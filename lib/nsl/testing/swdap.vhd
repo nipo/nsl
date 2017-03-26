@@ -146,11 +146,11 @@ begin
         end case;
 
         case r_state is
-          when others =>
-            r_data_par <= '0';
-
           when STATE_DATA =>
             r_data_par <= r_data_par xor r_data(0);
+
+          when others =>
+            r_data_par <= '0';
         end case;
 
         case r_state is
@@ -188,12 +188,16 @@ begin
       case r_state is
         when STATE_IDLE =>
           r_cmd_ok <= '1';
+
         when STATE_CMD_PAR =>
           r_cmd_ok <= not (p_swdio xor r_cmd_ad xor r_cmd_rw xor r_cmd_a(0) xor r_cmd_a(1));
+
         when STATE_CMD_STOP =>
           r_cmd_ok <= r_cmd_ok and not p_swdio;
+
         when STATE_CMD_PARK =>
           r_cmd_ok <= r_cmd_ok and p_swdio;
+
         when others =>
           null;
       end case;
@@ -227,14 +231,19 @@ begin
     case r_state is
       when STATE_ACK_OK =>
         r_swdio_out <= r_cmd_ok and p_dap_ready;
+
       when STATE_ACK_WAIT =>
         r_swdio_out <= r_cmd_ok and not p_dap_ready;
+
       when STATE_ACK_FAULT =>
         r_swdio_out <= not r_cmd_ok;
+
       when STATE_DATA =>
         r_swdio_out <= r_data(0);
+
       when STATE_DATA_PAR =>
         r_swdio_out <= r_data_par;
+
       when others =>
         r_swdio_out <= 'U';
     end case;
@@ -242,8 +251,10 @@ begin
     case r_state is
       when STATE_ACK_OK | STATE_ACK_WAIT | STATE_ACK_FAULT =>
         r_swdio_oe <= '1';
+
       when STATE_DATA | STATE_DATA_PAR =>
         r_swdio_oe <= r_cmd_rw;
+
       when others =>
         r_swdio_oe <= '0';
     end case;
