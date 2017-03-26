@@ -1,0 +1,2 @@
+vhdl-sources +=  tb.vhd
+
