@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package testing is
 
-  component fifo_counter_checker is
+  component fifo_counter_checker
     generic (
       width: integer
       );
@@ -18,7 +18,7 @@ package testing is
       );
   end component;
 
-  component fifo_counter_generator is
+  component fifo_counter_generator
     generic (
       width: integer
       );
@@ -29,6 +29,21 @@ package testing is
       p_empty_n: out std_ulogic;
       p_read: in std_ulogic;
       p_data: out std_ulogic_vector(width-1 downto 0)
+      );
+  end component;
+
+  component swdap
+    port (
+      p_swclk : in std_logic;
+      p_swdio : inout std_logic;
+
+      p_dap_a : out unsigned(1 downto 0);
+      p_dap_ad : out std_logic;
+      p_dap_rdata : in unsigned(31 downto 0);
+      p_dap_ready : in std_logic;
+      p_dap_ren : out std_logic;
+      p_dap_wdata : out unsigned(31 downto 0);
+      p_dap_wen : out std_logic
       );
   end component;
 
