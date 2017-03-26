@@ -7,6 +7,8 @@ simulate: $(top).vcd
 $(top).vcd: $(top)
 	./$(top) --vcd=$@ $(GHDLRUNFLAGS)
 
+.PRECIOUS: $(top).vcd
+
 elaborate: $(top)
 
 $(top): $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf)

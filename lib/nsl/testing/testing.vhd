@@ -79,4 +79,19 @@ package testing is
     );
   end component;
 
+  component fifo_file_checker
+    generic (
+      width: integer;
+      filename: string
+      );
+    port (
+      p_resetn  : in  std_ulogic;
+      p_clk     : in  std_ulogic;
+
+      p_full_n: out std_ulogic;
+      p_write: in std_ulogic;
+      p_data: in std_ulogic_vector(width-1 downto 0)
+      );
+  end component;
+
 end package testing;

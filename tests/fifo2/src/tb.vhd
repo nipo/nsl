@@ -80,13 +80,14 @@ begin
       p_out_empty_n => s_right_val
       );
 
-  sink: nsl.testing.fifo_sink
+  sink: nsl.testing.fifo_file_checker
     generic map(
-      width => width
+      width => width,
+      filename => "input.txt"
       )
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
+      p_resetn => s_resetn_clk2,
+      p_clk => s_clk2,
       p_full_n => s_right_ack,
       p_data => s_right_data,
       p_write => s_right_val
