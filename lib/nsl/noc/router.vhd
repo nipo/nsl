@@ -3,24 +3,30 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.types.all;
+use nsl.noc.all;
 
-entity nsl_noc_router is
+entity noc_router is
+  generic(
+    in_port_count : natural;
+    out_port_count : natural;
+    routing_table : noc_routing_table
+    );
   port(
-    p_reset_n   : in  std_ulogic;
-    p_clk       : in  std_ulogic;
+    p_resetn   : in  std_ulogic;
+    p_clk      : in  std_ulogic;
 
-    p_count_in  : in std_ulogic_vector(7 downto 0);
-    p_count_out : out std_ulogic_vector(7 downto 0);
+    p_in_val   : in noc_cmd_array(in_port_count-1 downto 0);
+    p_in_ack   : out noc_rsp_array(in_port_count-1 downto 0);
 
-    p_data_in   : in std_ulogic_vector(7 downto 0);
-    p_data_out  : out std_ulogic_vector(7 downto 0);
-
-    p_req_in    : in std_ulogic;
-    p_req_out   : out std_ulogic;
-
-    p_msg       : in  std_ulogic_vector(7 downto 0);
-    p_msg_val   : in  std_ulogic;
-    p_msg_ack   : out std_ulogic
+    p_out_val   : out noc_cmd_array(out_port_count-1 downto 0);
+    p_out_ack   : in noc_rsp_array(out_port_count-1 downto 0)
     );
 end entity;
+
+architecture rtl of noc_router is
+
+begin
+
+  
+
+end architecture;

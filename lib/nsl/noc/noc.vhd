@@ -7,52 +7,76 @@ use nsl.types.all;
 
 package noc is
 
-  component nsl_noc_injector is
+  type noc_cmd is record
+    data  :  std_ulogic_vector(7 downto 0);
+    more  :  std_ulogic;
+    val   :  std_ulogic;
+  end record;
+
+  type noc_rsp is record
+    ack   :  std_ulogic;
+  end record;
+
+  type noc_cmd_array is array(natural range <>) of noc_cmd;
+  type noc_rsp_array is array(natural range <>) of noc_rsp;
+
+  type noc_routing_table is array(natural range 0 to 15) of natural;
+
+  component noc_router is
     generic(
-      g_id        : nsl_id
+      in_port_count : natural;
+      out_port_count : natural;
+      routing_table : noc_routing_table
       );
     port(
-      p_reset_n   : in  std_ulogic;
-      p_clk       : in  std_ulogic;
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
 
-      p_count_in  : in std_ulogic_vector(7 downto 0);
-      p_count_out : out std_ulogic_vector(7 downto 0);
+      p_in_val   : in noc_cmd_array(in_port_count-1 downto 0);
+      p_in_ack   : out noc_rsp_array(in_port_count-1 downto 0);
 
-      p_data_in   : in std_ulogic_vector(7 downto 0);
-      p_data_out  : out std_ulogic_vector(7 downto 0);
-
-      p_req_in    : in std_ulogic;
-      p_req_out   : out std_ulogic;
-
-      p_msg       : in  std_ulogic_vector(7 downto 0);
-      p_msg_val   : in  std_ulogic;
-      p_msg_ack   : out std_ulogic
+      p_out_val   : out noc_cmd_array(out_port_count-1 downto 0);
+      p_out_ack   : in noc_rsp_array(out_port_count-1 downto 0)
       );
   end component;
 
-  component nsl_noc_extractor is
+  component noc_router_inbound is
     generic(
-      g_id        : nsl_id
+      out_port_count : natural;
+      routing_table : noc_routing_table
       );
     port(
-      p_reset_n   : in  std_ulogic;
-      p_clk       : in  std_ulogic;
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
 
-      p_count_in  : in std_ulogic_vector(7 downto 0);
-      p_count_out : out std_ulogic_vector(7 downto 0);
+      p_in_val   : in noc_cmd;
+      p_in_ack   : out noc_rsp;
 
-      p_data_in   : in std_ulogic_vector(7 downto 0);
-      p_data_out  : out std_ulogic_vector(7 downto 0);
-
-      p_req_in    : in std_ulogic;
-      p_req_out   : out std_ulogic;
-
-      p_msg       : out std_ulogic_vector(7 downto 0);
-      p_msg_val   : out std_ulogic;
-      p_msg_ack   : out std_ulogic;
-
-      p_avail     : in unsigned(9 downto 0)
+      p_out_val  : out noc_cmd;
+      p_out_ack  : in noc_rsp;
+      
+      p_select : out std_ulogic_vector(out_port_count-1 downto 0);
+      p_accept : in std_ulogic_vector(out_port_count-1 downto 0)
       );
   end component;
-  
+
+  component noc_router_outbound is
+    generic(
+      in_port_count : natural
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val   : in noc_cmd_array(in_port_count-1 downto 0);
+      p_in_ack   : out noc_rsp_array(in_port_count-1 downto 0);
+
+      p_out_val   : out noc_cmd;
+      p_out_ack   : in noc_rsp;
+
+      p_sel : in std_ulogic_vector(in_port_count-1 downto 0);
+      p_ack : out std_ulogic_vector(in_port_count-1 downto 0)
+      );
+  end component;
+
 end package noc;
