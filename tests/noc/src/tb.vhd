@@ -16,11 +16,12 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
+  signal s_done : std_ulogic;
+
   signal n0_val : noc_cmd_array(0 downto 0);
   signal n0_ack : noc_rsp_array(0 downto 0);
-
-  signal n1_val : noc_cmd_array(0 downto 0);
-  signal n1_ack : noc_rsp_array(0 downto 0);
+  signal n1_val : noc_cmd_array(1 downto 0);
+  signal n1_ack : noc_rsp_array(1 downto 0);
 
   shared variable sim_end : boolean := false;
 
@@ -33,11 +34,45 @@ begin
       p_clk => s_clk
       );
 
+  gen: nsl.noc.noc_file_reader
+    generic map(
+      filename => "input_0.txt"
+      )
+    port map(
+      p_resetn => s_resetn_clk,
+      p_clk => s_clk,
+      p_out_val => n0_val(0),
+      p_out_ack => n0_ack(0),
+      p_done => s_done
+      );
+
+  check0: nsl.noc.noc_file_checker
+    generic map(
+      filename => "output_0.txt"
+      )
+    port map(
+      p_resetn => s_resetn_clk,
+      p_clk => s_clk,
+      p_in_val => n1_val(0),
+      p_in_ack => n1_ack(0)
+      );
+
+  check1: nsl.noc.noc_file_checker
+    generic map(
+      filename => "output_1.txt"
+      )
+    port map(
+      p_resetn => s_resetn_clk,
+      p_clk => s_clk,
+      p_in_ack => n1_ack(1),
+      p_in_val => n1_val(1)
+      );
+
   router: nsl.noc.noc_router
     generic map(
       in_port_count => 1,
-      out_port_count => 1,
-      routing_table => (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      out_port_count => 2,
+      routing_table => (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
       )
     port map(
       p_resetn => s_resetn_clk,
@@ -53,6 +88,8 @@ begin
     s_resetn_async <= '0';
     wait for 10 ns;
     s_resetn_async <= '1';
+    wait until rising_edge(s_done);
+    sim_end := true;
     wait;
   end process;
 

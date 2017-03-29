@@ -2,12 +2,12 @@ VHDL_VERSION=93
 VHDL_VARIANT=c
 GHDL=ghdl
 
-simulate: $(top).vcd
+simulate: $(top).ghw
 
-$(top).vcd: $(top)
-	./$(top) --vcd=$@ $(GHDLRUNFLAGS)
+$(top).ghw: $(top)
+	./$(top) --wave=$@ $(GHDLRUNFLAGS)
 
-.PRECIOUS: $(top).vcd
+.PRECIOUS: $(top).ghw
 
 elaborate: $(top)
 
@@ -33,6 +33,6 @@ clean-files += $1-obj$$(VHDL_VERSION).cf
 
 endef
 
-clean-files += *.o $(top) $(top).vcd *.cf
+clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf
 
 $(eval $(foreach l,$(libraries),$(call ghdl_library,$l)))

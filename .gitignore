@@ -2,3 +2,4 @@
 *.cf
 *.vcd
 tb
+*.ghw
