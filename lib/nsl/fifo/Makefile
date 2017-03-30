@@ -1,1 +1,4 @@
-vhdl-sources += fifo.vhd sync_fifo.vhd async_fifo.vhd fifo_narrower.vhd
+vhdl-sources += fifo.vhd
+vhdl-sources += sync_fifo.vhd
+vhdl-sources += async_fifo.vhd
+vhdl-sources += fifo_narrower.vhd

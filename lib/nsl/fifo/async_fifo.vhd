@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.util.all;
+use nsl.fifo.all;
 
 entity async_fifo is
   generic(

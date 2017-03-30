@@ -4,20 +4,17 @@ GHDL=ghdl
 
 simulate: $(top).ghw
 
-$(top).ghw: $(top)
-	./$(top) --wave=$@ $(GHDLRUNFLAGS)
-
 .PRECIOUS: $(top).ghw
 
-elaborate: $(top)
+.PHONY: FORCE
 
-$(top): $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf)
-	$(GHDL) -e $(GHDLFLAGS) $(top)
+$(top).ghw: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf) FORCE
+	$(GHDL) -c -r $(top) --wave=$@ $(GHDLRUNFLAGS)
 
 analyze: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf)
 
 define ghdl_source_do
-$$(GHDL) $1 --std=$$(VHDL_VERSION)$$(VHDL_VARIANT) --work=$2 $3
+$$(GHDL) $1 --std=$$(VHDL_VERSION)$$(VHDL_VARIANT) -v --work=$2 $3
 	
 endef
 

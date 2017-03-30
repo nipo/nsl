@@ -3,3 +3,4 @@
 *.vcd
 tb
 *.ghw
+*.lst

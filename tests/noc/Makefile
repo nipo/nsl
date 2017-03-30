@@ -1,8 +1,9 @@
 CONFIG_NSL_NOC=y
 CONFIG_NSL_TESTING=y
 
-libraries = nsl work
+libraries = nsl testing work
 nsl-srcdir = ../../lib/nsl
+testing-srcdir = ../../lib/testing
 work-srcdir = src
 
 tool = ghdl

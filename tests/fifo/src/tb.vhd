@@ -7,7 +7,9 @@ end tb;
 library nsl;
 use nsl.util.all;
 use nsl.fifo.all;
-use nsl.testing.all;
+
+library testing;
+use testing.fifo.all;
 
 architecture arch of tb is
 
@@ -49,7 +51,7 @@ begin
       p_clk => s_clk2
       );
 
-  gen: fifo_counter_generator
+  gen: testing.fifo.fifo_counter_generator
     generic map(
       width => width
       )
@@ -61,7 +63,7 @@ begin
       p_data => s_left_data
       );
 
-  check: fifo_counter_checker
+  check: testing.fifo.fifo_counter_checker
     generic map(
       width => width
       )

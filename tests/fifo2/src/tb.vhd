@@ -7,7 +7,8 @@ end tb;
 library nsl;
 use nsl.util.all;
 use nsl.fifo.all;
-use nsl.testing.all;
+library testing;
+use testing.fifo.all;
 
 architecture arch of tb is
 
@@ -47,7 +48,7 @@ begin
       p_clk => s_clk2
       );
 
-  gen: nsl.testing.fifo_file_reader
+  gen: testing.fifo.fifo_file_reader
     generic map(
       width => width,
       filename => "input.txt"
@@ -80,7 +81,7 @@ begin
       p_out_empty_n => s_right_val
       );
 
-  sink: nsl.testing.fifo_file_checker
+  sink: testing.fifo.fifo_file_checker
     generic map(
       width => width,
       filename => "input.txt"

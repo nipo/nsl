@@ -5,7 +5,9 @@ use ieee.numeric_std.all;
 library nsl;
 use nsl.noc.all;
 use nsl.util.all;
-use nsl.testing.all;
+
+library testing;
+use testing.noc.all;
 
 entity tb is
 end tb;
@@ -34,7 +36,7 @@ begin
       p_clk => s_clk
       );
 
-  gen: nsl.noc.noc_file_reader
+  gen: testing.noc.noc_file_reader
     generic map(
       filename => "input_0.txt"
       )
@@ -46,7 +48,7 @@ begin
       p_done => s_done
       );
 
-  check0: nsl.noc.noc_file_checker
+  check0: testing.noc.noc_file_checker
     generic map(
       filename => "output_0.txt"
       )
@@ -57,7 +59,7 @@ begin
       p_in_ack => n1_ack(0)
       );
 
-  check1: nsl.noc.noc_file_checker
+  check1: testing.noc.noc_file_checker
     generic map(
       filename => "output_1.txt"
       )
