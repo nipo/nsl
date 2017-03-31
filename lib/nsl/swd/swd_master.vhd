@@ -24,28 +24,33 @@ end entity;
 
 architecture rtl of swd_master is
   type state_type is (
+    STATE_IDLE,
+    STATE_TAG_GET,
+    STATE_RSP_PUT,
+    STATE_TAG_PUT,
+    STATE_CMD_GET,
+    STATE_CMD_CHECK,
+    STATE_CMD_PREPARE,
+    STATE_CMD_DATA_GET,
+    STATE_CMD_SHIFT,
+    STATE_R0,
     STATE_ACK_FAULT,
     STATE_ACK_OK,
     STATE_ACK_WAIT,
-    STATE_CMD_CHECK,
-    STATE_CMD_PREPARE,
-    STATE_DATA_GET,
-    STATE_DATA_SET,
-    STATE_IDLE,
-    STATE_R0,
     STATE_R1,
+    STATE_DATA_SHIFT,
+    STATE_DATA_SHIFT_PAR,
     STATE_R2,
-    STATE_RESET_START,
     STATE_RESULT_STATUS,
-    STATE_SHIFT_CMD,
-    STATE_SHIFT_DATA,
-    STATE_SHIFT_DATA_PAR,
-    STATE_SHIFT_RESET1,
-    STATE_SHIFT_RESET2
+    STATE_DATA_SET,
+    STATE_RESET_START,
+    STATE_RESET_SHIFT1,
+    STATE_RESET_SHIFT2
   );
 
-
   signal r_ack, s_ack                     : std_ulogic_vector(2 downto 0);
+  signal r_tag, s_tag                     : std_ulogic_vector(7 downto 0);
+  signal r_fromto, s_fromto               : std_ulogic_vector(7 downto 0);
   signal r_cmd_a, s_cmd_a                 : std_ulogic_vector(1 downto 0);
   signal r_cmd_ad, s_cmd_ad               : std_ulogic;
   signal r_cmd_read, s_cmd_read           : std_ulogic;
@@ -79,6 +84,8 @@ begin
         r_data_par <= '0';
         r_has_more <= '0';
         r_ack <= (others => '0');
+        r_fromto <= (others => '0');
+        r_tag <= (others => '0');
       else
         r_cmd_reset <= s_cmd_reset;
         r_cmd_read <= s_cmd_read;
@@ -92,6 +99,8 @@ begin
         r_data_par <= s_data_par;
         r_has_more <= s_has_more;
         r_ack <= s_ack;
+        r_fromto <= s_fromto;
+        r_tag <= s_tag;
       end if;
     end if;
   end process;
@@ -105,6 +114,26 @@ begin
     case r_state is
       when STATE_IDLE =>
         if p_in_val.val = '1' then
+          s_state <= STATE_TAG_GET;
+        end if;
+
+      when STATE_TAG_GET =>
+        if p_in_val.val = '1' then
+          s_state <= STATE_RSP_PUT;
+        end if;
+
+      when STATE_RSP_PUT =>
+        if p_out_ack.ack = '1' then
+          s_state <= STATE_TAG_PUT;
+        end if;
+
+      when STATE_TAG_PUT =>
+        if p_out_ack.ack = '1' then
+          s_state <= STATE_CMD_GET;
+        end if;
+
+      when STATE_CMD_GET =>
+        if p_in_val.val = '1' then
           s_state <= STATE_CMD_CHECK;
         end if;
 
@@ -114,18 +143,18 @@ begin
         elsif r_cmd_read = '1' then
           s_state <= STATE_CMD_PREPARE;
         elsif p_in_val.val = '1' then
-          s_state <= STATE_DATA_GET;
+          s_state <= STATE_CMD_DATA_GET;
         end if;
 
-      when STATE_DATA_GET =>
+      when STATE_CMD_DATA_GET =>
         if (p_in_val.val = '1') and (r_to_shift_left = 0) then
           s_state <= STATE_CMD_PREPARE;
         end if;
 
       when STATE_CMD_PREPARE =>
-        s_state <= STATE_SHIFT_CMD;
+        s_state <= STATE_CMD_SHIFT;
 
-      when STATE_SHIFT_CMD =>
+      when STATE_CMD_SHIFT =>
         if r_to_shift_left = 0 then
           s_state <= STATE_R0;
         end if;
@@ -143,24 +172,24 @@ begin
         if p_swdio_i & r_ack(2 downto 1) = "010" then
           s_state <= STATE_CMD_PREPARE;
         elsif p_swdio_i & r_ack(2 downto 1) = "001" and r_cmd_read = '1' then
-          s_state <= STATE_SHIFT_DATA;
+          s_state <= STATE_DATA_SHIFT;
         else
           s_state <= STATE_R1;
         end if;
 
       when STATE_R1 =>
         if r_ack = "001" then
-          s_state <= STATE_SHIFT_DATA;
+          s_state <= STATE_DATA_SHIFT;
         else
           s_state <= STATE_RESULT_STATUS;
         end if;
 
-      when STATE_SHIFT_DATA =>
+      when STATE_DATA_SHIFT =>
         if r_to_shift_left = 0 then
-          s_state <= STATE_SHIFT_DATA_PAR;
+          s_state <= STATE_DATA_SHIFT_PAR;
         end if;
 
-      when STATE_SHIFT_DATA_PAR =>
+      when STATE_DATA_SHIFT_PAR =>
         if r_cmd_read = '1' then
           s_state <= STATE_R2;
         else
@@ -174,6 +203,8 @@ begin
         if p_out_ack.ack = '1' then
           if (r_cmd_read = '1') and r_ack(0) = '1' then
             s_state <= STATE_DATA_SET;
+          elsif r_has_more = '1' then
+            s_state <= STATE_CMD_GET;
           else
             s_state <= STATE_IDLE;
           end if;
@@ -181,18 +212,22 @@ begin
 
       when STATE_DATA_SET =>
         if (p_out_ack.ack = '1') and (r_to_shift_left = 0) then
-          s_state <= STATE_IDLE;
+          if r_has_more = '1' then
+            s_state <= STATE_CMD_GET;
+          else
+            s_state <= STATE_IDLE;
+          end if;
         end if;
 
       when STATE_RESET_START =>
-        s_state <= STATE_SHIFT_RESET1;
+        s_state <= STATE_RESET_SHIFT1;
 
-      when STATE_SHIFT_RESET1 =>
+      when STATE_RESET_SHIFT1 =>
         if r_to_shift_left = 0 then
-          s_state <= STATE_SHIFT_RESET2;
+          s_state <= STATE_RESET_SHIFT2;
         end if;
 
-      when STATE_SHIFT_RESET2 =>
+      when STATE_RESET_SHIFT2 =>
         if r_to_shift_left = 0 then
           s_state <= STATE_RESULT_STATUS;
         end if;
@@ -207,8 +242,8 @@ begin
     s_to_shift_left <= r_to_shift_left;
 
     case r_state is
-      when STATE_SHIFT_CMD | STATE_SHIFT_DATA | STATE_SHIFT_RESET1 | STATE_SHIFT_RESET2
-        | STATE_DATA_SET | STATE_DATA_GET =>
+      when STATE_CMD_SHIFT | STATE_DATA_SHIFT | STATE_RESET_SHIFT1 | STATE_RESET_SHIFT2
+        | STATE_DATA_SET | STATE_CMD_DATA_GET =>
         s_to_shift_left <= (r_to_shift_left - 1) mod 32;
       when STATE_RESET_START =>
         s_to_shift_left <= 20;
@@ -239,9 +274,32 @@ begin
     end case;
   end process;
 
+  tag: process(r_state, p_in_val.data, p_in_val.val)
+  begin
+    s_tag <= r_tag;
+
+    if (r_state = STATE_TAG_GET) and (p_in_val.val = '1') then
+      s_tag <= p_in_val.data;
+    end if;
+  end process;
+
+  fromto: process(r_state, p_in_val.data, p_in_val.val)
+  begin
+    s_fromto <= r_fromto;
+
+    if (r_state = STATE_IDLE) and (p_in_val.val = '1') then
+      s_fromto <= p_in_val.data;
+    end if;
+  end process;
+
   cmd: process(r_state, p_in_val.data, p_in_val.val)
   begin
-    if (r_state = STATE_IDLE) and (p_in_val.val = '1') then
+    s_cmd_reset <= r_cmd_reset;
+    s_cmd_read <= r_cmd_read;
+    s_cmd_ad <= r_cmd_ad;
+    s_cmd_a <= r_cmd_a;
+
+    if (r_state = STATE_CMD_GET) and (p_in_val.val = '1') then
       s_cmd_reset <= p_in_val.data(5) and not p_in_val.data(4);
       s_cmd_read <= p_in_val.data(3);
       s_cmd_ad <= p_in_val.data(2);
@@ -255,7 +313,7 @@ begin
     
     if p_in_val.val = '1' then
       case r_state is
-        when STATE_IDLE | STATE_DATA_GET =>
+        when STATE_CMD_GET | STATE_CMD_DATA_GET =>
           s_has_more <= p_in_val.more;
         when others =>
           null;
@@ -266,12 +324,12 @@ begin
   data: process(r_state, r_data, p_in_val.val, p_swdio_i, p_in_val.data)
   begin
     case r_state is
-      when STATE_DATA_GET =>
+      when STATE_CMD_DATA_GET =>
         if p_in_val.val = '1' then
           s_data <= p_in_val.data & r_data(31 downto 8);
         end if;
 
-      when STATE_SHIFT_DATA =>
+      when STATE_DATA_SHIFT =>
         s_data <= p_swdio_i & r_data(31 downto 1);
 
       when STATE_DATA_SET =>
@@ -290,7 +348,7 @@ begin
       when STATE_CMD_PREPARE =>
         s_command <= "10" & (((r_cmd_read xor r_cmd_ad) xor r_cmd_a(1)) xor r_cmd_a(0)) & r_cmd_a(1) & r_cmd_a(0) & r_cmd_read & r_cmd_ad & '1';
 
-      when STATE_SHIFT_CMD =>
+      when STATE_CMD_SHIFT =>
         s_command <= '0' & r_command(1 + 6 downto 1);
 
       when others =>
@@ -304,7 +362,7 @@ begin
       when STATE_CMD_PREPARE =>
         s_data_par <= '0';
 
-      when STATE_SHIFT_DATA =>
+      when STATE_DATA_SHIFT =>
         s_data_par <= r_data_par xor Ternary_Logic((r_cmd_read = '1'), p_swdio_i, r_data(0));
 
       when others =>
@@ -326,7 +384,7 @@ begin
           s_status <= "0010";
         end if;
 
-      when STATE_SHIFT_DATA =>
+      when STATE_DATA_SHIFT =>
         if r_ack = "001" then
           s_status <= r_cmd_read & "000";
         elsif r_ack = "100" then
@@ -335,7 +393,7 @@ begin
           s_status <= "0010";
         end if;
 
-      when STATE_SHIFT_DATA_PAR =>
+      when STATE_DATA_SHIFT_PAR =>
         if (r_cmd_read = '1') and (r_data_par /= p_swdio_i) then
           s_status <= "0011";
         end if;
@@ -357,7 +415,7 @@ begin
         when STATE_R0 | STATE_R1 | STATE_R2 | STATE_ACK_OK | STATE_ACK_WAIT | STATE_ACK_FAULT =>
           p_swdio_oe <= '0';
 
-        when STATE_SHIFT_DATA | STATE_SHIFT_DATA_PAR =>
+        when STATE_DATA_SHIFT | STATE_DATA_SHIFT_PAR =>
           p_swdio_oe <= not r_cmd_read;
 
         when others =>
@@ -368,24 +426,24 @@ begin
         when STATE_R0 | STATE_R1 | STATE_R2 | STATE_ACK_OK | STATE_ACK_WAIT | STATE_ACK_FAULT =>
           p_swdio_o <= 'X';
 
-        when STATE_SHIFT_CMD =>
+        when STATE_CMD_SHIFT =>
           p_swdio_o <= r_command(0);
 
-        when STATE_SHIFT_DATA =>
+        when STATE_DATA_SHIFT =>
           if r_cmd_read = '1' then
             p_swdio_o <= 'X';
           else
             p_swdio_o <= r_data(0);
           end if;
 
-        when STATE_SHIFT_DATA_PAR =>
+        when STATE_DATA_SHIFT_PAR =>
           if r_cmd_read = '1' then
             p_swdio_o <= 'X';
           else
             p_swdio_o <= r_data_par;
           end if;
 
-        when STATE_SHIFT_RESET1 | STATE_SHIFT_RESET2 =>
+        when STATE_RESET_SHIFT1 | STATE_RESET_SHIFT2 =>
           p_swdio_o <= '1';
 
         when others =>
@@ -397,7 +455,7 @@ begin
   noc_moore: process (r_state, r_status, r_ack, r_cmd_read, r_to_shift_left, r_has_more, r_data) is
   begin
     case r_state is
-      when STATE_IDLE | STATE_DATA_GET =>
+      when STATE_IDLE | STATE_TAG_GET | STATE_CMD_GET | STATE_CMD_DATA_GET =>
         p_in_ack.ack <= '1';
 
       when others =>
@@ -405,6 +463,16 @@ begin
     end case;
 
     case r_state is
+      when STATE_RSP_PUT =>
+        p_out_val.data <= r_fromto(3 downto 0) & r_fromto(7 downto 4);
+        p_out_val.val <= '1';
+        p_out_val.more <= '1';
+
+      when STATE_TAG_PUT =>
+        p_out_val.data <= r_tag;
+        p_out_val.val <= '1';
+        p_out_val.more <= '1';
+
       when STATE_RESULT_STATUS =>
         p_out_val.data <= "0000" & r_status;
         p_out_val.val <= '1';

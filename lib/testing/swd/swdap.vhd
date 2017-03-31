@@ -203,7 +203,11 @@ begin
   
     case r_state is
       when STATE_DATA =>
-        s_data_par <= r_data_par xor r_data(0);
+        if r_cmd_rw = '1' then
+          s_data_par <= r_data_par xor r_data(0);
+        else
+          s_data_par <= r_data_par xor r_data(31);
+        end if;
 
       when others =>
         s_data_par <= '0';
@@ -289,6 +293,10 @@ begin
     case r_state is
       when STATE_DATA_PAR =>
         p_dap_wen <= not r_cmd_rw and (r_data_par xnor p_swdio);
+        p_dap_ren <= '0';
+
+      when STATE_ACK_FAULT =>
+        p_dap_wen <= '0';
         p_dap_ren <= r_cmd_rw;
 
       when others =>
