@@ -2,18 +2,18 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl;
+use nsl.noc.all;
+
 entity swd_master is
   port (
     p_clk      : in  std_logic;
     p_resetn   : in  std_logic;
 
-    p_cmd      : in  unsigned(7 downto 0);
-    p_cmd_val  : in  std_logic;
-    p_cmd_ack  : out std_logic;
-    
-    p_rsp      : out unsigned(7 downto 0);
-    p_rsp_ack  : in  std_logic;
-    p_rsp_val  : out std_logic;
+    p_in_val    : in noc_cmd;
+    p_in_ack    : out noc_rsp;
+    p_out_val   : out noc_cmd;
+    p_out_ack   : in noc_rsp;
 
     p_swclk    : out std_logic;
     p_swdio_i  : in  std_logic;
@@ -45,19 +45,20 @@ architecture rtl of swd_master is
   );
 
 
-  signal r_ack, s_ack                     : std_logic_vector(2 downto 0);
-  signal r_cmd_a, s_cmd_a                 : unsigned(1 downto 0);
-  signal r_cmd_ad, s_cmd_ad               : std_logic;
-  signal r_cmd_read, s_cmd_read           : std_logic;
-  signal r_cmd_reset, s_cmd_reset         : std_logic;
-  signal r_command, s_command             : unsigned(7 downto 0);
-  signal r_data, s_data                   : unsigned(31 downto 0);
+  signal r_ack, s_ack                     : std_ulogic_vector(2 downto 0);
+  signal r_cmd_a, s_cmd_a                 : std_ulogic_vector(1 downto 0);
+  signal r_cmd_ad, s_cmd_ad               : std_ulogic;
+  signal r_cmd_read, s_cmd_read           : std_ulogic;
+  signal r_cmd_reset, s_cmd_reset         : std_ulogic;
+  signal r_command, s_command             : std_ulogic_vector(7 downto 0);
+  signal r_data, s_data                   : std_ulogic_vector(31 downto 0);
   signal r_data_par, s_data_par           : std_logic;
+  signal r_has_more, s_has_more           : std_logic;
   signal r_state, s_state                 : state_type;
-  signal r_status, s_status               : unsigned(4 downto 0);
+  signal r_status, s_status               : std_ulogic_vector(3 downto 0);
   signal r_to_shift_left, s_to_shift_left : integer range 0 to 31;
 
-  function Ternary_Logic(T : Boolean; X, Y : std_logic) return std_logic is
+  function Ternary_Logic(T : Boolean; X, Y : std_logic) return std_ulogic is
   begin
     if T then return X; else return Y; end if;
   end function;
@@ -76,6 +77,7 @@ begin
         r_data <= (others => '0');
         r_command <= (others => '0');
         r_data_par <= '0';
+        r_has_more <= '0';
         r_ack <= (others => '0');
       else
         r_cmd_reset <= s_cmd_reset;
@@ -88,18 +90,21 @@ begin
         r_data <= s_data;
         r_command <= s_command;
         r_data_par <= s_data_par;
+        r_has_more <= s_has_more;
         r_ack <= s_ack;
       end if;
     end if;
   end process;
 
-  state: process (r_state, p_cmd_val, p_rsp_ack, p_swdio_i, r_to_shift_left, r_cmd_reset, r_cmd_read, r_status)
+  state: process (r_state, p_in_val.val, p_out_ack.ack,
+                  p_swdio_i, r_to_shift_left,
+                  r_cmd_reset, r_cmd_read, r_status)
   begin
     s_state <= r_state;
 
     case r_state is
       when STATE_IDLE =>
-        if p_cmd_val = '1' then
+        if p_in_val.val = '1' then
           s_state <= STATE_CMD_CHECK;
         end if;
 
@@ -108,12 +113,12 @@ begin
           s_state <= STATE_RESET_START;
         elsif r_cmd_read = '1' then
           s_state <= STATE_CMD_PREPARE;
-        elsif p_cmd_val = '1' then
+        elsif p_in_val.val = '1' then
           s_state <= STATE_DATA_GET;
         end if;
 
       when STATE_DATA_GET =>
-        if (p_cmd_val = '1') and (r_to_shift_left = 0) then
+        if (p_in_val.val = '1') and (r_to_shift_left = 0) then
           s_state <= STATE_CMD_PREPARE;
         end if;
 
@@ -135,16 +140,16 @@ begin
         s_state <= STATE_ACK_FAULT;
 
       when STATE_ACK_FAULT =>
-        if r_ack(1 downto 0) & p_swdio_i = "010" then
+        if p_swdio_i & r_ack(2 downto 1) = "010" then
           s_state <= STATE_CMD_PREPARE;
-        elsif r_ack(1 downto 0) & p_swdio_i = "100" and r_cmd_read = '1' then
+        elsif p_swdio_i & r_ack(2 downto 1) = "001" and r_cmd_read = '1' then
           s_state <= STATE_SHIFT_DATA;
         else
           s_state <= STATE_R1;
         end if;
 
       when STATE_R1 =>
-        if r_ack = "100" then
+        if r_ack = "001" then
           s_state <= STATE_SHIFT_DATA;
         else
           s_state <= STATE_RESULT_STATUS;
@@ -166,8 +171,8 @@ begin
         s_state <= STATE_RESULT_STATUS;
 
       when STATE_RESULT_STATUS =>
-        if p_rsp_ack = '1' then
-          if (r_cmd_read = '1') and r_status(2) = '1' then
+        if p_out_ack.ack = '1' then
+          if (r_cmd_read = '1') and r_ack(0) = '1' then
             s_state <= STATE_DATA_SET;
           else
             s_state <= STATE_IDLE;
@@ -175,7 +180,7 @@ begin
         end if;
 
       when STATE_DATA_SET =>
-        if (p_rsp_ack = '1') and (r_to_shift_left = 0) then
+        if (p_out_ack.ack = '1') and (r_to_shift_left = 0) then
           s_state <= STATE_IDLE;
         end if;
 
@@ -199,17 +204,18 @@ begin
 
   to_shift_left: process (r_state, r_to_shift_left)
   begin
-    case r_state is
-      when STATE_R0 =>
-        s_to_shift_left <= 2;
+    s_to_shift_left <= r_to_shift_left;
 
+    case r_state is
       when STATE_SHIFT_CMD | STATE_SHIFT_DATA | STATE_SHIFT_RESET1 | STATE_SHIFT_RESET2
         | STATE_DATA_SET | STATE_DATA_GET =>
-        s_to_shift_left <= r_to_shift_left - 1;
+        s_to_shift_left <= (r_to_shift_left - 1) mod 32;
       when STATE_RESET_START =>
         s_to_shift_left <= 20;
-      when STATE_RESULT_STATUS | STATE_CMD_PREPARE =>
+      when STATE_RESULT_STATUS =>
         s_to_shift_left <= 3;
+      when STATE_CMD_PREPARE =>
+        s_to_shift_left <= 7;
       when STATE_CMD_CHECK =>
         if r_cmd_read = '1' then
           s_to_shift_left <= 7;
@@ -227,36 +233,50 @@ begin
   begin
     case r_state is
       when STATE_ACK_OK | STATE_ACK_WAIT | STATE_ACK_FAULT =>
-        s_ack <= r_ack(1 downto 0) & p_swdio_i;
+        s_ack <= p_swdio_i & r_ack(2 downto 1);
       when others =>
         null;
     end case;
   end process;
 
-  cmd: process(r_state, p_cmd, p_cmd_val)
+  cmd: process(r_state, p_in_val.data, p_in_val.val)
   begin
-    if (r_state = STATE_IDLE) and (p_cmd_val = '1') then
-      s_cmd_reset <= p_cmd(5) and not p_cmd(4);
-      s_cmd_read <= p_cmd(3);
-      s_cmd_ad <= p_cmd(2);
-      s_cmd_a <= p_cmd(1 downto 0);
+    if (r_state = STATE_IDLE) and (p_in_val.val = '1') then
+      s_cmd_reset <= p_in_val.data(5) and not p_in_val.data(4);
+      s_cmd_read <= p_in_val.data(3);
+      s_cmd_ad <= p_in_val.data(2);
+      s_cmd_a <= p_in_val.data(1 downto 0);
     end if;
   end process;
 
-  data: process(r_state, r_data, p_cmd_val, p_swdio_i, p_cmd)
+  more: process(r_state, r_has_more, p_in_val.val, p_in_val.more)
+  begin
+    s_has_more <= r_has_more;
+    
+    if p_in_val.val = '1' then
+      case r_state is
+        when STATE_IDLE | STATE_DATA_GET =>
+          s_has_more <= p_in_val.more;
+        when others =>
+          null;
+      end case;
+    end if;
+  end process;
+  
+  data: process(r_state, r_data, p_in_val.val, p_swdio_i, p_in_val.data)
   begin
     case r_state is
       when STATE_DATA_GET =>
-        if p_cmd_val = '1' then
-          s_data <= p_cmd & r_data(31 downto 8);
+        if p_in_val.val = '1' then
+          s_data <= p_in_val.data & r_data(31 downto 8);
         end if;
 
       when STATE_SHIFT_DATA =>
         s_data <= p_swdio_i & r_data(31 downto 1);
 
       when STATE_DATA_SET =>
-        if p_rsp_ack = '1' then
-          s_data <= p_cmd & r_data(31 downto 8);
+        if p_out_ack.ack = '1' then
+          s_data <= p_in_val.data & r_data(31 downto 8);
         end if;
 
       when others =>
@@ -294,32 +314,34 @@ begin
 
   status: process(r_state, r_cmd_read, r_ack, r_data_par, p_swdio_i)
   begin
+    s_status <= r_status;
+
     case r_state is
       when STATE_R1 =>
-        if r_ack = "100" then
-          s_status <= "00" & r_cmd_read & "00";
-        elsif r_ack = "001" then
-          s_status <= "00001";
+        if r_ack = "001" then
+          s_status <= r_cmd_read & "000";
+        elsif r_ack = "100" then
+          s_status <= "0001";
         else
-          s_status <= "00010";
+          s_status <= "0010";
         end if;
 
       when STATE_SHIFT_DATA =>
-        if r_ack = "100" then
-          s_status <= "00" & r_cmd_read & "00";
-        elsif r_ack = "001" then
-          s_status <= "00001";
+        if r_ack = "001" then
+          s_status <= r_cmd_read & "000";
+        elsif r_ack = "100" then
+          s_status <= "0001";
         else
-          s_status <= "00010";
+          s_status <= "0010";
         end if;
 
       when STATE_SHIFT_DATA_PAR =>
         if (r_cmd_read = '1') and (r_data_par /= p_swdio_i) then
-          s_status <= "00011";
+          s_status <= "0011";
         end if;
 
       when STATE_RESET_START =>
-        s_status <= "00000";
+        s_status <= "0101";
 
       when others =>
         null;
@@ -328,7 +350,7 @@ begin
   
   p_swclk <= p_clk;
 
-  moore: process (p_clk) is
+  swd_moore: process (p_clk) is
   begin
     if falling_edge(p_clk) then
       case r_state is
@@ -369,34 +391,43 @@ begin
         when others =>
           p_swdio_o <= '0';
       end case;
-
-      case r_state is
-        when STATE_IDLE | STATE_DATA_GET =>
-          p_cmd_ack <= '1';
-
-        when others =>
-          p_cmd_ack <= '0';
-      end case;
-
-      case r_state is
-        when STATE_RESULT_STATUS | STATE_DATA_SET =>
-          p_rsp_val <= '1';
-
-        when others =>
-          p_rsp_val <= '0';
-      end case;
-
-      case r_state is
-        when STATE_RESULT_STATUS =>
-          p_rsp <= "000" & r_status;
-
-        when STATE_DATA_SET =>
-          p_rsp <= r_data(0 + 7 downto 0);
-
-        when others =>
-          p_rsp <= (others => 'X');
-      end case;
     end if;
+  end process;
+  
+  noc_moore: process (r_state, r_status, r_ack, r_cmd_read, r_to_shift_left, r_has_more, r_data) is
+  begin
+    case r_state is
+      when STATE_IDLE | STATE_DATA_GET =>
+        p_in_ack.ack <= '1';
+
+      when others =>
+        p_in_ack.ack <= '0';
+    end case;
+
+    case r_state is
+      when STATE_RESULT_STATUS =>
+        p_out_val.data <= "0000" & r_status;
+        p_out_val.val <= '1';
+        if r_cmd_read = '1' and r_ack(0) = '1' then
+          p_out_val.more <= '1';
+        else
+          p_out_val.more <= r_has_more;
+        end if;
+
+      when STATE_DATA_SET =>
+        p_out_val.data <= r_data(7 downto 0);
+        p_out_val.val <= '1';
+        if r_to_shift_left /= 0 then
+          p_out_val.more <= '1';
+        else
+          p_out_val.more <= r_has_more;
+        end if;
+
+      when others =>
+        p_out_val.data <= (others => 'X');
+        p_out_val.val <= '0';
+        p_out_val.more <= 'X';
+    end case;
   end process;
 end architecture;
 

@@ -1,8 +1,8 @@
+vhdl-sources += type.vhd
 subdirs += util
-subdirs += swd
 subdirs += fifo
 subdirs += noc
 subdirs += ftdi
+subdirs += swd
 subdirs += logic_analyzer
-vhdl-sources += type.vhd
 

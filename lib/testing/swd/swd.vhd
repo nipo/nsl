@@ -19,4 +19,18 @@ package swd is
       );
   end component;
 
+  component dap_sim
+    port (
+      p_clk : in std_ulogic;
+
+      p_dap_a : in unsigned(1 downto 0);
+      p_dap_ad : in std_logic;
+      p_dap_rdata : out unsigned(31 downto 0);
+      p_dap_ready : out std_logic;
+      p_dap_ren : in std_logic;
+      p_dap_wdata : in unsigned(31 downto 0);
+      p_dap_wen : in std_logic
+      );
+  end component;
+
 end package swd;

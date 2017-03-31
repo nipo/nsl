@@ -1,0 +1,118 @@
+#!/usr/bin/env python2
+
+import sys
+
+class NocTxnFile:
+    def __init__(self, filename):
+        self.output = open(filename, "w")
+
+    def append(self, flit, pause = 0):
+        for i, b in enumerate(flit):
+            if i < len(flit) - 1:
+                self.output.write("%d %d\n" % (b + 0x100, 0))
+            else:
+                self.output.write("%d %d\n" % (b, pause))
+
+class Flit:
+    def __init__(self, data):
+        self.data = data
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iadd__(self, other):
+        self.data += other.data
+
+    def __add__(self, other):
+        return self.__class__(self.data + other.data)
+
+CMD_RESET = 0x20
+CMD_READ = 0x08
+CMD_WRITE = 0x00
+CMD_AD = lambda x: x<<2
+CMD_A = lambda x: x
+
+RSP_ACK = 0
+RSP_FAULT = 1
+RSP_ERROR = 2
+RSP_PARITY_ERROR = 3
+RSP_RESET_DONE = 5
+RSP_HAS_DATA = 8
+
+class SwdResetCmd(Flit):
+    def __init__(self):
+        Flit.__init__(self, [CMD_RESET])
+
+class SwdReadCmd(Flit):
+    def __init__(self, ad, a):
+        Flit.__init__(self, [CMD_READ | CMD_AD(ad) | CMD_A(a)])
+
+class SwdWriteCmd(Flit):
+    def __init__(self, ad, a, val):
+        Flit.__init__(self, [CMD_WRITE | CMD_AD(ad) | CMD_A(a),
+                 val & 0xff, (val >> 8) & 0xff,
+                 (val >> 16) & 0xff, (val >> 24) & 0xff])
+
+class SwdReadRsp(Flit):
+    def __init__(self, val):
+        Flit.__init__(self, [RSP_HAS_DATA,
+                 val & 0xff, (val >> 8) & 0xff,
+                 (val >> 16) & 0xff, (val >> 24) & 0xff])
+
+class SwdResetRsp(Flit):
+    def __init__(self):
+        Flit.__init__(self, [RSP_RESET_DONE])
+
+class SwdWriteRsp(Flit):
+    def __init__(self):
+        Flit.__init__(self, [RSP_ACK])
+
+class SwdFaultRsp(Flit):
+    def __init__(self, val):
+        Flit.__init__(self, [RSP_FAULT])
+
+class SwdCmd(NocTxnFile):
+    def __init__(self, filename):
+        NocTxnFile.__init__(self, filename)
+
+    def read(self, ad, a, val):
+        self.append(SwdReadCmd(ad, a))
+
+    def write(self, ad, a, val):
+        self.append(SwdWriteCmd(ad, a, val))
+
+    def reset(self):
+        self.append(SwdResetCmd())
+
+class SwdRsp(NocTxnFile):
+    def __init__(self, filename):
+        NocTxnFile.__init__(self, filename)
+
+    def read(self, ad, a, val):
+        self.append(SwdReadRsp(val))
+
+    def write(self, ad, a, val):
+        self.append(SwdWriteRsp())
+
+    def reset(self):
+        self.append(SwdResetRsp())
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    if n.startswith("swd_responses"):
+        t = SwdRsp(n)
+    else:
+        t = SwdCmd(n)
+
+    t.reset()
+    t.write(0, 0, 42)
+    t.read(0, 0, 42)
+    t.write(0, 1, 123)
+    t.read(0, 1, 123)
+    t.read(0, 0, 42)
+    t.reset()
+

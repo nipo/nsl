@@ -1,0 +1,59 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Fri Mar 31 10:30:27 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/swd/tb.ghw"
+[dumpfile_mtime] "Fri Mar 31 10:30:03 2017"
+[dumpfile_size] 31526
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/swd/Untitled.gtkw"
+[timestart] 0
+[size] 1340 809
+[pos] -1 -1
+*-30,010042 1139800000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.s_in_val.
+[treeopen] top.tb.swd_master.
+[treeopen] top.tb.swd_master.p_out_val.
+[treeopen] top.tb.swdap.
+[sst_width] 193
+[signals_width] 258
+[sst_expanded] 1
+[sst_vpaned_height] 241
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+top.tb.s_in_val.val
+top.tb.s_in_ack.ack
+top.tb.s_in_val.more
+@22
+#{top.tb.s_in_val.data[7:0]} top.tb.s_in_val.data[7] top.tb.s_in_val.data[6] top.tb.s_in_val.data[5] top.tb.s_in_val.data[4] top.tb.s_in_val.data[3] top.tb.s_in_val.data[2] top.tb.s_in_val.data[1] top.tb.s_in_val.data[0]
+@28
+top.tb.swd_master.p_out_val.val
+top.tb.swd_master.p_out_ack.ack
+top.tb.swd_master.p_out_val.more
+@22
+#{top.tb.swd_master.p_out_val.data[7:0]} top.tb.swd_master.p_out_val.data[7] top.tb.swd_master.p_out_val.data[6] top.tb.swd_master.p_out_val.data[5] top.tb.swd_master.p_out_val.data[4] top.tb.swd_master.p_out_val.data[3] top.tb.swd_master.p_out_val.data[2] top.tb.swd_master.p_out_val.data[1] top.tb.swd_master.p_out_val.data[0]
+@28
+top.tb.swd_master.r_state
+@22
+#{top.tb.swd_master.r_data[31:0]} top.tb.swd_master.r_data[31] top.tb.swd_master.r_data[30] top.tb.swd_master.r_data[29] top.tb.swd_master.r_data[28] top.tb.swd_master.r_data[27] top.tb.swd_master.r_data[26] top.tb.swd_master.r_data[25] top.tb.swd_master.r_data[24] top.tb.swd_master.r_data[23] top.tb.swd_master.r_data[22] top.tb.swd_master.r_data[21] top.tb.swd_master.r_data[20] top.tb.swd_master.r_data[19] top.tb.swd_master.r_data[18] top.tb.swd_master.r_data[17] top.tb.swd_master.r_data[16] top.tb.swd_master.r_data[15] top.tb.swd_master.r_data[14] top.tb.swd_master.r_data[13] top.tb.swd_master.r_data[12] top.tb.swd_master.r_data[11] top.tb.swd_master.r_data[10] top.tb.swd_master.r_data[9] top.tb.swd_master.r_data[8] top.tb.swd_master.r_data[7] top.tb.swd_master.r_data[6] top.tb.swd_master.r_data[5] top.tb.swd_master.r_data[4] top.tb.swd_master.r_data[3] top.tb.swd_master.r_data[2] top.tb.swd_master.r_data[1] top.tb.swd_master.r_data[0]
+@28
+top.tb.swd_master.r_to_shift_left
+top.tb.s_swdio
+top.tb.s_swclk
+top.tb.swdap.r_reset_counter
+top.tb.swdap.s_reset
+top.tb.swdap.r_state
+@22
+#{top.tb.swdap.r_data[31:0]} top.tb.swdap.r_data[31] top.tb.swdap.r_data[30] top.tb.swdap.r_data[29] top.tb.swdap.r_data[28] top.tb.swdap.r_data[27] top.tb.swdap.r_data[26] top.tb.swdap.r_data[25] top.tb.swdap.r_data[24] top.tb.swdap.r_data[23] top.tb.swdap.r_data[22] top.tb.swdap.r_data[21] top.tb.swdap.r_data[20] top.tb.swdap.r_data[19] top.tb.swdap.r_data[18] top.tb.swdap.r_data[17] top.tb.swdap.r_data[16] top.tb.swdap.r_data[15] top.tb.swdap.r_data[14] top.tb.swdap.r_data[13] top.tb.swdap.r_data[12] top.tb.swdap.r_data[11] top.tb.swdap.r_data[10] top.tb.swdap.r_data[9] top.tb.swdap.r_data[8] top.tb.swdap.r_data[7] top.tb.swdap.r_data[6] top.tb.swdap.r_data[5] top.tb.swdap.r_data[4] top.tb.swdap.r_data[3] top.tb.swdap.r_data[2] top.tb.swdap.r_data[1] top.tb.swdap.r_data[0]
+@28
+top.tb.swdap.r_data_par
+top.tb.swdap.p_dap_wen
+top.tb.swdap.p_dap_ren
+top.tb.swdap.p_dap_ready
+top.tb.swdap.p_dap_ad
+@29
+top.tb.dap.waiting
+[pattern_trace] 1
+[pattern_trace] 0
