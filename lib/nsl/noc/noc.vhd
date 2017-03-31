@@ -75,4 +75,37 @@ package noc is
       );
   end component;
 
+  component noc_fifo is
+    generic(
+      depth : natural
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val   : in noc_cmd;
+      p_in_ack   : out noc_rsp;
+
+      p_out_val   : out noc_cmd;
+      p_out_ack   : in noc_rsp
+      );
+  end component;
+
+  component noc_async_fifo is
+    generic(
+      depth : natural
+      );
+    port(
+      p_resetn    : in  std_ulogic;
+
+      p_in_clk    : in  std_ulogic;
+      p_in_val    : in noc_cmd;
+      p_in_ack    : out noc_rsp;
+
+      p_out_clk   : in  std_ulogic;
+      p_out_val   : out noc_cmd;
+      p_out_ack   : in noc_rsp
+      );
+  end component;
+
 end package noc;
