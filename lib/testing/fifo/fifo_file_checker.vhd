@@ -14,7 +14,9 @@ entity fifo_file_checker is
 
     p_full_n: out std_ulogic;
     p_write: in std_ulogic;
-    p_data: in std_ulogic_vector(width-1 downto 0)
+    p_data: in std_ulogic_vector(width-1 downto 0);
+    
+    p_done: out std_ulogic
     );
 end fifo_file_checker;
 
@@ -80,6 +82,15 @@ begin
   begin
     if falling_edge(p_clk) then
       p_full_n <= r_accept;
+    end if;
+    if not is_reset and is_open then
+      if endfile(fd) then
+        p_done <= '1';
+      else
+        p_done <= '0';
+      end if;
+    else
+      p_done <= '0';
     end if;
   end process;
   

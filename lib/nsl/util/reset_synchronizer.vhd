@@ -15,28 +15,27 @@ end reset_synchronizer;
 
 architecture rtl of reset_synchronizer is
 
-
-  signal s_reset : std_ulogic_vector(cycle_count-1 downto 0);
   signal r_reset : std_ulogic_vector(cycle_count-1 downto 0);
 
 begin  -- rtl
 
   rst: process (p_clk, p_resetn)
-  begin  -- process rst
-    if p_resetn = '0' then
-      r_reset <= (others => '0');
-    elsif p_clk'event and p_clk = '1' then
-      r_reset <= s_reset;
-    end if;
-  end process rst;
-
-  s_reset <= '1' & r_reset(s_reset'high downto 1);
-
-  moore: process (p_clk)
   begin
-    if falling_edge(p_clk) then
-      p_resetn_sync <= r_reset(0) and p_resetn;
+    gen: for i in 0 to cycle_count - 2 loop
+      if p_resetn = '0' then
+        r_reset(i) <= '0';
+      elsif rising_edge(p_clk) then
+        r_reset(i) <= r_reset(i+1);
+      end if;
+    end loop;
+
+    if p_resetn = '0' then
+      r_reset(cycle_count-1) <= '0';
+    elsif rising_edge(p_clk) then
+      r_reset(cycle_count-1) <= p_resetn;
     end if;
   end process;
+
+  p_resetn_sync <= '0' when r_reset /= (r_reset'range => '1') else '1';
   
 end rtl;

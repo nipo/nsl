@@ -36,6 +36,7 @@ architecture rtl of async_fifo is
 
   signal r_mem: fifo_t;
 
+  signal s_out_rst, s_in_rst : std_ulogic_vector(1 downto 0);
   signal s_out_resetn, s_in_resetn : std_ulogic;
 
   signal s_in_wptr : count_t;
@@ -51,24 +52,35 @@ architecture rtl of async_fifo is
 begin
 
   reset_sync_out: reset_synchronizer
-    generic map(
-      cycle_count => 3
-      )
     port map(
       p_resetn => p_resetn,
       p_clk => p_out_clk,
-      p_resetn_sync => s_out_resetn
+      p_resetn_sync => s_out_rst(1)
       );
 
   reset_sync_in: reset_synchronizer
-    generic map(
-      cycle_count => 3
-      )
     port map(
       p_resetn => p_resetn,
       p_clk => p_in_clk,
-      p_resetn_sync => s_in_resetn
+      p_resetn_sync => s_in_rst(1)
       );
+
+  reset_sync_out_in: reset_synchronizer
+    port map(
+      p_resetn => s_out_rst(1),
+      p_clk => p_in_clk,
+      p_resetn_sync => s_in_rst(0)
+      );
+
+  reset_sync_in_out: reset_synchronizer
+    port map(
+      p_resetn => s_in_rst(1),
+      p_clk => p_out_clk,
+      p_resetn_sync => s_out_rst(0)
+      );
+
+  s_out_resetn <= s_out_rst(1) and s_out_rst(0);
+  s_in_resetn <= s_in_rst(1) and s_in_rst(0);
 
   out_rptr_gray: gray_encoder
     generic map(
@@ -156,19 +168,15 @@ begin
   s_out_empty <= '1' when r_out_rptr = r_out_wptr else '0';
   s_in_full <= '1' when std_ulogic_vector(unsigned(r_in_wptr) + 1) = r_in_rptr else '0';
 
-  out_moore: process(p_out_clk)
+  out_moore: process(r_mem, r_out_rptr, s_out_resetn, s_out_empty)
   begin
-    if falling_edge(p_out_clk) then
-      p_out_data <= r_mem(to_integer(unsigned(r_out_rptr)));
-      p_out_empty_n <= not s_out_empty;
-    end if;
+    p_out_data <= r_mem(to_integer(unsigned(r_out_rptr)));
+    p_out_empty_n <= not s_out_empty and s_out_resetn;
   end process;
 
-  in_moore: process(p_in_clk)
+  in_moore: process(s_in_full, s_in_resetn)
   begin
-    if rising_edge(p_in_clk) then
-      p_in_full_n <= not s_in_full;
-    end if;
+    p_in_full_n <= not s_in_full and s_in_resetn;
   end process;
 
   rptr: process(p_out_read, r_out_rptr, s_out_empty)

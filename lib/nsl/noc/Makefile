@@ -1,1 +1,6 @@
-vhdl-sources += noc.vhd noc_router_inbound.vhd noc_router_outbound.vhd noc_router.vhd
+vhdl-sources += noc.vhd
+vhdl-sources += noc_router_inbound.vhd
+vhdl-sources += noc_router_outbound.vhd
+vhdl-sources += noc_router.vhd
+vhdl-sources += noc_fifo.vhd
+vhdl-sources += noc_async_fifo.vhd

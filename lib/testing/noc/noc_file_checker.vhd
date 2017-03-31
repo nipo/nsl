@@ -17,7 +17,9 @@ entity noc_file_checker is
     p_clk      : in  std_ulogic;
 
     p_in_val   : in noc_cmd;
-    p_in_ack   : out noc_rsp
+    p_in_ack   : out noc_rsp;
+
+    p_done     : out std_ulogic
     );
 end entity;
 
@@ -37,7 +39,8 @@ begin
       p_clk => p_clk,
       p_full_n => p_in_ack.ack,
       p_write => p_in_val.val,
-      p_data => s_fifo
+      p_data => s_fifo,
+      p_done => p_done
       );
   s_fifo <= p_in_val.more & p_in_val.data;
 

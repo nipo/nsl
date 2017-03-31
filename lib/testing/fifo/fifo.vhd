@@ -75,7 +75,9 @@ package fifo is
 
       p_full_n: out std_ulogic;
       p_write: in std_ulogic;
-      p_data: in std_ulogic_vector(width-1 downto 0)
+      p_data: in std_ulogic_vector(width-1 downto 0);
+
+      p_done     : out std_ulogic
       );
   end component;
 

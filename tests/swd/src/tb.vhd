@@ -17,7 +17,9 @@ use testing.noc.all;
 architecture arch of tb is
 
   signal s_clk : std_ulogic := '0';
+  signal s_clk2 : std_ulogic := '0';
   signal s_resetn_clk : std_ulogic;
+  signal s_resetn_clk2 : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
   signal s_swclk : std_logic;
@@ -31,15 +33,14 @@ architecture arch of tb is
   signal s_dap_wdata : unsigned(31 downto 0);
   signal s_dap_wen : std_logic;
 
-  signal s_in_val    : noc_cmd;
-  signal s_in_ack    : noc_rsp;
-  signal s_out_val   : noc_cmd;
-  signal s_out_ack   : noc_rsp;
+  signal s_in_val    : noc_cmd_array(1 downto 0);
+  signal s_in_ack    : noc_rsp_array(1 downto 0);
+  signal s_out_val   : noc_cmd_array(1 downto 0);
+  signal s_out_ack   : noc_rsp_array(1 downto 0);
   signal s_swdio_o   : std_ulogic;
   signal s_swdio_oe  : std_ulogic;
 
   signal s_done : std_ulogic;
-  shared variable sim_end : boolean := false;
 
 begin
 
@@ -48,6 +49,13 @@ begin
       p_resetn => s_resetn_async,
       p_resetn_sync => s_resetn_clk,
       p_clk => s_clk
+      );
+
+  reset_sync_clk2: nsl.util.reset_synchronizer
+    port map(
+      p_resetn => s_resetn_async,
+      p_resetn_sync => s_resetn_clk2,
+      p_clk => s_clk2
       );
 
   swdap: testing.swd.swdap
@@ -77,13 +85,13 @@ begin
 
   swd_master: nsl.swd.swd_master
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
+      p_resetn => s_resetn_clk2,
+      p_clk => s_clk2,
 
-      p_in_val => s_in_val,
-      p_in_ack => s_in_ack,
-      p_out_val => s_out_val,
-      p_out_ack => s_out_ack,
+      p_in_val => s_in_val(1),
+      p_in_ack => s_in_ack(1),
+      p_out_val => s_out_val(1),
+      p_out_ack => s_out_ack(1),
 
       p_swclk => s_swclk,
       p_swdio_o => s_swdio_o,
@@ -100,9 +108,9 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_out_val => s_in_val,
-      p_out_ack => s_in_ack,
-      p_done => s_done
+      p_out_val => s_in_val(0),
+      p_out_ack => s_in_ack(0),
+      p_done => open
       );
 
   check0: testing.noc.noc_file_checker
@@ -112,25 +120,62 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_in_val => s_out_val,
-      p_in_ack => s_out_ack
+      p_in_val => s_out_val(0),
+      p_in_ack => s_out_ack(0),
+      p_done => s_done
+      );
+
+  cmd_fifo: nsl.noc.noc_async_fifo
+    generic map(
+      depth => 128
+      )
+    port map(
+      p_resetn => s_resetn_async,
+
+      p_in_clk => s_clk,
+      p_in_val => s_in_val(0),
+      p_in_ack => s_in_ack(0),
+
+      p_out_clk => s_clk2,
+      p_out_val => s_in_val(1),
+      p_out_ack => s_in_ack(1)
+      );
+
+  rsp_fifo: nsl.noc.noc_async_fifo
+    generic map(
+      depth => 128
+      )
+    port map(
+      p_resetn => s_resetn_async,
+
+      p_in_clk => s_clk2,
+      p_in_val => s_out_val(1),
+      p_in_ack => s_out_ack(1),
+
+      p_out_clk => s_clk,
+      p_out_val => s_out_val(0),
+      p_out_ack => s_out_ack(0)
       );
 
   process
   begin
     s_resetn_async <= '0';
-    wait for 10 ns;
+    wait for 100 ns;
     s_resetn_async <= '1';
-    wait until rising_edge(s_done);
-    wait for 800 ns;
-    sim_end := true;
     wait;
   end process;
 
   clock_gen: process(s_clk)
   begin
-    if not sim_end then
+    if s_done /= '1' then
       s_clk <= not s_clk after 5 ns;
+    end if;
+  end process;
+
+  clock_gen2: process(s_clk2)
+  begin
+    if s_done /= '1' then
+      s_clk2 <= not s_clk2 after 83 ns;
     end if;
   end process;
 

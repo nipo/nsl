@@ -32,7 +32,9 @@ package noc is
       p_clk      : in  std_ulogic;
 
       p_in_val   : in noc_cmd;
-      p_in_ack   : out noc_rsp
+      p_in_ack   : out noc_rsp;
+
+      p_done     : out std_ulogic
       );
   end component;
 
