@@ -6,7 +6,7 @@ library nsl;
 use nsl.util.all;
 use nsl.fifo.all;
 
-entity sync_fifo is
+entity fifo_sync is
   generic(
     data_width : integer;
     depth      : integer
@@ -23,9 +23,9 @@ entity sync_fifo is
     p_in_write  : in  std_ulogic;
     p_in_full_n : out std_ulogic
     );
-end sync_fifo;
+end fifo_sync;
 
-architecture rtl of sync_fifo is
+architecture rtl of fifo_sync is
 
   subtype word_t is std_ulogic_vector(data_width-1 downto 0);
   type fifo_t is array(depth - 1 downto 0) of word_t;

@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.noc.all;
-
 library testing;
 use testing.fifo.all;
 
-entity noc_file_checker is
+library nsl;
+use nsl.fifo.all;
+
+entity fifo_framed_file_reader is
   generic(
     filename: string
     );
@@ -16,20 +16,20 @@ entity noc_file_checker is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in noc_cmd;
-    p_in_ack   : out noc_rsp;
+    p_out_val   : out fifo_framed_cmd;
+    p_out_ack   : in fifo_framed_rsp;
 
-    p_done     : out std_ulogic
+    p_done : out std_ulogic
     );
 end entity;
 
-architecture rtl of noc_file_checker is
+architecture rtl of fifo_framed_file_reader is
 
   signal s_fifo : std_ulogic_vector(8 downto 0);
   
 begin
 
-  check: testing.fifo.fifo_file_checker
+  gen: testing.fifo.fifo_file_reader
     generic map(
       width => 9,
       filename => filename
@@ -37,11 +37,12 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-      p_full_n => p_in_ack.ack,
-      p_write => p_in_val.val,
+      p_empty_n => p_out_val.val,
+      p_read => p_out_ack.ack,
       p_data => s_fifo,
       p_done => p_done
       );
-  s_fifo <= p_in_val.more & p_in_val.data;
+  p_out_val.more <= s_fifo(8);
+  p_out_val.data <= s_fifo(7 downto 0);
 
 end architecture;

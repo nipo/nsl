@@ -7,12 +7,12 @@ end tb;
 
 library nsl;
 use nsl.util.all;
-use nsl.noc.all;
+use nsl.fifo.all;
 use nsl.swd.all;
 
 library testing;
 use testing.swd.all;
-use testing.noc.all;
+use testing.fifo.all;
 
 architecture arch of tb is
 
@@ -33,10 +33,10 @@ architecture arch of tb is
   signal s_dap_wdata : unsigned(31 downto 0);
   signal s_dap_wen : std_logic;
 
-  signal s_in_val    : noc_cmd_array(1 downto 0);
-  signal s_in_ack    : noc_rsp_array(1 downto 0);
-  signal s_out_val   : noc_cmd_array(1 downto 0);
-  signal s_out_ack   : noc_rsp_array(1 downto 0);
+  signal s_in_val    : fifo_framed_cmd_array(1 downto 0);
+  signal s_in_ack    : fifo_framed_rsp_array(1 downto 0);
+  signal s_out_val   : fifo_framed_cmd_array(1 downto 0);
+  signal s_out_ack   : fifo_framed_rsp_array(1 downto 0);
   signal s_swdio_o   : std_ulogic;
   signal s_swdio_oe  : std_ulogic;
 
@@ -101,7 +101,7 @@ begin
 
   s_swdio <= s_swdio_o when s_swdio_oe = '1' else 'Z';
 
-  gen: testing.noc.noc_file_reader
+  gen: testing.fifo.fifo_framed_file_reader
     generic map(
       filename => "swd_commands.txt"
       )
@@ -113,7 +113,7 @@ begin
       p_done => open
       );
 
-  check0: testing.noc.noc_file_checker
+  check0: testing.fifo.fifo_framed_file_checker
     generic map(
       filename => "swd_responses.txt"
       )
@@ -125,7 +125,7 @@ begin
       p_done => s_done
       );
 
-  cmd_fifo: nsl.noc.noc_async_fifo
+  cmd_fifo: nsl.fifo.fifo_framed_async
     generic map(
       depth => 128
       )
@@ -141,7 +141,7 @@ begin
       p_out_ack => s_in_ack(1)
       );
 
-  rsp_fifo: nsl.noc.noc_async_fifo
+  rsp_fifo: nsl.fifo.fifo_framed_async
     generic map(
       depth => 128
       )

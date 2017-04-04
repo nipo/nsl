@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.noc.all;
+use nsl.fifo.all;
 use nsl.util.all;
 
 library testing;
@@ -21,10 +22,10 @@ architecture arch of tb is
   signal s_done : std_ulogic_vector(1 downto 0);
   signal s_all_done : std_ulogic;
 
-  signal n0_val : noc_cmd_array(0 downto 0);
-  signal n0_ack : noc_rsp_array(0 downto 0);
-  signal n1_val : noc_cmd_array(1 downto 0);
-  signal n1_ack : noc_rsp_array(1 downto 0);
+  signal n0_val : fifo_framed_cmd_array(0 downto 0);
+  signal n0_ack : fifo_framed_rsp_array(0 downto 0);
+  signal n1_val : fifo_framed_cmd_array(1 downto 0);
+  signal n1_ack : fifo_framed_rsp_array(1 downto 0);
 
 begin
 
@@ -35,7 +36,7 @@ begin
       p_clk => s_clk
       );
 
-  gen: testing.noc.noc_file_reader
+  gen: testing.fifo.fifo_framed_file_reader
     generic map(
       filename => "input_0.txt"
       )
@@ -46,7 +47,7 @@ begin
       p_out_ack => n0_ack(0)
       );
 
-  check0: testing.noc.noc_file_checker
+  check0: testing.fifo.fifo_framed_file_checker
     generic map(
       filename => "output_0.txt"
       )
@@ -58,7 +59,7 @@ begin
       p_done => s_done(0)
       );
 
-  check1: testing.noc.noc_file_checker
+  check1: testing.fifo.fifo_framed_file_checker
     generic map(
       filename => "output_1.txt"
       )

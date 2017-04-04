@@ -3,11 +3,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.noc.all;
+use nsl.fifo.all;
 use nsl.util.all;
 
 library testing;
-use testing.noc.all;
+use testing.fifo.all;
 
 entity tb is
 end tb;
@@ -20,8 +20,8 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 downto 0);
 
-  signal n_val : noc_cmd_array(1 downto 0);
-  signal n_ack : noc_rsp_array(1 downto 0);
+  signal n_val : fifo_framed_cmd_array(1 downto 0);
+  signal n_ack : fifo_framed_rsp_array(1 downto 0);
 
 begin
 
@@ -32,7 +32,7 @@ begin
       p_clk => s_clk
       );
 
-  gen: testing.noc.noc_file_reader
+  gen: testing.fifo.fifo_framed_file_reader
     generic map(
       filename => "swd_responses.txt"
       )
@@ -43,7 +43,7 @@ begin
       p_out_ack => n_ack(0)
       );
 
-  check: testing.noc.noc_file_checker
+  check: testing.fifo.fifo_framed_file_checker
     generic map(
       filename => "swd_responses.txt"
       )
@@ -55,7 +55,7 @@ begin
       p_done => s_done(0)
       );
 
-  fifo: nsl.noc.noc_atomic_fifo
+  fifo: nsl.fifo.fifo_framed_atomic
     generic map(
       depth => 8
       )

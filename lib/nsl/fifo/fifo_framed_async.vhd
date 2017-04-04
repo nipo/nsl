@@ -4,9 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.fifo.all;
-use nsl.noc.all;
 
-entity noc_async_fifo is
+entity fifo_framed_async is
   generic(
     depth : natural
     );
@@ -14,22 +13,22 @@ entity noc_async_fifo is
     p_resetn    : in  std_ulogic;
 
     p_in_clk    : in  std_ulogic;
-    p_in_val    : in noc_cmd;
-    p_in_ack    : out noc_rsp;
+    p_in_val    : in fifo_framed_cmd;
+    p_in_ack    : out fifo_framed_rsp;
 
     p_out_clk   : in  std_ulogic;
-    p_out_val   : out noc_cmd;
-    p_out_ack   : in noc_rsp
+    p_out_val   : out fifo_framed_cmd;
+    p_out_ack   : in fifo_framed_rsp
     );
 end entity;
 
-architecture rtl of noc_async_fifo is
+architecture rtl of fifo_framed_async is
 
   signal s_in_data, s_out_data : std_ulogic_vector(8 downto 0);
 
 begin
 
-  fifo: nsl.fifo.async_fifo
+  fifo: nsl.fifo.fifo_async
     generic map(
       depth => depth,
       data_width => 9

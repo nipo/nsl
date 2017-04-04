@@ -75,7 +75,7 @@ begin
       p_data => s_right_data
       );
 
-  fifo1: nsl.fifo.sync_fifo
+  fifo1: nsl.fifo.fifo_sync
     generic map(
       data_width => width,
       depth => 128
@@ -93,7 +93,7 @@ begin
       p_out_empty_n => s_mid_val
       );
 
-  fifo2: nsl.fifo.async_fifo
+  fifo2: nsl.fifo.fifo_async
     generic map(
       data_width => width,
       depth => 128

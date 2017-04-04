@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
+use nsl.fifo.all;
 use nsl.noc.all;
 
 entity noc_router is
@@ -15,18 +16,18 @@ entity noc_router is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in noc_cmd_array(in_port_count-1 downto 0);
-    p_in_ack   : out noc_rsp_array(in_port_count-1 downto 0);
+    p_in_val   : in fifo_framed_cmd_array(in_port_count-1 downto 0);
+    p_in_ack   : out fifo_framed_rsp_array(in_port_count-1 downto 0);
 
-    p_out_val   : out noc_cmd_array(out_port_count-1 downto 0);
-    p_out_ack   : in noc_rsp_array(out_port_count-1 downto 0)
+    p_out_val   : out fifo_framed_cmd_array(out_port_count-1 downto 0);
+    p_out_ack   : in fifo_framed_rsp_array(out_port_count-1 downto 0)
     );
 end entity;
 
 architecture rtl of noc_router is
 
-  signal s_cmd: noc_cmd_array(in_port_count-1 downto 0);
-  signal s_rsp: noc_rsp_array(out_port_count-1 downto 0);
+  signal s_cmd: fifo_framed_cmd_array(in_port_count-1 downto 0);
+  signal s_rsp: fifo_framed_rsp_array(out_port_count-1 downto 0);
 
   subtype select_in_part_t is std_ulogic_vector(in_port_count-1 downto 0);
   type select_in_t is array(natural range 0 to out_port_count-1) of select_in_part_t;

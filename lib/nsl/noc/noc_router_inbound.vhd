@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
+use nsl.fifo.all;
 use nsl.noc.all;
 
 entity noc_router_inbound is
@@ -14,11 +15,11 @@ entity noc_router_inbound is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in noc_cmd;
-    p_in_ack   : out noc_rsp;
+    p_in_val   : in fifo_framed_cmd;
+    p_in_ack   : out fifo_framed_rsp;
 
-    p_out_val  : out noc_cmd;
-    p_out_ack  : in noc_rsp_array(out_port_count-1 downto 0);
+    p_out_val  : out fifo_framed_cmd;
+    p_out_ack  : in fifo_framed_rsp_array(out_port_count-1 downto 0);
     
     p_select : out std_ulogic_vector(out_port_count-1 downto 0)
     );

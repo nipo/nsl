@@ -3,17 +3,17 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.noc.all;
+use nsl.fifo.all;
 
 entity swd_master is
   port (
     p_clk      : in  std_logic;
     p_resetn   : in  std_logic;
 
-    p_in_val    : in noc_cmd;
-    p_in_ack    : out noc_rsp;
-    p_out_val   : out noc_cmd;
-    p_out_ack   : in noc_rsp;
+    p_in_val    : in fifo_framed_cmd;
+    p_in_ack    : out fifo_framed_rsp;
+    p_out_val   : out fifo_framed_cmd;
+    p_out_ack   : in fifo_framed_rsp;
 
     p_swclk    : out std_logic;
     p_swdio_i  : in  std_logic;
@@ -34,9 +34,9 @@ architecture rtl of swd_master is
     STATE_CMD_DATA_GET,
     STATE_CMD_SHIFT,
     STATE_R0,
-    STATE_ACK_FAULT,
     STATE_ACK_OK,
     STATE_ACK_WAIT,
+    STATE_ACK_FAULT,
     STATE_R1,
     STATE_DATA_SHIFT,
     STATE_DATA_SHIFT_PAR,

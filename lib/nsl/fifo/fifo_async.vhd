@@ -6,7 +6,7 @@ library nsl;
 use nsl.util.all;
 use nsl.fifo.all;
 
-entity async_fifo is
+entity fifo_async is
   generic(
     data_width : integer;
     depth      : integer
@@ -24,9 +24,9 @@ entity async_fifo is
     p_in_write  : in  std_ulogic;
     p_in_full_n : out std_ulogic
     );
-end async_fifo;
+end fifo_async;
 
-architecture rtl of async_fifo is
+architecture rtl of fifo_async is
 
   constant count_width : integer := log2(depth);
   subtype count_t is std_ulogic_vector(count_width-1 downto 0);

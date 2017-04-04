@@ -4,10 +4,9 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.fifo.all;
-use nsl.noc.all;
 use nsl.util.all;
 
-entity noc_atomic_fifo is
+entity fifo_framed_atomic is
   generic(
     depth : natural
     );
@@ -15,19 +14,19 @@ entity noc_atomic_fifo is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in noc_cmd;
-    p_in_ack   : out noc_rsp;
+    p_in_val   : in fifo_framed_cmd;
+    p_in_ack   : out fifo_framed_rsp;
 
-    p_out_val   : out noc_cmd;
-    p_out_ack   : in noc_rsp
+    p_out_val   : out fifo_framed_cmd;
+    p_out_ack   : in fifo_framed_rsp
     );
 end entity;
 
-architecture rtl of noc_atomic_fifo is
+architecture rtl of fifo_framed_atomic is
 
   -- Just to be able to read them back
-  signal s_out_val : noc_cmd;
-  signal s_in_ack, s_out_ack : noc_rsp;
+  signal s_out_val : fifo_framed_cmd;
+  signal s_in_ack, s_out_ack : fifo_framed_rsp;
   signal s_has_one : std_ulogic;
   signal r_flush, s_flush : std_ulogic;
   constant nw : natural := 2 ** log2(depth);
@@ -69,7 +68,7 @@ begin
     end if;
   end process;
   
-  fifo: nsl.noc.noc_fifo
+  fifo: nsl.fifo.fifo_framed
     generic map(
       depth => depth
       )

@@ -1,1 +1,8 @@
-vhdl-sources += fifo.vhd fifo_counter_checker.vhd fifo_counter_generator.vhd fifo_sink.vhd fifo_file_reader.vhd fifo_file_checker.vhd
+vhdl-sources += fifo.vhd
+vhdl-sources += fifo_counter_checker.vhd
+vhdl-sources += fifo_counter_generator.vhd
+vhdl-sources += fifo_sink.vhd
+vhdl-sources += fifo_file_reader.vhd
+vhdl-sources += fifo_file_checker.vhd
+vhdl-sources += fifo_framed_file_reader.vhd
+vhdl-sources += fifo_framed_file_checker.vhd

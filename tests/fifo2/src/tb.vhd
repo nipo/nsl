@@ -62,7 +62,7 @@ begin
       p_done => s_done
       );
 
-  fifo2: nsl.fifo.async_fifo
+  fifo2: nsl.fifo.fifo_async
     generic map(
       data_width => width,
       depth => 8
