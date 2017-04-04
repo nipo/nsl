@@ -1,4 +1,3 @@
-vhdl-sources += type.vhd
 subdirs += util
 subdirs += fifo
 subdirs += noc
