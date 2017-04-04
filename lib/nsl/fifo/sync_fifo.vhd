@@ -32,9 +32,13 @@ architecture rtl of sync_fifo is
 
   subtype count_t is unsigned(log2(depth)-1 downto 0);
 
-  signal r_usage, s_usage : count_t;
-  signal r_wptr, s_wptr   : count_t;
-  signal r_rptr, s_rptr   : count_t;
+  type regs_t is record
+    usage : unsigned(log2(depth) downto 0);
+    wptr  : count_t;
+    rptr  : count_t;
+  end record;
+
+  signal r, rin : regs_t;
   
   signal r_mem  : fifo_t;
 
@@ -49,47 +53,40 @@ begin
   reg: process (p_clk, p_resetn)
   begin
     if p_resetn = '0' then
-      r_usage <= (others => '0');
-      r_wptr <= (others => '0');
-      r_rptr <= (others => '0');
+      r.usage <= (others => '0');
+      r.wptr <= (others => '0');
+      r.rptr <= (others => '0');
     elsif rising_edge(p_clk) then
-      r_usage <= s_usage;
-      r_wptr <= s_wptr;
-      r_rptr <= s_rptr;
+      r <= rin;
     end if;
   end process reg;
 
-  s_full_n <= '0' when (r_usage = depth) else p_resetn;
-  s_empty_n <= '0' when (r_usage = 0) else p_resetn;
+  s_full_n <= '0' when (r.usage = depth) else p_resetn;
+  s_empty_n <= '0' when (r.usage = 0) else p_resetn;
 
-  moore: process (p_clk)
-  begin
-    if falling_edge(p_clk) then
-      p_out_empty_n <= s_empty_n;
-      p_in_full_n <= s_full_n;
-      p_out_data <= r_mem(to_integer(r_rptr));
-    end if;
-  end process;
+  p_out_empty_n <= s_empty_n;
+  p_in_full_n <= s_full_n;
+  p_out_data <= r_mem(to_integer(r.rptr));
 
   ram_write: process (p_clk)
   begin
     if rising_edge(p_clk) then
       if s_full_n = '1' and p_in_write = '1' then
-        r_mem(to_integer(r_wptr)) <= p_in_data;
+        r_mem(to_integer(r.wptr)) <= p_in_data;
       end if;
     end if;
   end process ram_write;
 
-  put_get : process (p_out_read, r_usage, p_in_write)
+  put_get : process (p_out_read, r.usage, p_in_write)
   begin
     s_put <= false;
     s_get <= false;
     
-    if r_usage = 0 then                                -- empty
+    if r.usage = 0 then
       if p_in_write = '1' then
         s_put <= true;
       end if;
-    elsif r_usage = depth then                    -- full
+    elsif r.usage = depth then
       if p_out_read = '1' then
         s_get <= true;
       end if;
@@ -105,38 +102,38 @@ begin
     end if;
   end process;
 
-  next_usage: process (s_get, s_put, r_usage)
+  next_usage: process (s_get, s_put, r.usage)
   begin
-    s_usage <= r_usage;
+    rin.usage <= r.usage;
     if s_get and not s_put then
-      s_usage <= r_usage - 1;
+      rin.usage <= r.usage - 1;
     elsif not s_get and s_put then
-      s_usage <= r_usage + 1;
+      rin.usage <= r.usage + 1;
     end if;
   end process next_usage;
 
   not_if_null: if depth > 1 generate
     
-    next_rptr: process (s_get, r_rptr)
+    next_rptr: process (s_get, r.rptr)
     begin
-      s_rptr <= r_rptr;
+      rin.rptr <= r.rptr;
       if s_get then
-        if r_rptr = depth - 1 then
-          s_rptr <= (others => '0');
+        if r.rptr = depth - 1 then
+          rin.rptr <= (others => '0');
         else
-          s_rptr <= r_rptr + 1;
+          rin.rptr <= r.rptr + 1;
         end if;
       end if;
     end process next_rptr;
     
-    next_wptr: process (s_put, r_wptr)
+    next_wptr: process (s_put, r.wptr)
     begin
-      s_wptr <= r_wptr;
+      rin.wptr <= r.wptr;
       if s_put then
-        if r_wptr = depth - 1 then
-          s_wptr <= (others => '0');
+        if r.wptr = depth - 1 then
+          rin.wptr <= (others => '0');
         else
-          s_wptr <= r_wptr + 1;
+          rin.wptr <= r.wptr + 1;
         end if;
       end if;
     end process next_wptr;
@@ -144,10 +141,8 @@ begin
   end generate not_if_null;
 
   if_null: if depth <= 1 generate
-    
-    s_rptr <= (others => '0');
-    s_wptr <= (others => '0');
-    
+    rin.rptr <= (others => '0');
+    rin.wptr <= (others => '0');
   end generate if_null;
    
 end rtl;

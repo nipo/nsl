@@ -1,0 +1,68 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Tue Apr  4 06:27:37 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/noc_atomic/tb.ghw"
+[dumpfile_mtime] "Tue Apr  4 06:25:59 2017"
+[dumpfile_size] 15307
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/noc_atomic/context.gtkw"
+[timestart] 0
+[size] 1341 656
+[pos] -1 -1
+*-27,949955 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.check.
+[treeopen] top.tb.fifo.
+[treeopen] top.tb.fifo.p_in_val.
+[treeopen] top.tb.fifo.p_out_val.
+[treeopen] top.tb.fifo.s_out_val.
+[sst_width] 193
+[signals_width] 159
+[sst_expanded] 1
+[sst_vpaned_height] 188
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+@800200
+-input
+@28
+top.tb.fifo.p_in_val.val
+top.tb.fifo.p_in_ack.ack
+@22
+#{top.tb.fifo.p_in_val.data[7:0]} top.tb.fifo.p_in_val.data[7] top.tb.fifo.p_in_val.data[6] top.tb.fifo.p_in_val.data[5] top.tb.fifo.p_in_val.data[4] top.tb.fifo.p_in_val.data[3] top.tb.fifo.p_in_val.data[2] top.tb.fifo.p_in_val.data[1] top.tb.fifo.p_in_val.data[0]
+@28
+top.tb.fifo.p_in_val.more
+@1000200
+-input
+@28
+top.tb.fifo.s_has_one
+top.tb.fifo.r_complete
+@29
+top.tb.fifo.r_flush
+@800200
+-output
+@28
+top.tb.fifo.p_out_val.val
+top.tb.fifo.s_out_val.val
+top.tb.fifo.p_out_ack.ack
+top.tb.fifo.s_out_ack.ack
+@22
+#{top.tb.fifo.p_out_val.data[7:0]} top.tb.fifo.p_out_val.data[7] top.tb.fifo.p_out_val.data[6] top.tb.fifo.p_out_val.data[5] top.tb.fifo.p_out_val.data[4] top.tb.fifo.p_out_val.data[3] top.tb.fifo.p_out_val.data[2] top.tb.fifo.p_out_val.data[1] top.tb.fifo.p_out_val.data[0]
+@28
+top.tb.fifo.p_out_val.more
+@1000200
+-output
+@800200
+-fifo
+@28
+top.tb.fifo.fifo.fifo.s_full_n
+top.tb.fifo.fifo.fifo.s_put
+top.tb.fifo.fifo.fifo.s_get
+@22
+#{top.tb.fifo.fifo.s_out_data[8:0]} top.tb.fifo.fifo.s_out_data[8] top.tb.fifo.fifo.s_out_data[7] top.tb.fifo.fifo.s_out_data[6] top.tb.fifo.fifo.s_out_data[5] top.tb.fifo.fifo.s_out_data[4] top.tb.fifo.fifo.s_out_data[3] top.tb.fifo.fifo.s_out_data[2] top.tb.fifo.fifo.s_out_data[1] top.tb.fifo.fifo.s_out_data[0]
+#{top.tb.fifo.fifo.s_in_data[8:0]} top.tb.fifo.fifo.s_in_data[8] top.tb.fifo.fifo.s_in_data[7] top.tb.fifo.fifo.s_in_data[6] top.tb.fifo.fifo.s_in_data[5] top.tb.fifo.fifo.s_in_data[4] top.tb.fifo.fifo.s_in_data[3] top.tb.fifo.fifo.s_in_data[2] top.tb.fifo.fifo.s_in_data[1] top.tb.fifo.fifo.s_in_data[0]
+@1000200
+-fifo
+[pattern_trace] 1
+[pattern_trace] 0
