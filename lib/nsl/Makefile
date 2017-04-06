@@ -1,5 +1,6 @@
 subdirs += util
 subdirs += fifo
+subdirs += mii
 subdirs += noc
 subdirs += ftdi
 subdirs += swd

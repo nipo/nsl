@@ -1,0 +1,70 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Wed Apr  5 20:19:28 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/mii/tb.ghw"
+[dumpfile_mtime] "Wed Apr  5 20:18:07 2017"
+[dumpfile_size] 51634
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/mii/context.gtkw"
+[timestart] 128000000
+[size] 1257 793
+[pos] -1 -1
+*-25,789175 302200000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.from_mii.
+[treeopen] top.tb.from_mii.r.
+[treeopen] top.tb.s_framed_ack.
+[treeopen] top.tb.s_framed_val.
+[treeopen] top.tb.s_framed_val.[0].
+[treeopen] top.tb.s_framed_val.[1].
+[treeopen] top.tb.s_mii_data.
+[treeopen] top.tb.to_mii.
+[sst_width] 193
+[signals_width] 195
+[sst_expanded] 1
+[sst_vpaned_height] 236
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+@800200
+-input
+@28
+top.tb.s_framed_val[0].val
+top.tb.s_framed_ack[0].ack
+top.tb.s_framed_val[0].more
+@22
+#{top.tb.s_framed_val[0].data[7:0]} top.tb.s_framed_val[0].data[7] top.tb.s_framed_val[0].data[6] top.tb.s_framed_val[0].data[5] top.tb.s_framed_val[0].data[4] top.tb.s_framed_val[0].data[3] top.tb.s_framed_val[0].data[2] top.tb.s_framed_val[0].data[1] top.tb.s_framed_val[0].data[0]
+@1000200
+-input
+@28
+top.tb.to_mii.r.state
+top.tb.to_mii.r.done
+@800200
+-mii
+@28
+top.tb.s_mii_data.er
+@22
+#{top.tb.s_mii_data.d[3:0]} top.tb.s_mii_data.d[3] top.tb.s_mii_data.d[2] top.tb.s_mii_data.d[1] top.tb.s_mii_data.d[0]
+@28
+top.tb.s_mii_data.dv
+@1000200
+-mii
+@28
+top.tb.from_mii.r.state
+@23
+#{top.tb.from_mii.r.data_in[7:0]} top.tb.from_mii.r.data_in[7] top.tb.from_mii.r.data_in[6] top.tb.from_mii.r.data_in[5] top.tb.from_mii.r.data_in[4] top.tb.from_mii.r.data_in[3] top.tb.from_mii.r.data_in[2] top.tb.from_mii.r.data_in[1] top.tb.from_mii.r.data_in[0]
+@22
+#{top.tb.from_mii.r.data_out[7:0]} top.tb.from_mii.r.data_out[7] top.tb.from_mii.r.data_out[6] top.tb.from_mii.r.data_out[5] top.tb.from_mii.r.data_out[4] top.tb.from_mii.r.data_out[3] top.tb.from_mii.r.data_out[2] top.tb.from_mii.r.data_out[1] top.tb.from_mii.r.data_out[0]
+@800200
+-output
+@28
+top.tb.s_framed_ack[1].ack
+top.tb.s_framed_val[1].val
+top.tb.s_framed_val[1].more
+@22
+#{top.tb.s_framed_val[1].data[7:0]} top.tb.s_framed_val[1].data[7] top.tb.s_framed_val[1].data[6] top.tb.s_framed_val[1].data[5] top.tb.s_framed_val[1].data[4] top.tb.s_framed_val[1].data[3] top.tb.s_framed_val[1].data[2] top.tb.s_framed_val[1].data[1] top.tb.s_framed_val[1].data[0]
+@1000200
+-output
+[pattern_trace] 1
+[pattern_trace] 0
