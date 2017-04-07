@@ -33,16 +33,11 @@ architecture rtl of ti_easyscale is
 
   type state_t is (
     STATE_IDLE,
-    STATE_DADR_START,
-    STATE_DADR_LOW,
-    STATE_DADR_BIT,
-    STATE_DADR_HIGH,
-    STATE_DADR_EOS,
-    STATE_DATA_START,
-    STATE_DATA_LOW,
-    STATE_DATA_BIT,
-    STATE_DATA_HIGH,
-    STATE_DATA_EOS,
+    STATE_START,
+    STATE_LOW,
+    STATE_BIT,
+    STATE_HIGH,
+    STATE_EOS,
     STATE_DEV_ACK
     );
 
@@ -50,8 +45,7 @@ architecture rtl of ti_easyscale is
     wait_ctr: natural range 0 to cycles_per_2us - 1;
     bit_ctr: natural range 0 to 511;
     state: state_t;
-    addr : std_ulogic_vector(7 downto 0);
-    data : std_ulogic_vector(7 downto 0);
+    cmd : std_ulogic_vector(15 downto 0);
     ack_req : std_ulogic;
     dev_ack : std_ulogic;
   end record;
@@ -64,6 +58,7 @@ begin
   begin
     if p_resetn = '0' then
       r.state <= STATE_IDLE;
+      r.dev_ack <= '0';
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
@@ -75,11 +70,11 @@ begin
 
     if r.state = STATE_IDLE then
       if p_start = '1' then
-        rin.state <= STATE_DADR_START;
-        rin.addr <= p_dev_addr;
+        rin.state <= STATE_START;
+        rin.cmd <= p_dev_addr & p_ack_req & p_reg_addr & p_data;
         rin.ack_req <= p_ack_req;
-        rin.data <= p_ack_req & p_reg_addr & p_data;
         rin.wait_ctr <= cycles_per_2us - 1;
+        rin.bit_ctr <= 15;
       end if;
     else
       if r.wait_ctr /= 0 then
@@ -88,42 +83,30 @@ begin
         rin.wait_ctr <= cycles_per_2us - 1;
 
         case r.state is
-          when STATE_DADR_START =>
-            rin.bit_ctr <= 7;
-            rin.state <= STATE_DADR_LOW;
-          when STATE_DADR_LOW =>
-            rin.state <= STATE_DADR_BIT;
-          when STATE_DADR_BIT =>
-            rin.state <= STATE_DADR_HIGH;
-          when STATE_DADR_HIGH =>
-            if r.bit_ctr = 0 then
-              rin.state <= STATE_DADR_EOS;
+          when STATE_START =>
+            rin.state <= STATE_LOW;
+          when STATE_LOW =>
+            rin.state <= STATE_BIT;
+          when STATE_BIT =>
+            rin.state <= STATE_HIGH;
+          when STATE_HIGH =>
+            if r.bit_ctr = 8 or r.bit_ctr = 0 then
+              rin.state <= STATE_EOS;
             else
-              rin.bit_ctr <= r.bit_ctr - 1;
-              rin.state <= STATE_DADR_LOW;
+              rin.state <= STATE_LOW;
             end if;
-          when STATE_DADR_EOS =>
-            rin.state <= STATE_DATA_START;
-          when STATE_DATA_START =>
-            rin.bit_ctr <= 7;
-            rin.state <= STATE_DATA_LOW;
-          when STATE_DATA_LOW =>
-            rin.state <= STATE_DATA_BIT;
-          when STATE_DATA_BIT =>
-            rin.state <= STATE_DATA_HIGH;
-          when STATE_DATA_HIGH =>
-            if r.bit_ctr = 0 then
-              rin.state <= STATE_DATA_EOS;
+            rin.bit_ctr <= (r.bit_ctr - 1) mod 512;
+          when STATE_EOS =>
+            if r.bit_ctr /= 7 then
+              if r.ack_req = '1' then
+                rin.state <= STATE_DEV_ACK;
+                rin.bit_ctr <= 511;
+              else
+                rin.state <= STATE_IDLE;
+                rin.dev_ack <= '1';
+              end if;
             else
-              rin.bit_ctr <= r.bit_ctr - 1;
-              rin.state <= STATE_DATA_LOW;
-            end if;
-          when STATE_DATA_EOS =>
-            if r.ack_req = '1' then
-              rin.state <= STATE_DEV_ACK;
-              rin.bit_ctr <= 511;
-            else
-              rin.state <= STATE_IDLE;
+              rin.state <= STATE_START;
             end if;
           when STATE_DEV_ACK =>
             if r.bit_ctr = 0 then
@@ -132,7 +115,7 @@ begin
               if r.bit_ctr = 256 then
                 rin.dev_ack <= not p_easyscale;
               end if;
-              rin.bit_ctr <= r.bit_ctr - 1;
+              rin.bit_ctr <= (r.bit_ctr - 1) mod 512;
             end if;
           when others =>
             null;
@@ -146,18 +129,14 @@ begin
     case r.state is
       when STATE_IDLE =>
         p_easyscale <= '1';
-      when STATE_DADR_START | STATE_DADR_HIGH
-        | STATE_DATA_START | STATE_DATA_HIGH =>
+      when STATE_START | STATE_HIGH =>
         p_easyscale <= '1';
-      when STATE_DADR_EOS | STATE_DADR_LOW
-        | STATE_DATA_EOS | STATE_DATA_LOW =>
+      when STATE_EOS | STATE_LOW =>
         p_easyscale <= '0';
       when STATE_DEV_ACK =>
         p_easyscale <= 'H';
-      when STATE_DADR_BIT =>
-        p_easyscale <= r.addr(r.bit_ctr);
-      when STATE_DATA_BIT =>
-        p_easyscale <= r.data(r.bit_ctr);
+      when STATE_BIT =>
+        p_easyscale <= r.cmd(r.bit_ctr mod 16);
     end case;
   end process;
 
@@ -166,11 +145,11 @@ begin
     case r.state is
       when STATE_IDLE =>
         p_busy <= '0';
-        p_dev_ack <= r.dev_ack;
       when others =>
         p_busy <= '1';
-        p_dev_ack <= 'X';
     end case;
   end process;
+
+  p_dev_ack <= r.dev_ack;
 
 end architecture;
