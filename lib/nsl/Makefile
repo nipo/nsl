@@ -5,4 +5,4 @@ subdirs += noc
 subdirs += ftdi
 subdirs += swd
 subdirs += logic_analyzer
-
+subdirs += ti

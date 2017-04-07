@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Fri Apr  7 06:09:33 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/easyscale/tb.ghw"
+[dumpfile_mtime] "Fri Apr  7 06:04:02 2017"
+[dumpfile_size] 2864087
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/easyscale/context.gtkw"
+[timestart] 671800000000
+[size] 1253 701
+[pos] -1 -1
+*-34,827618 685800000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.es.
+[treeopen] top.tb.es.r.
+[sst_width] 193
+[signals_width] 133
+[sst_expanded] 1
+[sst_vpaned_height] 204
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+top.tb.s_dev_ack
+top.tb.s_busy
+top.tb.s_start
+top.tb.s_ack_req
+top.tb.es.r.state
+top.tb.s_easyscale
+@29
+top.tb.s_done
+[pattern_trace] 1
+[pattern_trace] 0
