@@ -1,9 +1,3 @@
-simulate: elaborate
-
-elaborate: analyze
-
-analyze: 
-
 tool ?= debug
 
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
