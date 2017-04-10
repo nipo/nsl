@@ -6,3 +6,4 @@ subdirs += ftdi
 subdirs += swd
 subdirs += logic_analyzer
 subdirs += ti
+subdirs += ioext
