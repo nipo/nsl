@@ -1,0 +1,33 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Mon Apr 10 11:36:34 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/tb.ghw"
+[dumpfile_mtime] "Mon Apr 10 11:35:32 2017"
+[dumpfile_size] 49222
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/context.gtkw"
+[timestart] 12497000000
+[size] 1316 727
+[pos] -1 -1
+*-30,638842 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.io.
+[treeopen] top.tb.io.r.
+[treeopen] top.tb.reset_sync_clk.
+[sst_width] 193
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 213
+@28
+top.tb.s_data_valid
+top.tb.s_accept
+top.tb.s_uart
+top.tb.s_resetn_async
+top.tb.s_resetn_clk
+top.tb.s_clk
+@22
+#{top.tb.s_data[7:0]} top.tb.s_data[7] top.tb.s_data[6] top.tb.s_data[5] top.tb.s_data[4] top.tb.s_data[3] top.tb.s_data[2] top.tb.s_data[1] top.tb.s_data[0]
+#{top.tb.io.r.data[7:0]} top.tb.io.r.data[7] top.tb.io.r.data[6] top.tb.io.r.data[5] top.tb.io.r.data[4] top.tb.io.r.data[3] top.tb.io.r.data[2] top.tb.io.r.data[1] top.tb.io.r.data[0]
+[pattern_trace] 1
+[pattern_trace] 0

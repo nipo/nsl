@@ -7,3 +7,4 @@ subdirs += swd
 subdirs += logic_analyzer
 subdirs += ti
 subdirs += ioext
+subdirs += uart
