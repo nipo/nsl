@@ -21,4 +21,20 @@ package uart is
       );
   end component;
 
+  component uart_8n1_rx is
+    generic(
+      p_clk_rate : natural;
+      baud_rate : natural
+      );
+    port(
+      p_resetn    : in std_ulogic;
+      p_clk       : in std_ulogic;
+
+      p_uart_rx   : in std_ulogic;
+
+      p_data      : out std_ulogic_vector(7 downto 0);
+      p_data_val  : out std_ulogic
+      );
+  end component;
+
 end package uart;

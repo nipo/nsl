@@ -1,33 +1,51 @@
 [*]
 [*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
-[*] Mon Apr 10 11:36:34 2017
+[*] Mon Apr 10 12:13:12 2017
 [*]
 [dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/tb.ghw"
-[dumpfile_mtime] "Mon Apr 10 11:35:32 2017"
-[dumpfile_size] 49222
+[dumpfile_mtime] "Mon Apr 10 12:04:23 2017"
+[dumpfile_size] 3338887
 [savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/context.gtkw"
-[timestart] 12497000000
-[size] 1316 727
+[timestart] 0
+[size] 1334 822
 [pos] -1 -1
-*-30,638842 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-31,266354 8880000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
-[treeopen] top.tb.io.
-[treeopen] top.tb.io.r.
-[treeopen] top.tb.reset_sync_clk.
+[treeopen] top.tb.check.
+[treeopen] top.tb.gen.
+[treeopen] top.tb.s_data.
+[treeopen] top.tb.u_in.
+[treeopen] top.tb.u_in.r.
+[treeopen] top.tb.u_out.
+[treeopen] top.tb.u_out.r.
 [sst_width] 193
-[signals_width] 150
+[signals_width] 301
 [sst_expanded] 1
-[sst_vpaned_height] 213
+[sst_vpaned_height] 247
 @28
-top.tb.s_data_valid
 top.tb.s_accept
 top.tb.s_uart
 top.tb.s_resetn_async
 top.tb.s_resetn_clk
 top.tb.s_clk
 @22
-#{top.tb.s_data[7:0]} top.tb.s_data[7] top.tb.s_data[6] top.tb.s_data[5] top.tb.s_data[4] top.tb.s_data[3] top.tb.s_data[2] top.tb.s_data[1] top.tb.s_data[0]
-#{top.tb.io.r.data[7:0]} top.tb.io.r.data[7] top.tb.io.r.data[6] top.tb.io.r.data[5] top.tb.io.r.data[4] top.tb.io.r.data[3] top.tb.io.r.data[2] top.tb.io.r.data[1] top.tb.io.r.data[0]
+#{top.tb.u_in.r.data[7:0]} top.tb.u_in.r.data[7] top.tb.u_in.r.data[6] top.tb.u_in.r.data[5] top.tb.u_in.r.data[4] top.tb.u_in.r.data[3] top.tb.u_in.r.data[2] top.tb.u_in.r.data[1] top.tb.u_in.r.data[0]
+#{top.tb.s_data[0][7:0]} top.tb.s_data[0][7] top.tb.s_data[0][6] top.tb.s_data[0][5] top.tb.s_data[0][4] top.tb.s_data[0][3] top.tb.s_data[0][2] top.tb.s_data[0][1] top.tb.s_data[0][0]
+@28
+top.tb.u_in.r.state
+top.tb.u_in.r.bit_ctr
+top.tb.u_out.r.bit_ctr
+#{top.tb.s_data_valid[1:0]} top.tb.s_data_valid[1] top.tb.s_data_valid[0]
+@22
+#{top.tb.s_data[1][7:0]} top.tb.s_data[1][7] top.tb.s_data[1][6] top.tb.s_data[1][5] top.tb.s_data[1][4] top.tb.s_data[1][3] top.tb.s_data[1][2] top.tb.s_data[1][1] top.tb.s_data[1][0]
+@29
+top.tb.u_out.r.state
+@28
+top.tb.u_in.r.clk_div
+@22
+#{top.tb.u_out.r.data[7:0]} top.tb.u_out.r.data[7] top.tb.u_out.r.data[6] top.tb.u_out.r.data[5] top.tb.u_out.r.data[4] top.tb.u_out.r.data[3] top.tb.u_out.r.data[2] top.tb.u_out.r.data[1] top.tb.u_out.r.data[0]
+#{top.tb.check.s_next[7:0]} top.tb.check.s_next[7] top.tb.check.s_next[6] top.tb.check.s_next[5] top.tb.check.s_next[4] top.tb.check.s_next[3] top.tb.check.s_next[2] top.tb.check.s_next[1] top.tb.check.s_next[0]
+#{top.tb.check.r_last[7:0]} top.tb.check.r_last[7] top.tb.check.r_last[6] top.tb.check.r_last[5] top.tb.check.r_last[4] top.tb.check.r_last[3] top.tb.check.r_last[2] top.tb.check.r_last[1] top.tb.check.r_last[0]
 [pattern_trace] 1
 [pattern_trace] 0
