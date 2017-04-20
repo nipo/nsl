@@ -68,7 +68,7 @@ ise-build/$(top).ngd: ise-build/$(top).ngc
 	    -bm ise-build/$(top).bmm \
 	    $@
 
-ise-build/$(top).ngc: $(SOURCES) ise-build/$(top).xst ise-build/$(top).prj
+ise-build/$(top).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) ise-build/$(top).xst ise-build/$(top).prj
 	source $(ISE_ENV) ; \
 	xst $(INTF_STYLE) -ifn ise-build/$(top).xst
 
@@ -83,7 +83,7 @@ define ise_library_do
 	
 endef
 
-ise-build/$(top).prj: $(SOURCES)
+ise-build/$(top).prj: $(foreach l,$(libraries),$($l-vhdl-sources))
 	> $@.tmp
 	$(foreach l,$(libraries),$(call ise_library_do,$l))
 	sort -u $@.tmp > $@
