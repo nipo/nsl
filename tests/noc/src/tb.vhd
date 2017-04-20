@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.noc.all;
-use nsl.fifo.all;
+use nsl.flit.all;
 use nsl.util.all;
 
 library testing;
-use testing.noc.all;
+use testing.flit.all;
 
 entity tb is
 end tb;
@@ -22,10 +22,10 @@ architecture arch of tb is
   signal s_done : std_ulogic_vector(1 downto 0);
   signal s_all_done : std_ulogic;
 
-  signal n0_val : fifo_framed_cmd_array(0 downto 0);
-  signal n0_ack : fifo_framed_rsp_array(0 downto 0);
-  signal n1_val : fifo_framed_cmd_array(1 downto 0);
-  signal n1_ack : fifo_framed_rsp_array(1 downto 0);
+  signal n0_val : flit_cmd_array(0 downto 0);
+  signal n0_ack : flit_ack_array(0 downto 0);
+  signal n1_val : flit_cmd_array(1 downto 0);
+  signal n1_ack : flit_ack_array(1 downto 0);
 
 begin
 
@@ -36,7 +36,7 @@ begin
       p_clk => s_clk
       );
 
-  gen: testing.fifo.fifo_framed_file_reader
+  gen: testing.flit.flit_file_reader
     generic map(
       filename => "input_0.txt"
       )
@@ -47,7 +47,7 @@ begin
       p_out_ack => n0_ack(0)
       );
 
-  check0: testing.fifo.fifo_framed_file_checker
+  check0: testing.flit.flit_file_checker
     generic map(
       filename => "output_0.txt"
       )
@@ -59,7 +59,7 @@ begin
       p_done => s_done(0)
       );
 
-  check1: testing.fifo.fifo_framed_file_checker
+  check1: testing.flit.flit_file_checker
     generic map(
       filename => "output_1.txt"
       )

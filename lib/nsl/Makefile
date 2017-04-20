@@ -1,7 +1,6 @@
 subdirs += util
 subdirs += fifo
 subdirs += mii
-subdirs += noc
 subdirs += ftdi
 subdirs += swd
 subdirs += logic_analyzer
@@ -9,4 +8,4 @@ subdirs += ti
 subdirs += ioext
 subdirs += uart
 subdirs += flit
-
+subdirs += noc
