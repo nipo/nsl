@@ -6,7 +6,7 @@ library nsl;
 use nsl.mii.all;
 use nsl.fifo.all;
 
-entity mii_from_framed is
+entity rmii_from_framed is
   generic(
     inter_frame : natural := 56
     );
@@ -14,28 +14,29 @@ entity mii_from_framed is
     p_clk : in std_ulogic;
     p_resetn : in std_ulogic;
 
-    p_mii_data : out mii_datapath;
+    p_rmii_data : out rmii_datapath;
 
     p_framed_val : in fifo_framed_cmd;
     p_framed_ack : out fifo_framed_rsp
     );
 end entity;
 
-architecture rtl of mii_from_framed is
+architecture rtl of rmii_from_framed is
 
   type state_t is (
     STATE_IDLE,
-    STATE_FW0,
-    STATE_FW1,
+    STATE_SOF,
+    STATE_FW,
     STATE_IFS
     );
-  
+
   type regs_t is record
     wait_ctr: natural range 0 to inter_frame;
     state: state_t;
+    dibit_count: unsigned(1 downto 0);
     data: std_ulogic_vector(7 downto 0);
     underflow: std_ulogic;
-    done: std_ulogic;
+    more: std_ulogic;
   end record;
   
   signal r, rin : regs_t;
@@ -58,28 +59,31 @@ begin
     case r.state is
       when STATE_IDLE =>
         if p_framed_val.val = '1' then
-          rin.state <= STATE_FW0;
+          rin.state <= STATE_SOF;
+          rin.dibit_count <= "00";
           rin.data <= p_framed_val.data;
           rin.underflow <= '0';
-          rin.done <= '0';
+          rin.more <= '1';
         end if;
 
-      when STATE_FW0 =>
-        rin.state <= STATE_FW1;
+      when STATE_SOF =>
+        rin.dibit_count <= r.dibit_count + 1;
+        if r.dibit_count = "11" then
+          rin.state <= STATE_FW;
+        end if;
 
-      when STATE_FW1 =>
-        if r.done = '1' then
-          rin.state <= STATE_IFS;
-          rin.wait_ctr <= inter_frame;
-        else
-          rin.state <= STATE_FW0;
-          rin.done <= not p_framed_val.more;
-          if p_framed_val.val = '1' then
-            rin.data <= p_framed_val.data;
-          else
-            rin.data <= (others => 'X');
-            rin.underflow <= '1';
+      when STATE_FW =>
+        rin.dibit_count <= r.dibit_count + 1;
+        if r.dibit_count = "11" then
+          rin.data <= p_framed_val.data;
+          rin.more <= p_framed_val.more;
+
+          if r.more = '0' then
+            rin.state <= STATE_IFS;
+            rin.wait_ctr <= inter_frame;
           end if;
+        else
+          rin.data <= "XX" & r.data(7 downto 2);
         end if;
 
       when STATE_IFS =>
@@ -96,27 +100,31 @@ begin
     if falling_edge(p_clk) then
       case r.state is
         when STATE_IDLE =>
-          p_mii_data.dv <= '0';
-          p_mii_data.er <= '0';
-          p_mii_data.d <= (others => 'X');
+          p_rmii_data.dv <= '0';
+          p_rmii_data.d <= (others => 'X');
           p_framed_ack.ack <= '1';
 
-        when STATE_FW0 =>
-          p_mii_data.dv <= '1';
-          p_mii_data.er <= r.underflow;
-          p_mii_data.d <= r.data(3 downto 0);
+        when STATE_SOF =>
+          p_rmii_data.dv <= '1';
+          if r.dibit_count = "11" then
+            p_rmii_data.d <= "11";
+          else
+            p_rmii_data.d <= "01";
+          end if;
           p_framed_ack.ack <= '0';
 
-        when STATE_FW1 =>
-          p_mii_data.dv <= '1';
-          p_mii_data.er <= r.underflow;
-          p_mii_data.d <= r.data(7 downto 4);
-          p_framed_ack.ack <= not r.done;
+        when STATE_FW =>
+          p_rmii_data.dv <= '1';
+          p_rmii_data.d <= r.data(1 downto 0);
+          if r.dibit_count = "11" then
+            p_framed_ack.ack <= r.more;
+          else
+            p_framed_ack.ack <= '0';
+          end if;
 
         when STATE_IFS =>
-          p_mii_data.dv <= '0';
-          p_mii_data.er <= '0';
-          p_mii_data.d <= (others => 'X');
+          p_rmii_data.dv <= '0';
+          p_rmii_data.d <= (others => 'X');
           p_framed_ack.ack <= '0';
       end case;
     end if;

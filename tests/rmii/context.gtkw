@@ -1,0 +1,69 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Tue Apr 18 06:34:52 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/rmii/tb.ghw"
+[dumpfile_mtime] "Tue Apr 18 06:32:12 2017"
+[dumpfile_size] 88892
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/rmii/context.gtkw"
+[timestart] 64400000
+[size] 1257 793
+[pos] -1 -1
+*-25,904619 230500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.from_rmii.
+[treeopen] top.tb.from_rmii.r.
+[treeopen] top.tb.s_framed_ack.
+[treeopen] top.tb.s_framed_val.
+[treeopen] top.tb.s_framed_val.[0].
+[treeopen] top.tb.s_framed_val.[1].
+[treeopen] top.tb.s_rmii_data.
+[treeopen] top.tb.to_rmii.
+[treeopen] top.tb.to_rmii.r.
+[sst_width] 193
+[signals_width] 266
+[sst_expanded] 1
+[sst_vpaned_height] 236
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+@800200
+-input
+@28
+top.tb.s_framed_val[0].val
+top.tb.s_framed_ack[0].ack
+top.tb.s_framed_val[0].more
+@22
+#{top.tb.s_framed_val[0].data[7:0]} top.tb.s_framed_val[0].data[7] top.tb.s_framed_val[0].data[6] top.tb.s_framed_val[0].data[5] top.tb.s_framed_val[0].data[4] top.tb.s_framed_val[0].data[3] top.tb.s_framed_val[0].data[2] top.tb.s_framed_val[0].data[1] top.tb.s_framed_val[0].data[0]
+@1000200
+-input
+@28
+top.tb.to_rmii.r.state
+@29
+#{top.tb.to_rmii.r.data[7:0]} top.tb.to_rmii.r.data[7] top.tb.to_rmii.r.data[6] top.tb.to_rmii.r.data[5] top.tb.to_rmii.r.data[4] top.tb.to_rmii.r.data[3] top.tb.to_rmii.r.data[2] top.tb.to_rmii.r.data[1] top.tb.to_rmii.r.data[0]
+@28
+top.tb.to_rmii.r.more
+@800200
+-mii
+@28
+top.tb.s_rmii_data.dv
+#{top.tb.s_rmii_data.d[1:0]} top.tb.s_rmii_data.d[1] top.tb.s_rmii_data.d[0]
+@1000200
+-mii
+@28
+top.tb.from_rmii.r.state
+@22
+#{top.tb.from_rmii.r.data[7:0]} top.tb.from_rmii.r.data[7] top.tb.from_rmii.r.data[6] top.tb.from_rmii.r.data[5] top.tb.from_rmii.r.data[4] top.tb.from_rmii.r.data[3] top.tb.from_rmii.r.data[2] top.tb.from_rmii.r.data[1] top.tb.from_rmii.r.data[0]
+@800200
+-output
+@28
+top.tb.s_framed_ack[1].ack
+top.tb.s_framed_val[1].val
+top.tb.s_framed_val[1].more
+@22
+#{top.tb.s_framed_val[1].data[7:0]} top.tb.s_framed_val[1].data[7] top.tb.s_framed_val[1].data[6] top.tb.s_framed_val[1].data[5] top.tb.s_framed_val[1].data[4] top.tb.s_framed_val[1].data[3] top.tb.s_framed_val[1].data[2] top.tb.s_framed_val[1].data[1] top.tb.s_framed_val[1].data[0]
+@1000200
+-output
+[pattern_trace] 1
+[pattern_trace] 0

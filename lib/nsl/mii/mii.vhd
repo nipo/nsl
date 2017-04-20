@@ -36,12 +36,16 @@ package mii is
     col : std_ulogic;
   end record;
 
+  type rmii_datapath is record
+    d  : std_ulogic_vector(1 downto 0);
+    dv : std_ulogic;
+  end record;
+
   component mii_to_framed is
     port(
       p_clk : in std_ulogic;
       p_resetn : in std_ulogic;
 
-      p_mii_clk  : out std_ulogic;
       p_mii_data : in mii_datapath;
 
       p_framed_val : out fifo_framed_cmd;
@@ -57,8 +61,34 @@ package mii is
       p_clk : in std_ulogic;
       p_resetn : in std_ulogic;
 
-      p_mii_clk  : out std_ulogic;
       p_mii_data : out mii_datapath;
+
+      p_framed_val : in fifo_framed_cmd;
+      p_framed_ack : out fifo_framed_rsp
+      );
+  end component;
+
+  component rmii_to_framed is
+    port(
+      p_clk : in std_ulogic;
+      p_resetn : in std_ulogic;
+
+      p_rmii_data  : in rmii_datapath;
+
+      p_framed_val : out fifo_framed_cmd;
+      p_framed_ack : in fifo_framed_rsp
+      );
+  end component;
+
+  component rmii_from_framed is
+    generic(
+      inter_frame : natural := 56
+      );
+    port(
+      p_clk : in std_ulogic;
+      p_resetn : in std_ulogic;
+
+      p_rmii_data  : out rmii_datapath;
 
       p_framed_val : in fifo_framed_cmd;
       p_framed_ack : out fifo_framed_rsp

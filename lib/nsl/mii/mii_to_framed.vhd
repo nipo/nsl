@@ -11,7 +11,6 @@ entity mii_to_framed is
     p_clk : in std_ulogic;
     p_resetn : in std_ulogic;
 
-    p_mii_clk  : out std_ulogic;
     p_mii_data : in mii_datapath;
 
     p_framed_val : out fifo_framed_cmd;
@@ -103,7 +102,6 @@ begin
     end case;
   end process;
 
-  p_mii_clk <= p_clk;
   p_framed_val.data <= r.data_out;
 
 end architecture;
