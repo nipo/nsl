@@ -22,7 +22,7 @@ architecture beh of uart_8n1_rx is
 
   type state_t is (
     STATE_IDLE,
-    STATE_HALF,
+    STATE_START,
     STATE_SHIFT,
     STATE_STOP,
     STATE_OUT
@@ -31,8 +31,9 @@ architecture beh of uart_8n1_rx is
   type regs_t is record
     data: std_ulogic_vector(7 downto 0);
     state: state_t;
-    bit_ctr: natural range 0 to 7;
-    clk_div: natural range 0 to p_clk_rate-1;
+    bit_ctr: integer range 0 to 7;
+    clk_div: integer range 0 to p_clk_rate-1;
+    high_count: integer range 0 to p_clk_rate / baud_rate + 1;
   end record;
   
   signal r, rin: regs_t;
@@ -55,15 +56,18 @@ begin
 
     if r.state = STATE_IDLE then
       if p_uart_rx = '0' then
-        rin.state <= STATE_HALF;
-        rin.clk_div <= p_clk_rate / 2;
+        rin.state <= STATE_START;
+        rin.clk_div <= 0;
       end if;
     elsif r.state = STATE_OUT then
       rin.state <= STATE_IDLE;
     elsif r.clk_div < p_clk_rate - baud_rate then
       rin.clk_div <= r.clk_div + baud_rate;
+      if p_uart_rx = '1' then
+        rin.high_count <= r.high_count + 1;
+      end if;
     else
-      rin.clk_div <= r.clk_div - p_clk_rate + baud_rate;
+      rin.clk_div <= r.clk_div - (p_clk_rate - baud_rate);
 
       case r.state is
         when STATE_IDLE | STATE_OUT =>
@@ -72,17 +76,24 @@ begin
         when STATE_STOP =>
           rin.state <= STATE_OUT;
 
-        when STATE_HALF =>
-          rin.bit_ctr <= 7;
+        when STATE_START =>
+          rin.bit_ctr <= 0;
           rin.state <= STATE_SHIFT;
+          rin.high_count <= 0;
 
         when STATE_SHIFT =>
-          rin.data(7 - r.bit_ctr) <= p_uart_rx;
-          
-          if r.bit_ctr = 0 then
-            rin.state <= STATE_STOP;
+          rin.high_count <= 0;
+          if r.high_count > p_clk_rate / baud_rate / 2 then
+            rin.data <= "1" & r.data(7 downto 1);
           else
-            rin.bit_ctr <= r.bit_ctr - 1;
+            rin.data <= "0" & r.data(7 downto 1);
+          end if;
+          
+          if r.bit_ctr = 7 then
+            rin.state <= STATE_STOP;
+            rin.clk_div <= p_clk_rate / 4;
+          else
+            rin.bit_ctr <= r.bit_ctr + 1;
           end if;
       end case;
     end if;
