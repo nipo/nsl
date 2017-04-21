@@ -6,7 +6,7 @@ library nsl;
 use nsl.fifo.all;
 use nsl.flit.all;
 
-entity flit_fifo_committable is
+entity flit_from_framed is
   generic(
     data_depth  : natural := 512;
     txn_depth   : natural := 4
@@ -23,7 +23,7 @@ entity flit_fifo_committable is
     );
 end entity;
 
-architecture rtl of flit_fifo_committable is
+architecture rtl of flit_from_framed is
 
   signal s_data_in_val, s_data_out_val, s_size_in_val, s_size_out_val: flit_cmd;
   signal s_data_in_ack, s_data_out_ack, s_size_in_ack, s_size_out_ack: flit_ack;

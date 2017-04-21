@@ -9,6 +9,7 @@ use nsl.util.all;
 
 library testing;
 use testing.fifo.all;
+use testing.flit.all;
 
 entity tb is
 end tb;
@@ -21,11 +22,14 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 downto 0);
 
-  signal s_framed_val : fifo_framed_cmd;
-  signal s_framed_ack : fifo_framed_rsp;
+  signal s_in_val : fifo_framed_cmd;
+  signal s_in_ack : fifo_framed_rsp;
 
   signal s_flit_val : flit_cmd;
   signal s_flit_ack : flit_ack;
+
+  signal s_out_val : fifo_framed_cmd;
+  signal s_out_ack : fifo_framed_rsp;
 
 begin
 
@@ -43,32 +47,40 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_out_val => s_framed_val,
-      p_out_ack => s_framed_ack
+      p_out_val => s_in_val,
+      p_out_ack => s_in_ack
       );
 
-  check: testing.fifo.fifo_file_checker
+  from_framed: nsl.flit.flit_from_framed
+    port map(
+      p_resetn => s_resetn_clk,
+      p_clk => s_clk,
+      p_in_val => s_in_val,
+      p_in_ack => s_in_ack,
+      p_out_val => s_flit_val,
+      p_out_ack => s_flit_ack
+      );
+
+  to_framed: nsl.flit.flit_to_framed
+    port map(
+      p_resetn => s_resetn_clk,
+      p_clk => s_clk,
+      p_in_val => s_flit_val,
+      p_in_ack => s_flit_ack,
+      p_out_val => s_out_val,
+      p_out_ack => s_out_ack
+      );
+
+  check: testing.fifo.fifo_framed_file_checker
     generic map(
-      filename => "flit.txt",
-      width => 8
+      filename => "framed.txt"
       )
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_full_n => s_flit_ack.ack,
-      p_write => s_flit_val.val,
-      p_data => s_flit_val.data,
+      p_in_val => s_out_val,
+      p_in_ack => s_out_ack,
       p_done => s_done(0)
-      );
-
-  fifo: nsl.flit.flit_fifo_committable
-    port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_in_val => s_framed_val,
-      p_in_ack => s_framed_ack,
-      p_out_val => s_flit_val,
-      p_out_ack => s_flit_ack
       );
   
   process
