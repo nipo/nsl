@@ -7,12 +7,12 @@ end tb;
 
 library nsl;
 use nsl.util.all;
-use nsl.fifo.all;
+use nsl.flit.all;
 use nsl.swd.all;
 
 library testing;
 use testing.swd.all;
-use testing.fifo.all;
+use testing.flit.all;
 
 architecture arch of tb is
 
@@ -33,10 +33,10 @@ architecture arch of tb is
   signal s_dap_wdata : unsigned(31 downto 0);
   signal s_dap_wen : std_logic;
 
-  signal s_in_val    : fifo_framed_cmd_array(1 downto 0);
-  signal s_in_ack    : fifo_framed_rsp_array(1 downto 0);
-  signal s_out_val   : fifo_framed_cmd_array(1 downto 0);
-  signal s_out_ack   : fifo_framed_rsp_array(1 downto 0);
+  signal s_in_val    : flit_cmd_array(1 downto 0);
+  signal s_in_ack    : flit_ack_array(1 downto 0);
+  signal s_out_val   : flit_cmd_array(1 downto 0);
+  signal s_out_ack   : flit_ack_array(1 downto 0);
   signal s_swdio_o   : std_ulogic;
   signal s_swdio_oe  : std_ulogic;
 
@@ -83,7 +83,7 @@ begin
       p_dap_wen => s_dap_wen
       );
 
-  swd_master: nsl.swd.swd_master
+  swd_master: nsl.swd.swd_flit_master
     port map(
       p_resetn => s_resetn_clk2,
       p_clk => s_clk2,
@@ -101,7 +101,7 @@ begin
 
   s_swdio <= s_swdio_o when s_swdio_oe = '1' else 'Z';
 
-  gen: testing.fifo.fifo_framed_file_reader
+  gen: testing.flit.flit_file_reader
     generic map(
       filename => "swd_commands.txt"
       )
@@ -113,7 +113,7 @@ begin
       p_done => open
       );
 
-  check0: testing.fifo.fifo_framed_file_checker
+  check0: testing.flit.flit_file_checker
     generic map(
       filename => "swd_responses.txt"
       )
@@ -125,7 +125,7 @@ begin
       p_done => s_done
       );
 
-  cmd_fifo: nsl.fifo.fifo_framed_async
+  cmd_fifo: nsl.flit.flit_fifo_async
     generic map(
       depth => 128
       )
@@ -141,7 +141,7 @@ begin
       p_out_ack => s_in_ack(1)
       );
 
-  rsp_fifo: nsl.fifo.fifo_framed_async
+  rsp_fifo: nsl.flit.flit_fifo_async
     generic map(
       depth => 128
       )

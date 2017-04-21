@@ -13,11 +13,9 @@ class NocTxnFile:
     def flush(self):
         flit = sum(self.pending, Flit([]))
         self.pending = []
-        for i, b in enumerate(flit):
-            if i < len(flit) - 1:
-                self.output.write("%d %d\n" % (b + 0x100, 0))
-            else:
-                self.output.write("%d %d\n" % (b, 0))
+        self.output.write("%d %d\n" % (len(flit), 0))
+        for b in flit:
+            self.output.write("%d %d\n" % (b, 0))
 
 class Flit:
     def __init__(self, data):
