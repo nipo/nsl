@@ -72,7 +72,7 @@ begin
         if p_in_val.val = '1' then
           rin.state <= STATE_PUT_SIZE;
           rin.header <= p_in_val.data;
-          rin.selected <= routing_table(to_integer(unsigned(p_in_val.data(3 downto 0))));
+          rin.selected <= routing_table(noc_flit_header_dst(p_in_val.data));
         end if;
 
       when STATE_PUT_SIZE =>

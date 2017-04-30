@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use std.textio.all;
 
 library nsl;
 use nsl.fifo.all;
@@ -9,7 +8,16 @@ use nsl.flit.all;
 
 package noc is
 
-  type noc_routing_table is array(natural range 0 to 15) of natural;
+  subtype noc_id is natural range 0 to 15;
+  function noc_flit_header(dst: noc_id;
+                           src: noc_id)
+    return std_ulogic_vector;
+  function noc_flit_header_dst(w: std_ulogic_vector)
+    return noc_id;
+  function noc_flit_header_src(w: std_ulogic_vector)
+    return noc_id;
+  
+  type noc_routing_table is array(noc_id) of natural;
 
   component noc_router is
     generic(
@@ -66,4 +74,59 @@ package noc is
       );
   end component;
 
+  component noc_from_framed
+    generic(
+      srcid       : noc_id;
+      tgtid       : noc_id;
+      data_depth  : natural := 256;
+      txn_depth   : natural := 1
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val  : in fifo_framed_cmd;
+      p_in_ack  : out fifo_framed_rsp;
+
+      p_out_val : out flit_cmd;
+      p_out_ack : in  flit_ack
+      );
+  end component;
+
+  component noc_to_framed
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_out_val  : out fifo_framed_cmd;
+      p_out_ack  : in  fifo_framed_rsp;
+
+      p_in_val : in  flit_cmd;
+      p_in_ack : out flit_ack
+      );
+  end component;
+
 end package noc;
+
+package body noc is
+
+  function noc_flit_header(dst: noc_id;
+                           src: noc_id)
+    return std_ulogic_vector is
+  begin
+    return std_ulogic_vector(to_unsigned(src * 16 + dst, 8));
+  end;
+
+  function noc_flit_header_dst(w: std_ulogic_vector)
+    return noc_id is
+  begin
+    return to_integer(unsigned(w(3 downto 0)));
+  end;
+  
+  function noc_flit_header_src(w: std_ulogic_vector)
+    return noc_id is
+  begin
+    return to_integer(unsigned(w(7 downto 4)));
+  end;
+
+end noc;
