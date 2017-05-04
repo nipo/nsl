@@ -2,6 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl;
+use nsl.util.baudrate_generator;
+use nsl.util.log2;
+
 entity uart_8n1_tx is
   generic(
     p_clk_rate : natural;
@@ -24,52 +28,53 @@ architecture beh of uart_8n1_tx is
   type state_t is (
     STATE_IDLE,
     STATE_START,
-    STATE_SHIFT,
-    STATE_STOP
+    STATE_SHIFT
     );
 
   type regs_t is record
     data: std_ulogic_vector(7 downto 0);
     state: state_t;
     bit_ctr: natural range 0 to 7;
-    clk_div: natural range 0 to p_clk_rate-1;
   end record;
   
   signal r, rin: regs_t;
+
+  signal s_tick: std_ulogic;
   
 begin
 
+  brg: baudrate_generator
+    generic map(
+      p_clk_rate => p_clk_rate,
+      rate_msb => log2(p_clk_rate)
+      )
+    port map(
+      p_clk => p_clk,
+      p_resetn => p_resetn,
+      p_rate => to_unsigned(baud_rate, log2(p_clk_rate) + 1)(log2(p_clk_rate) downto 8),
+      p_tick => s_tick
+      );
+  
   regs: process (p_resetn, p_clk)
   begin
     if p_resetn = '0' then
       r.state <= STATE_IDLE;
-      r.clk_div <= 0;
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_data, p_data_val)
+  transition: process(r, p_data, p_data_val, s_tick)
   begin
     rin <= r;
 
-    if r.state = STATE_IDLE then
-      if p_data_val = '1' then
-        rin.state <= STATE_START;
-        rin.data <= p_data;
-      end if;
-    elsif r.clk_div < p_clk_rate - baud_rate then
-      rin.clk_div <= r.clk_div + baud_rate;
-    else
-      rin.clk_div <= r.clk_div + baud_rate - p_clk_rate;
-
+    if s_tick = '1' then
       case r.state is
         when STATE_IDLE =>
-          null;
-
-        when STATE_STOP =>
-          rin.bit_ctr <= 7;
-          rin.state <= STATE_IDLE;
+          if p_data_val = '1' then
+            rin.state <= STATE_START;
+            rin.data <= p_data;
+          end if;
 
         when STATE_START =>
           rin.state <= STATE_SHIFT;
@@ -77,7 +82,7 @@ begin
 
         when STATE_SHIFT =>
           if r.bit_ctr = 0 then
-            rin.state <= STATE_STOP;
+            rin.state <= STATE_IDLE;
           else
             rin.bit_ctr <= r.bit_ctr - 1;
           end if;
@@ -85,16 +90,12 @@ begin
     end if;
   end process;
 
-  moore: process(r, p_resetn)
+  moore: process(r, p_resetn, s_tick)
   begin
     case r.state is
       when STATE_IDLE =>
         p_uart_tx <= '1';
-        p_ready <= p_resetn;
-
-      when STATE_STOP =>
-        p_uart_tx <= '1';
-        p_ready <= '0';
+        p_ready <= p_resetn and s_tick;
 
       when STATE_START =>
         p_uart_tx <= '0';
@@ -103,7 +104,6 @@ begin
       when STATE_SHIFT =>
         p_uart_tx <= r.data(7 - r.bit_ctr);
         p_ready <= '0';
-
     end case;
   end process;
   

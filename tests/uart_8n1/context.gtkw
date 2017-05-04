@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
-[*] Mon Apr 10 15:29:44 2017
+[*] Mon May  1 09:39:15 2017
 [*]
 [dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/tb.ghw"
-[dumpfile_mtime] "Mon Apr 10 15:27:18 2017"
-[dumpfile_size] 3348834
+[dumpfile_mtime] "Mon May  1 09:37:30 2017"
+[dumpfile_size] 5286088
 [savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/uart_8n1/context.gtkw"
 [timestart] 0
 [size] 1334 822
 [pos] -1 -1
-*-32,266354 8880000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-34,266354 53145000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
 [treeopen] top.tb.check.
@@ -29,6 +29,7 @@ top.tb.s_uart
 top.tb.s_resetn_async
 top.tb.s_resetn_clk
 top.tb.s_clk
+top.tb.u_in.s_tick
 @22
 #{top.tb.u_in.r.data[7:0]} top.tb.u_in.r.data[7] top.tb.u_in.r.data[6] top.tb.u_in.r.data[5] top.tb.u_in.r.data[4] top.tb.u_in.r.data[3] top.tb.u_in.r.data[2] top.tb.u_in.r.data[1] top.tb.u_in.r.data[0]
 #{top.tb.s_data[0][7:0]} top.tb.s_data[0][7] top.tb.s_data[0][6] top.tb.s_data[0][5] top.tb.s_data[0][4] top.tb.s_data[0][3] top.tb.s_data[0][2] top.tb.s_data[0][1] top.tb.s_data[0][0]
@@ -41,12 +42,12 @@ top.tb.u_out.r.bit_ctr
 #{top.tb.s_data[1][7:0]} top.tb.s_data[1][7] top.tb.s_data[1][6] top.tb.s_data[1][5] top.tb.s_data[1][4] top.tb.s_data[1][3] top.tb.s_data[1][2] top.tb.s_data[1][1] top.tb.s_data[1][0]
 @28
 top.tb.u_out.r.state
-top.tb.u_in.r.clk_div
-@29
 top.tb.u_out.r.high_count
 @22
 #{top.tb.u_out.r.data[7:0]} top.tb.u_out.r.data[7] top.tb.u_out.r.data[6] top.tb.u_out.r.data[5] top.tb.u_out.r.data[4] top.tb.u_out.r.data[3] top.tb.u_out.r.data[2] top.tb.u_out.r.data[1] top.tb.u_out.r.data[0]
 #{top.tb.check.s_next[7:0]} top.tb.check.s_next[7] top.tb.check.s_next[6] top.tb.check.s_next[5] top.tb.check.s_next[4] top.tb.check.s_next[3] top.tb.check.s_next[2] top.tb.check.s_next[1] top.tb.check.s_next[0]
 #{top.tb.check.r_last[7:0]} top.tb.check.r_last[7] top.tb.check.r_last[6] top.tb.check.r_last[5] top.tb.check.r_last[4] top.tb.check.r_last[3] top.tb.check.r_last[2] top.tb.check.r_last[1] top.tb.check.r_last[0]
+@29
+top.tb.u_out.p_data_val
 [pattern_trace] 1
 [pattern_trace] 0

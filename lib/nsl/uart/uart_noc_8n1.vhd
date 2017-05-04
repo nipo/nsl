@@ -73,6 +73,7 @@ begin
       )
     port map(
       p_resetn => p_resetn,
+      p_tag => x"00",
       p_clk => p_clk,
       p_in_val => s_framed_rx_val,
       p_in_ack => s_framed_rx_ack,
@@ -84,6 +85,7 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
+      p_tag => open,
       p_out_val => s_framed_tx_val,
       p_out_ack => s_framed_tx_ack,
       p_in_val => p_tx_val,
