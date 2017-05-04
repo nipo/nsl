@@ -15,8 +15,9 @@ entity noc_from_framed is
     txn_depth   : natural := 4
     );
   port(
-    p_resetn    : in  std_ulogic;
-    p_clk       : in  std_ulogic;
+    p_resetn    : in std_ulogic;
+    p_clk       : in std_ulogic;
+    p_tag       : in std_ulogic_vector(7 downto 0);
 
     p_in_val    : in fifo_framed_cmd;
     p_in_ack    : out fifo_framed_rsp;
@@ -30,7 +31,8 @@ architecture rtl of noc_from_framed is
 
   type state_t is (
     STATE_RESET,
-    STATE_HEADER,
+    STATE_ROUTE,
+    STATE_TAG,
     STATE_DATA
     );
   
@@ -68,22 +70,27 @@ begin
     end if;
   end process;
 
-  transition: process(r, p_in_val, p_out_ack, s_in_ack)
+  transition: process(r, p_in_val, s_in_ack)
   begin
     rin <= r;
 
     case r.state is
       when STATE_RESET =>
-        rin.state <= STATE_HEADER;
+        rin.state <= STATE_ROUTE;
 
-      when STATE_HEADER =>
+      when STATE_ROUTE =>
+        if s_in_ack.ack = '1' then
+          rin.state <= STATE_TAG;
+        end if;
+
+      when STATE_TAG =>
         if s_in_ack.ack = '1' then
           rin.state <= STATE_DATA;
         end if;
 
       when STATE_DATA =>
         if s_in_ack.ack = '1' and p_in_val.val = '1' and p_in_val.more = '0' then
-          rin.state <= STATE_HEADER;
+          rin.state <= STATE_ROUTE;
         end if;
     end case;
   end process;
@@ -97,11 +104,17 @@ begin
         s_in_val.more <= 'X';
         s_in_val.data <= (others => 'X');
 
-      when STATE_HEADER =>
+      when STATE_ROUTE =>
         p_in_ack.ack <= '0';
         s_in_val.val <= '0';
         s_in_val.more <= '1';
         s_in_val.data <= noc_flit_header(tgtid, srcid);
+
+      when STATE_TAG =>
+        p_in_ack.ack <= '0';
+        s_in_val.val <= '0';
+        s_in_val.more <= '1';
+        s_in_val.data <= p_tag;
 
       when STATE_DATA =>
         p_in_ack <= s_in_ack;

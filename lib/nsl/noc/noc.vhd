@@ -11,10 +11,10 @@ package noc is
   subtype noc_id is natural range 0 to 15;
   function noc_flit_header(dst: noc_id;
                            src: noc_id)
-    return std_ulogic_vector;
-  function noc_flit_header_dst(w: std_ulogic_vector)
+    return flit_data;
+  function noc_flit_header_dst(w: flit_data)
     return noc_id;
-  function noc_flit_header_src(w: std_ulogic_vector)
+  function noc_flit_header_src(w: flit_data)
     return noc_id;
   
   type noc_routing_table is array(noc_id) of natural;
@@ -82,8 +82,10 @@ package noc is
       txn_depth   : natural := 1
       );
     port(
-      p_resetn   : in  std_ulogic;
-      p_clk      : in  std_ulogic;
+      p_resetn   : in std_ulogic;
+      p_clk      : in std_ulogic;
+
+      p_tag      : in flit_data;
 
       p_in_val  : in fifo_framed_cmd;
       p_in_ack  : out fifo_framed_rsp;
@@ -97,6 +99,8 @@ package noc is
     port(
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
+
+      p_tag      : out flit_data;
 
       p_out_val  : out fifo_framed_cmd;
       p_out_ack  : in  fifo_framed_rsp;
@@ -112,18 +116,18 @@ package body noc is
 
   function noc_flit_header(dst: noc_id;
                            src: noc_id)
-    return std_ulogic_vector is
+    return flit_data is
   begin
-    return std_ulogic_vector(to_unsigned(src * 16 + dst, 8));
+    return flit_data(to_unsigned(src * 16 + dst, 8));
   end;
 
-  function noc_flit_header_dst(w: std_ulogic_vector)
+  function noc_flit_header_dst(w: flit_data)
     return noc_id is
   begin
     return to_integer(unsigned(w(3 downto 0)));
   end;
   
-  function noc_flit_header_src(w: std_ulogic_vector)
+  function noc_flit_header_src(w: flit_data)
     return noc_id is
   begin
     return to_integer(unsigned(w(7 downto 4)));

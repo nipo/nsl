@@ -11,6 +11,7 @@ entity noc_to_framed is
     p_resetn    : in  std_ulogic;
     p_clk       : in  std_ulogic;
 
+    p_tag      : out std_ulogic_vector(7 downto 0);
     p_out_val  : out fifo_framed_cmd;
     p_out_ack  : in  fifo_framed_rsp;
 
@@ -23,12 +24,14 @@ architecture rtl of noc_to_framed is
 
   type state_t is (
     STATE_RESET,
-    STATE_HEADER,
+    STATE_ROUTE,
+    STATE_TAG,
     STATE_DATA
     );
   
   type regs_t is record
     state: state_t;
+    tag : std_ulogic_vector(7 downto 0);
   end record;
   
   signal r, rin : regs_t;
@@ -63,16 +66,22 @@ begin
 
     case r.state is
       when STATE_RESET =>
-        rin.state <= STATE_HEADER;
+        rin.state <= STATE_ROUTE;
 
-      when STATE_HEADER =>
+      when STATE_ROUTE =>
+        if s_out_val.val = '1' then
+          rin.state <= STATE_TAG;
+        end if;
+
+      when STATE_TAG =>
         if s_out_val.val = '1' then
           rin.state <= STATE_DATA;
+          rin.tag <= s_out_val.data;
         end if;
 
       when STATE_DATA =>
         if s_out_val.val = '1' and p_out_ack.ack = '1' and s_out_val.more = '0' then
-          rin.state <= STATE_HEADER;
+          rin.state <= STATE_ROUTE;
         end if;
     end case;
   end process;
@@ -84,7 +93,7 @@ begin
         p_out_val.val <= '0';
         s_out_ack.ack <= '0';
 
-      when STATE_HEADER =>
+      when STATE_TAG | STATE_ROUTE =>
         p_out_val.val <= '0';
         s_out_ack.ack <= '1';
 
@@ -94,4 +103,6 @@ begin
     end case;
   end process;
 
+  p_tag <= r.tag;
+  
 end architecture;

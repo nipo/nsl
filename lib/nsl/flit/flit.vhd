@@ -7,8 +7,10 @@ use nsl.fifo.all;
 
 package flit is
 
+  subtype flit_data is std_ulogic_vector(7 downto 0);
+  
   type flit_cmd is record
-    data : std_ulogic_vector(7 downto 0);
+    data : flit_data;
     val  : std_ulogic;
   end record;
 
