@@ -36,7 +36,7 @@ begin
 
   es: nsl.ti.ti_easyscale
     generic map(
-      p_clk_hz => 100000000
+      p_clk_rate => 100000000
       )
     port map(
       p_resetn => s_resetn_clk,
@@ -66,8 +66,8 @@ begin
     wait for 20 ns;
     s_start <= '0';
     wait until falling_edge(s_busy);
+    wait for 200 ns;
     s_done(1) <= '1';
-    wait for 20 ns;
     wait;
   end process;
 

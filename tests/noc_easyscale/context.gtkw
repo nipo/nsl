@@ -1,0 +1,49 @@
+[*]
+[*] GTKWave Analyzer v3.3.65 (w)1999-2015 BSI
+[*] Thu May  4 06:13:19 2017
+[*]
+[dumpfile] "/Users/nipo/projects/hardware/noprob/hdl/tests/noc_easyscale/tb.ghw"
+[dumpfile_mtime] "Thu May  4 06:11:24 2017"
+[dumpfile_size] 39832662
+[savefile] "/Users/nipo/projects/hardware/noprob/hdl/tests/noc_easyscale/context.gtkw"
+[timestart] 0
+[size] 1139 783
+[pos] -1 -1
+*-42,544853 9025238600000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.ez.
+[treeopen] top.tb.ez.r.
+[treeopen] top.tb.s_cmd_val.
+[treeopen] top.tb.s_rsp_val.
+[sst_width] 193
+[signals_width] 261
+[sst_expanded] 1
+[sst_vpaned_height] 233
+@28
+top.tb.s_clk
+top.tb.s_resetn_clk
+#{top.tb.s_done[1:0]} top.tb.s_done[1] top.tb.s_done[0]
+top.tb.s_cmd_val.val
+@22
+#{top.tb.s_cmd_val.data[7:0]} top.tb.s_cmd_val.data[7] top.tb.s_cmd_val.data[6] top.tb.s_cmd_val.data[5] top.tb.s_cmd_val.data[4] top.tb.s_cmd_val.data[3] top.tb.s_cmd_val.data[2] top.tb.s_cmd_val.data[1] top.tb.s_cmd_val.data[0]
+@28
+top.tb.s_cmd_ack.ack
+top.tb.ez.r.state
+@22
+#{top.tb.ez.r.size[7:0]} top.tb.ez.r.size[7] top.tb.ez.r.size[6] top.tb.ez.r.size[5] top.tb.ez.r.size[4] top.tb.ez.r.size[3] top.tb.ez.r.size[2] top.tb.ez.r.size[1] top.tb.ez.r.size[0]
+#{top.tb.ez.r.daddr[7:0]} top.tb.ez.r.daddr[7] top.tb.ez.r.daddr[6] top.tb.ez.r.daddr[5] top.tb.ez.r.daddr[4] top.tb.ez.r.daddr[3] top.tb.ez.r.daddr[2] top.tb.ez.r.daddr[1] top.tb.ez.r.daddr[0]
+@23
+#{top.tb.ez.r.data[7:0]} top.tb.ez.r.data[7] top.tb.ez.r.data[6] top.tb.ez.r.data[5] top.tb.ez.r.data[4] top.tb.ez.r.data[3] top.tb.ez.r.data[2] top.tb.ez.r.data[1] top.tb.ez.r.data[0]
+@28
+top.tb.ez.s_ack
+top.tb.ez.s_start
+top.tb.ez.s_busy
+top.tb.ez.p_easyscale
+top.tb.s_rsp_val.val
+@22
+#{top.tb.s_rsp_val.data[7:0]} top.tb.s_rsp_val.data[7] top.tb.s_rsp_val.data[6] top.tb.s_rsp_val.data[5] top.tb.s_rsp_val.data[4] top.tb.s_rsp_val.data[3] top.tb.s_rsp_val.data[2] top.tb.s_rsp_val.data[1] top.tb.s_rsp_val.data[0]
+@28
+top.tb.s_rsp_ack.ack
+[pattern_trace] 1
+[pattern_trace] 0

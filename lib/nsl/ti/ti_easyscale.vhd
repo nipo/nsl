@@ -8,7 +8,7 @@ use nsl.ti.all;
 
 entity ti_easyscale is
   generic(
-    p_clk_hz   : natural range 1000000 to 100000000
+    p_clk_rate : natural range 1000000 to 100000000
     );
   port(
     p_resetn   : in  std_ulogic;
@@ -29,7 +29,7 @@ end entity;
 
 architecture rtl of ti_easyscale is
 
-  constant cycles_per_2us : natural := (p_clk_hz / 500000);
+  constant cycles_per_2us : natural := (p_clk_rate / 500000);
 
   type state_t is (
     STATE_IDLE,

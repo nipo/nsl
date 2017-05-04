@@ -3,11 +3,32 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
+library nsl;
+use nsl.flit.all;
+
 package ti is
+
+  component ti_easyscale_noc is
+    generic(
+      p_clk_rate : natural
+      );
+    port(
+      p_resetn    : in std_ulogic;
+      p_clk       : in std_ulogic;
+
+      p_easyscale: inout std_logic;
+
+      p_cmd_val  : in  nsl.flit.flit_cmd;
+      p_cmd_ack  : out nsl.flit.flit_ack;
+
+      p_rsp_val : out nsl.flit.flit_cmd;
+      p_rsp_ack : in  nsl.flit.flit_ack
+      );
+  end component;
 
   component ti_easyscale is
     generic(
-      p_clk_hz   : natural range 1000000 to 100000000
+      p_clk_rate : natural range 1000000 to 100000000
       );
     port(
       p_resetn   : in  std_ulogic;
