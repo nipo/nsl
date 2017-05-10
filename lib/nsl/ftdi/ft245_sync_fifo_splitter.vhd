@@ -35,25 +35,25 @@ architecture arch of ft245_sync_fifo_splitter is
     S_FROM_IN_TURN
   );
 
-  signal r_state: state_type := S_FROM_IN;
-  signal s_state: state_type := S_FROM_IN;
-  signal r_counter: integer range 0 to burst_length-1 := 0;
-  signal s_counter: integer range 0 to burst_length-1 := 0;
+  type regs_t is record
+    state: state_type;
+    counter: integer range 0 to burst_length-1;
+  end record;
+
+  signal r, rin: regs_t;
 
   signal s_can_in : boolean;
   signal s_can_out : boolean;
   
 begin
 
-  -- Synchronous update
   process (p_clk, p_resetn)
   begin
     if (p_resetn = '0') then
-      r_state <= S_FROM_IN;
-      r_counter <= 0;
+      r.state <= S_FROM_IN;
+      r.counter <= 0;
     elsif (rising_edge(p_clk)) then
-      r_state <= s_state;
-      r_counter <= s_counter;
+      r <= rin;
     end if;
   end process;
 
@@ -61,45 +61,44 @@ begin
   s_can_out <= p_in_read = '1' and p_ftdi_rxfn = '0';
   
   -- Next state
-  process (r_counter, r_state, s_can_in, s_can_out)
+  process (r, s_can_in, s_can_out)
   begin
-    s_counter <= r_counter;
-    s_state <= r_state;
+    rin <= r;
     
-    case r_state is
+    case r.state is
       when S_FROM_IN =>
         if s_can_in then
-          if (r_counter = burst_length-1) then
+          if (r.counter = burst_length-1) then
             if s_can_out then
-              s_state <= S_TO_OUT_TURN;
+              rin.state <= S_TO_OUT_TURN;
             end if;
           else
-            s_counter <= r_counter + 1;
+            rin.counter <= r.counter + 1;
           end if;
         elsif s_can_out then
-          s_state <= S_TO_OUT_TURN;
+          rin.state <= S_TO_OUT_TURN;
         end if;
         
       when S_TO_OUT =>
         if s_can_out then
-          if (r_counter = burst_length-1) then
+          if (r.counter = burst_length-1) then
             if s_can_in then
-              s_state <= S_FROM_IN_TURN;
+              rin.state <= S_FROM_IN_TURN;
             end if;
           else
-            s_counter <= r_counter + 1;
+            rin.counter <= r.counter + 1;
           end if;
         elsif s_can_in then
-          s_state <= S_FROM_IN_TURN;
+          rin.state <= S_FROM_IN_TURN;
         end if;
         
       when S_FROM_IN_TURN =>
-        s_state <= S_FROM_IN;
-        s_counter <= 0;
+        rin.state <= S_FROM_IN;
+        rin.counter <= 0;
         
       when S_TO_OUT_TURN =>
-        s_state <= S_TO_OUT;
-        s_counter <= 0;
+        rin.state <= S_TO_OUT;
+        rin.counter <= 0;
     end case;
   end process;
 
@@ -107,9 +106,9 @@ begin
   p_in_data <= std_ulogic_vector(p_ftdi_data);
 
   -- Moore signals
-  process (r_state)
+  process (r)
   begin
-    case r_state is
+    case r.state is
       when S_FROM_IN | S_FROM_IN_TURN =>
         p_ftdi_oen <= '1';
       when S_TO_OUT_TURN | S_TO_OUT =>
@@ -118,9 +117,9 @@ begin
   end process;
 
   -- Mealy signals
-  process (r_state, p_in_read, p_out_write, p_ftdi_rxfn, p_ftdi_txen, p_out_data)
+  process (r, p_in_read, p_out_write, p_ftdi_rxfn, p_ftdi_txen, p_out_data)
   begin
-    case r_state is
+    case r.state is
       when S_FROM_IN =>
         p_ftdi_rdn <= '1';
         p_in_empty_n <= '0';
