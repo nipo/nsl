@@ -149,7 +149,7 @@ begin
     end if;
   end process in_reg;
 
-  in_mem: process(p_in_clk)
+  in_mem: process(p_in_clk, s_in_full)
   begin
     if rising_edge(p_in_clk) and s_in_full = '0' then
       r_mem(to_integer(unsigned(r_in_wptr))) <= p_in_data;
