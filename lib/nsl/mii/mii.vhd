@@ -94,5 +94,24 @@ package mii is
       p_framed_ack : out fifo_framed_rsp
       );
   end component;
+
+  component rmii_noc is
+    generic(
+      inter_frame : natural := 56
+      );
+    port(
+      p_resetn    : in std_ulogic;
+
+      p_clk_rmii  : in std_ulogic;
+      p_to_mac    : out rmii_datapath;
+      p_from_mac  : in  rmii_datapath;
+
+      p_clk_noc   : in std_ulogic;
+      p_in_val    : in  nsl.flit.flit_cmd;
+      p_in_ack    : out nsl.flit.flit_ack;
+      p_out_val   : out nsl.flit.flit_cmd;
+      p_out_ack   : in  nsl.flit.flit_ack
+      );
+  end component;
   
 end package mii;
