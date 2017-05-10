@@ -70,6 +70,7 @@ begin
     case r.state is
       when STATE_SIZE =>
         p_out_val.val <= '0';
+        p_out_val.more <= 'X';
         p_out_val.data <= (others => 'X');
         p_in_ack.ack <= '1';
 
