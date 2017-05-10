@@ -95,7 +95,7 @@ begin
     end case;
   end process;
 
-  mealy: process(r, p_resetn, p_in_val, s_in_ack)
+  mealy: process(r, p_resetn, p_in_val, s_in_ack, p_tag)
   begin
     case r.state is
       when STATE_RESET =>
