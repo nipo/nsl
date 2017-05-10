@@ -43,7 +43,7 @@ begin  -- rtl
     end if;
   end process;
 
-  transition: process(r)
+  transition: process(r, p_rate)
   begin
     rin <= r;
 
