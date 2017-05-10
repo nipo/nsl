@@ -51,6 +51,8 @@ begin
       p_data_val => s_framed_tx_val.val
       );
 
+  s_framed_rx_val.more <= '0';
+  
   rx: nsl.uart.uart_8n1_rx
     generic map(
       p_clk_rate => p_clk_rate,
@@ -69,7 +71,7 @@ begin
       srcid => srcid,
       tgtid => tgtid,
       data_depth => 256,
-      txn_depth => 1
+      txn_depth => 2
       )
     port map(
       p_resetn => p_resetn,
