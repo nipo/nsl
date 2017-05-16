@@ -6,6 +6,7 @@ library nsl;
 library testing;
 use testing.fifo.all;
 use nsl.uart.all;
+use nsl.util.all;
 
 entity tb is
 end tb;

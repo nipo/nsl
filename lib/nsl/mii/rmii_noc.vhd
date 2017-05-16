@@ -6,6 +6,7 @@ library nsl;
 use nsl.flit.all;
 use nsl.fifo.all;
 use nsl.mii.all;
+use nsl.util.all;
 
 entity rmii_noc is
   generic(
