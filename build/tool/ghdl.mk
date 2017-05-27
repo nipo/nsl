@@ -9,12 +9,12 @@ simulate: $(top).ghw
 .PHONY: FORCE
 
 $(top).ghw: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf) FORCE
-	@$(GHDL) -c -r $(top) --wave=$@ $(GHDLRUNFLAGS)
+	$(SILENT)$(GHDL) -c -r $(top) --wave=$@ $(GHDLRUNFLAGS)
 
 analyze: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf)
 
 define ghdl_source_do
-@$$(GHDL) $1 --std=$$(VHDL_VERSION)$$(VHDL_VARIANT) -v --work=$2 $3 > /dev/null
+$(SILENT)$$(GHDL) $1 --std=$$(VHDL_VERSION)$$(VHDL_VARIANT) --ieee=synopsys -v --work=$2 $3 > /dev/null
 	
 endef
 
@@ -22,7 +22,7 @@ endef
 define ghdl_library
 
 $1-obj$$(VHDL_VERSION).cf: $($1-vhdl-sources)
-	@rm -f $$@
+	$(SILENT)rm -f $$@
 	$(foreach s,$($1-vhdl-sources),$(call ghdl_source_do,-i,$1,$s))
 	$(foreach s,$($1-vhdl-sources),$(call ghdl_source_do,-a,$1,$s))
 

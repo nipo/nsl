@@ -12,13 +12,13 @@ simulate: $(target).lxt
 .PHONY: FORCE
 
 $(target).lxt: $(elab_target) FORCE
-	@$(NVC) -r $(top) --wave=$@
+	$(SILENT)$(NVC) -r $(top) --wave=$@
 
 $(elab_target): $(foreach l,$(libraries),$l/_NVC_LIB)
-	@$(NVC) -L. -e $(top)
+	$(SILENT)$(NVC) -L. -e $(top)
 
 define nvc_source_do
-@$$(NVC) -L. --std=$$(VHDL_VERSION) --work=$2 $1 $3 > /dev/null
+$(SILENT)$$(NVC) -L. --std=$$(VHDL_VERSION) --work=$2 $1 $3 > /dev/null
 	
 endef
 

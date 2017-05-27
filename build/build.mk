@@ -9,6 +9,12 @@ $(eval $(foreach l,$(libraries),$(call library_scan,$l,$($l-srcdir))))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 
+ifeq ($(V),)
+SILENT:=@
+else
+SILENT:=
+endif
+
 clean:
 	rm -f $(clean-files)
 	rm -rf $(clean-dirs)

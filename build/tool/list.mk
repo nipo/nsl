@@ -1,11 +1,11 @@
 
 define list_source_do
-@echo "  $1 source $2"
+$(SILENT)echo "  $1 source $2"
 	
 endef
 
 define list_library_do
-@echo "Library $1"
+$(SILENT)echo "Library $1"
 	$(foreach s,$($1-vhdl-sources),$(call list_source_do,VHDL,$s))
 	$(foreach s,$($1-verilog-sources),$(call list_source_do,Verilog,$s))
 	
