@@ -49,6 +49,17 @@ $(target).bit: ise-build/$(target)_par.ncd
 
 clean-files += $(target).bit
 
+$(target)-compressed.bit: ise-build/$(target)_par.ncd
+	$(ISE_PREPARE) ; \
+	bitgen $(INTF_STYLE) \
+            -g DriveDone:yes \
+            -g compress \
+            -g StartupClk:Cclk \
+            -w $< \
+	    $@
+
+clean-files += $(target)-compressed.bit
+
 ise-build/$(target)-2.bit: ise-build/$(target)_par.ncd
 	$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
