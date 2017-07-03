@@ -3,6 +3,7 @@ INTF_STYLE = -intstyle silent
 PAR_OPTS = -ol high
 ISE_PREPARE = source $(ISE)/settings64.sh > /dev/null
 target ?= $(top)
+user_id ?= 0xffffffff
 
 SHELL=/bin/bash
 
@@ -43,6 +44,7 @@ $(target).bit: ise-build/$(target)_par.ncd
 	$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
             -g DriveDone:yes \
+			-g UserID:$(user_id) \
             -g StartupClk:Cclk \
             -w $< \
 	    $@
@@ -54,6 +56,7 @@ $(target)-compressed.bit: ise-build/$(target)_par.ncd
 	bitgen $(INTF_STYLE) \
             -g DriveDone:yes \
             -g compress \
+			-g UserID:$(user_id) \
             -g StartupClk:Cclk \
             -w $< \
 	    $@
@@ -65,6 +68,7 @@ ise-build/$(target)-2.bit: ise-build/$(target)_par.ncd
 	bitgen $(INTF_STYLE) \
             -g spi_buswidth:2 \
             -g ConfigRate:26 \
+			-g UserID:$(user_id) \
             -g DriveDone:yes \
             -g StartupClk:Cclk \
             -w $< \
