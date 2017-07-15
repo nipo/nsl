@@ -197,7 +197,7 @@ begin
     end case;
   end process;
 
-  par: process(r_state, r_data_par, r_data)
+  par: process(r_state, r_data_par, r_data, p_swdio)
   begin
     s_data_par <= r_data_par;
   
@@ -206,7 +206,7 @@ begin
         if r_cmd_rw = '1' then
           s_data_par <= r_data_par xor r_data(0);
         else
-          s_data_par <= r_data_par xor r_data(31);
+          s_data_par <= r_data_par xor p_swdio;
         end if;
 
       when others =>
@@ -214,7 +214,7 @@ begin
     end case;
   end process;
 
-  data: process(r_state, r_data, p_swdio, r_to_shift, r_cmd_rw)
+  data: process(r_state, r_data, p_swdio, r_to_shift, r_cmd_rw, p_dap_rdata)
   begin
     s_data <= r_data;
     s_to_shift <= r_to_shift;
@@ -292,7 +292,7 @@ begin
 
     case r_state is
       when STATE_DATA_PAR =>
-        p_dap_wen <= not r_cmd_rw and (r_data_par xnor p_swdio);
+        p_dap_wen <= not (r_cmd_rw or (r_data_par xor p_swdio));
         p_dap_ren <= '0';
 
       when STATE_ACK_FAULT =>

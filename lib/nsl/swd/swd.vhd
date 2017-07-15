@@ -8,91 +8,91 @@ use nsl.flit.all;
 
 package swd is
 
-  function swd_cmd_read_build(
-    ad : boolean;
-    a : natural range 0 to 3
-    ) return std_ulogic_vector;
+  constant SWDP_CMD_AP_RUN       : std_ulogic_vector(7 downto 0):= "11------"; -- cycles - 1
+  constant SWDP_CMD_AP_SEL       : std_ulogic_vector(7 downto 0):= "1001----";
+  constant SWDP_CMD_DP_BANK      : std_ulogic_vector(7 downto 0):= "1000----";  
+  constant SWDP_CMD_ABORT        : std_ulogic_vector(7 downto 0):= "1010----"; -- ---- TBD
+  -- constant SWDP_CMD_          : std_ulogic_vector(7 downto 0):= "101100--";
+  constant SWDP_CMD_WAKEUP       : std_ulogic_vector(7 downto 0):= "10110000";
+  constant SWDP_CMD_DP_REG_WRITE : std_ulogic_vector(7 downto 0):= "101101--";
+  constant SWDP_CMD_DP_REG_READ  : std_ulogic_vector(7 downto 0):= "101110--";
+  constant SWDP_CMD_RESET        : std_ulogic_vector(7 downto 0):= "1011110-"; -- SRST value
+  constant SWDP_CMD_JTAG_CONFIG  : std_ulogic_vector(7 downto 0):= "10111110"; -- IR pre/post, DR pre/post, Target
+  constant SWDP_CMD_AP_READ      : std_ulogic_vector(7 downto 0):= "00------";
+  constant SWDP_CMD_AP_WRITE     : std_ulogic_vector(7 downto 0):= "01------";
+  
+  constant SWDP_RSP_AP_READ_DONE : std_ulogic_vector(7 downto 0):= "0001----";
+  constant SWDP_RSP_AP_WRITE_DONE: std_ulogic_vector(7 downto 0):= "0000----";
+  constant SWDP_RSP_DP_READ_DONE : std_ulogic_vector(7 downto 0):= "0011----";
+  constant SWDP_RSP_DP_WRITE_DONE: std_ulogic_vector(7 downto 0):= "0010----";
+  constant SWDP_RSP_MGMT_DONE    : std_ulogic_vector(7 downto 0):= "0100----";
+  constant SWDP_RSP_RESET_DONE   : std_ulogic_vector(7 downto 0):= "0101----";
+  constant SWDP_RSP_UNHANDLED    : std_ulogic_vector(7 downto 0):= "1000----";
+  constant SWDP_RSP_ACK          : std_ulogic_vector(7 downto 0):= "-----001";
+  constant SWDP_RSP_WAIT         : std_ulogic_vector(7 downto 0):= "-----010";
+  constant SWDP_RSP_ERROR        : std_ulogic_vector(7 downto 0):= "-----100";
+  constant SWDP_RSP_PAR_OK       : std_ulogic_vector(7 downto 0):= "----0---";
+  constant SWDP_RSP_PAR_ERROR    : std_ulogic_vector(7 downto 0):= "----1---";
 
-  function swd_cmd_write_build(
-    ad : boolean;
-    a : natural range 0 to 3
-    ) return std_ulogic_vector;
+  constant SWD_CMD_TURNAROUND    : std_ulogic_vector(2 downto 0):= "1--";
+  constant SWD_CMD_CONST         : std_ulogic_vector(2 downto 0):= "000";
+  constant SWD_CMD_BITBANG       : std_ulogic_vector(2 downto 0):= "001";
+  constant SWD_CMD_READ          : std_ulogic_vector(2 downto 0):= "011";
+  constant SWD_CMD_WRITE         : std_ulogic_vector(2 downto 0):= "010";
+  
+  type swd_cmd_data is record
+    data : std_ulogic_vector(31 downto 0);
+    op   : std_ulogic_vector(2 downto 0);
+    ap   : std_ulogic;
+    addr : unsigned(1 downto 0);
+  end record;
 
-  constant SWD_CMD_RESET : std_ulogic_vector(7 downto 0):= x"20";
-  constant SWD_CMD_READ  : std_ulogic_vector(7 downto 0):= x"08";
-  constant SWD_CMD_WRITE : std_ulogic_vector(7 downto 0):= x"00";
-
-  constant SWD_RSP_READ_OK      : std_ulogic_vector(3 downto 0):= x"8";
-  constant SWD_RSP_WRITE_OK     : std_ulogic_vector(3 downto 0):= x"0";
-  constant SWD_RSP_FAULT        : std_ulogic_vector(3 downto 0):= x"1";
-  constant SWD_RSP_OTHER        : std_ulogic_vector(3 downto 0):= x"2";
-  constant SWD_RSP_PARITY_ERROR : std_ulogic_vector(3 downto 0):= x"3";
-  constant SWD_RSP_RESET_DONE   : std_ulogic_vector(3 downto 0):= x"5";
-
+  type swd_rsp_data is record
+    data   : std_ulogic_vector(31 downto 0);
+    ack    : std_ulogic_vector(2 downto 0);
+    par_ok : std_ulogic;
+  end record;
+  
   component swd_master is
     port(
-      p_resetn    : in std_ulogic;
-      p_clk       : in std_ulogic;
+      p_clk      : in  std_ulogic;
+      p_resetn   : in  std_ulogic;
 
-      p_in_val    : in fifo_framed_cmd;
-      p_in_ack    : out fifo_framed_rsp;
-      p_out_val   : out fifo_framed_cmd;
-      p_out_ack   : in fifo_framed_rsp;
+      p_clk_div  : in  unsigned(15 downto 0);
 
-      p_swclk     : out std_ulogic;
-      p_swdio_o   : out std_ulogic;
-      p_swdio_i   : in std_ulogic;
-      p_swdio_oe  : out std_ulogic
+      p_cmd_val  : in  std_ulogic;
+      p_cmd_ack  : out std_ulogic;
+      p_cmd_data : in  swd_cmd_data;
+
+      p_rsp_val  : out std_ulogic;
+      p_rsp_ack  : in  std_ulogic;
+      p_rsp_data : out swd_rsp_data;
+      
+      p_swclk    : out std_ulogic;
+      p_swdio_i  : in  std_ulogic;
+      p_swdio_o  : out std_ulogic;
+      p_swdio_oe : out std_ulogic
       );
   end component;
 
-  component swd_flit_master is
-    port(
-      p_resetn    : in std_ulogic;
-      p_clk       : in std_ulogic;
+  component swd_swdp is
+    port (
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
 
-      p_in_val    : in flit_cmd;
-      p_in_ack    : out flit_ack;
-      p_out_val   : out flit_cmd;
-      p_out_ack   : in flit_ack;
+      p_srst     : out std_ulogic;
 
-      p_swclk     : out std_ulogic;
-      p_swdio_o   : out std_ulogic;
-      p_swdio_i   : in std_ulogic;
-      p_swdio_oe  : out std_ulogic
+      p_cmd_val  : in fifo_framed_cmd;
+      p_cmd_ack  : out fifo_framed_rsp;
+
+      p_rsp_val  : out fifo_framed_cmd;
+      p_rsp_ack  : in fifo_framed_rsp;
+
+      p_swclk    : out std_ulogic;
+      p_swdio_i  : in  std_ulogic;
+      p_swdio_o  : out std_ulogic;
+      p_swdio_oe : out std_ulogic
       );
-  end component;
-
-end package swd;
-
-package body swd is
-
-  function swd_cmd_read_build(
-    ad : boolean;
-    a : natural range 0 to 3
-    ) return std_ulogic_vector is
-    variable au : natural;
-  begin
-    if ad then
-      au := 4;
-    else
-      au := 0;
-    end if;
-    return std_ulogic_vector(to_unsigned(8 + a + au, 8));
-  end swd_cmd_read_build;
-  
-  function swd_cmd_write_build(
-    ad : boolean;
-    a : natural range 0 to 3
-    ) return std_ulogic_vector is
-    variable au : natural;
-  begin
-    if ad then
-      au := 4;
-    else
-      au := 0;
-    end if;
-    return std_ulogic_vector(to_unsigned(a + au, 8));
-  end swd_cmd_write_build;
+  end component; 
 
 end swd;

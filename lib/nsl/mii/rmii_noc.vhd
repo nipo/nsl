@@ -130,8 +130,7 @@ begin
       
   to_flit: nsl.flit.flit_from_framed
     generic map(
-      data_depth => 256,
-      txn_depth => 1
+      data_depth => 256
       )
     port map(
       p_resetn => s_resetn_noc,

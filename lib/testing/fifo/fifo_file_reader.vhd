@@ -31,6 +31,26 @@ architecture rtl of fifo_file_reader is
   signal r_data_valid : std_ulogic := '0';
   signal r_done : std_ulogic;
 
+  procedure slv_read(buf: inout line; v: out std_logic_vector) is
+    variable c: character;
+  begin
+    for i in v'range loop
+      read(buf, c);
+      case c is
+        when 'X' => v(i) := 'X';
+        when 'U' => v(i) := 'U';
+        when 'Z' => v(i) := 'Z';
+        when '0' => v(i) := '0';
+        when '1' => v(i) := '1';
+        when '-' => v(i) := '-';
+        when 'W' => v(i) := 'W';
+        when 'H' => v(i) := 'H';
+        when 'L' => v(i) := 'L';
+        when others => v(i) := '0';
+      end case;
+    end loop;
+  end procedure slv_read;
+
 begin
 
   process (p_clk, p_resetn)
@@ -48,8 +68,8 @@ begin
 
   process (p_clk)
     variable line_content : line;
-    variable data : integer;
     variable wc : integer;
+    variable data : std_logic_vector(width-1 downto 0);
   begin
     r_done <= '0';
 
@@ -64,10 +84,10 @@ begin
             r_done <= '1';
           else
             readline(fd, line_content);
-            read(line_content, data);
+            slv_read(line_content, data);
+            r_data <= std_ulogic_vector(data);
             read(line_content, wc);
             r_wait_cycles <= wc;
-            r_data <= std_ulogic_vector(to_unsigned(data, width));
             r_data_valid <= '1';
           end if;
         else

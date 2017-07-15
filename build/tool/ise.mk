@@ -1,9 +1,9 @@
 ISE = /opt/Xilinx/14.7/ISE_DS
-INTF_STYLE = -intstyle silent
+#INTF_STYLE = -intstyle silent
 PAR_OPTS = -ol high
 ISE_PREPARE = source $(ISE)/settings64.sh > /dev/null
 target ?= $(top)
-user_id ?= 0xffffffff
+user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32)))')
 
 SHELL=/bin/bash
 
@@ -44,7 +44,7 @@ $(target).bit: ise-build/$(target)_par.ncd
 	$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
             -g DriveDone:yes \
-			-g UserID:$(user_id) \
+	    -g UserID:$(user_id) \
             -g StartupClk:Cclk \
             -w $< \
 	    $@
@@ -56,7 +56,7 @@ $(target)-compressed.bit: ise-build/$(target)_par.ncd
 	bitgen $(INTF_STYLE) \
             -g DriveDone:yes \
             -g compress \
-			-g UserID:$(user_id) \
+	    -g UserID:$(user_id) \
             -g StartupClk:Cclk \
             -w $< \
 	    $@
@@ -64,11 +64,11 @@ $(target)-compressed.bit: ise-build/$(target)_par.ncd
 clean-files += $(target)-compressed.bit
 
 ise-build/$(target)-2.bit: ise-build/$(target)_par.ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
             -g spi_buswidth:2 \
             -g ConfigRate:26 \
-			-g UserID:$(user_id) \
+	    -g UserID:$(user_id) \
             -g DriveDone:yes \
             -g StartupClk:Cclk \
             -w $< \
@@ -77,15 +77,15 @@ ise-build/$(target)-2.bit: ise-build/$(target)_par.ncd
 clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
 
 %.mcs: %.bit
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
 
 ise-build/$(target)_par.ncd: ise-build/$(target).ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	par $(INTF_STYLE) $(PAR_OPTS) -w $< $@
 
 ise-build/$(target).ncd: ise-build/$(target).ngd
-	if [ -r ise-build/$(target)_par.ncd ]; then \
+	$(SILENT)if [ -r ise-build/$(target)_par.ncd ]; then \
 		cp ise-build/$(target)_par.ncd ise-build/smartguide.ncd; \
 		SMARTGUIDE="-smartguide ise-build/smartguide.ncd"; \
 	else \
@@ -95,8 +95,8 @@ ise-build/$(target).ncd: ise-build/$(target).ngd
 	map $(INTF_STYLE) $(MAP_OPTS) $${SMARTGUIDE} -w $<
 
 ise-build/$(target).ngd: ise-build/$(target).ngc $(constraints)
-	echo "//" > ise-build/$(target).bmm
-	$(ISE_PREPARE) ; \
+	$(SILENT)echo "//" > ise-build/$(target).bmm
+	$(SILENT)$(ISE_PREPARE) ; \
 	ngdbuild -dd ise-build \
 	    $(INTF_STYLE) ise-build/$(target).ngc \
 		$(foreach c,$(constraints),-uc $c) \
@@ -108,43 +108,36 @@ ise-build/$(target).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) ise-build/
 	xst $(INTF_STYLE) -ifn ise-build/$(target).xst
 
 define ise_source_do
-	echo "vhdl $1 $2" >> $@.tmp
-	
+	echo "$($1-language) $($1-library) $1" >> $@.tmp
+	$(SILENT)
 endef
 
+ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
+	$(SILENT)mkdir -p ise-build/xst
+	$(SILENT)> $@.tmp
+	$(SILENT)$(foreach s,$(sources),$(call ise_source_do,$s))
+	$(SILENT)mv -f $@.tmp $@
 
-define ise_library_do
-	$(foreach s,$($1-vhdl-sources),$(call ise_source_do,$1,$s))
-	
-endef
-
-ise-build/$(target).prj: $(foreach l,$(libraries),$($l-vhdl-sources))
-	mkdir -p ise-build/xst
-	> $@.tmp
-	$(foreach l,$(libraries),$(call ise_library_do,$l))
-	sort -u $@.tmp > $@
-	rm -f $@.tmp
-
-ise-build/$(target).xst: ise-build/$(target).prj $(OPTS)
-	echo 'set -tmpdir "ise-build/xst"' > $@
-	echo 'set -xsthdpdir "ise-build"' >> $@
-	echo "run" >> $@
-	echo "-p $(target_part)" >> $@
-	echo "-top $(top)" >> $@
-	echo "-ifn ise-build/$(target).prj" >> $@
-	echo "-ofn ise-build/$(target).ngc" >> $@
-	for o in $(OPTS) ; do \
+ise-build/$(target).xst: ise-build/$(target).prj $(OPTS) $(MAKEFILE_LIST)
+	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@
+	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@
+	$(SILENT)echo "run" >> $@
+	$(SILENT)echo "-p $(target_part)" >> $@
+	$(SILENT)echo "-top $(top-entity)" >> $@
+	$(SILENT)echo "-ifn ise-build/$(target).prj" >> $@
+	$(SILENT)echo "-ofn ise-build/$(target).ngc" >> $@
+	$(SILENT)for o in $(OPTS) ; do \
 	    cat $$o >> $@ ; \
 	done
 
 ise-build/$(target).post_map.twr: ise-build/$(target).ncd ise-build/$(target).pcf
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	trce -e 10 $< ise-build/$(target).pcf -o $@
 
 ise-build/$(target).twr: ise-build/$(target)_par.ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	trce $< ise-build/$(target).pcf -o $@
 
 ise-build/$(target)_err.twr: ise-build/$(target)_par.ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	trce -e 10 $< ise-build/$(target).pcf -o $@

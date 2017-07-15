@@ -18,15 +18,15 @@ $(elab_target): $(foreach l,$(libraries),$l/_NVC_LIB)
 	$(SILENT)$(NVC) -L. -e $(top)
 
 define nvc_source_do
-$(SILENT)$$(NVC) -L. --std=$$(VHDL_VERSION) --work=$2 $1 $3 > /dev/null
+$(SILENT)$$(NVC) -L. --std=$$(VHDL_VERSION) --work=$($1-library) $2 $1 > /dev/null
 	
 endef
 
 define nvc_library
 
-$1/_NVC_LIB: $($1-vhdl-sources)
+$1/_NVC_LIB: $($1-lib-sources)
 	rm -f $$
-	$(foreach s,$($1-vhdl-sources),$(call nvc_source_do,-a,$1,$s))
+	$(foreach s,$($1-lib-sources),$(call nvc_source_do,$s,-a))
 
 clean-dirs += $1/
 

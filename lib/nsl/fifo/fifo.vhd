@@ -19,6 +19,63 @@ package fifo is
   type fifo_framed_cmd_array is array(natural range <>) of fifo_framed_cmd;
   type fifo_framed_rsp_array is array(natural range <>) of fifo_framed_rsp;
 
+  type fifo_framed_routing_table is array(natural range 0 to 15) of natural;
+
+  component fifo_framed_router is
+    generic(
+      in_port_count : natural;
+      out_port_count : natural;
+      routing_table : fifo_framed_routing_table
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val   : in fifo_framed_cmd_array(in_port_count-1 downto 0);
+      p_in_ack   : out fifo_framed_rsp_array(in_port_count-1 downto 0);
+
+      p_out_val   : out fifo_framed_cmd_array(out_port_count-1 downto 0);
+      p_out_ack   : in fifo_framed_rsp_array(out_port_count-1 downto 0)
+      );
+  end component;
+
+  component fifo_framed_router_inbound is
+    generic(
+      out_port_count : natural;
+      routing_table : fifo_framed_routing_table
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val   : in fifo_framed_cmd;
+      p_in_ack   : out fifo_framed_rsp;
+
+      p_out_val  : out fifo_framed_cmd;
+      p_out_ack  : in fifo_framed_rsp_array(out_port_count-1 downto 0);
+      
+      p_select : out std_ulogic_vector(out_port_count-1 downto 0)
+      );
+  end component;
+
+  component fifo_framed_router_outbound is
+    generic(
+      in_port_count : natural
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_in_val   : in fifo_framed_cmd_array(in_port_count-1 downto 0);
+      p_in_ack   : out fifo_framed_rsp;
+
+      p_out_val  : out fifo_framed_cmd;
+      p_out_ack  : in fifo_framed_rsp;
+
+      p_select : in std_ulogic_vector(in_port_count-1 downto 0)
+      );
+  end component;
+  
   component fifo_sync
     generic(
       data_width : integer;

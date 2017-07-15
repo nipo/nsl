@@ -19,6 +19,8 @@ architecture rtl of resync_reg is
   subtype word_t is std_ulogic_vector(data_width-1 downto 0);
   type regs_t is array(cycle_count - 1 downto 0) of word_t;
   signal r_regs : regs_t;
+  attribute keep : boolean;
+  attribute keep of r_regs : signal is true;
 
 begin
 

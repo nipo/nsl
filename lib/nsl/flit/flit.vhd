@@ -39,8 +39,7 @@ package flit is
 
   component flit_from_framed
     generic(
-      data_depth  : natural := 256;
-      txn_depth   : natural := 1
+      data_depth  : natural := 256
       );
     port(
       p_resetn   : in  std_ulogic;
@@ -59,6 +58,8 @@ package flit is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
+      p_inval : out std_ulogic;
+      
       p_out_val  : out fifo_framed_cmd;
       p_out_ack  : in  fifo_framed_rsp;
 

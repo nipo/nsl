@@ -1,4 +1,5 @@
-subdirs += swd
-subdirs += fifo
-subdirs += noc
-subdirs += flit
+packages += swd
+packages += fifo
+packages += noc
+packages += ftdi
+packages += flit

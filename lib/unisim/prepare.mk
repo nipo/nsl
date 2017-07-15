@@ -1,6 +1,6 @@
 ISE = $(HOME)/local/opt/Xilinx/14.7
 ISE_VHDL = $(ISE)/ISE_DS/ISE/vhdl/src
-UNISIM_VHDL = $(ISE_VHDL)/unisim
+UNISIM_VHDL = $(ISE_VHDL)/unisims
 
 ISE_UNISIM_SRC := $(shell cat $(UNISIM_VHDL)/primitive/vhdl_analyze_order | uniq)
 

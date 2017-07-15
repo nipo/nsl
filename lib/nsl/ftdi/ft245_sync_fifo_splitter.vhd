@@ -29,10 +29,11 @@ end ft245_sync_fifo_splitter;
 architecture arch of ft245_sync_fifo_splitter is
 
   type state_type is (
-    S_FROM_IN,
-    S_TO_OUT_TURN,
-    S_TO_OUT,
-    S_FROM_IN_TURN
+    S_RESET,
+    S_TO_P_IN,
+    S_FROM_P_OUT_TURN,
+    S_FROM_P_OUT,
+    S_TO_P_IN_TURN
   );
 
   type regs_t is record
@@ -42,110 +43,100 @@ architecture arch of ft245_sync_fifo_splitter is
 
   signal r, rin: regs_t;
 
-  signal s_can_in : boolean;
-  signal s_can_out : boolean;
+  signal s_p_out_ready : boolean;
+  signal s_p_in_ready : boolean;
   
 begin
 
   process (p_clk, p_resetn)
   begin
     if (p_resetn = '0') then
-      r.state <= S_FROM_IN;
-      r.counter <= 0;
+      r.state <= S_RESET;
     elsif (rising_edge(p_clk)) then
       r <= rin;
     end if;
   end process;
 
-  s_can_in <= p_out_write = '1' and p_ftdi_txen = '0';
-  s_can_out <= p_in_read = '1' and p_ftdi_rxfn = '0';
+  s_p_out_ready <= p_out_write = '1' and p_ftdi_txen = '0';
+  s_p_in_ready <= p_in_read = '1' and p_ftdi_rxfn = '0';
   
   -- Next state
-  process (r, s_can_in, s_can_out)
+  process (r, s_p_out_ready, s_p_in_ready)
   begin
     rin <= r;
     
     case r.state is
-      when S_FROM_IN =>
-        if s_can_in then
-          if (r.counter = burst_length-1) then
-            if s_can_out then
-              rin.state <= S_TO_OUT_TURN;
+      when S_RESET =>
+        rin.state <= S_TO_P_IN_TURN;
+        
+      when S_TO_P_IN =>
+        if s_p_in_ready then
+          if r.counter = 0 then
+            if s_p_out_ready then
+              rin.state <= S_FROM_P_OUT_TURN;
             end if;
           else
-            rin.counter <= r.counter + 1;
+            rin.counter <= r.counter - 1;
           end if;
-        elsif s_can_out then
-          rin.state <= S_TO_OUT_TURN;
+        elsif s_p_out_ready then
+          rin.state <= S_FROM_P_OUT_TURN;
         end if;
         
-      when S_TO_OUT =>
-        if s_can_out then
-          if (r.counter = burst_length-1) then
-            if s_can_in then
-              rin.state <= S_FROM_IN_TURN;
+      when S_FROM_P_OUT =>
+        if s_p_out_ready then
+          if r.counter = 0 then
+            if s_p_in_ready then
+              rin.state <= S_TO_P_IN_TURN;
             end if;
           else
-            rin.counter <= r.counter + 1;
+            rin.counter <= r.counter - 1;
           end if;
-        elsif s_can_in then
-          rin.state <= S_FROM_IN_TURN;
+        elsif s_p_in_ready then
+          rin.state <= S_TO_P_IN_TURN;
         end if;
         
-      when S_FROM_IN_TURN =>
-        rin.state <= S_FROM_IN;
-        rin.counter <= 0;
+      when S_TO_P_IN_TURN =>
+        rin.state <= S_TO_P_IN;
+        rin.counter <= burst_length - 1;
         
-      when S_TO_OUT_TURN =>
-        rin.state <= S_TO_OUT;
-        rin.counter <= 0;
+      when S_FROM_P_OUT_TURN =>
+        rin.state <= S_FROM_P_OUT;
+        rin.counter <= burst_length - 1;
     end case;
   end process;
 
   -- Constant mapping
   p_in_data <= std_ulogic_vector(p_ftdi_data);
 
-  -- Moore signals
-  process (r)
-  begin
-    case r.state is
-      when S_FROM_IN | S_FROM_IN_TURN =>
-        p_ftdi_oen <= '1';
-      when S_TO_OUT_TURN | S_TO_OUT =>
-        p_ftdi_oen <= '0';
-    end case;
-  end process;
-
   -- Mealy signals
   process (r, p_in_read, p_out_write, p_ftdi_rxfn, p_ftdi_txen, p_out_data)
   begin
+    p_ftdi_rdn <= '1';
+    p_in_empty_n <= '0';
+
+    p_ftdi_wrn <= '1';
+    p_out_full_n <= '0';
+
+    p_ftdi_data <= (others => 'Z');
+    p_ftdi_oen <= '1';
+
     case r.state is
-      when S_FROM_IN =>
-        p_ftdi_rdn <= '1';
-        p_in_empty_n <= '0';
+      when S_TO_P_IN_TURN =>
+        p_ftdi_oen <= '0';
 
-        p_ftdi_wrn <= not p_out_write;
+      when S_TO_P_IN =>
+        p_ftdi_rdn <= (not p_in_read) or p_ftdi_rxfn;
+        p_in_empty_n <= not p_ftdi_rxfn;
+        p_ftdi_oen <= '0';
+
+      when S_FROM_P_OUT =>
+        p_ftdi_wrn <= (not p_out_write) or p_ftdi_txen;
         p_out_full_n <= not p_ftdi_txen;
-
         p_ftdi_data <= std_logic_vector(p_out_data);
 
-      when S_FROM_IN_TURN | S_TO_OUT_TURN =>
-        p_ftdi_rdn <= '1';
-        p_in_empty_n <= '0';
+      when others =>
+        null;
 
-        p_ftdi_wrn <= '1';
-        p_out_full_n <= '0';
-          
-        p_ftdi_data <= (others => 'Z');
-
-      when S_TO_OUT =>
-        p_ftdi_rdn <= not p_in_read;
-        p_in_empty_n <= not p_ftdi_rxfn;
-
-        p_ftdi_wrn <= '1';
-        p_out_full_n <= '0';
-          
-        p_ftdi_data <= (others => 'Z');
     end case;
   end process;
   

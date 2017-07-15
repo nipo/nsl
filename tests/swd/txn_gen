@@ -1,119 +1,82 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 
 class NocTxnFile:
     def __init__(self, filename):
         self.output = open(filename, "w")
-        self.pending = []
+        self.cmds = []
 
-    def append(self, flit):
-        self.pending.append(flit)
+    def put(self, data, mask, length, more):
+        self.output.write("%d" % int(bool(more)))
+        for i in range(length - 1, -1, -1):
+            v = (data >> i) & 1
+            m = (mask >> i) & 1
+            if m:
+                self.output.write("%d" % v)
+            else:
+                self.output.write("-")
+        self.output.write(" %d\n" % 0)
 
-    def flush(self):
-        flit = sum(self.pending, Flit([]))
-        self.pending = []
-        self.output.write("%d %d\n" % (len(flit), 0))
-        for b in flit:
-            self.output.write("%d %d\n" % (b, 0))
+    def flush(self, header, tag):
+        if not self.cmds:
+            return
 
-class Flit:
-    def __init__(self, data):
-        self.data = data
-
-    def __iter__(self):
-        return iter(self.data)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __iadd__(self, other):
-        self.data += other.data
-
-    def __add__(self, other):
-        return self.__class__(self.data + other.data)
-
-class Header(Flit):
-    def __init__(self, src, dst, tag):
-        Flit.__init__(self, [dst + src * 16, tag])
-
-CMD_RESET = 0x20
-CMD_READ = 0x08
-CMD_WRITE = 0x00
-CMD_AD = lambda x: x<<2
-CMD_A = lambda x: x
-
-RSP_ACK = 0
-RSP_FAULT = 1
-RSP_ERROR = 2
-RSP_PARITY_ERROR = 3
-RSP_RESET_DONE = 5
-RSP_HAS_DATA = 8
-
-class SwdResetCmd(Flit):
-    def __init__(self):
-        Flit.__init__(self, [CMD_RESET])
-
-class SwdReadCmd(Flit):
-    def __init__(self, ad, a):
-        Flit.__init__(self, [CMD_READ | CMD_AD(ad) | CMD_A(a)])
-
-class SwdWriteCmd(Flit):
-    def __init__(self, ad, a, val):
-        Flit.__init__(self, [CMD_WRITE | CMD_AD(ad) | CMD_A(a),
-                 val & 0xff, (val >> 8) & 0xff,
-                 (val >> 16) & 0xff, (val >> 24) & 0xff])
-
-class SwdReadRsp(Flit):
-    def __init__(self, val):
-        Flit.__init__(self, [RSP_HAS_DATA,
-                 val & 0xff, (val >> 8) & 0xff,
-                 (val >> 16) & 0xff, (val >> 24) & 0xff])
-
-class SwdResetRsp(Flit):
-    def __init__(self):
-        Flit.__init__(self, [RSP_RESET_DONE])
-
-class SwdWriteRsp(Flit):
-    def __init__(self):
-        Flit.__init__(self, [RSP_ACK])
-
-class SwdFaultRsp(Flit):
-    def __init__(self, val):
-        Flit.__init__(self, [RSP_FAULT])
+        self.put(header, 0xff, 8, 1)
+        self.put(tag, 0xff, 8, 1)
+        for i, c in enumerate(self.cmds):
+            try:
+                v, mask = c
+            except:
+                v = c
+                mask = 0xff
+            self.put(v, mask, 8, i != len(self.cmds) - 1)
+        self.cmds = []
 
 class SwdCmd(NocTxnFile):
-    def __init__(self, filename):
-        NocTxnFile.__init__(self, filename)
+    def read(self, ap, ad, val):
+        if ap:
+            self.cmds += [0x00 | (ad & 0x3f)]
+        else:
+            self.cmds += [0xb8 | (ad & 0x03)]
 
-    def start(self, src, dst, tag):
-        self.append(Header(src, dst, tag))
+    def write(self, ap, ad, val):
+        if ap:
+            self.cmds += [0x40 | (ad & 0x3f)]
+        else:
+            self.cmds += [0xb4 | (ad & 0x03)]
+        for i in range(4):
+            self.cmds += [(val >> (8 * i)) & 0xff]
 
-    def read(self, ad, a, val):
-        self.append(SwdReadCmd(ad, a))
+    def reset(self, idcode):
+        self.cmds += [0xb0]
 
-    def write(self, ad, a, val):
-        self.append(SwdWriteCmd(ad, a, val))
-
-    def reset(self):
-        self.append(SwdResetCmd())
+    def div(self, d):
+        self.cmds += [0xbe, d & 0xff, d >> 8]
 
 class SwdRsp(NocTxnFile):
-    def __init__(self, filename):
-        NocTxnFile.__init__(self, filename)
+    def read(self, ap, ad, val):
+        if ap:
+            self.cmds += [0x11]
+        else:
+            self.cmds += [0x31]
+        for i in range(4):
+            self.cmds += [(val >> (8 * i)) & 0xff]
 
-    def start(self, src, dst, tag):
-        self.append(Header(dst, src, tag))
+    def write(self, ap, ad, val):
+        if ap:
+            self.cmds += [(0x01, 0xf7)]
+        else:
+            self.cmds += [(0x21, 0xf7)]
 
-    def read(self, ad, a, val):
-        self.append(SwdReadRsp(val))
+    def reset(self, idcode):
+        self.cmds += [(0x51, 0xf0)]
+        for i in range(4):
+            self.cmds += [(idcode >> (8 * i)) & 0xff]
 
-    def write(self, ad, a, val):
-        self.append(SwdWriteRsp())
-
-    def reset(self):
-        self.append(SwdResetRsp())
-
+    def div(self, d):
+        self.cmds += [(0x40, 0xf0)]
+            
 if __name__ == "__main__":
     n = sys.argv[1]
 
@@ -122,26 +85,30 @@ if __name__ == "__main__":
     else:
         t = SwdCmd(n)
 
-    t.start(0, 1, 0x2a)
-    t.reset()
-    t.write(0, 0, 42)
-    t.read(0, 0, 42)
-    t.flush()
-
-    t.start(2, 1, 0xee)
+    t.reset(0xdeadbeef)
+    t.div(0x2)
+    t.write(1, 0, 42)
+    t.read(1, 0, 42)
+    t.flush(0, 0)
+    
     t.write(0, 1, 123)
     t.read(0, 1, 123)
-    t.read(0, 0, 42)
-    t.flush()
+    t.read(1, 0, 42)
+    t.flush(0, 1)
 
-    t.start(0, 1, 0xff)
-    t.reset()
-    t.flush()
+    t.reset(0xdeadbeef)
 
-
-    for i in range(16):
-        t.start(i, 1, i * 0x11)
-        t.write(i >> 3, i & 3, i * 0x11111111)
-        t.read(i >> 3, i & 3, i * 0x11111111)
-        t.flush()
-        
+    for s in (0, 1, 2, 3, 4, 10, 50):
+        t.div(s)
+        t.reset(0xdeadbeef)
+        last = 0
+        for i in range(32):
+            t.write(1, i >> 2, i * 0x11111111)
+            if i & 1:
+                t.read(1, i >> 2, i * 0x11111111)
+            if i & 2:
+                t.read(1, i >> 2, i * 0x11111111)
+            if i % 3 == 0:
+                t.flush(0, last)
+                last = i
+        t.flush(0, last)

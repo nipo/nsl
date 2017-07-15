@@ -1,0 +1,2 @@
+packages += fifo
+packages += ram

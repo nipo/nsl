@@ -16,6 +16,8 @@ end reset_synchronizer;
 architecture rtl of reset_synchronizer is
 
   signal r_reset : std_ulogic_vector(cycle_count-1 downto 0);
+  attribute keep : boolean;
+  attribute keep of r_reset : signal is true;
 
 begin  -- rtl
 
