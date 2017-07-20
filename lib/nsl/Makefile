@@ -8,5 +8,6 @@ packages += swd
 packages += logic_analyzer
 packages += ti
 packages += ioext
+packages += cs
 packages += uart
 packages += tpiu
