@@ -5,6 +5,7 @@ packages += routed
 packages += sized
 packages += noc
 packages += mii
+packages += spi
 packages += ftdi
 packages += logic_analyzer
 packages += ti
