@@ -16,31 +16,30 @@ package ram is
 
       p_addr  : in  std_ulogic_vector (addr_size-1 downto 0);
 
-      p_wren  : in  std_ulogic;
+      p_wen   : in  std_ulogic;
       p_wdata : in  std_ulogic_vector (data_size-1 downto 0);
 
       p_rdata : out std_ulogic_vector (data_size-1 downto 0)
       );
   end component;
 
-  component ram_2p
+  component ram_2p_r_w
     generic (
       addr_size : natural;
       data_size : natural;
-      passthrough_12 : boolean := false
+      clk_count : natural range 1 to 2 := 1;
+      bypass : boolean := false
       );
     port (
-      p_clk1   : in  std_ulogic;
-      p_addr1  : in  std_ulogic_vector (addr_size-1 downto 0);
-      p_wren1  : in  std_ulogic;
-      p_wdata1 : in  std_ulogic_vector (data_size-1 downto 0);
-      p_rdata1 : out std_ulogic_vector (data_size-1 downto 0);
+      p_clk    : in  std_ulogic_vector(clk_count-1 downto 0);
 
-      p_clk2   : in  std_ulogic;
-      p_addr2  : in  std_ulogic_vector (addr_size-1 downto 0);
-      p_wren2  : in  std_ulogic;
-      p_wdata2 : in  std_ulogic_vector (data_size-1 downto 0);
-      p_rdata2 : out std_ulogic_vector (data_size-1 downto 0)
+      p_waddr  : in  std_ulogic_vector (addr_size-1 downto 0);
+      p_wen    : in  std_ulogic := '0';
+      p_wdata  : in  std_ulogic_vector (data_size-1 downto 0) := (others => '-');
+
+      p_raddr  : in  std_ulogic_vector (addr_size-1 downto 0);
+      p_ren    : in  std_ulogic := '1';
+      p_rdata  : out std_ulogic_vector (data_size-1 downto 0)
       );
   end component;
 

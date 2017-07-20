@@ -27,14 +27,15 @@ end fifo_sync;
 architecture rtl of fifo_sync is
 begin
 
-  impl: hwdep.fifo.fifo_sync
+  impl: hwdep.fifo.fifo_2p
     generic map(
       data_width => data_width,
-      depth => depth
+      depth => depth,
+      clk_count => 1
       )
     port map(
       p_resetn => p_resetn,
-      p_clk => p_clk,
+      p_clk(0) => p_clk,
 
       p_out_data => p_out_data,
       p_out_read => p_out_read,
