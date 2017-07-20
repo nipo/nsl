@@ -6,8 +6,10 @@ library nsl;
 
 package fifo is
 
+  subtype framed_data_t is std_ulogic_vector(7 downto 0);
+  
   type fifo_framed_cmd is record
-    data : std_ulogic_vector(7 downto 0);
+    data : framed_data_t;
     more : std_ulogic;
     val  : std_ulogic;
   end record;
@@ -19,7 +21,8 @@ package fifo is
   type fifo_framed_cmd_array is array(natural range <>) of fifo_framed_cmd;
   type fifo_framed_rsp_array is array(natural range <>) of fifo_framed_rsp;
 
-  type fifo_framed_routing_table is array(natural range 0 to 15) of natural;
+  subtype component_id is natural range 0 to 15;
+  type fifo_framed_routing_table is array(component_id) of natural;
 
   component fifo_framed_router is
     generic(
@@ -196,5 +199,24 @@ package fifo is
       p_out_ack   : in fifo_framed_rsp
       );
   end component;
+
+  function fifo_framed_header(dst: component_id;
+                              src: component_id)
+    return framed_data_t is
+  begin
+    return framed_data_t(to_unsigned(src * 16 + dst, 8));
+  end;
+
+  function fifo_framed_header_dst(w: framed_data_t)
+    return component_id is
+  begin
+    return to_integer(unsigned(w(3 downto 0)));
+  end;
+  
+  function fifo_framed_header_src(w: framed_data_t)
+    return component_id is
+  begin
+    return to_integer(unsigned(w(7 downto 4)));
+  end;
 
 end package fifo;
