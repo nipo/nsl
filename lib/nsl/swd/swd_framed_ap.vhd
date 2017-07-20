@@ -6,34 +6,27 @@ library nsl;
 use nsl.fifo.all;
 use nsl.swd.all;
 
-entity swd_swdp is
+entity swd_framed_ap is
+  generic(
+    srcid : nsl.fifo.component_id
+    );
   port (
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_srst     : out std_ulogic;
-    
-    p_cmd_val   : in fifo_framed_cmd;
-    p_cmd_ack   : out fifo_framed_rsp;
+    p_cmd_val   : in nsl.fifo.fifo_framed_cmd;
+    p_cmd_ack   : out nsl.fifo.fifo_framed_rsp;
+    p_rsp_val   : out nsl.fifo.fifo_framed_cmd;
+    p_rsp_ack   : in nsl.fifo.fifo_framed_rsp;
 
-    p_rsp_val   : out fifo_framed_cmd;
-    p_rsp_ack   : in fifo_framed_rsp;
-
-    p_swclk    : out std_logic;
-    p_swdio_i  : in  std_logic;
-    p_swdio_o  : out std_logic;
-    p_swdio_oe : out std_logic
+    p_dp_cmd_val   : in nsl.fifo.fifo_framed_cmd;
+    p_dp_cmd_ack   : out nsl.fifo.fifo_framed_rsp;
+    p_dp_rsp_val   : out nsl.fifo.fifo_framed_cmd;
+    p_dp_rsp_ack   : in nsl.fifo.fifo_framed_rsp
   );
 end entity; 
 
-architecture rtl of swd_swdp is
-
-  signal s_cmd_val  : std_logic;
-  signal s_cmd_ack  : std_logic;
-  signal s_cmd_data : swd_cmd_data;
-  signal s_rsp_val  : std_logic;
-  signal s_rsp_ack  : std_logic;
-  signal s_rsp_data : swd_rsp_data;
+architecture rtl of swd_framed_ap is
 
   type state_t is (
     STATE_RESET,
@@ -46,37 +39,22 @@ architecture rtl of swd_swdp is
     STATE_CMD_GET,
     STATE_CMD_ROUTE,
 
-    STATE_CLK_DIV,
-
     STATE_SELECT_CMD,
     STATE_SELECT_RSP,
+
     STATE_RDBUF_CMD,
     STATE_RDBUF_RSP,
-    
-    STATE_WAKEUP_R1_CMD,
-    STATE_WAKEUP_R1_RSP,
-    STATE_WAKEUP_R2_CMD,
-    STATE_WAKEUP_R2_RSP,
-    STATE_WAKEUP_R3_CMD,
-    STATE_WAKEUP_R3_RSP,
-    STATE_WAKEUP_R4_CMD,
-    STATE_WAKEUP_R4_RSP,
-    
-    STATE_DATA_PREPARE,
-    STATE_SWD_CMD,
-    STATE_SWD_RSP,
-    STATE_AP_RUN_CMD,
-    STATE_AP_RUN_RSP,
 
-    STATE_RSP_PUT,
-    STATE_RSP_DATA_PUT
+    STATE_AP_CMD,
+    STATE_AP_RSP,
+    
+    STATE_DATA_PS_PUT,
+    STATE_DATA_PS_GET,
     );
   
   type regs_t is record
-    clk_div         : std_ulogic_vector(15 downto 0);
-
     state           : state_t;
-    srst            : std_ulogic;
+    dp_id           : nsl.fifo.component_id;
 
     cmd             : std_ulogic_vector(7 downto 0);
     cmd_pending     : boolean;
@@ -85,15 +63,10 @@ architecture rtl of swd_swdp is
 
     ap_run_pending  : boolean;
     ap_read_pending : boolean;
-    swd_put_rsp     : boolean;
-    swd_data_rsp    : boolean;
-    swd_cmd         : swd_cmd_data;
-    status          : std_ulogic_vector(7 downto 0);
-    has_data        : boolean;
     data_byte       : natural range 0 to 3;
     ap_run_cycles   : std_ulogic_vector(5 downto 0);
     sel_dirty       : boolean;
-    ap_sel          : std_ulogic_vector(3 downto 0);
+    ap_sel          : std_ulogic_vector(7 downto 0);
     ap_bank_sel     : std_ulogic_vector(3 downto 0);
     dp_bank_sel     : std_ulogic_vector(3 downto 0);
   end record;
@@ -113,28 +86,26 @@ begin
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_rsp_ack, s_cmd_ack, s_rsp_val, s_rsp_data)
+  transition: process (r, p_cmd_val, p_rsp_ack, p_dp_cmd_val, p_dp_rsp_ack)
   begin
     rin <= r;
 
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_HEADER_GET;
-        rin.clk_div <= x"0095";
-        rin.swd_put_rsp <= false;
+        rin.ap_run_pending <= false;
         rin.ap_read_pending <= false;
-        rin.ap_run_cycles <= "111111";
+        rin.ap_run_cycles <= std_ulogic_vector(to_unsigned(10, 6));
         rin.more <= '0';
-        rin.ap_sel <= x"0";
-        rin.ap_bank_sel <= x"0";
-        rin.dp_bank_sel <= x"0";
-        rin.srst <= '1';
-        rin.sel_dirty <= true;
         
       when STATE_HEADER_GET =>
         if p_cmd_val.val = '1' then
           rin.cmd <= p_cmd_val.data(3 downto 0) & p_cmd_val.data(7 downto 4);
           rin.state <= STATE_HEADER_PUT;
+          rin.ap_sel <= x"00";
+          rin.ap_bank_sel <= x"0";
+          rin.dp_bank_sel <= x"0";
+          rin.sel_dirty <= true;
         end if;
         
       when STATE_HEADER_PUT =>
@@ -154,7 +125,7 @@ begin
         end if;
 
       when STATE_CMD_GET =>
-        assert not r.cmd_pending report "Command getting overflow" severity error;
+        assert not r.cmd_pending report "Command getting overflow" severity failure;
         
         if p_cmd_val.val = '1' then
           rin.cmd <= p_cmd_val.data;
@@ -164,20 +135,12 @@ begin
         end if;
         
       when STATE_CMD_ROUTE =>
-        if r.ap_run_pending and (not r.cmd_pending
-                                 or std_match(r.cmd, SWDP_CMD_AP_READ)
-                                 or std_match(r.cmd, SWDP_CMD_AP_WRITE)) then
+        if r.ap_run_pending and (not r.cmd_pending or std_match(r.cmd, SWD_AP_AP_RW)) then
           rin.state <= STATE_AP_RUN_CMD;
           rin.ap_run_pending <= false;
-          rin.swd_put_rsp <= false;
-          rin.swd_data_rsp <= false;
-        elsif r.ap_read_pending and (not r.cmd_pending
-                                     or r.more = '0'
-                                     or not std_match(r.cmd, SWDP_CMD_AP_READ)) then
+        elsif r.ap_read_pending and (not r.cmd_pending or r.more = '0' or not std_match(r.cmd, SWD_AP_AP_READ)) then
           rin.state <= STATE_RDBUF_CMD;
           rin.ap_read_pending <= false;
-          rin.swd_put_rsp <= true;
-          rin.swd_data_rsp <= true;
         elsif not r.cmd_pending then
           if r.more = '1' then
             rin.state <= STATE_CMD_GET;
@@ -185,36 +148,26 @@ begin
             rin.state <= STATE_HEADER_GET;
           end if;
         else
-          rin.swd_put_rsp <= false;
-          rin.swd_data_rsp <= false;
           rin.cmd_pending <= false;
-          if std_match(r.cmd, SWDP_CMD_AP_RUN) then
+
+          if std_match(r.cmd, SWD_AP_AP_RUN) then
             rin.ap_run_cycles <= r.cmd(5 downto 0);
             rin.state <= STATE_RSP_PUT;
-            rin.status <= SWDP_RSP_MGMT_DONE;
             
-          elsif std_match(r.cmd, SWDP_CMD_AP_SEL) then
-            rin.ap_sel <= r.cmd(3 downto 0);
-            rin.sel_dirty <= r.ap_sel /= r.cmd(3 downto 0);
+          elsif std_match(r.cmd, SWD_AP_AP_SEL_HIGH) then
+            rin.sel_dirty <= r.ap_sel(7 downto 4) /= r.cmd(3 downto 0);
+            rin.ap_sel(7 downto 4) <= r.cmd(3 downto 0);
             rin.state <= STATE_RSP_PUT;
-            rin.status <= SWDP_RSP_MGMT_DONE;
 
-          elsif std_match(r.cmd, SWDP_CMD_DP_BANK) then
-            rin.dp_bank_sel <= r.cmd(3 downto 0);
-            rin.sel_dirty <= r.dp_bank_sel /= r.cmd(3 downto 0);
+          elsif std_match(r.cmd, SWD_AP_AP_SEL_LOW) then
+            rin.sel_dirty <= r.ap_sel /= "0000" & r.cmd(3 downto 0);
+            rin.ap_sel <= "0000" & r.cmd(3 downto 0);
             rin.state <= STATE_RSP_PUT;
-            rin.status <= SWDP_RSP_MGMT_DONE;
 
-          elsif std_match(r.cmd, SWDP_CMD_ABORT) then
-            rin.state <= STATE_SWD_CMD;
-            rin.swd_cmd.op <= SWD_CMD_WRITE;
-            rin.swd_cmd.ap <= '0';
-            rin.swd_cmd.addr <= "00";
-            rin.swd_cmd.data <= "0000000000000000000000000001" & r.cmd(3 downto 0);
-            rin.ap_read_pending <= false;
-            rin.status <= SWDP_RSP_MGMT_DONE;
+          elsif std_match(r.cmd, SWD_AP_ABORT) then
+            rin.state <= STATE_ABORT_CMD;
 
-          elsif std_match(r.cmd, SWDP_CMD_DP_REG_WRITE) then
+          elsif std_match(r.cmd, SWD_AP_DP_REG_WRITE) then
             if r.sel_dirty then
               rin.sel_dirty <= false;
               rin.state <= STATE_SELECT_CMD;
@@ -227,10 +180,9 @@ begin
               rin.swd_cmd.addr <= unsigned(r.cmd(1 downto 0));
               rin.data_byte <= 3;
               rin.state <= STATE_DATA_PREPARE;
-              rin.status <= SWDP_RSP_DP_WRITE_DONE;
             end if;
 
-          elsif std_match(r.cmd, SWDP_CMD_DP_REG_READ) then
+          elsif std_match(r.cmd, SWD_AP_DP_REG_READ) then
             if r.sel_dirty then
               rin.sel_dirty <= false;
               rin.state <= STATE_SELECT_CMD;
@@ -243,10 +195,9 @@ begin
               rin.swd_cmd.addr <= unsigned(r.cmd(1 downto 0));
               rin.data_byte <= 3;
               rin.state <= STATE_SWD_CMD;
-              rin.status <= SWDP_RSP_DP_READ_DONE;
             end if;
 
-          elsif std_match(r.cmd, SWDP_CMD_AP_WRITE) then
+          elsif std_match(r.cmd, SWD_AP_AP_WRITE) then
             if r.sel_dirty or r.ap_bank_sel /= r.cmd(5 downto 2) then
               rin.sel_dirty <= false;
               rin.ap_bank_sel <= r.cmd(5 downto 2);
@@ -260,10 +211,9 @@ begin
               rin.swd_cmd.addr <= unsigned(r.cmd(1 downto 0));
               rin.data_byte <= 3;
               rin.state <= STATE_DATA_PREPARE;
-              rin.status <= SWDP_RSP_AP_WRITE_DONE;
             end if;
 
-          elsif std_match(r.cmd, SWDP_CMD_AP_READ) then
+          elsif std_match(r.cmd, SWD_AP_AP_READ) then
             if r.sel_dirty or r.ap_bank_sel /= r.cmd(5 downto 2) then
               rin.sel_dirty <= false;
               rin.ap_bank_sel <= r.cmd(5 downto 2);
@@ -278,10 +228,9 @@ begin
               rin.swd_cmd.addr <= unsigned(r.cmd(1 downto 0));
               rin.data_byte <= 3;
               rin.state <= STATE_SWD_CMD;
-              rin.status <= SWDP_RSP_AP_READ_DONE;
             end if;
 
-          elsif std_match(r.cmd, SWDP_CMD_WAKEUP) then
+          elsif std_match(r.cmd, SWD_AP_WAKEUP) then
             rin.state <= STATE_WAKEUP_R1_CMD;
             rin.sel_dirty <= false;
             rin.ap_sel <= X"0";
@@ -291,21 +240,17 @@ begin
             rin.swd_cmd.ap <= '0';
             rin.swd_cmd.addr <= "00";
             rin.swd_cmd.data <= X"ffffffff";
-            rin.status <= SWDP_RSP_RESET_DONE;
 
-          elsif std_match(r.cmd, SWDP_CMD_RESET) then
+          elsif std_match(r.cmd, SWD_AP_RESET) then
             rin.state <= STATE_RSP_PUT;
-            rin.status <= SWDP_RSP_MGMT_DONE;
             rin.srst <= r.cmd(0);
             
-          elsif std_match(r.cmd, SWDP_CMD_JTAG_CONFIG) then
+          elsif std_match(r.cmd, SWD_AP_JTAG_CONFIG) then
             rin.state <= STATE_CLK_DIV;
-            rin.status <= SWDP_RSP_MGMT_DONE;
             rin.data_byte <= 1;
             
           else
             rin.state <= STATE_RSP_PUT;
-            rin.status <= SWDP_RSP_UNHANDLED;
           end if;
         end if;
 
@@ -398,8 +343,6 @@ begin
             rin.state <= STATE_RSP_PUT;
             rin.swd_cmd.data <= s_rsp_data.data;
             rin.data_byte <= 3;
-            rin.status(3) <= s_rsp_data.par_ok;
-            rin.status(2 downto 0) <= s_rsp_data.ack;
           else
             rin.state <= STATE_CMD_ROUTE;
           end if;
@@ -436,8 +379,6 @@ begin
           rin.state <= STATE_RSP_PUT;
           rin.swd_cmd.data <= s_rsp_data.data;
           rin.data_byte <= 3;
-          rin.status(3) <= s_rsp_data.par_ok;
-          rin.status(2 downto 0) <= s_rsp_data.ack;
         end if;
 
       when STATE_RSP_PUT =>
@@ -534,7 +475,7 @@ begin
         else
           p_rsp_val.more <= r.more;
         end if;
-        p_rsp_val.data <= r.status;
+        p_rsp_val.data <= r.cmd;
 
       when STATE_RSP_DATA_PUT =>
         p_cmd_ack.ack <= '0';
