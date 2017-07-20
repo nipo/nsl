@@ -8,7 +8,7 @@ use nsl.flit.all;
 
 entity flit_from_framed is
   generic(
-    data_depth  : natural := 2048
+    max_txn_length : natural := 2048
     );
   port(
     p_resetn    : in  std_ulogic;
@@ -82,7 +82,7 @@ begin
         end if;
 
       when STATE_DATA_FLUSH =>
-        if p_out_ack.ack = '1' then
+        if p_out_ack.ack = '1' and s_data_out_val.val = '1' then
           rin.count <= r.count - 1;
           if r.count = 0 then
             rin.state <= STATE_DATA;
@@ -93,7 +93,7 @@ begin
 
   data_fifo: nsl.flit.flit_fifo_sync
     generic map(
-      depth => data_depth
+      depth => max_txn_length
       )
     port map(
       p_resetn => p_resetn,
@@ -105,13 +105,14 @@ begin
       p_in_val => s_data_in_val,
       p_in_ack => s_data_in_ack
       );
-
-  moore: process(r, p_in_val, s_data_in_ack, p_out_ack, s_data_out_val)
+  
+  mux: process(r.state, p_in_val.val, p_in_val.data, s_data_in_ack.ack, p_out_ack.ack,
+               s_data_out_val.val, s_data_out_val.data)
   begin
     p_out_val.val <= '0';
-    p_out_val.data <= (others => 'X');
+    p_out_val.data <= (others => '-');
     s_data_in_val.val <= '0';
-    s_data_in_val.data <= (others => 'X');
+    s_data_in_val.data <= (others => '-');
     p_in_ack.ack <= '0';
     s_data_out_ack.ack <= '0';
 

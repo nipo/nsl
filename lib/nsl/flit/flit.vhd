@@ -39,7 +39,7 @@ package flit is
 
   component flit_from_framed
     generic(
-      data_depth  : natural := 256
+      max_txn_length  : natural := 2048
       );
     port(
       p_resetn   : in  std_ulogic;
