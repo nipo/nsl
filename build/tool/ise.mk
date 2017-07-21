@@ -87,7 +87,7 @@ ise-build/$(target)_par.ncd: ise-build/$(target).ncd
 ise-build/$(target).ncd: ise-build/$(target).ngd
 	$(SILENT)if [ -r ise-build/$(target)_par.ncd ]; then \
 		cp ise-build/$(target)_par.ncd ise-build/smartguide.ncd; \
-		SMARTGUIDE="-smartguide ise-build/smartguide.ncd"; \
+		SMARTGUIDE="-smartguide ise-build/smartguide.ncd -detail"; \
 	else \
 		SMARTGUIDE=""; \
 	fi; \
