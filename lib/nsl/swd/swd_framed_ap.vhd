@@ -8,7 +8,7 @@ use nsl.swd.all;
 
 entity swd_framed_ap is
   generic(
-    srcid : nsl.fifo.component_id
+    source_id : nsl.fifo.component_id
     );
   port (
     p_resetn   : in  std_ulogic;
@@ -24,34 +24,44 @@ entity swd_framed_ap is
     p_dp_rsp_val   : out nsl.fifo.fifo_framed_cmd;
     p_dp_rsp_ack   : in nsl.fifo.fifo_framed_rsp
   );
-end entity; 
+end entity;
 
 architecture rtl of swd_framed_ap is
 
   type state_t is (
     STATE_RESET,
-    
+
     STATE_HEADER_GET,
     STATE_HEADER_PUT,
+
     STATE_TAG_GET,
     STATE_TAG_PUT,
 
+    STATE_DP_HEADER_PUT,
+    STATE_DP_TAG_PUT,
+
+    STATE_DP_HEADER_GET,
+    STATE_DP_TAG_GET,
+    
     STATE_CMD_GET,
     STATE_CMD_ROUTE,
 
-    STATE_SELECT_CMD,
-    STATE_SELECT_RSP,
+    STATE_DP_SELECT_CMD,
+    STATE_DP_SELECT_DATA,
+    STATE_DP_SELECT_RSP,
 
-    STATE_RDBUF_CMD,
-    STATE_RDBUF_RSP,
+    STATE_DP_RDBUF_CMD,
+    STATE_DP_RDBUF_RSP,
 
-    STATE_AP_CMD,
-    STATE_AP_RSP,
-    
-    STATE_DATA_PS_PUT,
-    STATE_DATA_PS_GET,
+    STATE_DP_READ_CMD,
+    STATE_DP_READ_RSP,
+    STATE_DP_READ_RSP_DATA,
+
+    STATE_DP_WRITE_CMD,
+    STATE_DP_WRITE_CMD_DATA,
+    STATE_DP_WRITE_RSP,
     );
-  
+
   type regs_t is record
     state           : state_t;
     dp_id           : nsl.fifo.component_id;
@@ -72,7 +82,7 @@ architecture rtl of swd_framed_ap is
   end record;
 
   signal r, rin : regs_t;
-  
+
 begin
 
   reg: process (p_clk)
@@ -97,7 +107,7 @@ begin
         rin.ap_read_pending <= false;
         rin.ap_run_cycles <= std_ulogic_vector(to_unsigned(10, 6));
         rin.more <= '0';
-        
+
       when STATE_HEADER_GET =>
         if p_cmd_val.val = '1' then
           rin.cmd <= p_cmd_val.data(3 downto 0) & p_cmd_val.data(7 downto 4);
@@ -107,7 +117,7 @@ begin
           rin.dp_bank_sel <= x"0";
           rin.sel_dirty <= true;
         end if;
-        
+
       when STATE_HEADER_PUT =>
         if p_rsp_ack.ack = '1' then
           rin.state <= STATE_TAG_GET;
@@ -126,14 +136,14 @@ begin
 
       when STATE_CMD_GET =>
         assert not r.cmd_pending report "Command getting overflow" severity failure;
-        
+
         if p_cmd_val.val = '1' then
           rin.cmd <= p_cmd_val.data;
           rin.more <= p_cmd_val.more;
           rin.state <= STATE_CMD_ROUTE;
           rin.cmd_pending <= true;
         end if;
-        
+
       when STATE_CMD_ROUTE =>
         if r.ap_run_pending and (not r.cmd_pending or std_match(r.cmd, SWD_AP_AP_RW)) then
           rin.state <= STATE_AP_RUN_CMD;
@@ -153,7 +163,7 @@ begin
           if std_match(r.cmd, SWD_AP_AP_RUN) then
             rin.ap_run_cycles <= r.cmd(5 downto 0);
             rin.state <= STATE_RSP_PUT;
-            
+
           elsif std_match(r.cmd, SWD_AP_AP_SEL_HIGH) then
             rin.sel_dirty <= r.ap_sel(7 downto 4) /= r.cmd(3 downto 0);
             rin.ap_sel(7 downto 4) <= r.cmd(3 downto 0);
@@ -244,11 +254,11 @@ begin
           elsif std_match(r.cmd, SWD_AP_RESET) then
             rin.state <= STATE_RSP_PUT;
             rin.srst <= r.cmd(0);
-            
+
           elsif std_match(r.cmd, SWD_AP_JTAG_CONFIG) then
             rin.state <= STATE_CLK_DIV;
             rin.data_byte <= 1;
-            
+
           else
             rin.state <= STATE_RSP_PUT;
           end if;
@@ -263,7 +273,7 @@ begin
             rin.state <= STATE_RSP_PUT;
           end if;
         end if;
-        
+
       when STATE_WAKEUP_R1_CMD =>
         if s_cmd_ack = '1' then
           rin.state <= STATE_WAKEUP_R1_RSP;
@@ -486,7 +496,7 @@ begin
           p_rsp_val.more <= r.more;
         end if;
         p_rsp_val.data <= r.swd_cmd.data(7 downto 0);
-        
+
       when others =>
         p_cmd_ack.ack <= '0';
         p_rsp_val.val <= '0';
@@ -494,7 +504,7 @@ begin
         p_rsp_val.data <= (others => 'X');
     end case;
   end process;
-  
+
   swd_port: swd_master
     port map(
       p_resetn => p_resetn,
@@ -517,5 +527,5 @@ begin
       );
 
   p_srst <= r.srst;
-  
+
 end architecture;
