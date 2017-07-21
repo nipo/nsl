@@ -9,7 +9,9 @@ vhdl-sources += fifo_framed_router.vhd
 vhdl-sources += fifo_framed_router_inbound.vhd
 vhdl-sources += fifo_framed_router_outbound.vhd
 vhdl-sources += fifo_framed_endpoint.vhd
+vhdl-sources += fifo_framed_gateway.vhd
 
 deps += nsl.fifo
 deps += nsl.util
 deps += hwdep.fifo
+deps += hwdep.ram

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.fifo.all;
+library hwdep;
 use hwdep.ram.all;
 
 entity fifo_framed_gateway is
@@ -53,7 +54,7 @@ architecture rtl of fifo_framed_gateway is
   constant tag_size: natural := 4;
   
   type regs_t is record
-    cmd_from: component_id;
+    cmd_from: std_ulogic_vector(3 downto 0);
     cmd_to2: component_id;
     cmd_tag: nsl.fifo.framed_data_t;
     cmd_state: cmd_state_t;
@@ -85,10 +86,10 @@ begin
   lut: hwdep.ram.ram_2p_r_w
     generic map(
       addr_size => tag_size,
-      data_size => s_lut_tag'length + s_lut_source'length;
+      data_size => s_lut_tag'length + s_lut_source'length
       )
     port map(
-      p_clk => p_clk,
+      p_clk(0) => p_clk,
 
       p_waddr => std_ulogic_vector(r.next_tag),
       p_wen => s_lut_write,
@@ -114,13 +115,13 @@ begin
 
       when CMD_GET_HEADER =>
         if p_cmd_in_val.val = '1' then
-          rin.cmd_from <= nsl.fifo.fifo_framed_header_src(p_cmd_in_val);
+          rin.cmd_from <= std_ulogic_vector(to_unsigned(nsl.fifo.fifo_framed_header_src(p_cmd_in_val.data), 4));
           rin.cmd_state <= CMD_GET_HEADER2;
         end if;
         
       when CMD_GET_HEADER2 =>
         if p_cmd_in_val.val = '1' then
-          rin.cmd_to2 <= nsl.fifo.fifo_framed_header_dst(p_cmd_in_val);
+          rin.cmd_to2 <= nsl.fifo.fifo_framed_header_dst(p_cmd_in_val.data);
           rin.cmd_state <= CMD_GET_TAG;
         end if;
         
@@ -157,7 +158,7 @@ begin
       when RSP_GET_HEADER =>
         if p_rsp_in_val.val = '1' then
           rin.rsp_state <= RSP_GET_TAG;
-          rin.rsp_from2 <= nsl.fifo.fifo_framed_header_src(p_cmd_in_val);
+          rin.rsp_from2 <= nsl.fifo.fifo_framed_header_src(p_cmd_in_val.data);
         end if;
         
       when RSP_GET_TAG =>
@@ -216,7 +217,7 @@ begin
         
       when CMD_PUT_TAG =>
         p_cmd_out_val.val <= '1';
-        p_cmd_out_val.data(tag_size-1 downto 0) <= r.next_tag;
+        p_cmd_out_val.data(tag_size-1 downto 0) <= std_ulogic_vector(r.next_tag);
         p_cmd_out_val.more <= '1';
 
       when CMD_FORWARD =>
@@ -233,7 +234,7 @@ begin
         
       when RSP_PUT_HEADER =>
         p_rsp_out_val.val <= '1';
-        p_rsp_out_val.data <= nsl.fifo.fifo_framed_header(s_lut_source, target_id);
+        p_rsp_out_val.data <= nsl.fifo.fifo_framed_header(to_integer(unsigned(s_lut_source)), target_id);
         p_rsp_out_val.more <= '1';
         
       when RSP_PUT_HEADER2 =>
