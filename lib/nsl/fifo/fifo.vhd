@@ -200,6 +200,27 @@ package fifo is
       );
   end component;
 
+  component fifo_framed_gateway
+    generic(
+      source_id: component_id;
+      target_id: component_id
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_cmd_in_val   : in nsl.fifo.fifo_framed_cmd;
+      p_cmd_in_ack   : out nsl.fifo.fifo_framed_rsp;
+      p_cmd_out_val   : out nsl.fifo.fifo_framed_cmd;
+      p_cmd_out_ack   : in nsl.fifo.fifo_framed_rsp;
+
+      p_rsp_in_val   : in nsl.fifo.fifo_framed_cmd;
+      p_rsp_in_ack   : out nsl.fifo.fifo_framed_rsp;
+      p_rsp_out_val   : out nsl.fifo.fifo_framed_cmd;
+      p_rsp_out_ack   : in nsl.fifo.fifo_framed_rsp
+      );
+  end component;
+  
   function fifo_framed_header(dst: component_id;
                               src: component_id)
     return framed_data_t is
