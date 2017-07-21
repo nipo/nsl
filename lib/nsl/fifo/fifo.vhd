@@ -2,8 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-
 package fifo is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
@@ -56,8 +54,9 @@ package fifo is
 
       p_out_val  : out fifo_framed_cmd;
       p_out_ack  : in fifo_framed_rsp_array(out_port_count-1 downto 0);
-      
-      p_select : out std_ulogic_vector(out_port_count-1 downto 0)
+
+      p_request  : out std_ulogic_vector(out_port_count-1 downto 0);
+      p_selected : in  std_ulogic_vector(out_port_count-1 downto 0)
       );
   end component;
 
@@ -75,7 +74,8 @@ package fifo is
       p_out_val  : out fifo_framed_cmd;
       p_out_ack  : in fifo_framed_rsp;
 
-      p_select : in std_ulogic_vector(in_port_count-1 downto 0)
+      p_request  : in  std_ulogic_vector(in_port_count-1 downto 0);
+      p_selected : out std_ulogic_vector(in_port_count-1 downto 0)
       );
   end component;
   
@@ -209,15 +209,15 @@ package fifo is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_cmd_in_val   : in nsl.fifo.fifo_framed_cmd;
-      p_cmd_in_ack   : out nsl.fifo.fifo_framed_rsp;
-      p_cmd_out_val   : out nsl.fifo.fifo_framed_cmd;
-      p_cmd_out_ack   : in nsl.fifo.fifo_framed_rsp;
+      p_cmd_in_val   : in fifo_framed_cmd;
+      p_cmd_in_ack   : out fifo_framed_rsp;
+      p_cmd_out_val   : out fifo_framed_cmd;
+      p_cmd_out_ack   : in fifo_framed_rsp;
 
-      p_rsp_in_val   : in nsl.fifo.fifo_framed_cmd;
-      p_rsp_in_ack   : out nsl.fifo.fifo_framed_rsp;
-      p_rsp_out_val   : out nsl.fifo.fifo_framed_cmd;
-      p_rsp_out_ack   : in nsl.fifo.fifo_framed_rsp
+      p_rsp_in_val   : in fifo_framed_cmd;
+      p_rsp_in_ack   : out fifo_framed_rsp;
+      p_rsp_out_val   : out fifo_framed_cmd;
+      p_rsp_out_ack   : in fifo_framed_rsp
       );
   end component;
   

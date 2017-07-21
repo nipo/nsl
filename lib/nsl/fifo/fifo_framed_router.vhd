@@ -30,11 +30,11 @@ architecture rtl of fifo_framed_router is
 
   subtype select_in_part_t is std_ulogic_vector(in_port_count-1 downto 0);
   type select_in_t is array(natural range 0 to out_port_count-1) of select_in_part_t;
-  signal s_select_out : select_in_t;
+  signal s_request_out, s_selected_in : select_in_t;
 
   subtype select_out_part_t is std_ulogic_vector(out_port_count-1 downto 0);
   type select_out_t is array(natural range 0 to in_port_count-1) of select_out_part_t;
-  signal s_select_in : select_out_t;
+  signal s_request_in, s_selected_out : select_out_t;
 
 begin
 
@@ -51,7 +51,8 @@ begin
         p_in_ack => p_in_ack(in_port),
         p_out_val => s_cmd(in_port),
         p_out_ack => s_rsp,
-        p_select => s_select_in(in_port)
+        p_request => s_request_in(in_port),
+        p_selected => s_selected_out(in_port)
         );
   end generate;
 
@@ -67,13 +68,15 @@ begin
         p_in_ack => s_rsp(out_port),
         p_out_val => p_out_val(out_port),
         p_out_ack => p_out_ack(out_port),
-        p_select => s_select_out(out_port)
+        p_request => s_request_out(out_port),
+        p_selected => s_selected_in(out_port)
         );
   end generate;
 
   map_select: for in_port in 0 to in_port_count-1 generate
     map_select2: for out_port in 0 to out_port_count-1 generate
-      s_select_out(out_port)(in_port) <= s_select_in(in_port)(out_port);
+      s_request_out(out_port)(in_port) <= s_request_in(in_port)(out_port);
+      s_selected_out(in_port)(out_port) <= s_selected_in(out_port)(in_port);
     end generate;
   end generate;
   
