@@ -28,21 +28,20 @@ end entity;
 
 architecture rtl of swd_framed_dp is
 
-  signal s_cmd_val  : std_logic;
-  signal s_cmd_ack  : std_logic;
-  signal s_cmd_data : swd_cmd_data;
-  signal s_rsp_val  : std_logic;
-  signal s_rsp_ack  : std_logic;
-  signal s_rsp_data : swd_rsp_data;
+  signal s_swd_cmd_val  : std_logic;
+  signal s_swd_cmd_ack  : std_logic;
+  signal s_swd_cmd_data : swd_cmd_data;
+  signal s_swd_rsp_val  : std_logic;
+  signal s_swd_rsp_ack  : std_logic;
+  signal s_swd_rsp_data : swd_rsp_data;
+
+  signal s_cmd_val   : nsl.fifo.fifo_framed_cmd;
+  signal s_cmd_ack   : nsl.fifo.fifo_framed_rsp;
+  signal s_rsp_val   : nsl.fifo.fifo_framed_cmd;
+  signal s_rsp_ack   : nsl.fifo.fifo_framed_rsp;
 
   type state_t is (
     STATE_RESET,
-
-    STATE_HEADER_GET,
-    STATE_HEADER_PUT,
-
-    STATE_TAG_GET,
-    STATE_TAG_PUT,
 
     STATE_CMD_GET,
     STATE_CMD_DATA_GET_0,
@@ -84,41 +83,19 @@ begin
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_rsp_ack, s_cmd_ack, s_rsp_val, s_rsp_data)
+  transition: process (r, s_cmd_val, s_rsp_ack, s_swd_cmd_ack, s_swd_rsp_val, s_swd_rsp_data)
   begin
     rin <= r;
 
     case r.state is
       when STATE_RESET =>
-        rin.state <= STATE_HEADER_GET;
-
-      when STATE_HEADER_GET =>
-        if p_cmd_val.val = '1' then
-          rin.cmd <= p_cmd_val.data(3 downto 0) & p_cmd_val.data(7 downto 4);
-          rin.state <= STATE_HEADER_PUT;
-        end if;
-
-      when STATE_HEADER_PUT =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_TAG_GET;
-        end if;
-
-      when STATE_TAG_GET =>
-        if p_cmd_val.val = '1' then
-          rin.cmd <= p_cmd_val.data;
-          rin.state <= STATE_TAG_PUT;
-        end if;
-
-      when STATE_TAG_PUT =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_CMD_GET;
-        end if;
+        rin.state <= STATE_CMD_GET;
 
       when STATE_CMD_GET =>
-        if p_cmd_val.val = '1' then
-          rin.cmd <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
-          if std_match(p_cmd_val.data, SWD_DP_W) or std_match(p_cmd_val.data, SWD_DP_BITBANG) then
+        if s_cmd_val.val = '1' then
+          rin.cmd <= s_cmd_val.data;
+          rin.more <= s_cmd_val.more;
+          if std_match(s_cmd_val.data, SWD_DP_W) or std_match(s_cmd_val.data, SWD_DP_BITBANG) then
             rin.state <= STATE_CMD_DATA_GET_0;
           else
             rin.state <= STATE_SWD_CMD;
@@ -126,78 +103,72 @@ begin
         end if;
 
       when STATE_CMD_DATA_GET_0 =>
-        if p_cmd_val.val = '1' then
-          rin.data(7 downto 0) <= p_cmd_val.data;
+        if s_cmd_val.val = '1' then
+          rin.data(7 downto 0) <= s_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_1;
         end if;
 
       when STATE_CMD_DATA_GET_1 =>
-        if p_cmd_val.val = '1' then
-          rin.data(15 downto 8) <= p_cmd_val.data;
+        if s_cmd_val.val = '1' then
+          rin.data(15 downto 8) <= s_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_2;
         end if;
 
       when STATE_CMD_DATA_GET_2 =>
-        if p_cmd_val.val = '1' then
-          rin.data(23 downto 16) <= p_cmd_val.data;
+        if s_cmd_val.val = '1' then
+          rin.data(23 downto 16) <= s_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_3;
         end if;
 
       when STATE_CMD_DATA_GET_3 =>
-        if p_cmd_val.val = '1' then
-          rin.data(31 downto 24) <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
+        if s_cmd_val.val = '1' then
+          rin.data(31 downto 24) <= s_cmd_val.data;
+          rin.more <= s_cmd_val.more;
           rin.state <= STATE_SWD_CMD;
         end if;
 
       when STATE_SWD_CMD =>
-        if s_cmd_ack = '1' then
+        if s_swd_cmd_ack = '1' then
           rin.state <= STATE_SWD_RSP;
         end if;
 
       when STATE_SWD_RSP =>
-        if s_rsp_val = '1' then
+        if s_swd_rsp_val = '1' then
           if std_match(r.cmd, SWD_DP_RW) then
-            rin.data <= s_rsp_data.data;
-            rin.cmd(3) <= s_rsp_data.par_ok;
-            rin.cmd(2 downto 0) <= s_rsp_data.ack;
+            rin.data <= s_swd_rsp_data.data;
+            rin.cmd(3) <= s_swd_rsp_data.par_ok;
+            rin.cmd(2 downto 0) <= s_swd_rsp_data.ack;
           end if;
           rin.state <= STATE_RSP_PUT;
         end if;
 
       when STATE_RSP_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if s_rsp_ack.ack = '1' then
           if std_match(r.cmd, SWD_DP_R) then
             rin.state <= STATE_RSP_DATA_PUT_0;
-          elsif r.more = '1' then
-            rin.state <= STATE_CMD_GET;
           else
-            rin.state <= STATE_HEADER_GET;
+            rin.state <= STATE_CMD_GET;
           end if;
         end if;
         
       when STATE_RSP_DATA_PUT_0 =>
-        if p_rsp_ack.ack = '1' then
+        if s_rsp_ack.ack = '1' then
           rin.state <= STATE_RSP_DATA_PUT_1;
         end if;
 
       when STATE_RSP_DATA_PUT_1 =>
-        if p_rsp_ack.ack = '1' then
+        if s_rsp_ack.ack = '1' then
           rin.state <= STATE_RSP_DATA_PUT_2;
         end if;
 
       when STATE_RSP_DATA_PUT_2 =>
-        if p_rsp_ack.ack = '1' then
+        if s_rsp_ack.ack = '1' then
           rin.state <= STATE_RSP_DATA_PUT_3;
         end if;
 
       when STATE_RSP_DATA_PUT_3 =>
-        if p_rsp_ack.ack = '1' then
-          if r.more = '1' then
-            rin.state <= STATE_CMD_GET;
-          else
-            rin.state <= STATE_HEADER_GET;
-          end if;
+        if s_rsp_ack.ack = '1' then
+          rin.state <= STATE_CMD_GET;
         end if;
 
     end case;
@@ -205,62 +176,73 @@ begin
 
   moore: process (r)
   begin
-    s_cmd_val <= '0';
-    s_rsp_ack <= '0';
-    p_cmd_ack.ack <= '0';
-    p_rsp_val.val <= '0';
-    p_rsp_val.more <= '-';
-    p_rsp_val.data <= (others => '-');
+    s_swd_cmd_val <= '0';
+    s_swd_rsp_ack <= '0';
+    s_cmd_ack.ack <= '0';
+    s_rsp_val.val <= '0';
+    s_rsp_val.more <= '-';
+    s_rsp_val.data <= (others => '-');
 
     case r.state is
       when STATE_RESET =>
         null;
 
-      when STATE_HEADER_GET | STATE_TAG_GET | STATE_CMD_GET
+      when STATE_CMD_GET
         | STATE_CMD_DATA_GET_0 | STATE_CMD_DATA_GET_1 | STATE_CMD_DATA_GET_2 | STATE_CMD_DATA_GET_3 =>
-        p_cmd_ack.ack <= '1';
-
-      when STATE_HEADER_PUT | STATE_TAG_PUT =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.cmd;
+        s_cmd_ack.ack <= '1';
 
       when STATE_RSP_PUT =>
-        p_rsp_val.val <= '1';
+        s_rsp_val.val <= '1';
         if std_match(r.cmd, SWD_DP_R) then
-          p_rsp_val.more <= '1';
+          s_rsp_val.more <= '1';
         else
-          p_rsp_val.more <= r.more;
+          s_rsp_val.more <= r.more;
         end if;
-        p_rsp_val.data <= r.cmd;
+        s_rsp_val.data <= r.cmd;
 
       when STATE_RSP_DATA_PUT_0 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.data(7 downto 0);
+        s_rsp_val.val <= '1';
+        s_rsp_val.more <= '1';
+        s_rsp_val.data <= r.data(7 downto 0);
 
       when STATE_RSP_DATA_PUT_1 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.data(15 downto 8);
+        s_rsp_val.val <= '1';
+        s_rsp_val.more <= '1';
+        s_rsp_val.data <= r.data(15 downto 8);
 
       when STATE_RSP_DATA_PUT_2 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.data(23 downto 16);
+        s_rsp_val.val <= '1';
+        s_rsp_val.more <= '1';
+        s_rsp_val.data <= r.data(23 downto 16);
 
       when STATE_RSP_DATA_PUT_3 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= r.more;
-        p_rsp_val.data <= r.data(31 downto 24);
+        s_rsp_val.val <= '1';
+        s_rsp_val.more <= r.more;
+        s_rsp_val.data <= r.data(31 downto 24);
 
       when STATE_SWD_CMD =>
-        s_cmd_val <= '1';
+        s_swd_cmd_val <= '1';
 
       when STATE_SWD_RSP =>
-        s_rsp_ack <= '1';
+        s_swd_rsp_ack <= '1';
     end case;
   end process;
+
+  endpoint: nsl.fifo.fifo_framed_endpoint
+    port map(
+      p_resetn => p_resetn,
+      p_clk => p_clk,
+
+      p_cmd_in_val => p_cmd_val,
+      p_cmd_in_ack => p_cmd_ack,
+      p_rsp_out_val => p_rsp_val,
+      p_rsp_out_ack => p_rsp_ack,
+
+      p_cmd_out_val => s_cmd_val,
+      p_cmd_out_ack => s_cmd_ack,
+      p_rsp_in_val => s_rsp_val,
+      p_rsp_in_ack => s_rsp_ack
+      );
 
   swd_port: swd_dp
     port map(
@@ -269,14 +251,14 @@ begin
 
       p_clk_div => p_clk_div,
 
-      p_cmd_val => s_cmd_val,
-      p_cmd_ack => s_cmd_ack,
+      p_cmd_val => s_swd_cmd_val,
+      p_cmd_ack => s_swd_cmd_ack,
       p_cmd_data.op => r.cmd,
       p_cmd_data.data => r.data,
 
-      p_rsp_val => s_rsp_val,
-      p_rsp_ack => s_rsp_ack,
-      p_rsp_data => s_rsp_data,
+      p_rsp_val => s_swd_rsp_val,
+      p_rsp_ack => s_swd_rsp_ack,
+      p_rsp_data => s_swd_rsp_data,
 
       p_swclk => p_swclk,
       p_swdio_i => p_swdio_i,
