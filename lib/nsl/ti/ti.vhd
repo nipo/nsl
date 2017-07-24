@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 library nsl;
-use nsl.flit.all;
+use nsl.framed.all;
 
 package ti is
 
-  component ti_easyscale_noc is
+  component ti_framed_easyscale is
     generic(
       p_clk_rate : natural
       );
@@ -18,11 +18,11 @@ package ti is
 
       p_easyscale: inout std_logic;
 
-      p_cmd_val  : in  nsl.flit.flit_cmd;
-      p_cmd_ack  : out nsl.flit.flit_ack;
+      p_cmd_val  : in  nsl.framed.framed_req;
+      p_cmd_ack  : out nsl.framed.framed_ack;
 
-      p_rsp_val : out nsl.flit.flit_cmd;
-      p_rsp_ack : in  nsl.flit.flit_ack
+      p_rsp_val : out nsl.framed.framed_req;
+      p_rsp_ack : in  nsl.framed.framed_ack
       );
   end component;
 

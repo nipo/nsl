@@ -3,26 +3,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
+use nsl.framed.all;
+use nsl.routed.all;
 
-entity fifo_framed_endpoint is
+entity routed_endpoint is
   port(
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_cmd_in_val   : in nsl.fifo.fifo_framed_cmd;
-    p_cmd_in_ack   : out nsl.fifo.fifo_framed_rsp;
-    p_cmd_out_val   : out nsl.fifo.fifo_framed_cmd;
-    p_cmd_out_ack   : in nsl.fifo.fifo_framed_rsp;
+    p_cmd_in_val   : in nsl.routed.routed_req;
+    p_cmd_in_ack   : out nsl.routed.routed_ack;
+    p_cmd_out_val   : out nsl.framed.framed_req;
+    p_cmd_out_ack   : in nsl.framed.framed_ack;
 
-    p_rsp_in_val   : in nsl.fifo.fifo_framed_cmd;
-    p_rsp_in_ack   : out nsl.fifo.fifo_framed_rsp;
-    p_rsp_out_val   : out nsl.fifo.fifo_framed_cmd;
-    p_rsp_out_ack   : in nsl.fifo.fifo_framed_rsp
+    p_rsp_in_val   : in nsl.routed.routed_req;
+    p_rsp_in_ack   : out nsl.routed.routed_ack;
+    p_rsp_out_val   : out nsl.framed.framed_req;
+    p_rsp_out_ack   : in nsl.framed.framed_ack
     );
 end entity;
 
-architecture rtl of fifo_framed_endpoint is
+architecture rtl of routed_endpoint is
 
   type state_t is (
     ST_RESET,

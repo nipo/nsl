@@ -14,7 +14,7 @@ package fifo is
       );
     port(
       p_resetn   : in  std_ulogic;
-      p_clk      : in  std_ulogic_vector(clk_count - 1 downto 0);
+      p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
       p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
       p_in_write  : in  std_ulogic;

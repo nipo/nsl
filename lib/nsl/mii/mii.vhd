@@ -3,7 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
+use nsl.framed.all;
+use nsl.sized.all;
 
 package mii is
   -- IEEE-802.3 MAC-centric naming of signals
@@ -48,8 +49,8 @@ package mii is
 
       p_mii_data : in mii_datapath;
 
-      p_framed_val : out fifo_framed_cmd;
-      p_framed_ack : in fifo_framed_rsp
+      p_framed_val : out nsl.framed.framed_req;
+      p_framed_ack : in nsl.framed.framed_ack
       );
   end component;
 
@@ -63,8 +64,8 @@ package mii is
 
       p_mii_data : out mii_datapath;
 
-      p_framed_val : in fifo_framed_cmd;
-      p_framed_ack : out fifo_framed_rsp
+      p_framed_val : in nsl.framed.framed_req;
+      p_framed_ack : out nsl.framed.framed_ack
       );
   end component;
 
@@ -75,8 +76,8 @@ package mii is
 
       p_rmii_data  : in rmii_datapath;
 
-      p_framed_val : out fifo_framed_cmd;
-      p_framed_ack : in fifo_framed_rsp
+      p_framed_val : out nsl.framed.framed_req;
+      p_framed_ack : in nsl.framed.framed_ack
       );
   end component;
 
@@ -90,8 +91,8 @@ package mii is
 
       p_rmii_data  : out rmii_datapath;
 
-      p_framed_val : in fifo_framed_cmd;
-      p_framed_ack : out fifo_framed_rsp
+      p_framed_val : in nsl.framed.framed_req;
+      p_framed_ack : out nsl.framed.framed_ack
       );
   end component;
 
@@ -107,10 +108,10 @@ package mii is
       p_from_mac  : in  rmii_datapath;
 
       p_clk_noc   : in std_ulogic;
-      p_in_val    : in  nsl.flit.flit_cmd;
-      p_in_ack    : out nsl.flit.flit_ack;
-      p_out_val   : out nsl.flit.flit_cmd;
-      p_out_ack   : in  nsl.flit.flit_ack
+      p_in_val    : in  nsl.sized.sized_req;
+      p_in_ack    : out nsl.sized.sized_ack;
+      p_out_val   : out nsl.sized.sized_req;
+      p_out_ack   : in  nsl.sized.sized_ack
       );
   end component;
   

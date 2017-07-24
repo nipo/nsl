@@ -1,6 +1,4 @@
 vhdl-sources += ti.vhd
 vhdl-sources += ti_easyscale.vhd
-vhdl-sources += ti_easyscale_noc.vhd
-deps += nsl.fifo
-deps += nsl.flit
-deps += nsl.noc
+vhdl-sources += ti_framed_easyscale.vhd
+deps += nsl.framed

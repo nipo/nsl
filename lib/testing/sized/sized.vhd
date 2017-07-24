@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 library nsl;
-use nsl.flit.all;
+use nsl.sized.all;
 
-package flit is
+package sized is
 
-  component flit_file_reader
+  component sized_file_reader
     generic (
       filename: string
       );
@@ -16,14 +16,14 @@ package flit is
       p_resetn  : in  std_ulogic;
       p_clk     : in  std_ulogic;
 
-      p_out_val: out flit_cmd;
-      p_out_ack: in flit_ack;
+      p_out_val: out sized_req;
+      p_out_ack: in sized_ack;
       
       p_done: out std_ulogic
       );
   end component;
 
-  component flit_file_checker
+  component sized_file_checker
     generic (
       filename: string
       );
@@ -31,11 +31,11 @@ package flit is
       p_resetn  : in  std_ulogic;
       p_clk     : in  std_ulogic;
 
-      p_in_val: in flit_cmd;
-      p_in_ack: out flit_ack;
+      p_in_val: in sized_req;
+      p_in_ack: out sized_ack;
 
       p_done     : out std_ulogic
       );
   end component;
 
-end package flit;
+end package sized;

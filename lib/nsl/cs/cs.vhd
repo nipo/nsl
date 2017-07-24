@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
+use nsl.framed.all;
 
 package cs is
 
@@ -22,11 +22,11 @@ package cs is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_cmd_val   : in nsl.fifo.fifo_framed_cmd;
-      p_cmd_ack   : out nsl.fifo.fifo_framed_rsp;
+      p_cmd_val   : in nsl.framed.framed_req;
+      p_cmd_ack   : out nsl.framed.framed_ack;
 
-      p_rsp_val   : out nsl.fifo.fifo_framed_cmd;
-      p_rsp_ack   : in nsl.fifo.fifo_framed_rsp;
+      p_rsp_val   : out nsl.framed.framed_req;
+      p_rsp_ack   : in nsl.framed.framed_ack;
 
       p_config_data  : out cs_reg;
       p_config_write : out std_ulogic_vector(config_count-1 downto 0);

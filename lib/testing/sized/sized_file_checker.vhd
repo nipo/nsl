@@ -2,13 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.fifo.all;
-
 library testing;
 use testing.fifo.all;
+use testing.sized.all;
 
-entity fifo_framed_file_checker is
+library nsl;
+use nsl.sized.all;
+
+entity sized_file_checker is
   generic(
     filename: string
     );
@@ -16,22 +17,19 @@ entity fifo_framed_file_checker is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in fifo_framed_cmd;
-    p_in_ack   : out fifo_framed_rsp;
+    p_in_val   : in sized_req;
+    p_in_ack   : out sized_ack;
 
     p_done     : out std_ulogic
     );
 end entity;
 
-architecture rtl of fifo_framed_file_checker is
-
-  signal s_fifo : std_ulogic_vector(8 downto 0);
-  
+architecture rtl of sized_file_checker is
 begin
 
   check: testing.fifo.fifo_file_checker
     generic map(
-      width => 9,
+      width => 8,
       filename => filename
       )
     port map(
@@ -39,9 +37,8 @@ begin
       p_clk => p_clk,
       p_full_n => p_in_ack.ack,
       p_write => p_in_val.val,
-      p_data => s_fifo,
+      p_data => p_in_val.data,
       p_done => p_done
       );
-  s_fifo <= p_in_val.more & p_in_val.data;
 
 end architecture;

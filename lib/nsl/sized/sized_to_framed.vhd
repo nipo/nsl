@@ -3,25 +3,25 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
-use nsl.flit.all;
+use nsl.framed.all;
+use nsl.sized.all;
 
-entity flit_to_framed is
+entity sized_to_framed is
   port(
     p_resetn    : in  std_ulogic;
     p_clk       : in  std_ulogic;
 
-    p_inval : out std_ulogic;
+    p_inval     : out std_ulogic;
 
-    p_out_val   : out fifo_framed_cmd;
-    p_out_ack   : in  fifo_framed_rsp;
+    p_out_val   : out framed_req;
+    p_out_ack   : in  framed_ack;
 
-    p_in_val    : in  flit_cmd;
-    p_in_ack    : out flit_ack
+    p_in_val    : in  sized_req;
+    p_in_ack    : out sized_ack
     );
 end entity;
 
-architecture rtl of flit_to_framed is
+architecture rtl of sized_to_framed is
 
   type state_t is (
     STATE_RESET,

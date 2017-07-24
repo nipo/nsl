@@ -23,16 +23,6 @@ end fifo_narrower;
 
 architecture rtl of fifo_narrower is
 
-  function log2 (x : positive)
-    return natural is
-  begin  -- log2
-    if x <= 1 then
-      return 0;
-    else
-      return log2((x+1)/2) + 1;
-    end if;
-  end log2;
-
   constant width_in : integer := width_out * parts;
 
   signal r_buffer, s_buffer : std_ulogic_vector(width_in-1 downto 0);

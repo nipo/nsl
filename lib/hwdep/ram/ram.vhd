@@ -31,7 +31,7 @@ package ram is
       bypass : boolean := false
       );
     port (
-      p_clk    : in  std_ulogic_vector(clk_count-1 downto 0);
+      p_clk    : in  std_ulogic_vector(0 to clk_count-1);
 
       p_waddr  : in  std_ulogic_vector (addr_size-1 downto 0);
       p_wen    : in  std_ulogic := '0';

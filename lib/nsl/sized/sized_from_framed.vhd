@@ -3,10 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
-use nsl.flit.all;
+use nsl.framed.all;
+use nsl.sized.all;
 
-entity flit_from_framed is
+entity sized_from_framed is
   generic(
     max_txn_length : natural := 2048
     );
@@ -14,18 +14,18 @@ entity flit_from_framed is
     p_resetn    : in  std_ulogic;
     p_clk       : in  std_ulogic;
 
-    p_in_val    : in fifo_framed_cmd;
-    p_in_ack    : out fifo_framed_rsp;
+    p_in_val    : in framed_req;
+    p_in_ack    : out framed_ack;
 
-    p_out_val   : out flit_cmd;
-    p_out_ack   : in flit_ack
+    p_out_val   : out sized_req;
+    p_out_ack   : in sized_ack
     );
 end entity;
 
-architecture rtl of flit_from_framed is
+architecture rtl of sized_from_framed is
 
-  signal s_data_in_val, s_data_out_val: flit_cmd;
-  signal s_data_in_ack, s_data_out_ack: flit_ack;
+  signal s_data_in_val, s_data_out_val: sized_req;
+  signal s_data_in_ack, s_data_out_ack: sized_ack;
 
   type state_t is (
     STATE_RESET,
@@ -91,13 +91,14 @@ begin
     end case;
   end process;
 
-  data_fifo: nsl.flit.flit_fifo_sync
+  data_fifo: nsl.sized.sized_fifo
     generic map(
-      depth => max_txn_length
+      depth => max_txn_length,
+      clk_count => 1
       )
     port map(
       p_resetn => p_resetn,
-      p_clk => p_clk,
+      p_clk(0) => p_clk,
 
       p_out_val => s_data_out_val,
       p_out_ack => s_data_out_ack,

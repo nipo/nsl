@@ -2,35 +2,40 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.fifo.all;
+library hwdep;
+use hwdep.fifo.all;
 
-entity fifo_framed is
+library nsl;
+use nsl.framed.all;
+
+entity framed_fifo is
   generic(
-    depth : natural
+    depth : natural;
+    clk_count  : natural range 1 to 2
     );
   port(
     p_resetn   : in  std_ulogic;
-    p_clk      : in  std_ulogic;
+    p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
-    p_in_val   : in fifo_framed_cmd;
-    p_in_ack   : out fifo_framed_rsp;
+    p_in_val   : in nsl.framed.framed_req;
+    p_in_ack   : out nsl.framed.framed_ack;
 
-    p_out_val   : out fifo_framed_cmd;
-    p_out_ack   : in fifo_framed_rsp
+    p_out_val   : out nsl.framed.framed_req;
+    p_out_ack   : in nsl.framed.framed_ack
     );
 end entity;
 
-architecture rtl of fifo_framed is
+architecture rtl of framed_fifo is
 
   signal s_in_data, s_out_data : std_ulogic_vector(8 downto 0);
 
 begin
 
-  fifo: nsl.fifo.fifo_sync
+  fifo: hwdep.fifo.fifo_2p
     generic map(
       depth => depth,
-      data_width => 9
+      data_width => 9,
+      clk_count => clk_count
       )
     port map(
       p_resetn => p_resetn,

@@ -3,12 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.flit.all;
-use nsl.fifo.all;
-use nsl.noc.all;
+use nsl.framed.all;
 use nsl.ti.all;
 
-entity ti_easyscale_noc is
+entity ti_framed_easyscale is
   generic(
     p_clk_rate : natural
     );
@@ -18,15 +16,15 @@ entity ti_easyscale_noc is
 
     p_easyscale: inout std_logic;
 
-    p_cmd_val  : in  nsl.flit.flit_cmd;
-    p_cmd_ack  : out nsl.flit.flit_ack;
+    p_cmd_val  : in  nsl.framed.framed_cmd;
+    p_cmd_ack  : out nsl.framed.framed_ack;
 
-    p_rsp_val : out nsl.flit.flit_cmd;
-    p_rsp_ack : in  nsl.flit.flit_ack
+    p_rsp_val : out nsl.framed.framed_cmd;
+    p_rsp_ack : in  nsl.framed.framed_ack
     );
 end entity;
 
-architecture beh of ti_easyscale_noc is
+architecture beh of ti_framed_easyscale is
 
   type state_e is (
     STATE_IDLE,
@@ -46,13 +44,10 @@ architecture beh of ti_easyscale_noc is
   
   type regs_t is record
     state : state_e;
-    size  : unsigned(7 downto 0);
-    src   : noc_id;
-    dst   : noc_id;
-    tag   : flit_data;
-    daddr : flit_data;
-    data  : flit_data;
+    daddr : framed_data_t;
+    data  : framed_data_t;
     ack   : std_ulogic;
+    more  : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -93,46 +88,13 @@ begin
 
     case r.state is
       when STATE_IDLE =>
-        rin.state <= STATE_SIZE_GET;
-
-      when STATE_SIZE_GET =>
-        if p_cmd_val.val = '1' then
-          rin.state <= STATE_ROUTE_GET;
-          rin.size <= unsigned(p_cmd_val.data) - x"01";
-        end if;
-        
-      when STATE_ROUTE_GET =>
-        if p_cmd_val.val = '1' then
-          if r.size = x"00" then
-            rin.state <= STATE_SIZE_GET;
-          else
-            rin.state <= STATE_TAG_GET;
-            rin.dst <= noc_flit_header_dst(p_cmd_val.data);
-            rin.src <= noc_flit_header_src(p_cmd_val.data);
-            rin.size <= r.size - x"01";
-          end if;
-        end if;
-
-      when STATE_TAG_GET =>
-        if p_cmd_val.val = '1' then
-          if r.size = x"00" then
-            rin.state <= STATE_SIZE_GET;
-          else
-            rin.state <= STATE_DADDR_GET;
-            rin.tag <= p_cmd_val.data;
-            rin.size <= r.size - x"01";
-          end if;
-        end if;
+        rin.state <= STATE_DADDR_GET;
 
       when STATE_DADDR_GET =>
         if p_cmd_val.val = '1' then
-          if r.size = x"00" then
-            rin.state <= STATE_SIZE_GET;
-          else
-            rin.state <= STATE_DATA_GET;
-            rin.daddr <= p_cmd_val.data;
-            rin.size <= r.size - x"01";
-          end if;
+          rin.more <= p_cmd_val.more;
+          rin.state <= STATE_DATA_GET;
+          rin.daddr <= p_cmd_val.data;
         end if;
 
       when STATE_DATA_GET =>

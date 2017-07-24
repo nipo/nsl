@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.mii.all;
-use nsl.fifo.all;
+use nsl.framed.all;
 
 entity rmii_from_framed is
   generic(
@@ -16,8 +16,8 @@ entity rmii_from_framed is
 
     p_rmii_data : out rmii_datapath;
 
-    p_framed_val : in fifo_framed_cmd;
-    p_framed_ack : out fifo_framed_rsp
+    p_framed_val : in nsl.framed.framed_cmd;
+    p_framed_ack : out nsl.framed.framed_rsp
     );
 end entity;
 

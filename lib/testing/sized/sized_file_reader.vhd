@@ -4,12 +4,12 @@ use ieee.numeric_std.all;
 
 library testing;
 use testing.fifo.all;
-use testing.flit.all;
+use testing.sized.all;
 
 library nsl;
-use nsl.flit.all;
+use nsl.sized.all;
 
-entity flit_file_checker is
+entity sized_file_reader is
   generic(
     filename: string
     );
@@ -17,17 +17,17 @@ entity flit_file_checker is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in flit_cmd;
-    p_in_ack   : out flit_ack;
+    p_out_val   : out sized_req;
+    p_out_ack   : in sized_ack;
 
-    p_done     : out std_ulogic
+    p_done : out std_ulogic
     );
 end entity;
 
-architecture rtl of flit_file_checker is
+architecture rtl of sized_file_reader is
 begin
 
-  check: testing.fifo.fifo_file_checker
+  gen: testing.fifo.fifo_file_reader
     generic map(
       width => 8,
       filename => filename
@@ -35,9 +35,9 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-      p_full_n => p_in_ack.ack,
-      p_write => p_in_val.val,
-      p_data => p_in_val.data,
+      p_empty_n => p_out_val.val,
+      p_read => p_out_ack.ack,
+      p_data => p_out_val.data,
       p_done => p_done
       );
 

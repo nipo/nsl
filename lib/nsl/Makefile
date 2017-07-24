@@ -1,6 +1,8 @@
 packages += util
 packages += fifo
-packages += flit
+packages += framed
+packages += routed
+packages += sized
 packages += noc
 packages += mii
 packages += ftdi

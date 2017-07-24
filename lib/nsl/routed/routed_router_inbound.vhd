@@ -3,29 +3,29 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
+use nsl.routed.all;
 
-entity fifo_framed_router_inbound is
+entity routed_router_inbound is
   generic(
     out_port_count : natural;
-    routing_table : nsl.fifo.fifo_framed_routing_table
+    routing_table : nsl.routed.routed_routing_table
     );
   port(
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in nsl.fifo.fifo_framed_cmd;
-    p_in_ack   : out nsl.fifo.fifo_framed_rsp;
+    p_in_val   : in nsl.routed.routed_req;
+    p_in_ack   : out nsl.routed.routed_ack;
 
-    p_out_val  : out nsl.fifo.fifo_framed_cmd;
-    p_out_ack  : in nsl.fifo.fifo_framed_rsp_array(out_port_count-1 downto 0);
+    p_out_val  : out nsl.routed.routed_req;
+    p_out_ack  : in nsl.routed.routed_ack_array(out_port_count-1 downto 0);
 
     p_request  : out std_ulogic_vector(out_port_count-1 downto 0);
     p_selected : in  std_ulogic_vector(out_port_count-1 downto 0)
     );
 end entity;
 
-architecture rtl of fifo_framed_router_inbound is
+architecture rtl of routed_router_inbound is
 
   type state_t is (
     STATE_RESET,

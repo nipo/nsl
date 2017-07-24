@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.mii.all;
-use nsl.fifo.all;
+use nsl.framed.all;
 
 entity rmii_to_framed is
   port(
@@ -13,8 +13,8 @@ entity rmii_to_framed is
 
     p_rmii_data  : in rmii_datapath;
 
-    p_framed_val : out fifo_framed_cmd;
-    p_framed_ack : in fifo_framed_rsp
+    p_framed_val : out nsl.framed.framed_req;
+    p_framed_ack : in nsl.framed.framed_ack
     );
 end entity;
 
