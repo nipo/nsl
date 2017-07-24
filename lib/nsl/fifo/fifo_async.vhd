@@ -38,12 +38,12 @@ begin
     port map(
       p_resetn => p_resetn,
 
+      p_clk(0) => p_in_clk,
       p_clk(1) => p_out_clk,
       p_out_data => p_out_data,
       p_out_read => p_out_read,
       p_out_empty_n => p_out_empty_n,
 
-      p_clk(0) => p_in_clk,
       p_in_data => p_in_data,
       p_in_write => p_in_write,
       p_in_full_n => p_in_full_n
