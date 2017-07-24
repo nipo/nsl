@@ -12,14 +12,15 @@ library unisim;
 use unisim.vcomponents.all;
 
 library nsl;
-use nsl.fifo.all;
+use nsl.framed.all;
+
+library hwdep;
+use hwdep.fifo.all;
 
 entity tpiu_unformatter is
   generic(
-    test        : boolean := false; -- Send an incremented value either than retrieved data
-    trace_width : positive range 1 to 32; -- Data width of coresight data
-    target_id : natural range 0 to 15;
-    source_id : natural range 0 to 15
+    test        : boolean := false;       -- Send an incremented value instead of retrieved data
+    trace_width : positive range 1 to 32  -- Data width of trace data
     );
   port(
     p_resetn    : in  std_ulogic;                                 --* asynchronous active low reset
@@ -28,8 +29,8 @@ entity tpiu_unformatter is
     p_overflow  : out std_ulogic;                                 --* Command/data fifo full 
     p_sync      : out std_ulogic;                                 --* Synchronization is done 
     p_tracedata : in  std_ulogic_vector(2 * trace_width - 1 downto 0); --* input  data
-    p_out_val   : out fifo_framed_cmd;
-    p_out_ack   : in  fifo_framed_rsp
+    p_out_val   : out nsl.framed.framed_req;
+    p_out_ack   : in  nsl.framed.framed_ack
     );
 
 end entity tpiu_unformatter;
@@ -41,9 +42,7 @@ architecture rtl of tpiu_unformatter is
   constant FRAME_WIDTH           : integer := 128;
   constant MAXLENWIDTH           : integer := 8;
 
-  constant HEADER       : std_ulogic_vector(7 downto 0) := std_ulogic_vector(to_unsigned(target_id + 16 * source_id, 8));
-
-  signal synchronised   : std_ulogic;
+  signal synchronised   : boolean;
   signal auxiliary      : std_ulogic_vector(7 downto 0);
   signal frame_data     : std_ulogic_vector(FRAME_WIDTH - 1 downto 0);
   signal frame_valid    : std_ulogic_vector(15 downto 0);
@@ -70,7 +69,7 @@ architecture rtl of tpiu_unformatter is
   signal data_full_n    : std_ulogic;
   signal data_empty_n   : std_ulogic;
 
-  type state_type is (STATE_RESET, STATE_WAIT_CMD, STATE_PUT_HEADER, STATE_PUT_TAG, STATE_DATA);
+  type state_type is (STATE_RESET, STATE_WAIT_CMD, STATE_PUT_TAG, STATE_DATA);
   signal state: state_type;
   signal tag  : std_ulogic_vector(7 downto 0);
   signal cnt  : unsigned(MAXLENWIDTH - 1 downto 0);
@@ -79,45 +78,47 @@ architecture rtl of tpiu_unformatter is
 
 begin
 
-  fcmd : fifo_async
+  fcmd: hwdep.fifo.fifo_2p
     generic map(
       data_width => 16,
-      depth => 1024
+      depth => 1024,
+      clk_count => 2
       )
     port map(
       p_resetn => p_resetn,
+      p_clk(0) => p_traceclk,
+      p_clk(1) => p_clk,
 
-      p_out_clk => p_clk,
       p_out_data => cmd_dout,
       p_out_read => cmd_ren,
       p_out_empty_n => cmd_empty_n,
 
-      p_in_clk => p_traceclk,
       p_in_write => cmd_wen,
       p_in_full_n => cmd_full_n,
       p_in_data => cmd_din
       );
 
-  fdata : fifo_async
+  fdata: hwdep.fifo.fifo_2p
     generic map(
       data_width => 8,
-      depth => 1024
+      depth => 1024,
+      clk_count => 2
       )
     port map(
       p_resetn => p_resetn,
+      p_clk(0) => p_traceclk,
+      p_clk(1) => p_clk,
 
-      p_out_clk => p_clk,
       p_out_data => data_dout,
       p_out_read => data_ren,
       p_out_empty_n => data_empty_n,
 
-      p_in_clk => p_traceclk,
       p_in_write => data_wen,
       p_in_full_n => data_full_n,
       p_in_data => data_din
       );
 
-  p_sync <= synchronised;
+  p_sync <= '1' when synchronised else '0';
 
   filter : process(p_traceclk, p_resetn)
     variable filt_data_v   : std_ulogic_vector(31 + trace_width downto 0);
@@ -129,7 +130,7 @@ begin
       
       filt_data    <= (others => '0');
       filt_valid   <= (others => '0');
-      synchronised <= '0';
+      synchronised <= false;
       offset       <= 0;
       filt_idx     <= (others => '0');
 
@@ -140,16 +141,16 @@ begin
 
       filt_data_v(31 + trace_width - offset downto 32 - trace_width - offset) := p_tracedata;
 
-      if synchronised = '0' then 
+      if not synchronised then 
         -- Not yet syncronised
         filt_valid_v(31 + trace_width downto 32 - trace_width) := (others => '0');
         if filt_data_v(31 downto 0) = FRAME_SYNC_WORD then 
           filt_valid_v(31 + trace_width downto 32 - trace_width) := (others => '1');
           offset <= 0;
-          synchronised <= '1';
+          synchronised <= true;
         elsif filt_data_v(31 + trace_width downto trace_width) = FRAME_SYNC_WORD then 
           offset <= trace_width;
-          synchronised <= '1';
+          synchronised <= true;
         end if;
       else
         filt_valid_v(31 downto 32 - 2*trace_width) := (others => '1');
@@ -181,7 +182,7 @@ begin
 
   begin
 
-    if (p_resetn = '0') then
+    if p_resetn = '0' then
       
       frame_valid  <= (others => '0');
       frame_data   <= (others => '0');
@@ -224,15 +225,10 @@ begin
   begin
     if p_resetn = '0' then
       p_overflow <= '0';
-    elsif rising_edge(p_traceclk) then
-      if synchronised = '1' then
-        if cmd_full_n = '0' or data_full_n = '0' then
-          p_overflow <= '1';
-        end if;
-      end if;
+    elsif rising_edge(p_traceclk) and synchronised and (cmd_full_n = '0' or data_full_n = '0') then
+      p_overflow <= '1';
     end if;
   end process fullp;
-
 
   splitter : process(p_traceclk, p_resetn)
     variable bit_idx_v   : natural range 0 to 7;
@@ -249,6 +245,7 @@ begin
       pid       <= '0';
       cmd_wen   <= '0';
       data_wen  <= '0';
+
     elsif rising_edge(p_traceclk) then
       data_en_v   := false;
       data_v      := (others => '0');
@@ -265,39 +262,36 @@ begin
         -- A new byte is available
         bit_idx_v := to_integer(frame_idx(3 downto 1));
 
-        assert not(frame_idx = 14 and 
-                   frame_data(0) = '1' and
-                   auxiliary(bit_idx_v) = '1')
+        assert not(frame_idx = 14 and frame_data(0) = '1' and auxiliary(bit_idx_v) = '1')
           report "Auxiliary bit of byte 14 must be zero when new ID"
           severity failure;
 
-        if frame_idx(0) = '0' then 
-          -- Start of an halfword
-
-          if frame_data(0) = '0' then
-            -- This byte is a data byte
-            data_en_v := true;
-            data_v    := frame_data(7 downto 1) & auxiliary(bit_idx_v);
-          elsif curr_id /= frame_data(7 downto 1) then
-            -- This byte is a new id
-            if auxiliary(bit_idx_v) = '0' then
-              -- The new ID takes effect immediately
-              curr_id <= frame_data(7 downto 1);
-              if fifo_cnt > 0 then 
-                cmd_wen   <= not nullid;
-                cmd_din   <= '0' &  curr_id & std_ulogic_vector(fifo_cnt - 1);
-                fifo_cnt  <= (others => '0');
-              end if;
-            else
-              -- The new ID takes effect after next data byte
-              pid       <= '1';
-              next_id   <= frame_data(7 downto 1);
-            end if;
-          end if;
-        else
+        if frame_idx(0) = '1' then 
           -- This is always a data
           data_en_v := true;
           data_v    := frame_data(7 downto 0);
+
+        elsif frame_data(0) = '0' then
+          -- Start of an halfword
+          -- This byte is a data byte
+          data_en_v := true;
+          data_v    := frame_data(7 downto 1) & auxiliary(bit_idx_v);
+
+        elsif curr_id /= frame_data(7 downto 1) then
+          -- This byte is a new id
+          if auxiliary(bit_idx_v) = '0' then
+            -- The new ID takes effect immediately
+            curr_id <= frame_data(7 downto 1);
+            if fifo_cnt > 0 then 
+              cmd_wen   <= not nullid;
+              cmd_din   <= '0' &  curr_id & std_ulogic_vector(fifo_cnt - 1);
+              fifo_cnt  <= (others => '0');
+            end if;
+          else
+            -- The new ID takes effect after next data byte
+            pid       <= '1';
+            next_id   <= frame_data(7 downto 1);
+          end if;
         end if;
       end if;
       
@@ -314,13 +308,12 @@ begin
           end if;
         end if;
         data_wen <= not nullid;
-        if test = true then
+        if test then
           data_din <= std_ulogic_vector(fifo_cnt);
         else
           data_din <= data_v;
         end if;
       end if;
-    -- End rising_edge(p_traceclk)
     end if;
 
   end process splitter;
@@ -339,14 +332,9 @@ begin
             -- A new command is available
             cnt     <= unsigned(cmd_dout(MAXLENWIDTH - 1 downto 0));
             tag     <= cmd_dout(15 downto 8);
-            state   <= STATE_PUT_HEADER;
-          end if;
-          
-        when STATE_PUT_HEADER =>
-          if p_out_ack.ack = '1' then
             state   <= STATE_PUT_TAG;
           end if;
-
+          
         when STATE_PUT_TAG =>
           if p_out_ack.ack = '1' then
             state   <= STATE_DATA;
@@ -379,13 +367,6 @@ begin
         p_out_val.more <= 'X';
         data_ren <= '0';
         cmd_ren <= '1';
-
-      when STATE_PUT_HEADER =>
-        p_out_val.val <= '1';
-        p_out_val.data <= HEADER;
-        p_out_val.more <= '1';
-        data_ren <= '0';
-        cmd_ren <= '0';
 
       when STATE_PUT_TAG => 
         p_out_val.val <= '1';

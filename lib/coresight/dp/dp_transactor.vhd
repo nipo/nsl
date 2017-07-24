@@ -3,10 +3,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
-use nsl.swd.all;
+use nsl.framed.all;
 
-entity swd_dp is
+library coresight;
+use coresight.dp.all;
+
+entity dp_transactor is
   port (
     p_clk      : in  std_ulogic;
     p_resetn   : in  std_ulogic;
@@ -15,11 +17,11 @@ entity swd_dp is
 
     p_cmd_val  : in  std_ulogic;
     p_cmd_ack  : out std_ulogic;
-    p_cmd_data : in  swd_cmd_data;
+    p_cmd_data : in  dp_cmd_data;
 
     p_rsp_val  : out std_ulogic;
     p_rsp_ack  : in  std_ulogic;
-    p_rsp_data : out swd_rsp_data;
+    p_rsp_data : out dp_rsp_data;
 
     p_swclk    : out std_ulogic;
     p_swdio_i  : in  std_ulogic;
@@ -28,7 +30,7 @@ entity swd_dp is
   );
 end entity;
 
-architecture rtl of swd_dp is
+architecture rtl of dp_transactor is
 
   type state_t is (
     STATE_RESET,
@@ -122,20 +124,20 @@ begin
 
       when STATE_CMD_ROUTE =>
         if swclk_rising then
-          if std_match(r.op, SWD_DP_TURNAROUND) then
+          if std_match(r.op, DP_CMD_TURNAROUND) then
             rin.turnaround <= to_integer(unsigned(r.op(1 downto 0)));
             rin.state <= STATE_RSP_PUT;
 
-          elsif std_match(r.op, SWD_DP_RUN) then
+          elsif std_match(r.op, DP_CMD_RUN) then
             rin.cycle_count <= to_integer(unsigned(r.op(5 downto 0)));
             rin.state <= STATE_RUN;
             rin.run_val <= r.op(6);
 
-          elsif std_match(r.op, SWD_DP_BITBANG) then
+          elsif std_match(r.op, DP_CMD_BITBANG) then
             rin.cycle_count <= to_integer(unsigned(r.op(4 downto 0)));
             rin.state <= STATE_BITBANG;
 
-          elsif std_match(r.op, SWD_DP_AP_ABORT) then
+          elsif std_match(r.op, DP_CMD_AP_ABORT) then
             rin.cmd <= x"81"; -- Write to DP 0
             rin.par_in <= '0';
             rin.par_out <= '0';
@@ -143,7 +145,7 @@ begin
             rin.state <= STATE_CMD_SHIFT;
             rin.data <= x"0000001f";
 
-          elsif std_match(r.op, SWD_DP_RW) then
+          elsif std_match(r.op, DP_CMD_RW) then
             rin.cmd(7 downto 6) <= "10";
             rin.cmd(5) <= r.op(0) xor r.op(1) xor r.op(4) xor r.op(5);
             rin.cmd(4 downto 3) <= std_ulogic_vector(r.op(1 downto 0));

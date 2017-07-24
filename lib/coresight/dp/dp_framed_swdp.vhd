@@ -4,9 +4,11 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.framed.all;
-use nsl.swd.all;
 
-entity swd_framed_dp is
+library coresight;
+use coresight.dp.all;
+
+entity dp_framed_swdp is
   port (
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
@@ -26,14 +28,14 @@ entity swd_framed_dp is
   );
 end entity;
 
-architecture rtl of swd_framed_dp is
+architecture rtl of dp_framed_swdp is
 
   signal s_swd_cmd_val  : std_logic;
   signal s_swd_cmd_ack  : std_logic;
-  signal s_swd_cmd_data : swd_cmd_data;
+  signal s_swd_cmd_data : dp_cmd_data;
   signal s_swd_rsp_val  : std_logic;
   signal s_swd_rsp_ack  : std_logic;
-  signal s_swd_rsp_data : swd_rsp_data;
+  signal s_swd_rsp_data : dp_rsp_data;
 
   type state_t is (
     STATE_RESET,
@@ -90,7 +92,7 @@ begin
         if p_cmd_val.val = '1' then
           rin.cmd <= p_cmd_val.data;
           rin.more <= p_cmd_val.more;
-          if std_match(p_cmd_val.data, SWD_DP_W) or std_match(p_cmd_val.data, SWD_DP_BITBANG) then
+          if std_match(p_cmd_val.data, DP_CMD_W) or std_match(p_cmd_val.data, DP_CMD_BITBANG) then
             rin.state <= STATE_CMD_DATA_GET_0;
           else
             rin.state <= STATE_SWD_CMD;
@@ -129,7 +131,7 @@ begin
 
       when STATE_SWD_RSP =>
         if s_swd_rsp_val = '1' then
-          if std_match(r.cmd, SWD_DP_RW) then
+          if std_match(r.cmd, DP_CMD_RW) then
             rin.data <= s_swd_rsp_data.data;
             rin.cmd(3) <= s_swd_rsp_data.par_ok;
             rin.cmd(2 downto 0) <= s_swd_rsp_data.ack;
@@ -139,7 +141,7 @@ begin
 
       when STATE_RSP_PUT =>
         if p_rsp_ack.ack = '1' then
-          if std_match(r.cmd, SWD_DP_R) then
+          if std_match(r.cmd, DP_CMD_R) then
             rin.state <= STATE_RSP_DATA_PUT_0;
           else
             rin.state <= STATE_CMD_GET;
@@ -188,7 +190,7 @@ begin
 
       when STATE_RSP_PUT =>
         p_rsp_val.val <= '1';
-        if std_match(r.cmd, SWD_DP_R) then
+        if std_match(r.cmd, DP_CMD_R) then
           p_rsp_val.more <= '1';
         else
           p_rsp_val.more <= r.more;
@@ -223,7 +225,7 @@ begin
     end case;
   end process;
 
-  swd_port: swd_dp
+  swd_port: dp_transactor
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,

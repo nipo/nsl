@@ -2,9 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.swd.all;
-
 entity dap_sim is
   port (
     p_clk : in std_ulogic;
