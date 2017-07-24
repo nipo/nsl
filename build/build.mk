@@ -1,5 +1,5 @@
 tool ?= debug
-libraries += work nsl testing hwdep
+libraries += work nsl testing hwdep coresight
 work-srcdir ?= $(SRC_DIR)/src
 
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
@@ -9,6 +9,7 @@ LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
 nsl-srcdir := $(LIB_ROOT)/nsl
 testing-srcdir := $(LIB_ROOT)/testing
 hwdep-srcdir := $(LIB_ROOT)/hwdep
+coresight-srcdir := $(LIB_ROOT)/coresight
 
 define declare_source
 
@@ -116,5 +117,5 @@ SILENT:=
 endif
 
 clean:
-	rm -f $(clean-files)
+	rm -f $(sort $(clean-files))
 	rm -rf $(clean-dirs)

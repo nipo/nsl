@@ -1,35 +1,28 @@
 VHDL_VERSION=93
 VHDL_VARIANT=c
 GHDL=ghdl
+target ?= $(top-entity)
 
-simulate: $(top).ghw
+simulate: $(target).ghw
 
-.PRECIOUS: $(top).ghw
+.PRECIOUS: $(target).ghw
 
 .PHONY: FORCE
 
-$(top).ghw: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf) FORCE
-	$(SILENT)$(GHDL) -c -r $(top) --wave=$@ $(GHDLRUNFLAGS)
-
-analyze: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf)
-
 define ghdl_source_do
-$(SILENT)$$(GHDL) $1 --std=$$(VHDL_VERSION)$$(VHDL_VARIANT) --ieee=synopsys -v --work=$2 $3 > /dev/null
-	
+	$(GHDL) $2 --std=$(VHDL_VERSION)$(VHDL_VARIANT) --ieee=synopsys -v --work=$($1-library) $1
+	$(SILENT)
 endef
 
-
-define ghdl_library
-
-$1-obj$$(VHDL_VERSION).cf: $($1-vhdl-sources)
-	$(SILENT)rm -f $$@
-	$(foreach s,$($1-vhdl-sources),$(call ghdl_source_do,-i,$1,$s))
-	$(foreach s,$($1-vhdl-sources),$(call ghdl_source_do,-a,$1,$s))
-
-clean-files += $1-obj$$(VHDL_VERSION).cf
+define ghdl_lib_do
+$1-obj$(VHDL_VERSION).cf:
+	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do,$s,-i))
 
 endef
+
+$(eval $(foreach l,$(libraries),$(call ghdl_lib_do,$l)))
+
+$(target).ghw: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf) FORCE
+	$(SILENT)$(GHDL) -c -r --work=$(top-library) $(top-entity) --wave=$@ $(GHDLRUNFLAGS)
 
 clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf
-
-$(eval $(foreach l,$(libraries),$(call ghdl_library,$l)))
