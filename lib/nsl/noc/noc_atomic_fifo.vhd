@@ -5,7 +5,8 @@ use ieee.numeric_std.all;
 library nsl;
 use nsl.fifo.all;
 use nsl.noc.all;
-use nsl.util.all;
+library util;
+use util.numeric.all;
 
 entity noc_atomic_fifo is
   generic(

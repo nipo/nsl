@@ -6,4 +6,4 @@ vhdl-sources += rmii_to_framed.vhd
 vhdl-sources += rmii_noc.vhd
 deps += nsl.framed
 deps += nsl.sized
-deps += nsl.util
+deps += util.sync

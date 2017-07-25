@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.framed.all;
-use nsl.util.all;
+library util;
+use util.numeric.all;
 
 entity framed_fifo_atomic is
   generic(
@@ -29,7 +30,7 @@ architecture rtl of framed_fifo_atomic is
   signal s_out_val : nsl.framed.framed_req;
   signal s_in_ack, s_out_ack : nsl.framed.framed_ack;
   signal s_has_one : std_ulogic;
-  constant nw : natural := 2 ** nsl.util.log2(depth);
+  constant nw : natural := 2 ** util.numeric.log2(depth);
 
   type regs_t is record
     flush: std_ulogic;

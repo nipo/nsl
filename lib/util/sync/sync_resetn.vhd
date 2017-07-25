@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity reset_synchronizer is
+entity sync_resetn is
   generic(
     cycle_count : natural := 2
     );
@@ -11,15 +11,15 @@ entity reset_synchronizer is
     p_resetn_sync : out std_ulogic
     );
 
-end reset_synchronizer;
+end sync_resetn;
 
-architecture rtl of reset_synchronizer is
+architecture rtl of sync_resetn is
 
   signal r_reset : std_ulogic_vector(cycle_count-1 downto 0);
   attribute keep : boolean;
   attribute keep of r_reset : signal is true;
 
-begin  -- rtl
+begin
 
   rst: process (p_clk, p_resetn)
   begin

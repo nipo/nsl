@@ -1,10 +1,10 @@
 
 define list_source_do
-$(SILENT)echo "  $($1-language) in $($1-lib): $1"
-	
+echo "  $($1-language) in $($1-library): $1"
+	$(SILENT)
 endef
 
 analyze elaborate simulate: list
 
 list:
-	$(foreach s,$(sources),$(call list_source_do,$s))
+	$(SILENT)$(foreach s,$(sources),$(call list_source_do,$s))

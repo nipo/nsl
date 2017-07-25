@@ -1,68 +1,79 @@
 tool ?= debug
-libraries += work nsl testing hwdep coresight
 work-srcdir ?= $(SRC_DIR)/src
 
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
 LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
 
-nsl-srcdir := $(LIB_ROOT)/nsl
-testing-srcdir := $(LIB_ROOT)/testing
-hwdep-srcdir := $(LIB_ROOT)/hwdep
-coresight-srcdir := $(LIB_ROOT)/coresight
-
 define declare_source
 
-$(1)-language := $(2)
-$(1)-library := $(3)
-sources += $(1)
+$1-language := $2
+$1-library := $3
+_tmp-sources += $1
 
 endef
 
 define package_scan
 
+#$$(info Scanning package $1.$2)
+
 vhdl-sources :=
 verilog-sources :=
-deps := $(1)
+deps := $1
+pkg := $1.$2
 srcdir := $$(shell cd $$(shell pwd) ; cd $$(dir $$(lastword $$(MAKEFILE_LIST))) ; pwd)
 
 include $3/Makefile
 
-sources :=
+_tmp-sources :=
 $$(eval $$(foreach s,$$(vhdl-sources),$$(call declare_source,$3/$$s,vhdl,$1)))
 $$(eval $$(foreach s,$$(verilog-sources),$$(call declare_source,$3/$$s,verilog,$1)))
 
-$(1).$(2)-sources := $$(sources)
-$(1).$(2)-deps := $$(deps)
-$(1).$(2)-library := $(1)
+$$(pkg)-sources := $$(_tmp-sources)
+$$(pkg)-deps := $$(deps)
+$$(pkg)-library := $1
 
 endef
 
-define library_scan
+libraries :=
+
+library_scan = $(if $(filter $1,$(libraries)),,$(call _library_scan,$1))
+
+define _library_scan
+
+#$$(info Scanning library $1)
+
+libraries += $1
+
+srcdir := $($1-srcdir)
+ifeq ($$(srcdir),)
+srcdir := $(LIB_ROOT)/$1
+endif
+
+#$$(info srcdir: $$(srcdir))
 
 vhdl-sources :=
 verilog-sources :=
 packages :=
 deps :=
 
-include $2/Makefile
+include $$(srcdir)/Makefile
 
-$(1)-deps := $$(deps)
-$(1)-library := $(1)
+$1-deps := $$(deps)
+$1-library := $1
 
-sources :=
-$$(eval $$(foreach s,$$(vhdl-sources),$$(call declare_source,$2/$$s,vhdl,$1)))
-$$(eval $$(foreach s,$$(verilog-sources),$$(call declare_source,$2/$$s,verilog,$1)))
+_tmp-sources :=
+$$(eval $$(foreach s,$$(vhdl-sources),$$(call declare_source,$$(srcdir)/$$s,vhdl,$1)))
+$$(eval $$(foreach s,$$(verilog-sources),$$(call declare_source,$$(srcdir)/$$s,verilog,$1)))
 
-$(1)-sources := $$(sources)
+$1-sources := $$(_tmp-sources)
 
-$$(eval $$(foreach p,$$(packages),$$(call package_scan,$1,$$p,$2/$$p)))
+$$(eval $$(foreach p,$$(packages),$$(call package_scan,$1,$$p,$$(srcdir)/$$p)))
 
 endef
 
-$(eval $(foreach l,$(libraries),$(call library_scan,$l,$($l-srcdir))))
-
 top-parts := $(subst ., ,$(top))
+library_name = $(word 1,$(subst ., ,$1))
 
 ifeq ($(words $(top-parts)),1)
 top-library := work
@@ -90,23 +101,28 @@ endif
 parts-scanned :=
 sources :=
 
-define part_scan
-ifeq ($$(filter $(1),$$(parts-scanned)),)
+part_scan = $(if $(filter $1,$(parts-scanned)),,$(call _part_scan,$1))
 
-parts-scanned += $(1)
+define _part_scan
 
-$$(eval $$(foreach d,$$($(1)-deps),$$(call part_scan,$$(d))))
+$$(eval $$(foreach l,$$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll)))),$$(call library_scan,$$l)))
 
-$$(info Adding $1)
-sources += $$($(1)-sources)
-$$($1-library)-lib-sources += $$($(1)-sources)
+parts-scanned += $1
 
-endif
+#$$(info Scanning part $1)
+#$$(info $1 - lib deps: $$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll) $1))))
+$$(eval $$(foreach d,$$($1-deps),$$(call part_scan,$$(d))))
+
+$$($1-library)-lib-sources += $$($1-sources)
+sources += $$($1-sources)
+
+#$$(info $1 - sources: $$($1-sources))
 
 endef
 
-$(eval $(call part_scan,$(top-library).$(top-package)))
-$(eval $(call part_scan,$(top-library)))
+$(eval $(call library_scan,$(top-library)))
+
+$(eval $(call part_scan,$(top-library)$(if $(top-package),.$(top-package),)))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 

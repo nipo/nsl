@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.util.baudrate_generator;
-use nsl.util.log2;
+library util;
+use util.numeric.log2;
 
 entity uart_8n1_tx is
   generic(

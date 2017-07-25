@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity resync_reg is
+entity sync_reg is
   generic(
     cycle_count : natural := 2;
     data_width : integer
@@ -12,9 +12,9 @@ entity resync_reg is
     p_in  : in std_ulogic_vector(data_width-1 downto 0);
     p_out : out std_ulogic_vector(data_width-1 downto 0)
     );
-end resync_reg;
+end sync_reg;
 
-architecture rtl of resync_reg is
+architecture rtl of sync_reg is
 
   subtype word_t is std_ulogic_vector(data_width-1 downto 0);
   type regs_t is array(cycle_count - 1 downto 0) of word_t;

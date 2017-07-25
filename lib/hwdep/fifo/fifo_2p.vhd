@@ -2,8 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.util.all;
+library util;
+use util.numeric.log2;
+use util.sync.sync_resetn;
+use util.gray.all;
 
 library hwdep;
 use hwdep.ram.all;
@@ -65,14 +67,14 @@ architecture inferred of fifo_2p is
 begin
   
   reset_async: if not is_synchronous generate
-    reset_sync_out: nsl.util.reset_synchronizer
+    reset_sync_out: util.sync.sync_resetn
       port map(
         p_resetn => p_resetn,
         p_clk => p_clk(cout),
         p_resetn_sync => s_rst(1)
         );
 
-    reset_sync_in: nsl.util.reset_synchronizer
+    reset_sync_in: util.sync.sync_resetn
       port map(
         p_resetn => p_resetn,
         p_clk => p_clk(cin),
@@ -81,14 +83,14 @@ begin
 
     s_common_rst <= s_rst(0) and s_rst(1);
     
-    reset_sync_out_in: nsl.util.reset_synchronizer
+    reset_sync_out_in: util.sync.sync_resetn
       port map(
         p_resetn => s_common_rst,
         p_clk => p_clk(cin),
         p_resetn_sync => s_in_resetn
         );
 
-    reset_sync_in_out: nsl.util.reset_synchronizer
+    reset_sync_in_out: util.sync.sync_resetn
       port map(
         p_resetn => s_common_rst,
         p_clk => p_clk(cout),
@@ -122,7 +124,7 @@ begin
     end if;
   end process out_rptr;
 
-  in_wptr_gray: nsl.util.gray_encoder
+  in_wptr_gray: util.gray.gray_encoder
     generic map(
       data_width => count_width
       )
@@ -131,7 +133,7 @@ begin
       p_binary => std_ulogic_vector(r_in_wptr_bin)
       );
 
-  out_rptr_gray: nsl.util.gray_encoder
+  out_rptr_gray: util.gray.gray_encoder
     generic map(
       data_width => count_width
       )
@@ -222,14 +224,14 @@ begin
   s_in_full_n <= '0' when r_state = GOING_FULL and s_ptr_equal else '1';
   s_out_empty_n <= '0' when r_state = GOING_EMPTY and s_ptr_equal else '1';
 
-  in_full_sync: nsl.util.reset_synchronizer
+  in_full_sync: util.sync.sync_resetn
     port map(
       p_resetn => s_in_full_n,
       p_clk => p_clk(cin),
       p_resetn_sync => r_in_full_n
       );
 
-  out_empty_sync: nsl.util.reset_synchronizer
+  out_empty_sync: util.sync.sync_resetn
     port map(
       p_resetn => s_out_empty_n,
       p_clk => p_clk(cout),

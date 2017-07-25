@@ -2,5 +2,7 @@ vhdl-sources += fifo.vhd
 
 vhdl-sources += fifo_2p.vhd
 
-deps += nsl.util
+deps += util.sync
+deps += util.numeric
+deps += util.gray
 deps += hwdep.ram
