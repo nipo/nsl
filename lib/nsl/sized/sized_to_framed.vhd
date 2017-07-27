@@ -93,22 +93,22 @@ begin
     case r.state is
       when STATE_INVAL =>
         p_out_val.val <= '0';
-        p_out_val.more <= 'X';
-        p_out_val.data <= (others => 'X');
+        p_out_val.more <= '-';
+        p_out_val.data <= (others => '-');
         p_in_ack.ack <= '1';
         p_inval <= '1';
 
       when STATE_RESET =>
         p_out_val.val <= '0';
-        p_out_val.more <= 'X';
-        p_out_val.data <= (others => 'X');
+        p_out_val.more <= '-';
+        p_out_val.data <= (others => '-');
         p_in_ack.ack <= '0';
         p_inval <= '1';
 
       when STATE_SIZE_L | STATE_SIZE_H =>
         p_out_val.val <= '0';
-        p_out_val.more <= 'X';
-        p_out_val.data <= (others => 'X');
+        p_out_val.more <= '-';
+        p_out_val.data <= (others => '-');
         p_in_ack.ack <= '1';
         p_inval <= '0';
 
