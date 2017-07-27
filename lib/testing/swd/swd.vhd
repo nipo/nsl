@@ -5,31 +5,46 @@ use ieee.numeric_std.all;
 package swd is
 
   component swdap
+    generic(
+      idr: unsigned(31 downto 0) := X"2ba01477"
+      );
     port (
       p_swclk : in std_logic;
       p_swdio : inout std_logic;
+      p_swd_resetn : out std_ulogic;
 
-      p_dap_a : out unsigned(1 downto 0);
-      p_dap_ad : out std_logic;
-      p_dap_rdata : in unsigned(31 downto 0);
-      p_dap_ready : in std_logic;
-      p_dap_ren : out std_logic;
-      p_dap_wdata : out unsigned(31 downto 0);
-      p_dap_wen : out std_logic
+      p_ap_ready : in std_ulogic;
+
+      p_ap_sel : out unsigned(7 downto 0);
+
+      p_ap_a : out unsigned(5 downto 0);
+
+      p_ap_rdata : in unsigned(31 downto 0);
+      p_ap_rok : in std_logic;
+      p_ap_ren : out std_logic;
+      
+      p_ap_wdata : out unsigned(31 downto 0);
+      p_ap_wen : out std_logic
       );
   end component;
 
-  component dap_sim
+  component ap_sim
     port (
       p_clk : in std_ulogic;
+      p_resetn : in std_ulogic;
 
-      p_dap_a : in unsigned(1 downto 0);
-      p_dap_ad : in std_logic;
-      p_dap_rdata : out unsigned(31 downto 0);
-      p_dap_ready : out std_logic;
-      p_dap_ren : in std_logic;
-      p_dap_wdata : in unsigned(31 downto 0);
-      p_dap_wen : in std_logic
+      p_ready : out std_ulogic;
+
+      p_ap : in unsigned(7 downto 0);
+
+      p_a : in unsigned(5 downto 0);
+
+      p_rdata : out unsigned(31 downto 0);
+      p_rok : out std_logic;
+      p_ren : in std_logic;
+
+      p_wdata : in unsigned(31 downto 0);
+      p_wen : in std_logic
       );
   end component;
 

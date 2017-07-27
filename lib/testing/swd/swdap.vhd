@@ -3,23 +3,33 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity swdap is
+  generic(
+    idr: unsigned(31 downto 0) := X"2ba01477"
+    );
   port (
     p_swclk : in std_logic;
     p_swdio : inout std_logic;
+    p_swd_resetn : out std_ulogic;
 
-    p_dap_a : out unsigned(1 downto 0);
-    p_dap_ad : out std_logic;
-    p_dap_rdata : in unsigned(31 downto 0);
-    p_dap_ready : in std_logic;
-    p_dap_ren : out std_logic;
-    p_dap_wdata : out unsigned(31 downto 0);
-    p_dap_wen : out std_logic
-  );
+    p_ap_ready : in std_logic;
+
+    p_ap_sel : out unsigned(7 downto 0);
+
+    p_ap_a : out unsigned(5 downto 0);
+
+    p_ap_rdata : in unsigned(31 downto 0);
+    p_ap_rok : in std_logic;
+    p_ap_ren : out std_logic;
+    
+    p_ap_wdata : out unsigned(31 downto 0);
+    p_ap_wen : out std_logic
+    );
 end entity; 
 
 architecture rtl of swdap is
 
   type state_t is (
+    STATE_RESET,
     STATE_IDLE,
     STATE_CMD_AD,
     STATE_CMD_RW,
@@ -28,30 +38,38 @@ architecture rtl of swdap is
     STATE_CMD_PAR,
     STATE_CMD_STOP,
     STATE_CMD_PARK,
-    STATE_R0,
+    STATE_CMD_TURN,
     STATE_ACK_OK,
     STATE_ACK_WAIT,
     STATE_ACK_FAULT,
-    STATE_R1,
+    STATE_ACK_TURN,
     STATE_DATA,
     STATE_DATA_PAR,
-    STATE_R2
+    STATE_DATA_TURN
     );
 
-  signal r_cmd_a, s_cmd_a : unsigned(1 downto 0);
-  signal r_cmd_ad, s_cmd_ad : std_logic;
-  signal r_cmd_ok, s_cmd_ok : std_logic;
-  signal r_cmd_rw, s_cmd_rw : std_logic;
-  signal r_ready, s_ready : std_logic;
-  signal r_data, s_data : unsigned(31 downto 0);
-  signal r_data_par, s_data_par : std_logic;
-  signal r_reset_counter, s_reset_counter : natural;
-  signal r_state, s_state : state_t;
-  signal r_to_shift, s_to_shift : integer;
+  type regs_t is record
+    cmd_a : unsigned(1 downto 0);
+    cmd_ad : std_logic;
+    cmd_ok : std_logic;
+    cmd_rw : std_logic;
+    ready : std_logic;
+    data : unsigned(31 downto 0);
+    data_par : std_logic;
+    turnaround : natural range 0 to 3;
+    state : state_t;
+    to_shift : integer range 0 to 31;
+    ap_sel: unsigned(7 downto 0);
+    ap_bank_sel: unsigned(3 downto 0);
+    dp_bank_sel: unsigned(3 downto 0);
+    rdata : unsigned(31 downto 0);
+  end record;
 
-  signal s_swdio_oe : std_logic;
-  signal s_swdio_out : std_logic;
-  signal s_reset : std_logic;
+  signal r_reset_counter : natural range 0 to 49;
+
+  signal r, rin: regs_t;
+
+  signal s_swdio_out, s_swdio_oe, s_reset: std_logic;
   
   function Boolean_To_Logic(B : Boolean) return std_logic is
   begin
@@ -66,168 +84,226 @@ begin
   begin
     if rising_edge(p_swclk) then
       if s_reset = '1' then
-        r_cmd_a <= "00";
-        r_cmd_ad <= '0';
-        r_cmd_ok <= '0';
-        r_cmd_rw <= '0';
-        r_data <= (others => '0');
-        r_data_par <= '0';
-        r_state <= STATE_IDLE;
-        r_to_shift <= 0;
-        r_ready <= '0';
+        r.state <= STATE_RESET;
       else
-        r_cmd_a <= s_cmd_a;
-        r_cmd_ad <= s_cmd_ad;
-        r_cmd_ok <= s_cmd_ok;
-        r_cmd_rw <= s_cmd_rw;
-        r_data <= s_data;
-        r_data_par <= s_data_par;
-        r_state <= s_state;
-        r_to_shift <= s_to_shift;
-        r_ready <= s_ready;
+        r <= rin;
       end if;
     end if;
   end process;
 
-  reset: process(p_swclk)
+  reset: process(r, p_swdio)
   begin
-    if rising_edge(p_swclk) then
-      if p_swdio = '0' then
-        r_reset_counter <= 50;
-      elsif r_reset_counter /= 0 then
-        r_reset_counter <= r_reset_counter - 1;
-      end if;
+    if p_swdio = '0' then
+      r_reset_counter <= 0;
+      s_reset <= '0';
+    elsif r_reset_counter /= 49 then
+      r_reset_counter <= r_reset_counter + 1;
+      s_reset <= '0';
+    else
+      s_reset <= '1';
     end if;
   end process;
 
-  ready: process(r_state, p_dap_ready)
+  state: process(r, p_swdio, p_ap_rdata, p_ap_rok)
   begin
-    case r_state is
-      when STATE_R0 =>
-        s_ready <= p_dap_ready;
+    rin <= r;
 
-      when others =>
-        s_ready <= r_ready;
-    end case;
-  end process;
-
-  state: process(r_state, p_swdio, r_cmd_ok, p_dap_ready, r_cmd_rw, r_to_shift)
-  begin
-    s_state <= r_state;
+    if p_ap_rok = '1' then
+      rin.rdata <= p_ap_rdata;
+    end if;
     
-    case r_state is
+    case r.state is
+      when STATE_RESET =>
+        rin.state <= STATE_IDLE;
+        rin.turnaround <= 0;
+        rin.ap_bank_sel <= (others => '0');
+        rin.ap_sel <= (others => '0');
+        rin.dp_bank_sel <= (others => '0');
+        rin.cmd_a <= (others => '0');
+        rin.cmd_ad <= '0';
+        rin.rdata <= (others => '0');
+        rin.data <= (others => '0');
+
       when STATE_IDLE =>
+        rin.cmd_ok <= '1';
         if p_swdio = '1' then
-          s_state <= STATE_CMD_AD;
+          rin.state <= STATE_CMD_AD;
+          rin.data_par <= '0';
         end if;
 
       when STATE_CMD_AD =>
-        s_state <= STATE_CMD_RW;
+        rin.cmd_ad <= p_swdio;
+        rin.state <= STATE_CMD_RW;
 
       when STATE_CMD_RW =>
-        s_state <= STATE_CMD_A0;
+        rin.cmd_rw <= p_swdio;
+        rin.state <= STATE_CMD_A0;
 
       when STATE_CMD_A0 =>
-        s_state <= STATE_CMD_A1;
+        rin.cmd_a(0) <= p_swdio;
+        rin.state <= STATE_CMD_A1;
 
       when STATE_CMD_A1 =>
-        s_state <= STATE_CMD_PAR;
+        rin.cmd_a(1) <= p_swdio;
+        rin.state <= STATE_CMD_PAR;
 
       when STATE_CMD_PAR =>
-        s_state <= STATE_CMD_STOP;
+        rin.state <= STATE_CMD_STOP;
+        rin.cmd_ok <= r.cmd_ok and not (p_swdio xor r.cmd_ad xor r.cmd_rw xor r.cmd_a(0) xor r.cmd_a(1));
 
       when STATE_CMD_STOP =>
+        rin.cmd_ok <= r.cmd_ok and not p_swdio;
         if p_swdio = '1' then
-          s_state <= STATE_IDLE;
+          rin.state <= STATE_IDLE;
         else
-          s_state <= STATE_CMD_PARK;
+          rin.state <= STATE_CMD_PARK;
         end if;
 
       when STATE_CMD_PARK =>
         if p_swdio = '0' then
-          s_state <= STATE_IDLE;
+          rin.state <= STATE_IDLE;
         else
-          s_state <= STATE_R0;
+          rin.state <= STATE_CMD_TURN;
+          rin.to_shift <= r.turnaround;
         end if;
 
       when STATE_ACK_OK =>
-        s_state <= STATE_ACK_WAIT;
+        rin.state <= STATE_ACK_WAIT;
 
       when STATE_ACK_WAIT =>
-        s_state <= STATE_ACK_FAULT;
+        rin.state <= STATE_ACK_FAULT;
 
-      when STATE_R1 =>
-        s_state <= STATE_DATA;
+      when STATE_ACK_TURN =>
+        rin.to_shift <= (r.to_shift - 1) mod 32;
 
-      when STATE_R0 =>
-        if r_cmd_ok = '1' then
-          s_state <= STATE_ACK_OK;
+        if r.to_shift = 0 then
+          rin.state <= STATE_DATA;
+        end if;
+          
+      when STATE_CMD_TURN =>
+        if r.cmd_ad = '1' or r.cmd_a = "11" then
+          rin.ready <= p_ap_ready;
         else
-          s_state <= STATE_IDLE;
+          rin.ready <= '1';
         end if;
 
-      when STATE_ACK_FAULT =>
-        if r_cmd_ok = '1' and r_ready = '1' then
-          if r_cmd_rw = '1' then
-            s_state <= STATE_DATA;
+        rin.to_shift <= (r.to_shift - 1) mod 32;
+
+        if r.to_shift = 0 then
+          if r.cmd_ok = '1' then
+            rin.state <= STATE_ACK_OK;
           else
-            s_state <= STATE_R1;
+            rin.state <= STATE_IDLE;
+          end if;
+        end if;
+          
+      when STATE_ACK_FAULT =>
+        rin.to_shift <= 31;
+
+        if r.cmd_rw = '1' then
+          if r.cmd_ad = '1' then
+            rin.data <= r.rdata;
+          else
+            rin.data <= (others => '-');
+
+            -- DP read
+            case r.cmd_a is
+              when "00" => -- IDR
+                rin.data <= idr;
+
+              when "01" => -- Banked
+                case r.dp_bank_sel is
+                  when "0000" => -- CTRL/Stat
+                    rin.data <= X"00000000";
+                    
+                  when "0001" => -- DCLR
+                    rin.data(9 downto 8) <= to_unsigned(rin.turnaround, 3);
+                    rin.data(7 downto 0) <= X"43";
+
+                  when others =>
+                    null;
+                end case;
+                
+              when "10" => -- Select
+                null;
+                
+              when "11" => -- RdBuf
+                rin.data <= r.rdata;
+
+              when others =>
+                null;
+            end case;
+          end if;
+        end if;
+
+        if r.cmd_ok = '1' and r.ready = '1' then
+          if r.cmd_rw = '1' then
+            rin.state <= STATE_DATA;
+          else
+            rin.state <= STATE_ACK_TURN;
+            rin.to_shift <= r.turnaround;
           end if;
         else
-          s_state <= STATE_IDLE;
+          rin.state <= STATE_IDLE;
         end if;
 
       when STATE_DATA =>
-        if r_to_shift = 0 then
-          s_state <= STATE_DATA_PAR;
+        rin.data <= p_swdio & r.data(31 downto 1);
+        rin.to_shift <= (r.to_shift - 1) mod 32;
+
+        if r.to_shift = 0 then
+          rin.state <= STATE_DATA_PAR;
+        end if;
+
+        if r.cmd_rw = '1' then
+          rin.data_par <= r.data_par xor r.data(0);
+        else
+          rin.data_par <= r.data_par xor p_swdio;
         end if;
 
       when STATE_DATA_PAR =>
-        if r_cmd_rw = '1' then
-          s_state <= STATE_R2;
+        if r.cmd_rw = '1' then
+          rin.state <= STATE_DATA_TURN;
+          rin.to_shift <= r.turnaround;
         else
-          s_state <= STATE_IDLE;
+          -- was a write to dp
+          if r.cmd_ad = '0' and r.data_par = p_swdio then
+            case r.cmd_a is
+              when "00" => -- Abort
+                null;
+
+              when "01" => -- Banked
+                case r.dp_bank_sel is
+                  when "0000" => -- CTRL/Stat
+                    null;
+                    
+                  when "0001" => -- DCLR
+                    rin.turnaround <= to_integer(unsigned(r.data(9 downto 8)));
+
+                  when others =>
+                    null;
+                end case;
+                
+              when "10" => -- Select
+                rin.ap_bank_sel <= r.data(7 downto 4);
+                rin.dp_bank_sel <= r.data(3 downto 0);
+                rin.ap_sel <= r.data(31 downto 24);
+
+              when "11" => -- RdBuf
+                null;
+
+              when others =>
+                null;
+            end case;
+          end if;
+          rin.state <= STATE_IDLE;
         end if;
 
-      when STATE_R2 =>
-        s_state <= STATE_IDLE;
+      when STATE_DATA_TURN =>
+        rin.to_shift <= (r.to_shift - 1) mod 32;
 
-      when others =>
-        null;
-    end case;
-  end process;
-
-  par: process(r_state, r_data_par, r_data, p_swdio)
-  begin
-    s_data_par <= r_data_par;
-  
-    case r_state is
-      when STATE_DATA =>
-        if r_cmd_rw = '1' then
-          s_data_par <= r_data_par xor r_data(0);
-        else
-          s_data_par <= r_data_par xor p_swdio;
-        end if;
-
-      when others =>
-        s_data_par <= '0';
-    end case;
-  end process;
-
-  data: process(r_state, r_data, p_swdio, r_to_shift, r_cmd_rw, p_dap_rdata)
-  begin
-    s_data <= r_data;
-    s_to_shift <= r_to_shift;
-
-    case r_state is
-      when STATE_DATA =>
-        s_data <= p_swdio & r_data(1 + 30 downto 1);
-        s_to_shift <= r_to_shift - 1;
-
-      when STATE_ACK_FAULT =>
-        s_to_shift <= 31;
-        if r_cmd_rw = '1' then
-          s_data <= p_dap_rdata;
+        if r.to_shift = 0 then
+          rin.state <= STATE_IDLE;
         end if;
 
       when others =>
@@ -235,101 +311,54 @@ begin
     end case;
   end process;
 
-  cmd_in: process(p_swdio, r_state)
-  begin
-    s_cmd_ad <= r_cmd_ad;
-    s_cmd_rw <= r_cmd_rw;
-    s_cmd_a <= r_cmd_a;
-
-    case r_state is
-      when STATE_CMD_AD =>
-        s_cmd_ad <= p_swdio;
-
-      when STATE_CMD_RW =>
-        s_cmd_rw <= p_swdio;
-
-      when STATE_CMD_A0 =>
-        s_cmd_a(0) <= p_swdio;
-
-      when STATE_CMD_A1 =>
-        s_cmd_a(1) <= p_swdio;
-
-      when others =>
-        null;
-    end case;
-  end process;
-
-  cmd_ok: process(r_state, p_swdio, r_cmd_ad, r_cmd_rw, r_cmd_a, r_cmd_ok)
-  begin
-    s_cmd_ok <= r_cmd_ok;
-
-    case r_state is
-      when STATE_IDLE =>
-        s_cmd_ok <= '1';
-
-      when STATE_CMD_PAR =>
-        s_cmd_ok <= not (p_swdio xor r_cmd_ad xor r_cmd_rw xor r_cmd_a(0) xor r_cmd_a(1));
-
-      when STATE_CMD_STOP =>
-        s_cmd_ok <= r_cmd_ok and not p_swdio;
-
-      when STATE_CMD_PARK =>
-        s_cmd_ok <= r_cmd_ok and p_swdio;
-
-      when others =>
-        null;
-    end case;
-  end process;
-
-  s_reset <= '1' when r_reset_counter = 0 else '0';
   p_swdio <= s_swdio_out when s_swdio_oe = '1' else 'Z';
+  p_swd_resetn <= '0' when r.state = STATE_RESET else '1';
 
-  moore_dap: process (r_cmd_ad, r_cmd_a, r_data, r_cmd_rw, r_data_par, p_swdio, r_cmd_rw, r_state) is
+  moore_dap: process (r, p_swdio) is
   begin
-    p_dap_ad <= r_cmd_ad;
-    p_dap_a <= r_cmd_a;
-    p_dap_wdata <= r_data;
+    p_ap_wdata <= r.data;
+    p_ap_wen <= '0';
+    p_ap_ren <= '0';
+    p_ap_sel <= r.ap_sel;
+    p_ap_a <= r.ap_bank_sel & r.cmd_a;
 
-    case r_state is
+    case r.state is
       when STATE_DATA_PAR =>
-        p_dap_wen <= not (r_cmd_rw or (r_data_par xor p_swdio));
-        p_dap_ren <= '0';
+        p_ap_wen <= (not (r.cmd_rw or (r.data_par xor p_swdio))) and r.cmd_ad;
 
       when STATE_ACK_FAULT =>
-        p_dap_wen <= '0';
-        p_dap_ren <= r_cmd_rw;
+        p_ap_ren <= r.cmd_rw and r.cmd_ad;
 
       when others =>
-        p_dap_wen <= '0';
-        p_dap_ren <= '0';
+        null;
     end case;
   end process;
 
-  swd_io: process (r_state, r_cmd_ok, r_ready, r_data, r_data_par, r_cmd_rw) is
+  swd_io: process (r) is
   begin
-    case r_state is
+    case r.state is
       when STATE_ACK_OK =>
-        s_swdio_out <= r_cmd_ok and r_ready;
+        s_swdio_out <= r.cmd_ok and r.ready;
         s_swdio_oe <= '1';
 
       when STATE_ACK_WAIT =>
-        s_swdio_out <= r_cmd_ok and not r_ready;
+        s_swdio_out <= r.cmd_ok and not r.ready;
         s_swdio_oe <= '1';
 
       when STATE_ACK_FAULT =>
-        s_swdio_out <= not r_cmd_ok;
+        s_swdio_out <= not r.cmd_ok;
         s_swdio_oe <= '1';
 
       when STATE_DATA =>
-        s_swdio_out <= r_data(0);
-        s_swdio_oe <= r_cmd_rw;
+        s_swdio_out <= r.data(0);
+        s_swdio_oe <= r.cmd_rw;
 
       when STATE_DATA_PAR =>
-        s_swdio_out <= r_data_par;
-        s_swdio_oe <= r_cmd_rw;
+        s_swdio_out <= r.data_par;
+        s_swdio_oe <= r.cmd_rw;
 
       when others =>
-        s_swdio_out <= 'U';
+        s_swdio_out <= '-';
         s_swdio_oe <= '0';
     end case;
   end process;
