@@ -34,8 +34,7 @@ architecture ram2 of fifo_2p is
   subtype count_t is std_ulogic_vector(log2(depth)-1 downto 0);
   subtype word_t is std_ulogic_vector(data_width-1 downto 0);
 
-  signal s_resetn : std_ulogic_vector(0 to clk_count-1);
-
+  signal s_resetn: std_ulogic_vector(0 to clk_count-1);
   signal s_out_wptr, s_in_rptr: unsigned(count_t'range);
   signal s_out_wptr_tmp, s_in_rptr_tmp: std_ulogic_vector(count_t'range);
 
@@ -53,18 +52,30 @@ architecture ram2 of fifo_2p is
 
 begin
 
-  r_in: process (p_clk(0), s_resetn(0))
+  -- MEMO: Dont use rising_edge with record/arrays (ISE bug)
+  regs_in: process (p_clk(0), s_resetn(0))
   begin
     if s_resetn(0) = '0' then
       in_r.ptr <= (others => '0');
       in_r.blocked <= '0';
       in_r.move <= '0';
-    elsif rising_edge(p_clk(0)) then
+    elsif p_clk(0)'event and p_clk(0) = '1' then
       in_r <= in_rin;
     end if;
-  end process r_in;
+  end process;
 
-  transition_in: process(s_in_rptr, in_r, p_in_write)
+  regs_out: process(p_clk(clk_count-1), s_resetn(clk_count-1))
+  begin
+    if s_resetn(clk_count-1) = '0' then
+      out_r.ptr <= (others => '0');
+      out_r.blocked <= '1';
+      out_r.move <= '0';
+    elsif p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
+      out_r <= out_rin;
+    end if;
+  end process;
+
+  transition_in: process(in_r, p_in_write, s_in_rptr)
   begin
     in_rin <= in_r;
 
@@ -79,23 +90,12 @@ begin
           in_rin.blocked <= '1';
         end if;
       end if;
-    elsif s_in_rptr = in_r.ptr + 1 then
+    elsif s_in_rptr /= in_r.ptr then
       in_rin.blocked <= '0';
     end if;
   end process;
 
-  r_out: process (p_clk(clk_count-1), s_resetn(clk_count-1))
-  begin
-    if s_resetn(clk_count-1) = '0' then
-      out_r.ptr <= (others => '0');
-      out_r.blocked <= '1';
-      out_r.move <= '0';
-    elsif rising_edge(p_clk(clk_count-1)) then
-      out_r <= out_rin;
-    end if;
-  end process r_out;
-
-  transition_out: process(s_out_wptr, out_r, p_out_read)
+  transition_out: process(out_r, p_out_read, s_out_wptr)
   begin
     out_rin <= out_r;
 
@@ -110,7 +110,7 @@ begin
           out_rin.blocked <= '1';
         end if;
       end if;
-    elsif s_out_wptr = out_r.ptr + 1 then
+    elsif s_out_wptr /= out_r.ptr then
       out_rin.blocked <= '0';
     end if;
   end process;
@@ -119,7 +119,7 @@ begin
   async: if not is_synchronous generate
     reset_sync: util.sync.sync_multi_resetn
       generic map(
-        clk_count => clk_count
+        clk_count => 2
         )
       port map(
         p_clk => p_clk,

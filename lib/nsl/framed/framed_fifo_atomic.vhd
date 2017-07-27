@@ -44,13 +44,14 @@ begin
   assert clk_count = 1
     report "This component only supports one clock for now"
     severity failure;
-  
+
+  -- MEMO: Dont use rising_edge with record/arrays (ISE bug)
   reg: process(p_resetn, p_clk)
   begin
     if p_resetn = '0' then
       r.complete <= 0;
       r.flush <= '0';
-    elsif rising_edge(p_clk(0)) then
+    elsif p_clk(0)'event and p_clk(0) = '1' then
       r <= rin;
     end if;
   end process;

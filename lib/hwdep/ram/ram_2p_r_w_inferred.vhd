@@ -29,21 +29,26 @@ architecture inferred of ram_2p_r_w is
   shared variable r_mem: mem_t;
 
 begin
-  
-  process (p_clk(0), p_wen)
+
+  -- MEMO: Dont use rising_edge with record/arrays (ISE bug)
+  process (p_clk)
   begin
-    if rising_edge(p_clk(0)) and p_wen = '1' then
-      r_mem(to_integer(unsigned(p_waddr))) := p_wdata;
+    if p_clk(0)'event and p_clk(0) = '1' then
+      if p_wen = '1' then
+        r_mem(to_integer(unsigned(p_waddr))) := p_wdata;
+      end if;
     end if;
   end process;
 
-  process (p_clk(clk_count - 1), p_ren)
+  process (p_clk)
   begin
-    if rising_edge(p_clk(clk_count - 1)) and p_ren = '1' then
-      if clk_count = 1 and bypass and p_waddr = p_raddr and p_wen = '1' then
-        p_rdata <= p_wdata;
-      else
-        p_rdata <= r_mem(to_integer(unsigned(p_raddr)));
+    if p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
+      if p_ren = '1' then
+        if clk_count = 1 and bypass and p_waddr = p_raddr and p_wen = '1' then
+          p_rdata <= p_wdata;
+        else
+          p_rdata <= r_mem(to_integer(unsigned(p_raddr)));
+        end if;
       end if;
     end if;
   end process;
