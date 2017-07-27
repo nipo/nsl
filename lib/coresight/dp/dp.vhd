@@ -42,7 +42,7 @@ package dp is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_clk_div  : in  unsigned(15 downto 0);
+      p_clk_ref  : in  std_ulogic;
 
       p_cmd_val   : in nsl.framed.framed_req;
       p_cmd_ack   : out nsl.framed.framed_ack;
@@ -62,7 +62,7 @@ package dp is
       p_clk      : in  std_ulogic;
       p_resetn   : in  std_ulogic;
 
-      p_clk_div  : in  unsigned(15 downto 0);
+      p_clk_ref  : in  std_ulogic;
 
       p_cmd_val  : in  std_ulogic;
       p_cmd_ack  : out std_ulogic;

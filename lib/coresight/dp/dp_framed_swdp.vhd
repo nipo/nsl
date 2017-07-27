@@ -13,7 +13,7 @@ entity dp_framed_swdp is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_clk_div  : in  unsigned(15 downto 0);
+    p_clk_ref  : in  std_ulogic;
 
     p_cmd_val   : in nsl.framed.framed_req;
     p_cmd_ack   : out nsl.framed.framed_ack;
@@ -190,7 +190,7 @@ begin
       p_resetn => p_resetn,
       p_clk => p_clk,
 
-      p_clk_div => p_clk_div,
+      p_clk_ref => p_clk_ref,
 
       p_cmd_val => s_swd_cmd_val,
       p_cmd_ack => s_swd_cmd_ack,

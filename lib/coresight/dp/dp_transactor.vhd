@@ -13,7 +13,7 @@ entity dp_transactor is
     p_clk      : in  std_ulogic;
     p_resetn   : in  std_ulogic;
 
-    p_clk_div  : in  unsigned(15 downto 0);
+    p_clk_ref  : in  std_ulogic;
 
     p_cmd_val  : in  std_ulogic;
     p_cmd_ack  : out std_ulogic;
@@ -62,7 +62,6 @@ architecture rtl of dp_transactor is
     state         : state_t;
     ack           : std_ulogic_vector(2 downto 0);
     turnaround    : unsigned(1 downto 0);
-    scaler        : unsigned(p_clk_div'range);
 
     data          : std_ulogic_vector(31 downto 0);
     op            : std_ulogic_vector(7 downto 0);
@@ -90,13 +89,12 @@ begin
   begin
     if p_resetn = '0' then
       r.state <= STATE_RESET;
-      r.scaler <= (others => '0');
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swdio_i, p_clk_div)
+  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swdio_i, p_clk_ref)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -104,10 +102,9 @@ begin
     swclk_falling := false;
     swclk_rising := false;
 
-    rin.scaler <= r.scaler - 1;
-    if r.scaler = (r.scaler'range => '0') then
-      rin.scaler <= p_clk_div;
-      rin.swclk <= not r.swclk;
+    rin.swclk <= p_clk_ref;
+
+    if p_clk_ref /= r.swclk then
       swclk_falling := r.swclk = '1';
       swclk_rising := r.swclk = '0';
     end if;
@@ -115,7 +112,6 @@ begin
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_CMD_GET;
-        rin.scaler <= p_clk_div;
         rin.swclk <= '0';
         rin.swdio <= '0';
         rin.turnaround <= (others => '0');
