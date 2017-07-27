@@ -53,8 +53,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, p_in_val, p_out_ack,
-                      s_data_out_val, s_data_in_ack)
+  transition: process(r, p_in_val, p_out_ack, s_data_out_val, s_data_in_ack)
   begin
     rin <= r;
 
@@ -107,8 +106,7 @@ begin
       p_in_ack => s_data_in_ack
       );
   
-  mux: process(r.state, p_in_val.val, p_in_val.data, s_data_in_ack.ack, p_out_ack.ack,
-               s_data_out_val.val, s_data_out_val.data)
+  mux: process(r, p_in_val, s_data_in_ack, p_out_ack, s_data_out_val)
   begin
     p_out_val.val <= '0';
     p_out_val.data <= (others => '-');
@@ -135,9 +133,8 @@ begin
         p_out_val.data <= std_ulogic_vector(r.count(15 downto 8));
 
       when STATE_DATA_FLUSH =>
-        p_out_val.val <= s_data_out_val.val;
-        p_out_val.data <= s_data_out_val.data;
-        s_data_out_ack.ack <= p_out_ack.ack;
+        p_out_val <= s_data_out_val;
+        s_data_out_ack <= p_out_ack;
 
     end case;
   end process;

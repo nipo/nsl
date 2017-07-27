@@ -46,17 +46,17 @@ architecture hier of rmii_noc is
   
 begin
 
-  reset_sync_rmii: util.sync.sync_resetn
+  reset_sync_rmii: util.sync.sync_rising_edge
     port map(
-      p_resetn => p_resetn,
-      p_resetn_sync => s_resetn_rmii,
+      p_in => p_resetn,
+      p_out => s_resetn_rmii,
       p_clk => p_clk_rmii
       );
 
-  reset_sync_noc: util.sync.sync_resetn
+  reset_sync_noc: util.sync.sync_rising_edge
     port map(
-      p_resetn => p_resetn,
-      p_resetn_sync => s_resetn_noc,
+      p_in => p_resetn,
+      p_out => s_resetn_noc,
       p_clk => p_clk_noc
       );
 
