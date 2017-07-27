@@ -23,6 +23,6 @@ endef
 $(eval $(foreach l,$(libraries),$(call ghdl_lib_do,$l)))
 
 $(target).ghw: $(foreach l,$(libraries),$l-obj$(VHDL_VERSION).cf) FORCE
-	$(SILENT)$(GHDL) -c -r --work=$(top-library) $(top-entity) --wave=$@ $(GHDLRUNFLAGS)
+	$(SILENT)$(GHDL) -c -r --work=$(top-lib) $(top-entity) --wave=$@ $(GHDLRUNFLAGS)
 
 clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf

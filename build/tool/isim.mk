@@ -32,7 +32,7 @@ clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
 
 ise-build/$(target).exe: ise-build/$(target).prj $(MAKEFILE_LIST)
 	$(SILENT)$(ISE_PREPARE) ; \
-	fuse $(INTF_STYLE) -incremental -lib secureip -o $@ -prj $< $(top-library).$(top-entity)
+	fuse $(INTF_STYLE) -incremental -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
 
 $(target).vcd: ise-build/$(target).exe
 	$(SILENT)> $@.tmp

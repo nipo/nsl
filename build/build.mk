@@ -76,22 +76,17 @@ top-parts := $(subst ., ,$(top))
 library_name = $(word 1,$(subst ., ,$1))
 
 ifeq ($(words $(top-parts)),1)
-top-library := work
+top-lib := work
 top-package :=
 top-entity := $(top-parts)
 else
 ifeq ($(words $(top-parts)),2)
-ifeq ($(word 1,$(top-parts)),work)
-top-library := work
-top-package :=
-else
-top-library := work
-top-package := $(word 1,$(top-parts))
-endif
+top-lib := $(word 1,$(top-parts))
+top-package := 
 top-entity := $(word 2,$(top-parts))
 else
 ifeq ($(words $(top-parts)),3)
-top-library := $(word 1,$(top-parts))
+top-lib := $(word 1,$(top-parts))
 top-package := $(word 2,$(top-parts))
 top-entity := $(word 3,$(top-parts))
 endif
@@ -120,9 +115,9 @@ sources += $$($1-sources)
 
 endef
 
-$(eval $(call library_scan,$(top-library)))
+$(eval $(call library_scan,$(top-lib)))
 
-$(eval $(call part_scan,$(top-library)$(if $(top-package),.$(top-package),)))
+$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),)))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 
