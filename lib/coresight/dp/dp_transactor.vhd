@@ -42,10 +42,13 @@ architecture rtl of dp_transactor is
     STATE_CMD_TURNAROUND,
 
     STATE_ACK_SHIFT,
-    STATE_ACK_TURNAROUND,
 
-    STATE_DATA_SHIFT,
-    STATE_PARITY_SHIFT,
+    STATE_ACK_TURNAROUND,
+    STATE_DATA_SHIFT_OUT,
+    STATE_PARITY_SHIFT_OUT,
+
+    STATE_DATA_SHIFT_IN,
+    STATE_PARITY_SHIFT_IN,
     STATE_DATA_TURNAROUND,
 
     STATE_RUN,
@@ -58,19 +61,20 @@ architecture rtl of dp_transactor is
   type regs_t is record
     state         : state_t;
     ack           : std_ulogic_vector(2 downto 0);
-    turnaround    : integer range 0 to 3;
+    turnaround    : unsigned(1 downto 0);
     scaler        : unsigned(p_clk_div'range);
 
     data          : std_ulogic_vector(31 downto 0);
     op            : std_ulogic_vector(7 downto 0);
     run_val       : std_ulogic;
+    is_read       : std_ulogic;
 
     par_in        : std_ulogic;
     par_out       : std_ulogic;
 
     cmd           : std_ulogic_vector(7 downto 0);
 
-    cycle_count   : natural range 0 to 63;
+    cycle_count   : unsigned(5 downto 0);
 
     swclk         : std_ulogic;
     swdio         : std_ulogic;
@@ -79,16 +83,14 @@ architecture rtl of dp_transactor is
 
   signal r, rin: regs_t;
 
+  constant c_zero : unsigned(5 downto 0) := (others => '0');
+  
 begin
   reg: process (p_clk, p_resetn)
   begin
     if p_resetn = '0' then
       r.state <= STATE_RESET;
-      r.turnaround <= 0;
       r.scaler <= (others => '0');
-      r.swclk <= '0';
-      r.swdio <= '0';
-      r.swdio_oe <= '1';
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
@@ -114,6 +116,9 @@ begin
       when STATE_RESET =>
         rin.state <= STATE_CMD_GET;
         rin.scaler <= p_clk_div;
+        rin.swclk <= '0';
+        rin.swdio <= '0';
+        rin.turnaround <= (others => '0');
 
       when STATE_CMD_GET =>
         if p_cmd_val = '1' then
@@ -125,25 +130,27 @@ begin
       when STATE_CMD_ROUTE =>
         if swclk_rising then
           if std_match(r.op, DP_CMD_TURNAROUND) then
-            rin.turnaround <= to_integer(unsigned(r.op(1 downto 0)));
+            rin.turnaround <= unsigned(r.op(1 downto 0));
             rin.state <= STATE_RSP_PUT;
 
           elsif std_match(r.op, DP_CMD_RUN) then
-            rin.cycle_count <= to_integer(unsigned(r.op(5 downto 0)));
+            rin.cycle_count <= unsigned(r.op(5 downto 0));
             rin.state <= STATE_RUN;
             rin.run_val <= r.op(6);
 
           elsif std_match(r.op, DP_CMD_BITBANG) then
-            rin.cycle_count <= to_integer(unsigned(r.op(4 downto 0)));
+            rin.cycle_count <= '0' & unsigned(r.op(4 downto 0));
             rin.state <= STATE_BITBANG;
 
-          elsif std_match(r.op, DP_CMD_AP_ABORT) then
+          elsif std_match(r.op, DP_CMD_ABORT) then
             rin.cmd <= x"81"; -- Write to DP 0
             rin.par_in <= '0';
             rin.par_out <= '0';
-            rin.cycle_count <= 7;
+            rin.cycle_count <= "000111";
             rin.state <= STATE_CMD_SHIFT;
             rin.data <= x"0000001f";
+            rin.is_read <= '0';
+            rin.run_val <= '0';
 
           elsif std_match(r.op, DP_CMD_RW) then
             rin.cmd(7 downto 6) <= "10";
@@ -152,12 +159,15 @@ begin
             rin.cmd(2) <= r.op(4); -- Rnw
             rin.cmd(1) <= r.op(5); -- Apndp
             rin.cmd(0) <= '1';
+            rin.is_read <= r.op(4); -- Rnw
             rin.par_in <= '0';
             rin.par_out <= '0';
-            rin.cycle_count <= 7;
+            rin.cycle_count <= "000111";
             rin.state <= STATE_CMD_SHIFT;
+            rin.run_val <= '0';
 
           else
+            rin.cmd <= x"ff";
             rin.state <= STATE_RSP_PUT;
           end if;
         end if;
@@ -167,38 +177,40 @@ begin
           rin.swdio <= r.cmd(0);
           rin.swdio_oe <= '1';
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
+          rin.cycle_count <= r.cycle_count - 1;
           rin.cmd <= "-" & r.cmd(7 downto 1);
-          if r.cycle_count = 0 then
+          if r.cycle_count = c_zero then
             rin.state <= STATE_CMD_TURNAROUND;
-            rin.cycle_count <= r.turnaround;
+            rin.cycle_count <= "0000" & r.turnaround;
           end if;
         end if;
 
       when STATE_CMD_TURNAROUND =>
         if swclk_falling then
           rin.swdio_oe <= '0';
+          rin.swdio <= '-';
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          if r.cycle_count = 0 then
+          rin.cycle_count <= r.cycle_count - 1;
+          if r.cycle_count = c_zero then
             rin.state <= STATE_ACK_SHIFT;
-            rin.cycle_count <= 2;
+            rin.cycle_count <= "000010";
           end if;
         end if;
 
       when STATE_ACK_SHIFT =>
         if swclk_falling then
           rin.swdio_oe <= '0';
+          rin.swdio <= '-';
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
+          rin.cycle_count <= r.cycle_count - 1;
           rin.ack <= p_swdio_i & r.ack(2 downto 1);
-          if r.cycle_count = 0 then
-            if r.op(4) = '1' then -- read
-              rin.state <= STATE_DATA_SHIFT;
-              rin.cycle_count <= 31;
+          if r.cycle_count = c_zero then
+            if r.is_read = '1' then -- read
+              rin.state <= STATE_DATA_SHIFT_IN;
+              rin.cycle_count <= "011111";
             else
               rin.state <= STATE_ACK_TURNAROUND;
-              rin.cycle_count <= r.turnaround;
+              rin.cycle_count <= "0000" & r.turnaround;
             end if;
           end if;
         end if;
@@ -206,54 +218,69 @@ begin
       when STATE_ACK_TURNAROUND =>
         if swclk_falling then
           rin.swdio_oe <= '0';
+          rin.swdio <= '-';
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          if r.cycle_count = 0 then
-            rin.state <= STATE_DATA_SHIFT;
-            rin.cycle_count <= 31;
+          rin.cycle_count <= r.cycle_count - 1;
+          if r.cycle_count = c_zero then
+            rin.state <= STATE_DATA_SHIFT_OUT;
+            rin.cycle_count <= "011111";
           end if;
         end if;
 
-      when STATE_DATA_SHIFT =>
+      when STATE_DATA_SHIFT_OUT =>
         if swclk_falling then
+          rin.swdio_oe <= '1';
           rin.swdio <= r.data(0);
-          rin.swdio_oe <= not r.op(4); -- write
           rin.par_out <= r.par_out xor r.data(0);
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          rin.data <= p_swdio_i & r.data(31 downto 1);
-          rin.par_in <= r.par_in xor p_swdio_i;
-          if r.cycle_count = 0 then
-            rin.state <= STATE_PARITY_SHIFT;
+          rin.cycle_count <= r.cycle_count - 1;
+          rin.data <= '-' & r.data(31 downto 1);
+          if r.cycle_count = c_zero then
+            rin.state <= STATE_PARITY_SHIFT_OUT;
           end if;
         end if;
 
-      when STATE_PARITY_SHIFT =>
+      when STATE_PARITY_SHIFT_OUT =>
         if swclk_falling then
+          rin.swdio_oe <= '1';
           rin.swdio <= r.par_out;
-          rin.swdio_oe <= not r.op(4); -- write
+        elsif swclk_rising then
+          rin.state <= STATE_RUN;
+          rin.cycle_count <= "000001";
+        end if;
+
+      when STATE_DATA_SHIFT_IN =>
+        if swclk_falling then
+          rin.swdio_oe <= '0';
+          rin.swdio <= '-';
+        elsif swclk_rising then
+          rin.cycle_count <= r.cycle_count - 1;
+          rin.data <= p_swdio_i & r.data(31 downto 1);
+          rin.par_in <= r.par_in xor p_swdio_i;
+          if r.cycle_count = c_zero then
+            rin.state <= STATE_PARITY_SHIFT_IN;
+          end if;
+        end if;
+
+      when STATE_PARITY_SHIFT_IN =>
+        if swclk_falling then
+          rin.swdio_oe <= '0';
+          rin.swdio <= '-';
         elsif swclk_rising then
           rin.par_in <= r.par_in xor p_swdio_i;
-
-          if r.op(4) = '1' then -- read
-            rin.state <= STATE_DATA_TURNAROUND;
-            rin.cycle_count <= r.turnaround;
-          else
-            rin.state <= STATE_RUN;
-            rin.cycle_count <= 0;
-            rin.run_val <= '0';
-          end if;
+          rin.state <= STATE_DATA_TURNAROUND;
+          rin.cycle_count <= "0000" & r.turnaround;
         end if;
 
       when STATE_DATA_TURNAROUND =>
         if swclk_falling then
           rin.swdio_oe <= '0';
+          rin.swdio <= '-';
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          if r.cycle_count = 0 then
+          rin.cycle_count <= r.cycle_count - 1;
+          if r.cycle_count = c_zero then
             rin.state <= STATE_RUN;
-            rin.cycle_count <= 0;
-            rin.run_val <= '0';
+            rin.cycle_count <= "000001";
           end if;
         end if;
 
@@ -262,8 +289,8 @@ begin
           rin.swdio_oe <= '1';
           rin.swdio <= r.run_val;
         elsif swclk_rising then
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          if r.cycle_count = 0 then
+          rin.cycle_count <= r.cycle_count - 1;
+          if r.cycle_count = c_zero then
             rin.state <= STATE_RSP_PUT;
           end if;
         end if;
@@ -272,10 +299,11 @@ begin
         if swclk_falling then
           rin.swdio_oe <= '1';
           rin.swdio <= r.data(0);
+          rin.run_val <= r.data(0);
         elsif swclk_rising then
           rin.data <= '-' & r.data(31 downto 1);
-          rin.cycle_count <= (r.cycle_count - 1) mod 64;
-          if r.cycle_count = 0 then
+          rin.cycle_count <= r.cycle_count - 1;
+          if r.cycle_count = c_zero then
             rin.state <= STATE_RSP_PUT;
           end if;
         end if;

@@ -10,8 +10,7 @@ package dp is
   constant DP_CMD_RUN_0         : std_ulogic_vector(7 downto 0):= "00------";
   constant DP_CMD_RUN_1         : std_ulogic_vector(7 downto 0):= "01------";
   constant DP_CMD_TURNAROUND    : std_ulogic_vector(7 downto 0):= "110100--";
-  -- Warning: Ensure DP_CMD_ABORT(4) = '0'
-  constant DP_CMD_AP_ABORT      : std_ulogic_vector(7 downto 0):= "1100----";
+  constant DP_CMD_ABORT         : std_ulogic_vector(7 downto 0):= "1100----";
   constant DP_CMD_BITBANG       : std_ulogic_vector(7 downto 0):= "111-----";
   constant DP_CMD_RW            : std_ulogic_vector(7 downto 0):= "10------";
   constant DP_CMD_W             : std_ulogic_vector(7 downto 0):= "10-0----";

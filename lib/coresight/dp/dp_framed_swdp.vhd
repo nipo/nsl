@@ -41,19 +41,13 @@ architecture rtl of dp_framed_swdp is
     STATE_RESET,
 
     STATE_CMD_GET,
-    STATE_CMD_DATA_GET_0,
-    STATE_CMD_DATA_GET_1,
-    STATE_CMD_DATA_GET_2,
-    STATE_CMD_DATA_GET_3,
+    STATE_CMD_DATA_GET,
 
     STATE_SWD_CMD,
     STATE_SWD_RSP,
 
     STATE_RSP_PUT,
-    STATE_RSP_DATA_PUT_0,
-    STATE_RSP_DATA_PUT_1,
-    STATE_RSP_DATA_PUT_2,
-    STATE_RSP_DATA_PUT_3
+    STATE_RSP_DATA_PUT
     );
 
   type regs_t is record
@@ -61,6 +55,7 @@ architecture rtl of dp_framed_swdp is
 
     cmd             : std_ulogic_vector(7 downto 0);
     more            : std_ulogic;
+    cycle           : natural range 0 to 3;
 
     data            : std_ulogic_vector(31 downto 0);
   end record;
@@ -93,35 +88,21 @@ begin
           rin.cmd <= p_cmd_val.data;
           rin.more <= p_cmd_val.more;
           if std_match(p_cmd_val.data, DP_CMD_W) or std_match(p_cmd_val.data, DP_CMD_BITBANG) then
-            rin.state <= STATE_CMD_DATA_GET_0;
+            rin.state <= STATE_CMD_DATA_GET;
+            rin.cycle <= 3;
           else
             rin.state <= STATE_SWD_CMD;
           end if;
         end if;
 
-      when STATE_CMD_DATA_GET_0 =>
+      when STATE_CMD_DATA_GET =>
         if p_cmd_val.val = '1' then
-          rin.data(7 downto 0) <= p_cmd_val.data;
-          rin.state <= STATE_CMD_DATA_GET_1;
-        end if;
-
-      when STATE_CMD_DATA_GET_1 =>
-        if p_cmd_val.val = '1' then
-          rin.data(15 downto 8) <= p_cmd_val.data;
-          rin.state <= STATE_CMD_DATA_GET_2;
-        end if;
-
-      when STATE_CMD_DATA_GET_2 =>
-        if p_cmd_val.val = '1' then
-          rin.data(23 downto 16) <= p_cmd_val.data;
-          rin.state <= STATE_CMD_DATA_GET_3;
-        end if;
-
-      when STATE_CMD_DATA_GET_3 =>
-        if p_cmd_val.val = '1' then
-          rin.data(31 downto 24) <= p_cmd_val.data;
+          rin.cycle <= (r.cycle - 1) mod 4;
+          rin.data <= p_cmd_val.data & r.data(31 downto 8);
           rin.more <= p_cmd_val.more;
-          rin.state <= STATE_SWD_CMD;
+          if r.cycle = 0 then
+            rin.state <= STATE_SWD_CMD;
+          end if;
         end if;
 
       when STATE_SWD_CMD =>
@@ -142,30 +123,20 @@ begin
       when STATE_RSP_PUT =>
         if p_rsp_ack.ack = '1' then
           if std_match(r.cmd, DP_CMD_R) then
-            rin.state <= STATE_RSP_DATA_PUT_0;
+            rin.cycle <= 3;
+            rin.state <= STATE_RSP_DATA_PUT;
           else
             rin.state <= STATE_CMD_GET;
           end if;
         end if;
         
-      when STATE_RSP_DATA_PUT_0 =>
+      when STATE_RSP_DATA_PUT =>
         if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_RSP_DATA_PUT_1;
-        end if;
-
-      when STATE_RSP_DATA_PUT_1 =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_RSP_DATA_PUT_2;
-        end if;
-
-      when STATE_RSP_DATA_PUT_2 =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_RSP_DATA_PUT_3;
-        end if;
-
-      when STATE_RSP_DATA_PUT_3 =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_CMD_GET;
+          rin.cycle <= (r.cycle - 1) mod 4;
+          rin.data <= "--------" & r.data(31 downto 8);
+          if r.cycle = 0 then
+            rin.state <= STATE_CMD_GET;
+          end if;
         end if;
 
     end case;
@@ -185,7 +156,7 @@ begin
         null;
 
       when STATE_CMD_GET
-        | STATE_CMD_DATA_GET_0 | STATE_CMD_DATA_GET_1 | STATE_CMD_DATA_GET_2 | STATE_CMD_DATA_GET_3 =>
+        | STATE_CMD_DATA_GET =>
         p_cmd_ack.ack <= '1';
 
       when STATE_RSP_PUT =>
@@ -197,25 +168,14 @@ begin
         end if;
         p_rsp_val.data <= r.cmd;
 
-      when STATE_RSP_DATA_PUT_0 =>
+      when STATE_RSP_DATA_PUT =>
         p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
+        if r.cycle = 0 then
+          p_rsp_val.more <= r.more;
+        else
+          p_rsp_val.more <= '1';
+        end if;
         p_rsp_val.data <= r.data(7 downto 0);
-
-      when STATE_RSP_DATA_PUT_1 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.data(15 downto 8);
-
-      when STATE_RSP_DATA_PUT_2 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
-        p_rsp_val.data <= r.data(23 downto 16);
-
-      when STATE_RSP_DATA_PUT_3 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= r.more;
-        p_rsp_val.data <= r.data(31 downto 24);
 
       when STATE_SWD_CMD =>
         s_swd_cmd_val <= '1';
