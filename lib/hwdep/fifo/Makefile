@@ -1,6 +1,7 @@
 vhdl-sources += fifo.vhd
 
-vhdl-sources += fifo_2p.vhd
+#vhdl-sources += fifo_2p.vhd
+vhdl-sources += fifo_2p_ram2.vhd
 
 deps += util.sync
 deps += util.numeric

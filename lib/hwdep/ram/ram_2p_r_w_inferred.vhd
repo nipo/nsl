@@ -30,14 +30,14 @@ architecture inferred of ram_2p_r_w is
 
 begin
   
-  process (p_clk(0))
+  process (p_clk(0), p_wen)
   begin
     if rising_edge(p_clk(0)) and p_wen = '1' then
       r_mem(to_integer(unsigned(p_waddr))) := p_wdata;
     end if;
   end process;
 
-  process (p_clk(clk_count - 1))
+  process (p_clk(clk_count - 1), p_ren)
   begin
     if rising_edge(p_clk(clk_count - 1)) and p_ren = '1' then
       if clk_count = 1 and bypass and p_waddr = p_raddr and p_wen = '1' then

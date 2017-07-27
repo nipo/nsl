@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library util;
 use util.numeric.log2;
-use util.sync.sync_resetn;
+use util.sync.sync_rising_edge;
 use util.gray.all;
 
 library hwdep;
@@ -41,9 +41,6 @@ architecture inferred of fifo_2p is
   subtype count_t is std_ulogic_vector(count_width-1 downto 0);
   subtype count_u is unsigned(count_width-1 downto 0);
 
-  signal s_in_clk, s_out_clk: std_ulogic;
-  signal s_common_rst : std_ulogic;
-  signal s_rst: std_ulogic_vector(1 downto 0);
   signal s_out_resetn, s_in_resetn : std_ulogic;
 
   signal r_in_wptr_bin, r_out_rptr_bin: count_u;
@@ -67,34 +64,15 @@ architecture inferred of fifo_2p is
 begin
   
   reset_async: if not is_synchronous generate
-    reset_sync_out: util.sync.sync_resetn
+    sync: util.sync.sync_multi_resetn
+      generic map(
+        clk_count => 2
+        )
       port map(
+        p_clk => p_clk,
         p_resetn => p_resetn,
-        p_clk => p_clk(cout),
-        p_resetn_sync => s_rst(1)
-        );
-
-    reset_sync_in: util.sync.sync_resetn
-      port map(
-        p_resetn => p_resetn,
-        p_clk => p_clk(cin),
-        p_resetn_sync => s_rst(0)
-        );
-
-    s_common_rst <= s_rst(0) and s_rst(1);
-    
-    reset_sync_out_in: util.sync.sync_resetn
-      port map(
-        p_resetn => s_common_rst,
-        p_clk => p_clk(cin),
-        p_resetn_sync => s_in_resetn
-        );
-
-    reset_sync_in_out: util.sync.sync_resetn
-      port map(
-        p_resetn => s_common_rst,
-        p_clk => p_clk(cout),
-        p_resetn_sync => s_out_resetn
+        p_resetn_sync(0) => s_in_resetn,
+        p_resetn_sync(1) => s_out_resetn
         );
   end generate;
 
@@ -179,9 +157,9 @@ begin
                         xnor s_out_rptr_gray(s_out_rptr_gray'high - 1));
     end process;
 
-    process(s_going_full, s_going_empty, s_common_rst)
+    process(s_going_full, s_going_empty, s_in_resetn)
     begin
-      if s_going_empty = '1' or s_common_rst = '0' then
+      if s_going_empty = '1' or s_in_resetn = '0' then
         r_state <= GOING_EMPTY;
       elsif s_going_full = '1' then
         r_state <= GOING_FULL;
@@ -192,9 +170,9 @@ begin
   end generate;
 
   going_sync: if is_synchronous generate
-    process(p_resetn, p_clk(cin))
+    process(s_in_resetn, p_clk(cin))
     begin
-      if p_resetn = '0' then
+      if s_in_resetn = '0' then
         r_state <= GOING_EMPTY;
 
       elsif rising_edge(p_clk(cin)) then
@@ -209,9 +187,9 @@ begin
     s_ptr_equal <= r_in_wptr_bin = r_out_rptr_bin;
   end generate;
 
-  process(p_resetn, p_clk(cout))
+  process(s_out_resetn, p_clk(cout))
   begin
-    if p_resetn = '0' then
+    if s_out_resetn = '0' then
       r_out_data_valid <= '0';
 
     elsif rising_edge(p_clk(cout)) then
@@ -224,18 +202,18 @@ begin
   s_in_full_n <= '0' when r_state = GOING_FULL and s_ptr_equal else '1';
   s_out_empty_n <= '0' when r_state = GOING_EMPTY and s_ptr_equal else '1';
 
-  in_full_sync: util.sync.sync_resetn
+  in_full_sync: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_in_full_n,
+      p_in => s_in_full_n,
       p_clk => p_clk(cin),
-      p_resetn_sync => r_in_full_n
+      p_out => r_in_full_n
       );
 
-  out_empty_sync: util.sync.sync_resetn
+  out_empty_sync: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_out_empty_n,
+      p_in => s_out_empty_n,
       p_clk => p_clk(cout),
-      p_resetn_sync => r_out_empty_n
+      p_out => r_out_empty_n
       );
 
   p_in_full_n <= r_in_full_n;
