@@ -3,7 +3,6 @@ packages += fifo
 packages += framed
 packages += routed
 packages += sized
-packages += noc
 packages += mii
 packages += spi
 packages += ftdi
