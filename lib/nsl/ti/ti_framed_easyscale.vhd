@@ -16,10 +16,10 @@ entity ti_framed_easyscale is
 
     p_easyscale: inout std_logic;
 
-    p_cmd_val  : in  nsl.framed.framed_cmd;
+    p_cmd_val  : in  nsl.framed.framed_req;
     p_cmd_ack  : out nsl.framed.framed_ack;
 
-    p_rsp_val : out nsl.framed.framed_cmd;
+    p_rsp_val : out nsl.framed.framed_req;
     p_rsp_ack : in  nsl.framed.framed_ack
     );
 end entity;
@@ -27,18 +27,11 @@ end entity;
 architecture beh of ti_framed_easyscale is
 
   type state_e is (
-    STATE_IDLE,
-    STATE_SIZE_GET,
-    STATE_ROUTE_GET,
-    STATE_TAG_GET,
+    STATE_RESET,
     STATE_DADDR_GET,
     STATE_DATA_GET,
-    STATE_CMD_FLUSH,
     STATE_EXECUTE,
     STATE_WAIT,
-    STATE_SIZE_PUT,
-    STATE_ROUTE_PUT,
-    STATE_TAG_PUT,
     STATE_ACK_PUT
     );
   
@@ -76,7 +69,7 @@ begin
   regs: process (p_resetn, p_clk)
   begin
     if p_resetn = '0' then
-      r.state <= STATE_IDLE;
+      r.state <= STATE_RESET;
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
@@ -87,34 +80,20 @@ begin
     rin <= r;
 
     case r.state is
-      when STATE_IDLE =>
+      when STATE_RESET =>
         rin.state <= STATE_DADDR_GET;
 
       when STATE_DADDR_GET =>
         if p_cmd_val.val = '1' then
-          rin.more <= p_cmd_val.more;
           rin.state <= STATE_DATA_GET;
           rin.daddr <= p_cmd_val.data;
         end if;
 
       when STATE_DATA_GET =>
         if p_cmd_val.val = '1' then
-          if r.size = x"00" then
-            rin.state <= STATE_EXECUTE;
-            rin.data <= p_cmd_val.data;
-          else
-            rin.state <= STATE_CMD_FLUSH;
-            rin.size <= r.size - x"01";
-          end if;
-        end if;
-
-      when STATE_CMD_FLUSH =>
-        if p_cmd_val.val = '1' then
-          if r.size /= x"00" then
-            rin.size <= r.size - x"01";
-          else
-            rin.state <= STATE_EXECUTE;
-          end if;
+          rin.more <= p_cmd_val.more;
+          rin.state <= STATE_EXECUTE;
+          rin.data <= p_cmd_val.data;
         end if;
 
       when STATE_EXECUTE =>
@@ -124,28 +103,13 @@ begin
 
       when STATE_WAIT =>
         if s_busy = '0' then
-          rin.state <= STATE_SIZE_PUT;
-          rin.ack <= s_ack;
-        end if;
-
-      when STATE_SIZE_PUT =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_ROUTE_PUT;
-        end if;
-        
-      when STATE_ROUTE_PUT =>
-        if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_TAG_PUT;
-        end if;
-
-      when STATE_TAG_PUT =>
-        if p_rsp_ack.ack = '1' then
           rin.state <= STATE_ACK_PUT;
+          rin.ack <= s_ack;
         end if;
 
       when STATE_ACK_PUT =>
         if p_rsp_ack.ack = '1' then
-          rin.state <= STATE_SIZE_GET;
+          rin.state <= STATE_DADDR_GET;
         end if;
 
     end case;
@@ -153,56 +117,26 @@ begin
 
   moore: process(r)
   begin
+    p_cmd_ack.ack <= '0';
+    p_rsp_val.val <= '0';
+    p_rsp_val.data <= (others => '-');
+    p_rsp_val.more <= '-';
+    s_start <= '0';
+    
     case r.state is
-      when STATE_IDLE | STATE_WAIT =>
-        p_cmd_ack.ack <= '0';
-        p_rsp_val.val <= '0';
-        p_rsp_val.data <= (others => 'X');
-        s_start <= '0';
+      when STATE_RESET | STATE_WAIT =>
+        null;
 
-      when STATE_SIZE_GET | STATE_ROUTE_GET | STATE_TAG_GET
-        | STATE_DADDR_GET | STATE_DATA_GET =>
+      when STATE_DADDR_GET | STATE_DATA_GET =>
         p_cmd_ack.ack <= '1';
-        p_rsp_val.val <= '0';
-        p_rsp_val.data <= (others => 'X');
-        s_start <= '0';
-
-      when STATE_CMD_FLUSH =>
-        p_cmd_ack.ack <= '1';
-        p_rsp_val.val <= '0';
-        p_rsp_val.data <= (others => 'X');
-        s_start <= '0';
 
       when STATE_EXECUTE =>
-        p_cmd_ack.ack <= '0';
-        p_rsp_val.val <= '0';
-        p_rsp_val.data <= (others => 'X');
         s_start <= '1';
 
-      when STATE_SIZE_PUT =>
-        p_cmd_ack.ack <= '0';
-        p_rsp_val.val <= '1';
-        p_rsp_val.data <= x"03";
-        s_start <= '0';
-        
-      when STATE_ROUTE_PUT =>
-        p_cmd_ack.ack <= '0';
-        p_rsp_val.val <= '1';
-        p_rsp_val.data <= noc_flit_header(r.src, r.dst);
-        s_start <= '0';
-
-      when STATE_TAG_PUT =>
-        p_cmd_ack.ack <= '0';
-        p_rsp_val.val <= '1';
-        p_rsp_val.data <= r.tag;
-        s_start <= '0';
-
       when STATE_ACK_PUT =>
-        p_cmd_ack.ack <= '0';
         p_rsp_val.val <= '1';
         p_rsp_val.data <= "0000000" & r.ack;
-        s_start <= '0';
-
+        p_rsp_val.more <= r.more;
     end case;
   end process;
   
