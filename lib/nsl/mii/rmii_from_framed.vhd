@@ -16,8 +16,8 @@ entity rmii_from_framed is
 
     p_rmii_data : out rmii_datapath;
 
-    p_framed_val : in nsl.framed.framed_cmd;
-    p_framed_ack : out nsl.framed.framed_rsp
+    p_framed_val : in nsl.framed.framed_req;
+    p_framed_ack : out nsl.framed.framed_ack
     );
 end entity;
 

@@ -96,9 +96,10 @@ package mii is
       );
   end component;
 
-  component rmii_noc is
+  component rmii_framed is
     generic(
-      inter_frame : natural := 56
+      inter_frame : natural := 56;
+      mtu : natural := 1024
       );
     port(
       p_resetn    : in std_ulogic;
@@ -107,11 +108,11 @@ package mii is
       p_to_mac    : out rmii_datapath;
       p_from_mac  : in  rmii_datapath;
 
-      p_clk_noc   : in std_ulogic;
-      p_in_val    : in  nsl.sized.sized_req;
-      p_in_ack    : out nsl.sized.sized_ack;
-      p_out_val   : out nsl.sized.sized_req;
-      p_out_ack   : in  nsl.sized.sized_ack
+      p_clk_framed: in std_ulogic;
+      p_in_val    : in  nsl.framed.framed_req;
+      p_in_ack    : out nsl.framed.framed_ack;
+      p_out_val   : out nsl.framed.framed_req;
+      p_out_ack   : in  nsl.framed.framed_ack
       );
   end component;
   

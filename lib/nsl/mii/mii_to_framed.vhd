@@ -13,8 +13,8 @@ entity mii_to_framed is
 
     p_mii_data : in mii_datapath;
 
-    p_framed_val : out nsl.framed.framed_cmd;
-    p_framed_ack : in nsl.framed.framed_rsp
+    p_framed_val : out nsl.framed.framed_req;
+    p_framed_ack : in nsl.framed.framed_ack
     );
 end entity;
 
