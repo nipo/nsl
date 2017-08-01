@@ -14,4 +14,10 @@ package clock is
       );
   end component;
 
+  component clock_internal
+    port(
+      p_clk      : out std_ulogic
+      );
+  end component;
+
 end package clock;
