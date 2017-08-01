@@ -1,3 +1,4 @@
 packages += fifo
-packages += ram
 packages += clock
+packages += ram
+packages += jtag
