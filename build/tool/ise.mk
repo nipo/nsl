@@ -23,7 +23,7 @@ flash: $(target).bit
 	openocd -f interface/jlink.cfg -f cpld/xilinx-xc6s.cfg -c "adapter_khz 1000; init; xc6s_program xc6s.tap; pld load 0 $<; exit"
 
 spi-flash: $(target)-2.mcs
-	CABLEDB=$(HOME)/projects/proby/support/xc3sprog/cablelist.txt \
+	$(SILENT)CABLEDB=$(HOME)/projects/proby/support/xc3sprog/cablelist.txt \
 	xc3sprog -v -p 2 -c proby -I$(NOPROB_ROOT)/fpga/bscan_spi.bit $(<):W:0:MCS
 
 $(target).mcs: $(target).bit
@@ -41,24 +41,26 @@ clean-files += $(target)-2.cfi
 clean-files += $(target)-2.prm
 
 $(target).bit: ise-build/$(target)_par.ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
-            -g DriveDone:yes \
+	    -g DriveDone:yes \
+	    -g unusedpin:pullnone \
 	    -g UserID:$(user_id) \
-            -g StartupClk:Cclk \
-            -w $< \
+	    -g StartupClk:Cclk \
+	    -w $< \
 	    $@
 
 clean-files += $(target).bit
 
 $(target)-compressed.bit: ise-build/$(target)_par.ncd
-	$(ISE_PREPARE) ; \
+	$(SILENT)$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
-            -g DriveDone:yes \
-            -g compress \
+	    -g DriveDone:yes \
+	    -g unusedpin:pullnone \
+	    -g compress \
 	    -g UserID:$(user_id) \
-            -g StartupClk:Cclk \
-            -w $< \
+	    -g StartupClk:Cclk \
+	    -w $< \
 	    $@
 
 clean-files += $(target)-compressed.bit
@@ -66,12 +68,13 @@ clean-files += $(target)-compressed.bit
 ise-build/$(target)-2.bit: ise-build/$(target)_par.ncd
 	$(SILENT)$(ISE_PREPARE) ; \
 	bitgen $(INTF_STYLE) \
-            -g spi_buswidth:2 \
-            -g ConfigRate:26 \
+	    -g spi_buswidth:2 \
+	    -g unusedpin:pullnone \
+	    -g ConfigRate:26 \
 	    -g UserID:$(user_id) \
-            -g DriveDone:yes \
-            -g StartupClk:Cclk \
-            -w $< \
+	    -g DriveDone:yes \
+	    -g StartupClk:Cclk \
+	    -w $< \
 	    $@
 
 clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
