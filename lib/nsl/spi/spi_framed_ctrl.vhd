@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.spi.all;
+use nsl.framed.all;
 use nsl.fifo.all;
 
 entity spi_framed_ctrl is
@@ -21,11 +22,11 @@ entity spi_framed_ctrl is
     p_miso   : in  std_ulogic;
     p_csn    : out std_ulogic;
 
-    p_cmd_val   : in fifo_framed_cmd;
-    p_cmd_ack   : out fifo_framed_rsp;
+    p_cmd_val   : in nsl.framed.framed_req;
+    p_cmd_ack   : out nsl.framed.framed_ack;
 
-    p_rsp_val  : out fifo_framed_cmd;
-    p_rsp_ack  : in fifo_framed_rsp
+    p_rsp_val  : out nsl.framed.framed_req;
+    p_rsp_ack  : in nsl.framed.framed_ack
     );
 end entity;
 

@@ -9,7 +9,7 @@ entity spi_shift_register is
   generic(
     width : natural;
     msb_first : boolean := true
-    ):
+    );
   port(
     p_spi_clk       : in  std_ulogic;
     p_spi_word_en   : in  std_ulogic;
@@ -26,46 +26,80 @@ end entity;
 
 architecture rtl of spi_shift_register is
 
-  signal r_cycle       : natural range 0 to width - 1;
-  signal r_shreg       : std_ulogic_vector(width - 1 downto 0);
-  signal s_shreg_next  : std_ulogic_vector(width - 1 downto 0);
-  signal s_shreg_shift : std_ulogic_vector(width - 1 downto 0);
+  type regs_t is record
+    cycle       : natural range 0 to width - 1;
+    shreg       : std_ulogic_vector(width - 1 downto 0);
+    running     : std_ulogic;
+  end record;
+
+  signal r, rin: regs_t;
 
 begin
 
-  state: process (p_spi_word_en, p_spi_clk)
+  regs: process(p_spi_clk)
   begin
-    if p_spi_word_en = '0' then
-      r_cycle <= 0;
-    elsif rising_edge(p_spi_clk) then
-      r_shreg <= s_shreg_shift;
-      if r_cycle = width - 1 then
-        r_cycle <= 0;
-      else
-        r_cycle <= r_cycle + 1;
-      end if;
-    elsif falling_edge(p_spi_clk) then
-      if msb_first then
-        p_spi_dout <= s_shreg_shift(s_shreg_shift'high);
-      else
-        p_spi_dout <= s_shreg_shift(s_shreg_shift'low);
-      end if;
+    if rising_edge(p_spi_clk) then
+      r <= rin;
     end if;
   end process;
-
-  s_shreg_next <= p_tx_data when r_cycle = 0 else r_shreg;
-
-  sh: process(s_shreg_next, p_spi_din)
+  
+  transition: process (p_spi_word_en, p_spi_clk, r, p_spi_din, p_tx_data)
   begin
-    if msb_first then
-      s_shreg_shift <= s_shreg_next(width - 2 downto 0) & p_spi_din;
+    rin <= r;
+
+    if r.running = '0' then
+      rin.running <= p_spi_word_en;
+      rin.cycle <= width - 1;
     else
-      s_shreg_shift <= p_spi_din & s_shreg_next(width - 1 downto 1);
+      if r.cycle = width - 1 then
+        rin.shreg <= p_tx_data;
+      elsif msb_first then
+        rin.shreg <= r.shreg(width-2 downto 0) & p_spi_din;
+      else
+        rin.shreg <= p_spi_din & r.shreg(width-1 downto 1);
+      end if;
+      rin.cycle <= r.cycle - 1;
+      if r.cycle = 0 then
+        rin.running <= p_spi_word_en;
+        rin.cycle <= width - 1;
+      end if;
     end if;
   end process;
 
-  p_rx_data_valid <= '1' when r_cycle = width - 1 else '0';
-  p_tx_data_get <= '1' when r_cycle = 0 and p_spi_word_en = '1' else '0';
-  p_rx_data <= s_shreg_shift;
+  moore: process(p_spi_clk)
+  begin
+    if falling_edge(p_spi_clk) then
+      if r.running = '1' then
+        if r.cycle = 0 then
+          p_rx_data_valid <= '1';
+        else
+          p_rx_data_valid <= '0';
+        end if;
+
+        if r.cycle = width-1 then
+          p_tx_data_get <= '1';
+        else
+          p_tx_data_get <= '0';
+        end if;
+      else
+        p_tx_data_get   <= '0';
+        p_rx_data_valid <= '0';
+      end if;
+    end if;
+  end process;
+
+  dout: process(r, rin)
+  begin
+    p_spi_dout      <= 'Z';
+    if r.running = '1' then
+      if msb_first then
+        p_spi_dout <= rin.shreg(width-1);
+      else
+        p_spi_dout <= rin.shreg(0);
+      end if;
+    end if;
+  end process;
+
+  p_rx_data <= rin.shreg;
 
 end architecture;

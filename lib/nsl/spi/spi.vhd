@@ -4,9 +4,17 @@ use ieee.numeric_std.all;
 
 library nsl;
 use nsl.fifo.all;
+use nsl.framed.all;
 
 package spi is
 
+  constant SPI_CMD_SHIFT_OUT : std_ulogic_vector(7 downto 0) := "10------";
+  constant SPI_CMD_SHIFT_IN  : std_ulogic_vector(7 downto 0) := "01------";
+  constant SPI_CMD_SHIFT_IO  : std_ulogic_vector(7 downto 0) := "11------";
+  constant SPI_CMD_SELECT    : std_ulogic_vector(7 downto 0) := "000-----";
+  constant SPI_CMD_UNSELECT  : std_ulogic_vector(7 downto 0) := "00011111";
+  constant SPI_CMD_DIV       : std_ulogic_vector(7 downto 0) := "001-----";
+  
   component spi_shift_register
     generic(
       width : natural;
@@ -28,29 +36,21 @@ package spi is
 
   component spi_master
     generic(
-      width : natural;
-      msb_first : boolean := true
+      slave_count : natural range 1 to 63 := 1
       );
     port(
       p_clk    : in std_ulogic;
       p_resetn : in std_ulogic;
 
-      p_sck    : out std_ulogic;
-      p_sck_en : out std_ulogic; -- sck gate, active low, actual sck should be
-                                 -- p_sck_en or p_sck
-      p_mosi   : out std_ulogic;
-      p_miso   : in  std_ulogic;
-      p_csn    : out std_ulogic;
+      p_sck  : out std_ulogic;
+      p_csn  : out std_ulogic_vector(0 to slave_count-1);
+      p_mosi : out std_ulogic;
+      p_miso : in  std_ulogic;
 
-      p_run : in std_ulogic;
-      
-      p_miso_data    : out std_ulogic_vector(width-1 downto 0);
-      p_miso_full_n  : in  std_ulogic;
-      p_miso_write   : out std_ulogic;
-
-      p_mosi_data    : in  std_ulogic_vector(width-1 downto 0);
-      p_mosi_empty_n : in  std_ulogic;
-      p_mosi_read    : out std_ulogic
+      p_cmd_val : in  nsl.framed.framed_req;
+      p_cmd_ack : out nsl.framed.framed_ack;
+      p_rsp_val : out nsl.framed.framed_req;
+      p_rsp_ack : in  nsl.framed.framed_ack
       );
   end component;
 
@@ -68,12 +68,12 @@ package spi is
       p_miso   : in  std_ulogic;
       p_csn    : out std_ulogic;
 
-      p_cmd_val   : in fifo_framed_cmd;
-      p_cmd_ack   : out fifo_framed_rsp;
+      p_cmd_val   : in nsl.framed.framed_req;
+      p_cmd_ack   : out nsl.framed.framed_ack;
 
-      p_rsp_val  : out fifo_framed_cmd;
-      p_rsp_ack  : in fifo_framed_rsp;
+      p_rsp_val  : out nsl.framed.framed_req;
+      p_rsp_ack  : in nsl.framed.framed_ack
       );
   end component;
 
-end package uart;
+end package spi;
