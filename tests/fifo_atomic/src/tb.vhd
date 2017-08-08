@@ -3,11 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
-use nsl.util.all;
-
 library testing;
-use testing.fifo.all;
+library util;
 
 entity tb is
 end tb;
@@ -20,19 +17,19 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 downto 0);
 
-  signal n_val : fifo_framed_cmd_array(1 downto 0);
-  signal n_ack : fifo_framed_rsp_array(1 downto 0);
+  signal n_val : nsl.framed.framed_req_array(1 downto 0);
+  signal n_ack : nsl.framed.framed_ack_array(1 downto 0);
 
 begin
 
-  reset_sync_clk: nsl.util.reset_synchronizer
+  reset_sync_clk: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk,
       p_clk => s_clk
       );
 
-  gen: testing.fifo.fifo_framed_file_reader
+  gen: testing.framed.framed_file_reader
     generic map(
       filename => "swd_responses.txt"
       )
@@ -43,7 +40,7 @@ begin
       p_out_ack => n_ack(0)
       );
 
-  check: testing.fifo.fifo_framed_file_checker
+  check: testing.framed.framed_file_checker
     generic map(
       filename => "swd_responses.txt"
       )
@@ -55,13 +52,13 @@ begin
       p_done => s_done(0)
       );
 
-  fifo: nsl.fifo.fifo_framed_atomic
+  fifo: nsl.framed.framed_fifo_atomic
     generic map(
       depth => 8
       )
     port map(
       p_resetn => s_resetn_clk,
-      p_clk => s_clk,
+      p_clk(0) => s_clk,
       p_in_val => n_val(0),
       p_in_ack => n_ack(0),
       p_out_val => n_val(1),

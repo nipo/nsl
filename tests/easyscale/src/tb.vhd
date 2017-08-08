@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.ti.all;
+library util;
 
 entity tb is
 end tb;
@@ -27,10 +27,10 @@ architecture arch of tb is
 
 begin
 
-  reset_sync_clk: nsl.util.reset_synchronizer
+  reset_sync_clk: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk,
       p_clk => s_clk
       );
 

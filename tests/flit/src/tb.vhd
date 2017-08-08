@@ -3,13 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.fifo.all;
-use nsl.flit.all;
-use nsl.util.all;
-
 library testing;
-use testing.fifo.all;
-use testing.flit.all;
+library util;
 
 entity tb is
 end tb;
@@ -22,25 +17,25 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 downto 0);
 
-  signal s_in_val : fifo_framed_cmd;
-  signal s_in_ack : fifo_framed_rsp;
+  signal s_in_val : nsl.framed.framed_req;
+  signal s_in_ack : nsl.framed.framed_ack;
 
-  signal s_flit_val : flit_cmd;
-  signal s_flit_ack : flit_ack;
+  signal s_flit_val : nsl.sized.sized_req;
+  signal s_flit_ack : nsl.sized.sized_ack;
 
-  signal s_out_val : fifo_framed_cmd;
-  signal s_out_ack : fifo_framed_rsp;
+  signal s_out_val : nsl.framed.framed_req;
+  signal s_out_ack : nsl.framed.framed_ack;
 
 begin
 
-  reset_sync_clk: nsl.util.reset_synchronizer
+  reset_sync_clk: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk,
       p_clk => s_clk
       );
 
-  gen: testing.fifo.fifo_framed_file_reader
+  gen: testing.framed.framed_file_reader
     generic map(
       filename => "framed.txt"
       )
@@ -51,7 +46,7 @@ begin
       p_out_ack => s_in_ack
       );
 
-  from_framed: nsl.flit.flit_from_framed
+  from_framed: nsl.sized.sized_from_framed
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
@@ -61,7 +56,7 @@ begin
       p_out_ack => s_flit_ack
       );
 
-  to_framed: nsl.flit.flit_to_framed
+  to_framed: nsl.sized.sized_to_framed
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
@@ -71,7 +66,7 @@ begin
       p_out_ack => s_out_ack
       );
 
-  check: testing.fifo.fifo_framed_file_checker
+  check: testing.framed.framed_file_checker
     generic map(
       filename => "framed.txt"
       )

@@ -1,14 +1,6 @@
-CONFIG_NSL_SWD = y
-CONFIG_NSL_FIFO = y
-CONFIG_NSL_TESTING = y
-
-libraries = nsl testing work
-nsl-srcdir = ../../lib/nsl
-testing-srcdir = ../../lib/testing
-work-srcdir = src
-
+top = work.tb
+work-srcdir = $(SRC_DIR)/src
 tool = ghdl
-top = tb
 
 include ../../build/build.mk
 

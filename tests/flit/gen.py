@@ -12,13 +12,13 @@ def B(v, w):
 for txn in range(20):
     size = random.randint(1, 255)
     
-    flit.write("%s %d\n" % (B(size), 0))
+    flit.write("%s %d\n" % (B(size, 9), 0))
 
     for i in range(size - 1):
         d = random.randint(0, 255)
-        framed.write("%s %d\n" % (B(d + (256 if i < size - 1 else 0)), random.randint(0, 4)))
-        flit.write("%s %d\n" % (B(d), random.randint(0, 4)))
+        framed.write("%s %d\n" % (B(d + (256 if i < size - 1 else 0), 9), random.randint(0, 4)))
+        flit.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))
 
     d = random.randint(0, 255)
-    framed.write("%s %d\n" % (B(d), random.randint(0, 4)))
-    flit.write("%s %d\n" % (B(d), random.randint(0, 4)))
+    framed.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))
+    flit.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))

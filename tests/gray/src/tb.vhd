@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.util.all;
+library util;
 
 entity tb is
 end tb;
@@ -19,7 +18,7 @@ architecture arch of tb is
   
 begin
 
-  encoder: nsl.util.gray_encoder
+  encoder: util.gray.gray_encoder
     generic map(
       data_width => data_width
       )
@@ -28,7 +27,7 @@ begin
       p_gray => s_gray
       );
 
-  decoder: nsl.util.gray_decoder
+  decoder: util.gray.gray_decoder
     generic map(
       data_width => data_width
       )

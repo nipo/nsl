@@ -1,8 +1,5 @@
-libraries = nsl work
-nsl-srcdir = ../../lib/nsl
-work-srcdir = src
-
+top = work.tb
+work-srcdir = $(SRC_DIR)/src
 tool = ghdl
-top = tb
 
 include ../../build/build.mk

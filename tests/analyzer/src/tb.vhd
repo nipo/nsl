@@ -53,7 +53,7 @@ begin
       p_write => s_in_w_rok
       );
   
-  fifo: nsl.fifo.sync_fifo
+  fifo: nsl.fifo.fifo_sync
     generic map(
       data_width => DW+TW,
       depth => 1024

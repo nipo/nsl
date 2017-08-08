@@ -5,10 +5,8 @@ import sys
 class NocTxnFile:
     def __init__(self, filename):
         self.output = open(filename, "w")
-        self.cmds = []
 
-    def put(self, data, mask, length, more):
-        self.output.write("%d" % int(bool(more)))
+    def put(self, data, mask, length, wait = 0):
         for i in range(length - 1, -1, -1):
             v = (data >> i) & 1
             m = (mask >> i) & 1
@@ -16,99 +14,155 @@ class NocTxnFile:
                 self.output.write("%d" % v)
             else:
                 self.output.write("-")
-        self.output.write(" %d\n" % 0)
+        self.output.write(" %d\n" % wait)
 
-    def flush(self, header, tag):
+class Txn:
+    def __init__(self, target, header):
+        self.target = target
+        self.header = header
+        self.cmds = []
+
+    def flush(self, tag, wait = 100):
         if not self.cmds:
             return
 
-        self.put(header, 0xff, 8, 1)
-        self.put(tag, 0xff, 8, 1)
+        l = len(self.cmds) + 2 - 1
+        self.target.put(0x100 | self.header, 0x1ff, 9)
+        self.target.put(0x100 | tag, 0x1ff, 9)
         for i, c in enumerate(self.cmds):
             try:
                 v, mask = c
             except:
                 v = c
                 mask = 0xff
-            self.put(v, mask, 8, i != len(self.cmds) - 1)
+            self.target.put((0 if i == len(self.cmds) - 1 else 0x100) | v, 0x100 | mask, 9,
+                            int(wait if i == len(self.cmds) - 1 else 0))
         self.cmds = []
 
-class SwdCmd(NocTxnFile):
-    def read(self, ap, ad, val):
-        if ap:
-            self.cmds += [0x00 | (ad & 0x3f)]
-        else:
-            self.cmds += [0xb8 | (ad & 0x03)]
-
-    def write(self, ap, ad, val):
-        if ap:
-            self.cmds += [0x40 | (ad & 0x3f)]
-        else:
-            self.cmds += [0xb4 | (ad & 0x03)]
+class CsCmd(Txn):
+    def write(self, reg, val):
+        self.cmds += [reg]
         for i in range(4):
             self.cmds += [(val >> (8 * i)) & 0xff]
 
-    def reset(self, idcode):
-        self.cmds += [0xb0]
-
-    def div(self, d):
-        self.cmds += [0xbe, d & 0xff, d >> 8]
-
-class SwdRsp(NocTxnFile):
-    def read(self, ap, ad, val):
-        if ap:
-            self.cmds += [0x11]
-        else:
-            self.cmds += [0x31]
-        for i in range(4):
-            self.cmds += [(val >> (8 * i)) & 0xff]
-
-    def write(self, ap, ad, val):
-        if ap:
-            self.cmds += [(0x01, 0xf7)]
-        else:
-            self.cmds += [(0x21, 0xf7)]
-
-    def reset(self, idcode):
-        self.cmds += [(0x51, 0xf0)]
-        for i in range(4):
-            self.cmds += [(idcode >> (8 * i)) & 0xff]
-
-    def div(self, d):
-        self.cmds += [(0x40, 0xf0)]
+    def read(self, reg, val):
+        self.cmds += [0x80 | reg]
             
+class CsRsp(Txn):
+    def write(self, reg, val):
+        self.cmds += [reg]
+
+    def read(self, reg, val):
+        self.cmds += [0x80 | reg]
+        for i in range(4):
+            self.cmds += [(val >> (8 * i)) & 0xff]
+
+class Dp(Txn):
+    def reset(self, idcode):
+        self.run(1, 50)
+        self.bitbang(0xe79e, 16)
+        self.run(1, 50)
+        self.run(0, 10)
+        self.read(0, 0, idcode)
+
+    def turnaround(self, n):
+        self.cmds += [0xd0 | (n-1)]
+        
+class DpCmd(Dp):
+    def read(self, ap, ad, val):
+        if ap:
+            self.cmds += [0xb0 | (ad & 0x3)]
+        else:
+            self.cmds += [0x90 | (ad & 0x3)]
+
+    def write(self, ap, ad, val):
+        if ap:
+            self.cmds += [0xa0 | (ad & 0x3)]
+        else:
+            self.cmds += [0x80 | (ad & 0x3)]
+        for i in range(4):
+            self.cmds += [(val >> (8 * i)) & 0xff]
+
+    def run(self, val, cycles):
+        while cycles:
+            c = min((cycles, 64))
+            cycles -= c
+            self.cmds += [(int(bool(val)) << 6) | ((c - 1) & 0x3f)]
+
+    def bitbang(self, value, length):
+        self.cmds += [0xe0 | ((length - 1) & 0x1f)]
+        for i in range(4):
+            self.cmds += [(value >> (8 * i)) & 0xff]
+
+class DpRsp(Dp):
+    def read(self, ap, ad, val):
+        if ap:
+            self.cmds += [(0xb1, 0xf7 if val is None else 0xff)]
+        else:
+            self.cmds += [(0x91, 0xf7 if val is None else 0xff)]
+        if val is not None:
+            for i in range(4):
+                self.cmds += [(val >> (8 * i)) & 0xff]
+        else:
+            for i in range(4):
+                self.cmds += [(0, 0)]
+
+    def write(self, ap, ad, val):
+        if ap:
+            self.cmds += [0xa1]
+        else:
+            self.cmds += [0x81]
+        
+    def run(self, val, cycles):
+        while cycles:
+            c = min((cycles, 64))
+            cycles -= c
+            self.cmds += [(int(bool(val)) << 6) | ((c - 1) & 0x3f)]
+
+    def bitbang(self, value, length):
+        self.cmds += [0xe0 | ((length - 1) & 0x1f)]
+
 if __name__ == "__main__":
     n = sys.argv[1]
 
-    if n.startswith("swd_responses"):
-        t = SwdRsp(n)
+    f = NocTxnFile(n)
+    if n.startswith("swd_res"):
+        t = DpRsp(f, 0x0f)
+        c = CsRsp(f, 0x1f)
     else:
-        t = SwdCmd(n)
+        t = DpCmd(f, 0xf0)
+        c = CsCmd(f, 0xf1)
 
-    t.reset(0xdeadbeef)
-    t.div(0x2)
-    t.write(1, 0, 42)
-    t.read(1, 0, 42)
-    t.flush(0, 0)
+    t.reset(0x2ba01477)
+    t.flush(1)
+
+    c.write(0, 2 * 1024 * 1024)
+    c.write(1, 1)
+    c.flush(1)
+
+    t.write(False, 2, 0x1)
+    t.write(False, 1, 0x300)
+    t.turnaround(4)
+    t.run(0, 20)
+    t.flush(1)
+
+    t.read(False, 0, 0x2ba01477)
+    t.flush(1)
+
+    t.write(True, 0, 0xdecafbad)
+    t.run(0, 20)
+    t.read(True, 0, None)
+    t.run(0, 20)
+    t.read(False, 3, 0xdecafbad)
+    t.flush(1)
+
+    c.write(0, int(25e6 * 2))
+    c.flush(1)
     
-    t.write(0, 1, 123)
-    t.read(0, 1, 123)
-    t.read(1, 0, 42)
-    t.flush(0, 1)
-
-    t.reset(0xdeadbeef)
-
-    for s in (0, 1, 2, 3, 4, 10, 50):
-        t.div(s)
-        t.reset(0xdeadbeef)
-        last = 0
-        for i in range(32):
-            t.write(1, i >> 2, i * 0x11111111)
-            if i & 1:
-                t.read(1, i >> 2, i * 0x11111111)
-            if i & 2:
-                t.read(1, i >> 2, i * 0x11111111)
-            if i % 3 == 0:
-                t.flush(0, last)
-                last = i
-        t.flush(0, last)
+    t.write(True, 0, 0xdecafbad)
+    t.run(0, 20)
+    t.read(True, 0, None)
+    t.run(0, 20)
+    t.read(False, 3, 0xdecafbad)
+    t.flush(1)
+    

@@ -1,5 +1,5 @@
 vhdl-sources += tb.vhd
-deps += nsl.util
+deps += util.sync
 deps += nsl.fifo
 deps += testing.fifo
 

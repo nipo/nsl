@@ -6,12 +6,8 @@ entity tb is
 end tb;
 
 library nsl;
-use nsl.util.all;
-use nsl.fifo.all;
-use nsl.mii.all;
-
 library testing;
-use testing.fifo.all;
+library util;
 
 architecture arch of tb is
 
@@ -19,23 +15,23 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_framed_val : fifo_framed_cmd_array(1 downto 0);
-  signal s_framed_ack : fifo_framed_rsp_array(1 downto 0);
+  signal s_framed_val : nsl.framed.framed_req_array(1 downto 0);
+  signal s_framed_ack : nsl.framed.framed_ack_array(1 downto 0);
 
-  signal s_mii_data   : mii_datapath;
+  signal s_mii_data   : nsl.mii.mii_datapath;
 
   signal s_done : std_ulogic;
 
 begin
 
-  reset_sync_clk: nsl.util.reset_synchronizer
+  reset_sync_clk: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk,
       p_clk => s_clk
       );
 
-  gen: testing.fifo.fifo_framed_file_reader
+  gen: testing.framed.framed_file_reader
     generic map(
       filename => "dataset.txt"
       )
@@ -47,7 +43,7 @@ begin
       p_done => open
       );
 
-  check0: testing.fifo.fifo_framed_file_checker
+  check0: testing.framed.framed_file_checker
     generic map(
       filename => "dataset.txt"
       )
@@ -63,7 +59,6 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_mii_clk => open,
       p_mii_data => s_mii_data,
       p_framed_val => s_framed_val(0),
       p_framed_ack => s_framed_ack(0)
@@ -73,7 +68,6 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_mii_clk => open,
       p_mii_data => s_mii_data,
       p_framed_val => s_framed_val(1),
       p_framed_ack => s_framed_ack(1)

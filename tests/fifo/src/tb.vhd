@@ -4,8 +4,10 @@ use ieee.std_logic_1164.all;
 entity tb is
 end tb;
 
+library util;
+use util.sync.all;
+
 library nsl;
-use nsl.util.all;
 use nsl.fifo.all;
 
 library testing;
@@ -37,17 +39,17 @@ architecture arch of tb is
 
 begin
 
-  reset_sync_clk: nsl.util.reset_synchronizer
+  reset_sync_clk: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk,
       p_clk => s_clk
       );
 
-  reset_sync_clk2: nsl.util.reset_synchronizer
+  reset_sync_clk2: util.sync.sync_rising_edge
     port map(
-      p_resetn => s_resetn_async,
-      p_resetn_sync => s_resetn_clk2,
+      p_in => s_resetn_async,
+      p_out => s_resetn_clk2,
       p_clk => s_clk2
       );
 
