@@ -199,8 +199,8 @@ begin
     end if;
   end process;
 
-  s_in_full_n <= '0' when r_state = GOING_FULL and s_ptr_equal else '1';
-  s_out_empty_n <= '0' when r_state = GOING_EMPTY and s_ptr_equal else '1';
+  s_in_full_n <= '0' when r_state = GOING_FULL and s_ptr_equal else s_in_resetn;
+  s_out_empty_n <= '0' when r_state = GOING_EMPTY and s_ptr_equal else s_out_resetn;
 
   in_full_sync: util.sync.sync_rising_edge
     port map(

@@ -201,7 +201,7 @@ begin
       p_rdata => p_out_data
       );
 
-  p_in_full_n <= not in_r.blocked;
+  p_in_full_n <= not in_r.blocked and s_resetn(0);
   p_out_empty_n <= not out_r.blocked;
 
 end ram2;
