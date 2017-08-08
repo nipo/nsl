@@ -125,7 +125,7 @@ ise-build/$(target).xst: ise-build/$(target).prj $(OPTS) $(MAKEFILE_LIST)
 	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@
 	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@
 	$(SILENT)echo "run" >> $@
-	$(SILENT)echo "-p $(target_part)" >> $@
+	$(SILENT)echo "-p $(target_part)$(target_package)$(target_speed)" >> $@
 	$(SILENT)echo "-top $(top-entity)" >> $@
 	$(SILENT)echo "-ifn ise-build/$(target).prj" >> $@
 	$(SILENT)echo "-ofn ise-build/$(target).ngc" >> $@
