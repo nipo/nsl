@@ -121,6 +121,14 @@ $(eval $(call library_scan,$(top-lib)))
 
 $(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
 
+define lib_deps_calc
+
+$(1)-lib-deps := $(sort $(filter-out $1,$(foreach p,$(filter $1%,$(parts-scanned)),$(foreach d,$($p-deps),$($d-library)))))
+
+endef
+
+$(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
+
 include $(BUILD_ROOT)/tool/$(tool).mk
 
 ifeq ($(V),)
