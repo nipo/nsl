@@ -96,28 +96,30 @@ endif
 parts-scanned :=
 sources :=
 
-part_scan = $(if $(filter $1,$(parts-scanned)),,$(call _part_scan,$1))
+define part_scan
+#$$(info $2 Scanning part $1, done=$$(parts-scanned))
 
-define _part_scan
+ifeq ($$(filter $1,$$(parts-scanned)),)
 
 $$(eval $$(foreach l,$$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll)))),$$(call library_scan,$$l)))
 
 parts-scanned += $1
 
-#$$(info Scanning part $1)
-#$$(info $1 - lib deps: $$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll) $1))))
-$$(eval $$(foreach d,$$($1-deps),$$(call part_scan,$$(d))))
+#$$(info $2 $1 - lib deps: $$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll) $1))))
+$$(eval $$(foreach d,$$($1-deps),$$(call part_scan,$$(d),_$2)))
 
 $$($1-library)-lib-sources += $$($1-sources)
 sources += $$($1-sources)
 
-#$$(info $1 - sources: $$($1-sources))
+#$$(info $2 $1 - sources: $$($1-sources))
+
+endif
 
 endef
 
 $(eval $(call library_scan,$(top-lib)))
 
-$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),)))
+$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 
