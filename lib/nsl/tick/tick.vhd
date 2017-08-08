@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-package util is
+package tick is
 
   component baudrate_generator is
     generic(
@@ -18,4 +18,4 @@ package util is
       );
   end component;
 
-end package util;
+end package tick;

@@ -1,4 +1,4 @@
-packages += util
+packages += tick
 packages += fifo
 packages += framed
 packages += routed

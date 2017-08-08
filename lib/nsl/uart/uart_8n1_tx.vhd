@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
-use nsl.util.baudrate_generator;
+use nsl.tick.baudrate_generator;
 library util;
 use util.numeric.log2;
 
