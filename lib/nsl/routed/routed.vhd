@@ -112,6 +112,16 @@ package routed is
   end component;
   
   function routed_header(dst: component_id; src: component_id)
+    return nsl.framed.framed_data_t;
+  function routed_header_dst(w: nsl.framed.framed_data_t)
+    return component_id;
+  function routed_header_src(w: nsl.framed.framed_data_t)
+    return component_id;
+end package routed;
+
+package body routed is
+
+  function routed_header(dst: component_id; src: component_id)
     return nsl.framed.framed_data_t is
   begin
     return nsl.framed.framed_data_t(to_unsigned(src * 16 + dst, 8));
@@ -129,4 +139,4 @@ package routed is
     return to_integer(unsigned(w(7 downto 4)));
   end;
 
-end package routed;
+end package body routed;
