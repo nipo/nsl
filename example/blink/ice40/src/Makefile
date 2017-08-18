@@ -1,0 +1,2 @@
+vhdl-sources += blink.vhd
+

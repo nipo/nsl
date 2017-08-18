@@ -1,0 +1,9 @@
+*-build
+*.log
+*.bak
+synlog.tcl
+*.bin
+*.hex
+*.nvcm
+*_glb.txt
+*_int.hex
