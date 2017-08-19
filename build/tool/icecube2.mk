@@ -5,6 +5,11 @@ SBT_OPT_LIB = $(SBT)/lib/linux/opt
 DEVICES_DIR = $(SBT)/devices
 SYNTHESIS_TOOL ?= synplify
 
+include $(BUILD_ROOT)/tool/icecube-devices.mk
+
+target_dev := $(DEVICES_DIR)/$(call ice-resolve-name,dev,$(target_part),$(target_package),$(target_speed))
+target_lib := $(DEVICES_DIR)/$(call ice-resolve-name,lib,$(target_part),$(target_package),$(target_speed))
+
 build-dir := $(target)-build
 
 empty :=
@@ -18,7 +23,6 @@ TCL_LIBRARY=$(SBT)/bin/linux/lib/tcl8.4
 endef
 
 target ?= $(top)
-user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32)))')
 
 SHELL=/bin/bash
 
@@ -73,7 +77,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(build-dir)/synth/oadb-$(top-entity)
 	$(SILENT)$(ICECUBE2_PREPARE) \
 	$(SBT_OPT_BIN)/edifparser \
-		$(DEVICES_DIR)/$(target_dev).dev \
+		$(target_dev) \
 		$(build-dir)/synth/$(target).edf \
 		$(build-dir)/synth \
 		-p$(target_package) \
@@ -82,6 +86,8 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		--devicename $(target_part)
 	$(SILENT)cp $(build-dir)/Temp/sbt_temp.sdc $@
 
+clean-dirs += $(build-dir)
+
 # Place with constraints
 $(build-dir)/placed/$(target).sdc: $(build-dir)/synth/$(target).sdc
 	$(SILENT)mkdir -p $(dir $@)
@@ -89,11 +95,11 @@ $(build-dir)/placed/$(target).sdc: $(build-dir)/synth/$(target).sdc
 	$(SBT_OPT_BIN)/sbtplacer \
 		--des-lib $(build-dir)/synth/oadb-$(top-entity) \
 		--outdir $(build-dir)/placed \
-		--device-file $(DEVICES_DIR)/$(target_dev).dev \
+		--device-file $(target_dev) \
 		--package $(target_package) \
 		--deviceMarketName $(target_part) \
 		--sdc-file $< \
-		--lib-file $(DEVICES_DIR)/$(target_lib).lib \
+		--lib-file $(target_lib) \
 		--effort_level std \
 		--out-sdc-file $@
 
@@ -105,7 +111,7 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 	$(SILENT)mkdir -p $(dir $@)/packed
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/packer \
-		$(DEVICES_DIR)/$(target_dev).dev \
+		$(target_dev) \
 		$(build-dir)/synth/oadb-$(top-entity) \
 		--package $(target_package) \
 		--outdir $(dir $@) \
@@ -115,9 +121,9 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		--devicename $(target_part)
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/sbrouter \
-		$(DEVICES_DIR)/$(target_dev).dev \
+		$(target_dev) \
 		$(build-dir)/synth/oadb-$(top-entity) \
-		$(DEVICES_DIR)/$(target_lib).lib \
+		$(target_lib) \
 		$(dir $@)/packed/$(notdir $@) \
 		--outdir $(dir $@) \
 		--sdf_file $(dir $@)/routed.sdf \
@@ -128,31 +134,48 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		--verilog $(@:.sdc=.v) \
 		--vhdl $(@:.sdc=.vhd) \
 		--view rt \
-		--device $(DEVICES_DIR)/$(target_dev).dev \
+		--device $(target_dev) \
 		--splitio \
 		--in-sdc-file  \
 		--out-sdc-file $(dir $@)/$(target).sdc
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/sbtimer \
 		--des-lib $(build-dir)/synth/oadb-$(top-entity) \
-		--lib-file $(DEVICES_DIR)/$(target_lib).lib \
+		--lib-file $(target_lib) \
 		--sdc-file $(dir $@)/$(target).sdc \
 		--sdf-file $(dir $@)/routed.sdf \
 		--report-file $(dir $@)/timing.rpt \
-		--device-file $(DEVICES_DIR)/$(target_dev).dev \
+		--device-file $(target_dev) \
 		--timing-summary
 
 # Bitstream
-$(target).bin: $(build-dir)/routed/$(target).sdc
+$(build-dir)/$(top-entity)_bitmap.bin \
+$(build-dir)/$(top-entity)_bitmap.hex \
+$(build-dir)/$(top-entity)_bitmap.nvcm : $(build-dir)/routed/$(target).sdc
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/bitmap \
-		$(DEVICES_DIR)/$(target_dev).dev \
+		$(target_dev) \
 		--design $(build-dir)/synth/oadb-$(top-entity) \
 		--device_name $(target_part) \
 		--package $(target_package) \
-		--outdir ./ \
+		--outdir $(build-dir)/ \
 		--low_power on \
 		--init_ram on \
 		--init_ram_bank 1111 \
 		--frequency low \
 		--warm_boot on
+
+$(target).%: $(build-dir)/$(top-entity)_bitmap.%
+	cp $< $@
+
+clean-files += stdout.log
+clean-files += stdout.log.bak
+clean-files += synlog.tcl
+clean-files += $(target).bin
+clean-files += $(target).hex
+clean-files += $(target).nvcm
+clean-files += $(top-entity)_bitmap.bin
+clean-files += $(top-entity)_bitmap.hex
+clean-files += $(top-entity)_bitmap.nvcm
+clean-files += $(top-entity)_bitmap_glb.txt
+clean-files += $(top-entity)_bitmap_int.hex

@@ -1,9 +1,7 @@
 target = blink
 top = work.top
 work-srcdir = $(SRC_DIR)/src
-target_dev = ICE40P04
 target_part = iCE40HX1K
-target_lib = ice40HX1K
 target_package = TQ144
 target_speed =
 constraints += $(SRC_DIR)/led.pcf
