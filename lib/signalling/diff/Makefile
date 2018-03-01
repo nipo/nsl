@@ -1,0 +1,1 @@
+vhdl-sources += diff.vhd

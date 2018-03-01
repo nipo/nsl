@@ -1,0 +1,1 @@
+vhdl-sources += swd.vhd
