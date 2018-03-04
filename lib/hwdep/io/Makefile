@@ -7,4 +7,6 @@ vhdl-sources += io_ddr_input_xc6.vhd
 vhdl-sources += io_ddr_output_xc6.vhd
 endif
 
+vhdl-sources += io_clock_output.vhd
+
 deps += signalling.diff

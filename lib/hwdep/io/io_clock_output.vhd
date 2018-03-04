@@ -2,16 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 library hwdep;
+library signalling;
 
-entity clock_output is
+entity io_clock_output is
   port(
-    p_clk     : in  std_ulogic;
-    p_clk_neg : in  std_ulogic;
+    p_clk : in signalling.diff.diff_pair;
     p_port    : out std_ulogic
     );
 end entity;
 
-architecture gen of clock_output is
+architecture gen of io_clock_output is
   
 begin
 
