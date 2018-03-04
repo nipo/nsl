@@ -7,7 +7,7 @@ use signalling.diff.all;
 
 library unisim;
 
-entity diff_output_pad is
+entity pad_diff_output is
   generic(
     is_clock : boolean := false
     );
@@ -17,7 +17,7 @@ entity diff_output_pad is
     );
 end entity;
 
-architecture rtl of diff_output_pad is
+architecture rtl of pad_diff_output is
   
 begin
 

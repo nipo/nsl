@@ -7,7 +7,7 @@ use signalling.diff.all;
 
 library unisim;
 
-entity diff_input_pad is
+entity pad_diff_input is
   generic(
     diff_term : boolean := true;
     is_clock  : boolean := false;
@@ -19,7 +19,7 @@ entity diff_input_pad is
     );
 end entity;
 
-architecture rtl of diff_input_pad is
+architecture rtl of pad_diff_input is
   
   signal s_se : std_ulogic;
   
