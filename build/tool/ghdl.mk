@@ -25,12 +25,25 @@ define ghdl_source_do
 	$(SILENT)
 endef
 
+define ghdl_source_do2
+	-$(GHDL) \
+		$2 \
+		 --workdir=$$(dir $$@) \
+		$(foreach l,$($($1-library)-lib-deps),-Pghdl-build/$l) \
+		$(GHDL_OPTS) \
+		-v \
+		--work=$($1-library) \
+		$(subst .vhd,,$(notdir $1))
+	$(SILENT)
+endef
+
 define ghdl_lib_do
 $(call lib_cf,$1): $(foreach l,$($1-lib-deps),$(call lib_cf,$($l-library))) $($1-lib-sources)
 	$(SILENT)echo Updating $$@, depends on $$^
 	$(SILENT)mkdir -p $$(dir $$@)
 	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do,$s,-i))
 	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do,$s,-a))
+	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do2,$s,-e))
 
 clean-dirs += $(filter-out ./,$(dir $(call lib_cf,$1)))
 
