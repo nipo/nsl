@@ -91,10 +91,10 @@ architecture rtl of i2c_master is
   --      |   |   \---------------------- STOP_SCL
   --      |   \-------------------------- STOP_SCL_RISE
   --      \------------------------------ STOP_IDLE
-  --               ^   ^
-  --               |   \---- Usual start point for stop
-  --               \---- Can happen if slave holds SDA,
-  --                     Should toggle SCL until SDA rises
+  --                   ^   ^
+  --                   |   \---- Usual start point for stop
+  --                   \---- Can happen if slave holds SDA,
+  --                         Should toggle SCL until SDA rises
 
   type state_t is (
     ST_RESET,
