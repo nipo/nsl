@@ -36,7 +36,6 @@ architecture ram2 of fifo_2p is
 
   signal s_resetn: std_ulogic_vector(0 to clk_count-1);
   signal s_out_wptr, s_in_rptr: unsigned(count_t'range);
-  signal s_out_wptr_tmp, s_in_rptr_tmp: std_ulogic_vector(count_t'range);
 
   signal s_read2 : std_ulogic;
 
@@ -153,31 +152,29 @@ begin
   sync: if is_synchronous generate
     s_resetn(0) <= p_resetn;
 
-    out_wptr: sync_reg
-      generic map(
-        data_width => count_t'length,
-        cycle_count => 1
-        )
-      port map(
-        p_clk => p_clk(0),
-        p_in => std_ulogic_vector(in_r.ptr),
-        p_out => s_out_wptr_tmp
-        );
-
-    s_out_wptr <= unsigned(s_out_wptr_tmp);
-
-    in_rptr: sync_reg
-      generic map(
-        data_width => count_t'length,
-        cycle_count => 1
-        )
-      port map(
-        p_clk => p_clk(0),
-        p_in => std_ulogic_vector(out_r.ptr),
-        p_out => s_in_rptr_tmp
-        );
-
-    s_in_rptr <= unsigned(s_in_rptr_tmp);
+--    out_wptr: sync_reg
+--      generic map(
+--        data_width => count_t'length,
+--        cycle_count => 1
+--        )
+--      port map(
+--        p_clk => p_clk(0),
+--        p_in => std_ulogic_vector(in_r.ptr),
+--        unsigned(p_out) => s_out_wptr
+--        );
+--
+--    in_rptr: sync_reg
+--      generic map(
+--        data_width => count_t'length,
+--        cycle_count => 1
+--        )
+--      port map(
+--        p_clk => p_clk(0),
+--        p_in => std_ulogic_vector(out_r.ptr),
+--        unsigned(p_out) => s_in_rptr
+--        );
+    s_in_rptr <= out_r.ptr;
+    s_out_wptr <= in_r.ptr;
   end generate;
 
   s_read2 <= out_rin.move or out_r.blocked;
