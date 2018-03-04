@@ -62,34 +62,34 @@ begin
         rin.state <= ST_GET_HEADER;
 
       when ST_GET_HEADER =>
-        if p_cmd_in_val.val = '1' then
+        if p_cmd_in_val.valid = '1' then
           rin.cmd <= p_cmd_in_val.data(3 downto 0) & p_cmd_in_val.data(7 downto 4);
           rin.state <= ST_PUT_HEADER;
         end if;
 
       when ST_PUT_HEADER =>
-        if p_rsp_out_ack.ack = '1' then
+        if p_rsp_out_ack.ready = '1' then
           rin.state <= ST_GET_TAG;
         end if;
         
       when ST_GET_TAG =>
-        if p_cmd_in_val.val = '1' then
+        if p_cmd_in_val.valid = '1' then
           rin.cmd <= p_cmd_in_val.data;
           rin.state <= ST_PUT_TAG;
         end if;
 
       when ST_PUT_TAG =>
-        if p_rsp_out_ack.ack = '1' then
+        if p_rsp_out_ack.ready = '1' then
           rin.state <= ST_FORWARD_CMD;
         end if;
 
       when ST_FORWARD_CMD =>
-        if p_cmd_in_val.val = '1' and p_cmd_out_ack.ack = '1' and p_cmd_in_val.more = '0' then
+        if p_cmd_in_val.valid = '1' and p_cmd_out_ack.ready = '1' and p_cmd_in_val.last = '1' then
           rin.state <= ST_FORWARD_RSP;
         end if;
 
       when ST_FORWARD_RSP =>
-        if p_rsp_in_val.val = '1' and p_rsp_out_ack.ack = '1' and p_rsp_in_val.more = '0' then
+        if p_rsp_in_val.valid = '1' and p_rsp_out_ack.ready = '1' and p_rsp_in_val.last = '1' then
           rin.state <= ST_GET_HEADER;
         end if;
     end case;
@@ -97,27 +97,27 @@ begin
 
   mux: process(r, p_cmd_in_val, p_cmd_out_ack, p_rsp_in_val, p_rsp_out_ack)
   begin
-    p_cmd_out_val.val <= '0';
+    p_cmd_out_val.valid <= '0';
     p_cmd_out_val.data <= (others => '-');
-    p_cmd_out_val.more <= '-';
-    p_cmd_in_ack.ack <= '0';
+    p_cmd_out_val.last <= '-';
+    p_cmd_in_ack.ready <= '0';
 
-    p_rsp_out_val.val <= '0';
+    p_rsp_out_val.valid <= '0';
     p_rsp_out_val.data <= (others => '-');
-    p_rsp_out_val.more <= '-';
-    p_rsp_in_ack.ack <= '0';
+    p_rsp_out_val.last <= '-';
+    p_rsp_in_ack.ready <= '0';
 
     case r.state is
       when ST_RESET =>
         null;
         
       when ST_GET_HEADER | ST_GET_TAG =>
-        p_cmd_in_ack.ack <= '1';
+        p_cmd_in_ack.ready <= '1';
         
       when ST_PUT_HEADER | ST_PUT_TAG =>
-        p_rsp_out_val.val <= '1';
+        p_rsp_out_val.valid <= '1';
         p_rsp_out_val.data <= r.cmd;
-        p_rsp_out_val.more <= '1';
+        p_rsp_out_val.last <= '0';
         
       when ST_FORWARD_CMD | ST_FORWARD_RSP =>
         p_cmd_out_val <= p_cmd_in_val;

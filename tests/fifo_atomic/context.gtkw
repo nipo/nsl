@@ -27,8 +27,8 @@ top.tb.s_resetn_clk
 @800200
 -input
 @28
-top.tb.fifo.p_in_val.val
-top.tb.fifo.p_in_ack.ack
+top.tb.fifo.p_in_val.valid
+top.tb.fifo.p_in_ack.ready
 @22
 #{top.tb.fifo.p_in_val.data[7:0]} top.tb.fifo.p_in_val.data[7] top.tb.fifo.p_in_val.data[6] top.tb.fifo.p_in_val.data[5] top.tb.fifo.p_in_val.data[4] top.tb.fifo.p_in_val.data[3] top.tb.fifo.p_in_val.data[2] top.tb.fifo.p_in_val.data[1] top.tb.fifo.p_in_val.data[0]
 @28
@@ -43,10 +43,10 @@ top.tb.fifo.r_flush
 @800200
 -output
 @28
-top.tb.fifo.p_out_val.val
-top.tb.fifo.s_out_val.val
-top.tb.fifo.p_out_ack.ack
-top.tb.fifo.s_out_ack.ack
+top.tb.fifo.p_out_val.valid
+top.tb.fifo.s_out_val.valid
+top.tb.fifo.p_out_ack.ready
+top.tb.fifo.s_out_ack.ready
 @22
 #{top.tb.fifo.p_out_val.data[7:0]} top.tb.fifo.p_out_val.data[7] top.tb.fifo.p_out_val.data[6] top.tb.fifo.p_out_val.data[5] top.tb.fifo.p_out_val.data[4] top.tb.fifo.p_out_val.data[3] top.tb.fifo.p_out_val.data[2] top.tb.fifo.p_out_val.data[1] top.tb.fifo.p_out_val.data[0]
 @28

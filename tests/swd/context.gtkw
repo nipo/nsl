@@ -36,9 +36,9 @@ top.tb.s_swclk
 -cmd
 @28
 top.tb.gen.p_done
-top.tb.s_cmd_val_fifo.val
+top.tb.s_cmd_val_fifo.valid
 top.tb.s_cmd_val_fifo.more
-top.tb.s_cmd_ack_fifo.ack
+top.tb.s_cmd_ack_fifo.ready
 @22
 #{top.tb.s_cmd_val_fifo.data[7:0]} top.tb.s_cmd_val_fifo.data[7] top.tb.s_cmd_val_fifo.data[6] top.tb.s_cmd_val_fifo.data[5] top.tb.s_cmd_val_fifo.data[4] top.tb.s_cmd_val_fifo.data[3] top.tb.s_cmd_val_fifo.data[2] top.tb.s_cmd_val_fifo.data[1] top.tb.s_cmd_val_fifo.data[0]
 @1000200
@@ -87,9 +87,9 @@ top.tb.swdp_inst.swd_port.r.par_in
 @800200
 -rsp
 @28
-top.tb.s_rsp_ack_fifo.ack
+top.tb.s_rsp_ack_fifo.ready
 @29
-top.tb.s_rsp_val_fifo.val
+top.tb.s_rsp_val_fifo.valid
 @28
 top.tb.s_rsp_val_fifo.more
 @c00022

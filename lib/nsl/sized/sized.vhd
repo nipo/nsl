@@ -11,11 +11,11 @@ package sized is
 
   type sized_req is record
     data : sized_data;
-    val  : std_ulogic;
+    valid  : std_ulogic;
   end record;
 
   type sized_ack is record
-    ack  : std_ulogic;
+    ready : std_ulogic;
   end record;
 
   type sized_req_array is array(natural range <>) of sized_req;

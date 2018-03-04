@@ -67,9 +67,9 @@ begin
         end loop;
 
       when STATE_PASSTHROUGH =>
-        if p_out_ack.ack = '1'
-          and p_in_val(r.selected).val = '1'
-          and p_in_val(r.selected).more = '0' then
+        if p_out_ack.ready = '1'
+          and p_in_val(r.selected).valid = '1'
+          and p_in_val(r.selected).last = '1' then
           rin.state <= STATE_SELECT;
         end if;
 
@@ -78,10 +78,10 @@ begin
 
   outputs: process(r, p_in_val, p_out_ack)
   begin
-    p_out_val.more <= '-';
+    p_out_val.last <= '-';
     p_out_val.data <= (others => '-');
-    p_in_ack.ack <= '0';
-    p_out_val.val <= '0';
+    p_in_ack.ready <= '0';
+    p_out_val.valid <= '0';
     p_selected <= (others => '0');
 
     case r.state is

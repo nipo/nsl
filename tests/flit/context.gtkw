@@ -26,8 +26,8 @@
 top.tb.s_clk
 top.tb.s_resetn_clk
 top.tb.gen.gen.r_wait_cycles
-top.tb.s_framed_val.val
-top.tb.s_framed_ack.ack
+top.tb.s_framed_val.valid
+top.tb.s_framed_ack.ready
 top.tb.s_framed_val.more
 @22
 #{top.tb.s_framed_val.data[7:0]} top.tb.s_framed_val.data[7] top.tb.s_framed_val.data[6] top.tb.s_framed_val.data[5] top.tb.s_framed_val.data[4] top.tb.s_framed_val.data[3] top.tb.s_framed_val.data[2] top.tb.s_framed_val.data[1] top.tb.s_framed_val.data[0]
@@ -38,8 +38,8 @@ top.tb.fifo.r.out_state
 @23
 #{top.tb.fifo.r.out_count[7:0]} top.tb.fifo.r.out_count[7] top.tb.fifo.r.out_count[6] top.tb.fifo.r.out_count[5] top.tb.fifo.r.out_count[4] top.tb.fifo.r.out_count[3] top.tb.fifo.r.out_count[2] top.tb.fifo.r.out_count[1] top.tb.fifo.r.out_count[0]
 @28
-top.tb.s_flit_val.val
-top.tb.s_flit_ack.ack
+top.tb.s_flit_val.valid
+top.tb.s_flit_ack.ready
 @22
 #{top.tb.s_flit_val.data[7:0]} top.tb.s_flit_val.data[7] top.tb.s_flit_val.data[6] top.tb.s_flit_val.data[5] top.tb.s_flit_val.data[4] top.tb.s_flit_val.data[3] top.tb.s_flit_val.data[2] top.tb.s_flit_val.data[1] top.tb.s_flit_val.data[0]
 [pattern_trace] 1

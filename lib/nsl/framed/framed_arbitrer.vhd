@@ -62,19 +62,19 @@ begin
 
       when STATE_ELECT =>
         ports: for i in source_count-1 downto 0 loop
-          if p_cmd_val(i).val = '1' then
+          if p_cmd_val(i).valid = '1' then
             rin.elected <= i;
             rin.state <= STATE_FORWARD;
           end if;
         end loop;
 
       when STATE_FORWARD =>
-        if p_cmd_val(r.elected).val = '1' and p_target_cmd_ack.ack = '1' and p_cmd_val(r.elected).more = '0' then
+        if p_cmd_val(r.elected).valid = '1' and p_target_cmd_ack.ready = '1' and p_cmd_val(r.elected).last = '1' then
           rin.state <= STATE_FLUSH;
         end if;
 
       when STATE_FLUSH =>
-        if p_target_rsp_val.val = '1' and p_rsp_ack(r.elected).ack = '1' and p_target_rsp_val.more = '0' then
+        if p_target_rsp_val.valid = '1' and p_rsp_ack(r.elected).ready = '1' and p_target_rsp_val.last = '1' then
           rin.state <= STATE_ELECT;
         end if;
         
@@ -84,15 +84,15 @@ begin
   mux: process(r, p_cmd_val, p_rsp_ack, p_target_cmd_ack, p_target_rsp_val)
   begin
     ports: for i in 0 to source_count-1 loop
-      p_cmd_ack(i).ack <= '0';
-      p_rsp_val(i).val <= '0';
+      p_cmd_ack(i).ready <= '0';
+      p_rsp_val(i).valid <= '0';
       p_rsp_val(i).data <= (others => '-');
-      p_rsp_val(i).more <= '-';
+      p_rsp_val(i).last <= '-';
     end loop;
-    p_target_rsp_ack.ack <= '0';
-    p_target_cmd_val.val <= '0';
+    p_target_rsp_ack.ready <= '0';
+    p_target_cmd_val.valid <= '0';
     p_target_cmd_val.data <= (others => '-');
-    p_target_cmd_val.more <= '-';
+    p_target_cmd_val.last <= '-';
 
     case r.state is
       when STATE_FORWARD =>

@@ -63,13 +63,13 @@ begin
         end if;
 
       when STATE_SIZE_L =>
-        if p_in_val.val = '1' then
+        if p_in_val.valid = '1' then
           rin.count(7 downto 0) <= unsigned(p_in_val.data);
           rin.state <= STATE_SIZE_H;
         end if;
 
       when STATE_SIZE_H =>
-        if p_in_val.val = '1' then
+        if p_in_val.valid = '1' then
           rin.count(15 downto 8) <= unsigned(p_in_val.data);
           if r.count(7 downto 0) = x"FF" and p_in_val.data = x"FF" then
             rin.state <= STATE_INVAL;
@@ -79,7 +79,7 @@ begin
         end if;
 
       when STATE_DATA =>
-        if p_in_val.val = '1' and p_out_ack.ack = '1' then
+        if p_in_val.valid = '1' and p_out_ack.ready = '1' then
           rin.count <= r.count - 1;
           if r.count = 0 then
             rin.state <= STATE_SIZE_L;
@@ -92,34 +92,34 @@ begin
   begin
     case r.state is
       when STATE_INVAL =>
-        p_out_val.val <= '0';
-        p_out_val.more <= '-';
+        p_out_val.valid <= '0';
+        p_out_val.last <= '-';
         p_out_val.data <= (others => '-');
-        p_in_ack.ack <= '1';
+        p_in_ack.ready <= '1';
         p_inval <= '1';
 
       when STATE_RESET =>
-        p_out_val.val <= '0';
-        p_out_val.more <= '-';
+        p_out_val.valid <= '0';
+        p_out_val.last <= '-';
         p_out_val.data <= (others => '-');
-        p_in_ack.ack <= '0';
+        p_in_ack.ready <= '0';
         p_inval <= '1';
 
       when STATE_SIZE_L | STATE_SIZE_H =>
-        p_out_val.val <= '0';
-        p_out_val.more <= '-';
+        p_out_val.valid <= '0';
+        p_out_val.last <= '-';
         p_out_val.data <= (others => '-');
-        p_in_ack.ack <= '1';
+        p_in_ack.ready <= '1';
         p_inval <= '0';
 
       when STATE_DATA =>
-        p_out_val.val <= p_in_val.val;
+        p_out_val.valid <= p_in_val.valid;
         p_out_val.data <= p_in_val.data;
-        p_in_ack.ack <= p_out_ack.ack;
+        p_in_ack.ready <= p_out_ack.ready;
         if r.count /= 0 then
-          p_out_val.more <= '1';
+          p_out_val.last <= '0';
         else
-          p_out_val.more <= '0';
+          p_out_val.last <= '1';
         end if;
         p_inval <= '0';
     end case;

@@ -33,7 +33,8 @@ end entity;
 architecture rtl of spi_framed_ctrl is
 
   signal s_cmd_ack: std_ulogic;
-  signal r_more: std_ulogic;
+  signal r_last: std_ulogic;
+  signal run: std_ulogic;
   
 begin
 
@@ -52,25 +53,26 @@ begin
       p_miso => p_miso,
       p_csn => p_csn,
 
-      p_run => r_more,
+      p_run => run,
 
       p_miso_data => p_rsp_val.data,
-      p_miso_ready => p_rsp_ack.ack,
-      p_miso_valid => p_rsp_val.val,
+      p_miso_ready => p_rsp_ack.ready,
+      p_miso_valid => p_rsp_val.valid,
 
       p_mosi_data => p_cmd_val.data,
-      p_mosi_valid => p_cmd_val.val,
+      p_mosi_valid => p_cmd_val.valid,
       p_mosi_ready => s_cmd_ack
       );
 
-  p_rsp_val.more <= r_more;
-  p_cmd_ack.ack <= s_cmd_ack;
+  run <= not r_last;
+  p_rsp_val.last <= r_last;
+  p_cmd_ack.ready <= s_cmd_ack;
 
-  more: process(p_clk)
+  last: process(p_clk)
   begin
     if rising_edge(p_clk) then
-      if p_cmd_val.val = '1' and s_cmd_ack = '1' then
-        r_more <= p_cmd_val.more;
+      if p_cmd_val.valid = '1' and s_cmd_ack = '1' then
+        r_last <= p_cmd_val.last;
       end if;
     end if;
   end process;

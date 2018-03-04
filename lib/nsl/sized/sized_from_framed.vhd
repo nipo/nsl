@@ -63,25 +63,25 @@ begin
         rin.count <= (rin.count'range => '1');
 
       when STATE_DATA =>
-        if p_in_val.val = '1' and s_data_in_ack.ack = '1' then
+        if p_in_val.valid = '1' and s_data_in_ack.ready = '1' then
           rin.count <= r.count + 1;
-          if p_in_val.more = '0' then
+          if p_in_val.last = '1' then
             rin.state <= STATE_SIZE_L;
           end if;
         end if;
         
       when STATE_SIZE_L =>
-        if p_out_ack.ack = '1' then
+        if p_out_ack.ready = '1' then
           rin.state <= STATE_SIZE_H;
         end if;
 
       when STATE_SIZE_H =>
-        if p_out_ack.ack = '1' then
+        if p_out_ack.ready = '1' then
           rin.state <= STATE_DATA_FLUSH;
         end if;
 
       when STATE_DATA_FLUSH =>
-        if p_out_ack.ack = '1' and s_data_out_val.val = '1' then
+        if p_out_ack.ready = '1' and s_data_out_val.valid = '1' then
           rin.count <= r.count - 1;
           if r.count = 0 then
             rin.state <= STATE_DATA;
@@ -108,28 +108,28 @@ begin
   
   mux: process(r, p_in_val, s_data_in_ack, p_out_ack, s_data_out_val)
   begin
-    p_out_val.val <= '0';
+    p_out_val.valid <= '0';
     p_out_val.data <= (others => '-');
-    s_data_in_val.val <= '0';
+    s_data_in_val.valid <= '0';
     s_data_in_val.data <= (others => '-');
-    p_in_ack.ack <= '0';
-    s_data_out_ack.ack <= '0';
+    p_in_ack.ready <= '0';
+    s_data_out_ack.ready <= '0';
 
     case r.state is
       when STATE_RESET =>
         null;
         
       when STATE_DATA =>
-        s_data_in_val.val <= p_in_val.val;
+        s_data_in_val.valid <= p_in_val.valid;
         s_data_in_val.data <= p_in_val.data;
-        p_in_ack.ack <= s_data_in_ack.ack;
+        p_in_ack.ready <= s_data_in_ack.ready;
 
       when STATE_SIZE_L =>
-        p_out_val.val <= '1';
+        p_out_val.valid <= '1';
         p_out_val.data <= std_ulogic_vector(r.count(7 downto 0));
 
       when STATE_SIZE_H =>
-        p_out_val.val <= '1';
+        p_out_val.valid <= '1';
         p_out_val.data <= std_ulogic_vector(r.count(15 downto 8));
 
       when STATE_DATA_FLUSH =>

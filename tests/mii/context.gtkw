@@ -30,8 +30,8 @@ top.tb.s_resetn_clk
 @800200
 -input
 @28
-top.tb.s_framed_val[0].val
-top.tb.s_framed_ack[0].ack
+top.tb.s_framed_val[0].valid
+top.tb.s_framed_ack[0].ready
 top.tb.s_framed_val[0].more
 @22
 #{top.tb.s_framed_val[0].data[7:0]} top.tb.s_framed_val[0].data[7] top.tb.s_framed_val[0].data[6] top.tb.s_framed_val[0].data[5] top.tb.s_framed_val[0].data[4] top.tb.s_framed_val[0].data[3] top.tb.s_framed_val[0].data[2] top.tb.s_framed_val[0].data[1] top.tb.s_framed_val[0].data[0]
@@ -59,8 +59,8 @@ top.tb.from_mii.r.state
 @800200
 -output
 @28
-top.tb.s_framed_ack[1].ack
-top.tb.s_framed_val[1].val
+top.tb.s_framed_ack[1].ready
+top.tb.s_framed_val[1].valid
 top.tb.s_framed_val[1].more
 @22
 #{top.tb.s_framed_val[1].data[7:0]} top.tb.s_framed_val[1].data[7] top.tb.s_framed_val[1].data[6] top.tb.s_framed_val[1].data[5] top.tb.s_framed_val[1].data[4] top.tb.s_framed_val[1].data[3] top.tb.s_framed_val[1].data[2] top.tb.s_framed_val[1].data[1] top.tb.s_framed_val[1].data[0]

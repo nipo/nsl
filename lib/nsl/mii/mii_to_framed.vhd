@@ -85,20 +85,20 @@ begin
   begin
     case r.state is
       when STATE_FILL0 | STATE_FILL1 | STATE_FILL2 =>
-        p_framed_val.val <= '0';
-        p_framed_val.more <= '0';
+        p_framed_val.valid <= '0';
+        p_framed_val.last <= '1';
 
       when STATE_FW0 =>
-        p_framed_val.val <= '1';
-        p_framed_val.more <= '1';
+        p_framed_val.valid <= '1';
+        p_framed_val.last <= '0';
 
       when STATE_FW1 =>
-        p_framed_val.val <= '0';
-        p_framed_val.more <= '1';
+        p_framed_val.valid <= '0';
+        p_framed_val.last <= '0';
 
       when STATE_LAST =>
-        p_framed_val.val <= '1';
-        p_framed_val.more <= '0';
+        p_framed_val.valid <= '1';
+        p_framed_val.last <= '1';
     end case;
   end process;
 

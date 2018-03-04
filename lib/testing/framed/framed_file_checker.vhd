@@ -37,11 +37,11 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-      p_ready => p_in_ack.ack,
-      p_valid => p_in_val.val,
+      p_ready => p_in_ack.ready,
+      p_valid => p_in_val.valid,
       p_data => s_fifo,
       p_done => p_done
       );
-  s_fifo <= p_in_val.more & p_in_val.data;
+  s_fifo <= not p_in_val.last & p_in_val.data;
 
 end architecture;

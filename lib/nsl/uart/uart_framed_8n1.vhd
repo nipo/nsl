@@ -40,11 +40,11 @@ begin
       p_clk => p_clk,
       p_uart_tx => p_uart_tx,
       p_data => p_tx_val.data,
-      p_ready => p_tx_ack.ack,
-      p_data_val => p_tx_val.val
+      p_ready => p_tx_ack.ready,
+      p_data_val => p_tx_val.valid
       );
 
-  p_rx_val.more <= '0';
+  p_rx_val.last <= '1';
   
   rx: nsl.uart.uart_8n1_rx
     generic map(
@@ -56,7 +56,7 @@ begin
       p_clk => p_clk,
       p_uart_rx => p_uart_rx,
       p_data => p_rx_val.data,
-      p_data_val => p_rx_val.val
+      p_data_val => p_rx_val.valid
       );
 
 end;

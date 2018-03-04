@@ -27,8 +27,6 @@ end entity;
 
 architecture rtl of framed_fifo is
 
-  signal s_in_data, s_out_data : std_ulogic_vector(8 downto 0);
-
 begin
 
   fifo: hwdep.fifo.fifo_2p
@@ -40,16 +38,14 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-      p_out_data => s_out_data,
-      p_out_ready => p_out_ack.ack,
-      p_out_valid => p_out_val.val,
-      p_in_data => s_in_data,
-      p_in_valid => p_in_val.val,
-      p_in_ready => p_in_ack.ack
+      p_out_data(8) => p_out_val.last,
+      p_out_data(7 downto 0) => p_out_val.data,
+      p_out_ready => p_out_ack.ready,
+      p_out_valid => p_out_val.valid,
+      p_in_data(8) => p_in_val.last,
+      p_in_data(7 downto 0) => p_in_val.data,
+      p_in_valid => p_in_val.valid,
+      p_in_ready => p_in_ack.ready
       );
 
-  s_in_data <= p_in_val.more & p_in_val.data;
-  p_out_val.more <= s_out_data(8);
-  p_out_val.data <= s_out_data(7 downto 0);
-  
 end architecture;

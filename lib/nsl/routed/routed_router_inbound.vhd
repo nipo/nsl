@@ -63,21 +63,21 @@ begin
         rin.selected <= 0;
 
       when STATE_IDLE =>
-        if p_in_val.val = '1' then
+        if p_in_val.valid = '1' then
           rin.state <= STATE_FLUSH_HEADER;
           rin.header <= p_in_val.data;
           rin.selected <= routing_table(to_integer(unsigned(p_in_val.data(3 downto 0))));
         end if;
 
       when STATE_FLUSH_HEADER =>
-        if p_out_ack(r.selected).ack = '1' and p_selected(r.selected) = '1' then
+        if p_out_ack(r.selected).ready = '1' and p_selected(r.selected) = '1' then
           rin.state <= STATE_PASSTHROUGH;
         end if;
 
       when STATE_PASSTHROUGH =>
-        if p_out_ack(r.selected).ack = '1'
-          and p_in_val.val = '1'
-          and p_in_val.more = '0'
+        if p_out_ack(r.selected).ready = '1'
+          and p_in_val.valid = '1'
+          and p_in_val.last = '1'
           and p_selected(r.selected) = '1' then
           rin.state <= STATE_IDLE;
         end if;
@@ -87,9 +87,9 @@ begin
 
   outputs: process(r, p_in_val, p_out_ack, p_selected)
   begin
-    p_in_ack.ack <= '0';
-    p_out_val.val <= '0';
-    p_out_val.more <= '-';
+    p_in_ack.ready <= '0';
+    p_out_val.valid <= '0';
+    p_out_val.last <= '-';
     p_out_val.data <= (others => '-');
     p_request <= (others => '0');
 
@@ -98,18 +98,18 @@ begin
         null;
 
       when STATE_IDLE =>
-        p_in_ack.ack <= '1';
+        p_in_ack.ready <= '1';
 
       when STATE_FLUSH_HEADER =>
-        p_out_val.val <= '1';
-        p_out_val.more <= '1';
+        p_out_val.valid <= '1';
+        p_out_val.last <= '0';
         p_out_val.data <= r.header;
         p_request(r.selected) <= '1';
 
       when STATE_PASSTHROUGH =>
-        p_in_ack.ack <= p_out_ack(r.selected).ack and p_selected(r.selected);
-        p_out_val.val <= p_in_val.val and p_selected(r.selected);
-        p_out_val.more <= p_in_val.more;
+        p_in_ack.ready <= p_out_ack(r.selected).ready and p_selected(r.selected);
+        p_out_val.valid <= p_in_val.valid and p_selected(r.selected);
+        p_out_val.last <= p_in_val.last;
         p_out_val.data <= p_in_val.data;
         p_request(r.selected) <= '1';
     end case;

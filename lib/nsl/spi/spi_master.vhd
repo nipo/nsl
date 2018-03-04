@@ -43,7 +43,7 @@ architecture rtl of spi_master is
     word_count : natural range 0 to 63;
     selected   : natural range 0 to 63;
     bit_count  : natural range 0 to 7;
-    more       : std_ulogic;
+    last       : std_ulogic;
     div        : unsigned(4 downto 0);
     cnt        : unsigned(4 downto 0);
     sck, mosi  : std_ulogic;
@@ -83,14 +83,14 @@ begin
         rin.sck <= '0';
 
       when ST_IDLE =>
-        if p_cmd_val.val = '1' then
-          rin.more <= p_cmd_val.more;
+        if p_cmd_val.valid = '1' then
+          rin.last <= p_cmd_val.last;
           rin.cmd <= p_cmd_val.data;
           rin.state <= ST_RSP;
         end if;
 
       when ST_RSP =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= ST_IDLE;
           if std_match(r.cmd, SPI_CMD_DIV) then
             rin.div <= unsigned(r.cmd(4 downto 0));
@@ -112,9 +112,9 @@ begin
         end if;
 
       when ST_DATA_GET =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.shreg <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
+          rin.last <= p_cmd_val.last;
           rin.state <= ST_SHIFT;
           rin.bit_count <= 7;
         end if;
@@ -146,7 +146,7 @@ begin
         end if;
 
       when ST_DATA_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.word_count <= (r.word_count - 1) mod 64;
 
           if r.word_count /= 0 then
@@ -170,9 +170,9 @@ begin
     p_sck <= r.sck;
     p_csn <= (others => '1');
     p_mosi <= r.mosi;
-    p_cmd_ack.ack <= '0';
-    p_rsp_val.val <= '0';
-    p_rsp_val.more <= '-';
+    p_cmd_ack.ready <= '0';
+    p_rsp_val.valid <= '0';
+    p_rsp_val.last <= '-';
     p_rsp_val.data <= (others => '-');
     if r.selected < slave_count then
       p_csn(r.selected) <= '0';
@@ -183,24 +183,24 @@ begin
         null;
         
       when ST_IDLE | ST_DATA_GET =>
-        p_cmd_ack.ack <= '1';
+        p_cmd_ack.ready <= '1';
         
       when ST_RSP =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= r.cmd;
         if std_match(r.cmd, SPI_CMD_SHIFT_IN) or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
-          p_rsp_val.more <= '1';
+          p_rsp_val.last <= '0';
         else
-          p_rsp_val.more <= r.more;
+          p_rsp_val.last <= r.last;
         end if;
 
       when ST_DATA_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= r.shreg;
         if r.word_count = 0 then
-          p_rsp_val.more <= r.more;
+          p_rsp_val.last <= r.last;
         else
-          p_rsp_val.more <= '1';
+          p_rsp_val.last <= '0';
         end if;
 
     end case;

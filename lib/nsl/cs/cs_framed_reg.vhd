@@ -52,7 +52,7 @@ architecture rtl of cs_framed_reg is
     state           : state_t;
 
     cmd             : std_ulogic_vector(7 downto 0);
-    more            : std_ulogic;
+    last            : std_ulogic;
 
     data            : std_ulogic_vector(31 downto 0);
 
@@ -83,9 +83,9 @@ begin
         rin.state <= STATE_CMD_GET;
 
       when STATE_CMD_GET =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.cmd <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
+          rin.last <= p_cmd_val.last;
           if std_match(p_cmd_val.data, CS_REG_WRITE) then
             rin.state <= STATE_CMD_DATA_GET_0;
           else
@@ -94,27 +94,27 @@ begin
         end if;
 
       when STATE_CMD_DATA_GET_0 =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.data(7 downto 0) <= p_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_1;
         end if;
 
       when STATE_CMD_DATA_GET_1 =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.data(15 downto 8) <= p_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_2;
         end if;
 
       when STATE_CMD_DATA_GET_2 =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.data(23 downto 16) <= p_cmd_val.data;
           rin.state <= STATE_CMD_DATA_GET_3;
         end if;
 
       when STATE_CMD_DATA_GET_3 =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.data(31 downto 24) <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
+          rin.last <= p_cmd_val.last;
           rin.state <= STATE_WRITE;
         end if;
 
@@ -126,7 +126,7 @@ begin
         rin.state <= STATE_RSP_PUT;
 
       when STATE_RSP_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           if std_match(r.cmd, CS_REG_READ) then
             rin.state <= STATE_RSP_DATA_PUT_0;
           else
@@ -135,22 +135,22 @@ begin
         end if;
         
       when STATE_RSP_DATA_PUT_0 =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= STATE_RSP_DATA_PUT_1;
         end if;
 
       when STATE_RSP_DATA_PUT_1 =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= STATE_RSP_DATA_PUT_2;
         end if;
 
       when STATE_RSP_DATA_PUT_2 =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= STATE_RSP_DATA_PUT_3;
         end if;
 
       when STATE_RSP_DATA_PUT_3 =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= STATE_CMD_GET;
         end if;
 
@@ -159,9 +159,9 @@ begin
 
   moore: process (r)
   begin
-    p_cmd_ack.ack <= '0';
-    p_rsp_val.val <= '0';
-    p_rsp_val.more <= '-';
+    p_cmd_ack.ready <= '0';
+    p_rsp_val.valid <= '0';
+    p_rsp_val.last <= '-';
     p_rsp_val.data <= (others => '-');
     p_config_write <= (others => '0');
     p_config_data <= r.data;
@@ -175,35 +175,35 @@ begin
 
       when STATE_CMD_GET
         | STATE_CMD_DATA_GET_0 | STATE_CMD_DATA_GET_1 | STATE_CMD_DATA_GET_2 | STATE_CMD_DATA_GET_3 =>
-        p_cmd_ack.ack <= '1';
+        p_cmd_ack.ready <= '1';
 
       when STATE_RSP_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         if std_match(r.cmd, CS_REG_READ) then
-          p_rsp_val.more <= '1';
+          p_rsp_val.last <= '0';
         else
-          p_rsp_val.more <= r.more;
+          p_rsp_val.last <= r.last;
         end if;
         p_rsp_val.data <= r.cmd;
 
       when STATE_RSP_DATA_PUT_0 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
+        p_rsp_val.valid <= '1';
+        p_rsp_val.last <= '0';
         p_rsp_val.data <= r.data(7 downto 0);
 
       when STATE_RSP_DATA_PUT_1 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
+        p_rsp_val.valid <= '1';
+        p_rsp_val.last <= '0';
         p_rsp_val.data <= r.data(15 downto 8);
 
       when STATE_RSP_DATA_PUT_2 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= '1';
+        p_rsp_val.valid <= '1';
+        p_rsp_val.last <= '0';
         p_rsp_val.data <= r.data(23 downto 16);
 
       when STATE_RSP_DATA_PUT_3 =>
-        p_rsp_val.val <= '1';
-        p_rsp_val.more <= r.more;
+        p_rsp_val.valid <= '1';
+        p_rsp_val.last <= r.last;
         p_rsp_val.data <= r.data(31 downto 24);
     end case;
   end process;

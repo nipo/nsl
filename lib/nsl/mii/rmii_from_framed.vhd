@@ -36,7 +36,7 @@ architecture rtl of rmii_from_framed is
     dibit_count: unsigned(1 downto 0);
     data: std_ulogic_vector(7 downto 0);
     underflow: std_ulogic;
-    more: std_ulogic;
+    last: std_ulogic;
   end record;
   
   signal r, rin : regs_t;
@@ -58,12 +58,12 @@ begin
 
     case r.state is
       when STATE_IDLE =>
-        if p_framed_val.val = '1' then
+        if p_framed_val.valid = '1' then
           rin.state <= STATE_SOF;
           rin.dibit_count <= "00";
           rin.data <= p_framed_val.data;
           rin.underflow <= '0';
-          rin.more <= '1';
+          rin.last <= '0';
         end if;
 
       when STATE_SOF =>
@@ -76,9 +76,9 @@ begin
         rin.dibit_count <= r.dibit_count + 1;
         if r.dibit_count = "11" then
           rin.data <= p_framed_val.data;
-          rin.more <= p_framed_val.more;
+          rin.last <= p_framed_val.last;
 
-          if r.more = '0' then
+          if r.last = '1' then
             rin.state <= STATE_IFS;
             rin.wait_ctr <= inter_frame;
           end if;
@@ -102,7 +102,7 @@ begin
         when STATE_IDLE =>
           p_rmii_data.dv <= '0';
           p_rmii_data.d <= (others => 'X');
-          p_framed_ack.ack <= '1';
+          p_framed_ack.ready <= '1';
 
         when STATE_SOF =>
           p_rmii_data.dv <= '1';
@@ -111,21 +111,21 @@ begin
           else
             p_rmii_data.d <= "01";
           end if;
-          p_framed_ack.ack <= '0';
+          p_framed_ack.ready <= '0';
 
         when STATE_FW =>
           p_rmii_data.dv <= '1';
           p_rmii_data.d <= r.data(1 downto 0);
           if r.dibit_count = "11" then
-            p_framed_ack.ack <= r.more;
+            p_framed_ack.ready <= not r.last;
           else
-            p_framed_ack.ack <= '0';
+            p_framed_ack.ready <= '0';
           end if;
 
         when STATE_IFS =>
           p_rmii_data.dv <= '0';
           p_rmii_data.d <= (others => 'X');
-          p_framed_ack.ack <= '0';
+          p_framed_ack.ready <= '0';
       end case;
     end if;
   end process;

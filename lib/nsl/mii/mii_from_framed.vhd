@@ -57,7 +57,7 @@ begin
 
     case r.state is
       when STATE_IDLE =>
-        if p_framed_val.val = '1' then
+        if p_framed_val.valid = '1' then
           rin.state <= STATE_FW0;
           rin.data <= p_framed_val.data;
           rin.underflow <= '0';
@@ -73,8 +73,8 @@ begin
           rin.wait_ctr <= inter_frame;
         else
           rin.state <= STATE_FW0;
-          rin.done <= not p_framed_val.more;
-          if p_framed_val.val = '1' then
+          rin.done <= p_framed_val.last;
+          if p_framed_val.valid = '1' then
             rin.data <= p_framed_val.data;
           else
             rin.data <= (others => 'X');
@@ -99,25 +99,25 @@ begin
           p_mii_data.dv <= '0';
           p_mii_data.er <= '0';
           p_mii_data.d <= (others => 'X');
-          p_framed_ack.ack <= '1';
+          p_framed_ack.ready <= '1';
 
         when STATE_FW0 =>
           p_mii_data.dv <= '1';
           p_mii_data.er <= r.underflow;
           p_mii_data.d <= r.data(3 downto 0);
-          p_framed_ack.ack <= '0';
+          p_framed_ack.ready <= '0';
 
         when STATE_FW1 =>
           p_mii_data.dv <= '1';
           p_mii_data.er <= r.underflow;
           p_mii_data.d <= r.data(7 downto 4);
-          p_framed_ack.ack <= not r.done;
+          p_framed_ack.ready <= not r.done;
 
         when STATE_IFS =>
           p_mii_data.dv <= '0';
           p_mii_data.er <= '0';
           p_mii_data.d <= (others => 'X');
-          p_framed_ack.ack <= '0';
+          p_framed_ack.ready <= '0';
       end case;
     end if;
   end process;

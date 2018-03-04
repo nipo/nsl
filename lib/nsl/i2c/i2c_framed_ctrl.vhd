@@ -39,7 +39,7 @@ architecture rtl of i2c_framed_ctrl is
   
   type regs_t is record
     state                : state_t;
-    more                 : std_ulogic;
+    last                 : std_ulogic;
     ack                  : std_ulogic;
     data                 : std_ulogic_vector(7 downto 0);
     word_count           : natural range 0 to 63;
@@ -76,9 +76,9 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.ack <= '-';
-          rin.more <= p_cmd_val.more;
+          rin.last <= p_cmd_val.last;
 
           if std_match(p_cmd_val.data, I2C_CMD_READ) then
             rin.state <= ST_READ;
@@ -144,10 +144,10 @@ begin
         end if;
 
       when ST_DATA_GET =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.state <= ST_WRITE;
           rin.data <= p_cmd_val.data;
-          rin.more <= p_cmd_val.more;
+          rin.last <= p_cmd_val.last;
         end if;
 
     end case;
@@ -174,32 +174,32 @@ begin
 
     case r.state is
       when ST_DATA_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= r.data;
-        p_rsp_val.more <= '1';
+        p_rsp_val.last <= '0';
 
       when ST_RSP_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= (others => '0');
-        p_rsp_val.more <= r.more;
+        p_rsp_val.last <= r.last;
 
       when ST_ACK_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= "0000000" & r.ack;
-        p_rsp_val.more <= '1';
+        p_rsp_val.last <= '0';
 
       when others =>
-        p_rsp_val.val <= '0';
+        p_rsp_val.valid <= '0';
         p_rsp_val.data <= (others => '-');
-        p_rsp_val.more <= '-';
+        p_rsp_val.last <= '-';
     end case;
 
     case r.state is
       when ST_DATA_GET | ST_IDLE =>
-        p_cmd_ack.ack <= '1';
+        p_cmd_ack.ready <= '1';
 
       when others =>
-        p_cmd_ack.ack <= '0';
+        p_cmd_ack.ready <= '0';
     end case;
   end process;
 

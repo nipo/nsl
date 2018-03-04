@@ -40,7 +40,7 @@ architecture beh of ti_framed_easyscale is
     daddr : framed_data_t;
     data  : framed_data_t;
     ack   : std_ulogic;
-    more  : std_ulogic;
+    last  : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -84,14 +84,14 @@ begin
         rin.state <= STATE_DADDR_GET;
 
       when STATE_DADDR_GET =>
-        if p_cmd_val.val = '1' then
+        if p_cmd_val.valid = '1' then
           rin.state <= STATE_DATA_GET;
           rin.daddr <= p_cmd_val.data;
         end if;
 
       when STATE_DATA_GET =>
-        if p_cmd_val.val = '1' then
-          rin.more <= p_cmd_val.more;
+        if p_cmd_val.valid = '1' then
+          rin.last <= p_cmd_val.last;
           rin.state <= STATE_EXECUTE;
           rin.data <= p_cmd_val.data;
         end if;
@@ -108,7 +108,7 @@ begin
         end if;
 
       when STATE_ACK_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= STATE_DADDR_GET;
         end if;
 
@@ -117,10 +117,10 @@ begin
 
   moore: process(r)
   begin
-    p_cmd_ack.ack <= '0';
-    p_rsp_val.val <= '0';
+    p_cmd_ack.ready <= '0';
+    p_rsp_val.valid <= '0';
     p_rsp_val.data <= (others => '-');
-    p_rsp_val.more <= '-';
+    p_rsp_val.last <= '-';
     s_start <= '0';
     
     case r.state is
@@ -128,15 +128,15 @@ begin
         null;
 
       when STATE_DADDR_GET | STATE_DATA_GET =>
-        p_cmd_ack.ack <= '1';
+        p_cmd_ack.ready <= '1';
 
       when STATE_EXECUTE =>
         s_start <= '1';
 
       when STATE_ACK_PUT =>
-        p_rsp_val.val <= '1';
+        p_rsp_val.valid <= '1';
         p_rsp_val.data <= "0000000" & r.ack;
-        p_rsp_val.more <= r.more;
+        p_rsp_val.last <= r.last;
     end case;
   end process;
   

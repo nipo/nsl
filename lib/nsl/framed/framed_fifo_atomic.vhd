@@ -59,8 +59,8 @@ begin
   process(p_in_val, s_out_ack, s_out_val, s_in_ack, r.complete)
     variable inc, dec : boolean;
   begin
-    inc := p_in_val.val = '1' and s_in_ack.ack = '1' and p_in_val.more = '0';
-    dec := s_out_val.val = '1' and s_out_ack.ack = '1' and s_out_val.more = '0';
+    inc := p_in_val.valid = '1' and s_in_ack.ready = '1' and p_in_val.last = '1';
+    dec := s_out_val.valid = '1' and s_out_ack.ready = '1' and s_out_val.last = '1';
 
     rin.complete <= r.complete;
     if inc and not dec then
@@ -70,9 +70,9 @@ begin
     end if;
 
     if r.flush = '0' then
-      rin.flush <= not s_in_ack.ack;
+      rin.flush <= not s_in_ack.ready;
     else
-      rin.flush <= s_out_val.val and s_out_val.more;
+      rin.flush <= s_out_val.valid and not s_out_val.last;
     end if;
   end process;
   
@@ -92,9 +92,9 @@ begin
 
   s_has_one <= '1' when r.complete /= 0 else '0';
   p_in_ack <= s_in_ack;
-  s_out_ack.ack <= p_out_ack.ack and (s_has_one or r.flush);
-  p_out_val.val <= s_out_val.val and (s_has_one or r.flush);
+  s_out_ack.ready <= p_out_ack.ready and (s_has_one or r.flush);
+  p_out_val.valid <= s_out_val.valid and (s_has_one or r.flush);
   p_out_val.data <= s_out_val.data;
-  p_out_val.more <= s_out_val.more;
+  p_out_val.last <= s_out_val.last;
 
 end architecture;

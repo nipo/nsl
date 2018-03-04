@@ -336,12 +336,12 @@ begin
           end if;
           
         when STATE_PUT_TAG =>
-          if p_out_ack.ack = '1' then
+          if p_out_ack.ready = '1' then
             state   <= STATE_DATA;
           end if;
           
         when STATE_DATA =>
-          if data_valid = '1' and p_out_ack.ack = '1' then
+          if data_valid = '1' and p_out_ack.ready = '1' then
             if cnt = 0 then 
               state <= STATE_WAIT_CMD;
             end if;
@@ -355,35 +355,35 @@ begin
   begin
     case state is
       when STATE_RESET =>
-        p_out_val.val <= '0';
-        p_out_val.data  <= (others => 'X');
-        p_out_val.more <= 'X';
+        p_out_val.valid <= '0';
+        p_out_val.data  <= (others => '-');
+        p_out_val.last <= '-';
         data_ren <= '0';
         cmd_ren <= '0';
 
       when STATE_WAIT_CMD =>
-        p_out_val.val <= '0';
-        p_out_val.data  <= (others => 'X');
-        p_out_val.more <= 'X';
+        p_out_val.valid <= '0';
+        p_out_val.data  <= (others => '-');
+        p_out_val.last <= '-';
         data_ren <= '0';
         cmd_ren <= '1';
 
       when STATE_PUT_TAG => 
-        p_out_val.val <= '1';
+        p_out_val.valid <= '1';
         p_out_val.data <= tag;
-        p_out_val.more <= '1';
+        p_out_val.last <= '0';
         data_ren <= '0';
         cmd_ren <= '0';
 
       when STATE_DATA => 
-        p_out_val.val <= data_valid;
+        p_out_val.valid <= data_valid;
         p_out_val.data <= data_dout;
         if cnt = 0 then
-          p_out_val.more <= '0';
+          p_out_val.last <= '1';
         else
-          p_out_val.more <= '1';
+          p_out_val.last <= '0';
         end if;
-        data_ren <= p_out_ack.ack;
+        data_ren <= p_out_ack.ready;
         cmd_ren <= '0';
 
     end case;

@@ -98,20 +98,20 @@ begin
   begin
     case r.state is
       when STATE_IDLE | STATE_FILL =>
-        p_framed_val.val <= '0';
-        p_framed_val.more <= '0';
+        p_framed_val.valid <= '0';
+        p_framed_val.last <= '-';
 
       when STATE_FW | STATE_FLUSH =>
         if r.dibit_count = "11" then
-          p_framed_val.val <= '1';
+          p_framed_val.valid <= '1';
         else
-          p_framed_val.val <= '0';
+          p_framed_val.valid <= '0';
         end if;
-        p_framed_val.more <= '1';
+        p_framed_val.last <= '0';
 
       when STATE_LAST =>
-        p_framed_val.val <= '1';
-        p_framed_val.more <= '0';
+        p_framed_val.valid <= '1';
+        p_framed_val.last <= '1';
     end case;
   end process;
 

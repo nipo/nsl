@@ -103,7 +103,7 @@ begin
       );
 
   s_lut_write <= '1' when r.cmd_state = CMD_PUT_TABLE else '0';
-  s_lut_read <= p_rsp_in_val.val when r.rsp_state = RSP_GET_TAG else '0';
+  s_lut_read <= p_rsp_in_val.valid when r.rsp_state = RSP_GET_TAG else '0';
   
   transition: process(p_cmd_in_val, p_cmd_out_ack, p_rsp_in_val, p_rsp_out_ack, r)
   begin
@@ -114,19 +114,19 @@ begin
         rin.cmd_state <= CMD_GET_HEADER;
 
       when CMD_GET_HEADER =>
-        if p_cmd_in_val.val = '1' then
+        if p_cmd_in_val.valid = '1' then
           rin.cmd_from <= std_ulogic_vector(to_unsigned(nsl.routed.routed_header_src(p_cmd_in_val.data), 4));
           rin.cmd_state <= CMD_GET_HEADER2;
         end if;
         
       when CMD_GET_HEADER2 =>
-        if p_cmd_in_val.val = '1' then
+        if p_cmd_in_val.valid = '1' then
           rin.cmd_to2 <= nsl.routed.routed_header_dst(p_cmd_in_val.data);
           rin.cmd_state <= CMD_GET_TAG;
         end if;
         
       when CMD_GET_TAG =>
-        if p_cmd_in_val.val = '1' then
+        if p_cmd_in_val.valid = '1' then
           rin.cmd_tag <= p_cmd_in_val.data;
           rin.cmd_state <= CMD_PUT_TABLE;
         end if;
@@ -135,18 +135,18 @@ begin
         rin.cmd_state <= CMD_PUT_HEADER;
         
       when CMD_PUT_HEADER =>
-        if p_cmd_out_ack.ack = '1' then
+        if p_cmd_out_ack.ready = '1' then
           rin.cmd_state <= CMD_PUT_TAG;
         end if;
         
       when CMD_PUT_TAG =>
-        if p_cmd_out_ack.ack = '1' then
+        if p_cmd_out_ack.ready = '1' then
           rin.cmd_state <= CMD_FORWARD;
           rin.next_tag <= r.next_tag + 1;
         end if;
 
       when CMD_FORWARD =>
-        if p_cmd_in_val.val = '1' and p_cmd_out_ack.ack = '1' and p_cmd_in_val.more = '0' then
+        if p_cmd_in_val.valid = '1' and p_cmd_out_ack.ready = '1' and p_cmd_in_val.last = '1' then
           rin.cmd_state <= CMD_GET_HEADER;
         end if;
     end case;
@@ -156,33 +156,33 @@ begin
         rin.rsp_state <= RSP_GET_HEADER;
 
       when RSP_GET_HEADER =>
-        if p_rsp_in_val.val = '1' then
+        if p_rsp_in_val.valid = '1' then
           rin.rsp_state <= RSP_GET_TAG;
           rin.rsp_from2 <= nsl.routed.routed_header_src(p_cmd_in_val.data);
         end if;
         
       when RSP_GET_TAG =>
-        if p_rsp_in_val.val = '1' then
+        if p_rsp_in_val.valid = '1' then
           rin.rsp_state <= RSP_PUT_HEADER;
         end if;
         
       when RSP_PUT_HEADER =>
-        if p_rsp_out_ack.ack = '1' then
+        if p_rsp_out_ack.ready = '1' then
           rin.rsp_state <= RSP_PUT_HEADER2;
         end if;
         
       when RSP_PUT_HEADER2 =>
-        if p_rsp_out_ack.ack = '1' then
+        if p_rsp_out_ack.ready = '1' then
           rin.rsp_state <= RSP_PUT_TAG;
         end if;
         
       when RSP_PUT_TAG =>
-        if p_rsp_out_ack.ack = '1' then
+        if p_rsp_out_ack.ready = '1' then
           rin.rsp_state <= RSP_FORWARD;
         end if;
 
       when RSP_FORWARD =>
-        if p_rsp_in_val.val = '1' and p_rsp_out_ack.ack = '1' and p_rsp_in_val.more = '0' then
+        if p_rsp_in_val.valid = '1' and p_rsp_out_ack.ready = '1' and p_rsp_in_val.last = '1' then
           rin.rsp_state <= RSP_GET_HEADER;
         end if;
     end case;
@@ -190,35 +190,35 @@ begin
 
   mux: process(r, p_cmd_in_val, p_cmd_out_ack, p_rsp_in_val, p_rsp_out_ack)
   begin
-    p_cmd_out_val.val <= '0';
+    p_cmd_out_val.valid <= '0';
     p_cmd_out_val.data <= (others => '-');
-    p_cmd_out_val.more <= '-';
-    p_cmd_in_ack.ack <= '0';
+    p_cmd_out_val.last <= '-';
+    p_cmd_in_ack.ready <= '0';
 
-    p_rsp_out_val.val <= '0';
+    p_rsp_out_val.valid <= '0';
     p_rsp_out_val.data <= (others => '-');
-    p_rsp_out_val.more <= '-';
-    p_rsp_in_ack.ack <= '0';
+    p_rsp_out_val.last <= '-';
+    p_rsp_in_ack.ready <= '0';
 
     case r.cmd_state is
       when CMD_RESET =>
         null;
         
       when CMD_GET_HEADER | CMD_GET_HEADER2 | CMD_GET_TAG =>
-        p_cmd_in_ack.ack <= '1';
+        p_cmd_in_ack.ready <= '1';
         
       when CMD_PUT_TABLE =>
         rin.cmd_state <= CMD_PUT_HEADER;
         
       when CMD_PUT_HEADER =>
-        p_cmd_out_val.val <= '1';
+        p_cmd_out_val.valid <= '1';
         p_cmd_out_val.data <= nsl.routed.routed_header(r.cmd_to2, source_id);
-        p_cmd_out_val.more <= '1';
+        p_cmd_out_val.last <= '0';
         
       when CMD_PUT_TAG =>
-        p_cmd_out_val.val <= '1';
+        p_cmd_out_val.valid <= '1';
         p_cmd_out_val.data(tag_size-1 downto 0) <= std_ulogic_vector(r.next_tag);
-        p_cmd_out_val.more <= '1';
+        p_cmd_out_val.last <= '0';
 
       when CMD_FORWARD =>
         p_cmd_out_val <= p_cmd_in_val;
@@ -230,22 +230,22 @@ begin
         null;
 
       when RSP_GET_HEADER | RSP_GET_TAG =>
-        p_rsp_in_ack.ack <= '1';
+        p_rsp_in_ack.ready <= '1';
         
       when RSP_PUT_HEADER =>
-        p_rsp_out_val.val <= '1';
+        p_rsp_out_val.valid <= '1';
         p_rsp_out_val.data <= nsl.routed.routed_header(to_integer(unsigned(s_lut_source)), target_id);
-        p_rsp_out_val.more <= '1';
+        p_rsp_out_val.last <= '0';
         
       when RSP_PUT_HEADER2 =>
-        p_rsp_out_val.val <= '1';
+        p_rsp_out_val.valid <= '1';
         p_rsp_out_val.data <= nsl.routed.routed_header(0, r.rsp_from2);
-        p_rsp_out_val.more <= '1';
+        p_rsp_out_val.last <= '0';
         
       when RSP_PUT_TAG =>
-        p_rsp_out_val.val <= '1';
+        p_rsp_out_val.valid <= '1';
         p_rsp_out_val.data <= s_lut_tag;
-        p_rsp_out_val.more <= '1';
+        p_rsp_out_val.last <= '0';
 
       when RSP_FORWARD =>
         p_rsp_out_val <= p_rsp_in_val;

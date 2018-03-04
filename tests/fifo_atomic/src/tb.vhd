@@ -54,6 +54,7 @@ begin
 
   fifo: nsl.framed.framed_fifo_atomic
     generic map(
+      clk_count => 1,
       depth => 8
       )
     port map(
