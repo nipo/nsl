@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library hwdep;
+
 entity clock_output is
   port(
     p_clk     : in  std_ulogic;
@@ -13,6 +15,11 @@ architecture gen of clock_output is
   
 begin
 
-  p_port <= p_clk;
-
+  iod: hwdep.io.io_ddr_output
+    port map(
+      p_clk => p_clk,
+      p_d => "01",
+      p_dd => p_port
+      );
+  
 end architecture;
