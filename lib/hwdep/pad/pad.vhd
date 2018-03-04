@@ -7,7 +7,7 @@ use signalling.diff.all;
 
 package pad is
 
-  component diff_input_pad
+  component pad_diff_input
     generic(
       diff_term : boolean := true;
       is_clock : boolean := false;
@@ -19,7 +19,7 @@ package pad is
       );
   end component;
 
-  component diff_output_pad
+  component pad_diff_output
     generic(
       is_clock : boolean := false
       );
