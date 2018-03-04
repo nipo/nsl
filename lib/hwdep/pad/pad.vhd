@@ -7,6 +7,13 @@ use signalling.diff.all;
 
 package pad is
 
+  component pad_diff_clock_input
+    port(
+      p_pad : in  diff_pair;
+      p_clk : out diff_pair
+      );
+  end component;
+
   component pad_diff_input
     generic(
       diff_term : boolean := true;

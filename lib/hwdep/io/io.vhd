@@ -7,13 +7,6 @@ use signalling.diff.all;
 
 package io is
 
-  component diff_clock_input
-    port(
-      p_i : in  diff_pair;
-      p_o : out diff_pair
-      );
-  end component;
-
   -- Source-synchronous DDR output, edge-aligned
   -- p_d is sampled on p_clk rising edge
   -- p_d(0) is on p_dd while p_clk is high (on wire first)
