@@ -19,14 +19,12 @@ architecture sp6 of diff_clock_input is
 
 begin
 
-  inst: ibufgds
+  inst: ibufgds_diff_out
    port map (
      i => p_i.p,
      ib => p_i.n,
-     o => clk
+     o => p_o.p,
+     ob => p_o.n
      );
-
-  p_o.p <= clk;
-  p_o.n <= not clk;
 
 end architecture;
