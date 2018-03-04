@@ -94,6 +94,7 @@ begin
   start_s <= scl_filt and sda_fall;
   stop_s <= scl_filt and sda_rise;
 
+  p_scl_drain <= '0';
   p_start <= start_s;
   p_stop <= stop_s;
   p_addr <= write and addr;

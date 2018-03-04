@@ -57,37 +57,40 @@ architecture rtl of i2c_master is
 
   -- Bit transmission
   --         /----------- SDA Update point
-  --         |      /---- SDA Sample point
-  --         v      v
-  --              ___
-  -- SCL  _______/   \___
-  --
-  --         |   |   |
-  --      ___ _______ ___
-  -- SDA  ___X_______X___
-  --
-  --         |   |   |
-  --           ^   ^  
-  --           |   |
-  --           |   \------ SCL_HIGH
-  --           \---------- SDA_SETTLE
+  --         |          /---- SDA Sample point
+  --         v          v
+  --               ______
+  -- SCL  ________/__/   \_______
+  --                         
+  --         |   |   |   |   |
+  --      ___ _______________ ___
+  -- SDA  ___X_______________X___
+  --                         
+  --         |   |   |   |   |
+  --           ^   ^   ^   ^
+  --           |   |   |   \-- SCL_LOW
+  --           |   |   \------ SCL_HIGH
+  --           |   \---------- SCL_RISE
+  --           \-------------- SDA_SETTLE
 
   -- Stop condition
-  --          _______     _______
-  -- SCL  ___/       \___/
-  --
-  --         |   |   |   |   |
-  --              !!!         ___
-  -- SDA  ___________________/
-  --
-  --         |   |   |   |   |
-  --       ^   ^   ^   ^   ^   ^
-  --       |   |   |   |   |   \------ STOP_SDA
-  --       |   |   |   |   \---------- STOP_SCL
-  --       |   |   |   \-------------- STOP_IDLE
-  --       |   |   \------------------ STOP_SDA
-  --       |   \---------------------- STOP_SCL
-  --       \-------------------------- STOP_IDLE
+  --          __________      __________
+  -- SCL  ___/__/       \____/__/
+  --                            
+  --        |   |   |   |   |   |   |
+  --                 !!!             ___
+  -- SDA  __________________________/
+  --                            
+  --        |   |   |   |   |   |   |
+  --      ^   ^   ^   ^   ^   ^   ^   ^
+  --      |   |   |   |   |   |   |   \-- STOP_SDA
+  --      |   |   |   |   |   |   \------ STOP_SCL
+  --      |   |   |   |   |   \---------- STOP_SCL_RISE
+  --      |   |   |   |   \-------------- STOP_IDLE
+  --      |   |   |   \------------------ STOP_SDA
+  --      |   |   \---------------------- STOP_SCL
+  --      |   \-------------------------- STOP_SCL_RISE
+  --      \------------------------------ STOP_IDLE
   --               ^   ^
   --               |   \---- Usual start point for stop
   --               \---- Can happen if slave holds SDA,
@@ -103,10 +106,13 @@ architecture rtl of i2c_master is
     ST_START_SCL,
     ST_START_RECOVER,
     ST_STOP_IDLE,
+    ST_STOP_SCL_RISE,
     ST_STOP_SCL,
     ST_STOP_SDA,
     ST_BIT_SDA_SETTLE,
-    ST_BIT_SCL_HIGH
+    ST_BIT_SCL_RISE,
+    ST_BIT_SCL_HIGH,
+    ST_BIT_SCL_LOW
     );
 
   type regs_t is record
@@ -115,7 +121,7 @@ architecture rtl of i2c_master is
     ack                  : std_ulogic;
     started              : std_ulogic;
     bit_count            : natural range 0 to 8;
-    ctr                  : natural range 0 to 2 ** divisor_width - 1;
+    ctr                  : natural range 0 to 2 ** (divisor_width + 1) - 1;
   end record;
 
   signal r, rin : regs_t;
@@ -132,11 +138,12 @@ begin
   end process;
 
   transition : process (p_cmd, p_divisor, p_scl, p_sda, p_wdata, r)
-    variable ready, step : boolean;
+    variable ready, step, double_step : boolean;
   begin
     rin <= r;
 
     step := false;
+    double_step := false;
     if r.ctr /= 0 then
       rin.ctr <= r.ctr - 1;
       ready := false;
@@ -225,6 +232,11 @@ begin
 
       when ST_STOP_IDLE =>
         if ready then
+          rin.state <= ST_STOP_SCL_RISE;
+        end if;
+
+      when ST_STOP_SCL_RISE =>
+        if p_scl = '1' then
           step := true;
           rin.state <= ST_STOP_SCL;
         end if;
@@ -248,18 +260,33 @@ begin
       when ST_BIT_SDA_SETTLE =>
         if ready then
           step := true;
+          rin.state <= ST_BIT_SCL_RISE;
+        end if;
+
+      when ST_BIT_SCL_RISE =>
+        if p_scl = '1' then
+          double_step := true;
           rin.state <= ST_BIT_SCL_HIGH;
         end if;
 
       when ST_BIT_SCL_HIGH =>
-        if ready and p_scl = '1' then
+        if ready then
+          rin.state <= ST_BIT_SCL_LOW;
           step := true;
           if r.bit_count /= 0 then
             rin.data <= r.data(6 downto 0) & p_sda;
+          else
+            rin.ack <= not p_sda;
+          end if;
+        end if;
+
+      when ST_BIT_SCL_LOW =>
+        if ready then
+          step := true;
+          if r.bit_count /= 0 then
             rin.bit_count <= r.bit_count - 1;
             rin.state <= ST_BIT_SDA_SETTLE;
           else
-            rin.ack <= not p_sda;
             rin.state <= ST_DONE;
           end if;
         end if;
@@ -272,6 +299,8 @@ begin
 
     if step then
       rin.ctr <= to_integer(unsigned(p_divisor));
+    elsif double_step then
+      rin.ctr <= to_integer(unsigned(p_divisor)) * 2;
     end if;
   end process;
 
@@ -295,6 +324,7 @@ begin
       when ST_START_SCL
         | ST_START_RESTART
         | ST_BIT_SDA_SETTLE
+        | ST_BIT_SCL_LOW
         | ST_STOP_IDLE =>
         p_scl_drain <= '1';
         
@@ -311,6 +341,7 @@ begin
         | ST_START_SCL
         | ST_START_RECOVER
         | ST_STOP_SCL
+        | ST_STOP_SCL_RISE
         | ST_STOP_IDLE =>
         p_sda_drain <= '1';
 
@@ -319,6 +350,8 @@ begin
         p_scl_drain <= r.started;
 
       when ST_BIT_SCL_HIGH
+        | ST_BIT_SCL_LOW
+        | ST_BIT_SCL_RISE
         | ST_BIT_SDA_SETTLE =>
         if p_cmd = I2C_READ then
           if r.bit_count = 0 then
