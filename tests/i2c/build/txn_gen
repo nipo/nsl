@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+
+import sys
+import random
+
+class NocTxnFile:
+    def __init__(self, filename):
+        self.output = open(filename, "w")
+
+    def put(self, data, mask, length, wait = 0):
+        for i in range(length - 1, -1, -1):
+            v = (data >> i) & 1
+            m = (mask >> i) & 1
+            if m:
+                self.output.write("%d" % v)
+            else:
+                self.output.write("-")
+        self.output.write(" %d\n" % wait)
+
+class Txn:
+    def __init__(self, target, header):
+        self.target = target
+        self.header = header
+        self.cmds = []
+
+    def flush(self, tag, wait = 100):
+        if not self.cmds:
+            return
+
+        l = len(self.cmds) + 2 - 1
+        self.target.put(0x100 | self.header, 0x1ff, 9)
+        self.target.put(0x100 | tag, 0x1ff, 9)
+        for i, c in enumerate(self.cmds):
+            try:
+                v, mask = c
+            except:
+                v = c
+                mask = 0xff
+            self.target.put((0 if i == len(self.cmds) - 1 else 0x100) | v, 0x100 | mask, 9,
+                            int(wait if i == len(self.cmds) - 1 else 0))
+        self.cmds = []
+
+class I2CCmd(Txn):
+    def divisor(self, value):
+        self.cmds += [value]
+
+    def start(self):
+        self.cmds += [0x20]
+
+    def stop(self):
+        self.cmds += [0x21]
+
+    def read(self, data, ack):
+        self.cmds += [0x80 | (int(bool(ack)) << 6) | (len(data) - 1)]
+
+    def write(self, data, ack = True):
+        self.cmds += [0x40 | (len(data) - 1)]
+        self.cmds += list(data)
+
+class I2CRsp(Txn):
+    def divisor(self, value):
+        self.cmds += [0]
+
+    def start(self):
+        self.cmds += [0x00]
+
+    def stop(self):
+        self.cmds += [0x00]
+
+    def read(self, data, ack):
+        self.cmds += list(data)
+        self.cmds += [0x00]
+
+    def write(self, data, ack = True):
+        self.cmds += [1] * (len(data) - 1)
+        self.cmds.append(int(ack))
+        self.cmds.append(0)
+
+class I2CMem:
+    def __init__(self, bus, addr):
+        self.bus = bus
+        self.addr = addr
+
+    def write(self, tag, addr, data):
+        self.bus.start()
+        self.bus.write([self.addr << 1, addr >> 8, addr & 0xff] + data)
+        self.bus.stop()
+        self.bus.flush(tag)
+
+    def read(self, tag, addr, data):
+        self.bus.start()
+        self.bus.write([self.addr << 1, addr >> 8, addr & 0xff])
+        self.bus.start()
+        self.bus.write([(self.addr << 1) | 1])
+        self.bus.read(data, False)
+        self.bus.stop()
+        self.bus.flush(tag)
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = NocTxnFile(n)
+    if n.startswith("i2c_res"):
+        t = I2CRsp(f, 0x0f)
+    else:
+        t = I2CCmd(f, 0xf0)
+
+    mem = I2CMem(t, 0x26)
+
+    t.divisor(8)
+    t.flush(2)
+
+    random.seed(42)
+
+    for retries in range(10):
+        addr = random.randint(0, 1<<16)
+        length = random.randint(1, 42)
+        tag = random.randint(1, 255)
+        tag2 = random.randint(1, 255)
+
+        data = list(random.randint(0, 255) for i in range(length))
+        
+        mem.write(tag, addr, data)
+        mem.read(tag2, addr, data)
