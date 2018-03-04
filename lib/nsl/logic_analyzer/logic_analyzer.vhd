@@ -18,7 +18,7 @@ package logic_analyzer is
 
     p_delta   : out std_ulogic_vector(delta_width-1 downto 0);
     p_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_write   : out std_ulogic
+    p_valid   : out std_ulogic
     );
   end component;
 

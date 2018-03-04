@@ -15,12 +15,12 @@ entity fifo_sync is
     p_clk    : in  std_ulogic;
 
     p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_out_read    : in  std_ulogic;
-    p_out_empty_n : out std_ulogic;
+    p_out_ready    : in  std_ulogic;
+    p_out_valid : out std_ulogic;
 
     p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-    p_in_write  : in  std_ulogic;
-    p_in_full_n : out std_ulogic
+    p_in_valid  : in  std_ulogic;
+    p_in_ready : out std_ulogic
     );
 end fifo_sync;
 
@@ -38,12 +38,12 @@ begin
       p_clk(0) => p_clk,
 
       p_out_data => p_out_data,
-      p_out_read => p_out_read,
-      p_out_empty_n => p_out_empty_n,
+      p_out_ready => p_out_ready,
+      p_out_valid => p_out_valid,
 
       p_in_data => p_in_data,
-      p_in_write => p_in_write,
-      p_in_full_n => p_in_full_n
+      p_in_valid => p_in_valid,
+      p_in_ready => p_in_ready
       );
   
 end rtl;

@@ -10,8 +10,8 @@ entity fifo_counter_checker is
     p_resetn  : in  std_ulogic;
     p_clk     : in  std_ulogic;
 
-    p_full_n: out std_ulogic;
-    p_write: in std_ulogic;
+    p_ready: out std_ulogic;
+    p_valid: in std_ulogic;
     p_data: in std_ulogic_vector(width-1 downto 0)
     );
 end fifo_counter_checker;
@@ -30,7 +30,7 @@ begin
     if (p_resetn = '0') then
       r_last <= (others => '1');
     elsif rising_edge(p_clk) then
-      if p_write = '1' then
+      if p_valid = '1' then
         if s_next /= p_data then
           report "Discontinuity in fifo stream, got " & integer'image(to_integer(unsigned(p_data))) & ", expected " & integer'image(to_integer(unsigned(s_next)));
         end if;
@@ -39,6 +39,6 @@ begin
     end if;
   end process reg;
 
-  p_full_n <= '1';
+  p_ready <= '1';
   
 end rtl;

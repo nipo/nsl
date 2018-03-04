@@ -59,15 +59,15 @@ architecture rtl of tpiu_unformatter is
   signal cmd_ren        : std_ulogic;
   signal cmd_din        : std_ulogic_vector(15 downto 0);
   signal cmd_dout       : std_ulogic_vector(15 downto 0);
-  signal cmd_full_n     : std_ulogic;
-  signal cmd_empty_n    : std_ulogic;
+  signal cmd_ready     : std_ulogic;
+  signal cmd_valid    : std_ulogic;
 
   signal data_wen       : std_ulogic;
   signal data_ren       : std_ulogic;
   signal data_din       : std_ulogic_vector(7 downto 0);
   signal data_dout      : std_ulogic_vector(7 downto 0);
-  signal data_full_n    : std_ulogic;
-  signal data_empty_n   : std_ulogic;
+  signal data_ready    : std_ulogic;
+  signal data_valid   : std_ulogic;
 
   type state_type is (STATE_RESET, STATE_WAIT_CMD, STATE_PUT_TAG, STATE_DATA);
   signal state: state_type;
@@ -90,11 +90,11 @@ begin
       p_clk(1) => p_clk,
 
       p_out_data => cmd_dout,
-      p_out_read => cmd_ren,
-      p_out_empty_n => cmd_empty_n,
+      p_out_ready => cmd_ren,
+      p_out_valid => cmd_valid,
 
-      p_in_write => cmd_wen,
-      p_in_full_n => cmd_full_n,
+      p_in_valid => cmd_wen,
+      p_in_ready => cmd_ready,
       p_in_data => cmd_din
       );
 
@@ -110,11 +110,11 @@ begin
       p_clk(1) => p_clk,
 
       p_out_data => data_dout,
-      p_out_read => data_ren,
-      p_out_empty_n => data_empty_n,
+      p_out_ready => data_ren,
+      p_out_valid => data_valid,
 
-      p_in_write => data_wen,
-      p_in_full_n => data_full_n,
+      p_in_valid => data_wen,
+      p_in_ready => data_ready,
       p_in_data => data_din
       );
 
@@ -225,7 +225,7 @@ begin
   begin
     if p_resetn = '0' then
       p_overflow <= '0';
-    elsif rising_edge(p_traceclk) and synchronised and (cmd_full_n = '0' or data_full_n = '0') then
+    elsif rising_edge(p_traceclk) and synchronised and (cmd_ready = '0' or data_ready = '0') then
       p_overflow <= '1';
     end if;
   end process fullp;
@@ -328,7 +328,7 @@ begin
           state <= STATE_WAIT_CMD;
 
         when STATE_WAIT_CMD =>
-          if cmd_empty_n = '1' then
+          if cmd_valid = '1' then
             -- A new command is available
             cnt     <= unsigned(cmd_dout(MAXLENWIDTH - 1 downto 0));
             tag     <= cmd_dout(15 downto 8);
@@ -341,7 +341,7 @@ begin
           end if;
           
         when STATE_DATA =>
-          if data_empty_n = '1' and p_out_ack.ack = '1' then
+          if data_valid = '1' and p_out_ack.ack = '1' then
             if cnt = 0 then 
               state <= STATE_WAIT_CMD;
             end if;
@@ -351,7 +351,7 @@ begin
     end if;
   end process outdata;
 
-  mux : process(state, cmd_empty_n, cmd_dout, data_empty_n, data_dout, p_out_ack, tag, cnt)
+  mux : process(state, cmd_valid, cmd_dout, data_valid, data_dout, p_out_ack, tag, cnt)
   begin
     case state is
       when STATE_RESET =>
@@ -376,7 +376,7 @@ begin
         cmd_ren <= '0';
 
       when STATE_DATA => 
-        p_out_val.val <= data_empty_n;
+        p_out_val.val <= data_valid;
         p_out_val.data <= data_dout;
         if cnt = 0 then
           p_out_val.more <= '0';

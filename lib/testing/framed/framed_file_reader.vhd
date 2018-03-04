@@ -37,8 +37,8 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-      p_empty_n => p_out_val.val,
-      p_read => p_out_ack.ack,
+      p_valid => p_out_val.val,
+      p_ready => p_out_ack.ack,
       p_data => s_fifo,
       p_done => p_done
       );

@@ -17,12 +17,12 @@ package fifo is
       p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
       p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-      p_in_write  : in  std_ulogic;
-      p_in_full_n : out std_ulogic;
+      p_in_valid  : in  std_ulogic;
+      p_in_ready : out std_ulogic;
 
       p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-      p_out_read    : in  std_ulogic;
-      p_out_empty_n : out std_ulogic
+      p_out_ready    : in  std_ulogic;
+      p_out_valid : out std_ulogic
       );
   end component;
 

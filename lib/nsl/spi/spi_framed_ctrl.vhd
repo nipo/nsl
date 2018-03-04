@@ -55,12 +55,12 @@ begin
       p_run => r_more,
 
       p_miso_data => p_rsp_val.data,
-      p_miso_full_n => p_rsp_ack.ack,
-      p_miso_write => p_rsp_val.val,
+      p_miso_ready => p_rsp_ack.ack,
+      p_miso_valid => p_rsp_val.val,
 
       p_mosi_data => p_cmd_val.data,
-      p_mosi_empty_n => p_cmd_val.val,
-      p_mosi_read => s_cmd_ack
+      p_mosi_valid => p_cmd_val.val,
+      p_mosi_ready => s_cmd_ack
       );
 
   p_rsp_val.more <= r_more;

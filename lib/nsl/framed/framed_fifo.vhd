@@ -41,11 +41,11 @@ begin
       p_resetn => p_resetn,
       p_clk => p_clk,
       p_out_data => s_out_data,
-      p_out_read => p_out_ack.ack,
-      p_out_empty_n => p_out_val.val,
+      p_out_ready => p_out_ack.ack,
+      p_out_valid => p_out_val.val,
       p_in_data => s_in_data,
-      p_in_write => p_in_val.val,
-      p_in_full_n => p_in_ack.ack
+      p_in_valid => p_in_val.val,
+      p_in_ready => p_in_ack.ack
       );
 
   s_in_data <= p_in_val.more & p_in_val.data;

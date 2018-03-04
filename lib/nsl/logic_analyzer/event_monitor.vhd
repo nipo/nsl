@@ -16,7 +16,7 @@ entity event_monitor is
 
     p_delta   : out std_ulogic_vector(delta_width-1 downto 0);
     p_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_write   : out std_ulogic
+    p_valid   : out std_ulogic
     );
 end event_monitor;
 
@@ -48,7 +48,7 @@ begin
   s_count <= std_ulogic_vector((to_unsigned(0,1) & unsigned(r_count)) + 1) when s_changed = '0' else (others => '0');
   s_diff <= r_resync(0) xor r_resync(1);
   s_changed <= '0' when unsigned(s_diff) = 0 else '1';
-  p_write <= s_count(delta_width) or s_changed;
+  p_valid <= s_count(delta_width) or s_changed;
   p_delta <= r_count;
   p_data <= r_resync(1);
   

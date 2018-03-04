@@ -69,8 +69,8 @@ begin
       p_resetn => s_resetn_slave_clk,
       p_clk => s_clk_slave,
 
-      p_empty_n => s_slave_gen_out.valid,
-      p_read => s_slave_gen_out.ready,
+      p_valid => s_slave_gen_out.valid,
+      p_ready => s_slave_gen_out.ready,
       p_data => s_slave_gen_out.data
       );
 
@@ -84,12 +84,12 @@ begin
       p_clk => s_clk_slave,
 
       p_in_data => s_slave_gen_out.data,
-      p_in_write => s_slave_gen_out.valid,
-      p_in_full_n => s_slave_gen_out.ready,
+      p_in_valid => s_slave_gen_out.valid,
+      p_in_ready => s_slave_gen_out.ready,
 
       p_out_data => s_slave_gate_out.data,
-      p_out_read => s_slave_gate_out.ready,
-      p_out_empty_n => s_slave_gate_out.valid
+      p_out_ready => s_slave_gate_out.ready,
+      p_out_valid => s_slave_gate_out.valid
       );
 
   slave_check: testing.fifo.fifo_counter_checker
@@ -100,8 +100,8 @@ begin
       p_resetn => s_resetn_slave_clk,
       p_clk => s_clk_slave,
       
-      p_full_n => s_slave_check_in.ready,
-      p_write => s_slave_check_in.valid,
+      p_ready => s_slave_check_in.ready,
+      p_valid => s_slave_check_in.valid,
       p_data => s_slave_check_in.data
       );
 
@@ -115,12 +115,12 @@ begin
       p_clk => s_clk_slave,
 
       p_in_data => s_slave_gate_in.data,
-      p_in_write => s_slave_gate_in.valid,
-      p_in_full_n => s_slave_gate_in.ready,
+      p_in_valid => s_slave_gate_in.valid,
+      p_in_ready => s_slave_gate_in.ready,
 
       p_out_data => s_slave_check_in.data,
-      p_out_read => s_slave_check_in.ready,
-      p_out_empty_n => s_slave_check_in.valid
+      p_out_ready => s_slave_check_in.ready,
+      p_out_valid => s_slave_check_in.valid
       );
 
   slave_gate: nsl.ftdi.ft245_sync_fifo_slave
@@ -159,8 +159,8 @@ begin
       p_resetn => s_resetn_master_clk,
       p_clk => s_clk_master,
 
-      p_empty_n => s_master_gen_out.valid,
-      p_read => s_master_gen_out.ready,
+      p_valid => s_master_gen_out.valid,
+      p_ready => s_master_gen_out.ready,
       p_data => s_master_gen_out.data
       );
 
@@ -174,12 +174,12 @@ begin
       p_clk => s_clk_master,
 
       p_in_data => s_master_gen_out.data,
-      p_in_write => s_master_gen_out.valid,
-      p_in_full_n => s_master_gen_out.ready,
+      p_in_valid => s_master_gen_out.valid,
+      p_in_ready => s_master_gen_out.ready,
 
       p_out_data => s_master_gate_out.data,
-      p_out_read => s_master_gate_out.ready,
-      p_out_empty_n => s_master_gate_out.valid
+      p_out_ready => s_master_gate_out.ready,
+      p_out_valid => s_master_gate_out.valid
       );
 
   master_check: testing.fifo.fifo_counter_checker
@@ -190,8 +190,8 @@ begin
       p_resetn => s_resetn_master_clk,
       p_clk => s_clk_master,
       
-      p_full_n => s_master_check_in.ready,
-      p_write => s_master_check_in.valid,
+      p_ready => s_master_check_in.ready,
+      p_valid => s_master_check_in.valid,
       p_data => s_master_check_in.data
       );
 
@@ -205,12 +205,12 @@ begin
       p_clk => s_clk_master,
       
       p_in_data => s_master_gate_in.data,
-      p_in_write => s_master_gate_in.valid,
-      p_in_full_n => s_master_gate_in.ready,
+      p_in_valid => s_master_gate_in.valid,
+      p_in_ready => s_master_gate_in.ready,
 
       p_out_data => s_master_check_in.data,
-      p_out_read => s_master_check_in.ready,
-      p_out_empty_n => s_master_check_in.valid
+      p_out_ready => s_master_check_in.ready,
+      p_out_valid => s_master_check_in.valid
       );
 
   master_gate: nsl.ftdi.ft245_sync_fifo_master

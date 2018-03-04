@@ -10,8 +10,8 @@ entity fifo_counter_generator is
     p_resetn  : in  std_ulogic;
     p_clk     : in  std_ulogic;
 
-    p_empty_n: out std_ulogic;
-    p_read: in std_ulogic;
+    p_valid: out std_ulogic;
+    p_ready: in std_ulogic;
     p_data: out std_ulogic_vector(width-1 downto 0)
     );
 end fifo_counter_generator;
@@ -27,7 +27,7 @@ begin
     if (p_resetn = '0') then
       r_counter <= (others => '0');
     elsif rising_edge(p_clk) then
-      if p_read = '1' then
+      if p_ready = '1' then
         r_counter <= std_ulogic_vector(unsigned(r_counter) + 1);
       end if;
     end if;
@@ -36,7 +36,7 @@ begin
   moore: process (p_clk)
   begin
     if falling_edge(p_clk) then
-      p_empty_n <= p_resetn;
+      p_valid <= p_resetn;
       p_data <= r_counter;
     end if;
   end process;

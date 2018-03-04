@@ -56,7 +56,7 @@ top.tb.fifo.p_out_val.more
 @800200
 -fifo
 @28
-top.tb.fifo.fifo.fifo.s_full_n
+top.tb.fifo.fifo.fifo.s_ready
 top.tb.fifo.fifo.fifo.s_put
 top.tb.fifo.fifo.fifo.s_get
 @22

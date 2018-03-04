@@ -21,12 +21,12 @@ entity fifo_2p is
     p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
     p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-    p_in_write  : in  std_ulogic;
-    p_in_full_n : out std_ulogic;
+    p_in_valid  : in  std_ulogic;
+    p_in_ready : out std_ulogic;
 
     p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_out_read    : in  std_ulogic;
-    p_out_empty_n : out std_ulogic
+    p_out_ready    : in  std_ulogic;
+    p_out_valid : out std_ulogic
     );
 end fifo_2p;
 
@@ -52,9 +52,9 @@ architecture inferred of fifo_2p is
   signal s_going_full, s_going_empty: std_ulogic;
   signal s_ptr_equal: boolean;
   
-  signal r_in_full_n, r_out_empty_n : std_ulogic;
-  signal s_in_full_n, s_out_empty_n : std_ulogic;
-  signal s_in_write, s_out_read : std_ulogic;
+  signal r_in_ready, r_out_valid : std_ulogic;
+  signal s_in_ready, s_out_valid : std_ulogic;
+  signal s_in_valid, s_out_ready : std_ulogic;
   signal r_out_data_valid : std_ulogic;
 
   constant is_synchronous: boolean := clk_count = 1;
@@ -81,8 +81,8 @@ begin
     s_in_resetn <= p_resetn;
   end generate;
   
-  s_out_rptr_bin <= r_out_rptr_bin + 1 when s_out_read = '1' else r_out_rptr_bin;
-  s_in_wptr_bin <= r_in_wptr_bin + 1 when s_in_write = '1' else r_in_wptr_bin;
+  s_out_rptr_bin <= r_out_rptr_bin + 1 when s_out_ready = '1' else r_out_rptr_bin;
+  s_in_wptr_bin <= r_in_wptr_bin + 1 when s_in_valid = '1' else r_in_wptr_bin;
 
   in_wptr: process(p_clk(cin), s_in_resetn)
   begin
@@ -131,16 +131,16 @@ begin
       p_clk => p_clk,
       
       p_waddr => std_ulogic_vector(r_in_wptr_bin),
-      p_wen => s_in_write,
+      p_wen => s_in_valid,
       p_wdata => p_in_data,
 
       p_raddr => std_ulogic_vector(r_out_rptr_bin),
-      p_ren => s_out_read,
+      p_ren => s_out_ready,
       p_rdata => p_out_data
       );
 
-  s_out_read <= (not r_out_data_valid or p_out_read) and r_out_empty_n;
-  s_in_write <= p_in_write and r_in_full_n;
+  s_out_ready <= (not r_out_data_valid or p_out_ready) and r_out_valid;
+  s_in_valid <= p_in_valid and r_in_ready;
 
   going_async: if not is_synchronous generate
     process(s_out_rptr_gray, s_in_wptr_gray)
@@ -176,9 +176,9 @@ begin
         r_state <= GOING_EMPTY;
 
       elsif rising_edge(p_clk(cin)) then
-        if p_in_write = '0' and (r_out_data_valid = '0' or p_out_read = '1') then
+        if p_in_valid = '0' and (r_out_data_valid = '0' or p_out_ready = '1') then
           r_state <= GOING_EMPTY;
-        elsif p_in_write = '1' and (r_out_data_valid = '1' and p_out_read = '0') then
+        elsif p_in_valid = '1' and (r_out_data_valid = '1' and p_out_ready = '0') then
           r_state <= GOING_FULL;
         end if;
       end if;
@@ -193,30 +193,30 @@ begin
       r_out_data_valid <= '0';
 
     elsif rising_edge(p_clk(cout)) then
-      if p_out_read = '1' or r_out_data_valid = '0' then
-        r_out_data_valid <= s_out_read;
+      if p_out_ready = '1' or r_out_data_valid = '0' then
+        r_out_data_valid <= s_out_ready;
       end if;
     end if;
   end process;
 
-  s_in_full_n <= '0' when r_state = GOING_FULL and s_ptr_equal else s_in_resetn;
-  s_out_empty_n <= '0' when r_state = GOING_EMPTY and s_ptr_equal else s_out_resetn;
+  s_in_ready <= '0' when r_state = GOING_FULL and s_ptr_equal else s_in_resetn;
+  s_out_valid <= '0' when r_state = GOING_EMPTY and s_ptr_equal else s_out_resetn;
 
   in_full_sync: util.sync.sync_rising_edge
     port map(
-      p_in => s_in_full_n,
+      p_in => s_in_ready,
       p_clk => p_clk(cin),
-      p_out => r_in_full_n
+      p_out => r_in_ready
       );
 
   out_empty_sync: util.sync.sync_rising_edge
     port map(
-      p_in => s_out_empty_n,
+      p_in => s_out_valid,
       p_clk => p_clk(cout),
-      p_out => r_out_empty_n
+      p_out => r_out_valid
       );
 
-  p_in_full_n <= r_in_full_n;
-  p_out_empty_n <= r_out_data_valid;
+  p_in_ready <= r_in_ready;
+  p_out_valid <= r_out_data_valid;
   
 end inferred;

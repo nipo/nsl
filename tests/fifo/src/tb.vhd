@@ -60,8 +60,8 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_empty_n => s_left_val,
-      p_read => s_left_ack,
+      p_valid => s_left_val,
+      p_ready => s_left_ack,
       p_data => s_left_data
       );
 
@@ -72,8 +72,8 @@ begin
     port map(
       p_resetn => s_resetn_clk2,
       p_clk => s_clk2,
-      p_full_n => s_right_ack,
-      p_write => s_right_val,
+      p_ready => s_right_ack,
+      p_valid => s_right_val,
       p_data => s_right_data
       );
 
@@ -87,12 +87,12 @@ begin
       p_clk => s_clk,
 
       p_in_data => s_left_data,
-      p_in_write => s_left_val,
-      p_in_full_n => s_left_ack,
+      p_in_valid => s_left_val,
+      p_in_ready => s_left_ack,
 
       p_out_data => s_mid_data,
-      p_out_read => s_mid_ack,
-      p_out_empty_n => s_mid_val
+      p_out_ready => s_mid_ack,
+      p_out_valid => s_mid_val
       );
 
   fifo2: nsl.fifo.fifo_async
@@ -105,13 +105,13 @@ begin
 
       p_in_clk => s_clk,
       p_in_data => s_mid_data,
-      p_in_write => s_mid_val,
-      p_in_full_n => s_mid_ack,
+      p_in_valid => s_mid_val,
+      p_in_ready => s_mid_ack,
 
       p_out_clk => s_clk2,
       p_out_data => s_right_data,
-      p_out_read => s_right_ack,
-      p_out_empty_n => s_right_val
+      p_out_ready => s_right_ack,
+      p_out_valid => s_right_val
       );
 
   process

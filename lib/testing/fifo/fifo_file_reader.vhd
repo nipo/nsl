@@ -12,8 +12,8 @@ entity fifo_file_reader is
     p_resetn  : in  std_ulogic;
     p_clk     : in  std_ulogic;
 
-    p_empty_n: out std_ulogic;
-    p_read: in std_ulogic;
+    p_valid: out std_ulogic;
+    p_ready: in std_ulogic;
     p_data: out std_ulogic_vector(width-1 downto 0);
     
     p_done: out std_ulogic
@@ -74,7 +74,7 @@ begin
     r_done <= '0';
 
     if not r_is_reset and rising_edge(p_clk) then
-      if r_data_valid = '0' or p_read = '1' then
+      if r_data_valid = '0' or p_ready = '1' then
         if r_wait_cycles /= 0 then
           r_data_valid <= '0';
           r_wait_cycles <= r_wait_cycles - 1;
@@ -93,7 +93,7 @@ begin
         else
           r_data_valid <= '0';
         end if;
-      elsif p_read = '1' then
+      elsif p_ready = '1' then
         r_data_valid <= '0';
       end if;
     end if;
@@ -103,7 +103,7 @@ begin
   begin
     if falling_edge(p_clk) then
       p_data <= r_data;
-      p_empty_n <= r_data_valid;
+      p_valid <= r_data_valid;
       p_done <= r_done;
     end if;
   end process;

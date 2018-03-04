@@ -67,8 +67,8 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_empty_n => s_data_valid(0),
-      p_read => s_accept,
+      p_valid => s_data_valid(0),
+      p_ready => s_accept,
       p_data => s_data(0)
       );
 
@@ -79,8 +79,8 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_full_n => open,
-      p_write => s_data_valid(1),
+      p_ready => open,
+      p_valid => s_data_valid(1),
       p_data => s_data(1)
       );
 

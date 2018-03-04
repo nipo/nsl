@@ -12,8 +12,8 @@ entity fifo_file_checker is
     p_resetn  : in  std_ulogic;
     p_clk     : in  std_ulogic;
 
-    p_full_n: out std_ulogic;
-    p_write: in std_ulogic;
+    p_ready: out std_ulogic;
+    p_valid: in std_ulogic;
     p_data: in std_ulogic_vector(width-1 downto 0);
     
     p_done: out std_ulogic
@@ -101,13 +101,13 @@ begin
     end if;
   end process;
 
-  process (p_clk, p_write, r_accept)
+  process (p_clk, p_valid, r_accept)
     variable data : std_logic_vector(width-1 downto 0);
     variable udata : std_ulogic_vector(width-1 downto 0);
     variable complaint : line;
   begin
     if rising_edge(p_clk) then
-      if not is_reset and is_open and r_accept = '1' and p_write = '1' then
+      if not is_reset and is_open and r_accept = '1' and p_valid = '1' then
         readline(fd, line_content);
         slv_read(line_content, data);
         read(line_content, wait_cycles);
@@ -132,7 +132,7 @@ begin
   moore: process (p_clk)
   begin
     if falling_edge(p_clk) then
-      p_full_n <= r_accept;
+      p_ready <= r_accept;
     end if;
     if not is_reset and is_open then
       if endfile(fd) then

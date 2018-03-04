@@ -12,12 +12,12 @@ entity fifo_narrower is
     p_clk     : in  std_ulogic;
 
     p_out_data    : out std_ulogic_vector(width_out-1 downto 0);
-    p_out_read    : in  std_ulogic;
-    p_out_empty_n : out std_ulogic;
+    p_out_ready    : in  std_ulogic;
+    p_out_valid : out std_ulogic;
 
     p_in_data   : in  std_ulogic_vector(parts*width_out-1 downto 0);
-    p_in_write  : in  std_ulogic;
-    p_in_full_n : out std_ulogic
+    p_in_valid  : in  std_ulogic;
+    p_in_ready : out std_ulogic
     );
 end fifo_narrower;
 
@@ -43,26 +43,26 @@ begin
   end process reg;
 
   s_can_shift <= r_filled(0);
-  s_can_take <= (not r_filled(0)) or (not r_filled(1) and p_out_read);
+  s_can_take <= (not r_filled(0)) or (not r_filled(1) and p_out_ready);
   s_has_data <= r_filled(0);
 
-  process (s_can_shift, s_can_take, s_has_data, r_filled, p_in_write, p_out_read, r_buffer)
+  process (s_can_shift, s_can_take, s_has_data, r_filled, p_in_valid, p_out_ready, r_buffer)
   begin
     s_filled <= r_filled;
     s_buffer <= r_buffer;
 
-    if s_can_take = '1' and p_in_write = '1' then
+    if s_can_take = '1' and p_in_valid = '1' then
       s_filled <= (others => '1');
       s_buffer <= p_in_data;
-    elsif s_can_shift = '1' and p_out_read = '1' then
+    elsif s_can_shift = '1' and p_out_ready = '1' then
       s_filled(parts-1) <= '0';
       s_filled(parts-2 downto 0) <= r_filled(parts-1 downto 1);
       s_buffer(width_in - width_out - 1 downto 0) <= r_buffer(width_in - 1 downto width_out);
     end if;
   end process;
   
-  p_out_empty_n <= r_filled(0);
-  p_in_full_n <= s_can_take;
+  p_out_valid <= r_filled(0);
+  p_in_ready <= s_can_take;
   p_out_data <= r_buffer(width_out - 1 downto 0);
    
 end rtl;

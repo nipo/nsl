@@ -20,12 +20,12 @@ entity fifo_2p is
     p_clk    : in  std_ulogic_vector(0 to clk_count-1);
 
     p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_out_read    : in  std_ulogic;
-    p_out_empty_n : out std_ulogic;
+    p_out_ready    : in  std_ulogic;
+    p_out_valid : out std_ulogic;
 
     p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-    p_in_write  : in  std_ulogic;
-    p_in_full_n : out std_ulogic
+    p_in_valid  : in  std_ulogic;
+    p_in_ready : out std_ulogic
     );
 end fifo_2p;
 
@@ -37,7 +37,7 @@ architecture ram2 of fifo_2p is
   signal s_resetn: std_ulogic_vector(0 to clk_count-1);
   signal s_out_wptr, s_in_rptr: unsigned(count_t'range);
 
-  signal s_read2 : std_ulogic;
+  signal s_ready2 : std_ulogic;
 
   constant is_synchronous: boolean := clk_count = 1;
 
@@ -74,14 +74,14 @@ begin
     end if;
   end process;
 
-  transition_in: process(in_r, p_in_write, s_in_rptr)
+  transition_in: process(in_r, p_in_valid, s_in_rptr)
   begin
     in_rin <= in_r;
 
     in_rin.move <= '0';
 
     if in_r.blocked = '0' then
-      if p_in_write = '1' then
+      if p_in_valid = '1' then
         in_rin.ptr <= in_r.ptr + 1;
         in_rin.move <= '1';
 
@@ -94,14 +94,14 @@ begin
     end if;
   end process;
 
-  transition_out: process(out_r, p_out_read, s_out_wptr)
+  transition_out: process(out_r, p_out_ready, s_out_wptr)
   begin
     out_rin <= out_r;
 
     out_rin.move <= '0';
 
     if out_r.blocked = '0' then
-      if p_out_read = '1' then
+      if p_out_ready = '1' then
         out_rin.ptr <= out_r.ptr + 1;
         out_rin.move <= '1';
 
@@ -177,7 +177,7 @@ begin
     s_out_wptr <= in_r.ptr;
   end generate;
 
-  s_read2 <= out_rin.move or out_r.blocked;
+  s_ready2 <= out_rin.move or out_r.blocked;
 
   ram: hwdep.ram.ram_2p_r_w
     generic map(
@@ -194,11 +194,11 @@ begin
       p_wdata => p_in_data,
 
       p_raddr => std_ulogic_vector(out_rin.ptr),
-      p_ren => s_read2,
+      p_ren => s_ready2,
       p_rdata => p_out_data
       );
 
-  p_in_full_n <= not in_r.blocked and s_resetn(0);
-  p_out_empty_n <= not out_r.blocked;
+  p_in_ready <= not in_r.blocked and s_resetn(0);
+  p_out_valid <= not out_r.blocked;
 
 end ram2;

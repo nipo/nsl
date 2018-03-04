@@ -50,7 +50,7 @@ begin
 
       p_delta => s_in_d(DW-1 downto 0),
       p_data => s_in_d(DW+TW-1 downto DW),
-      p_write => s_in_w_rok
+      p_valid => s_in_w_rok
       );
   
   fifo: nsl.fifo.fifo_sync
@@ -60,11 +60,11 @@ begin
     ) port map (
       p_resetn => s_resetn,
       p_clk => s_clk,
-      p_out_empty_n => s_mid_w_rok,
-      p_out_read => s_mid_r_wok,
+      p_out_valid => s_mid_w_rok,
+      p_out_ready => s_mid_r_wok,
       p_out_data => s_mid_d,
-      p_in_full_n => s_in_r_wok,
-      p_in_write => s_in_w_rok,
+      p_in_ready => s_in_r_wok,
+      p_in_valid => s_in_w_rok,
       p_in_data => s_in_d
     );
 
@@ -78,12 +78,12 @@ begin
       p_clk     => s_clk,
 
       p_out_data    => s_out_d,
-      p_out_read    => s_out_r_wok,
-      p_out_empty_n => s_out_w_rok,
+      p_out_ready    => s_out_r_wok,
+      p_out_valid => s_out_w_rok,
 
       p_in_data   => s_mid_d,
-      p_in_write  => s_mid_w_rok,
-      p_in_full_n => s_mid_r_wok
+      p_in_valid  => s_mid_w_rok,
+      p_in_ready => s_mid_r_wok
       );
 
   clock_gen: process(s_clk)
