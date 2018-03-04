@@ -54,4 +54,18 @@ package sync is
       );
   end component;
 
+  component sync_input is
+    generic (
+      N: integer := 2
+      );
+    port (
+      p_clk: in std_ulogic;
+      p_resetn: in std_ulogic;
+      p_input: in std_ulogic;
+      p_output: out std_ulogic;
+      p_rise: out std_ulogic;
+      p_fall: out std_ulogic
+      );
+  end component;
+
 end package sync;
