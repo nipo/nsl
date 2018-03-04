@@ -18,6 +18,11 @@ package sized is
     ready : std_ulogic;
   end record;
 
+  type sized_bus is record
+    req: sized_req;
+    ack: sized_ack;
+  end record;
+
   type sized_req_array is array(natural range <>) of sized_req;
   type sized_ack_array is array(natural range <>) of sized_ack;
 

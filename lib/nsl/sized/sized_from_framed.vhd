@@ -24,8 +24,7 @@ end entity;
 
 architecture rtl of sized_from_framed is
 
-  signal s_data_in_val, s_data_out_val: sized_req;
-  signal s_data_in_ack, s_data_out_ack: sized_ack;
+  signal s_data_in, s_data_out: sized_bus;
 
   type state_t is (
     STATE_RESET,
@@ -53,7 +52,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, p_in_val, p_out_ack, s_data_out_val, s_data_in_ack)
+  transition: process(r, p_in_val, p_out_ack, s_data_out.req, s_data_in.ack)
   begin
     rin <= r;
 
@@ -63,7 +62,7 @@ begin
         rin.count <= (rin.count'range => '1');
 
       when STATE_DATA =>
-        if p_in_val.valid = '1' and s_data_in_ack.ready = '1' then
+        if p_in_val.valid = '1' and s_data_in.ack.ready = '1' then
           rin.count <= r.count + 1;
           if p_in_val.last = '1' then
             rin.state <= STATE_SIZE_L;
@@ -81,7 +80,7 @@ begin
         end if;
 
       when STATE_DATA_FLUSH =>
-        if p_out_ack.ready = '1' and s_data_out_val.valid = '1' then
+        if p_out_ack.ready = '1' and s_data_out.req.valid = '1' then
           rin.count <= r.count - 1;
           if r.count = 0 then
             rin.state <= STATE_DATA;
@@ -99,30 +98,30 @@ begin
       p_resetn => p_resetn,
       p_clk(0) => p_clk,
 
-      p_out_val => s_data_out_val,
-      p_out_ack => s_data_out_ack,
+      p_out_val => s_data_out.req,
+      p_out_ack => s_data_out.ack,
 
-      p_in_val => s_data_in_val,
-      p_in_ack => s_data_in_ack
+      p_in_val => s_data_in.req,
+      p_in_ack => s_data_in.ack
       );
   
-  mux: process(r, p_in_val, s_data_in_ack, p_out_ack, s_data_out_val)
+  mux: process(r, p_in_val, s_data_in.ack, p_out_ack, s_data_out.req)
   begin
     p_out_val.valid <= '0';
     p_out_val.data <= (others => '-');
-    s_data_in_val.valid <= '0';
-    s_data_in_val.data <= (others => '-');
+    s_data_in.req.valid <= '0';
+    s_data_in.req.data <= (others => '-');
     p_in_ack.ready <= '0';
-    s_data_out_ack.ready <= '0';
+    s_data_out.ack.ready <= '0';
 
     case r.state is
       when STATE_RESET =>
         null;
         
       when STATE_DATA =>
-        s_data_in_val.valid <= p_in_val.valid;
-        s_data_in_val.data <= p_in_val.data;
-        p_in_ack.ready <= s_data_in_ack.ready;
+        s_data_in.req.valid <= p_in_val.valid;
+        s_data_in.req.data <= p_in_val.data;
+        p_in_ack.ready <= s_data_in.ack.ready;
 
       when STATE_SIZE_L =>
         p_out_val.valid <= '1';
@@ -133,8 +132,8 @@ begin
         p_out_val.data <= std_ulogic_vector(r.count(15 downto 8));
 
       when STATE_DATA_FLUSH =>
-        p_out_val <= s_data_out_val;
-        s_data_out_ack <= p_out_ack;
+        p_out_val <= s_data_out.req;
+        s_data_out.ack <= p_out_ack;
 
     end case;
   end process;

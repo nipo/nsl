@@ -9,9 +9,15 @@ package routed is
 
   subtype routed_req is nsl.framed.framed_req;
   subtype routed_ack is nsl.framed.framed_ack;
+
+  type routed_bus is record
+    req: routed_req;
+    ack: routed_ack;
+  end record;
   
   type routed_req_array is array(natural range <>) of routed_req;
   type routed_ack_array is array(natural range <>) of routed_ack;
+  type routed_bus_array is array(natural range <>) of routed_bus;
   
   subtype component_id is natural range 0 to 15;
   type routed_routing_table is array(component_id) of natural;

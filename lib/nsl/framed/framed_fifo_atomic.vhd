@@ -27,8 +27,8 @@ end entity;
 architecture rtl of framed_fifo_atomic is
 
   -- Just to be able to read them back
-  signal s_out_val : nsl.framed.framed_req;
-  signal s_in_ack, s_out_ack : nsl.framed.framed_ack;
+  signal s_out : nsl.framed.framed_bus;
+  signal s_in_ack : nsl.framed.framed_ack;
   signal s_has_one : std_ulogic;
   constant nw : natural := 2 ** log2(depth);
 
@@ -56,11 +56,11 @@ begin
     end if;
   end process;
 
-  process(p_in_val, s_out_ack, s_out_val, s_in_ack, r.complete)
+  process(p_in_val, s_out.ack, s_out.req, s_in_ack, r.complete)
     variable inc, dec : boolean;
   begin
     inc := p_in_val.valid = '1' and s_in_ack.ready = '1' and p_in_val.last = '1';
-    dec := s_out_val.valid = '1' and s_out_ack.ready = '1' and s_out_val.last = '1';
+    dec := s_out.req.valid = '1' and s_out.ack.ready = '1' and s_out.req.last = '1';
 
     rin.complete <= r.complete;
     if inc and not dec then
@@ -72,7 +72,7 @@ begin
     if r.flush = '0' then
       rin.flush <= not s_in_ack.ready;
     else
-      rin.flush <= s_out_val.valid and not s_out_val.last;
+      rin.flush <= s_out.req.valid and not s_out.req.last;
     end if;
   end process;
   
@@ -86,15 +86,15 @@ begin
       p_clk => p_clk,
       p_in_val => p_in_val,
       p_in_ack => s_in_ack,
-      p_out_val => s_out_val,
-      p_out_ack => s_out_ack
+      p_out_val => s_out.req,
+      p_out_ack => s_out.ack
       );
 
   s_has_one <= '1' when r.complete /= 0 else '0';
   p_in_ack <= s_in_ack;
-  s_out_ack.ready <= p_out_ack.ready and (s_has_one or r.flush);
-  p_out_val.valid <= s_out_val.valid and (s_has_one or r.flush);
-  p_out_val.data <= s_out_val.data;
-  p_out_val.last <= s_out_val.last;
+  s_out.ack.ready <= p_out_ack.ready and (s_has_one or r.flush);
+  p_out_val.valid <= s_out.req.valid and (s_has_one or r.flush);
+  p_out_val.data <= s_out.req.data;
+  p_out_val.last <= s_out.req.last;
 
 end architecture;

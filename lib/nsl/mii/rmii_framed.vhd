@@ -31,12 +31,9 @@ end entity;
 
 architecture hier of rmii_framed is
 
-  signal s_to_mac_atomic_val : nsl.framed.framed_req;
-  signal s_to_mac_atomic_ack : nsl.framed.framed_ack;
-  signal s_to_mac_sync_val : nsl.framed.framed_req;
-  signal s_to_mac_sync_ack : nsl.framed.framed_ack;
-  signal s_from_mac_val : nsl.framed.framed_req;
-  signal s_from_mac_ack : nsl.framed.framed_ack;
+  signal s_to_mac_atomic : nsl.framed.framed_bus;
+  signal s_to_mac_sync : nsl.framed.framed_bus;
+  signal s_from_mac : nsl.framed.framed_bus;
   
 begin
 
@@ -46,8 +43,8 @@ begin
       p_clk => p_clk_rmii,
       
       p_rmii_data => p_from_mac,
-      p_framed_val => s_from_mac_val,
-      p_framed_ack => s_from_mac_ack
+      p_framed_val => s_from_mac.req,
+      p_framed_ack => s_from_mac.ack
       );
 
   to_mac: nsl.mii.rmii_from_framed
@@ -59,8 +56,8 @@ begin
       p_clk => p_clk_rmii,
       
       p_rmii_data => p_to_mac,
-      p_framed_val => s_to_mac_atomic_val,
-      p_framed_ack => s_to_mac_atomic_ack
+      p_framed_val => s_to_mac_atomic.req,
+      p_framed_ack => s_to_mac_atomic.ack
       );
 
   to_mac_atomic: nsl.framed.framed_fifo_atomic
@@ -71,10 +68,10 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk(0) => p_clk_rmii,
-      p_in_val => s_to_mac_sync_val,
-      p_in_ack => s_to_mac_sync_ack,
-      p_out_val => s_to_mac_atomic_val,
-      p_out_ack => s_to_mac_atomic_ack
+      p_in_val => s_to_mac_sync.req,
+      p_in_ack => s_to_mac_sync.ack,
+      p_out_val => s_to_mac_atomic.req,
+      p_out_ack => s_to_mac_atomic.ack
       );
 
   to_mac_resync: nsl.framed.framed_fifo
@@ -88,8 +85,8 @@ begin
       p_clk(1) => p_clk_rmii,
       p_in_val => p_in_val,
       p_in_ack => p_in_ack,
-      p_out_val => s_to_mac_sync_val,
-      p_out_ack => s_to_mac_sync_ack
+      p_out_val => s_to_mac_sync.req,
+      p_out_ack => s_to_mac_sync.ack
       );
 
 
@@ -102,8 +99,8 @@ begin
       p_resetn => p_resetn,
       p_clk(0) => p_clk_rmii,
       p_clk(1) => p_clk_framed,
-      p_in_val => s_from_mac_val,
-      p_in_ack => s_from_mac_ack,
+      p_in_val => s_from_mac.req,
+      p_in_ack => s_from_mac.ack,
       p_out_val => p_out_val,
       p_out_ack => p_out_ack
       );

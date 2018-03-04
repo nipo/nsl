@@ -16,8 +16,14 @@ package framed is
     ready  : std_ulogic;
   end record;
   
+  type framed_bus is record
+    req: framed_req;
+    ack: framed_ack;
+  end record;
+  
   type framed_req_array is array(natural range <>) of framed_req;
   type framed_ack_array is array(natural range <>) of framed_ack;
+  type framed_bus_array is array(natural range <>) of framed_bus;
 
   component framed_fifo is
     generic(
