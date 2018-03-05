@@ -31,7 +31,9 @@ architecture rtl of spi_master is
     ST_RESET,
     ST_IDLE,
     ST_DATA_GET,
-    ST_SHIFT,
+    ST_CS_UPDATE,
+    ST_SHIFT_SCK_L,
+    ST_SHIFT_SCK_H,
     ST_DATA_PUT,
     ST_RSP
     );
@@ -46,7 +48,7 @@ architecture rtl of spi_master is
     last       : std_ulogic;
     div        : unsigned(4 downto 0);
     cnt        : unsigned(4 downto 0);
-    sck, mosi  : std_ulogic;
+    mosi       : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -80,7 +82,6 @@ begin
         rin.selected <= 63;
         rin.div <= "10000";
         rin.cnt <= (others => '0');
-        rin.sck <= '0';
 
       when ST_IDLE =>
         if p_cmd_val.valid = '1' then
@@ -97,6 +98,8 @@ begin
 
           elsif std_match(r.cmd, SPI_CMD_SELECT) then
             rin.selected <= to_integer(unsigned(r.cmd(4 downto 0)));
+            rin.cnt <= r.div;
+            rin.state <= ST_CS_UPDATE;
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_OUT)
             or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
@@ -104,8 +107,9 @@ begin
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
-            rin.state <= ST_SHIFT;
+            rin.state <= ST_SHIFT_SCK_L;
             rin.shreg <= (others => '1');
+            rin.mosi <= '1';
             rin.bit_count <= 7;
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
           end if;
@@ -114,62 +118,71 @@ begin
       when ST_DATA_GET =>
         if p_cmd_val.valid = '1' then
           rin.shreg <= p_cmd_val.data;
+          rin.mosi <= p_cmd_val.data(7);
           rin.last <= p_cmd_val.last;
-          rin.state <= ST_SHIFT;
+          rin.state <= ST_SHIFT_SCK_L;
           rin.bit_count <= 7;
         end if;
         
-      when ST_SHIFT =>
+      when ST_CS_UPDATE =>
         if ready then
           rin.cnt <= r.div;
+          rin.state <= ST_IDLE;
+        end if;
+        
+      when ST_SHIFT_SCK_L =>
+        if ready then
+          rin.cnt <= r.div;
+          rin.state <= ST_SHIFT_SCK_H;
+          rin.shreg <= r.shreg(6 downto 0) & p_miso;
+        end if;
 
-          if r.sck = '1' then -- falling edge
-            rin.sck <= '0';
-            rin.mosi <= r.shreg(7);
-          else -- rising edge
-            rin.sck <= '1';
-            rin.shreg <= r.shreg(6 downto 0) & p_miso;
-            rin.bit_count <= (r.bit_count - 1) mod 8;
-            if r.bit_count = 0 then
-              if std_match(r.cmd, SPI_CMD_SHIFT_IN) or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
-                rin.state <= ST_DATA_PUT;
-              else
-                rin.word_count <= (r.word_count - 1) mod 64;
-                if r.word_count /= 0 then
-                  rin.state <= ST_DATA_GET;
-                else
-                  rin.state <= ST_IDLE;
-                end if;
-              end if;
+      when ST_SHIFT_SCK_H =>
+        if ready then
+          rin.cnt <= r.div;
+          rin.mosi <= r.shreg(7);
+          rin.bit_count <= (r.bit_count - 1) mod 8;
+
+          if r.bit_count /= 0 then
+            rin.state <= ST_SHIFT_SCK_L;
+          elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
+            rin.state <= ST_DATA_PUT;
+          else
+            rin.word_count <= (r.word_count - 1) mod 64;
+            if r.word_count /= 0 then
+              rin.state <= ST_DATA_GET;
+            else
+              rin.state <= ST_CS_UPDATE;
             end if;
           end if;
         end if;
 
       when ST_DATA_PUT =>
         if p_rsp_ack.ready = '1' then
+          rin.cnt <= r.div;
           rin.word_count <= (r.word_count - 1) mod 64;
 
-          if r.word_count /= 0 then
-            if std_match(r.cmd, SPI_CMD_SHIFT_IN) then
-              rin.shreg <= (others => '1');
-              rin.bit_count <= 7;
-              rin.state <= ST_SHIFT;
-            else
-              rin.state <= ST_DATA_GET;
-            end if;
+          if r.word_count = 0 then
+            rin.state <= ST_CS_UPDATE;
+          elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
+            rin.shreg <= (others => '1');
+            rin.mosi <= '1';
+            rin.bit_count <= 7;
+            rin.state <= ST_SHIFT_SCK_L;
           else
-            rin.state <= ST_IDLE;
+            rin.state <= ST_DATA_GET;
           end if;
         end if;
 
     end case;
   end process;
 
+  p_mosi <= r.mosi;
+
   moore: process(r)
   begin
-    p_sck <= r.sck;
+    p_sck <= '0';
     p_csn <= (others => '1');
-    p_mosi <= r.mosi;
     p_cmd_ack.ready <= '0';
     p_rsp_val.valid <= '0';
     p_rsp_val.last <= '-';
@@ -179,9 +192,12 @@ begin
     end if;
     
     case r.state is
-      when ST_RESET | ST_SHIFT =>
+      when ST_RESET | ST_CS_UPDATE | ST_SHIFT_SCK_L =>
         null;
-        
+
+      when ST_SHIFT_SCK_H =>
+        p_sck <= '1';
+
       when ST_IDLE | ST_DATA_GET =>
         p_cmd_ack.ready <= '1';
         
