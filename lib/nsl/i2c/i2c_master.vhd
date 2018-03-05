@@ -98,8 +98,10 @@ architecture rtl of i2c_master is
 
   type state_t is (
     ST_RESET,
-    ST_IDLE,
-    ST_DONE,
+    ST_IDLE_STARTED,
+    ST_DONE_STARTED,
+    ST_IDLE_STOPPED,
+    ST_DONE_STOPPED,
     ST_START_IDLE,
     ST_START_RESTART,
     ST_START_SDA,
@@ -119,7 +121,7 @@ architecture rtl of i2c_master is
     state                : state_t;
     data                 : std_ulogic_vector(7 downto 0);
     ack                  : std_ulogic;
-    started              : std_ulogic;
+    sda                  : std_ulogic;
     bit_count            : natural range 0 to 8;
     ctr                  : natural range 0 to 2 ** (divisor_width + 1) - 1;
   end record;
@@ -137,7 +139,7 @@ begin
     end if;
   end process;
 
-  transition : process (p_cmd, p_divisor, p_scl, p_sda, p_wdata, r)
+  transition : process (p_cmd, p_divisor, p_scl, p_sda, p_wdata, r, p_rack)
     variable ready, step, double_step : boolean;
   begin
     rin <= r;
@@ -154,42 +156,41 @@ begin
     case r.state is
       when ST_RESET =>
         step := true;
-        rin.state <= ST_IDLE;
-        rin.started <= '0';
+        rin.state <= ST_IDLE_STOPPED;
 
-      when ST_IDLE =>
+      when ST_IDLE_STOPPED =>
         case p_cmd is
           when I2C_NOOP =>
             null;
 
           when I2C_START =>
             step := true;
-            if r.started = '1' then
-              rin.state <= ST_START_RESTART;
-            else
-              rin.started <= '1';
-              rin.state <= ST_START_IDLE;
-            end if;
+            rin.state <= ST_START_IDLE;
+
+          when I2C_STOP | I2C_READ | I2C_WRITE =>
+            rin.state <= ST_DONE_STOPPED;
+        end case;
+
+      when ST_IDLE_STARTED =>
+        case p_cmd is
+          when I2C_NOOP =>
+            null;
+
+          when I2C_START =>
+            step := true;
+            rin.state <= ST_START_RESTART;
 
           when I2C_STOP =>
-            if r.started = '1' then
-              step := true;
-              rin.started <= '0';
-              rin.state <= ST_STOP_IDLE;
-            else
-              rin.state <= ST_DONE;
-            end if;
+            step := true;
+            rin.state <= ST_STOP_IDLE;
 
           when I2C_READ | I2C_WRITE =>
-            if r.started = '1' then
-              step := true;
-              rin.state <= ST_BIT_SDA_SETTLE;
-              rin.data <= p_wdata;
-              rin.ack <= p_rack;
-              rin.bit_count <= 8;
-            else
-              rin.state <= ST_DONE;
-            end if;
+            step := true;
+            rin.state <= ST_BIT_SDA_SETTLE;
+            rin.data <= p_wdata;
+            rin.sda <= p_wdata(7);
+            rin.ack <= p_rack;
+            rin.bit_count <= 8;
         end case;
 
       when ST_START_IDLE =>
@@ -211,7 +212,7 @@ begin
       when ST_START_SCL =>
         if ready then
           step := true;
-          rin.state <= ST_DONE;
+          rin.state <= ST_DONE_STARTED;
         end if;
 
       when ST_START_RECOVER =>
@@ -251,7 +252,7 @@ begin
         if ready then
           step := true;
           if p_sda = '1' then
-            rin.state <= ST_DONE;
+            rin.state <= ST_DONE_STOPPED;
           else
             rin.state <= ST_STOP_IDLE;
           end if;
@@ -286,14 +287,20 @@ begin
           if r.bit_count /= 0 then
             rin.bit_count <= r.bit_count - 1;
             rin.state <= ST_BIT_SDA_SETTLE;
+            rin.sda <= r.data(7);
           else
-            rin.state <= ST_DONE;
+            rin.state <= ST_DONE_STARTED;
           end if;
         end if;
 
-      when ST_DONE =>
+      when ST_DONE_STARTED =>
         if p_cmd = I2C_NOOP then
-          rin.state <= ST_IDLE;
+          rin.state <= ST_IDLE_STARTED;
+        end if;
+
+      when ST_DONE_STOPPED =>
+        if p_cmd = I2C_NOOP then
+          rin.state <= ST_IDLE_STOPPED;
         end if;
     end case;
 
@@ -307,11 +314,11 @@ begin
   moore : process (p_cmd, r)
   begin
     case r.state is
-      when ST_IDLE =>
+      when ST_IDLE_STOPPED | ST_IDLE_STARTED =>
         p_busy <= '0';
         p_done <= '0';
 
-      when ST_DONE =>
+      when ST_DONE_STOPPED | ST_DONE_STARTED =>
         p_done <= '1';
         p_busy <= '1';
 
@@ -321,33 +328,39 @@ begin
     end case;
     
     case r.state is
-      when ST_START_SCL
-        | ST_START_RESTART
-        | ST_BIT_SDA_SETTLE
-        | ST_BIT_SCL_LOW
-        | ST_STOP_IDLE =>
-        p_scl_drain <= '1';
-        
-      when ST_IDLE
-        | ST_DONE =>
-        p_scl_drain <= r.started;
-
-      when others =>
+      when ST_IDLE_STOPPED
+        | ST_DONE_STOPPED
+        | ST_START_IDLE
+        | ST_RESET
+        | ST_START_RECOVER
+        | ST_START_SDA
+        | ST_STOP_SCL_RISE
+        | ST_STOP_SCL
+        | ST_STOP_SDA
+        | ST_BIT_SCL_RISE
+        | ST_BIT_SCL_HIGH =>
         p_scl_drain <= '0';
+
+      when ST_IDLE_STARTED
+        | ST_DONE_STARTED
+        | ST_START_RESTART
+        | ST_START_SCL
+        | ST_STOP_IDLE
+        | ST_BIT_SDA_SETTLE
+        | ST_BIT_SCL_LOW =>
+        p_scl_drain <= '1';
     end case;
 
     case r.state is
-      when ST_START_SDA
+      when ST_IDLE_STARTED
+        | ST_DONE_STARTED
+        | ST_START_SDA
         | ST_START_SCL
         | ST_START_RECOVER
         | ST_STOP_SCL
         | ST_STOP_SCL_RISE
         | ST_STOP_IDLE =>
         p_sda_drain <= '1';
-
-      when ST_IDLE
-        | ST_DONE =>
-        p_scl_drain <= r.started;
 
       when ST_BIT_SCL_HIGH
         | ST_BIT_SCL_LOW
@@ -363,7 +376,7 @@ begin
           if r.bit_count = 0 then
             p_sda_drain <= '0';
           else
-            p_sda_drain <= not r.data(7);
+            p_sda_drain <= not r.sda;
           end if;
         end if;
 

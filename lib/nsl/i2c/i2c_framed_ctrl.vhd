@@ -66,7 +66,7 @@ begin
     end if;
   end process;
 
-  transition : process (r, p_cmd_val, p_rsp_ack, s_busy, s_done)
+  transition : process (r, p_cmd_val, p_rsp_ack, s_busy, s_done, s_rdata, s_wack)
   begin
     rin <= r;
 
@@ -102,12 +102,12 @@ begin
         end if;
 
       when ST_RSP_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           rin.state <= ST_IDLE;
         end if;
 
       when ST_ACK_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           if r.word_count = 0 then
             rin.state <= ST_RSP_PUT;
           else
@@ -117,7 +117,7 @@ begin
         end if;
 
       when ST_DATA_PUT =>
-        if p_rsp_ack.ack = '1' then
+        if p_rsp_ack.ready = '1' then
           if r.word_count = 0 then
             rin.state <= ST_RSP_PUT;
           else
