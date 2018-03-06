@@ -122,6 +122,7 @@ architecture rtl of i2c_master is
     data                 : std_ulogic_vector(7 downto 0);
     ack                  : std_ulogic;
     sda                  : std_ulogic;
+    wait_stop            : std_ulogic;
     bit_count            : natural range 0 to 8;
     ctr                  : natural range 0 to 2 ** (divisor_width + 1) - 1;
   end record;
@@ -157,6 +158,7 @@ begin
       when ST_RESET =>
         step := true;
         rin.state <= ST_IDLE_STOPPED;
+        rin.wait_stop <= '0';
 
       when ST_IDLE_STOPPED =>
         case p_cmd is
@@ -164,10 +166,18 @@ begin
             null;
 
           when I2C_START =>
-            step := true;
-            rin.state <= ST_START_IDLE;
+            if rin.wait_stop = '1' then
+              rin.state <= ST_DONE_STOPPED;
+            else
+              step := true;
+              rin.state <= ST_START_IDLE;
+            end if;
 
-          when I2C_STOP | I2C_READ | I2C_WRITE =>
+          when I2C_STOP =>
+            rin.state <= ST_DONE_STOPPED;
+            rin.wait_stop <= '0';
+
+          when I2C_READ | I2C_WRITE =>
             rin.state <= ST_DONE_STOPPED;
         end case;
 
@@ -288,6 +298,9 @@ begin
             rin.bit_count <= r.bit_count - 1;
             rin.state <= ST_BIT_SDA_SETTLE;
             rin.sda <= r.data(7);
+          elsif p_cmd = I2C_WRITE and r.ack = '0' then
+            rin.wait_stop <= '1';
+            rin.state <= ST_STOP_IDLE;
           else
             rin.state <= ST_DONE_STARTED;
           end if;

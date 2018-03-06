@@ -109,7 +109,7 @@ begin
       when ST_ACK_PUT =>
         if p_rsp_ack.ready = '1' then
           if r.word_count = 0 then
-            rin.state <= ST_RSP_PUT;
+            rin.state <= ST_IDLE;
           else
             rin.state <= ST_DATA_GET;
             rin.word_count <= r.word_count - 1;
@@ -119,7 +119,7 @@ begin
       when ST_DATA_PUT =>
         if p_rsp_ack.ready = '1' then
           if r.word_count = 0 then
-            rin.state <= ST_RSP_PUT;
+            rin.state <= ST_IDLE;
           else
             rin.state <= ST_READ;
             rin.word_count <= r.word_count - 1;
@@ -176,7 +176,11 @@ begin
       when ST_DATA_PUT =>
         p_rsp_val.valid <= '1';
         p_rsp_val.data <= r.data;
-        p_rsp_val.last <= '0';
+        if r.word_count = 0 then
+          p_rsp_val.last <= r.last;
+        else
+          p_rsp_val.last <= '0';
+        end if;
 
       when ST_RSP_PUT =>
         p_rsp_val.valid <= '1';
@@ -186,7 +190,11 @@ begin
       when ST_ACK_PUT =>
         p_rsp_val.valid <= '1';
         p_rsp_val.data <= "0000000" & r.ack;
-        p_rsp_val.last <= '0';
+        if r.word_count = 0 then
+          p_rsp_val.last <= r.last;
+        else
+          p_rsp_val.last <= '0';
+        end if;
 
       when others =>
         p_rsp_val.valid <= '0';

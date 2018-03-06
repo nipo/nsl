@@ -69,12 +69,10 @@ class I2CRsp(Txn):
 
     def read(self, data, ack):
         self.cmds += list(data)
-        self.cmds += [0x00]
 
     def write(self, data, ack = True):
         self.cmds += [1] * (len(data) - 1)
         self.cmds.append(int(ack))
-        self.cmds.append(0)
 
 class I2CMem:
     def __init__(self, bus, addr):

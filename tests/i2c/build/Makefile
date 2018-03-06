@@ -8,7 +8,7 @@ target_speed = -2
 
 include ../../../build/build.mk
 
-tb.ghw: i2c_responses.txt i2c_commands.txt
+$(target).vcd: i2c_responses.txt i2c_commands.txt
 
 i2c_responses.txt i2c_commands.txt: txn_gen
 	./$< $@
