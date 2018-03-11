@@ -43,7 +43,6 @@ $(call lib_cf,$1): $(foreach l,$($1-lib-deps),$(call lib_cf,$($l-library))) $($1
 	$(SILENT)mkdir -p $$(dir $$@)
 	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do,$s,-i))
 	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do,$s,-a))
-	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do2,$s,-e))
 
 clean-dirs += $(filter-out ./,$(dir $(call lib_cf,$1)))
 
@@ -60,6 +59,9 @@ $(target): $(foreach l,$(libraries),$(call lib_cf,$l)) FORCE
 		$(top-entity)
 
 $(target).ghw: $(target)
-	$(SILENT)./$< --wave=$@
+	$(SILENT)$(GHDL) -r -v \
+		$(GHDL_OPTS) \
+		$(foreach l,$(libraries),-P$(dir $(call lib_cf,$l))) \
+		$(top-entity) --wave=$@
 
 clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf *.lst $(target)
