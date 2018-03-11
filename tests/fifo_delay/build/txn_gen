@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import sys
+import random
+
+class FifoFile:
+    def __init__(self, filename):
+        self.output = open(filename, "w")
+
+    def put(self, data, mask, length, wait = 0):
+        for i in range(length - 1, -1, -1):
+            v = (data >> i) & 1
+            m = (mask >> i) & 1
+            if m:
+                self.output.write("%d" % v)
+            else:
+                self.output.write("-")
+        self.output.write(" %d\n" % wait)
+
+if __name__ == "__main__":
+    f = FifoFile(sys.argv[1])
+
+    random.seed(0xdeadbeef)
+
+    data = [random.randint(0, 255) for i in range(2048)]
+
+    output = sys.argv[1].startswith("in")
+
+    if output:
+        random.seed(random.randint(0, 1<<16))
+
+    burst = 0
+    for d in data:
+        if not burst:
+            burst = random.randint(1, 16)
+        burst -= 1
+        f.put(d, 0xff, 8, 0 if burst else random.randint(0, 8))

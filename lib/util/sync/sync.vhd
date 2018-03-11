@@ -20,7 +20,8 @@ package sync is
 
   component sync_rising_edge
     generic(
-      cycle_count : natural := 2
+      cycle_count : natural := 2;
+      async_reset : boolean := true
       );
     port (
       p_clk : in  std_ulogic;

@@ -1,0 +1,96 @@
+[*]
+[*] GTKWave Analyzer v3.3.88 (w)1999-2018 BSI
+[*] Wed Mar 14 17:17:31 2018
+[*]
+[dumpfile] "/home/nipo/work/femux/nsl/tests/fifo_delay/build/tb.ghw"
+[dumpfile_mtime] "Wed Mar 14 17:14:31 2018"
+[dumpfile_size] 324788
+[savefile] "/home/nipo/work/femux/nsl/tests/fifo_delay/build/context.gtkw"
+[timestart] 41825000000
+[size] 1962 1285
+[pos] -519 1
+*-28.330666 575800000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.delay.
+[treeopen] top.tb.delay_writer.
+[treeopen] top.tb.delay_writer.r.
+[treeopen] top.tb.delay_writer.r.delay_line.
+[treeopen] top.tb.delay_writer.r.delay_line.[0].
+[treeopen] top.tb.delay_writer.r.delay_line.[1].
+[treeopen] top.tb.s_delay_in.
+[treeopen] top.tb.s_delayed.
+[treeopen] top.tb.s_out.
+[treeopen] top.tb.s_stabilized.
+[treeopen] top.tb.stabilizer.
+[sst_width] 213
+[signals_width] 241
+[sst_expanded] 1
+[sst_vpaned_height] 392
+@28
+top.tb.s_resetn_async
+top.tb.s_resetn_clk
+[color] 3
+top.tb.s_clk
+@800200
+-s_delay_in
+@28
+top.tb.s_delay_in.ready
+top.tb.s_delay_in.valid
+@22
+#{top.tb.s_delay_in.data[7:0]} top.tb.s_delay_in.data[7] top.tb.s_delay_in.data[6] top.tb.s_delay_in.data[5] top.tb.s_delay_in.data[4] top.tb.s_delay_in.data[3] top.tb.s_delay_in.data[2] top.tb.s_delay_in.data[1] top.tb.s_delay_in.data[0]
+@1000200
+-s_delay_in
+@800200
+-writer
+@420
+top.tb.delay_writer.r.flush_count
+top.tb.delay_writer.r.state
+@22
+#{top.tb.delay_writer.r.delay_line[1].data[7:0]} top.tb.delay_writer.r.delay_line[1].data[7] top.tb.delay_writer.r.delay_line[1].data[6] top.tb.delay_writer.r.delay_line[1].data[5] top.tb.delay_writer.r.delay_line[1].data[4] top.tb.delay_writer.r.delay_line[1].data[3] top.tb.delay_writer.r.delay_line[1].data[2] top.tb.delay_writer.r.delay_line[1].data[1] top.tb.delay_writer.r.delay_line[1].data[0]
+@28
+top.tb.delay_writer.r.delay_line[1].valid
+@22
+#{top.tb.delay_writer.r.delay_line[0].data[7:0]} top.tb.delay_writer.r.delay_line[0].data[7] top.tb.delay_writer.r.delay_line[0].data[6] top.tb.delay_writer.r.delay_line[0].data[5] top.tb.delay_writer.r.delay_line[0].data[4] top.tb.delay_writer.r.delay_line[0].data[3] top.tb.delay_writer.r.delay_line[0].data[2] top.tb.delay_writer.r.delay_line[0].data[1] top.tb.delay_writer.r.delay_line[0].data[0]
+@28
+top.tb.delay_writer.r.delay_line[0].valid
+@420
+top.tb.delay_writer.s_busy
+@28
+#{top.tb.delay_writer.s_valid[0:2]} top.tb.delay_writer.s_valid[0] top.tb.delay_writer.s_valid[1]
+@1000200
+-writer
+@800200
+-s_delayed
+@28
+top.tb.s_delayed.ready
+>-20000000
++{top.tb.s_delayed.ready} top.tb.s_delayed.ready
+>0
+top.tb.s_delayed.valid
+@22
+#{top.tb.s_delayed.data[7:0]} top.tb.s_delayed.data[7] top.tb.s_delayed.data[6] top.tb.s_delayed.data[5] top.tb.s_delayed.data[4] top.tb.s_delayed.data[3] top.tb.s_delayed.data[2] top.tb.s_delayed.data[1] top.tb.s_delayed.data[0]
+@1000200
+-s_delayed
+@800200
+-stabilized
+@28
+top.tb.s_stabilized.ready
+top.tb.s_stabilized.valid
+@22
+#{top.tb.s_stabilized.data[7:0]} top.tb.s_stabilized.data[7] top.tb.s_stabilized.data[6] top.tb.s_stabilized.data[5] top.tb.s_stabilized.data[4] top.tb.s_stabilized.data[3] top.tb.s_stabilized.data[2] top.tb.s_stabilized.data[1] top.tb.s_stabilized.data[0]
+@421
+top.tb.stabilizer.r.stable
+@1000200
+-stabilized
+@800200
+-out
+@28
+top.tb.s_out.ready
+top.tb.s_out.valid
+@22
+#{top.tb.s_out.data[7:0]} top.tb.s_out.data[7] top.tb.s_out.data[6] top.tb.s_out.data[5] top.tb.s_out.data[4] top.tb.s_out.data[3] top.tb.s_out.data[2] top.tb.s_out.data[1] top.tb.s_out.data[0]
+@1000200
+-out
+[pattern_trace] 1
+[pattern_trace] 0
