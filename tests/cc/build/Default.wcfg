@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="./isim.wdb" id="1" type="auto">
+         <top_modules>
+            <top_module name="fifo" />
+            <top_module name="fifo" />
+            <top_module name="framed" />
+            <top_module name="framed" />
+            <top_module name="numeric_std" />
+            <top_module name="routed" />
+            <top_module name="std_logic_1164" />
+            <top_module name="sync" />
+            <top_module name="tb" />
+            <top_module name="textio" />
+            <top_module name="ti" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <WVObjectSize size="17" />
+   <wvobject fp_name="/tb/s_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_clk</obj_property>
+      <obj_property name="ObjectShortName">s_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_resetn_clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_resetn_clk</obj_property>
+      <obj_property name="ObjectShortName">s_resetn_clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_srst" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_srst</obj_property>
+      <obj_property name="ObjectShortName">s_srst</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_dc" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_dc</obj_property>
+      <obj_property name="ObjectShortName">s_dc</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_ddoe" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_ddoe</obj_property>
+      <obj_property name="ObjectShortName">s_ddoe</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_ddo" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_ddo</obj_property>
+      <obj_property name="ObjectShortName">s_ddo</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_dd" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_dd</obj_property>
+      <obj_property name="ObjectShortName">s_dd</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_done" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">s_done[0:1]</obj_property>
+      <obj_property name="ObjectShortName">s_done[0:1]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_clk_gen" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_clk_gen</obj_property>
+      <obj_property name="ObjectShortName">s_clk_gen</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_clk_gen_toggle" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">s_clk_gen_toggle</obj_property>
+      <obj_property name="ObjectShortName">s_clk_gen_toggle</obj_property>
+   </wvobject>
+   <wvobject fp_name="/tb/s_routed_cmd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">s_routed_cmd</obj_property>
+      <obj_property name="ObjectShortName">s_routed_cmd</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/s_routed_cmd.req" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.req</obj_property>
+         <obj_property name="ObjectShortName">s_routed_cmd.req</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <wvobject fp_name="/tb/s_routed_cmd.req.data" type="array" db_ref_id="1">
+            <obj_property name="ElementShortName">.data</obj_property>
+            <obj_property name="ObjectShortName">s_routed_cmd.req.data</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_routed_cmd.req.last" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.last</obj_property>
+            <obj_property name="ObjectShortName">s_routed_cmd.req.last</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_routed_cmd.req.valid" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.valid</obj_property>
+            <obj_property name="ObjectShortName">s_routed_cmd.req.valid</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/tb/s_routed_cmd.ack" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.ack</obj_property>
+         <obj_property name="ObjectShortName">s_routed_cmd.ack</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/s_cc_cmd" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">s_cc_cmd</obj_property>
+      <obj_property name="ObjectShortName">s_cc_cmd</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/s_cc_cmd.req" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.req</obj_property>
+         <obj_property name="ObjectShortName">s_cc_cmd.req</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <wvobject fp_name="/tb/s_cc_cmd.req.data" type="array" db_ref_id="1">
+            <obj_property name="ElementShortName">.data</obj_property>
+            <obj_property name="ObjectShortName">s_cc_cmd.req.data</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_cc_cmd.req.last" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.last</obj_property>
+            <obj_property name="ObjectShortName">s_cc_cmd.req.last</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_cc_cmd.req.valid" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.valid</obj_property>
+            <obj_property name="ObjectShortName">s_cc_cmd.req.valid</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/tb/s_cc_cmd.ack" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.ack</obj_property>
+         <obj_property name="ObjectShortName">s_cc_cmd.ack</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/cc_endpoint/r" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">r</obj_property>
+      <obj_property name="ObjectShortName">r</obj_property>
+      <wvobject fp_name="/tb/cc_endpoint/r.state" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.state</obj_property>
+         <obj_property name="ObjectShortName">r.state</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/cc_endpoint/r.cmd" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.cmd</obj_property>
+         <obj_property name="ObjectShortName">r.cmd</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/master/r" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">r</obj_property>
+      <obj_property name="ObjectShortName">r</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/master/r.state" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.state</obj_property>
+         <obj_property name="ObjectShortName">r.state</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.last" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">.last</obj_property>
+         <obj_property name="ObjectShortName">r.last</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.ack" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">.ack</obj_property>
+         <obj_property name="ObjectShortName">r.ack</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.cmd" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.cmd</obj_property>
+         <obj_property name="ObjectShortName">r.cmd</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.data" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.data</obj_property>
+         <obj_property name="ObjectShortName">r.data</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.out_count" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.out_count</obj_property>
+         <obj_property name="ObjectShortName">r.out_count</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.in_count" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.in_count</obj_property>
+         <obj_property name="ObjectShortName">r.in_count</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/r.divisor" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.divisor</obj_property>
+         <obj_property name="ObjectShortName">r.divisor</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/master/master/r" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">r</obj_property>
+      <obj_property name="ObjectShortName">r</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/master/master/r.state" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.state</obj_property>
+         <obj_property name="ObjectShortName">r.state</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/master/r.bit_count" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.bit_count</obj_property>
+         <obj_property name="ObjectShortName">r.bit_count</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/master/r.shreg" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.shreg</obj_property>
+         <obj_property name="ObjectShortName">r.shreg</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/master/r.ddi" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">.ddi</obj_property>
+         <obj_property name="ObjectShortName">r.ddi</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/master/r.bad_byte" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.bad_byte</obj_property>
+         <obj_property name="ObjectShortName">r.bad_byte</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/tb/master/master/r.ctr" type="other" db_ref_id="1">
+         <obj_property name="ElementShortName">.ctr</obj_property>
+         <obj_property name="ObjectShortName">r.ctr</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/s_cc_rsp" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">s_cc_rsp</obj_property>
+      <obj_property name="ObjectShortName">s_cc_rsp</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/s_cc_rsp.req" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.req</obj_property>
+         <obj_property name="ObjectShortName">s_cc_rsp.req</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <wvobject fp_name="/tb/s_cc_rsp.req.data" type="array" db_ref_id="1">
+            <obj_property name="ElementShortName">.data</obj_property>
+            <obj_property name="ObjectShortName">s_cc_rsp.req.data</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_cc_rsp.req.last" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.last</obj_property>
+            <obj_property name="ObjectShortName">s_cc_rsp.req.last</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_cc_rsp.req.valid" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.valid</obj_property>
+            <obj_property name="ObjectShortName">s_cc_rsp.req.valid</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/tb/s_cc_rsp.ack" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.ack</obj_property>
+         <obj_property name="ObjectShortName">s_cc_rsp.ack</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject fp_name="/tb/s_routed_rsp" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">s_routed_rsp</obj_property>
+      <obj_property name="ObjectShortName">s_routed_rsp</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <wvobject fp_name="/tb/s_routed_rsp.req" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.req</obj_property>
+         <obj_property name="ObjectShortName">s_routed_rsp.req</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+         <wvobject fp_name="/tb/s_routed_rsp.req.data" type="array" db_ref_id="1">
+            <obj_property name="ElementShortName">.data</obj_property>
+            <obj_property name="ObjectShortName">s_routed_rsp.req.data</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_routed_rsp.req.last" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.last</obj_property>
+            <obj_property name="ObjectShortName">s_routed_rsp.req.last</obj_property>
+         </wvobject>
+         <wvobject fp_name="/tb/s_routed_rsp.req.valid" type="logic" db_ref_id="1">
+            <obj_property name="ElementShortName">.valid</obj_property>
+            <obj_property name="ObjectShortName">s_routed_rsp.req.valid</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/tb/s_routed_rsp.ack" type="array" db_ref_id="1">
+         <obj_property name="ElementShortName">.ack</obj_property>
+         <obj_property name="ObjectShortName">s_routed_rsp.ack</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+   </wvobject>
+</wave_config>

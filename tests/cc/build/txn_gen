@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+import sys
+import random
+
+class NocTxnFile:
+    def __init__(self, filename):
+        self.output = open(filename, "w")
+
+    def put(self, data, mask, length, wait = 0):
+        for i in range(length - 1, -1, -1):
+            v = (data >> i) & 1
+            m = (mask >> i) & 1
+            if m:
+                self.output.write("%d" % v)
+            else:
+                self.output.write("-")
+        self.output.write(" %d\n" % wait)
+
+class Txn:
+    def __init__(self, target, header):
+        self.target = target
+        self.header = header
+        self.cmds = []
+
+    def flush(self, tag, wait = 100):
+        if not self.cmds:
+            return
+
+        l = len(self.cmds) + 2 - 1
+        self.target.put(0x100 | self.header, 0x1ff, 9)
+        self.target.put(0x100 | tag, 0x1ff, 9)
+        for i, c in enumerate(self.cmds):
+            try:
+                v, mask = c
+            except:
+                v = c
+                mask = 0xff
+            self.target.put((0 if i == len(self.cmds) - 1 else 0x100) | v, 0x100 | mask, 9,
+                            int(wait if i == len(self.cmds) - 1 else 0))
+        self.cmds = []
+
+class CCCmd(Txn):
+    def divisor(self, value):
+        self.cmds += [0xc0 | (value-1)]
+
+    def reset(self):
+        self.cmds += [0x21]
+
+    def acquire(self):
+        self.cmds += [0x20]
+
+    def wait(self, cycles):
+        self.cmds += [0x40 | cycles]
+
+    def cmd(self, cmd, rsp):
+        assert 1 <= len(cmd) <= 4
+        assert 0 <= len(rsp) <= 2
+        self.cmds += [((len(cmd) - 1) << 2) | len(rsp)]
+        self.cmds += list(cmd)
+
+class CCRsp(Txn):
+    def divisor(self, value):
+        self.cmds += [0xc0 | (value-1)]
+
+    def reset(self):
+        self.cmds += [0x21]
+
+    def acquire(self):
+        self.cmds += [0x20]
+
+    def wait(self, cycles):
+        self.cmds += [0x40 | cycles]
+
+    def cmd(self, cmd, rsp):
+        assert 1 <= len(cmd) <= 4
+        assert 0 <= len(rsp) <= 2
+        self.cmds += [((len(cmd) - 1) << 2) | len(rsp)]
+        self.cmds += list(rsp)
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = NocTxnFile(n)
+    if n.startswith("cc_res"):
+        t = CCRsp(f, 0x0f)
+    else:
+        t = CCCmd(f, 0xf0)
+
+    t.divisor(8)
+    t.flush(0xaa)
+
+    random.seed(42)
+
+    t.reset()
+    t.flush(0x23)
+
+    t.acquire()
+    t.flush(0x2a)
+
+    for retries in range(10):
+        t.cmd([0xa0+retries] * ((retries % 3) + 1), [(0,0)] * (retries % 3))
+        t.wait(retries)
+        t.flush(retries)
