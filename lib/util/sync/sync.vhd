@@ -32,7 +32,8 @@ package sync is
   component sync_reg is
     generic(
       cycle_count : natural := 2;
-      data_width : integer
+      data_width : integer;
+      cross_region : boolean := true
       );
     port(
       p_clk : in std_ulogic;
@@ -44,7 +45,8 @@ package sync is
   component sync_cross_counter is
     generic(
       cycle_count : natural := 2;
-      data_width : integer
+      data_width : integer;
+      decode_stage_count : natural := 1
       );
     port(
       p_in_clk : in std_ulogic;
