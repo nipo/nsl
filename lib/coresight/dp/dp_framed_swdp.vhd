@@ -41,6 +41,7 @@ architecture rtl of dp_framed_swdp is
     STATE_RESET,
 
     STATE_CMD_GET,
+    STATE_CMD_ROUTE,
     STATE_CMD_DATA_GET,
 
     STATE_SWD_CMD,
@@ -87,12 +88,15 @@ begin
         if p_cmd_val.valid = '1' then
           rin.cmd <= p_cmd_val.data;
           rin.last <= p_cmd_val.last;
-          if std_match(p_cmd_val.data, DP_CMD_W) or std_match(p_cmd_val.data, DP_CMD_BITBANG) then
-            rin.state <= STATE_CMD_DATA_GET;
-            rin.cycle <= 3;
-          else
-            rin.state <= STATE_SWD_CMD;
-          end if;
+          rin.state <= STATE_CMD_ROUTE;
+        end if;
+
+      when STATE_CMD_ROUTE =>
+        if std_match(r.cmd, DP_CMD_W) or std_match(r.cmd, DP_CMD_BITBANG) then
+          rin.state <= STATE_CMD_DATA_GET;
+          rin.cycle <= 3;
+        else
+          rin.state <= STATE_SWD_CMD;
         end if;
 
       when STATE_CMD_DATA_GET =>
@@ -152,7 +156,7 @@ begin
     p_rsp_val.data <= (others => '-');
 
     case r.state is
-      when STATE_RESET =>
+      when STATE_RESET | STATE_CMD_ROUTE =>
         null;
 
       when STATE_CMD_GET
