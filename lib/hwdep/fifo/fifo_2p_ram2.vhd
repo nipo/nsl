@@ -2,12 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library util;
-use util.numeric.all;
-use util.sync.all;
-
-library hwdep;
-use hwdep.ram.all;
+library util, hwdep;
 
 entity fifo_2p is
   generic(
@@ -19,103 +14,33 @@ entity fifo_2p is
     p_resetn : in  std_ulogic;
     p_clk    : in  std_ulogic_vector(0 to clk_count-1);
 
-    p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_out_ready    : in  std_ulogic;
-    p_out_valid : out std_ulogic;
+    p_out_data      : out std_ulogic_vector(data_width-1 downto 0);
+    p_out_ready     : in  std_ulogic;
+    p_out_valid     : out std_ulogic;
+    p_out_available : out natural range 0 to depth;
 
-    p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-    p_in_valid  : in  std_ulogic;
-    p_in_ready : out std_ulogic
+    p_in_data       : in  std_ulogic_vector(data_width-1 downto 0);
+    p_in_valid      : in  std_ulogic;
+    p_in_ready      : out std_ulogic;
+    p_in_free       : out natural range 0 to depth
     );
 end fifo_2p;
 
 architecture ram2 of fifo_2p is
 
-  subtype count_t is std_ulogic_vector(log2(depth)-1 downto 0);
-  subtype word_t is std_ulogic_vector(data_width-1 downto 0);
+  subtype ptr_t is unsigned(util.numeric.log2(depth)-1 downto 0);
+  subtype data_t is std_ulogic_vector(data_width-1 downto 0);
 
   signal s_resetn: std_ulogic_vector(0 to clk_count-1);
-  signal s_out_wptr, s_in_rptr: unsigned(count_t'range);
-
-  signal s_ready2 : std_ulogic;
+  signal s_out_wptr, s_in_rptr, s_out_rptr, s_in_wptr: ptr_t;
+  signal s_mem_write, s_mem_read: std_ulogic;
 
   constant is_synchronous: boolean := clk_count = 1;
 
-  type regs_t is record
-    blocked: std_ulogic;
-    move: std_ulogic;
-    ptr: unsigned(count_t'range);
-  end record;
-
-  signal out_r, out_rin, in_r, in_rin: regs_t;
-
 begin
 
-  -- MEMO: Dont use rising_edge with record/arrays (ISE bug)
-  regs_in: process (p_clk(0), s_resetn(0))
-  begin
-    if s_resetn(0) = '0' then
-      in_r.ptr <= (others => '0');
-      in_r.blocked <= '0';
-      in_r.move <= '0';
-    elsif p_clk(0)'event and p_clk(0) = '1' then
-      in_r <= in_rin;
-    end if;
-  end process;
-
-  regs_out: process(p_clk(clk_count-1), s_resetn(clk_count-1))
-  begin
-    if s_resetn(clk_count-1) = '0' then
-      out_r.ptr <= (others => '0');
-      out_r.blocked <= '1';
-      out_r.move <= '0';
-    elsif p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
-      out_r <= out_rin;
-    end if;
-  end process;
-
-  transition_in: process(in_r, p_in_valid, s_in_rptr)
-  begin
-    in_rin <= in_r;
-
-    in_rin.move <= '0';
-
-    if in_r.blocked = '0' then
-      if p_in_valid = '1' then
-        in_rin.ptr <= in_r.ptr + 1;
-        in_rin.move <= '1';
-
-        if s_in_rptr = in_r.ptr + 1 then
-          in_rin.blocked <= '1';
-        end if;
-      end if;
-    elsif s_in_rptr /= in_r.ptr then
-      in_rin.blocked <= '0';
-    end if;
-  end process;
-
-  transition_out: process(out_r, p_out_ready, s_out_wptr)
-  begin
-    out_rin <= out_r;
-
-    out_rin.move <= '0';
-
-    if out_r.blocked = '0' then
-      if p_out_ready = '1' then
-        out_rin.ptr <= out_r.ptr + 1;
-        out_rin.move <= '1';
-
-        if s_out_wptr = out_r.ptr + 1 then
-          out_rin.blocked <= '1';
-        end if;
-      end if;
-    elsif s_out_wptr /= out_r.ptr then
-      out_rin.blocked <= '0';
-    end if;
-  end process;
-
-
   async: if not is_synchronous generate
+  begin
     reset_sync: util.sync.sync_multi_resetn
       generic map(
         clk_count => 2
@@ -126,79 +51,83 @@ begin
         p_resetn_sync => s_resetn
         );
 
-    out_wptr: sync_cross_counter
+    out_wptr: util.sync.sync_cross_counter
       generic map(
-        data_width => count_t'length
+        data_width => ptr_t'length
         )
       port map(
         p_in_clk => p_clk(0),
         p_out_clk => p_clk(clk_count-1),
-        p_in => in_r.ptr,
+        p_in => s_in_wptr,
         p_out => s_out_wptr
         );
 
-    in_rptr: sync_cross_counter
+    in_rptr: util.sync.sync_cross_counter
       generic map(
-        data_width => count_t'length
+        data_width => ptr_t'length,
+        decode_stage_count => (ptr_t'length + 3) / 4
         )
       port map(
         p_in_clk => p_clk(clk_count-1),
         p_out_clk => p_clk(0),
-        p_in => out_r.ptr,
+        p_in => s_out_rptr,
         p_out => s_in_rptr
         );
   end generate;
 
   sync: if is_synchronous generate
     s_resetn(0) <= p_resetn;
-
---    out_wptr: sync_reg
---      generic map(
---        data_width => count_t'length,
---        cycle_count => 1
---        )
---      port map(
---        p_clk => p_clk(0),
---        p_in => std_ulogic_vector(in_r.ptr),
---        unsigned(p_out) => s_out_wptr
---        );
---
---    in_rptr: sync_reg
---      generic map(
---        data_width => count_t'length,
---        cycle_count => 1
---        )
---      port map(
---        p_clk => p_clk(0),
---        p_in => std_ulogic_vector(out_r.ptr),
---        unsigned(p_out) => s_in_rptr
---        );
-    s_in_rptr <= out_r.ptr;
-    s_out_wptr <= in_r.ptr;
+    s_in_rptr <= s_out_rptr;
+    s_out_wptr <= s_in_wptr;
   end generate;
+  
+  ctr_in: hwdep.fifo.fifo_write_pointer
+    generic map(
+      ptr_width => ptr_t'length,
+      wrap_count => depth
+      )
+    port map(
+      p_resetn => s_resetn(0),
+      p_clk => p_clk(0),
+      p_valid => p_in_valid,
+      p_ready => p_in_ready,
+      p_peer_ptr => s_in_rptr,
+      p_mem_ptr => s_in_wptr,
+      p_write => s_mem_write
+      );
 
-  s_ready2 <= out_rin.move or out_r.blocked;
+  ctr_out: hwdep.fifo.fifo_read_pointer
+    generic map(
+      ptr_width => ptr_t'length,
+      wrap_count => depth
+      )
+    port map(
+      p_resetn => s_resetn(clk_count-1),
+      p_clk => p_clk(clk_count-1),
+      p_valid => p_out_valid,
+      p_ready => p_out_ready,
+      p_peer_ptr => s_out_wptr,
+      p_mem_ptr => s_out_rptr,
+      p_read => s_mem_read
+      );
 
   ram: hwdep.ram.ram_2p_r_w
     generic map(
-      addr_size => count_t'length,
-      data_size => word_t'length,
+      addr_size => ptr_t'length,
+      data_size => data_t'length,
       clk_count => clk_count,
       bypass => is_synchronous
       )
     port map(
       p_clk => p_clk,
 
-      p_waddr => std_ulogic_vector(in_r.ptr),
-      p_wen => in_rin.move,
+      p_waddr => std_ulogic_vector(s_in_wptr),
+      p_wen => s_mem_write,
       p_wdata => p_in_data,
 
-      p_raddr => std_ulogic_vector(out_rin.ptr),
-      p_ren => s_ready2,
+      p_raddr => std_ulogic_vector(s_out_rptr),
+      p_ren => s_mem_read,
       p_rdata => p_out_data
       );
-
-  p_in_ready <= not in_r.blocked and s_resetn(0);
-  p_out_valid <= not out_r.blocked;
 
 end ram2;

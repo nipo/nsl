@@ -26,4 +26,40 @@ package fifo is
       );
   end component;
 
+  component fifo_write_pointer is
+    generic(
+      ptr_width : natural;
+      wrap_count: integer
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_valid    : in  std_ulogic;
+      p_ready    : out std_ulogic;
+
+      p_peer_ptr : in  unsigned(ptr_width-1 downto 0);
+      p_mem_ptr  : out unsigned(ptr_width-1 downto 0);
+      p_write    : out std_ulogic
+      );
+  end component;
+
+  component fifo_read_pointer is
+    generic(
+      ptr_width : natural;
+      wrap_count: integer
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic;
+
+      p_ready    : in  std_ulogic;
+      p_valid    : out std_ulogic;
+
+      p_peer_ptr : in  unsigned(ptr_width-1 downto 0);
+      p_mem_ptr  : out unsigned(ptr_width-1 downto 0);
+      p_read     : out std_ulogic
+      );
+  end component;
+
 end package fifo;
