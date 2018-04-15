@@ -22,6 +22,9 @@ architecture rtl of gray_decoder is
     return ret;
   end function;
 
+  attribute register_balancing: string;
+  attribute register_balancing of p_binary: signal is "yes";
+  
 begin
 
   g: for i in 0 to data_width-1 generate
