@@ -22,14 +22,18 @@ architecture rtl of gray_decoder is
     return ret;
   end function;
 
+  signal s_binary : std_ulogic_vector(data_width-1 downto 0);
+
   attribute register_balancing: string;
-  attribute register_balancing of p_binary: signal is "yes";
+  attribute register_balancing of s_binary: signal is "yes";
   
 begin
 
   g: for i in 0 to data_width-1 generate
   begin
-    p_binary(i) <= xor_reduct(p_gray(data_width-1 downto i));
+    s_binary(i) <= xor_reduct(p_gray(data_width-1 downto i));
   end generate;
+
+  p_binary <= s_binary;
   
 end architecture;
