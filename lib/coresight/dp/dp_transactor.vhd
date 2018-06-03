@@ -13,7 +13,7 @@ entity dp_transactor is
     p_clk      : in  std_ulogic;
     p_resetn   : in  std_ulogic;
 
-    p_clk_ref  : in  std_ulogic;
+    p_clk_tick : in  std_ulogic;
 
     p_cmd_val  : in  std_ulogic;
     p_cmd_ack  : out std_ulogic;
@@ -89,12 +89,13 @@ begin
   begin
     if p_resetn = '0' then
       r.state <= STATE_RESET;
+      r.swclk <= '0';
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swdio_i, p_clk_ref)
+  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swdio_i, p_clk_tick)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -102,9 +103,8 @@ begin
     swclk_falling := false;
     swclk_rising := false;
 
-    rin.swclk <= p_clk_ref;
-
-    if p_clk_ref /= r.swclk then
+    if p_clk_tick = '1' then
+      rin.swclk <= not r.swclk;
       swclk_falling := r.swclk = '1';
       swclk_rising := r.swclk = '0';
     end if;
