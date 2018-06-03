@@ -47,9 +47,13 @@ package sync is
     generic(
       cycle_count : natural := 2;
       data_width : integer;
-      decode_stage_count : natural := 1
+      decode_stage_count : natural := 1;
+      input_is_gray : boolean := false;
+      output_is_gray : boolean := false
       );
     port(
+      p_in_resetn : in std_ulogic;
+      p_out_resetn : in std_ulogic;
       p_in_clk : in std_ulogic;
       p_out_clk : in std_ulogic;
       p_in  : in unsigned(data_width-1 downto 0);
