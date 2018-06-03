@@ -36,9 +36,10 @@ package sync is
       cross_region : boolean := true
       );
     port(
-      p_clk : in std_ulogic;
-      p_in  : in std_ulogic_vector(data_width-1 downto 0);
-      p_out : out std_ulogic_vector(data_width-1 downto 0)
+      p_clk    : in std_ulogic;
+      p_resetn : in std_ulogic;
+      p_in     : in std_ulogic_vector(data_width-1 downto 0);
+      p_out    : out std_ulogic_vector(data_width-1 downto 0)
       );
   end component;
 

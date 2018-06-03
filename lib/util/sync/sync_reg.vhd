@@ -9,9 +9,10 @@ entity sync_reg is
     cross_region : boolean := true
     );
   port(
-    p_clk : in std_ulogic;
-    p_in  : in std_ulogic_vector(data_width-1 downto 0);
-    p_out : out std_ulogic_vector(data_width-1 downto 0)
+    p_clk    : in std_ulogic;
+    p_resetn : in std_ulogic;
+    p_in     : in std_ulogic_vector(data_width-1 downto 0);
+    p_out    : out std_ulogic_vector(data_width-1 downto 0)
     );
 end sync_reg;
 
@@ -29,9 +30,11 @@ begin
     attribute keep of r_regs : signal is "TRUE";
     attribute async_reg of r_regs : signal is "TRUE";
   begin
-    clock: process (p_clk)
+    clock: process (p_clk, p_resetn)
     begin
-      if rising_edge(p_clk) then
+      if p_resetn = '0' then
+        r_regs <= (others => (others => '0'));
+      elsif rising_edge(p_clk) then
         r_regs(0 to cycle_count-2) <= r_regs(1 to cycle_count-1);
         r_regs(cycle_count-1) <= p_in;
       end if;
@@ -43,9 +46,11 @@ begin
   nocross: if not cross_region generate
     signal r_regs : regs_t;
   begin
-    clock: process (p_clk)
+    clock: process (p_clk, p_resetn)
     begin
-      if rising_edge(p_clk) then
+      if p_resetn = '0' then
+        r_regs <= (others => (others => '0'));
+      elsif rising_edge(p_clk) then
         r_regs(0 to cycle_count-2) <= r_regs(1 to cycle_count-1);
         r_regs(cycle_count-1) <= p_in;
       end if;
@@ -53,7 +58,5 @@ begin
 
     p_out <= r_regs(0);
   end generate nocross;
-  
-
   
 end rtl;
