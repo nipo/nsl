@@ -1,5 +1,6 @@
 tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
+source-types += vhdl verilog
 
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
@@ -13,12 +14,18 @@ _tmp-sources += $1
 
 endef
 
+define source-list-cleanup
+
+$1-sources :=
+
+endef
+
 define package_scan
 
 #$$(info Scanning package $1.$2)
 
-vhdl-sources :=
-verilog-sources :=
+
+$(foreach l,$(source-types),$(call source-list-cleanup,$l))
 deps := $1
 pkg := $1.$2
 srcdir := $$(shell cd $$(shell pwd) ; cd $$(dir $$(lastword $$(MAKEFILE_LIST))) ; pwd)
@@ -26,8 +33,7 @@ srcdir := $$(shell cd $$(shell pwd) ; cd $$(dir $$(lastword $$(MAKEFILE_LIST))) 
 include $3/Makefile
 
 _tmp-sources :=
-$$(eval $$(foreach s,$$(vhdl-sources),$$(call declare_source,$3/$$s,vhdl,$1)))
-$$(eval $$(foreach s,$$(verilog-sources),$$(call declare_source,$3/$$s,verilog,$1)))
+$(foreach l,$(source-types),$$(eval $$(foreach s,$$($l-sources),$$(call declare_source,$3/$$s,$l,$1))))
 
 $$(pkg)-sources := $$(_tmp-sources)
 $$(pkg)-deps := $$(deps)
@@ -52,8 +58,7 @@ endif
 
 #$$(info srcdir: $$(srcdir))
 
-vhdl-sources :=
-verilog-sources :=
+$(foreach l,$(source-types),$(call source-list-cleanup,$l))
 packages :=
 deps :=
 
@@ -63,8 +68,7 @@ $1-deps := $$(deps)
 $1-library := $1
 
 _tmp-sources :=
-$$(eval $$(foreach s,$$(vhdl-sources),$$(call declare_source,$$(srcdir)/$$s,vhdl,$1)))
-$$(eval $$(foreach s,$$(verilog-sources),$$(call declare_source,$$(srcdir)/$$s,verilog,$1)))
+$(foreach l,$(source-types),$$(eval $$(foreach s,$$($l-sources),$$(call declare_source,$$(srcdir)/$$s,$l,$1))))
 
 $1-sources := $$(_tmp-sources)
 
@@ -117,19 +121,17 @@ endif
 
 endef
 
-$(eval $(call library_scan,$(top-lib)))
-
-$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
-
 define lib_deps_calc
 
 $(1)-lib-deps := $(sort $(filter-out $1,$(foreach p,$(filter $1%,$(parts-scanned)),$(foreach d,$($p-deps),$($d-library)))))
 
 endef
 
-$(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
-
 include $(BUILD_ROOT)/tool/$(tool).mk
+
+$(eval $(call library_scan,$(top-lib)))
+$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
+$(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
 
 ifeq ($(V),)
 SILENT:=@
