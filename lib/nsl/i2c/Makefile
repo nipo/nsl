@@ -5,3 +5,4 @@ vhdl-sources += i2c_slave.vhd
 vhdl-sources += i2c_mem.vhd
 deps += nsl.framed
 deps += util.sync
+deps += signalling.i2c

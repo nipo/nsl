@@ -3,17 +3,15 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library util;
+library util, signalling;
 
 entity i2c_slave is
   port (
     p_clk: in std_ulogic;
     p_resetn: in std_ulogic;
 
-    p_scl: in std_ulogic;
-    p_sda: in std_ulogic;
-    p_scl_drain: out std_ulogic;
-    p_sda_drain: out std_ulogic;
+    p_i2c_o  : out signalling.i2c.i2c_o;
+    p_i2c_i  : in  signalling.i2c.i2c_i;
 
     p_start: out std_ulogic;
     p_stop: out std_ulogic;
@@ -68,8 +66,8 @@ architecture arch of i2c_slave is
 
 begin
 
-  scl_bin <= '0' when p_scl = '0' else '1';
-  sda_bin <= '0' when p_sda = '0' else '1';
+  scl_bin <= '0' when p_i2c_i.scl.v = '0' else '1';
+  sda_bin <= '0' when p_i2c_i.sda.v = '0' else '1';
 
   scl_sync: util.sync.sync_input
     port map (
@@ -94,7 +92,7 @@ begin
   start_s <= scl_filt and sda_fall;
   stop_s <= scl_filt and sda_rise;
 
-  p_scl_drain <= '0';
+  p_i2c_o.scl.drain <= '0';
   p_start <= start_s;
   p_stop <= stop_s;
   p_addr <= write and addr;
@@ -118,7 +116,7 @@ begin
       else
         case state is
           when S_IDLE =>
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
             cnt <= 0;
             sreg <= (others => '0');
             addr <= '1';
@@ -152,7 +150,7 @@ begin
 
           when S_READ_SEND_ACK =>
             if ack = '0' then
-              p_sda_drain <= '1';
+              p_i2c_o.sda.drain <= '1';
             end if;
 
             if scl_fall = '1' then
@@ -161,7 +159,7 @@ begin
 
           when S_READ_DONE =>
             ack <= '1';
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
             cnt <= 0;
 
             if ack = '1' then
@@ -185,10 +183,10 @@ begin
 
           when S_WRITE =>
             p_read <= '0';
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
 
             if sreg(7) = '0' then
-              p_sda_drain <= '1';
+              p_i2c_o.sda.drain <= '1';
             end if;
 
             if scl_fall = '1' then
@@ -201,9 +199,9 @@ begin
             end if;
 
           when S_WRITE_RECV_ACK =>
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
             if scl_rise = '1' then
-              if p_sda = '0' then
+              if p_i2c_i.sda.v = '0' then
                 ack <= '0';
               end if;
               state <= S_WRITE_DONE;

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
+library nsl, signalling;
 use nsl.i2c.all;
 
 entity i2c_master is
@@ -15,10 +15,8 @@ entity i2c_master is
 
     p_divisor  : in std_ulogic_vector(divisor_width-1 downto 0);
 
-    p_scl       : in  std_ulogic;
-    p_scl_drain : out std_ulogic; -- active high drain control
-    p_sda       : in  std_ulogic;
-    p_sda_drain : out std_ulogic; -- active high drain control
+    p_i2c_o  : out signalling.i2c.i2c_o;
+    p_i2c_i  : in  signalling.i2c.i2c_i;
 
     p_rack     : in  std_ulogic;
     p_rdata    : out std_ulogic_vector(7 downto 0);
@@ -140,7 +138,7 @@ begin
     end if;
   end process;
 
-  transition : process (p_cmd, p_divisor, p_scl, p_sda, p_wdata, r, p_rack)
+  transition : process (p_cmd, p_divisor, p_i2c_i, p_wdata, r, p_rack)
     variable ready, step, double_step : boolean;
   begin
     rin <= r;
@@ -206,7 +204,7 @@ begin
       when ST_START_IDLE =>
         if ready then
           step := true;
-          if p_sda = '0' then
+          if p_i2c_i.sda.v = '0' then
             rin.state <= ST_START_RECOVER;
           else
             rin.state <= ST_START_SDA;
@@ -234,7 +232,7 @@ begin
       when ST_START_RESTART =>
         if ready then
           step := true;
-          if p_sda = '1' then
+          if p_i2c_i.sda.v = '1' then
             rin.state <= ST_START_IDLE;
           else
             rin.state <= ST_START_RECOVER;
@@ -247,7 +245,7 @@ begin
         end if;
 
       when ST_STOP_SCL_RISE =>
-        if p_scl = '1' then
+        if p_i2c_i.scl.v = '1' then
           step := true;
           rin.state <= ST_STOP_SCL;
         end if;
@@ -261,7 +259,7 @@ begin
       when ST_STOP_SDA =>
         if ready then
           step := true;
-          if p_sda = '1' then
+          if p_i2c_i.sda.v = '1' then
             rin.state <= ST_DONE_STOPPED;
           else
             rin.state <= ST_STOP_IDLE;
@@ -275,7 +273,7 @@ begin
         end if;
 
       when ST_BIT_SCL_RISE =>
-        if p_scl = '1' then
+        if p_i2c_i.scl.v = '1' then
           double_step := true;
           rin.state <= ST_BIT_SCL_HIGH;
         end if;
@@ -285,9 +283,9 @@ begin
           rin.state <= ST_BIT_SCL_LOW;
           step := true;
           if r.bit_count /= 0 then
-            rin.data <= r.data(6 downto 0) & p_sda;
+            rin.data <= r.data(6 downto 0) & p_i2c_i.sda.v;
           else
-            rin.ack <= not p_sda;
+            rin.ack <= not p_i2c_i.sda.v;
           end if;
         end if;
 
@@ -352,7 +350,7 @@ begin
         | ST_STOP_SDA
         | ST_BIT_SCL_RISE
         | ST_BIT_SCL_HIGH =>
-        p_scl_drain <= '0';
+        p_i2c_o.scl.drain <= '0';
 
       when ST_IDLE_STARTED
         | ST_DONE_STARTED
@@ -361,7 +359,7 @@ begin
         | ST_STOP_IDLE
         | ST_BIT_SDA_SETTLE
         | ST_BIT_SCL_LOW =>
-        p_scl_drain <= '1';
+        p_i2c_o.scl.drain <= '1';
     end case;
 
     case r.state is
@@ -373,7 +371,7 @@ begin
         | ST_STOP_SCL
         | ST_STOP_SCL_RISE
         | ST_STOP_IDLE =>
-        p_sda_drain <= '1';
+        p_i2c_o.sda.drain <= '1';
 
       when ST_BIT_SCL_HIGH
         | ST_BIT_SCL_LOW
@@ -381,20 +379,20 @@ begin
         | ST_BIT_SDA_SETTLE =>
         if p_cmd = I2C_READ then
           if r.bit_count = 0 then
-            p_sda_drain <= r.ack;
+            p_i2c_o.sda.drain <= r.ack;
           else
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
           end if;
         else
           if r.bit_count = 0 then
-            p_sda_drain <= '0';
+            p_i2c_o.sda.drain <= '0';
           else
-            p_sda_drain <= not r.sda;
+            p_i2c_o.sda.drain <= not r.sda;
           end if;
         end if;
 
       when others =>
-        p_sda_drain <= '0';
+        p_i2c_o.sda.drain <= '0';
     end case;
 
   end process;

@@ -4,8 +4,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-library hwdep;
+library nsl, hwdep, signalling;
 
 entity i2c_mem is
   generic (
@@ -15,10 +14,8 @@ entity i2c_mem is
   port (
     p_clk: in std_ulogic;
     p_resetn: in std_ulogic;
-    p_scl: in std_ulogic;
-    p_sda: in std_ulogic;
-    p_scl_drain: out std_ulogic;
-    p_sda_drain: out std_ulogic
+    p_i2c_o  : out signalling.i2c.i2c_o;
+    p_i2c_i  : in  signalling.i2c.i2c_i
   );
 end i2c_mem;
 
@@ -60,10 +57,8 @@ begin
     port map (
       p_clk => p_clk,
       p_resetn => p_resetn,
-      p_scl => p_scl,
-      p_sda => p_sda,
-      p_scl_drain => p_scl_drain,
-      p_sda_drain => p_sda_drain,
+      p_i2c_i => p_i2c_i,
+      p_i2c_o => p_i2c_o,
 
       p_start => open,
       p_stop => open,

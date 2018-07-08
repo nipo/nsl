@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
+library nsl, signalling;
 use nsl.i2c.all;
 
 entity i2c_framed_ctrl is
@@ -10,10 +10,8 @@ entity i2c_framed_ctrl is
     p_clk    : in std_ulogic;
     p_resetn : in std_ulogic;
 
-    p_scl       : in  std_ulogic;
-    p_scl_drain : out std_ulogic;
-    p_sda       : in  std_ulogic;
-    p_sda_drain : out std_ulogic;
+    p_i2c_o  : out signalling.i2c.i2c_o;
+    p_i2c_i  : in  signalling.i2c.i2c_i;
 
     p_cmd_val  : in nsl.framed.framed_req;
     p_cmd_ack  : out nsl.framed.framed_ack;
@@ -221,10 +219,8 @@ begin
       p_clk => p_clk,
       p_resetn => p_resetn,
       p_divisor => r.divisor,
-      p_scl => p_scl,
-      p_scl_drain => p_scl_drain,
-      p_sda => p_sda,
-      p_sda_drain => p_sda_drain,
+      p_i2c_o => p_i2c_o,
+      p_i2c_i => p_i2c_i,
       p_rack => s_rack,
       p_rdata => s_rdata,
       p_wack => s_wack,

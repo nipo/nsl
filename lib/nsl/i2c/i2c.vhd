@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl;
+library signalling;
 
 package i2c is
 
@@ -19,10 +20,8 @@ package i2c is
       p_clk    : in std_ulogic;
       p_resetn : in std_ulogic;
 
-      p_scl       : in  std_ulogic;
-      p_scl_drain : out std_ulogic; -- active high drain control
-      p_sda       : in  std_ulogic;
-      p_sda_drain : out std_ulogic; -- active high drain control
+      p_i2c_o  : out signalling.i2c.i2c_o;
+      p_i2c_i  : in  signalling.i2c.i2c_i;
 
       p_cmd_val   : in nsl.framed.framed_req;
       p_cmd_ack   : out nsl.framed.framed_ack;
@@ -49,10 +48,8 @@ package i2c is
 
       p_divisor  : in std_ulogic_vector(divisor_width-1 downto 0);
 
-      p_scl       : in  std_ulogic;
-      p_scl_drain : out std_ulogic; -- active high drain control
-      p_sda       : in  std_ulogic;
-      p_sda_drain : out std_ulogic; -- active high drain control
+      p_i2c_o  : out signalling.i2c.i2c_o;
+      p_i2c_i  : in  signalling.i2c.i2c_i;
 
       p_rack     : in  std_ulogic;
       p_rdata    : out std_ulogic_vector(7 downto 0);
@@ -70,10 +67,8 @@ package i2c is
       p_clk: in std_ulogic;
       p_resetn: in std_ulogic;
 
-      p_scl: in std_ulogic;
-      p_sda: in std_ulogic;
-      p_scl_drain: out std_ulogic;
-      p_sda_drain: out std_ulogic;
+      p_i2c_o  : out signalling.i2c.i2c_o;
+      p_i2c_i  : in  signalling.i2c.i2c_i;
 
       p_start: out std_ulogic;
       p_stop: out std_ulogic;
@@ -96,10 +91,9 @@ package i2c is
     port (
       p_clk: in std_ulogic;
       p_resetn: in std_ulogic;
-      p_scl: in std_ulogic;
-      p_sda: in std_ulogic;
-      p_scl_drain: out std_ulogic;
-      p_sda_drain: out std_ulogic
+
+      p_i2c_o  : out signalling.i2c.i2c_o;
+      p_i2c_i  : in  signalling.i2c.i2c_i
       );
   end component;
 

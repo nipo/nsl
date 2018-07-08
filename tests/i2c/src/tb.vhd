@@ -66,10 +66,10 @@ begin
       p_rsp_val => s_i2c_rsp_val,
       p_rsp_ack => s_i2c_rsp_ack,
       
-      p_scl => s_scl,
-      p_sda => s_sda,
-      p_sda_drain => s_sda_drain_m,
-      p_scl_drain => s_scl_drain_m
+      p_i2c_i.scl.v => s_scl,
+      p_i2c_i.sda.v => s_sda,
+      p_i2c_o.sda.drain => s_sda_drain_m,
+      p_i2c_o.scl.drain => s_scl_drain_m
       );
 
   i2c_mem: nsl.i2c.i2c_mem
@@ -81,10 +81,10 @@ begin
       p_clk  => s_clk,
       p_resetn => s_resetn_clk,
       
-      p_scl => s_scl,
-      p_sda => s_sda,
-      p_sda_drain => s_sda_drain_s,
-      p_scl_drain => s_scl_drain_s
+      p_i2c_i.scl.v => s_scl,
+      p_i2c_i.sda.v => s_sda,
+      p_i2c_o.sda.drain => s_sda_drain_s,
+      p_i2c_o.scl.drain => s_scl_drain_s
       );
 
   s_scl <= '0' when s_scl_drain_s = '1' or s_scl_drain_m = '1' else '1';
