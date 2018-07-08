@@ -19,6 +19,6 @@ architecture impl of io_std_logic_driver is
 begin
 
   status.v <= io;
-  io <= control.v when control.oe = '1' else 'Z';
+  io <= control.v when control.en = '1' else 'Z';
 
 end architecture;

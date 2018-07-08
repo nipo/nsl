@@ -6,8 +6,8 @@ library signalling;
 
 entity io_io_dir_in_driver is
   port(
-    control : in io_c;
-    status  : out io_s;
+    control : in signalling.io.io_c;
+    status  : out signalling.io.io_s;
     i       : in std_ulogic;
     io      : inout std_logic;
     dir_out : out std_ulogic

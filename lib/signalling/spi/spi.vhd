@@ -11,4 +11,14 @@ package spi is
     cs   : std_logic;
   end record;
 
+  type spi_slave_i is record
+    mosi : std_ulogic;
+    sck  : std_ulogic;
+    cs   : std_ulogic;
+  end record;
+
+  type spi_slave_o is record
+    miso : std_ulogic;
+  end record;
+
 end package spi;
