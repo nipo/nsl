@@ -12,3 +12,4 @@ packages += ti
 packages += ioext
 packages += cs
 packages += uart
+packages += ws
