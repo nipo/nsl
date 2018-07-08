@@ -15,7 +15,7 @@ entity ws_2812_driver is
 
     p_data : out std_ulogic;
 
-    p_led : in signalling.led.led_rgb8;
+    p_led : in signalling.color.rgb24;
     p_valid : in  std_ulogic;
     p_ready : out std_ulogic;
     p_last : in std_ulogic
@@ -111,7 +111,11 @@ begin
 
       when WAITING =>
         if p_valid = '1' then
-          rin.shreg <= p_led.g & p_led.r & p_led.b;
+          rin.shreg <= std_ulogic_vector(
+            to_unsigned(p_led.g, 8)
+            & to_unsigned(p_led.r, 8)
+            & to_unsigned(p_led.b, 8)
+            );
           rin.bitno <= 23;
           rin.last <= p_last = '1';
 

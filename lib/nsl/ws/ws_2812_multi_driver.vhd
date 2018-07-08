@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library signalling, nsl;
-use signalling.led."/=";
+use signalling.color."/=";
 
 entity ws_2812_multi_driver is
   generic(
@@ -17,7 +17,7 @@ entity ws_2812_multi_driver is
 
     p_data : out std_ulogic;
 
-    p_led : in signalling.led.led_rgb8_vector(led_count-1 downto 0)
+    p_led : in signalling.color.rgb24_vector(led_count-1 downto 0)
     );
 end entity;
 
@@ -32,14 +32,14 @@ architecture rtl of ws_2812_multi_driver is
   type regs_t is
   record
     state : state_t;
-    leds : signalling.led.led_rgb8_vector(led_count-1 downto 0);
+    leds : signalling.color.rgb24_vector(led_count-1 downto 0);
     idx : natural range 0 to led_count-1;
   end record;
 
   signal r, rin : regs_t;
 
   signal s_valid, s_ready, s_last : std_ulogic;
-  signal s_led : signalling.led.led_rgb8;
+  signal s_led : signalling.color.rgb24;
 
 begin
 
@@ -58,9 +58,9 @@ begin
 
     case r.state is
       when ST_RESET =>
-        rin.leds <= (others => (r => (others => '0'),
-                                g => (others => '0'),
-                                b => (others => '0')));
+        rin.leds <= (others => (r => 0,
+                                g => 0,
+                                b => 0));
         rin.state <= ST_WAIT;
 
       when ST_WAIT =>

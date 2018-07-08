@@ -17,7 +17,7 @@ package ws is
 
       p_data : out std_ulogic;
 
-      p_led : in signalling.led.led_rgb8;
+      p_led : in signalling.color.rgb24;
       p_valid : in  std_ulogic;
       p_ready : out std_ulogic;
       p_last : in std_ulogic
@@ -55,7 +55,7 @@ package ws is
 
       p_data : out std_ulogic;
 
-      p_led : in signalling.led.led_rgb8_vector(led_count-1 downto 0)
+      p_led : in signalling.color.rgb24_vector(led_count-1 downto 0)
       );
   end component;
   

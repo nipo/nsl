@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
+library nsl, signalling;
 
 entity ws_2812_framed is
   generic(
@@ -37,7 +37,7 @@ architecture rtl of ws_2812_framed is
   type regs_t is record
     state   : state_t;
     last    : std_ulogic;
-    r, g, b : std_ulogic_vector(7 downto 0);
+    color   : signalling.color.rgb24;
   end record;
 
   signal r, rin : regs_t;
@@ -66,7 +66,7 @@ begin
 
       when ST_GET_R =>
         if p_cmd_val.valid = '1' then
-          rin.r <= p_cmd_val.data;
+          rin.color.r <= to_integer(unsigned(p_cmd_val.data));
           rin.last <= p_cmd_val.last;
           if p_cmd_val.last = '1' then
             rin.state <= ST_RUN;
@@ -77,8 +77,7 @@ begin
 
       when ST_GET_G =>
         if p_cmd_val.valid = '1' then
-          rin.g <= p_cmd_val.data;
-          rin.last <= p_cmd_val.last;
+          rin.color.g <= to_integer(unsigned(p_cmd_val.data));
           if p_cmd_val.last = '1' then
             rin.state <= ST_RUN;
           else
@@ -88,7 +87,7 @@ begin
 
       when ST_GET_B =>
         if p_cmd_val.valid = '1' then
-          rin.b <= p_cmd_val.data;
+          rin.color.b <= to_integer(unsigned(p_cmd_val.data));
           rin.last <= p_cmd_val.last;
           rin.state <= ST_RUN;
         end if;
@@ -145,9 +144,7 @@ begin
 
       p_data => p_data,
       
-      p_led.r => r.r,
-      p_led.g => r.g,
-      p_led.b => r.b,
+      p_led => r.color,
       p_last => r.last,
       p_valid => s_valid,
       p_ready => s_ready

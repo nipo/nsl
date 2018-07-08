@@ -9,7 +9,7 @@ entity top is
     clk: in std_ulogic;
     en: out std_ulogic;
     led: out std_ulogic;
-    rgb: in signalling.led.led_rgb8
+    rgb: in signalling.color.rgb24
   );
 end top;
 
