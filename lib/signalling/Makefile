@@ -1,4 +1,5 @@
 packages += diff
+packages += io
 packages += i2c
 packages += spi
 packages += swd
