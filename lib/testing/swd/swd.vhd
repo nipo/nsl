@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library signalling;
+
 package swd is
 
   component swdap
@@ -9,8 +11,8 @@ package swd is
       idr: unsigned(31 downto 0) := X"2ba01477"
       );
     port (
-      p_swclk : in std_logic;
-      p_swdio : inout std_logic;
+      p_swd_c : out signalling.swd.swd_slave_c;
+      p_swd_s : in signalling.swd.swd_slave_s;
       p_swd_resetn : out std_ulogic;
 
       p_ap_ready : in std_ulogic;

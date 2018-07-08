@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
+library nsl, signalling;
 use nsl.framed.all;
 
 package dp is
@@ -50,10 +50,8 @@ package dp is
       p_rsp_val   : out nsl.framed.framed_req;
       p_rsp_ack   : in nsl.framed.framed_ack;
 
-      p_swclk    : out std_logic;
-      p_swdio_i  : in  std_logic;
-      p_swdio_o  : out std_logic;
-      p_swdio_oe : out std_logic
+      p_swd_c     : out signalling.swd.swd_master_c;
+      p_swd_s     : in  signalling.swd.swd_master_s
       );
   end component;
 
@@ -72,10 +70,8 @@ package dp is
       p_rsp_ack  : in  std_ulogic;
       p_rsp_data : out dp_rsp_data;
 
-      p_swclk    : out std_ulogic;
-      p_swdio_i  : in  std_ulogic;
-      p_swdio_o  : out std_ulogic;
-      p_swdio_oe : out std_ulogic
+      p_swd_c    : out signalling.swd.swd_master_c;
+      p_swd_s    : in  signalling.swd.swd_master_s
       );
   end component;
 

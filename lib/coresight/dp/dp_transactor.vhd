@@ -2,9 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
-
+library nsl, coresight, signalling;
 library coresight;
 use coresight.dp.all;
 
@@ -23,10 +21,8 @@ entity dp_transactor is
     p_rsp_ack  : in  std_ulogic;
     p_rsp_data : out dp_rsp_data;
 
-    p_swclk    : out std_ulogic;
-    p_swdio_i  : in  std_ulogic;
-    p_swdio_o  : out std_ulogic;
-    p_swdio_oe : out std_ulogic
+    p_swd_c     : out signalling.swd.swd_master_c;
+    p_swd_s     : in  signalling.swd.swd_master_s
   );
 end entity;
 
@@ -75,9 +71,7 @@ architecture rtl of dp_transactor is
 
     cycle_count   : unsigned(5 downto 0);
 
-    swclk         : std_ulogic;
-    swdio         : std_ulogic;
-    swdio_oe      : std_ulogic;
+    swd           : signalling.swd.swd_master_c;
   end record;
 
   signal r, rin: regs_t;
@@ -89,13 +83,13 @@ begin
   begin
     if p_resetn = '0' then
       r.state <= STATE_RESET;
-      r.swclk <= '0';
+      r.swd.clk <= '0';
     elsif rising_edge(p_clk) then
       r <= rin;
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swdio_i, p_clk_tick)
+  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swd_s, p_clk_tick)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -104,16 +98,16 @@ begin
     swclk_rising := false;
 
     if p_clk_tick = '1' then
-      rin.swclk <= not r.swclk;
-      swclk_falling := r.swclk = '1';
-      swclk_rising := r.swclk = '0';
+      rin.swd.clk <= not r.swd.clk;
+      swclk_falling := r.swd.clk = '1';
+      swclk_rising := r.swd.clk = '0';
     end if;
 
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_CMD_GET;
-        rin.swclk <= '0';
-        rin.swdio <= '0';
+        rin.swd.clk <= '0';
+        rin.swd.dio.v <= '0';
         rin.turnaround <= (others => '0');
 
       when STATE_CMD_GET =>
@@ -170,8 +164,8 @@ begin
 
       when STATE_CMD_SHIFT =>
         if swclk_falling then
-          rin.swdio <= r.cmd(0);
-          rin.swdio_oe <= '1';
+          rin.swd.dio.v <= r.cmd(0);
+          rin.swd.dio.en <= '1';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
           rin.cmd <= "-" & r.cmd(7 downto 1);
@@ -183,8 +177,8 @@ begin
 
       when STATE_CMD_TURNAROUND =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
           if r.cycle_count = c_zero then
@@ -195,11 +189,11 @@ begin
 
       when STATE_ACK_SHIFT =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
-          rin.ack <= p_swdio_i & r.ack(2 downto 1);
+          rin.ack <= p_swd_s.dio.v & r.ack(2 downto 1);
           if r.cycle_count = c_zero then
             if r.is_read = '1' then -- read
               rin.state <= STATE_DATA_SHIFT_IN;
@@ -213,8 +207,8 @@ begin
 
       when STATE_ACK_TURNAROUND =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
           if r.cycle_count = c_zero then
@@ -225,8 +219,8 @@ begin
 
       when STATE_DATA_SHIFT_OUT =>
         if swclk_falling then
-          rin.swdio_oe <= '1';
-          rin.swdio <= r.data(0);
+          rin.swd.dio.en <= '1';
+          rin.swd.dio.v <= r.data(0);
           rin.par_out <= r.par_out xor r.data(0);
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
@@ -238,8 +232,8 @@ begin
 
       when STATE_PARITY_SHIFT_OUT =>
         if swclk_falling then
-          rin.swdio_oe <= '1';
-          rin.swdio <= r.par_out;
+          rin.swd.dio.en <= '1';
+          rin.swd.dio.v <= r.par_out;
         elsif swclk_rising then
           rin.state <= STATE_RUN;
           rin.cycle_count <= "000001";
@@ -247,12 +241,12 @@ begin
 
       when STATE_DATA_SHIFT_IN =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
-          rin.data <= p_swdio_i & r.data(31 downto 1);
-          rin.par_in <= r.par_in xor p_swdio_i;
+          rin.data <= p_swd_s.dio.v & r.data(31 downto 1);
+          rin.par_in <= r.par_in xor p_swd_s.dio.v;
           if r.cycle_count = c_zero then
             rin.state <= STATE_PARITY_SHIFT_IN;
           end if;
@@ -260,18 +254,18 @@ begin
 
       when STATE_PARITY_SHIFT_IN =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.par_in <= r.par_in xor p_swdio_i;
+          rin.par_in <= r.par_in xor p_swd_s.dio.v;
           rin.state <= STATE_DATA_TURNAROUND;
           rin.cycle_count <= "0000" & r.turnaround;
         end if;
 
       when STATE_DATA_TURNAROUND =>
         if swclk_falling then
-          rin.swdio_oe <= '0';
-          rin.swdio <= '-';
+          rin.swd.dio.en <= '0';
+          rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
           if r.cycle_count = c_zero then
@@ -282,8 +276,8 @@ begin
 
       when STATE_RUN =>
         if swclk_falling then
-          rin.swdio_oe <= '1';
-          rin.swdio <= r.run_val;
+          rin.swd.dio.en <= '1';
+          rin.swd.dio.v <= r.run_val;
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
           if r.cycle_count = c_zero then
@@ -293,8 +287,8 @@ begin
 
       when STATE_BITBANG =>
         if swclk_falling then
-          rin.swdio_oe <= '1';
-          rin.swdio <= r.data(0);
+          rin.swd.dio.en <= '1';
+          rin.swd.dio.v <= r.data(0);
           rin.run_val <= r.data(0);
         elsif swclk_rising then
           rin.data <= '-' & r.data(31 downto 1);
@@ -306,8 +300,8 @@ begin
 
       when STATE_RSP_PUT =>
         if swclk_falling then
-          rin.swdio_oe <= '1';
-          rin.swdio <= r.run_val;
+          rin.swd.dio.en <= '1';
+          rin.swd.dio.v <= r.run_val;
         end if;
 
         if p_rsp_ack = '1' then
@@ -316,10 +310,7 @@ begin
     end case;
   end process;
 
-  p_swclk <= r.swclk;
-  p_swdio_o <= r.swdio;
-  p_swdio_oe <= r.swdio_oe;
-
+  p_swd_c <= r.swd;
   p_cmd_ack <= '1' when r.state = STATE_CMD_GET else '0';
   p_rsp_val <= '1' when r.state = STATE_RSP_PUT else '0';
   p_rsp_data.data <= r.data;

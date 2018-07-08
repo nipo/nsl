@@ -1,2 +1,9 @@
 vhdl-sources += tb.vhd
-deps += coresight.dp nsl.framed testing.framed testing.swd util.sync nsl.routed nsl.tick
+deps += coresight.dp
+deps += nsl.framed
+deps += testing.framed
+deps += testing.swd
+deps += util.sync
+deps += nsl.routed
+deps += nsl.tick
+deps += signalling.swd

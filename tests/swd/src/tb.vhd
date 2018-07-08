@@ -5,10 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl;
-library testing;
-library coresight;
-library util;
+library nsl, testing, coresight, util, signalling;
 
 architecture arch of tb is
 
@@ -16,8 +13,10 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_swclk : std_ulogic;
-  signal s_swdio : std_logic;
+  signal s_swd_master_o : signalling.swd.swd_master_c;
+  signal s_swd_master_i : signalling.swd.swd_master_s;
+  signal s_swd_slave_o : signalling.swd.swd_slave_c;
+  signal s_swd_slave_i : signalling.swd.swd_slave_s;
   signal s_srst : std_logic;
 
   signal s_ap_resetn : std_ulogic;
@@ -40,7 +39,7 @@ architecture arch of tb is
   signal s_swd_cmd_val, s_swd_rsp_val : nsl.framed.framed_req;
   signal s_swd_cmd_ack, s_swd_rsp_ack : nsl.framed.framed_ack;
 
-  signal s_clk_gen, s_clk_gen_toggle: std_ulogic;
+  signal s_clk_gen_tick: std_ulogic;
 
 begin
 
@@ -51,10 +50,33 @@ begin
       p_clk => s_clk
       );
 
+  swdio: process (s_swd_master_o, s_swd_slave_o)
+    variable dio : std_logic;
+  begin
+    dio := '1';
+
+    if s_swd_master_o.dio.en = '1' and s_swd_slave_o.dio.en = '1' then
+      assert false
+        report "Write conflict on SWDIO line"
+        severity warning;
+      dio := 'L';
+    elsif s_swd_master_o.dio.en = '1' and s_swd_slave_o.dio.en = '0' then
+      dio := s_swd_master_o.dio.v;
+    elsif s_swd_slave_o.dio.en = '1' and s_swd_master_o.dio.en = '0' then
+      dio := s_swd_slave_o.dio.v;
+    else
+      dio := 'H';
+    end if;
+
+    s_swd_slave_i.clk <= s_swd_master_o.clk;
+    s_swd_slave_i.dio.v <= dio;
+    s_swd_master_i.dio.v <= dio;
+  end process;
+
   swdap: testing.swd.swdap
     port map(
-      p_swclk => s_swclk,
-      p_swdio => s_swdio,
+      p_swd_c => s_swd_slave_o,
+      p_swd_s => s_swd_slave_i,
 
       p_swd_resetn => s_ap_resetn,
       p_ap_sel => s_ap_sel,
@@ -69,7 +91,7 @@ begin
 
   ap: testing.swd.ap_sim
     port map(
-      p_clk => s_swclk,
+      p_clk => s_swd_slave_i.clk,
       p_resetn => s_ap_resetn,
       p_ap => s_ap_sel,
       p_a => s_ap_a,
@@ -102,18 +124,16 @@ begin
       p_clk  => s_clk,
       p_resetn => s_resetn_clk,
 
-      p_clk_ref => s_clk_gen,
+      p_clk_tick => s_clk_gen_tick,
       
       p_cmd_val => s_swd_cmd_val,
       p_cmd_ack => s_swd_cmd_ack,
 
       p_rsp_val => s_swd_rsp_val,
       p_rsp_ack => s_swd_rsp_ack,
-      
-      p_swclk => s_swclk,
-      p_swdio_i => s_swdio,
-      p_swdio_o => s_swdio_o,
-      p_swdio_oe => s_swdio_oe
+
+      p_swd_c => s_swd_master_o,
+      p_swd_s => s_swd_master_i
       );
 
   baud_gen: nsl.tick.baudrate_generator
@@ -125,22 +145,9 @@ begin
     port map(
       p_clk => s_clk,
       p_resetn => s_resetn_clk,
-      p_rate => X"01fffff",
-      p_tick => s_clk_gen_toggle
+      p_rate => X"00fffff",
+      p_tick => s_clk_gen_tick
       );
-
-  process(s_clk, s_resetn_clk, s_clk_gen_toggle)
-  begin
-    if s_resetn_clk = '0' then
-      s_clk_gen <= '0';
-    elsif rising_edge(s_clk) then
-      if s_clk_gen_toggle = '1' then
-        s_clk_gen <= not s_clk_gen;
-      end if;
-    end if;
-  end process;
-
-  s_swdio <= s_swdio_o when s_swdio_oe = '1' else 'Z';
 
   gen: testing.framed.framed_file_reader
     generic map(
