@@ -8,6 +8,7 @@ package ws is
 
   component ws_2812_driver is
     generic(
+      color_order : string := "GRB";
       clk_freq_hz : natural;
       cycle_time_ns : natural := 208
       );
@@ -26,6 +27,7 @@ package ws is
 
   component ws_2812_framed is
     generic(
+      color_order : string := "GRB";
       clk_freq_hz : natural;
       cycle_time_ns : natural := 208
       );
@@ -45,6 +47,7 @@ package ws is
 
   component ws_2812_multi_driver is
     generic(
+      color_order : string := "GRB";
       clk_freq_hz : natural;
       cycle_time_ns : natural := 208;
       led_count : natural

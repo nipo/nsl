@@ -6,6 +6,7 @@ library nsl, signalling;
 
 entity ws_2812_framed is
   generic(
+    color_order : string := "GRB";
     clk_freq_hz : natural;
     cycle_time_ns : natural := 208
     );
@@ -135,6 +136,7 @@ begin
 
   master: nsl.ws.ws_2812_driver
     generic map(
+      color_order => color_order,
       clk_freq_hz => clk_freq_hz,
       cycle_time_ns => cycle_time_ns
       )

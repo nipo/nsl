@@ -6,6 +6,7 @@ library signalling;
 
 entity ws_2812_driver is
   generic(
+    color_order : string := "GRB";
     clk_freq_hz : natural;
     cycle_time_ns : natural := 208
     );
@@ -111,11 +112,21 @@ begin
 
       when WAITING =>
         if p_valid = '1' then
-          rin.shreg <= std_ulogic_vector(
-            to_unsigned(p_led.g, 8)
-            & to_unsigned(p_led.r, 8)
-            & to_unsigned(p_led.b, 8)
-            );
+          case color_order(1) is
+            when 'R' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
+            when 'G' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
+            when others => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+          end case; 
+          case color_order(2) is
+            when 'R' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
+            when 'G' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
+            when others => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+          end case; 
+          case color_order(3) is
+            when 'R' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
+            when 'G' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
+            when others => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+          end case; 
           rin.bitno <= 23;
           rin.last <= p_last = '1';
 
