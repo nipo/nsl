@@ -1,3 +1,4 @@
+packages += axis
 packages += diff
 packages += io
 packages += i2c
