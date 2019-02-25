@@ -112,13 +112,14 @@ begin
         slv_read(line_content, data);
         read(line_content, wait_cycles);
 
-        write(complaint, string'("Expected value "));
+        write(complaint, filename);
+        write(complaint, string'(" value "));
         slv_write(complaint, std_logic_vector(data));
         write(complaint, string'(" does not match fifo data "));
         slv_write(complaint, std_logic_vector(p_data));
 
         
-        assert std_match(std_ulogic_vector(data), p_data)
+        assert std_match(std_ulogic_vector(data), to_x01(p_data))
           report complaint.all & CR & LF
           severity error;
 
