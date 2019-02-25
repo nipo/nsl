@@ -31,7 +31,7 @@ endef
 
 all: $(target).zip
 
-$(build-dir)/create.tcl: $(sources) $(MAKEFILE_LIST)
+$(build-dir)/ingress/create.tcl: $(sources) $(ip-packaging-scripts) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $@
 	$(SILENT)echo 'create_project -force $(target) . -part $(target_part)$(target_package)$(target_speed)' >> $@
@@ -45,14 +45,6 @@ $(build-dir)/create.tcl: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo 'set last_fobj ""' >> $@
 	$(SILENT)$(foreach s,$(constraints),$(call constraint_add,$s,XDC))
 	$(SILENT)echo 'set_property -name "top" -value "$(top-entity)" -objects $$srcset_obj' >> $@
-	$(SILENT)echo 'save_project_as -force $(target) $(target)' >> $@
-
-$(build-dir)/$(target).xpr: $(build-dir)/create.tcl
-	$(SILENT)$(VIVADO_PREPARE) ; cd $(dir $@) ; vivado -mode batch -source $(notdir $<)
-
-$(build-dir)/package.tcl: $(ip-packaging-scripts)
-	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)> $@
 	$(SILENT)echo 'ipx::package_project -root_dir ../ip -vendor $(ip-vendor) -library $(ip-library) -taxonomy /UserIP -import_files -set_current false' >> $@
 	$(SILENT)echo 'ipx::unload_core ../ip/component.xml' >> $@
 	$(SILENT)echo 'ipx::edit_ip_in_project -upgrade true -name tmp_edit_project -directory ../ip ../ip/component.xml' >> $@
@@ -60,11 +52,7 @@ $(build-dir)/package.tcl: $(ip-packaging-scripts)
 	$(SILENT)echo 'ipx::create_xgui_files [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::update_checksums [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::save_core [ipx::current_core]' >> $@
-	$(SILENT)echo 'ipx::check_integrity -quiet [ipx::current_core]' >> $@
-	$(SILENT)echo 'ipx::archive_core [concat $projdir/$design.zip] [ipx::current_core]' >> $@
-
-$(build-dir)/ip/component.xml: $(build-dir)/$(target).xpr $(build-dir)/package.tcl
-	$(SILENT)$(VIVADO_PREPARE) ; cd $(dir $@) ; vivado $(notdir $(filter %.xpr,$^)) -mode batch $(foreach n,$(filter %.tcl,$^),-source $(notdir $n))
+	$(SILENT)echo 'close_project -delete' >> $@
 
 $(build-dir)/ip/component.xml: $(build-dir)/ingress/create.tcl
 	$(SILENT)mkdir -p $(build-dir)/proj
