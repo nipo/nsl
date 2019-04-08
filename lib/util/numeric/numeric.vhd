@@ -15,6 +15,24 @@ package body numeric is
       return log2((x+1)/2) + 1;
     end if;
   end log2;
+    
+  function max(x, y : natural) return natural is
+  begin
+    if x < y then
+      return y;
+    else
+      return x;
+    end if;
+  end max;
+
+  function min(x, y : natural) return natural is
+  begin
+    if x < y then
+      return x;
+    else
+      return y;
+    end if;
+  end min;
 
   function is_pow2(x : positive) return boolean is
   begin
