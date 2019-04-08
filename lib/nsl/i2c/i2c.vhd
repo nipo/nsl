@@ -150,4 +150,27 @@ package i2c is
       );
   end component;
 
+  subtype control_word_32 is std_ulogic_vector(31 downto 0);
+  type control_word_32_vector is array(natural range <>) of control_word_32;
+
+  component i2c_control_bank is
+    generic (
+      control_count: natural range 0 to 32 := 0;
+      status_count: natural range 0 to 32 := 0
+      );
+    port (
+      slave_address: std_ulogic_vector(7 downto 1);
+
+      p_i2c_o: out signalling.i2c.i2c_o;
+      p_i2c_i: in  signalling.i2c.i2c_i;
+      p_i2c_irqn : out std_ulogic;
+
+      p_control: out control_word_32;
+      p_control_write: out std_ulogic_vector(0 to control_count-1);
+      p_status: in control_word_32_vector(0 to status_count-1);
+      -- asynchronous
+      p_raise_irq : in std_ulogic := '0'
+      );
+  end component;
+  
 end package i2c;

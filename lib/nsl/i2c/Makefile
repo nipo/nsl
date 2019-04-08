@@ -5,6 +5,7 @@ vhdl-sources += i2c_framed_ctrl.vhd
 vhdl-sources += i2c_slave.vhd
 vhdl-sources += i2c_slave_clkfree.vhd
 vhdl-sources += i2c_mem.vhd
+vhdl-sources += i2c_control_bank.vhd
 deps += nsl.framed
 deps += nsl.routed
 deps += util.sync
