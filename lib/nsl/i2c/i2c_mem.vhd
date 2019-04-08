@@ -6,7 +6,7 @@ library nsl, hwdep, signalling;
 
 entity i2c_mem is
   generic (
-    address: std_ulogic_vector(6 downto 0);
+    address: std_ulogic_vector(7 downto 1);
     addr_width: integer range 1 to 16 := 8;
     granularity: integer range 1 to 4 := 1
   );

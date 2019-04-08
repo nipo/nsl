@@ -12,7 +12,7 @@ entity i2c_mem_ctrl is
   port (
     p_clk : out std_ulogic;
 
-    slave_address: in std_ulogic_vector(6 downto 0);
+    slave_address: in std_ulogic_vector(7 downto 1);
 
     p_i2c_o  : out signalling.i2c.i2c_o;
     p_i2c_i  : in  signalling.i2c.i2c_i;

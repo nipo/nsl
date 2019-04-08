@@ -9,7 +9,7 @@ entity i2c_slave_clkfree is
     p_resetn : in std_ulogic := '1';
     p_clk_out : out std_ulogic;
 
-    address : in std_ulogic_vector(6 downto 0);
+    address : in std_ulogic_vector(7 downto 1);
 
     p_i2c_o  : out signalling.i2c.i2c_o;
     p_i2c_i  : in  signalling.i2c.i2c_i;

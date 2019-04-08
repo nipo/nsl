@@ -85,7 +85,7 @@ package i2c is
 
   component i2c_mem is
     generic (
-      address: std_ulogic_vector(6 downto 0);
+      address: std_ulogic_vector(7 downto 1);
       addr_width: integer range 1 to 16 := 8;
       granularity: integer range 1 to 4 := 1
       );
@@ -100,7 +100,7 @@ package i2c is
       p_resetn : in std_ulogic := '1';
       p_clk_out : out std_ulogic;
 
-      address : in std_ulogic_vector(6 downto 0);
+      address : in std_ulogic_vector(7 downto 1);
 
       p_i2c_o  : out signalling.i2c.i2c_o;
       p_i2c_i  : in  signalling.i2c.i2c_i;
@@ -129,7 +129,7 @@ package i2c is
     port (
       p_clk : out std_ulogic;
 
-      slave_address: in std_ulogic_vector(6 downto 0);
+      slave_address: in std_ulogic_vector(7 downto 1);
 
       p_i2c_o  : out signalling.i2c.i2c_o;
       p_i2c_i  : in  signalling.i2c.i2c_i;
