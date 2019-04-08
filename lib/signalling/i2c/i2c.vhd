@@ -12,13 +12,13 @@ package i2c is
   end record;
 
   type i2c_i is record
-    scl : signalling.io.od_i;
-    sda : signalling.io.od_i;
+    scl : signalling.io.single;
+    sda : signalling.io.single;
   end record;
 
   type i2c_o is record
-    scl : signalling.io.od_o;
-    sda : signalling.io.od_o;
+    scl : signalling.io.od_c;
+    sda : signalling.io.od_c;
   end record;
 
 end package i2c;
