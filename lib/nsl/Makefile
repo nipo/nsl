@@ -1,4 +1,5 @@
 packages += tick
+packages += aximm
 packages += i2c
 packages += fifo
 packages += framed
