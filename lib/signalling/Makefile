@@ -1,4 +1,5 @@
 packages += axis
+packages += axi4_lite
 packages += diff
 packages += io
 packages += i2c
