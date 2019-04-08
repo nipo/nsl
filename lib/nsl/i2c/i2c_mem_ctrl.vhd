@@ -92,18 +92,18 @@ begin
   begin
     rin <= r;
 
-    byte_off := to_integer(unsigned(r.addr)) mod data_bytes;
+    byte_off := to_integer(to_01(unsigned(r.addr), '0')) mod data_bytes;
 
     if s_write = '1' then
       if r.addr_byte_left = 0 then
         rin.data(byte_off*8+7 downto byte_off*8) <= s_wdata;
-        rin.addr <= std_ulogic_vector(unsigned(r.addr) + 1);
+        rin.addr <= std_ulogic_vector(to_01(unsigned(r.addr), '0') + 1);
       else
         rin.addr <= r.addr(r.addr'left-8 downto 0) & s_wdata;
         rin.addr_byte_left <= r.addr_byte_left - 1;
       end if;
     elsif s_read = '1' then
-      rin.addr <= std_ulogic_vector(unsigned(r.addr) + 1);
+      rin.addr <= std_ulogic_vector(to_01(unsigned(r.addr), '0') + 1);
       if byte_off = 0 then
         rin.data <= p_r_data;
       end if;
@@ -119,7 +119,7 @@ begin
   mealy: process(p_r_data, r, s_read, s_write)
     variable byte_off : integer range 0 to data_bytes - 1;
   begin
-    byte_off := to_integer(unsigned(r.addr)) mod data_bytes;
+    byte_off := to_integer(to_01(unsigned(r.addr), '0')) mod data_bytes;
 
     if r.addr_byte_left = 0 and s_write = '1' and byte_off = data_bytes - 1 then
       p_w_strobe <= '1';

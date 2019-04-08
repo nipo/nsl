@@ -110,7 +110,7 @@ begin
     variable lsb : natural range 0 to a_addr_lsb_wrap-1;
     variable i : natural;
   begin
-    lsb := to_integer(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)));
+    lsb := to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
     a_wen <= (others => '0');
 
     for i in 0 to a_data_bytes-1
@@ -123,7 +123,7 @@ begin
   begin
     if rising_edge(p_a_clk) then
       if p_a_en = '1' then
-        a_addr_lsb <= to_integer(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)));
+        a_addr_lsb <= to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
       end if;
     end if;
   end process;
@@ -141,7 +141,7 @@ begin
   b_wen_gen: process(p_b_addr, p_b_wen)
     variable lsb : natural range 0 to b_addr_lsb_wrap-1;
   begin
-    lsb := to_integer(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)));
+    lsb := to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
     b_wen <= (others => '0');
 
     for i in 0 to b_data_bytes-1
@@ -154,7 +154,7 @@ begin
   begin
     if rising_edge(p_b_clk) then
       if p_b_en = '1' then
-        b_addr_lsb <= to_integer(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)));
+        b_addr_lsb <= to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
       end if;
     end if;
   end process;

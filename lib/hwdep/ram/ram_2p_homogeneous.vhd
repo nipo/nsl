@@ -35,11 +35,11 @@ begin
   begin
     if rising_edge(p_a_clk) then
       if p_a_en = '1' then
-        p_a_rdata <= r_mem(to_integer(unsigned(p_a_addr)));
+        p_a_rdata <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
         for i in 0 to data_bytes - 1
         loop
           if p_a_wen(i) = '1' then
-            r_mem(to_integer(unsigned(p_a_addr)))((i + 1) * byte_size - 1 downto i * byte_size)
+            r_mem(to_integer(to_01(unsigned(p_a_addr), '0')))((i + 1) * byte_size - 1 downto i * byte_size)
               := p_a_wdata((i + 1) * byte_size - 1 downto i * byte_size);
           end if;
         end loop;
@@ -52,11 +52,11 @@ begin
     if rising_edge(p_b_clk)
     then
       if p_b_en = '1' then
-        p_b_rdata <= r_mem(to_integer(unsigned(p_b_addr)));
+        p_b_rdata <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
         for i in 0 to data_bytes - 1
         loop
           if p_b_wen(i) = '1' then
-            r_mem(to_integer(unsigned(p_b_addr)))((i + 1) * byte_size - 1 downto i * byte_size)
+            r_mem(to_integer(to_01(unsigned(p_b_addr), '0')))((i + 1) * byte_size - 1 downto i * byte_size)
               := p_b_wdata((i + 1) * byte_size - 1 downto i * byte_size);
           end if;
         end loop;

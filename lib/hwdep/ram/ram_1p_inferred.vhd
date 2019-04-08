@@ -31,9 +31,9 @@ begin
   begin
     if rising_edge(p_clk) then
       if p_wen = '1' then
-        r_mem(to_integer(unsigned(p_addr))) := p_wdata;
+        r_mem(to_integer(to_01(unsigned(p_addr), '0'))) := p_wdata;
       end if;
-      p_rdata <= r_mem(to_integer(unsigned(p_addr)));
+      p_rdata <= r_mem(to_integer(to_01(unsigned(p_addr), '0')));
     end if;
   end process;
 

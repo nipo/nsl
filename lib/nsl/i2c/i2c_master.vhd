@@ -316,9 +316,9 @@ begin
     end case;
 
     if step then
-      rin.ctr <= to_integer(unsigned(p_divisor));
+      rin.ctr <= to_integer(to_01(unsigned(p_divisor), '0'));
     elsif double_step then
-      rin.ctr <= to_integer(unsigned(p_divisor)) * 2;
+      rin.ctr <= to_integer(to_01(unsigned(p_divisor), '0')) * 2;
     end if;
   end process;
 
