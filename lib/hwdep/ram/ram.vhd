@@ -43,4 +43,51 @@ package ram is
       );
   end component;
 
+  component ram_2p_homogeneous is
+    generic(
+      addr_size  : integer := 10;
+      byte_size  : integer := 8;
+      data_bytes : integer := 4
+      );
+    port(
+      p_a_clk  : in  std_ulogic;
+      p_a_en   : in  std_ulogic := '1';
+      p_a_wen   : in  std_ulogic_vector(data_bytes - 1 downto 0) := (others => '0');
+      p_a_addr : in  std_ulogic_vector(addr_size - 1 downto 0);
+      p_a_wdata   : in  std_ulogic_vector(data_bytes * byte_size - 1 downto 0) := (others => '-');
+      p_a_rdata   : out std_ulogic_vector(data_bytes * byte_size - 1 downto 0);
+      p_b_clk  : in  std_ulogic;
+      p_b_en   : in  std_ulogic := '1';
+      p_b_wen   : in  std_ulogic_vector(data_bytes - 1 downto 0) := (others => '0');
+      p_b_addr : in  std_ulogic_vector(addr_size - 1 downto 0);
+      p_b_wdata   : in  std_ulogic_vector(data_bytes * byte_size - 1 downto 0) := (others => '-');
+      p_b_rdata   : out std_ulogic_vector(data_bytes * byte_size - 1 downto 0)
+      );
+  end component;
+
+  component ram_2p
+    generic (
+      a_addr_size : natural;
+      a_data_bytes : natural;
+
+      b_addr_size : natural;
+      b_data_bytes : natural
+      );
+    port (
+      p_a_clk   : in  std_ulogic;
+      p_a_en    : in  std_ulogic                               := '1';
+      p_a_addr : in  std_ulogic_vector (a_addr_size-1 downto 0);
+      p_a_wen   : in  std_ulogic_vector (a_data_bytes-1 downto 0) := (others => '1');
+      p_a_wdata : in  std_ulogic_vector (a_data_bytes*8-1 downto 0) := (others => '-');
+      p_a_rdata : out std_ulogic_vector (a_data_bytes*8-1 downto 0);
+
+      p_b_clk   : in  std_ulogic;
+      p_b_en    : in  std_ulogic                               := '1';
+      p_b_addr : in  std_ulogic_vector (b_addr_size-1 downto 0);
+      p_b_wen   : in  std_ulogic_vector (b_data_bytes-1 downto 0) := (others => '1');
+      p_b_wdata : in  std_ulogic_vector (b_data_bytes*8-1 downto 0) := (others => '-');
+      p_b_rdata : out std_ulogic_vector (b_data_bytes*8-1 downto 0)
+      );
+  end component;
+
 end package ram;
