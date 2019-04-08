@@ -30,6 +30,17 @@ package sync is
       );
   end component;
 
+  component sync_deglitcher
+    generic(
+      cycle_count : natural := 2
+      );
+    port (
+      p_clk : in  std_ulogic;
+      p_in  : in  std_ulogic;
+      p_out : out std_ulogic
+      );
+  end component;
+
   component sync_reg is
     generic(
       cycle_count : natural := 2;
