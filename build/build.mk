@@ -2,6 +2,8 @@ tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
 source-types += vhdl verilog
 
+.SUFFIXES:
+
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
 LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
@@ -127,11 +129,11 @@ $(1)-lib-deps := $(sort $(filter-out $1,$(foreach p,$(filter $1%,$(parts-scanned
 
 endef
 
-include $(BUILD_ROOT)/tool/$(tool).mk
-
 $(eval $(call library_scan,$(top-lib)))
 $(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
 $(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
+
+include $(BUILD_ROOT)/tool/$(tool).mk
 
 ifeq ($(V),)
 SILENT:=@

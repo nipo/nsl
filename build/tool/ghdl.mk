@@ -46,13 +46,16 @@ $(call lib_cf,$1): $(foreach l,$($1-lib-deps),$(call lib_cf,$($l-library))) $($1
 
 clean-dirs += $(filter-out ./,$(dir $(call lib_cf,$1)))
 
+$(target): $(call lib_cf,$1)
+
 endef
 
 clean-dirs += ghdl-build
 
+#$(info $(libraries))
 $(eval $(foreach l,$(libraries),$(call ghdl_lib_do,$l)))
 
-$(target): $(foreach l,$(libraries),$(call lib_cf,$l)) FORCE
+$(target): FORCE
 	$(SILENT)$(GHDL) -e -v \
 		$(GHDL_OPTS) \
 		$(foreach l,$(filter %.cf,$^),-P$(dir $l)) \
