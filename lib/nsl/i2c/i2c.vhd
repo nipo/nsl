@@ -86,7 +86,8 @@ package i2c is
   component i2c_mem is
     generic (
       address: std_ulogic_vector(6 downto 0);
-      addr_width: integer range 1 to 16 := 8
+      addr_width: integer range 1 to 16 := 8;
+      granularity: integer range 1 to 4 := 1
       );
     port (
       p_i2c_o  : out signalling.i2c.i2c_o;
@@ -117,6 +118,35 @@ package i2c is
       p_w_data: out std_ulogic_vector(7 downto 0);
       p_w_strobe: out std_ulogic;
       p_w_ready: in std_ulogic := '1'
+      );
+  end component;
+
+  component i2c_mem_ctrl is
+    generic (
+      addr_bytes: integer range 1 to 4 := 2;
+      data_bytes: integer range 1 to 4 := 1
+      );
+    port (
+      p_clk : out std_ulogic;
+
+      slave_address: in std_ulogic_vector(6 downto 0);
+
+      p_i2c_o  : out signalling.i2c.i2c_o;
+      p_i2c_i  : in  signalling.i2c.i2c_i;
+
+      p_start    : out std_ulogic;
+      p_stop     : out std_ulogic;
+      p_selected : out std_ulogic;
+
+      p_addr     : out std_ulogic_vector(addr_bytes*8-1 downto 0);
+
+      p_r_strobe : out std_ulogic;
+      p_r_data   : in  std_ulogic_vector(data_bytes*8-1 downto 0);
+      p_r_ready  : in  std_ulogic := '1';
+
+      p_w_strobe : out std_ulogic;
+      p_w_data   : out std_ulogic_vector(data_bytes*8-1 downto 0);
+      p_w_ready  : in  std_ulogic := '1'
       );
   end component;
 
