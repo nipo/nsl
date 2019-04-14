@@ -4,6 +4,12 @@ use ieee.numeric_std.all;
 
 package color is
 
+  type rgb3 is record
+    r, g, b : std_ulogic;
+  end record;
+
+  type rgb3_vector is array(natural range <>) of rgb3;
+
   type rgb24 is record
     r, g, b : natural range 0 to 255;
   end record;
