@@ -112,6 +112,7 @@ endef
 ise-build/$(target).ngd: ise-build/$(target).ngc $(constraints)
 	$(SILENT)echo "//" > $(@:.ngd=.bmm)
 	$(SILENT)$I; ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
+	    $(foreach c,$(filter %.ngc,$(sources)),-sd $(dir $c)) \
 	    $(foreach c,$(filter %.ngc,$^),$(call arg_add,$c)) \
 	    $(foreach c,$(filter %.ucf,$^),$(call arg_add,-uc,$c)) \
 	    -bm $(@:.ngd=.bmm) \
@@ -122,8 +123,13 @@ ise-build/$(target).ngd: ise-build/$(target).ngc $(constraints)
 
 .PRECIOUS: %-map.pcf
 
-define ise_source_do
-	echo "$($1-language) $($1-library) $1" >> $@.prj
+define ise_source_vhdl_do
+	echo "vhdl $($1-library) $1" >> $@.prj
+	$(SILENT)
+endef
+
+define ise_source_verilog_do
+	echo "vlog $($1-library) $1" >> $@.prj
 	$(SILENT)
 endef
 
@@ -135,7 +141,7 @@ endef
 ise-build/$(target).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) $(sources) $(OPTS)
 	$(SILENT)mkdir -p ise-build/xst
 	$(SILENT)> $@.prj
-	$(SILENT)$(foreach s,$(sources),$(call ise_source_do,$s))
+	$(SILENT)$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$s))
 
 	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@.xst
 	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@.xst
