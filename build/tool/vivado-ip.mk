@@ -61,8 +61,9 @@ $(build-dir)/ingress/create.tcl: $(sources) $(ip-packaging-scripts) $(vivado-ini
 	$(SILENT)echo 'set_property display_name {$(ip-display-name)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property name {$(ip-name)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property core_revision {$(ip-revision)} [ipx::current_core]' >> $@
-	$(SILENT)echo 'set_property supported_families [list $(target_families) Pre-Production] [ipx::current_core]' >> $@
+	$(SILENT)echo 'set_property supported_families [list $(target_families) Production] [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property description {$(ip-description)} [ipx::current_core]' >> $@
+	$(SILENT)echo 'set_property company_url {$(ip-company-url)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::create_xgui_files [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::update_checksums [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::save_core [ipx::current_core]' >> $@
@@ -99,14 +100,14 @@ $(target).zip: $(build-dir)/ip/component.xml
 	$(SILENT)cd $(build-dir)/ip ; \
 	zip -r9D ../../$@ .
 
-ifneq ($(ip_repo_path),)
+ifneq ($(vivado_ip_repo_path),)
 
-all: $(ip_repo_path)/packs/$(target).zip $(ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml
+all: $(vivado_ip_repo_path)/packs/$(target).zip $(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml
 
-$(ip_repo_path)/packs/$(target).zip: $(target).zip
+$(vivado_ip_repo_path)/packs/$(target).zip: $(target).zip
 	cp $< $@
 
-$(ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml: $(target).zip
+$(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml: $(target).zip
 	rm -rf $(dir $@)
 	mkdir -p $(dir $@)
 	unzip -d $(dir $@) $<
