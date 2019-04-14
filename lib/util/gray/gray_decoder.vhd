@@ -13,15 +13,6 @@ end entity;
 
 architecture rtl of gray_decoder is
 
-  function xor_reduct(slv : in std_ulogic_vector) return std_logic is
-    variable ret : std_logic := '0';
-  begin
-    for i in slv'range loop
-      ret := ret xor slv(i);
-    end loop;
-    return ret;
-  end function;
-
   signal s_binary : std_ulogic_vector(data_width-1 downto 0);
 
   attribute register_balancing: string;
@@ -29,11 +20,7 @@ architecture rtl of gray_decoder is
   
 begin
 
-  g: for i in 0 to data_width-1 generate
-  begin
-    s_binary(i) <= xor_reduct(p_gray(data_width-1 downto i));
-  end generate;
-
+  s_binary <= p_gray xor ('0' & s_binary(data_width-1 downto 1));
   p_binary <= s_binary;
   
 end architecture;
