@@ -1,6 +1,6 @@
 tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
-source-types += vhdl verilog
+source-types += vhdl verilog dcp ucf xcf ngc bd
 
 .SUFFIXES:
 
