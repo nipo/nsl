@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spirit:abstractionDefinition xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <spirit:vendor>nsl</spirit:vendor>
+  <spirit:library>interface</spirit:library>
+  <spirit:name>spi_rtl</spirit:name>
+  <spirit:version>1.0</spirit:version>
+  <spirit:busType spirit:vendor="nsl" spirit:library="interface" spirit:name="spi" spirit:version="1.0"/>
+  <spirit:ports>
+    <spirit:port>
+      <spirit:logicalName>sck</spirit:logicalName>
+      <spirit:description>Serial Clock</spirit:description>
+      <spirit:wire>
+        <spirit:qualifier>
+          <spirit:isClock>true</spirit:isClock>
+        </spirit:qualifier>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onSlave>
+      </spirit:wire>
+    </spirit:port>
+    <spirit:port>
+      <spirit:logicalName>mosi</spirit:logicalName>
+      <spirit:description>Master Out Slave In</spirit:description>
+      <spirit:wire>
+        <spirit:qualifier>
+          <spirit:isData>true</spirit:isData>
+        </spirit:qualifier>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onSlave>
+      </spirit:wire>
+    </spirit:port>
+    <spirit:port>
+      <spirit:logicalName>miso</spirit:logicalName>
+      <spirit:description>Master In Slave Out</spirit:description>
+      <spirit:wire>
+        <spirit:qualifier>
+          <spirit:isData>true</spirit:isData>
+        </spirit:qualifier>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+        </spirit:onSlave>
+      </spirit:wire>
+    </spirit:port>
+    <spirit:port>
+      <spirit:logicalName>cs_n</spirit:logicalName>
+      <spirit:description>Chip Select</spirit:description>
+      <spirit:wire>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+          <spirit:width>1</spirit:width>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onSlave>
+      </spirit:wire>
+    </spirit:port>
+  </spirit:ports>
+  <spirit:vendorExtensions>
+    <xilinx:abstractionDefinitionInfo>
+      <xilinx:displayName>SPI</xilinx:displayName>
+    </xilinx:abstractionDefinitionInfo>
+  </spirit:vendorExtensions>
+</spirit:abstractionDefinition>
