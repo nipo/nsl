@@ -59,6 +59,7 @@ $(build-dir)/ingress/create.tcl: $(sources) $(ip-packaging-scripts) $(vivado-ini
 		cat $$f >> $@ ; \
 	done
 	$(SILENT)echo 'set_property display_name {$(ip-display-name)} [ipx::current_core]' >> $@
+	$(SILENT)echo 'set_property vendor_display_name {$(ip-display-vendor)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property name {$(ip-name)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property core_revision {$(ip-revision)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property supported_families [list $(target_families) Production] [ipx::current_core]' >> $@
