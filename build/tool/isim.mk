@@ -4,6 +4,8 @@ PAR_OPTS = -ol high
 ISE_PREPARE = source $(ISE)/settings64.sh > /dev/null
 target ?= $(top)
 
+simulation-time = 10 ms
+
 SHELL=/bin/bash
 
 clean-files += par_usage_statistics.html
@@ -40,7 +42,7 @@ $(target).vcd: ise-build/$(target).exe
 	$(SILENT)echo 'vcd dumpfile "$@"' >> $@.tmp
 	$(SILENT)echo 'vcd dumpvars -m / -l 0' >> $@.tmp
 	$(SILENT)echo 'wave add /' >> $@.tmp
-	$(SILENT)echo 'run 10 ms;' >> $@.tmp
+	$(SILENT)echo 'run $(simulation-time);' >> $@.tmp
 	$(SILENT)echo 'quit -f' >> $@.tmp
 	$(SILENT)$(ISE_PREPARE) ; $< -tclbatch $@.tmp
 
