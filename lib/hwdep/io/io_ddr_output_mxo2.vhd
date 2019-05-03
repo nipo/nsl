@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim, signalling;
+library signalling, machxo2;
 
 entity io_ddr_output is
   port(
@@ -11,24 +11,17 @@ entity io_ddr_output is
     );
 end entity;
 
-architecture xil of io_ddr_output is
+architecture mxo2 of io_ddr_output is
 
 begin
 
-  pad: unisim.vcomponents.oddr2
-    generic map(
-      ddr_alignment => "C0",
-      init => '0',
-      srtype => "SYNC")
+  pad: machxo2.components.oddrxe
    port map (
+      sclk => p_clk.p,
+      rst => '0',
       q => p_dd,
-      c0 => p_clk.p,
-      c1 => p_clk.n,
-      ce => '1',
       d0 => p_d(0),
-      d1 => p_d(1),
-      r => '0',
-      s => '0'
+      d1 => p_d(1)
    );
 
 end architecture;

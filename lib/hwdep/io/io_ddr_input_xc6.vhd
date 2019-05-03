@@ -1,10 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-use unisim.vcomponents.all;
-
-library signalling;
+library unisim, signalling;
 
 entity io_ddr_input is
   port(
@@ -18,9 +15,9 @@ architecture xil of io_ddr_input is
   
 begin
 
-  pad: iddr2
+  pad: unisim.vcomponents.iddr2
     generic map(
-      ddr_alignment => "C1",
+      ddr_alignment => "C0",
       srtype => "SYNC")
    port map (
       d => p_dd,

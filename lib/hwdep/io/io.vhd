@@ -16,8 +16,18 @@ package io is
 
   -- Source-synchronous DDR output, edge-aligned
   -- p_d is sampled on p_clk rising edge
-  -- p_d(0) is on p_dd while p_clk is high (on wire first)
-  -- p_d(1) is on p_dd while p_clk is low (on wire late)
+  -- p_d(0) is on p_dd while p_clk is high (on wire first), to be sampled on falling edge
+  -- p_d(1) is on p_dd while p_clk is low (on wire late), to be sampled on rising edge
+  --
+  --  Sample out of design
+  --                     d0/d1     d2/d3     d4/d5
+  --                       v         v         v
+  --              ____      ____      ____      ____      __
+  --  Clock  ____/    \____/    \____/    \____/    \____/ 
+  --  d(0)        XXXXXX D0 XXXXXX D2 XXXXXX D4 XXXXXX
+  --  d(1)        XXXXXX D1 XXXXXX D3 XXXXXX D5 XXXXXX
+  --  dd         X    X    X D0 X D1 X D2 X D3 X D4 X D5 X
+  
   component io_ddr_output
     port(
       p_clk : in diff_pair;
@@ -27,11 +37,17 @@ package io is
   end component;
 
   -- DDR input
-  -- p_clk is sampling clock, it should be 90° late on signal edges
-  -- p_d is updated on p_clk90 falling edge, it is stable on signal clock
-  -- rising edge, so that it can be resynchronized in the design.
-  -- p_d(0) is synchronous to p_clk high (on wire first)
-  -- p_d(1) is synchronous to p_clk low (on wire late)
+  -- p_clk is sampling clock
+  -- p_d(0) is synchronous to p_clk high (on wire first), to be sampled on falling edge
+  -- p_d(1) is synchronous to p_clk low (on wire late), to be sampled on rising edge
+  --
+  --  Sample in design             d0/d1     d2/d3     d4/d5
+  --                                 v         v         v
+  --              ____      ____      ____      ____      __
+  --  Clock  ____/    \____/    \____/    \____/    \____/ 
+  --  dd         X D0 X D1 X D2 X D3 X D4 X D5 X
+  --  d(0)                  XXXXXX D0 XXXXXX D2 XXXXXX D4 XXXXX
+  --  d(1)                  XXXXXX D1 XXXXXX D3 XXXXXX D5 XXXXX
   component io_ddr_input
     port(
       p_clk : in diff_pair;
