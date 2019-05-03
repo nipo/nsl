@@ -8,6 +8,10 @@ SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; p
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
 LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
 
+PYTHONPATH=$(BUILD_ROOT)/../python
+
+export PYTHONPATH
+
 define declare_source
 
 $1-language := $2

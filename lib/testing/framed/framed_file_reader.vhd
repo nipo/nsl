@@ -42,7 +42,7 @@ begin
       p_data => s_fifo,
       p_done => p_done
       );
-  p_out_val.last <= not s_fifo(8);
+  p_out_val.last <= s_fifo(8);
   p_out_val.data <= s_fifo(7 downto 0);
 
 end architecture;

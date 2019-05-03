@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep;
-library signalling;
+library hwdep, signalling;
 
 entity tb is
 end tb;
@@ -18,7 +17,7 @@ architecture arch of tb is
   signal io_b_d   : std_ulogic;
   signal io_a_clk : std_ulogic;
   signal io_b_clk : std_ulogic;
-  signal b_clk90 : signalling.diff.diff_pair;
+  signal a_clk_diff, b_clk90 : signalling.diff.diff_pair;
   signal b_clk   : std_ulogic;
 
   signal a_d : word_t := (others => '0');
@@ -29,23 +28,26 @@ architecture arch of tb is
   
 begin
 
+  a_clk_diff.p <= a_clk;
+  a_clk_diff.n <= not a_clk;
+  
   o: hwdep.io.io_ddr_output
     port map(
-      p_clk => a_clk,
+      p_clk => a_clk_diff,
       p_d => a_d,
       p_dd => io_a_d
       );
 
   i: hwdep.io.io_ddr_input
     port map(
-      p_clk90 => b_clk90,
+      p_clk => b_clk90,
       p_dd => io_b_d,
       p_d => b_d
       );
 
   cko: hwdep.io.io_ddr_output
     port map(
-      p_clk => a_clk,
+      p_clk => a_clk_diff,
       p_d => "01",
       p_dd => io_a_clk
       );

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+
+from nsl.routed import Routed, SplitRouted
+import sys
+import random
+
+class CCCmd(SplitRouted):
+    def divisor(self, value):
+        self.put([0xc0 | (value-1)])
+
+    def reset(self):
+        self.put([0x21])
+
+    def acquire(self):
+        self.put([0x20])
+
+    def wait(self, cycles):
+        self.put([0x40 | cycles])
+
+    def cmd(self, cmd, rsp):
+        assert 1 <= len(cmd) <= 4
+        assert 0 <= len(rsp) <= 2
+        self.put([((len(cmd) - 1) << 2) | len(rsp)])
+        self.put(list(cmd))
+
+class CCRsp(SplitRouted):
+    def divisor(self, value):
+        self.put([0xc0 | (value-1)])
+
+    def reset(self):
+        self.put([0x21])
+
+    def acquire(self):
+        self.put([0x20])
+
+    def wait(self, cycles):
+        self.put([0x40 | cycles])
+
+    def cmd(self, cmd, rsp):
+        assert 1 <= len(cmd) <= 4
+        assert 0 <= len(rsp) <= 2
+        self.put([((len(cmd) - 1) << 2) | len(rsp)])
+        self.put(list(rsp))
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = Routed(n)
+    if n.startswith("cc_res"):
+        t = CCRsp(f, 0xf, 0x0)
+    else:
+        t = CCCmd(f, 0x0, 0xf)
+
+    t.divisor(8)
+    t.flush(0xaa)
+
+    random.seed(42)
+
+    t.reset()
+    t.flush(0x23)
+
+    t.acquire()
+    t.flush(0x2a)
+
+    for retries in range(10):
+        t.cmd([0xa0+retries] * ((retries % 3) + 1), [(0,0)] * (retries % 3))
+        t.wait(retries)
+        t.flush(retries)

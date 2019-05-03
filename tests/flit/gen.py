@@ -1,24 +1,19 @@
 #!/usr/bin/env python2
 
+from nsl.sized import Sized
+from nsl.framed import Framed
 import sys
 import random
 
-framed = open(sys.argv[1], "w")
-flit = open(sys.argv[2], "w")
+framed = Framed(sys.argv[1])
+sized = Sized(sys.argv[2])
 
-def B(v, w):
-    return bin(v)[2:].rjust(w, '0')
+for txn in range(40):
+    size = random.randint(1, 1500)
 
-for txn in range(20):
-    size = random.randint(1, 255)
-    
-    flit.write("%s %d\n" % (B(size, 9), 0))
-
+    frame = []
     for i in range(size - 1):
         d = random.randint(0, 255)
-        framed.write("%s %d\n" % (B(d + (256 if i < size - 1 else 0), 9), random.randint(0, 4)))
-        flit.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))
-
-    d = random.randint(0, 255)
-    framed.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))
-    flit.write("%s %d\n" % (B(d, 9), random.randint(0, 4)))
+        frame.append(d)
+    framed.put(frame, end_delay = random.randint(0, 512))
+    sized.put(frame, end_delay = random.randint(0, 512))

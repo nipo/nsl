@@ -29,9 +29,6 @@ architecture arch of tb is
   signal s_ap_wdata : unsigned(31 downto 0);
   signal s_ap_wen : std_ulogic;
 
-  signal s_swdio_o   : std_ulogic;
-  signal s_swdio_oe  : std_ulogic;
-
   signal s_done : std_ulogic_vector(0 to 1);
 
   signal s_cmd_val_fifo, s_rsp_val_fifo : nsl.framed.framed_req;

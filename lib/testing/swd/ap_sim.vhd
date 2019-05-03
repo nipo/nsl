@@ -54,7 +54,7 @@ begin
   process (r, p_wen, p_ren, p_wdata, p_a)
     variable s_addr : natural range 0 to 63;
   begin
-    s_addr := to_integer(p_a);
+    s_addr := to_integer(to_01(p_a));
     rin <= r;
 
     if r.waiting /= 0 then

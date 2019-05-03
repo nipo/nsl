@@ -82,9 +82,9 @@ architecture rtl of swdap is
     end if;
   end function;
 begin
-  reg: process (p_swd_s.clk, s_reset) is
+  reg: process (p_swd_s, s_reset) is
   begin
-    if rising_edge(p_swd_s.clk) then
+    if p_swd_s.clk = '1' and p_swd_s.clk'event then
       if s_reset = '1' then
         r.state <= STATE_RESET;
       else
@@ -95,7 +95,7 @@ begin
 
   reset: process(r, p_swd_s.dio.v)
   begin
-    if p_swd_s.dio.v = '0' then
+    if to_x01(p_swd_s.dio.v) = '0' then
       r_reset_counter <= 0;
       s_reset <= '0';
     elsif r_reset_counter /= 49 then
@@ -118,51 +118,55 @@ begin
       when STATE_RESET =>
         rin.state <= STATE_IDLE;
         rin.turnaround <= 0;
-        rin.ap_bank_sel <= (others => '0');
-        rin.ap_sel <= (others => '0');
-        rin.dp_bank_sel <= (others => '0');
-        rin.cmd_a <= (others => '0');
-        rin.cmd_ad <= '0';
-        rin.rdata <= (others => '0');
-        rin.data <= (others => '0');
+        rin.ap_bank_sel <= (others => '-');
+        rin.ap_sel <= (others => '-');
+        rin.dp_bank_sel <= (others => '-');
+        rin.cmd_a <= (others => '-');
+        rin.cmd_ad <= '-';
+        rin.cmd_rw <= '-';
+        rin.ready <= '0';
+        rin.data_par <= '-';
+        rin.cmd_ok <= '0';
+        rin.rdata <= (others => '-');
+        rin.data <= (others => '-');
 
       when STATE_IDLE =>
         rin.cmd_ok <= '1';
-        if p_swd_s.dio.v = '1' then
+        if to_x01(p_swd_s.dio.v) = '1' then
           rin.state <= STATE_CMD_AD;
           rin.data_par <= '0';
         end if;
 
       when STATE_CMD_AD =>
-        rin.cmd_ad <= p_swd_s.dio.v;
+        rin.cmd_ad <= to_x01(p_swd_s.dio.v);
         rin.state <= STATE_CMD_RW;
 
       when STATE_CMD_RW =>
-        rin.cmd_rw <= p_swd_s.dio.v;
+        rin.cmd_rw <= to_x01(p_swd_s.dio.v);
         rin.state <= STATE_CMD_A0;
 
       when STATE_CMD_A0 =>
-        rin.cmd_a(0) <= p_swd_s.dio.v;
+        rin.cmd_a(0) <= to_x01(p_swd_s.dio.v);
         rin.state <= STATE_CMD_A1;
 
       when STATE_CMD_A1 =>
-        rin.cmd_a(1) <= p_swd_s.dio.v;
+        rin.cmd_a(1) <= to_x01(p_swd_s.dio.v);
         rin.state <= STATE_CMD_PAR;
 
       when STATE_CMD_PAR =>
         rin.state <= STATE_CMD_STOP;
-        rin.cmd_ok <= r.cmd_ok and not (p_swd_s.dio.v xor r.cmd_ad xor r.cmd_rw xor r.cmd_a(0) xor r.cmd_a(1));
+        rin.cmd_ok <= r.cmd_ok and not (to_x01(p_swd_s.dio.v) xor r.cmd_ad xor r.cmd_rw xor r.cmd_a(0) xor r.cmd_a(1));
 
       when STATE_CMD_STOP =>
-        rin.cmd_ok <= r.cmd_ok and not p_swd_s.dio.v;
-        if p_swd_s.dio.v = '1' then
+        rin.cmd_ok <= r.cmd_ok and not to_x01(p_swd_s.dio.v);
+        if to_x01(p_swd_s.dio.v) = '1' then
           rin.state <= STATE_IDLE;
         else
           rin.state <= STATE_CMD_PARK;
         end if;
 
       when STATE_CMD_PARK =>
-        if p_swd_s.dio.v = '0' then
+        if to_x01(p_swd_s.dio.v) = '0' then
           rin.state <= STATE_IDLE;
         else
           rin.state <= STATE_CMD_TURN;
@@ -250,7 +254,7 @@ begin
         end if;
 
       when STATE_DATA =>
-        rin.data <= p_swd_s.dio.v & r.data(31 downto 1);
+        rin.data <= to_x01(p_swd_s.dio.v) & r.data(31 downto 1);
         rin.to_shift <= (r.to_shift - 1) mod 32;
 
         if r.to_shift = 0 then
@@ -260,7 +264,7 @@ begin
         if r.cmd_rw = '1' then
           rin.data_par <= r.data_par xor r.data(0);
         else
-          rin.data_par <= r.data_par xor p_swd_s.dio.v;
+          rin.data_par <= r.data_par xor to_x01(p_swd_s.dio.v);
         end if;
 
       when STATE_DATA_PAR =>
@@ -269,7 +273,7 @@ begin
           rin.to_shift <= r.turnaround;
         else
           -- was a write to dp
-          if r.cmd_ad = '0' and r.data_par = p_swd_s.dio.v then
+          if r.cmd_ad = '0' and r.data_par = to_x01(p_swd_s.dio.v) then
             case r.cmd_a is
               when "00" => -- Abort
                 null;
@@ -325,7 +329,7 @@ begin
 
     case r.state is
       when STATE_DATA_PAR =>
-        p_ap_wen <= (not (r.cmd_rw or (r.data_par xor p_swd_s.dio.v))) and r.cmd_ad;
+        p_ap_wen <= (not (r.cmd_rw or (r.data_par xor to_x01(p_swd_s.dio.v)))) and r.cmd_ad;
 
       when STATE_ACK_FAULT =>
         p_ap_ren <= r.cmd_rw and r.cmd_ad;

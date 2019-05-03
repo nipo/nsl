@@ -5,9 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl;
-library testing;
-library util;
+library nsl, testing, util, signalling;
 
 architecture arch of tb is
 
@@ -15,12 +13,8 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_scl : std_logic;
-  signal s_sda : std_logic;
-  signal s_scl_drain_m : std_ulogic;
-  signal s_sda_drain_m : std_ulogic;
-  signal s_scl_drain_s : std_ulogic;
-  signal s_sda_drain_s : std_ulogic;
+  signal s_i2c : signalling.i2c.i2c_i;
+  signal s_i2c_slave, s_i2c_master : signalling.i2c.i2c_o;
 
   signal s_done : std_ulogic_vector(0 to 1);
 
@@ -66,29 +60,22 @@ begin
       p_rsp_val => s_i2c_rsp_val,
       p_rsp_ack => s_i2c_rsp_ack,
       
-      p_i2c_i.scl.v => s_scl,
-      p_i2c_i.sda.v => s_sda,
-      p_i2c_o.sda.drain => s_sda_drain_m,
-      p_i2c_o.scl.drain => s_scl_drain_m
+      p_i2c_i => s_i2c,
+      p_i2c_o => s_i2c_master
       );
 
   i2c_mem: nsl.i2c.i2c_mem
     generic map(
-      slave_addr => "0100110",
-      mem_addr_width => 16
+      address => "0100110",
+      addr_width => 16
       )
     port map(
-      p_clk  => s_clk,
-      p_resetn => s_resetn_clk,
-      
-      p_i2c_i.scl.v => s_scl,
-      p_i2c_i.sda.v => s_sda,
-      p_i2c_o.sda.drain => s_sda_drain_s,
-      p_i2c_o.scl.drain => s_scl_drain_s
+      p_i2c_i => s_i2c,
+      p_i2c_o => s_i2c_slave
       );
 
-  s_scl <= '0' when s_scl_drain_s = '1' or s_scl_drain_m = '1' else '1';
-  s_sda <= '0' when s_sda_drain_s = '1' or s_sda_drain_m = '1' else '1';
+  s_i2c.scl.v <= not (s_i2c_slave.scl.drain or s_i2c_master.scl.drain) after 10 ns;
+  s_i2c.sda.v <= not (s_i2c_slave.sda.drain or s_i2c_master.sda.drain) after 10 ns;
 
   gen: testing.framed.framed_file_reader
     generic map(
@@ -124,8 +111,10 @@ begin
 
   clock_gen: process(s_clk)
   begin
-    if s_done /= "11" then
-      s_clk <= not s_clk after 5 ns;
+    if s_done = (s_done'range => '1') then
+      assert false report "all done" severity note;
+    else
+      s_clk <= not s_clk after 50 ns;
     end if;
   end process;
 

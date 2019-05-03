@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+from nsl.framed import Framed, SplitFramed
+from nsl.spi_master import Master, MasterCmd, MasterRsp
+import sys
+import random
+
+class SlaveReceived(Framed):
+    def to_slave(self, data):
+        self.put(data)
+
+    def from_slave(self, data):
+        pass
+
+class SlaveTransmitted(Framed):
+    def to_slave(self, data):
+        pass
+
+    def from_slave(self, data):
+        self.put(data)
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    if n == "master_cmd.txt":
+        t = Master(MasterCmd(SplitFramed(n)))
+    elif n == "master_rsp.txt":
+        t = Master(MasterRsp(SplitFramed(n)))
+    elif n == "slave_received.txt":
+        t = SlaveReceived(n)
+    elif n == "slave_transmitted.txt":
+        t = SlaveTransmitted(n)
+
+    random.seed(42)
+
+    for i in range(10):
+        r = random.randint(1, 512)
+        size = r >> 1
+        direction = r & 1
+
+        if direction:
+            t.to_slave(bytes([i & 0xff for i in range(size)]))
+        else:
+            t.from_slave(bytes([i & 0xff for i in range(size)]))

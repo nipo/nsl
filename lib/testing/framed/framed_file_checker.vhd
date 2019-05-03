@@ -42,6 +42,6 @@ begin
       p_data => s_fifo,
       p_done => p_done
       );
-  s_fifo <= not p_in_val.last & p_in_val.data;
+  s_fifo <= p_in_val.last & p_in_val.data;
 
 end architecture;
