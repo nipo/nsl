@@ -42,4 +42,27 @@ package axi4_lite is
     sm: a32_d32_sm;
   end record;
 
+  constant a32_d32_ms_idle : a32_d32_ms := (
+    awaddr => (others => '-'),
+    awvalid => '0',
+    wdata => (others => '-'),
+    wstrb => (others => '-'),
+    wvalid => '0',
+    bready => '0',
+    araddr => (others => '-'),
+    arvalid => '0',
+    rready => '0'
+    );
+
+  constant a32_d32_sm_idle : a32_d32_sm := (
+    awready => '0',
+    wready => '0',
+    bvalid => '0',
+    bresp => (others => '-'),
+    arready => '0',
+    rvalid => '0',
+    rresp => (others => '-'),
+    rdata => (others => '-')
+    );
+
 end package;

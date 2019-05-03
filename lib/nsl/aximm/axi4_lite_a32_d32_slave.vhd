@@ -122,13 +122,7 @@ begin
     p_w_valid <= '0';
     p_r_ready <= '0';
 
-    p_axi_sm.awready <= '0';
-    p_axi_sm.wready <= '0';
-    p_axi_sm.bresp <= "--";
-    p_axi_sm.bvalid <= '0';
-    p_axi_sm.arready <= '0';
-    p_axi_sm.rvalid <= '0';
-    p_axi_sm.rresp <= "--";
+    p_axi_sm <= signalling.axi4_lite.a32_d32_sm_idle;
 
     case r.state is
       when ST_WCMD =>
