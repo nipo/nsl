@@ -9,14 +9,15 @@ entity fifo_pointer is
     ptr_width         : natural;
     wrap_count        : integer;
     equal_can_move    : boolean; -- equal means empty, can move for wptr
-    ptr_are_gray      : boolean
+    ptr_are_gray      : boolean;
+    increment_early   : boolean := false
     );
 
   port(
     p_resetn : in std_ulogic;
     p_clk    : in std_ulogic;
 
-    p_req : in  std_ulogic;
+    p_inc : in  std_ulogic;
     p_ack : out std_ulogic;
 
     p_peer_ptr   : in  std_ulogic_vector(ptr_width downto 0);
@@ -46,6 +47,28 @@ architecture rtl of fifo_pointer is
   signal s_local_ptr: std_ulogic_vector(ptr_width downto 0);
   signal r, rin: regs_t;
 
+  function next_ctr(cur: ctr_t) return ctr_t is
+    variable ret : ctr_t;
+  begin
+    ret := cur;
+
+    if c_is_pow2 then
+      if cur.value = c_idx_high then
+        ret.wrap_toggle := not cur.wrap_toggle;
+      end if;
+      ret.value := cur.value + 1;
+    else
+      if cur.value = c_idx_high then
+        ret.wrap_toggle := not cur.wrap_toggle;
+        ret.value := (others => '0');
+      else
+        ret.value := cur.value + 1;
+      end if;
+    end if;
+    return ret;
+
+  end function;
+  
 begin
 
   regs: process (p_clk, p_resetn)
@@ -97,7 +120,7 @@ begin
   generate
     s_ptr_equal <= s_local_ptr(ptr_t'range) = p_peer_ptr(ptr_t'range);
   end generate;
-  
+
   s_can_inc <= not s_ptr_equal
     or (p_peer_ptr(ptr_width) = s_local_ptr(ptr_width)) = equal_can_move;
 
@@ -105,25 +128,13 @@ begin
   p_local_ptr <= s_local_ptr;
   p_mem_ptr <= r.position.value;
   
-  transition: process(r, p_req, s_can_inc)
+  transition: process(r, p_inc, s_can_inc)
   begin
     rin <= r;
     rin.running <= true;
 
-    if r.running and s_can_inc and p_req = '1' then
-      if c_is_pow2 then
-        if r.position.value = c_idx_high then
-          rin.position.wrap_toggle <= not r.position.wrap_toggle;
-        end if;
-        rin.position.value <= r.position.value + 1;
-      else
-        if r.position.value = c_idx_high then
-          rin.position.wrap_toggle <= not r.position.wrap_toggle;
-          rin.position.value <= (others => '0');
-        else
-          rin.position.value <= r.position.value + 1;
-        end if;
-      end if;
+    if r.running and s_can_inc and p_inc = '1' then
+      rin.position <= next_ctr(r.position);
     end if;
   end process;
   

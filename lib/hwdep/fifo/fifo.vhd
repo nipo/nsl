@@ -31,14 +31,15 @@ package fifo is
       ptr_width         : natural;
       wrap_count        : integer;
       equal_can_move    : boolean; -- equal means empty, can move for wptr
-      ptr_are_gray      : boolean
+      ptr_are_gray      : boolean;
+      increment_early   : boolean := false
       );
 
     port(
       p_resetn : in std_ulogic;
       p_clk    : in std_ulogic;
 
-      p_req : in  std_ulogic;
+      p_inc : in  std_ulogic;
       p_ack : out std_ulogic;
 
       p_peer_ptr   : in  std_ulogic_vector(ptr_width downto 0);

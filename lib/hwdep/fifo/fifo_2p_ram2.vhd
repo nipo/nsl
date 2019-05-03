@@ -39,13 +39,14 @@ architecture ram2 of fifo_2p is
   signal s_resetn: std_ulogic_vector(0 to clk_count-1);
   signal s_out_wptr, s_in_rptr, s_out_rptr, s_in_wptr: peer_ptr_t;
   signal s_mem_wptr, s_mem_rptr: mem_ptr_t;
-  signal s_mem_write, s_mem_read: std_ulogic;
-  signal s_write_ack, s_read_req, s_read_ack: std_ulogic;
+  signal s_mem_write, s_mem_ren, s_rptr_valid: std_ulogic;
+  signal s_write_ack, s_rptr_inc: std_ulogic;
   signal s_read_data: data_t;
   
   type regs_t is record
+    direct, valid: std_logic;
+    addr: mem_ptr_t;
     data: data_t;
-    valid: std_logic;
   end record;
 
   signal r, rin: regs_t;
@@ -140,7 +141,7 @@ begin
     port map(
       p_resetn => s_resetn(0),
       p_clk => p_clk(0),
-      p_req => p_in_valid,
+      p_inc => p_in_valid,
       p_ack => s_write_ack,
       p_peer_ptr => s_in_rptr,
       p_local_ptr => s_in_wptr,
@@ -152,13 +153,14 @@ begin
       ptr_width => mem_ptr_t'length,
       wrap_count => depth,
       equal_can_move => false,
-      ptr_are_gray => is_bisynchronous
+      ptr_are_gray => is_bisynchronous,
+      increment_early => true
       )
     port map(
       p_resetn => s_resetn(clk_count-1),
       p_clk => p_clk(clk_count-1),
-      p_req => s_read_req,
-      p_ack => s_read_ack,
+      p_inc => s_rptr_inc,
+      p_ack => s_rptr_valid,
       p_peer_ptr => s_out_wptr,
       p_local_ptr => s_out_rptr,
       p_mem_ptr => s_mem_rptr
@@ -179,41 +181,44 @@ begin
       p_wdata => p_in_data,
 
       p_raddr => std_ulogic_vector(s_mem_rptr),
-      p_ren => s_mem_read,
+      p_ren => s_mem_ren,
       p_rdata => s_read_data
       );
 
   p_in_ready <= s_write_ack;
   s_mem_write <= s_write_ack and p_in_valid;
-
-  p_out_valid <= r.valid;
-  p_out_data <= s_read_data; --r.data;
-
-  s_mem_read <= '1';
   
   regs: process (p_clk, s_resetn)
   begin
     if s_resetn(clk_count-1) = '0' then
       r.valid <= '0';
+      r.direct <= '0';
       r.data <= (others => '-');
     elsif p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
       r <= rin;
     end if;
   end process;
 
-  transition: process(p_out_ready, r, s_read_ack, s_read_data)
+  transition: process(p_out_ready, r, s_mem_rptr, s_read_data, s_rptr_valid)
   begin
     rin <= r;
 
-    if (p_out_ready = '1' or r.valid = '0') and s_read_ack = '1' then
-      rin.valid <= '1';
+    rin.direct <= s_rptr_valid;
+
+    if r.valid = '0' and p_out_ready = '0' then
+      rin.valid <= r.direct;
       rin.data <= s_read_data;
-    elsif p_out_ready = '1' then
+      rin.addr <= s_mem_rptr;
+    elsif r.valid = '1' and p_out_ready = '1' then
       rin.valid <= '0';
       rin.data <= (others => '-');
+      rin.addr <= (others => '-');
     end if;
   end process;
 
-  s_read_req <= not r.valid or p_out_ready;
+  s_rptr_inc <= p_out_ready or (not r.valid and not r.direct);
+  s_mem_ren <= s_rptr_valid and (p_out_ready or not r.valid);
+  p_out_valid <= r.valid or r.direct;
+  p_out_data <= r.data when r.valid = '1' else s_read_data;
   
 end ram2;
