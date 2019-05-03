@@ -10,6 +10,24 @@ package color is
 
   type rgb3_vector is array(natural range <>) of rgb3;
 
+  constant rgb3_black   : rgb3 := ('0', '0', '0');
+  constant rgb3_blue    : rgb3 := ('0', '0', '1');
+  constant rgb3_red     : rgb3 := ('1', '0', '0');
+  constant rgb3_green   : rgb3 := ('0', '1', '0');
+  constant rgb3_yellow  : rgb3 := ('1', '1', '0');
+  constant rgb3_cyan    : rgb3 := ('0', '1', '1');
+  constant rgb3_magenta : rgb3 := ('1', '0', '1');
+  constant rgb3_white   : rgb3 := ('1', '1', '1');
+  
+  function "="(l, r : rgb3) return boolean;
+  function "/="(l, r : rgb3) return boolean;
+  function "="(l, r : rgb3_vector) return boolean;
+  function "/="(l, r : rgb3_vector) return boolean;
+  function "and"(l, r : rgb3) return rgb3;
+  function "or"(l, r : rgb3) return rgb3;
+  function "xor"(l, r : rgb3) return rgb3;
+  function "not"(l : rgb3) return rgb3;
+
   type rgb24 is record
     r, g, b : natural range 0 to 255;
   end record;
