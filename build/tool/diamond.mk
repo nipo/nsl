@@ -12,19 +12,29 @@ define append
 endef
 
 define syn_source_do
-	$(call append,$1,add_file -$($2-language) -lib $($2-library) "$2")
+	$(call append,$1,add_file -$($2-language) -lib $($2-library) {$2})
 
 endef
+
+define syn_constraint_do
+	$(if $(filter %.sdc,$2),$(call append,$1,add_file -constraint {$2}))
+
+endef
+
+clean-dirs += $(build-dir)
+clean-files += $(target).bit
 
 $(build-dir)/synth.prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $@
+	$(call append,$@,add_file -vhdl {$(DIAMOND_PATH)/cae_library/synthesis/vhdl/machxo2.vhd})
 	$(foreach s,$(sources),$(call syn_source_do,$@,$s))
+	$(foreach c,$(constraints),$(call syn_constraint_do,$@,$c))
 	$(call append,$@,impl -add synth -type fpga)
 #	$(call append,$@,set_option -vhdl2008 1)
 	$(call append,$@,set_option -technology $(target_technology))
 	$(call append,$@,set_option -part $(target_part))
-	$(call append,$@,set_option -package $(target_package))
+	$(call append,$@,set_option -package $(target_package2))
 	$(call append,$@,set_option -speed_grade $(target_speed))
 #	$(call append,$@,set_option -speed_part_companion "")
 	$(call append,$@,set_option -top_module $(top-lib).$(top-entity))
@@ -56,12 +66,12 @@ $(build-dir)/synth/$(target).edi: $(build-dir)/synth.prj
 
 $(build-dir)/$(target).ngo: $(build-dir)/synth/$(target).edi
 	cd $(build-dir) && $(ISPFPGA_BIN)/edif2ngd \
-		-l $(target_tech) -d $(target_part) \
+		-l $(target_arch) -d $(subst _,-,$(target_part)) \
 		synth/$(target).edi $(target).ngo
 
 $(build-dir)/$(target).ngd: $(build-dir)/$(target).ngo
 	cd $(build-dir) && $(ISPFPGA_BIN)/ngdbuild \
-		-a $(target_arch) -d $(target_part) \
+		-a $(target_arch) -d $(subst _,-,$(target_part)) \
 		-p $(DIAMOND_PATH)/ispfpga/$(target_dir)/data \
 		$(target).ngo $(target).ngd
 
@@ -70,11 +80,11 @@ $(build-dir)/port_remap.sed: $(build-dir)/synth/$(target).edi
 		sed -e 's:top port \(.*\) \(.*\):s,\1,\2,:' > $@
 
 $(build-dir)/constraints.lpf: $(constraints) $(build-dir)/port_remap.sed
-	cat $(constraints) | sed -f $(build-dir)/port_remap.sed > $@
+	cat $(filter %.lpf,$(constraints)) | sed -f $(build-dir)/port_remap.sed > $@
 
 $(build-dir)/$(target)_map.ncd: $(build-dir)/$(target).ngd $(build-dir)/constraints.lpf
 	cd $(build-dir) && $(ISPFPGA_BIN)/map \
-		-a $(target_arch) -p $(target_part) -t $(target_package) -s $(target_speed) \
+		-a $(target_arch) -p $(subst _,-,$(target_part)) -t $(target_package2) -s $(subst -,,$(target_speed)) \
 		-oc Commercial \
 		$(target).ngd -o $(target)_map.ncd \
 		-pr $(target).prf -mp $(target).mrp \
@@ -128,29 +138,29 @@ $(build-dir)/$(target).jed: $(build-dir)/$(target).prf $(build-dir)/$(target).t2
 $(target).bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress off \
-		-header -mirror -of ../$@ -dev $(target_part)
+		-header -mirror -of ../$@ -dev $(subst _,-,$(target_part))
 
 $(target)-compressed.bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress on \
-		-header -mirror -of ../$@ -dev $(target_part)
+		-header -mirror -of ../$@ -dev $(subst _,-,$(target_part))
 
 %-ram.svf: %.bit
 	$(DIAMOND_BIN)/ddtcmd -oft -svf \
 		-if $< -op "SRAM Erase,Program,Verify" -revd -runtest \
-		-of $@ -dev $(target_part)
+		-of $@ -dev $(subst _,-,$(target_part))
 #	sed -i 's:RUNTEST.*IDLE.*;:RUNTEST IDLE 32 TCK;:' $@
 
 %-flash.svf: $(build-dir)/$(target).jed
 	$(DIAMOND_BIN)/ddtcmd -oft -svf \
 		-if $< -op "FLASH Erase,Program,Verify" -revd -runtest \
-		-of $@ -dev $(target_part)
+		-of $@ -dev $(subst _,-,$(target_part))
 #	sed -i 's:RUNTEST.*IDLE.*10002.*TCK;:RUNTEST IDLE 32 TCK;:' $@
 #	sed -i 's:RUNTEST.*IDLE.*15000002.*TCK;:RUNTEST IDLE 100 TCK 0.8E-00 SEC;:' $@
 
 %-compressed-flash.svf: $(build-dir)/$(target).jed
 	$(DIAMOND_BIN)/ddtcmd -oft -svf \
 		-if $< -op "FLASH Erase,Program,Verify" -revd -runtest \
-		-of $@ -dev $(target_part)
+		-of $@ -dev $(subst _,-,$(target_part))
 #	sed -i 's:RUNTEST.*IDLE.*10002.*TCK;:RUNTEST IDLE 32 TCK;:' $@
 #	sed -i 's:RUNTEST.*IDLE.*15000002.*TCK;:RUNTEST IDLE 100 TCK 0.8E-00 SEC;:' $@
