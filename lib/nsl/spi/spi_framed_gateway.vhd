@@ -268,7 +268,9 @@ begin
         s_to_spi(1) <= not s_out_io.req.valid;
         s_to_spi(0) <= s_in_spi.req.valid;
 
-      when ST_TO_SPI_SIZE_H | ST_TO_SPI_SIZE_L | ST_TO_SPI_DATA | ST_TO_SPI_CONT_DATA =>
+      when ST_TO_SPI_SIZE_H | ST_TO_SPI_SIZE_L
+        | ST_TO_SPI_DATA | ST_TO_SPI_CONT_DATA
+        | ST_OVER =>
         s_to_spi <= s_in_spi.req.data;
         
       when others =>
