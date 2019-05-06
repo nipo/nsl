@@ -193,7 +193,7 @@ begin
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
-          rin.ack <= p_swd_s.dio.v & r.ack(2 downto 1);
+          rin.ack <= to_x01(p_swd_s.dio.v) & r.ack(2 downto 1);
           if r.cycle_count = c_zero then
             if r.is_read = '1' then -- read
               rin.state <= STATE_DATA_SHIFT_IN;
@@ -245,8 +245,8 @@ begin
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.cycle_count <= r.cycle_count - 1;
-          rin.data <= p_swd_s.dio.v & r.data(31 downto 1);
-          rin.par_in <= r.par_in xor p_swd_s.dio.v;
+          rin.data <= to_x01(p_swd_s.dio.v) & r.data(31 downto 1);
+          rin.par_in <= r.par_in xor to_x01(p_swd_s.dio.v);
           if r.cycle_count = c_zero then
             rin.state <= STATE_PARITY_SHIFT_IN;
           end if;
@@ -257,7 +257,7 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.par_in <= r.par_in xor p_swd_s.dio.v;
+          rin.par_in <= r.par_in xor to_x01(p_swd_s.dio.v);
           rin.state <= STATE_DATA_TURNAROUND;
           rin.cycle_count <= "0000" & r.turnaround;
         end if;
