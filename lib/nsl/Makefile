@@ -14,3 +14,4 @@ packages += ioext
 packages += cs
 packages += uart
 packages += ws
+packages += jtag

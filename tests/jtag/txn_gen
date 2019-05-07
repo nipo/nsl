@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+from nsl.routed import Routed, SplitRouted
+from nsl.jtag import AteCmd, AteRsp, Tap
+
+import sys
+import random
+
+if __name__ == "__main__":
+    IDCODE = 0x87654321
+    
+    n = sys.argv[1]
+
+    noc = Routed(n)
+    if n.startswith("ate_res"):
+        ate = AteRsp(SplitRouted(noc, 0xf, 0x0))
+    else:
+        ate = AteCmd(SplitRouted(noc, 0x0, 0xf))
+
+    tap = Tap(ate, 4)
+
+    ate.divisor(8)
+    ate.swd_to_jtag()
+    ate.flush()
+
+    tap.run()
+    tap.dr_io(32, None, IDCODE)
+    tap.run()
+    ate.flush()
+
+    ate.divisor(1)
+    ate.swd_to_jtag()
+    ate.flush()
+
+    tap.run()
+    tap.dr_io(32, None, IDCODE)
+    tap.run()
+    ate.flush()
+
+    tap.run()
+    tap.ir_io()
+    tap.dr_io(1, None, 0)
+    tap.run()
+    ate.flush()
+
+    tap.run()
+    tap.ir_io(0x2)
+    tap.dr_io(32, None, IDCODE)
+    tap.run()
+    ate.flush()
+    
