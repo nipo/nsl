@@ -5,19 +5,25 @@ class AteBase:
 
     def flush(self, **kwargs):
         self.pipe.flush(**kwargs)
-        
+
     def shift_bytes(self, opts, length, data):
         for off in range(0, length, 0x20):
             size = min(32, length - off)
-            
-            self.pipe.put([0x00 | opts | (size - 1)])
+
+            if self.is_cmd:
+                self.pipe.put([0x00 | opts | (size - 1)])
             if data:
                 self.pipe.put(list(data[off:off+size]))
+            if not self.is_cmd:
+                self.pipe.put([0x00])
 
     def shift_bits(self, opts, length, data):
-        self.pipe.put([0xe0 | opts | (length - 1)])
+        if self.is_cmd:
+            self.pipe.put([0xe0 | opts | (length - 1)])
         if data is not None:
             self.pipe.put([data])
+        if not self.is_cmd:
+            self.pipe.put([0x00])
 
     def reset(self, cycles = 5):
         while cycles > 7:
@@ -75,6 +81,7 @@ class AteBase:
             
             
 class AteCmd(AteBase):
+    is_cmd = True
     def shift_bytes(self, tdi, tdo, length):
         opts = 0
         if tdi:
@@ -95,6 +102,7 @@ class AteCmd(AteBase):
         AteBase.shift_bits(self, opts, length, tdi)
 
 class AteRsp(AteBase):
+    is_cmd = False
     def shift_bytes(self, tdi, tdo, length):
         opts = 0
         if tdi:

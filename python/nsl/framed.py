@@ -7,6 +7,7 @@ class Framed(FifoFile):
         self.tlast = 1 << (self.width - 1)
 
     def put(self, frame, tag = None, delay = 0, end_delay = 0):
+        dmask = self.tlast - 1
         for i, flit in enumerate(frame):
             is_last = i + 1 == len(frame)
             try:
@@ -14,8 +15,8 @@ class Framed(FifoFile):
             except:
                 data, mask = flit, (1 << (self.width - 1)) - 1
 
-            FifoFile.put(self, data | (self.tlast if is_last else 0),
-                         mask | self.tlast,
+            FifoFile.put(self, (data & dmask) | (self.tlast if is_last else 0),
+                         (mask & dmask) | self.tlast,
                          delay + (end_delay if is_last else 0))
 
 class SplitFramed(Framed):
