@@ -119,9 +119,13 @@ begin
         p_rsp_out_val.data <= r.cmd;
         p_rsp_out_val.last <= '0';
         
-      when ST_FORWARD_CMD | ST_FORWARD_RSP =>
+      when ST_FORWARD_CMD =>
         p_cmd_out_val <= p_cmd_in_val;
         p_cmd_in_ack <= p_cmd_out_ack;
+        p_rsp_out_val <= p_rsp_in_val;
+        p_rsp_in_ack <= p_rsp_out_ack;
+
+      when ST_FORWARD_RSP =>
         p_rsp_out_val <= p_rsp_in_val;
         p_rsp_in_ack <= p_rsp_out_ack;
     end case;
