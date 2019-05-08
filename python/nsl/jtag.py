@@ -21,7 +21,8 @@ class AteBase:
         if self.is_cmd:
             self.pipe.put([0xe0 | opts | (length - 1)])
         if data is not None:
-            self.pipe.put([data])
+            mask = (1 << length) - 1
+            self.pipe.put([(data, mask)])
         if not self.is_cmd:
             self.pipe.put([0x00])
 
