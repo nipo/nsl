@@ -28,6 +28,11 @@ if __name__ == "__main__":
     tap.run()
     ate.flush()
 
+    tap.ir_io(0x2)
+    tap.dr_io(32, None, IDCODE)
+    tap.run()
+    ate.flush()
+
     ate.divisor(1)
     ate.swd_to_jtag()
     ate.flush()

@@ -58,10 +58,11 @@ architecture rtl of jtag_ate is
     ST_MOVING, -- shift TMS
     ST_SHIFT_PRE, -- Special kind of MOVING where next state is SHIFTING
     ST_SHIFTING,
+    ST_SHIFTING_PIPELINE,
     ST_SHIFT_POST, -- Special kind of MOVING where next state is SHIFT_DONE
     ST_SHIFT_DONE
     );
-  
+
   type regs_t is
   record
     state : state_t;
@@ -72,6 +73,7 @@ architecture rtl of jtag_ate is
     tms_shreg : std_ulogic_vector(7 downto 0);
     tms_left : natural range 0 to 9;
     tck : std_ulogic;
+    pipelining : boolean;
   end record;
 
   signal r, rin: regs_t;
@@ -95,7 +97,7 @@ begin
 
     rising := false;
     falling := false;
-    
+
     if r.prescaler = 0 then
       if r.tck = '0' then
         rising := true;
@@ -111,14 +113,15 @@ begin
     else
       rin.prescaler <= divisor_i;
     end if;
-    
+
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
         rin.prescaler <= divisor_i;
-        
+
       when ST_IDLE =>
         if cmd_valid_i = '1' and falling then
+          rin.pipelining <= false;
           case cmd_op_i is
             when nsl.jtag.ATE_OP_RESET =>
               -- From state * to Reset
@@ -228,17 +231,49 @@ begin
         end if;
 
       when ST_SHIFTING =>
+        -- Remember: We cannot do anything useful on falling in ST_SHIFTING, as we
+        -- may sometimes be in SHIFTING_PIPELINE instead.
         if rising then
           rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
           rin.data_shreg(r.data_shreg_insertion_index) <= tdo_i;
           rin.data_left <= r.data_left - 1;
           if r.data_left = 0 then
-            -- On next cycle, we are on Exit1, just go to Pause
-            rin.tms_shreg <= "-------0";
-            rin.tms_left <= 0;
-            rin.state <= ST_SHIFT_POST;
+            if r.pipelining then
+              rin.state <= ST_SHIFTING_PIPELINE;
+            else
+              -- Basically, we are on a shift underrun. We cannot assert what's
+              -- next, so we'll basically go to pause.
+              -- On next cycle, we are on Exit1, just go to Pause
+              rin.tms_shreg <= "-------0";
+              rin.tms_left <= 0;
+              rin.state <= ST_SHIFT_POST;
+            end if;
+          else
+            -- We need to validate pipelining before we assert TMS up.
+            if cmd_valid_i = '1'
+              and rsp_ready_i = '1' then
+              case cmd_op_i is
+                when nsl.jtag.ATE_OP_SHIFT =>
+                  rin.pipelining <= true;
+                  when others => null;
+              end case;
+            end if;
           end if;
         end if;
+
+      when ST_SHIFTING_PIPELINE =>
+        -- This should last exactly one cycle, in case divisor = 1 (0), it will
+        -- be exactly at the same time than the tck-high part of last bit of
+        -- word shift.
+        -- We already made sure handshake from master was OK, now we'll spend
+        -- one (ref) clock cycle to swap shift register values.
+        -- On next cycle, we go back as normal in ST_SHIFTING.
+        rin.data_shreg <= cmd_data_i;
+        rin.data_left <= cmd_size_m1_i;
+        rin.data_shreg_insertion_index <= cmd_size_m1_i;
+        rin.tap_branch <= TAP_REG;
+        rin.pipelining <= false;
+        rin.state <= ST_SHIFTING;
 
       when ST_SHIFT_DONE =>
         if rsp_ready_i = '1' then
@@ -263,6 +298,11 @@ begin
         rsp_valid_o <= '1';
         rsp_data_o <= r.data_shreg;
 
+      when ST_SHIFTING_PIPELINE =>
+        rsp_valid_o <= '1';
+        rsp_data_o <= r.data_shreg;
+        cmd_ready_o <= '1';
+
       when others =>
         null;
     end case;
@@ -272,16 +312,22 @@ begin
   begin
     tck_o <= r.tck;
 
-    if r.prescaler = 0 and r.tck = '0' then
-      tms_o <= '0';
+    if r.tck = '0' then
+      case r.tap_branch is
+        when TAP_RESET =>
+          tms_o <= '1';
+        when others =>
+          tms_o <= '0';
+      end case;
+
       tdi_o <= '-';
 
       case r.state is
         when ST_MOVING | ST_SHIFT_PRE | ST_SHIFT_POST =>
           tms_o <= r.tms_shreg(0);
 
-        when ST_SHIFTING =>
-          if r.data_left = 0 then
+        when ST_SHIFTING | ST_SHIFTING_PIPELINE =>
+          if r.data_left = 0 and not r.pipelining then
             tms_o <= '1';
           end if;
           tdi_o <= r.data_shreg(0);
