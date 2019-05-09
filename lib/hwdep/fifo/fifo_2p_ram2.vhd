@@ -78,8 +78,6 @@ begin
       port map(
         p_in_clk => p_clk(0),
         p_out_clk => p_clk(clk_count-1),
-        p_in_resetn => s_resetn(0),
-        p_out_resetn => s_resetn(clk_count-1),
         p_in => unsigned(s_in_wptr),
         peer_ptr_t(p_out) => s_out_wptr
         );
@@ -94,8 +92,6 @@ begin
       port map(
         p_in_clk => p_clk(clk_count-1),
         p_out_clk => p_clk(0),
-        p_in_resetn => s_resetn(clk_count-1),
-        p_out_resetn => s_resetn(0),
         p_in => unsigned(s_out_rptr),
         peer_ptr_t(p_out) => s_in_rptr
         );
@@ -113,7 +109,6 @@ begin
         )
       port map(
         p_clk => p_clk(0),
-        p_resetn => p_resetn,
         p_in => std_ulogic_vector(s_in_wptr),
         peer_ptr_t(p_out) => s_out_wptr
         );
@@ -125,7 +120,6 @@ begin
         )
       port map(
         p_clk => p_clk(0),
-        p_resetn => p_resetn,
         p_in => std_ulogic_vector(s_out_rptr),
         peer_ptr_t(p_out) => s_in_rptr
         );

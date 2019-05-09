@@ -13,8 +13,6 @@ entity sync_cross_counter is
     output_is_gray : boolean := false
     );
   port(
-    p_in_resetn : in std_ulogic;
-    p_out_resetn : in std_ulogic;
     p_in_clk : in std_ulogic;
     p_out_clk : in std_ulogic;
     p_in  : in unsigned(data_width-1 downto 0);
@@ -52,7 +50,6 @@ begin
       )
     port map(
       p_clk => p_in_clk,
-      p_resetn => p_in_resetn,
       p_in => s_in_gray,
       p_out => s_in_gray_sync
       );
@@ -64,7 +61,6 @@ begin
       )
     port map(
       p_clk => p_out_clk,
-      p_resetn => p_out_resetn,
       p_in => s_in_gray_sync,
       p_out => s_out_gray
       );
@@ -93,7 +89,6 @@ begin
         )
       port map(
         p_clk => p_out_clk,
-        p_resetn => p_out_resetn,
         p_in => s_out_bin,
         unsigned(p_out) => p_out
         );

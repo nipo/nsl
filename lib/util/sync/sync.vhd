@@ -49,7 +49,6 @@ package sync is
       );
     port(
       p_clk    : in std_ulogic;
-      p_resetn : in std_ulogic;
       p_in     : in std_ulogic_vector(data_width-1 downto 0);
       p_out    : out std_ulogic_vector(data_width-1 downto 0)
       );
@@ -64,8 +63,6 @@ package sync is
       output_is_gray : boolean := false
       );
     port(
-      p_in_resetn : in std_ulogic;
-      p_out_resetn : in std_ulogic;
       p_in_clk : in std_ulogic;
       p_out_clk : in std_ulogic;
       p_in  : in unsigned(data_width-1 downto 0);
