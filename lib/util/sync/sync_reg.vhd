@@ -25,19 +25,19 @@ architecture rtl of sync_reg is
 begin
 
   cross: if cross_region generate
-    signal tig_reg : regs_t;
-    attribute keep of tig_reg : signal is "TRUE";
-    attribute async_reg of tig_reg : signal is "TRUE";
+    signal tig_reg_d : regs_t;
+    attribute keep of tig_reg_d : signal is "TRUE";
+    attribute async_reg of tig_reg_d : signal is "TRUE";
   begin
     clock: process (p_clk)
     begin
       if rising_edge(p_clk) then
-        tig_reg(0 to cycle_count-2) <= tig_reg(1 to cycle_count-1);
-        tig_reg(cycle_count-1) <= p_in;
+        tig_reg_d(0 to cycle_count-2) <= tig_reg_d(1 to cycle_count-1);
+        tig_reg_d(cycle_count-1) <= p_in;
       end if;
     end process clock;
 
-    p_out <= tig_reg(0);
+    p_out <= tig_reg_d(0);
   end generate cross;
 
   nocross: if not cross_region generate
