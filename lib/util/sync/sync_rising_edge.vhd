@@ -27,8 +27,11 @@ begin
     if async_reset and p_in = '0' then
       r_resync <= (others => '0');
     elsif rising_edge(p_clk) then
-      r_resync(0 to cycle_count - 2) <= r_resync(1 to cycle_count - 1);
-      r_resync(cycle_count-1) <= p_in;
+      if not async_reset and p_in = '0' then
+        r_resync <= (others => '0');
+      else
+        r_resync <= r_resync(1 to cycle_count - 1) & '1';
+      end if;
     end if;
   end process;
 
