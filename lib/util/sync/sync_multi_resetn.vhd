@@ -32,6 +32,9 @@ begin
         );
 
     sync_out: util.sync.sync_rising_edge
+      generic map(
+        cycle_count => cycle_count
+        )
       port map(
         p_in => merged,
         p_clk => p_clk(i),
