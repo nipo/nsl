@@ -25,9 +25,9 @@ architecture rtl of sync_reg is
 begin
 
   cross: if cross_region generate
-    signal r_regs : regs_t;
-    attribute keep of r_regs : signal is "TRUE";
-    attribute async_reg of r_regs : signal is "TRUE";
+    signal tig_reg : regs_t;
+    attribute keep of tig_reg : signal is "TRUE";
+    attribute async_reg of tig_reg : signal is "TRUE";
   begin
     clock: process (p_clk)
     begin

@@ -17,8 +17,8 @@ end sync_rising_edge;
 architecture rtl of sync_rising_edge is
 
   signal r_resync : std_ulogic_vector(0 to cycle_count-1);
-  attribute keep : boolean;
-  attribute keep of r_resync : signal is true;
+  attribute keep : string;
+  attribute keep of r_resync : signal is "TRUE";
 
 begin
 
