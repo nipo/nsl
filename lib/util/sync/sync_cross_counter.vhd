@@ -46,7 +46,8 @@ begin
   in_sync: util.sync.sync_reg
     generic map(
       cycle_count => 1,
-      data_width => data_width
+      data_width => data_width,
+      cross_region => false
       )
     port map(
       p_clk => p_in_clk,
@@ -57,7 +58,8 @@ begin
   gray_sync: util.sync.sync_reg
     generic map(
       cycle_count => cycle_count,
-      data_width => data_width
+      data_width => data_width,
+      cross_region => true
       )
     port map(
       p_clk => p_out_clk,
