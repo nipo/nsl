@@ -184,12 +184,14 @@ begin
   
   regs: process (p_clk, s_resetn)
   begin
-    if s_resetn(clk_count-1) = '0' then
-      r.valid <= '0';
-      r.direct <= '0';
-      r.data <= (others => '-');
-    elsif p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
-      r <= rin;
+    if p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
+      if s_resetn(clk_count-1) = '0' then
+        r.valid <= '0';
+        r.direct <= '0';
+        r.data <= (others => '-');
+      else
+        r <= rin;
+      end if;
     end if;
   end process;
 

@@ -73,12 +73,14 @@ begin
 
   regs: process (p_clk, p_resetn)
   begin
-    if p_resetn = '0' then
-      r.position.value <= (others => '0');
-      r.position.wrap_toggle <= '0';
-      r.running <= false;
-    elsif rising_edge(p_clk) then
-      r <= rin;
+    if rising_edge(p_clk) then
+      if p_resetn = '0' then
+        r.position.value <= (others => '0');
+        r.position.wrap_toggle <= '0';
+        r.running <= false;
+      else
+        r <= rin;
+      end if;
     end if;
   end process;
 
