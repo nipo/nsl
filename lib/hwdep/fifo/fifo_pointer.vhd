@@ -109,15 +109,7 @@ begin
   generate
     signal a, b: std_ulogic_vector(ptr_width-1 downto 0);
   begin
-    enc: util.gray.gray_encoder
-      generic map(
-        data_width => ptr_width+1
-        )
-      port map(
-        p_binary => s_local_ptr,
-        p_gray => s_local_position
-        );
-
+    s_local_position <= util.gray.bin_to_gray(unsigned(s_local_ptr));
     a(ptr_width-2 downto 0) <= s_local_position(ptr_width-2 downto 0);
     a(ptr_width-1) <= s_local_position(ptr_width-1) xor s_local_position(ptr_width);
     b(ptr_width-2 downto 0) <= p_peer_position(ptr_width-2 downto 0);
@@ -145,17 +137,10 @@ begin
 
   decode_position: if gray_position
   generate
-    signal peer_ptr_dec : std_ulogic_vector(ptr_width downto 0);
-    signal peer_ptr_ret : std_ulogic_vector(ptr_width downto 0);
+    signal peer_ptr_bin : std_ulogic_vector(ptr_width downto 0);
+    signal peer_ptr_bin_relaxed : std_ulogic_vector(ptr_width downto 0);
   begin
-    gray_decoder: util.gray.gray_decoder
-      generic map(
-        data_width => ptr_width+1
-        )
-      port map(
-        p_gray => p_peer_position,
-        p_binary => peer_ptr_dec
-        );
+    peer_ptr_bin <= std_ulogic_vector(util.gray.gray_to_bin(p_peer_position));
 
     decoder_pipeline: util.sync.sync_reg
       generic map(
@@ -165,11 +150,11 @@ begin
         )
       port map(
         p_clk => p_clk,
-        p_in => peer_ptr_dec,
-        p_out => peer_ptr_ret
+        p_in => peer_ptr_bin,
+        p_out => peer_ptr_bin_relaxed
         );
-    peer_wcounter.wrap_toggle <= peer_ptr_ret(peer_ptr_ret'left);
-    peer_wcounter.value <= unsigned(peer_ptr_ret(peer_ptr_ret'left-1 downto 0));
+    peer_wcounter.wrap_toggle <= peer_ptr_bin_relaxed(peer_ptr_bin_relaxed'left);
+    peer_wcounter.value <= unsigned(peer_ptr_bin_relaxed(peer_ptr_bin_relaxed'left-1 downto 0));
   end generate;
 
   forward_position: if not gray_position

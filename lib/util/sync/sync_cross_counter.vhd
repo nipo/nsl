@@ -22,26 +22,11 @@ end sync_cross_counter;
 
 architecture rtl of sync_cross_counter is
 
-  signal s_in_gray, s_in_gray_sync, s_out_gray, s_out_bin: std_ulogic_vector(p_in'range);
+  signal s_in_gray, s_in_gray_sync, s_out_gray: std_ulogic_vector(p_in'range);
 
 begin
 
-  in_pt: if input_is_gray
-  generate
-    s_in_gray <= std_ulogic_vector(p_in);
-  end generate;
-
-  in_enc: if not input_is_gray
-  generate
-    in_gray_enc: util.gray.gray_encoder
-      generic map(
-        data_width => data_width
-        )
-      port map(
-        p_binary => std_ulogic_vector(p_in),
-        p_gray => s_in_gray
-        );
-  end generate;
+  s_in_gray <= std_ulogic_vector(p_in) when input_is_gray else util.gray.bin_to_gray(p_in);
 
   in_sync: util.sync.sync_reg
     generic map(
@@ -67,21 +52,16 @@ begin
       p_out => s_out_gray
       );
 
-  out_pt: if output_is_gray
+  out_as_gray: if output_is_gray
   generate
     p_out <= unsigned(s_out_gray);
   end generate;
 
-  out_dec: if not output_is_gray
+  out_as_bin: if not output_is_gray
   generate
-    out_gray_dec: util.gray.gray_decoder
-      generic map(
-        data_width => data_width
-        )
-      port map(
-        p_binary => s_out_bin,
-        p_gray => s_out_gray
-        );
+    signal out_bin: unsigned(p_in'range);
+  begin
+    out_bin <= util.gray.gray_to_bin(s_out_gray);
 
     out_sync: util.sync.sync_reg
       generic map(
@@ -91,7 +71,7 @@ begin
         )
       port map(
         p_clk => p_out_clk,
-        p_in => s_out_bin,
+        p_in => std_ulogic_vector(out_bin),
         unsigned(p_out) => p_out
         );
   end generate;
