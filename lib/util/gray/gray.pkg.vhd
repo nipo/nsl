@@ -4,6 +4,9 @@ use ieee.numeric_std.all;
 
 package gray is
 
+  function bin_to_gray(binary : unsigned) return std_ulogic_vector;
+  function gray_to_bin(gray : std_ulogic_vector) return unsigned;
+
   component gray_encoder
     generic(
       data_width : integer

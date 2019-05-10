@@ -1,5 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library util;
 
 entity gray_encoder is
   generic(
@@ -15,6 +18,6 @@ architecture rtl of gray_encoder is
 
 begin
 
-  p_gray <= p_binary xor ('0' & p_binary(data_width - 1 downto 1));
+  p_gray <= util.gray.bin_to_gray(unsigned(p_binary));
   
 end architecture;
