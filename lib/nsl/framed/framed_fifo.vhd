@@ -36,16 +36,16 @@ begin
       clk_count => clk_count
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
-      p_out_data(8) => p_out_val.last,
-      p_out_data(7 downto 0) => p_out_val.data,
-      p_out_ready => p_out_ack.ready,
-      p_out_valid => p_out_val.valid,
-      p_in_data(8) => p_in_val.last,
-      p_in_data(7 downto 0) => p_in_val.data,
-      p_in_valid => p_in_val.valid,
-      p_in_ready => p_in_ack.ready
+      reset_n_i => p_resetn,
+      clk_i => p_clk,
+      out_data_o(8) => p_out_val.last,
+      out_data_o(7 downto 0) => p_out_val.data,
+      out_ready_i => p_out_ack.ready,
+      out_valid_o => p_out_val.valid,
+      in_data_i(8) => p_in_val.last,
+      in_data_i(7 downto 0) => p_in_val.data,
+      in_valid_i => p_in_val.valid,
+      in_ready_o => p_in_ack.ready
       );
 
 end architecture;

@@ -35,16 +35,16 @@ begin
       clk_count => clk_count
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
+      reset_n_i => p_resetn,
+      clk_i => p_clk,
 
-      p_out_data => p_out_val.data,
-      p_out_ready => p_out_ack.ready,
-      p_out_valid => p_out_val.valid,
+      out_data_o => p_out_val.data,
+      out_ready_i => p_out_ack.ready,
+      out_valid_o => p_out_val.valid,
 
-      p_in_data => p_in_val.data,
-      p_in_valid => p_in_val.valid,
-      p_in_ready => p_in_ack.ready
+      in_data_i => p_in_val.data,
+      in_valid_i => p_in_val.valid,
+      in_ready_o => p_in_ack.ready
       );
   
 end architecture;

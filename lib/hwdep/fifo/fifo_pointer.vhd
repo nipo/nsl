@@ -15,19 +15,19 @@ entity fifo_pointer is
     );
 
   port(
-    p_resetn : in std_ulogic;
-    p_clk    : in std_ulogic;
+    reset_n_i : in std_ulogic;
+    clk_i    : in std_ulogic;
 
-    p_inc : in  std_ulogic;
-    p_ack : out std_ulogic;
+    inc_i : in  std_ulogic;
+    ack_o : out std_ulogic;
 
-    p_peer_position   : in  std_ulogic_vector(ptr_width downto 0);
-    p_local_position  : out std_ulogic_vector(ptr_width downto 0);
+    peer_position_i   : in  std_ulogic_vector(ptr_width downto 0);
+    local_position_o  : out std_ulogic_vector(ptr_width downto 0);
 
-    p_used_count : out unsigned(ptr_width downto 0);
-    p_free_count : out unsigned(ptr_width downto 0);
+    used_count_o : out unsigned(ptr_width downto 0);
+    free_count_o : out unsigned(ptr_width downto 0);
 
-    p_mem_ptr    : out unsigned(ptr_width-1 downto 0)
+    mem_ptr_o    : out unsigned(ptr_width-1 downto 0)
     );
 end fifo_pointer;
 
@@ -83,10 +83,10 @@ architecture rtl of fifo_pointer is
 
 begin
 
-  regs: process (p_clk, p_resetn)
+  regs: process (clk_i, reset_n_i)
   begin
-    if rising_edge(p_clk) then
-      if p_resetn = '0' then
+    if rising_edge(clk_i) then
+      if reset_n_i = '0' then
         r.wcounter.value <= (others => '0');
         r.wcounter.wrap_toggle <= '0';
         r.running <= false;
@@ -102,7 +102,7 @@ begin
   generate
     s_local_position <= s_local_ptr;
 
-    s_ptr_equal <= s_local_position(ptr_t'range) = p_peer_position(ptr_t'range);
+    s_ptr_equal <= s_local_position(ptr_t'range) = peer_position_i(ptr_t'range);
   end generate;
 
   local_ptr_gray: if gray_position
@@ -112,25 +112,25 @@ begin
     s_local_position <= util.gray.bin_to_gray(unsigned(s_local_ptr));
     a(ptr_width-2 downto 0) <= s_local_position(ptr_width-2 downto 0);
     a(ptr_width-1) <= s_local_position(ptr_width-1) xor s_local_position(ptr_width);
-    b(ptr_width-2 downto 0) <= p_peer_position(ptr_width-2 downto 0);
-    b(ptr_width-1) <= p_peer_position(ptr_width-1) xor p_peer_position(ptr_width);
+    b(ptr_width-2 downto 0) <= peer_position_i(ptr_width-2 downto 0);
+    b(ptr_width-1) <= peer_position_i(ptr_width-1) xor peer_position_i(ptr_width);
 
     s_ptr_equal <= a = b;
   end generate;
 
   s_can_inc <= not s_ptr_equal
-    or (p_peer_position(ptr_width) = s_local_position(ptr_width)) = equal_can_move;
+    or (peer_position_i(ptr_width) = s_local_position(ptr_width)) = equal_can_move;
 
-  p_ack <= '1' when r.running and s_can_inc else '0';
-  p_local_position <= s_local_position;
-  p_mem_ptr <= r.wcounter.value;
+  ack_o <= '1' when r.running and s_can_inc else '0';
+  local_position_o <= s_local_position;
+  mem_ptr_o <= r.wcounter.value;
 
-  transition: process(r, p_inc, s_can_inc)
+  transition: process(r, inc_i, s_can_inc)
   begin
     rin <= r;
     rin.running <= true;
 
-    if r.running and s_can_inc and p_inc = '1' then
+    if r.running and s_can_inc and inc_i = '1' then
       rin.wcounter <= next_ctr(r.wcounter);
     end if;
   end process;
@@ -140,7 +140,7 @@ begin
     signal peer_ptr_bin : std_ulogic_vector(ptr_width downto 0);
     signal peer_ptr_bin_relaxed : std_ulogic_vector(ptr_width downto 0);
   begin
-    peer_ptr_bin <= std_ulogic_vector(util.gray.gray_to_bin(p_peer_position));
+    peer_ptr_bin <= std_ulogic_vector(util.gray.gray_to_bin(peer_position_i));
 
     decoder_pipeline: util.sync.sync_reg
       generic map(
@@ -149,7 +149,7 @@ begin
         cross_region => false
         )
       port map(
-        p_clk => p_clk,
+        p_clk => clk_i,
         p_in => peer_ptr_bin,
         p_out => peer_ptr_bin_relaxed
         );
@@ -159,8 +159,8 @@ begin
 
   forward_position: if not gray_position
   generate
-    peer_wcounter.wrap_toggle <= p_peer_position(ptr_t'length);
-    peer_wcounter.value <= unsigned(p_peer_position(ptr_t'range));
+    peer_wcounter.wrap_toggle <= peer_position_i(ptr_t'length);
+    peer_wcounter.value <= unsigned(peer_position_i(ptr_t'range));
   end generate;
 
   -- peer_wcounter holds same data as r.wcounter:
@@ -214,18 +214,18 @@ begin
     -- Then this actually makes the thing work for simulation and synthesis cases.
 
     if to_integer(used) <= wrap_count then
-      p_used_count <= used;
+      used_count_o <= used;
     else
-      p_used_count <= (others => '-');
+      used_count_o <= (others => '-');
       --assert false
       --  report "Used pointer difference above wrap count: " & integer'image(to_integer(used))
       --  severity warning;
     end if;
 
     if to_integer(free) <= wrap_count then
-      p_free_count <= free;
+      free_count_o <= free;
     else
-      p_free_count <= (others => '-');
+      free_count_o <= (others => '-');
       --assert false
       --  report "Free pointer difference above wrap count: " & integer'image(to_integer(free))
       --  severity warning;

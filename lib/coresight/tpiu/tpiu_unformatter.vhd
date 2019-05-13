@@ -85,17 +85,17 @@ begin
       clk_count => 2
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk(0) => p_traceclk,
-      p_clk(1) => p_clk,
+      reset_n_i => p_resetn,
+      clk_i(0) => p_traceclk,
+      clk_i(1) => p_clk,
 
-      p_out_data => cmd_dout,
-      p_out_ready => cmd_ren,
-      p_out_valid => cmd_valid,
+      out_data_o => cmd_dout,
+      out_ready_i => cmd_ren,
+      out_valid_o => cmd_valid,
 
-      p_in_valid => cmd_wen,
-      p_in_ready => cmd_ready,
-      p_in_data => cmd_din
+      in_valid_i => cmd_wen,
+      in_ready_o => cmd_ready,
+      in_data_i => cmd_din
       );
 
   fdata: hwdep.fifo.fifo_2p
@@ -105,17 +105,17 @@ begin
       clk_count => 2
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk(0) => p_traceclk,
-      p_clk(1) => p_clk,
+      reset_n_i => p_resetn,
+      clk_i(0) => p_traceclk,
+      clk_i(1) => p_clk,
 
-      p_out_data => data_dout,
-      p_out_ready => data_ren,
-      p_out_valid => data_valid,
+      out_data_o => data_dout,
+      out_ready_i => data_ren,
+      out_valid_o => data_valid,
 
-      p_in_valid => data_wen,
-      p_in_ready => data_ready,
-      p_in_data => data_din
+      in_valid_i => data_wen,
+      in_ready_o => data_ready,
+      in_data_i => data_din
       );
 
   p_sync <= '1' when synchronised else '0';

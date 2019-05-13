@@ -36,17 +36,17 @@ begin
       clk_count => 2
       )
     port map(
-      p_resetn => p_resetn,
+      reset_n_i => p_resetn,
 
-      p_clk(0) => p_in_clk,
-      p_clk(1) => p_out_clk,
-      p_out_data => p_out_data,
-      p_out_ready => p_out_ready,
-      p_out_valid => p_out_valid,
+      clk_i(0) => p_in_clk,
+      clk_i(1) => p_out_clk,
+      out_data_o => p_out_data,
+      out_ready_i => p_out_ready,
+      out_valid_o => p_out_valid,
 
-      p_in_data => p_in_data,
-      p_in_valid => p_in_valid,
-      p_in_ready => p_in_ready
+      in_data_i => p_in_data,
+      in_valid_i => p_in_valid,
+      in_ready_o => p_in_ready
       );
     
 end rtl;
