@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library util;
+
 entity event_monitor is
   generic(
     data_width : integer;
@@ -21,35 +23,71 @@ entity event_monitor is
 end event_monitor;
 
 architecture rtl of event_monitor is
-  
-  subtype word_t is std_ulogic_vector(data_width-1 downto 0);
-  type pipeline_t is array(sync_depth downto 0) of word_t;
-  signal r_resync : pipeline_t;
 
-  signal r_count : std_ulogic_vector(delta_width-1 downto 0);
-  signal s_count : std_ulogic_vector(delta_width downto 0);
-  signal s_diff : word_t;
+  type regs_t is
+  record
+    cur, old : std_ulogic_vector(data_width-1 downto 0);
+    count : unsigned(delta_width-1 downto 0);
+
+    out_valid : std_ulogic;
+    out_delta : unsigned(delta_width-1 downto 0);
+    out_value : std_ulogic_vector(data_width-1 downto 0);
+  end record;
+
   signal s_changed : std_ulogic;
-
+  signal s_resync : std_ulogic_vector(data_width-1 downto 0);
+  
+  signal r, rin: regs_t;
+  
 begin
 
   reg: process (p_clk, p_resetn)
   begin
     if p_resetn = '0' then
-      r_resync <= (others => (others => '0'));
-      r_count <= (others => '0');
+      r.cur <= (others => '0');
+      r.old <= (others => '0');
+      r.count <= (others => '0');
     elsif rising_edge(p_clk) then
-      r_resync(sync_depth - 1 downto 0) <= r_resync(sync_depth downto 1);
-      r_resync(sync_depth) <= p_in;
-      r_count <= s_count(delta_width - 1 downto 0);
+      r <= rin;
     end if;
   end process reg;
 
-  s_count <= std_ulogic_vector((to_unsigned(0,1) & unsigned(r_count)) + 1) when s_changed = '0' else (others => '0');
-  s_diff <= r_resync(0) xor r_resync(1);
-  s_changed <= '0' when unsigned(s_diff) = 0 else '1';
-  p_valid <= s_count(delta_width) or s_changed;
-  p_delta <= r_count;
-  p_data <= r_resync(1);
+  resync_in: util.sync.sync_reg
+    generic map(
+      cycle_count => 2,
+      cross_region => true,
+      data_width => data_width
+      )
+    port map(
+      p_clk => p_clk,
+      p_in => p_in,
+      p_out => s_resync
+      );
+  
+  s_changed <= '1' when r.cur /= r.old or r.count = (r.count'range => '1') else '0';
+
+  transition: process(r, s_resync, s_changed)
+  begin
+    rin <= r;
+
+    rin.out_valid <= '0';
+    rin.out_value <= (others => '-');
+    rin.out_delta <= (others => '-');
+
+    rin.count <= r.count + 1;
+    rin.old <= r.cur;
+    rin.cur <= s_resync;
+
+    if s_changed = '1' then
+      rin.count <= (others => '0');
+      rin.out_valid <= '1';
+      rin.out_value <= r.cur;
+      rin.out_delta <= r.count;
+    end if;
+  end process;
+
+  p_valid <= r.out_valid;
+  p_delta <= std_ulogic_vector(r.out_delta);
+  p_data <= r.out_value;
   
 end rtl;

@@ -1,1 +1,3 @@
-vhdl-sources += logic_analyzer.vhd event_monitor.vhd
+vhdl-sources += logic_analyzer.vhd
+vhdl-sources += event_monitor.vhd
+deps += util.sync
