@@ -41,7 +41,7 @@ architecture rtl of i2c_framed_ctrl is
     ack                  : std_ulogic;
     data                 : std_ulogic_vector(7 downto 0);
     word_count           : natural range 0 to 63;
-    divisor              : std_ulogic_vector(5 downto 0);
+    divisor              : std_ulogic_vector(7 downto 0);
   end record;
 
   signal r, rin : regs_t;
@@ -89,7 +89,7 @@ begin
 
           elsif std_match(p_cmd_val.data, I2C_CMD_DIV) then
             rin.state <= ST_RSP_PUT;
-            rin.divisor <= p_cmd_val.data(rin.divisor'range);
+            rin.divisor <= p_cmd_val.data(5 downto 0) & "11";
 
           elsif std_match(p_cmd_val.data, I2C_CMD_START) then
             rin.state <= ST_START;

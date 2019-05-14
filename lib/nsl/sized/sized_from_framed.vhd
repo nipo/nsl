@@ -52,14 +52,14 @@ begin
     end if;
   end process;
 
-  transition: process(r, p_in_val, p_out_ack, s_data_out.req, s_data_in.ack)
+  transition: process(p_in_val, p_out_ack, r, s_data_in, s_data_out)
   begin
     rin <= r;
 
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_DATA;
-        rin.count <= (rin.count'range => '1');
+        rin.count <= (others => '1');
 
       when STATE_DATA =>
         if p_in_val.valid = '1' and s_data_in.ack.ready = '1' then
@@ -105,7 +105,7 @@ begin
       p_in_ack => s_data_in.ack
       );
   
-  mux: process(r, p_in_val, s_data_in.ack, p_out_ack, s_data_out.req)
+  mux: process(p_in_val, p_out_ack, r, s_data_in, s_data_out)
   begin
     p_out_val.valid <= '0';
     p_out_val.data <= (others => '-');
