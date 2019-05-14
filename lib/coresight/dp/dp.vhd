@@ -10,7 +10,8 @@ package dp is
   constant DP_CMD_RUN_0         : std_ulogic_vector(7 downto 0):= "00------";
   constant DP_CMD_RUN_1         : std_ulogic_vector(7 downto 0):= "01------";
   constant DP_CMD_TURNAROUND    : std_ulogic_vector(7 downto 0):= "110100--";
-  constant DP_CMD_ABORT         : std_ulogic_vector(7 downto 0):= "1100----";
+  constant DP_CMD_ABORT         : std_ulogic_vector(7 downto 0):= "11000000";
+  constant DP_CMD_DIVISOR       : std_ulogic_vector(7 downto 0):= "11000001";
   constant DP_CMD_BITBANG       : std_ulogic_vector(7 downto 0):= "111-----";
   constant DP_CMD_RW            : std_ulogic_vector(7 downto 0):= "10------";
   constant DP_CMD_W             : std_ulogic_vector(7 downto 0):= "10-0----";
@@ -42,8 +43,6 @@ package dp is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_clk_tick : in  std_ulogic;
-
       p_cmd_val   : in nsl.framed.framed_req;
       p_cmd_ack   : out nsl.framed.framed_ack;
 
@@ -59,8 +58,6 @@ package dp is
     port (
       p_clk      : in  std_ulogic;
       p_resetn   : in  std_ulogic;
-
-      p_clk_tick : in  std_ulogic;
 
       p_cmd_val  : in  std_ulogic;
       p_cmd_ack  : out std_ulogic;

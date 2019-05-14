@@ -30,9 +30,7 @@ package io is
     drain : std_ulogic;
   end record;
 
-  type od_s is record
-    v : std_ulogic;
-  end record;
+  subtype od_s is single;
 
   component od_std_logic_driver is
     generic(

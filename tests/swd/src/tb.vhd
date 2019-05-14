@@ -36,8 +36,6 @@ architecture arch of tb is
   signal s_swd_cmd_val, s_swd_rsp_val : nsl.framed.framed_req;
   signal s_swd_cmd_ack, s_swd_rsp_ack : nsl.framed.framed_ack;
 
-  signal s_clk_gen_tick: std_ulogic;
-
 begin
 
   reset_sync_clk: util.sync.sync_rising_edge
@@ -120,8 +118,6 @@ begin
     port map(
       p_clk  => s_clk,
       p_resetn => s_resetn_clk,
-
-      p_clk_tick => s_clk_gen_tick,
       
       p_cmd_val => s_swd_cmd_val,
       p_cmd_ack => s_swd_cmd_ack,
@@ -131,19 +127,6 @@ begin
 
       p_swd_c => s_swd_master_o,
       p_swd_s => s_swd_master_i
-      );
-
-  baud_gen: nsl.tick.baudrate_generator
-    generic map(
-      p_clk_rate => 200000000,
-      rate_lsb => 0,
-      rate_msb => 27
-      )
-    port map(
-      p_clk => s_clk,
-      p_resetn => s_resetn_clk,
-      p_rate => X"00fffff",
-      p_tick => s_clk_gen_tick
       );
 
   gen: testing.framed.framed_file_reader

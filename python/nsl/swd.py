@@ -18,7 +18,14 @@ class Base:
         self.run(0, 10)
         self.read(0, 0, idcode)
 
+    def abort(self):
+        self.pipe.put([0xc0])
+        
 class MasterCmd(Base):
+    def divisor(self, value):
+        self.pipe.put([0xc1])
+        self.pipe.put(list(int(value-1).to_bytes(2, "little")))
+
     def read(self, ap, ad, val):
         if ap:
             self.pipe.put([0xb0 | (ad & 0x3)])
@@ -45,6 +52,9 @@ class MasterCmd(Base):
             self.pipe.put([(value >> (8 * i)) & 0xff])
 
 class MasterRsp(Base):
+    def divisor(self, value):
+        self.pipe.put([0xc1])
+
     def read(self, ap, ad, val):
         if ap:
             self.pipe.put([(0xb1, 0xf7 if val is None else 0xff)])

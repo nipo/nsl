@@ -10,8 +10,6 @@ entity dp_framed_swdp is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_clk_tick : in  std_ulogic;
-
     p_cmd_val   : in nsl.framed.framed_req;
     p_cmd_ack   : out nsl.framed.framed_ack;
 
@@ -90,6 +88,10 @@ begin
         if std_match(r.cmd, DP_CMD_W) or std_match(r.cmd, DP_CMD_BITBANG) then
           rin.state <= STATE_CMD_DATA_GET;
           rin.cycle <= 3;
+        elsif std_match(r.cmd, DP_CMD_DIVISOR) then
+          rin.state <= STATE_CMD_DATA_GET;
+          rin.cycle <= 1;
+          rin.data <= (others => '0');
         else
           rin.state <= STATE_SWD_CMD;
         end if;
@@ -188,8 +190,6 @@ begin
     port map(
       p_resetn => p_resetn,
       p_clk => p_clk,
-
-      p_clk_tick=> p_clk_tick,
 
       p_cmd_val => s_swd_cmd_val,
       p_cmd_ack => s_swd_cmd_ack,
