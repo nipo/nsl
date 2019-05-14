@@ -70,14 +70,16 @@ architecture rtl of jtag_ate is
     prescaler : natural range 0 to 31;
     data_shreg : std_ulogic_vector(data_max_size-1 downto 0);
     data_shreg_insertion_index, data_left : natural range 0 to data_max_size+1;
-    tms_shreg : std_ulogic_vector(7 downto 0);
+    tms_shreg : std_ulogic_vector(0 to 7);
     tms_left : natural range 0 to 9;
-    tck : std_ulogic;
+    tck, tms, tdi : std_ulogic;
     pipelining : boolean;
   end record;
 
   signal r, rin: regs_t;
 
+  signal rising, falling : boolean;
+  
 begin
 
   reg: process(reset_n_i, clock_i)
@@ -85,42 +87,57 @@ begin
     if reset_n_i = '0' then
       r.state <= ST_RESET;
       r.prescaler <= 0;
+      r.tck <= '0';
     elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, tdo_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i)
-    variable rising, falling : boolean;
+  rising <= r.tck = '0' and r.prescaler = 0;
+  falling <= r.tck /= '0' and r.prescaler = 0;
+  
+  transition: process(r, tdo_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
+                      rising, falling)
   begin
     rin <= r;
-
-    rising := false;
-    falling := false;
-
-    if r.prescaler = 0 then
-      if r.tck = '0' then
-        rising := true;
-        rin.tck <= '1';
-      else
-        falling := true;
-        rin.tck <= '0';
-      end if;
-    end if;
 
     if r.prescaler /= 0 then
       rin.prescaler <= r.prescaler - 1;
     else
+      rin.tck <= not r.tck;
       rin.prescaler <= divisor_i;
     end if;
 
+    if falling then
+      rin.tdi <= '-';
+
+      case r.state is
+        when ST_IDLE | ST_RESET | ST_SHIFT_DONE =>
+          case r.tap_branch is
+            when TAP_RESET | TAP_UNDEFINED =>
+              rin.tms <= '1';
+            when others =>
+              rin.tms <= '0';
+          end case;
+
+        when ST_MOVING | ST_SHIFT_PRE | ST_SHIFT_POST =>
+          rin.tms <= r.tms_shreg(0);
+
+        when ST_SHIFTING | ST_SHIFTING_PIPELINE =>
+          if r.data_left = 0 and not r.pipelining then
+            rin.tms <= '1';
+          end if;
+          rin.tdi <= r.data_shreg(0);
+      end case;
+    end if;
+    
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
         rin.prescaler <= divisor_i;
 
       when ST_IDLE =>
-        if cmd_valid_i = '1' and falling then
+        if cmd_valid_i = '1' and rising then
           rin.pipelining <= false;
           case cmd_op_i is
             when nsl.jtag.ATE_OP_RESET =>
@@ -142,7 +159,7 @@ begin
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- go through Exit2 and Update to Rti
-                  rin.tms_shreg <= "00000011";
+                  rin.tms_shreg <= "11000000";
                   rin.tms_left <= cmd_size_m1_i + 2;
                   rin.tap_branch <= TAP_RTI;
                   rin.state <= ST_MOVING;
@@ -154,14 +171,14 @@ begin
                   null;
                 when TAP_RTI =>
                   -- Through Sel-DR, Capture, Ext1 to Pause
-                  rin.tms_shreg <= "----0101";
+                  rin.tms_shreg <= "1010----";
                   rin.tms_left <= 3;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- Loop through Exit2, Update, Sel-DR, Capture, Ext1 to Pause
                   -- Dont touch Rti
-                  rin.tms_shreg <= "--010111";
+                  rin.tms_shreg <= "111010--";
                   rin.tms_left <= 5;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
@@ -173,24 +190,35 @@ begin
                   null;
                 when TAP_RTI =>
                   -- Through Sel-DR, Sel-IR, Capture, Ext1 to Pause
-                  rin.tms_shreg <= "---01011";
+                  rin.tms_shreg <= "11010---";
                   rin.tms_left <= 4;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- Loop through Exit2, Update, Sel-DR, Sel-IR, Capture, Ext1 to Pause
                   -- Dont touch Rti
-                  rin.tms_shreg <= "-0101111";
+                  rin.tms_shreg <= "1111010-";
                   rin.tms_left <= 6;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
               end case;
 
-            when nsl.jtag.ATE_OP_SWD_TO_JTAG_3 =>
+            when nsl.jtag.ATE_OP_SWD_TO_JTAG_1 =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
-                  rin.tms_shreg <= "--111100";
+                  rin.tms_shreg <= "001111--";
                   rin.tms_left <= 5;
+                  rin.tap_branch <= TAP_UNDEFINED;
+                  rin.state <= ST_MOVING;
+                when TAP_REG =>
+                  null;
+              end case;
+
+            when nsl.jtag.ATE_OP_SWD_TO_JTAG_23 =>
+              case r.tap_branch is
+                when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
+                  rin.tms_shreg <= "00111---";
+                  rin.tms_left <= 4;
                   rin.tap_branch <= TAP_UNDEFINED;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
@@ -204,7 +232,7 @@ begin
 
                 when TAP_REG =>
                   -- From pause, go through Exit2 to Shift
-                  rin.tms_shreg <= "------01";
+                  rin.tms_shreg <= "10------";
                   rin.tms_left <= 1;
                   rin.data_shreg <= cmd_data_i;
                   rin.data_left <= cmd_size_m1_i;
@@ -218,8 +246,8 @@ begin
       when ST_MOVING | ST_SHIFT_PRE | ST_SHIFT_POST =>
         if rising then
           if r.tms_left /= 0 then
-            -- extend on left, on purpose
-            rin.tms_shreg(rin.tms_shreg'left-1 downto 0) <= r.tms_shreg(r.tms_shreg'left downto 1);
+            -- extend on right, on purpose
+            rin.tms_shreg(0 to rin.tms_shreg'right-1) <= r.tms_shreg(1 to r.tms_shreg'right);
             rin.tms_left <= r.tms_left - 1;
           elsif r.state = ST_SHIFT_PRE then
             rin.state <= ST_SHIFTING;
@@ -242,9 +270,10 @@ begin
               rin.state <= ST_SHIFTING_PIPELINE;
             else
               -- Basically, we are on a shift underrun. We cannot assert what's
-              -- next, so we'll basically go to pause.
-              -- On next cycle, we are on Exit1, just go to Pause
-              rin.tms_shreg <= "-------0";
+              -- next, so we'll go to pause.
+              -- As TMS is 1 on last shift cycle,
+              -- on next cycle, we are on Exit1, just go to Pause
+              rin.tms_shreg <= "0-------";
               rin.tms_left <= 0;
               rin.state <= ST_SHIFT_POST;
             end if;
@@ -275,6 +304,13 @@ begin
         rin.pipelining <= false;
         rin.state <= ST_SHIFTING;
 
+        -- Hack for extreme cases where divisor is 0.
+        -- In such case, pipeline is executed on "falling" cycle (last cycle
+        -- where tck=1). We have to update tdi here.
+        if falling then
+          rin.tdi <= cmd_data_i(0);
+        end if;
+
       when ST_SHIFT_DONE =>
         if rsp_ready_i = '1' then
           rin.state <= ST_IDLE;
@@ -282,7 +318,7 @@ begin
     end case;
   end process;
 
-  moore: process(r)
+  moore: process(r, rising)
   begin
     cmd_ready_o <= '0';
     rsp_valid_o <= '0';
@@ -290,8 +326,8 @@ begin
 
     case r.state is
       when ST_IDLE =>
-        if r.prescaler = 0 and r.tck /= '0' then
-            cmd_ready_o <= '1';
+        if rising then
+          cmd_ready_o <= '1';
         end if;
 
       when ST_SHIFT_DONE =>
@@ -308,34 +344,8 @@ begin
     end case;
   end process;
 
-  jtag_moore: process(r)
-  begin
-    tck_o <= r.tck;
-
-    if r.tck = '0' then
-      case r.tap_branch is
-        when TAP_RESET =>
-          tms_o <= '1';
-        when others =>
-          tms_o <= '0';
-      end case;
-
-      tdi_o <= '-';
-
-      case r.state is
-        when ST_MOVING | ST_SHIFT_PRE | ST_SHIFT_POST =>
-          tms_o <= r.tms_shreg(0);
-
-        when ST_SHIFTING | ST_SHIFTING_PIPELINE =>
-          if r.data_left = 0 and not r.pipelining then
-            tms_o <= '1';
-          end if;
-          tdi_o <= r.data_shreg(0);
-
-      when others =>
-        null;
-      end case;
-    end if;
-  end process;
+  tck_o <= r.tck;
+  tdi_o <= r.tdi;
+  tms_o <= r.tms;
 
 end architecture;

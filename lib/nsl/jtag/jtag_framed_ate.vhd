@@ -27,6 +27,7 @@ architecture rtl of jtag_framed_ate is
     ST_CMD_RESET,
     ST_CMD_IDLE,
     ST_CMD_ROUTE,
+    ST_CMD_SWD_TO_JTAG1,
     ST_CMD_PUT,
     ST_CMD_DATA_GET,
     ST_CMD_DATA_PUT
@@ -49,13 +50,14 @@ architecture rtl of jtag_framed_ate is
   record
     cmd_st : st_cmd_t;
     cmd_pending : nsl.jtag.ate_op;
-    cmd_op_last, cmd_data_last : std_ulogic;
+    cmd_op_last : std_ulogic;
     cmd_data : std_ulogic_vector(7 downto 0);
     cmd_word_left : natural range 0 to 31;
     cmd_bit_count_m1 : natural range 0 to data_max_size-1;
 
     rsp_st : st_rsp_t;
     rsp_data : std_ulogic_vector(7 downto 0);
+    rsp_op_last, rsp_data_last : std_ulogic;
     rsp_word_left : natural range 0 to 31;
 
     divisor : natural range 0 to 31;
@@ -112,7 +114,6 @@ begin
             rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(4 downto 0)));
             rin.cmd_bit_count_m1 <= 7;
             rin.cmd_pending <= nsl.jtag.ATE_OP_SHIFT;
-            rin.cmd_data_last <= r.cmd_op_last;
             if std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BYTE_W) then
               rin.cmd_st <= ST_CMD_DATA_GET;
             else
@@ -123,7 +124,6 @@ begin
             rin.cmd_word_left <= 0;
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
             rin.cmd_pending <= nsl.jtag.ATE_OP_SHIFT;
-            rin.cmd_data_last <= r.cmd_op_last;
             if std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BIT_W) then
               rin.cmd_st <= ST_CMD_DATA_GET;
             else
@@ -139,9 +139,8 @@ begin
             rin.cmd_st <= ST_CMD_PUT;
             rin.cmd_pending <= nsl.jtag.ATE_OP_IR_CAPTURE;
           elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_SWD_TO_JTAG) then
-            rin.cmd_word_left <= 2;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_SWD_TO_JTAG_3;
+            rin.cmd_st <= ST_CMD_SWD_TO_JTAG1;
+            rin.cmd_pending <= nsl.jtag.ATE_OP_SWD_TO_JTAG_1;
           elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_RESET_CYCLE) then
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
             rin.cmd_word_left <= 0;
@@ -174,6 +173,13 @@ begin
           end if;
         end if;
 
+      when ST_CMD_SWD_TO_JTAG1 =>
+        if s_cmd_ready = '1' then
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_word_left <= 1;
+          rin.cmd_pending <= nsl.jtag.ATE_OP_SWD_TO_JTAG_23;
+        end if;
+
       when ST_CMD_PUT =>
         if s_cmd_ready = '1' then
           if r.cmd_word_left /= 0 then
@@ -186,7 +192,7 @@ begin
       when ST_CMD_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.cmd_data <= cmd_i.data;
-          rin.cmd_data_last <= cmd_i.last;
+          rin.rsp_data_last <= cmd_i.last;
           rin.cmd_st <= ST_CMD_DATA_PUT;
         end if;
 
@@ -208,7 +214,9 @@ begin
       when ST_RSP_IDLE =>
         if r.cmd_st = ST_CMD_ROUTE then
           rin.rsp_st <= ST_RSP_ROUTE;
+          rin.rsp_op_last <= r.cmd_op_last;
           rin.rsp_data <= r.cmd_data;
+          rin.rsp_data_last <= r.cmd_op_last;
         end if;
 
       when ST_RSP_ROUTE =>
@@ -285,7 +293,7 @@ begin
       when ST_CMD_IDLE | ST_CMD_DATA_GET =>
         cmd_o.ready <= '1';
 
-      when ST_CMD_PUT | ST_CMD_DATA_PUT =>
+      when ST_CMD_PUT | ST_CMD_DATA_PUT | ST_CMD_SWD_TO_JTAG1 =>
         s_cmd_valid <= '1';
     end case;
 
@@ -295,11 +303,11 @@ begin
 
       when ST_RSP_PUT =>
         rsp_o.valid <= '1';
-        rsp_o.last <= r.cmd_op_last;
+        rsp_o.last <= r.rsp_op_last;
 
       when ST_RSP_DATA_STATUS_PUT =>
         rsp_o.valid <= '1';
-        rsp_o.last <= r.cmd_data_last;
+        rsp_o.last <= r.rsp_data_last;
 
       when ST_RSP_DATA_PUT =>
         rsp_o.valid <= '1';

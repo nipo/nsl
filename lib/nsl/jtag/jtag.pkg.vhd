@@ -24,7 +24,8 @@ package jtag is
   type ate_op is (
     ATE_OP_RESET,
     ATE_OP_RTI,
-    ATE_OP_SWD_TO_JTAG_3, -- One third of SWD To JTAG (TMS=001111)
+    ATE_OP_SWD_TO_JTAG_1, -- One third of SWD To JTAG (TMS=001111)
+    ATE_OP_SWD_TO_JTAG_23, -- One third of SWD To JTAG (TMS=00111)
     ATE_OP_DR_CAPTURE,
     ATE_OP_IR_CAPTURE,
     ATE_OP_SHIFT
