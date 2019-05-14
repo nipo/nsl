@@ -90,27 +90,22 @@ begin
 
   output: process(r, p_out_ack, p_in_val)
   begin
+    p_out_val.valid <= '0';
+    p_out_val.last <= '-';
+    p_out_val.data <= (others => '-');
+    p_in_ack.ready <= '0';
+    p_inval <= '0';
+
     case r.state is
       when STATE_INVAL =>
-        p_out_val.valid <= '0';
-        p_out_val.last <= '-';
-        p_out_val.data <= (others => '-');
         p_in_ack.ready <= '1';
         p_inval <= '1';
 
       when STATE_RESET =>
-        p_out_val.valid <= '0';
-        p_out_val.last <= '-';
-        p_out_val.data <= (others => '-');
-        p_in_ack.ready <= '0';
         p_inval <= '1';
 
       when STATE_SIZE_L | STATE_SIZE_H =>
-        p_out_val.valid <= '0';
-        p_out_val.last <= '-';
-        p_out_val.data <= (others => '-');
         p_in_ack.ready <= '1';
-        p_inval <= '0';
 
       when STATE_DATA =>
         p_out_val.valid <= p_in_val.valid;
@@ -121,7 +116,6 @@ begin
         else
           p_out_val.last <= '1';
         end if;
-        p_inval <= '0';
     end case;
   end process;
 
