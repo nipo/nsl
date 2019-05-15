@@ -1,4 +1,4 @@
-vhdl-sources += i2c.vhd
+vhdl-sources += i2c.pkg.vhd
 vhdl-sources += i2c_master.vhd
 vhdl-sources += i2c_mem_ctrl.vhd
 vhdl-sources += i2c_framed_ctrl.vhd

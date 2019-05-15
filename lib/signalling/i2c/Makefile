@@ -1,2 +1,2 @@
-vhdl-sources += i2c.vhd
+vhdl-sources += i2c.pkg.vhd
 deps += signalling.io

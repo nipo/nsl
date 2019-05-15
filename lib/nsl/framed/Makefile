@@ -1,4 +1,4 @@
-vhdl-sources += framed.vhd
+vhdl-sources += framed.pkg.vhd
 vhdl-sources += framed_fifo.vhd
 vhdl-sources += framed_fifo_atomic.vhd
 vhdl-sources += framed_arbitrer.vhd

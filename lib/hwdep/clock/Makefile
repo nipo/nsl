@@ -1,4 +1,4 @@
-vhdl-sources += clock.vhd
+vhdl-sources += clock.pkg.vhd
 
 ifneq ($(filter xc%,$(target_part)),)
 ifneq ($(filter xc6slx%,$(target_part)),)

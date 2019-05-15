@@ -1,1 +1,1 @@
-vhdl-sources += jtag.vhd
+vhdl-sources += jtag.pkg.vhd

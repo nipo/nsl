@@ -1,4 +1,4 @@
-vhdl-sources += sync.vhd
+vhdl-sources += sync.pkg.vhd
 vhdl-sources += sync_reg.vhd
 vhdl-sources += sync_deglitcher.vhd
 vhdl-sources += sync_rising_edge.vhd

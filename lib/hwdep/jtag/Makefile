@@ -1,4 +1,4 @@
-vhdl-sources += jtag.vhd
+vhdl-sources += jtag.pkg.vhd
 vhdl-sources += jtag_reg.vhd
 vhdl-sources += jtag_inbound_fifo.vhd
 vhdl-sources += jtag_outbound_fifo.vhd

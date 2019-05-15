@@ -1,1 +1,1 @@
-vhdl-sources += numeric.vhd
+vhdl-sources += numeric.pkg.vhd

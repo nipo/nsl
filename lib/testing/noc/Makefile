@@ -1,2 +1,2 @@
-vhdl-sources += noc.vhd
+vhdl-sources += noc.pkg.vhd
 deps += nsl.noc

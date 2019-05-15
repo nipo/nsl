@@ -1,4 +1,4 @@
-vhdl-sources += ftdi.vhd
+vhdl-sources += ftdi.pkg.vhd
 vhdl-sources += ft245_sync_fifo_master.vhd
 vhdl-sources += ft245_sync_fifo_slave.vhd
 vhdl-sources += ftdi_fs_tx.vhd

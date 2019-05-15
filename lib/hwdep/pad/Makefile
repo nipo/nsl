@@ -1,4 +1,4 @@
-vhdl-sources += pad.vhd
+vhdl-sources += pad.pkg.vhd
 
 ifneq ($(filter xc6%,$(target_part)),)
 vhdl-sources += pad_diff_output_xc6.vhd

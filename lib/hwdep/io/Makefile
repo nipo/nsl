@@ -1,4 +1,4 @@
-vhdl-sources += io.vhd
+vhdl-sources += io.pkg.vhd
 vhdl-sources += io_ddr_bus_output.vhd
 vhdl-sources += io_ddr_bus_input.vhd
 

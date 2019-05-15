@@ -1,1 +1,1 @@
-vhdl-sources += diff.vhd
+vhdl-sources += diff.pkg.vhd

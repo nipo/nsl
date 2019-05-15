@@ -1,4 +1,4 @@
-vhdl-sources += reset.vhd
+vhdl-sources += reset.pkg.vhd
 
 ifneq ($(filter xc%,$(target_part)),)
 vhdl-sources += reset_at_startup_xc.vhd

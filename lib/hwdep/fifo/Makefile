@@ -1,4 +1,4 @@
-vhdl-sources += fifo.vhd
+vhdl-sources += fifo.pkg.vhd
 
 vhdl-sources += fifo_pointer.vhd
 vhdl-sources += fifo_2p.vhd

@@ -1,4 +1,4 @@
-vhdl-sources += fifo.vhd
+vhdl-sources += fifo.pkg.vhd
 vhdl-sources += fifo_counter_checker.vhd
 vhdl-sources += fifo_counter_generator.vhd
 vhdl-sources += fifo_sink.vhd

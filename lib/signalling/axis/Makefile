@@ -1,1 +1,1 @@
-vhdl-sources += axis.vhd
+vhdl-sources += axis.pkg.vhd

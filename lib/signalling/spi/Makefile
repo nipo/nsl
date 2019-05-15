@@ -1,1 +1,1 @@
-vhdl-sources += spi.vhd
+vhdl-sources += spi.pkg.vhd
