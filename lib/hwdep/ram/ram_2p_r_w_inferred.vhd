@@ -23,34 +23,34 @@ entity ram_2p_r_w is
 end ram_2p_r_w;
 
 architecture inferred of ram_2p_r_w is
-
+  
   subtype word_t is std_ulogic_vector(data_size - 1 downto 0);
   type mem_t is array(2**addr_size - 1 downto 0) of word_t;
-  shared variable r_mem: mem_t;
+  shared variable dpram_reg: mem_t;
 
 begin
 
   -- MEMO: Dont use rising_edge with record/arrays (ISE bug)
-  process (p_clk)
+  writer: process (p_clk)
   begin
     if p_clk(0)'event and p_clk(0) = '1' then
       if p_wen = '1' then
-        r_mem(to_integer(unsigned(p_waddr))) := p_wdata;
+        dpram_reg(to_integer(unsigned(p_waddr))) := p_wdata;
       end if;
     end if;
   end process;
 
-  process (p_clk)
+  reader: process (p_clk)
   begin
     if p_clk(clk_count-1)'event and p_clk(clk_count-1) = '1' then
       if p_ren = '1' then
         if clk_count = 1 and bypass and p_waddr = p_raddr and p_wen = '1' then
           p_rdata <= p_wdata;
         else
-          p_rdata <= r_mem(to_integer(unsigned(p_raddr)));
+          p_rdata <= dpram_reg(to_integer(unsigned(p_raddr)));
         end if;
       end if;
     end if;
   end process;
-
+  
 end inferred;
