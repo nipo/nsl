@@ -2,221 +2,249 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library util;
-use util.numeric.log2;
-use util.sync.sync_rising_edge;
-use util.gray.all;
-
-library hwdep;
-use hwdep.ram.all;
+library util, hwdep;
 
 entity fifo_2p is
   generic(
-    data_width : integer;
-    depth      : integer;
-    clk_count  : natural range 1 to 2
+    data_width   : integer;
+    depth        : integer;
+    clk_count    : natural range 1 to 2
     );
   port(
-    p_resetn   : in  std_ulogic;
-    p_clk      : in  std_ulogic_vector(0 to clk_count-1);
+    reset_n_i : in  std_ulogic;
+    clk_i    : in  std_ulogic_vector(0 to clk_count-1);
 
-    p_in_data   : in  std_ulogic_vector(data_width-1 downto 0);
-    p_in_valid  : in  std_ulogic;
-    p_in_ready : out std_ulogic;
+    out_data_o      : out std_ulogic_vector(data_width-1 downto 0);
+    out_ready_i     : in  std_ulogic;
+    out_valid_o     : out std_ulogic;
+    out_used_o      : out integer range 0 to depth;
+    out_free_o      : out integer range 0 to depth;
 
-    p_out_data    : out std_ulogic_vector(data_width-1 downto 0);
-    p_out_ready    : in  std_ulogic;
-    p_out_valid : out std_ulogic
+    in_data_i       : in  std_ulogic_vector(data_width-1 downto 0);
+    in_valid_i      : in  std_ulogic;
+    in_ready_o      : out std_ulogic;
+    in_used_o       : out integer range 0 to depth;
+    in_free_o       : out integer range 0 to depth
     );
+
 end fifo_2p;
 
-architecture inferred of fifo_2p is
+architecture ram2 of fifo_2p is
 
-  type state is (
-    GOING_EMPTY,
-    GOING_FULL
-    );
-  
-  constant count_width : integer := log2(depth);
-  subtype count_t is std_ulogic_vector(count_width-1 downto 0);
-  subtype count_u is unsigned(count_width-1 downto 0);
-
-  signal s_out_resetn, s_in_resetn : std_ulogic;
-
-  signal r_in_wptr_bin, r_out_rptr_bin: count_u;
-  signal s_in_wptr_bin, s_out_rptr_bin: count_u;
-  signal r_state: state;
-
-  signal s_in_wptr_gray, s_out_rptr_gray: count_t;
-
-  signal s_going_full, s_going_empty: std_ulogic;
-  signal s_ptr_equal: boolean;
-  
-  signal r_in_ready, r_out_valid : std_ulogic;
-  signal s_in_ready, s_out_valid : std_ulogic;
-  signal s_in_valid, s_out_ready : std_ulogic;
-  signal r_out_data_valid : std_ulogic;
-
+  constant ptr_width : natural := util.numeric.log2(depth);
+  subtype mem_ptr_t is unsigned(ptr_width-1 downto 0);
+  subtype peer_pos_t is std_ulogic_vector(ptr_width downto 0);
+  subtype data_t is std_ulogic_vector(data_width-1 downto 0);
+  constant c_idx_high : mem_ptr_t := to_unsigned(depth-1, ptr_width);
+  constant c_is_pow2 : boolean := c_idx_high = (c_idx_high'range => '1');
   constant is_synchronous: boolean := clk_count = 1;
-  constant cin: natural := 0;
-  constant cout: natural := clk_count-1;
-  
+  constant is_bisynchronous: boolean := clk_count = 2;
+
+  signal s_resetn: std_ulogic_vector(0 to clk_count-1);
+
+  type side_info_t is
+  record
+    -- Position (gray if async), resynchronized and compared for full/empty.
+    local_pos, peer_pos : peer_pos_t;
+    -- pointers
+    used, free : unsigned(ptr_width downto 0);
+    -- Memory pointer
+    mem_ptr : mem_ptr_t;
+    -- Memory and pointer logic control signals
+    mem_en : std_ulogic;
+    inc_req : std_ulogic;
+    inc_ack : std_ulogic;
+  end record;
+
+  signal s_left, s_right: side_info_t;
+
+  signal s_read_data: data_t;
+
+  type regs_t is record
+    direct, valid: std_logic;
+    addr: mem_ptr_t;
+    data: data_t;
+  end record;
+
+  signal r, rin: regs_t;
+
 begin
-  
-  reset_async: if not is_synchronous generate
-    sync: util.sync.sync_multi_resetn
+
+  assert is_synchronous or c_is_pow2
+    report "Bisynchronous fifos can only work for power-of-two depths"
+    severity failure;
+
+  async: if not is_synchronous generate
+  begin
+    reset_sync: util.sync.sync_multi_resetn
       generic map(
         clk_count => 2
         )
       port map(
-        p_clk => p_clk,
-        p_resetn => p_resetn,
-        p_resetn_sync(0) => s_in_resetn,
-        p_resetn_sync(1) => s_out_resetn
+        p_clk => clk_i,
+        p_resetn => reset_n_i,
+        p_resetn_sync => s_resetn
+        );
+
+    out_wptr: util.sync.sync_cross_counter
+      generic map(
+        data_width => peer_pos_t'length,
+        input_is_gray => true,
+        output_is_gray => true
+        )
+      port map(
+        p_in_clk => clk_i(0),
+        p_out_clk => clk_i(clk_count-1),
+        p_in => unsigned(s_left.local_pos),
+        peer_pos_t(p_out) => s_right.peer_pos
+        );
+
+    in_rptr: util.sync.sync_cross_counter
+      generic map(
+        data_width => peer_pos_t'length,
+        decode_stage_count => (peer_pos_t'length + 3) / 4,
+        input_is_gray => true,
+        output_is_gray => true
+        )
+      port map(
+        p_in_clk => clk_i(clk_count-1),
+        p_out_clk => clk_i(0),
+        p_in => unsigned(s_right.local_pos),
+        peer_pos_t(p_out) => s_left.peer_pos
         );
   end generate;
 
-  reset_sync: if is_synchronous generate
-    s_out_resetn <= p_resetn;
-    s_in_resetn <= p_resetn;
+  sync: if is_synchronous generate
+    s_resetn(0) <= reset_n_i;
+
+    -- only insert a 2-cycle delay (ram latency)
+
+    out_wptr: util.sync.sync_reg
+      generic map(
+        data_width => peer_pos_t'length,
+        cross_region => false
+        )
+      port map(
+        p_clk => clk_i(0),
+        p_in => std_ulogic_vector(s_left.local_pos),
+        peer_pos_t(p_out) => s_right.peer_pos
+        );
+
+    in_rptr: util.sync.sync_reg
+      generic map(
+        data_width => peer_pos_t'length,
+        cross_region => false
+        )
+      port map(
+        p_clk => clk_i(0),
+        p_in => std_ulogic_vector(s_right.local_pos),
+        peer_pos_t(p_out) => s_left.peer_pos
+        );
   end generate;
-  
-  s_out_rptr_bin <= r_out_rptr_bin + 1 when s_out_ready = '1' else r_out_rptr_bin;
-  s_in_wptr_bin <= r_in_wptr_bin + 1 when s_in_valid = '1' else r_in_wptr_bin;
 
-  in_wptr: process(p_clk(cin), s_in_resetn)
-  begin
-    if s_in_resetn = '0' then
-      r_in_wptr_bin <= (others => '0');
-    elsif rising_edge(p_clk(cin)) then
-      r_in_wptr_bin <= s_in_wptr_bin;
-    end if;
-  end process in_wptr;
-
-  out_rptr: process(p_clk(cout), s_out_resetn)
-  begin
-    if s_out_resetn = '0' then
-      r_out_rptr_bin <= (others => '0');
-    elsif rising_edge(p_clk(cout)) then
-      r_out_rptr_bin <= s_out_rptr_bin;
-    end if;
-  end process out_rptr;
-
-  in_wptr_gray: util.gray.gray_encoder
+  ctr_in: hwdep.fifo.fifo_pointer
     generic map(
-      data_width => count_width
+      ptr_width => mem_ptr_t'length,
+      wrap_count => depth,
+      equal_can_move => true,
+      gray_position => is_bisynchronous,
+      increment_early => false,
+      peer_ahead => true
       )
     port map(
-      p_gray => s_in_wptr_gray,
-      p_binary => std_ulogic_vector(r_in_wptr_bin)
+      reset_n_i => s_resetn(0),
+      clk_i => clk_i(0),
+      inc_i => s_left.inc_req,
+      ack_o => s_left.inc_ack,
+      peer_position_i => s_left.peer_pos,
+      local_position_o => s_left.local_pos,
+      mem_ptr_o => s_left.mem_ptr,
+      used_count_o => s_left.used,
+      free_count_o => s_left.free
       );
 
-  out_rptr_gray: util.gray.gray_encoder
+  ctr_out: hwdep.fifo.fifo_pointer
     generic map(
-      data_width => count_width
+      ptr_width => mem_ptr_t'length,
+      wrap_count => depth,
+      equal_can_move => false,
+      gray_position => is_bisynchronous,
+      increment_early => true,
+      peer_ahead => false
       )
     port map(
-      p_gray => s_out_rptr_gray,
-      p_binary => std_ulogic_vector(r_out_rptr_bin)
+      reset_n_i => s_resetn(clk_count-1),
+      clk_i => clk_i(clk_count-1),
+      inc_i => s_right.inc_req,
+      ack_o => s_right.inc_ack,
+      peer_position_i => s_right.peer_pos,
+      local_position_o => s_right.local_pos,
+      mem_ptr_o => s_right.mem_ptr,
+      used_count_o => s_right.used,
+      free_count_o => s_right.free
       );
+
+  in_used_o <= to_integer(to_01(s_left.used));
+  in_free_o <= to_integer(to_01(s_left.free));
+  out_used_o <= to_integer(to_01(s_right.used));
+  out_free_o <= to_integer(to_01(s_right.free));
 
   ram: hwdep.ram.ram_2p_r_w
     generic map(
-      addr_size => count_width,
-      data_size => data_width,
+      addr_size => mem_ptr_t'length,
+      data_size => data_t'length,
       clk_count => clk_count,
       bypass => is_synchronous
       )
     port map(
-      p_clk => p_clk,
-      
-      p_waddr => std_ulogic_vector(r_in_wptr_bin),
-      p_wen => s_in_valid,
-      p_wdata => p_in_data,
+      p_clk => clk_i,
 
-      p_raddr => std_ulogic_vector(r_out_rptr_bin),
-      p_ren => s_out_ready,
-      p_rdata => p_out_data
+      p_waddr => std_ulogic_vector(s_left.mem_ptr),
+      p_wen => s_left.mem_en,
+      p_wdata => in_data_i,
+
+      p_raddr => std_ulogic_vector(s_right.mem_ptr),
+      p_ren => s_right.mem_en,
+      p_rdata => s_read_data
       );
 
-  s_out_ready <= (not r_out_data_valid or p_out_ready) and r_out_valid;
-  s_in_valid <= p_in_valid and r_in_ready;
+  in_ready_o <= s_left.inc_ack;
+  s_left.mem_en <= s_left.inc_ack and in_valid_i;
+  s_left.inc_req <= in_valid_i;
 
-  going_async: if not is_synchronous generate
-    process(s_out_rptr_gray, s_in_wptr_gray)
-    begin
-      s_going_full <= (s_in_wptr_gray(s_in_wptr_gray'high - 1)
-                       xnor s_out_rptr_gray(s_out_rptr_gray'high))
-                      and
-                      (s_in_wptr_gray(s_in_wptr_gray'high)
-                       xor s_out_rptr_gray(s_out_rptr_gray'high - 1));
-      s_going_empty <= (s_in_wptr_gray(s_in_wptr_gray'high - 1)
-                        xor s_out_rptr_gray(s_out_rptr_gray'high))
-                       and
-                       (s_in_wptr_gray(s_in_wptr_gray'high)
-                        xnor s_out_rptr_gray(s_out_rptr_gray'high - 1));
-    end process;
-
-    process(s_going_full, s_going_empty, s_in_resetn)
-    begin
-      if s_going_empty = '1' or s_in_resetn = '0' then
-        r_state <= GOING_EMPTY;
-      elsif s_going_full = '1' then
-        r_state <= GOING_FULL;
-      end if;
-    end process;
-
-    s_ptr_equal <= s_in_wptr_gray = s_out_rptr_gray;
-  end generate;
-
-  going_sync: if is_synchronous generate
-    process(s_in_resetn, p_clk(cin))
-    begin
-      if s_in_resetn = '0' then
-        r_state <= GOING_EMPTY;
-
-      elsif rising_edge(p_clk(cin)) then
-        if p_in_valid = '0' and (r_out_data_valid = '0' or p_out_ready = '1') then
-          r_state <= GOING_EMPTY;
-        elsif p_in_valid = '1' and (r_out_data_valid = '1' and p_out_ready = '0') then
-          r_state <= GOING_FULL;
-        end if;
-      end if;
-    end process;
-
-    s_ptr_equal <= r_in_wptr_bin = r_out_rptr_bin;
-  end generate;
-
-  process(s_out_resetn, p_clk(cout))
+  regs: process (clk_i, s_resetn)
   begin
-    if s_out_resetn = '0' then
-      r_out_data_valid <= '0';
-
-    elsif rising_edge(p_clk(cout)) then
-      if p_out_ready = '1' or r_out_data_valid = '0' then
-        r_out_data_valid <= s_out_ready;
+    if clk_i(clk_count-1)'event and clk_i(clk_count-1) = '1' then
+      if s_resetn(clk_count-1) = '0' then
+        r.valid <= '0';
+        r.direct <= '0';
+        r.data <= (others => '-');
+      else
+        r <= rin;
       end if;
     end if;
   end process;
 
-  s_in_ready <= '0' when r_state = GOING_FULL and s_ptr_equal else s_in_resetn;
-  s_out_valid <= '0' when r_state = GOING_EMPTY and s_ptr_equal else s_out_resetn;
+  transition: process(out_ready_i, r, s_right.mem_ptr, s_read_data, s_right.inc_ack)
+  begin
+    rin <= r;
 
-  in_full_sync: util.sync.sync_rising_edge
-    port map(
-      p_in => s_in_ready,
-      p_clk => p_clk(cin),
-      p_out => r_in_ready
-      );
+    rin.direct <= s_right.inc_ack;
 
-  out_empty_sync: util.sync.sync_rising_edge
-    port map(
-      p_in => s_out_valid,
-      p_clk => p_clk(cout),
-      p_out => r_out_valid
-      );
+    if r.valid = '0' and out_ready_i = '0' then
+      rin.valid <= r.direct;
+      rin.data <= s_read_data;
+      rin.addr <= s_right.mem_ptr;
+    elsif r.valid = '1' and out_ready_i = '1' then
+      rin.valid <= '0';
+      rin.data <= (others => '-');
+      rin.addr <= (others => '-');
+    end if;
+  end process;
 
-  p_in_ready <= r_in_ready;
-  p_out_valid <= r_out_data_valid;
-  
-end inferred;
+  s_right.inc_req <= out_ready_i or (not r.valid and not r.direct);
+  s_right.mem_en <= s_right.inc_ack and (out_ready_i or not r.valid);
+  out_valid_o <= r.valid or r.direct;
+  out_data_o <= r.data when r.valid = '1' else s_read_data;
+
+end ram2;
