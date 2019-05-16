@@ -11,7 +11,7 @@ define append
 	$(SILENT)echo '$2' >> $1
 endef
 
-define syn_source_do
+define syn_hdl_do
 	$(call append,$1,add_file -$($2-language) -lib $($2-library) {$2})
 
 endef
@@ -21,6 +21,8 @@ define syn_constraint_do
 
 endef
 
+syn_source_do=$(if $(filter constraint,$($2-language)),$(call syn_hdl_do,$1,$2),$(call syn_constraint_do,$1,$2))
+
 clean-dirs += $(build-dir)
 clean-files += $(target).bit
 
@@ -29,7 +31,6 @@ $(build-dir)/synth.prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)> $@
 	$(call append,$@,add_file -vhdl {$(DIAMOND_PATH)/cae_library/synthesis/vhdl/machxo2.vhd})
 	$(foreach s,$(sources),$(call syn_source_do,$@,$s))
-	$(foreach c,$(constraints),$(call syn_constraint_do,$@,$c))
 	$(call append,$@,impl -add synth -type fpga)
 #	$(call append,$@,set_option -vhdl2008 1)
 	$(call append,$@,set_option -technology $(target_technology))
@@ -79,8 +80,8 @@ $(build-dir)/port_remap.sed: $(build-dir)/synth/$(target).edi
 	grep "^top port" $(build-dir)/synth/.recordref | \
 		sed -e 's:top port \(.*\) \(.*\):s,\1,\2,:' > $@
 
-$(build-dir)/constraints.lpf: $(constraints) $(build-dir)/port_remap.sed
-	cat $(filter %.lpf,$(constraints)) | sed -f $(build-dir)/port_remap.sed > $@
+$(build-dir)/constraints.lpf: $(all-constraint-sources) $(build-dir)/port_remap.sed
+	cat $(filter %.lpf,$(all-constraint-sources)) | sed -f $(build-dir)/port_remap.sed > $@
 
 $(build-dir)/$(target)_map.ncd: $(build-dir)/$(target).ngd $(build-dir)/constraints.lpf
 	cd $(build-dir) && $(ISPFPGA_BIN)/map \

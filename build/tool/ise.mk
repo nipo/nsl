@@ -109,7 +109,7 @@ define arg_add
     $1 $2
 endef
 
-ise-build/$(target).ngd: ise-build/$(target).ngc $(constraints)
+ise-build/$(target).ngd: ise-build/$(target).ngc $(all-constraint-sources)
 	$(SILENT)echo "//" > $(@:.ngd=.bmm)
 	$(SILENT)$I; ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
 	    $(foreach c,$(filter %.ngc,$(sources)),-sd $(dir $c)) \

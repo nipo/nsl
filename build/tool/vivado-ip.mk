@@ -13,8 +13,8 @@ define source_add
 	$(SILENT)echo 'set fobj [get_files -of_object $$srcset_obj [list "*$$fname"]]' >> $@
 	$(SILENT)echo 'set_property "file_type" "$($1-language)" $$fobj' >> $@
 	$(SILENT)echo 'set_property "library" "$($1-library)" $$fobj' >> $@
-	$(SILENT)echo 'if { $$last_fobj != "" } { reorder_files -after [get_property name $$last_fobj] [get_property name $$fobj] }' >> $@
-	$(SILENT)echo 'set last_fobj $$fobj' >> $@
+	$(SILENT)echo 'if { $$last_source != "" } { reorder_files -after [get_property name $$last_source] [get_property name $$fobj] }' >> $@
+	$(SILENT)echo 'set last_source $$fobj' >> $@
 	$(SILENT)
 endef
 
@@ -22,10 +22,20 @@ define constraint_add
 	echo 'set fname [file normalize "$1"]' >> $@
 	$(SILENT)echo 'add_files -norecurse -fileset $$cstrset_obj [list "$$fname"]' >> $@
 	$(SILENT)echo 'set fobj [get_files -of_object $$cstrset_obj [list "*$$fname"]]' >> $@
-	$(SILENT)echo 'set_property "file_type" "$2" $$fobj' >> $@
+	$(SILENT)echo 'set_property "file_type" "$(if $(filter %.xdc,$1),xdc)$(if $(filter %.tcl,$1),tcl)" $$fobj' >> $@
+	$(SILENT)echo 'set_property used_in_implementation true $$fobj' >> $@
 	$(SILENT)echo 'set_property "library" "$($1-library)" $$fobj' >> $@
-	$(SILENT)echo 'if { $$last_fobj != "" } { reorder_files -after [get_property name $$last_fobj] [get_property name $$fobj] }' >> $@
-	$(SILENT)echo 'set last_fobj $$fobj' >> $@
+	$(SILENT)echo 'if { $$last_constraint != "" } { reorder_files -after [get_property name $$last_constraint] [get_property name $$fobj] }' >> $@
+	$(SILENT)echo 'set last_constraint $$fobj' >> $@
+	$(SILENT)echo 'set constraints_handles [list]' >> $@
+	$(SILENT)
+endef
+
+define constraint_postprocess
+	$(SILENT)echo 'ipx::add_file src/$(notdir $1) [ipx::get_file_groups xilinx_implementation -of_objects [ipx::current_core]]' >> $@
+	$(SILENT)echo 'foreach {fg} [ipx::get_file_groups -filter {name=~*xilinx_any*} -of_objects [ipx::current_core]] { catch { ipx::remove_file src/$(notdir $1) $$fg } lol }' >> $@
+	$(SILENT)echo 'set fobj [ipx::get_files -of_object [ipx::get_file_groups xilinx_implementation -of_objects [ipx::current_core]] [list "src/$(notdir $1)"]]'  >> $@
+	$(SILENT)echo 'set_property USED_IN implementation $$fobj' >> $@
 	$(SILENT)
 endef
 
@@ -46,13 +56,15 @@ $(build-dir)/ingress/create.tcl: $(sources) $(ip-packaging-scripts) $(vivado-ini
 	$(SILENT)echo 'debug::set_trace_verbosity -verbose' >> $@
 	$(SILENT)echo 'set_property source_mgmt_mode DisplayOnly [current_project]' >> $@
 	$(SILENT)echo 'set srcset_obj [get_filesets sources_1]' >> $@
-	$(SILENT)echo 'set cstrset_obj [get_filesets sources_1]' >> $@
-	$(SILENT)echo 'set last_fobj ""' >> $@
-	$(SILENT)$(foreach s,$(sources),$(call source_add,$s))
+	$(SILENT)echo 'set cstrset_obj [get_filesets constrs_1]' >> $@
+	$(SILENT)echo 'set last_source ""' >> $@
+	$(SILENT)echo 'set last_constraint ""' >> $@
+	$(SILENT)echo 'set constraints_handles [list]' >> $@
+	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),$(call constraint_add,$s),$(call source_add,$s)))
 	$(SILENT)echo 'set_property -name "top" -value "$(top-entity)" -objects $$srcset_obj' >> $@
 #	$(SILENT)echo 'launch_runs synth_1 -jobs 6' >> $@
 #	$(SILENT)echo 'wait_on_run synth_1' >> $@
-	$(SILENT)echo 'ipx::package_project -root_dir ../ip -vendor $(ip-vendor) -library $(ip-library) -taxonomy $(ip-taxonomy) -import_files -set_current false' >> $@
+	$(SILENT)echo 'ipx::package_project -force -root_dir ../ip -vendor $(ip-vendor) -library $(ip-library) -taxonomy $(ip-taxonomy) -import_files -set_current true -verbose' >> $@
 	$(SILENT)echo 'ipx::unload_core ../ip/component.xml' >> $@
 	$(SILENT)echo 'ipx::edit_ip_in_project -upgrade true -name tmp_edit_project -directory ../ip ../ip/component.xml' >> $@
 	$(SILENT)for f in $(ip-packaging-scripts) ; do \
@@ -66,6 +78,8 @@ $(build-dir)/ingress/create.tcl: $(sources) $(ip-packaging-scripts) $(vivado-ini
 	$(SILENT)echo 'set_property description {$(ip-description)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'set_property company_url {$(ip-company-url)} [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::create_xgui_files [ipx::current_core]' >> $@
+	$(SILENT)echo 'ipx::add_file_group -type implementation xilinx_implementation [ipx::current_core]' >> $@
+	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),$(call constraint_postprocess,$s)))
 	$(SILENT)echo 'ipx::update_checksums [ipx::current_core]' >> $@
 	$(SILENT)echo 'ipx::save_core [ipx::current_core]' >> $@
 	$(SILENT)echo 'close_project -delete' >> $@
@@ -79,8 +93,9 @@ $(build-dir)/ingress/synth.tcl: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo 'set_property source_mgmt_mode DisplayOnly [current_project]' >> $@
 	$(SILENT)echo 'set srcset_obj [get_filesets sources_1]' >> $@
 	$(SILENT)echo 'set cstrset_obj [get_filesets sources_1]' >> $@
-	$(SILENT)echo 'set last_fobj ""' >> $@
-	$(SILENT)$(foreach s,$(sources),$(call source_add,$s))
+	$(SILENT)echo 'set last_source ""' >> $@
+	$(SILENT)echo 'set last_constraint ""' >> $@
+	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),$(call constraint_add,$s),$(call source_add,$s)))
 	$(SILENT)echo 'set_property -name "top" -value "$(top-entity)" -objects $$srcset_obj' >> $@
 	$(SILENT)echo 'launch_runs synth_1 -jobs 6' >> $@
 	$(SILENT)echo 'wait_on_run synth_1' >> $@

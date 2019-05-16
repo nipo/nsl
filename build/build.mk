@@ -1,6 +1,6 @@
 tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
-source-types += vhdl verilog dcp ucf xcf ngc bd
+source-types += vhdl verilog ngc bd constraint
 
 .SUFFIXES:
 
@@ -133,9 +133,15 @@ $(1)-lib-deps := $(sort $(filter-out $1,$(foreach p,$(filter $1%,$(parts-scanned
 
 endef
 
+define source_type_gather
+all-$1-sources := $(foreach f,$(sources),$(if $(filter $1,$($f-language)),$f))
+
+endef
+
 $(eval $(call library_scan,$(top-lib)))
 $(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
 $(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
+$(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 

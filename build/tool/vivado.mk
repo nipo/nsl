@@ -24,7 +24,10 @@ routed-reports = $(build-dir)/routed_incremental_reuse.rpt
 routed-reports = $(build-dir)/routed_clock_utilization.rpt
 routed-reports += $(placed-reports)
 
-all: $(build-dir)/bitstream.bit
+all: $(target).bit
+
+$(target).bit: $(build-dir)/bitstream.bit
+	cp $< $@
 
 define append
 	$(SILENT)echo '$2' >> $1
@@ -40,16 +43,21 @@ define append_verilog_synth
 
 endef
 
+define append_constraint_synth
+	$(if $(filter %.xdc,$2),$(call append,$1,read_xdc $2))	
+
+endef
+
 define append_bd_synth
 	$(call append,$1,catch {add_files $2})
 	$(call append,$1,reset_target Synthesis [get_files $2])
-#	$(call append,$1,generate_target Synthesis [get_files $2])
-#	$(call append,$1,read_vhdl -library $($2-library) $(dir $2)/hdl/$(patsubst %.bd,%.vhd,$(notdir $2)))
 	$(call append,$1,open_bd_design $2)
 	$(call append,$1,write_bd_tcl debug.tcl)
 	$(call append,$1,exit)
 	$(call append,$1,update_compile_order)
 endef
+#	$(call append,$1,generate_target Synthesis [get_files $2])
+#	$(call append,$1,read_vhdl -library $($2-library) $(dir $2)/hdl/$(patsubst %.bd,%.vhd,$(notdir $2)))
 
 define append_xci_synth
 	$(call append,$1,read_ip -quiet $2)
@@ -68,12 +76,6 @@ define append_dcp_link
 
 endef
 
-define read_constraint
-	$(call append,$1,read_xdc $2)
-#	$(call append,$1,set_property used_in_implementation false [get_files $2])
-
-endef
-
 define read_checkpoint
 	$(foreach s,$(sources),$(call append_$($s-language)_link,$1,$s))
 	$(call append,$1,link_design -top $(top-entity) -part $(target_part)$(target_package)$(target_speed))
@@ -87,6 +89,7 @@ define project_init
 	$(SILENT)for f in $(vivado-init-tcl) ; do \
 		cat $$f >> $1 ; \
 	done
+endef
 
 # 	$(call append,$1,set_param project.singleFileAddWarning.threshold 0)
 # 	$(call append,$1,set_param project.compositeFile.enableAutoGeneration 0)
@@ -97,7 +100,6 @@ define project_init
 # #	$(call append,$1,set_property ip_repo_paths {IP REPO PATHS} [current_project])
 # 	$(call append,$1,set_property ip_output_repo $(realpath $(dir $1))/ip [current_project])
 # 	$(call append,$1,set_property ip_cache_permissions {read write} [current_project])
-endef
 
 define project_load_sources
 	$(foreach s,$(sources),$(call append_$($s-language)_synth,$1,$s))
@@ -106,20 +108,17 @@ define project_load_sources
 	$(call append,$1,  set_property used_in_implementation false $$dcp)
 	$(call append,$1,})
 
-	$(foreach s,$(constraints),$(call append_constraint,$1,$s))
-
 endef
 
-$(build-dir)/synth.dcp: $(sources) $(constraints) $(vivado-init-tcl) $(MAKEFILE_LIST)
+$(build-dir)/synth.dcp: $(sources) $(vivado-init-tcl) $(MAKEFILE_LIST)
 	$(SILENT)> $@.tcl
 	$(SILENT)$(call project_init,$@.tcl)
 	$(SILENT)$(call project_load_sources,$@.tcl)
 	$(call append,$@.tcl,synth_design -top $(top-entity) -part $(target_part)$(target_package)$(target_speed))
+	$(call append,$@.tcl,write_checkpoint -force -noxdef $(notdir $@))
+	$(call vivado-run,$@.tcl)
 
 #	$(call append,$@.tcl,set_param constraints.enableBinaryConstraints false)
-	$(call append,$@.tcl,write_checkpoint -force -noxdef $(notdir $@))
-
-	$(call vivado-run,$@.tcl)
 
 $(build-dir)/synth.rpt: $(build-dir)/synth.dcp
 	$(SILENT)> $@.tcl
@@ -148,6 +147,7 @@ $(build-dir)/placed.dcp: $(build-dir)/link_opt.dcp
 	$(SILENT)$(call project_init,$@.tcl)
 	$(call read_checkpoint,$@.tcl,$(notdir $<))
 #	$(call append,$@.tcl,implement_debug_core)
+	$(foreach s,$(all-constraint-sources),$(call append_constraint_synth,$@,$s))
 	$(call append,$@.tcl,place_design)
 	$(call append,$@.tcl,write_checkpoint -force $(notdir $@))
 	$(call vivado-run,$@.tcl)

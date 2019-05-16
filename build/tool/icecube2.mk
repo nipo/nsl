@@ -81,7 +81,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		$(build-dir)/synth/$(target).edf \
 		$(build-dir)/synth \
 		-p$(target_package) \
-		-y$(subst $(space),$(comma),$(constraints)) \
+		-y$(subst $(space),$(comma),$(all-constraint-sources)) \
 		-c \
 		--devicename $(target_part)
 	$(SILENT)cp $(build-dir)/Temp/sbt_temp.sdc $@
