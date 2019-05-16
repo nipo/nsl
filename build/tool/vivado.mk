@@ -24,6 +24,10 @@ routed-reports = $(build-dir)/routed_incremental_reuse.rpt
 routed-reports = $(build-dir)/routed_clock_utilization.rpt
 routed-reports += $(placed-reports)
 
+sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
+$(BUILD_ROOT)/support/generic_timing_constraints.tcl-language = constraint
+all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
+
 all: $(target).bit
 
 $(target).bit: $(build-dir)/bitstream.bit
