@@ -41,11 +41,14 @@ package sync is
       );
   end component;
 
+  -- cross_region is for synchronization of a bus across two clocked design parts
+  -- async_sampler is for sampling a bus to a clock from a totally asynchronous port
   component sync_reg is
     generic(
       cycle_count : natural := 2;
       data_width : integer;
-      cross_region : boolean := true
+      cross_region : boolean := true;
+      async_sampler : boolean := false
       );
     port(
       p_clk    : in std_ulogic;

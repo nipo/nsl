@@ -55,7 +55,8 @@ begin
   resync_in: util.sync.sync_reg
     generic map(
       cycle_count => 2,
-      cross_region => true,
+      cross_region => false,
+      async_sampler => true,
       data_width => data_width
       )
     port map(

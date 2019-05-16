@@ -6,7 +6,8 @@ entity sync_reg is
   generic(
     cycle_count : natural := 2;
     data_width : integer;
-    cross_region : boolean := true
+    cross_region : boolean := true;
+    async_sampler : boolean := false
     );
   port(
     p_clk    : in std_ulogic;
@@ -18,40 +19,62 @@ end sync_reg;
 architecture rtl of sync_reg is
   
   subtype word_t is std_ulogic_vector(data_width-1 downto 0);
-  type regs_t is array(0 to cycle_count - 1) of word_t;
+  type word_vector_t is array (natural range <>) of word_t;
   attribute keep : string;
   attribute async_reg : string;
 
 begin
 
   cross: if cross_region generate
-    signal tig_reg_d : regs_t;
-    attribute keep of tig_reg_d : signal is "TRUE";
-    attribute async_reg of tig_reg_d : signal is "TRUE";
+    signal cross_region_reg_d : word_t;
+    signal metastable_reg_d : word_vector_t (0 to cycle_count-2);
+    attribute keep of cross_region_reg_d, metastable_reg_d : signal is "TRUE";
+    attribute async_reg of cross_region_reg_d, metastable_reg_d : signal is "TRUE";
   begin
     clock: process (p_clk)
     begin
       if rising_edge(p_clk) then
-        tig_reg_d(0 to cycle_count-2) <= tig_reg_d(1 to cycle_count-1);
-        tig_reg_d(cycle_count-1) <= p_in;
+        metastable_reg_d(metastable_reg_d'left to metastable_reg_d'right-1)
+          <= metastable_reg_d(metastable_reg_d'left+1 to metastable_reg_d'right);
+        metastable_reg_d(metastable_reg_d'right) <= cross_region_reg_d;
+        cross_region_reg_d <= p_in;
       end if;
     end process clock;
 
-    p_out <= tig_reg_d(0);
+    p_out <= metastable_reg_d(metastable_reg_d'left);
   end generate cross;
 
-  nocross: if not cross_region generate
-    signal r_regs : regs_t;
+  async: if async_sampler and not cross_region generate
+    signal tig_reg_d : word_t;
+    signal metastable_reg_d : word_vector_t (0 to cycle_count-2);
+    attribute keep of tig_reg_d, metastable_reg_d : signal is "TRUE";
+    attribute async_reg of tig_reg_d, metastable_reg_d : signal is "TRUE";
   begin
     clock: process (p_clk)
     begin
       if rising_edge(p_clk) then
-        r_regs(0 to cycle_count-2) <= r_regs(1 to cycle_count-1);
-        r_regs(cycle_count-1) <= p_in;
+        metastable_reg_d(metastable_reg_d'left to metastable_reg_d'right-1)
+          <= metastable_reg_d(metastable_reg_d'left+1 to metastable_reg_d'right);
+        metastable_reg_d(metastable_reg_d'right) <= tig_reg_d;
+        tig_reg_d <= p_in;
       end if;
     end process clock;
 
-    p_out <= r_regs(0);
+    p_out <= metastable_reg_d(metastable_reg_d'left);
+  end generate async;
+
+  nocross: if not cross_region and not async_sampler generate
+    signal r_regs : word_vector_t (0 to cycle_count-1);
+  begin
+    clock: process (p_clk)
+    begin
+      if rising_edge(p_clk) then
+        r_regs(r_regs'left to r_regs'right-1) <= r_regs(r_regs'left+1 to r_regs'right);
+        r_regs(r_regs'right) <= p_in;
+      end if;
+    end process clock;
+
+    p_out <= r_regs(r_regs'left);
   end generate nocross;
   
 end rtl;
