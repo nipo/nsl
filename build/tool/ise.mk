@@ -1,12 +1,12 @@
 INTF_STYLE = -intstyle silent
 
-MAP_PLACE_ROUTE_OPTS = # -ol high -xe c
+MAP_PLACE_ROUTE_OPTS = -ol high -xe c
 
 MAP_OPTS        = $(MAP_PLACE_ROUTE_OPTS) -mt on
 PAR_OPTS        = $(MAP_PLACE_ROUTE_OPTS)
-#MAP_OPTS        += -global_opt speed -retiming on
-#MAP_OPTS        += -register_duplication on
-#MAP_OPTS        += -equivalent_register_removal off
+MAP_OPTS        += -global_opt speed -retiming on
+MAP_OPTS        += -register_duplication on
+MAP_OPTS        += -equivalent_register_removal off -lc area
 
 # They should be the same, anyway
 MAP_OPTS_GUIDED = $(MAP_OPTS)
