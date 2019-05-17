@@ -1,0 +1,61 @@
+#!/bin/bash
+
+declare -a nets
+declare -A periods
+
+edif=$1
+
+while read net period ; do
+    nets+=($net)
+    periods[$net]=$period
+done
+
+has_tig_clr=
+has_tid_d=
+has_tig_q=
+has_ff_cross=
+
+grep -q tig_reg_clr "$edif" && has_tig_clr=1
+grep -q tig_reg_d "$edif" && has_tig_clr=1
+grep -q tig_reg_q "$edif" && has_tig_clr=1
+grep -q cross_region_reg_d "$edif" && has_ff_cross=1
+
+test -n "$has_tig_clr"  && echo "PIN \"*tig_reg_clr*.CLR\" TPTHRU = \"ff_tig_clr\";"
+test -n "$has_tig_d"    && echo "PIN \"*tig_reg_d*.D\" TPTHRU = \"ff_tig_d\";"
+test -n "$has_tig_q"    && echo "PIN \"*tig_reg_q*.Q\" TPTHRU = \"ff_tig_q\";"
+test -n "$has_ff_cross" && echo "PIN \"*cross_region_reg_d*.D\" TPTHRU = \"ff_cross\";"
+
+for i in "${!nets[@]}"; do
+    net=${nets[$i]}
+    token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${net})
+
+    echo "NET \"$net\" TNM_NET=\"CCF_${token}_TNM\";"
+    echo "TIMEGRP \"CCF_${token}_GRP\" = \"CCF_${token}_TNM\";"
+    test -n "$has_tig_clr"  && echo "TIMESPEC \"TS_to_${token}_tig_clr\" = THRU \"ff_tig_clr\" TO \"CCF_${token}_GRP\" TIG;"
+    test -n "$has_tig_d"    && echo "TIMESPEC \"TS_to_${token}_tig_d\" = THRU \"ff_tig_d\" TO \"CCF_${token}_GRP\" TIG;"
+    test -n "$has_tig_q"    && echo "TIMESPEC \"TS_to_${token}_tig_q\" = FROM \"CCF_${token}_GRP\" THRU \"ff_tig_q\" TIG;"
+done
+
+if [ -n "$has_ff_cross" ] ; then
+    for i in "${!nets[@]}"; do
+        source=${nets[$i]}
+        source_token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${source})
+        source_period=${periods[$source]}
+
+        for j in "${!nets[@]}"; do
+            [ "$i" = "$j" ] && continue
+
+            dest=${nets[$j]}
+            dest_token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${dest})
+            dest_period=${periods[$dest]}
+
+            min_period=${source_period}
+            if [ $(bc -l <<< "${dest_period}<${source_period}") = 1 ] ; then
+                min_period=${dest_period}
+            fi
+            
+            echo "TIMESPEC \"TS_from_${source_token}_to_${dest_token}_resync\" = FROM \"CCF_${source_token}_GRP\" THRU \"ff_cross\" TO \"CCF_${dest_token}_GRP\" ${min_period} ns DATAPATHONLY;"
+            
+        done
+    done
+fi

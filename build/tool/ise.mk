@@ -88,7 +88,7 @@ clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
 	$(SILENT)$I; promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
 
 ise-build/$(target)-first-map.ncd ise-build/$(target)-map.ncd:
-	$I; map $(INTF_STYLE) -p $(target_part)$(target_package)$(target_speed) \
+	$(SILENT)$I; map $(INTF_STYLE) -p $(target_part)$(target_package)$(target_speed) \
 		$(if $(filter %-par.ncd,$^),$(MAP_OPTS_GUIDED),$(MAP_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %.ngd,$^)" -o "$@"
@@ -109,7 +109,19 @@ define arg_add
     $1 $2
 endef
 
-ise-build/$(target).ngd: ise-build/$(target).ngc $(all-constraint-sources)
+define ccf_gen
+
+ise-build/$(notdir $(f:.ccf=.ucf)): $f ise-build/$(target).ndf
+	bash $(BUILD_ROOT)/support/ccf_ucf_gen ise-build/$(target).ndf < $$< > $$@
+
+endef
+
+$(eval $(foreach f,$(filter %.ccf,$(all-constraint-sources)),$(call ccf_gen,$f)))
+
+ise-build/$(target).ndf: ise-build/$(target).ngc
+	$(SILENT)$I; ngc2edif $(INTF_STYLE) -w $< $@
+
+ise-build/$(target).ngd: ise-build/$(target).ngc $(filter %.ucf,$(all-constraint-sources)) $(foreach f,$(filter %.ccf,$(all-constraint-sources)),ise-build/$(notdir $(f:.ccf=.ucf)))
 	$(SILENT)echo "//" > $(@:.ngd=.bmm)
 	$(SILENT)$I; ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
 	    $(foreach c,$(filter %.ngc,$(sources)),-sd $(dir $c)) \
