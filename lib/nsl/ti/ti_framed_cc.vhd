@@ -6,6 +6,9 @@ library nsl;
 use nsl.ti.all;
 
 entity ti_framed_cc is
+  generic(
+    divisor_shift : natural := 0
+    );
   port(
     p_clk    : in std_ulogic;
     p_resetn : in std_ulogic;
@@ -230,12 +233,13 @@ begin
 
   master: ti_cc_master
     generic map(
-      divisor_width => r.divisor'length
+      divisor_width => r.divisor'length + divisor_shift
       )
     port map(
       p_clk => p_clk,
       p_resetn => p_resetn,
-      p_divisor => r.divisor,
+      p_divisor(r.divisor'length+divisor_shift-1 downto divisor_shift) => r.divisor,
+      p_divisor(divisor_shift-1 downto 0) => (others => '1'),
 
       p_cc_resetn => p_cc_resetn,
       p_cc_dc => p_cc_dc,

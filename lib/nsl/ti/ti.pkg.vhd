@@ -54,6 +54,9 @@ package ti is
   constant TI_CC_CMD_DIV       : framed_data_t := "11------";
   
   component ti_framed_cc is
+    generic(
+      divisor_shift : natural := 0
+      );
     port(
       p_resetn    : in  std_ulogic;
       p_clk       : in  std_ulogic;
