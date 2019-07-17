@@ -78,7 +78,8 @@ begin
   ram: hwdep.ram.ram_2p_homogeneous
     generic map(
       addr_size => min_addr_size,
-      data_byte_count => max_word_bytes
+      word_size => 8,
+      data_word_count => max_word_bytes
       )
     port map(
       p_a_clk   => p_a_clk,
