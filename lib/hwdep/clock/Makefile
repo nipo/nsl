@@ -11,4 +11,15 @@ deps += unisim.vcomponents
 endif
 endif
 
+ifeq ($(tool),isim)
+vhdl-sources += clock.pkg_body-isim.vhd
+else
+vhdl-sources += clock.pkg_body-generic.vhd
+endif
+
+ifneq ($(filter lattice-machxo2,$(hwdep)),)
+vhdl-sources += clock_internal_mxo2.vhd
+deps += machxo2.components
+endif
+
 deps += hwdep.io

@@ -12,4 +12,7 @@ package clock is
       );
   end component;
 
+  function is_rising(signal ck: std_ulogic) return boolean;
+  function is_falling(signal ck: std_ulogic) return boolean;
+
 end package clock;
