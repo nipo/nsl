@@ -31,7 +31,7 @@ architecture byte_wr_ram_rf of ram_2p_homogeneous is
   subtype word_t is std_ulogic_vector(data_word_count * word_size - 1 downto 0);
   signal a_out_reg, b_out_reg: word_t;
   type ram_type is array (0 to word_count - 1) of word_t;
-  shared variable r_mem : ram_type := (others => (others => '-'));
+  shared variable dpram_reg : ram_type := (others => (others => '-'));
 
 begin
 
@@ -41,15 +41,15 @@ begin
       if p_a_en = '1' then
         if registered_output then
           p_a_rdata <= a_out_reg;
-          a_out_reg <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
+          a_out_reg <= dpram_reg(to_integer(to_01(unsigned(p_a_addr), '0')));
         else
-          p_a_rdata <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
+          p_a_rdata <= dpram_reg(to_integer(to_01(unsigned(p_a_addr), '0')));
         end if;
 
         for i in 0 to data_word_count - 1
         loop
           if p_a_wen(i) = '1' then
-            r_mem(to_integer(to_01(unsigned(p_a_addr), '0')))((i + 1) * word_size - 1 downto i * word_size)
+            dpram_reg(to_integer(to_01(unsigned(p_a_addr), '0')))((i + 1) * word_size - 1 downto i * word_size)
               := p_a_wdata((i + 1) * word_size - 1 downto i * word_size);
           end if;
         end loop;
@@ -64,15 +64,15 @@ begin
       if p_b_en = '1' then
         if registered_output then
           p_b_rdata <= b_out_reg;
-          b_out_reg <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
+          b_out_reg <= dpram_reg(to_integer(to_01(unsigned(p_b_addr), '0')));
         else
-          p_b_rdata <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
+          p_b_rdata <= dpram_reg(to_integer(to_01(unsigned(p_b_addr), '0')));
         end if;
 
         for i in 0 to data_word_count - 1
         loop
           if p_b_wen(i) = '1' then
-            r_mem(to_integer(to_01(unsigned(p_b_addr), '0')))((i + 1) * word_size - 1 downto i * word_size)
+            dpram_reg(to_integer(to_01(unsigned(p_b_addr), '0')))((i + 1) * word_size - 1 downto i * word_size)
               := p_b_wdata((i + 1) * word_size - 1 downto i * word_size);
           end if;
         end loop;
