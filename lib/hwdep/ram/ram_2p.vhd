@@ -7,29 +7,29 @@ library util, hwdep;
 entity ram_2p is
   generic (
     a_addr_size : natural;
-    a_data_bytes : natural;
+    a_data_byte_count : natural;
 
     b_addr_size : natural;
-    b_data_bytes : natural
+    b_data_byte_count : natural
     );
   port (
     p_a_clk   : in  std_ulogic;
     p_a_en    : in  std_ulogic                               := '1';
     p_a_addr  : in  std_ulogic_vector (a_addr_size-1 downto 0);
-    p_a_wen   : in  std_ulogic_vector (a_data_bytes-1 downto 0) := (others => '1');
-    p_a_wdata : in  std_ulogic_vector (a_data_bytes*8-1 downto 0) := (others => '-');
-    p_a_rdata : out std_ulogic_vector (a_data_bytes*8-1 downto 0);
+    p_a_wen   : in  std_ulogic_vector (a_data_byte_count-1 downto 0) := (others => '1');
+    p_a_wdata : in  std_ulogic_vector (a_data_byte_count*8-1 downto 0) := (others => '-');
+    p_a_rdata : out std_ulogic_vector (a_data_byte_count*8-1 downto 0);
 
     p_b_clk   : in  std_ulogic;
     p_b_en    : in  std_ulogic                               := '1';
     p_b_addr  : in  std_ulogic_vector (b_addr_size-1 downto 0);
-    p_b_wen   : in  std_ulogic_vector (b_data_bytes-1 downto 0) := (others => '1');
-    p_b_wdata : in  std_ulogic_vector (b_data_bytes*8-1 downto 0) := (others => '-');
-    p_b_rdata : out std_ulogic_vector (b_data_bytes*8-1 downto 0)
+    p_b_wen   : in  std_ulogic_vector (b_data_byte_count-1 downto 0) := (others => '1');
+    p_b_wdata : in  std_ulogic_vector (b_data_byte_count*8-1 downto 0) := (others => '-');
+    p_b_rdata : out std_ulogic_vector (b_data_byte_count*8-1 downto 0)
     );
 begin
 
-  assert 2**a_addr_size * a_data_bytes = 2**b_addr_size * b_data_bytes
+  assert 2**a_addr_size * a_data_byte_count = 2**b_addr_size * b_data_byte_count
     report "Both memory sizes are not equal"
     severity failure;
 
@@ -55,9 +55,9 @@ architecture inferred of ram_2p is
     end if;
   end min;
 
-  constant max_word_bytes : natural := max(a_data_bytes, b_data_bytes);
+  constant max_word_bytes : natural := max(a_data_byte_count, b_data_byte_count);
   constant min_addr_size : natural := min(a_addr_size, b_addr_size);
-  constant addr_size : natural := a_addr_size + util.numeric.log2(a_data_bytes);
+  constant addr_size : natural := a_addr_size + util.numeric.log2(a_data_byte_count);
 
   constant mem_size : natural := 2**min_addr_size;
   subtype word_t is std_ulogic_vector(max_word_bytes*8-1 downto 0);
@@ -78,7 +78,7 @@ begin
   ram: hwdep.ram.ram_2p_homogeneous
     generic map(
       addr_size => min_addr_size,
-      data_bytes => max_word_bytes
+      data_byte_count => max_word_bytes
       )
     port map(
       p_a_clk   => p_a_clk,
@@ -101,7 +101,7 @@ begin
   begin
     for i in 0 to a_addr_lsb_wrap-1
     loop
-      a_wdata((i+1)*a_data_bytes*8-1 downto i*a_data_bytes*8)
+      a_wdata((i+1)*a_data_byte_count*8-1 downto i*a_data_byte_count*8)
         <= p_a_wdata;
       end loop;
   end process;
@@ -113,9 +113,9 @@ begin
     lsb := to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
     a_wen <= (others => '0');
 
-    for i in 0 to a_data_bytes-1
+    for i in 0 to a_data_byte_count-1
     loop
-      a_wen(lsb*a_data_bytes+i) <= p_a_wen(i);
+      a_wen(lsb*a_data_byte_count+i) <= p_a_wen(i);
     end loop;
   end process;
   
@@ -133,7 +133,7 @@ begin
   begin
     for i in 0 to b_addr_lsb_wrap-1
     loop
-      b_wdata((i+1)*b_data_bytes*8-1 downto i*b_data_bytes*8)
+      b_wdata((i+1)*b_data_byte_count*8-1 downto i*b_data_byte_count*8)
         <= p_b_wdata;
     end loop;
   end process;
@@ -144,9 +144,9 @@ begin
     lsb := to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
     b_wen <= (others => '0');
 
-    for i in 0 to b_data_bytes-1
+    for i in 0 to b_data_byte_count-1
     loop
-      b_wen(lsb*b_data_bytes+i) <= p_b_wen(i);
+      b_wen(lsb*b_data_byte_count+i) <= p_b_wen(i);
     end loop;
   end process;
 
@@ -159,7 +159,7 @@ begin
     end if;
   end process;
 
-  p_a_rdata <= a_rdata((a_addr_lsb+a_data_bytes)*8-1 downto a_addr_lsb*8);
-  p_b_rdata <= b_rdata((b_addr_lsb+b_data_bytes)*8-1 downto b_addr_lsb*8);
+  p_a_rdata <= a_rdata((a_addr_lsb+a_data_byte_count)*8-1 downto a_addr_lsb*8);
+  p_b_rdata <= b_rdata((b_addr_lsb+b_data_byte_count)*8-1 downto b_addr_lsb*8);
 
 end inferred;
