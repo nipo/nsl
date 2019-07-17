@@ -12,7 +12,7 @@ entity i2c_mem_ctrl is
   port (
     p_clk : out std_ulogic;
 
-    slave_address: in std_ulogic_vector(7 downto 1);
+    slave_address: in unsigned(7 downto 1);
 
     p_i2c_o  : out signalling.i2c.i2c_o;
     p_i2c_i  : in  signalling.i2c.i2c_i;
@@ -21,7 +21,7 @@ entity i2c_mem_ctrl is
     p_stop     : out std_ulogic;
     p_selected : out std_ulogic;
 
-    p_addr     : out std_ulogic_vector(addr_bytes*8-1 downto 0);
+    p_addr     : out unsigned(addr_bytes*8-1 downto 0);
 
     p_r_strobe : out std_ulogic;
     p_r_data   : in  std_ulogic_vector(data_bytes*8-1 downto 0);
@@ -37,13 +37,14 @@ architecture arch of i2c_mem_ctrl is
 
   type regs_t is
   record
-    addr : std_ulogic_vector(addr_bytes*8-1 downto 0);
+    addr : unsigned(addr_bytes*8-1 downto 0);
     addr_byte_left : integer range 0 to addr_bytes;
     data : std_ulogic_vector(data_bytes*8-1 downto 0);
   end record;
 
   constant data_bytes_l2 : natural := util.numeric.log2(data_bytes);
-  constant addr_lsb0 : std_ulogic_vector(data_bytes_l2-1 downto 0) := (others => '0');
+  constant addr_lsb0 : unsigned(data_bytes_l2-1 downto 0) := (others => '0');
+  constant addr_lsb1 : unsigned(data_bytes_l2-1 downto 0) := (others => '1');
   
   signal r, rin: regs_t;
   signal s_start, s_read, s_write, s_clk : std_ulogic;
@@ -92,18 +93,18 @@ begin
   begin
     rin <= r;
 
-    byte_off := to_integer(to_01(unsigned(r.addr), '0')) mod data_bytes;
+    byte_off := to_integer(r.addr) mod data_bytes;
 
     if s_write = '1' then
       if r.addr_byte_left = 0 then
         rin.data(byte_off*8+7 downto byte_off*8) <= s_wdata;
-        rin.addr <= std_ulogic_vector(to_01(unsigned(r.addr), '0') + 1);
+        rin.addr <= r.addr + 1;
       else
         rin.addr <= r.addr(r.addr'left-8 downto 0) & s_wdata;
         rin.addr_byte_left <= r.addr_byte_left - 1;
       end if;
     elsif s_read = '1' then
-      rin.addr <= std_ulogic_vector(to_01(unsigned(r.addr), '0') + 1);
+      rin.addr <= r.addr + 1;
       if byte_off = 0 then
         rin.data <= p_r_data;
       end if;

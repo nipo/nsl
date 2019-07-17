@@ -85,7 +85,7 @@ package i2c is
 
   component i2c_mem is
     generic (
-      address: std_ulogic_vector(7 downto 1);
+      address: unsigned(7 downto 1);
       addr_width: integer range 1 to 16 := 8;
       granularity: integer range 1 to 4 := 1
       );
@@ -100,7 +100,7 @@ package i2c is
       p_resetn : in std_ulogic := '1';
       p_clk_out : out std_ulogic;
 
-      address : in std_ulogic_vector(7 downto 1);
+      address : in unsigned(7 downto 1);
 
       p_i2c_o  : out signalling.i2c.i2c_o;
       p_i2c_i  : in  signalling.i2c.i2c_i;
@@ -129,7 +129,7 @@ package i2c is
     port (
       p_clk : out std_ulogic;
 
-      slave_address: in std_ulogic_vector(7 downto 1);
+      slave_address: in unsigned(7 downto 1);
 
       p_i2c_o  : out signalling.i2c.i2c_o;
       p_i2c_i  : in  signalling.i2c.i2c_i;
@@ -138,7 +138,7 @@ package i2c is
       p_stop     : out std_ulogic;
       p_selected : out std_ulogic;
 
-      p_addr     : out std_ulogic_vector(addr_bytes*8-1 downto 0);
+      p_addr     : out unsigned(addr_bytes*8-1 downto 0);
 
       p_r_strobe : out std_ulogic;
       p_r_data   : in  std_ulogic_vector(data_bytes*8-1 downto 0);
@@ -159,7 +159,7 @@ package i2c is
       status_count: natural range 0 to 32 := 0
       );
     port (
-      slave_address: std_ulogic_vector(7 downto 1);
+      slave_address: in unsigned(7 downto 1);
 
       p_i2c_o: out signalling.i2c.i2c_o;
       p_i2c_i: in  signalling.i2c.i2c_i;

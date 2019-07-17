@@ -6,7 +6,7 @@ library nsl, hwdep, signalling;
 
 entity i2c_mem is
   generic (
-    address: std_ulogic_vector(7 downto 1);
+    address: unsigned(7 downto 1);
     addr_width: integer range 1 to 16 := 8;
     granularity: integer range 1 to 4 := 1
   );
@@ -22,7 +22,7 @@ architecture arch of i2c_mem is
 
   signal s_write, s_clk : std_ulogic;
   signal s_rdata, s_wdata : std_ulogic_vector(8*granularity-1 downto 0);
-  signal s_address : std_ulogic_vector(8*addr_byte_cnt-1 downto 0);
+  signal s_address : unsigned(8*addr_byte_cnt-1 downto 0);
   
 begin
 
@@ -55,7 +55,7 @@ begin
     port map (
       p_clk => s_clk,
       p_wen => s_write,
-      p_addr => s_address(addr_width-1 downto 0),
+      p_addr => std_ulogic_vector(s_address(addr_width-1 downto 0)),
       p_wdata => s_wdata,
       p_rdata => s_rdata
       );

@@ -10,7 +10,7 @@ entity i2c_control_bank is
     status_count: natural range 0 to 64 := 0
     );
   port (
-    slave_address: std_ulogic_vector(7 downto 1);
+    slave_address: unsigned(7 downto 1);
 
     p_i2c_o: out signalling.i2c.i2c_o;
     p_i2c_i: in  signalling.i2c.i2c_i;
@@ -29,7 +29,7 @@ architecture rtl of i2c_control_bank is
 
   signal s_i2c_write, s_i2c_read, s_i2c_clk : std_ulogic;
   signal s_i2c_rdata, s_i2c_wdata : std_ulogic_vector(31 downto 0);
-  signal s_i2c_address : std_ulogic_vector(7 downto 0);
+  signal s_i2c_address : unsigned(7 downto 0);
   signal s_i2c_start, s_i2c_stop : std_ulogic;
 
 begin
@@ -71,7 +71,7 @@ begin
   decoder: process(s_i2c_address, s_i2c_write)
     variable index : integer range 0 to 63;
   begin
-    index := to_integer(unsigned(s_i2c_address(7 downto 2)));
+    index := to_integer(s_i2c_address(7 downto 2));
 
     p_control_write <= (others => '-');
     s_i2c_rdata <= (others => '-');

@@ -9,7 +9,7 @@ entity i2c_slave_clkfree is
     p_resetn : in std_ulogic := '1';
     p_clk_out : out std_ulogic;
 
-    address : in std_ulogic_vector(7 downto 1);
+    address : in unsigned(7 downto 1);
 
     p_i2c_o  : out signalling.i2c.i2c_o;
     p_i2c_i  : in  signalling.i2c.i2c_i;
@@ -116,7 +116,7 @@ begin
           rin.shreg <= r.shreg(6 downto 0) & p_i2c_i.sda.v;
           rin.bit_left <= (r.bit_left - 1) mod 8;
           if r.bit_left = 0 then
-            if r.shreg(6 downto 0) /= address then
+            if r.shreg(6 downto 0) /= std_ulogic_vector(address) then
               rin.state <= ST_NOT_SELECTED;
             else
               rin.state <= ST_ADDR_ACK;
