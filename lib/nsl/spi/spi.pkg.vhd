@@ -35,6 +35,24 @@ package spi is
       rx_strobe_o : out std_ulogic
       );
   end component;
+
+  component spi_memory_controller
+    generic(
+      addr_bytes   : natural range 1 to 4          := 1;
+      read_opcode  : std_ulogic_vector(7 downto 0) := x"F0";
+      write_opcode : std_ulogic_vector(7 downto 0) := x"F8"
+      );
+    port(
+      spi_i          : in signalling.spi.spi_slave_i;
+      spi_o          : out signalling.spi.spi_slave_o;
+      selected_o     : out std_ulogic;
+      mem_addr_o     : out unsigned(addr_bytes*8-1 downto 0);
+      mem_r_data_i   : in  std_ulogic_vector(7 downto 0);
+      mem_r_strobe_o : out std_ulogic;
+      mem_r_done_i   : in  std_ulogic := '1';
+      mem_w_data_o   : out std_ulogic_vector(7 downto 0);
+      mem_w_strobe_o : out std_ulogic;
+      mem_w_done_i   : in  std_ulogic := '1'
       );
   end component;
 
