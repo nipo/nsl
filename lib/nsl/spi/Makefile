@@ -5,3 +5,5 @@ vhdl-sources += spi_framed_gateway.vhd
 deps += nsl.fifo
 deps += nsl.framed
 deps += nsl.sized
+deps += signalling.spi
+deps += hwdep.clock

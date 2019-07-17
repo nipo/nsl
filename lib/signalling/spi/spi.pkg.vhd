@@ -8,13 +8,13 @@ package spi is
     mosi : std_logic;
     miso : std_logic;
     sck  : std_logic;
-    cs   : std_logic;
+    cs_n : std_logic;
   end record;
 
   type spi_slave_i is record
     mosi : std_ulogic;
     sck  : std_ulogic;
-    cs   : std_ulogic;
+    cs_n : std_ulogic;
   end record;
 
   type spi_slave_o is record

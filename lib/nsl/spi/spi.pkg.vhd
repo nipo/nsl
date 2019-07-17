@@ -2,25 +2,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.fifo.all;
-use nsl.framed.all;
+library nsl, signalling;
 
 package spi is
 
-  constant SPI_CMD_SHIFT_OUT : framed_data_t := "10------";
-  constant SPI_CMD_SHIFT_IN  : framed_data_t := "01------";
-  constant SPI_CMD_SHIFT_IO  : framed_data_t := "11------";
-  constant SPI_CMD_SELECT    : framed_data_t := "000-----";
-  constant SPI_CMD_UNSELECT  : framed_data_t := "00011111";
-  constant SPI_CMD_DIV       : framed_data_t := "001-----";
+  constant SPI_CMD_SHIFT_OUT : nsl.framed.framed_data_t := "10------";
+  constant SPI_CMD_SHIFT_IN  : nsl.framed.framed_data_t := "01------";
+  constant SPI_CMD_SHIFT_IO  : nsl.framed.framed_data_t := "11------";
+  constant SPI_CMD_SELECT    : nsl.framed.framed_data_t := "000-----";
+  constant SPI_CMD_UNSELECT  : nsl.framed.framed_data_t := "00011111";
+  constant SPI_CMD_DIV       : nsl.framed.framed_data_t := "001-----";
 
-  constant SPI_FRAMED_GW_STATUS      : framed_data_t := "0-------";
-  constant SPI_FRAMED_GW_ST_OUT_RDY  : framed_data_t := "------1-";
-  constant SPI_FRAMED_GW_ST_IN_VALID : framed_data_t := "-------1";
-  constant SPI_FRAMED_GW_PUT         : framed_data_t := "10------";
-  constant SPI_FRAMED_GW_GET         : framed_data_t := "11-----0";
-  constant SPI_FRAMED_GW_GET_CONT    : framed_data_t := "11-----1";
+  constant SPI_FRAMED_GW_STATUS      : nsl.framed.framed_data_t := "0-------";
+  constant SPI_FRAMED_GW_ST_OUT_RDY  : nsl.framed.framed_data_t := "------1-";
+  constant SPI_FRAMED_GW_ST_IN_VALID : nsl.framed.framed_data_t := "-------1";
+  constant SPI_FRAMED_GW_PUT         : nsl.framed.framed_data_t := "10------";
+  constant SPI_FRAMED_GW_GET         : nsl.framed.framed_data_t := "11-----0";
+  constant SPI_FRAMED_GW_GET_CONT    : nsl.framed.framed_data_t := "11-----1";
 
   component spi_shift_register
     generic(
@@ -28,16 +26,15 @@ package spi is
       msb_first : boolean := true
       );
     port(
-      p_spi_clk       : in  std_ulogic;
-      p_spi_word_en   : in  std_ulogic; -- active high, allow shreg operation
-      p_spi_dout      : out std_ulogic;
-      p_spi_din       : in  std_ulogic;
+      spi_i       : in signalling.spi.spi_slave_i;
+      spi_o       : out signalling.spi.spi_slave_o;
 
-      p_io_clk        : out std_ulogic;
-      p_tx_data       : in  std_ulogic_vector(width - 1 downto 0);
-      p_tx_data_get   : out std_ulogic;
-      p_rx_data       : out std_ulogic_vector(width - 1 downto 0);
-      p_rx_data_valid : out std_ulogic
+      tx_data_i   : in  std_ulogic_vector(width - 1 downto 0);
+      tx_strobe_o : out std_ulogic;
+      rx_data_o   : out std_ulogic_vector(width - 1 downto 0);
+      rx_strobe_o : out std_ulogic
+      );
+  end component;
       );
   end component;
 
@@ -54,10 +51,10 @@ package spi is
       p_miso      : out std_ulogic;
       p_mosi      : in  std_ulogic;
 
-      p_out_val   : out framed_req;
-      p_out_ack   : in  framed_ack;
-      p_in_val    : in  framed_req;
-      p_in_ack    : out framed_ack
+      p_out_val   : out nsl.framed.framed_req;
+      p_out_ack   : in  nsl.framed.framed_ack;
+      p_in_val    : in  nsl.framed.framed_req;
+      p_in_ack    : out nsl.framed.framed_ack
       );
   end component;
 

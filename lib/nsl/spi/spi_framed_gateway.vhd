@@ -78,13 +78,10 @@ architecture rtl of spi_framed_gateway is
   signal r, rin: regs_t;
 
   signal s_in_spi, s_out_spi, s_in_io, s_out_io: sized_bus;
-  signal s_cs, s_from_spi_valid, s_to_spi_ready, s_out_empty_n : std_ulogic;
+  signal s_from_spi_valid, s_to_spi_ready, s_out_empty_n : std_ulogic;
   signal s_to_spi, s_from_spi : framed_data_t;
-  signal s_spi_clk : std_ulogic;
     
 begin
-
-  s_cs <= not p_csn;
 
   bridge_in: sized_from_framed
     port map(
@@ -114,7 +111,7 @@ begin
     port map(
       p_resetn => p_framed_resetn,
       p_in_clk => p_framed_clk,
-      p_out_clk => s_spi_clk,
+      p_out_clk => p_sck,
       p_in_valid => s_in_io.req.valid,
       p_in_data => s_in_io.req.data,
       p_in_ready => s_in_io.ack.ready,
@@ -130,7 +127,7 @@ begin
       )
     port map(
       p_resetn => p_framed_resetn,
-      p_in_clk => s_spi_clk,
+      p_in_clk => p_sck,
       p_out_clk => p_framed_clk,
       p_in_valid => s_out_spi.req.valid,
       p_in_data => s_out_spi.req.data,
@@ -146,23 +143,22 @@ begin
       msb_first => msb_first
       )
     port map(
-      p_spi_clk => p_sck,
-      p_spi_word_en => s_cs,
-      p_spi_dout => p_miso,
-      p_spi_din => p_mosi,
+      spi_i.sck => p_sck,
+      spi_i.cs_n => p_csn,
+      spi_i.mosi => p_mosi,
+      spi_o.miso => p_miso,
 
-      p_io_clk => s_spi_clk,
-      p_tx_data => s_to_spi,
-      p_tx_data_get => s_to_spi_ready,
-      p_rx_data => s_from_spi,
-      p_rx_data_valid => s_from_spi_valid
+      tx_data_i => s_to_spi,
+      tx_strobe_o => s_to_spi_ready,
+      rx_data_o => s_from_spi,
+      rx_strobe_o => s_from_spi_valid
       );
   
-  regs: process(p_csn, s_spi_clk)
+  regs: process(p_csn, p_sck)
   begin
     if p_csn = '1' then
       r.state <= ST_CMD;
-    elsif rising_edge(s_spi_clk) then
+    elsif rising_edge(p_sck) then
       r <= rin;
     end if;
   end process;
