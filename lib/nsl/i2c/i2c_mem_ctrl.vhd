@@ -47,9 +47,10 @@ architecture arch of i2c_mem_ctrl is
   constant addr_lsb1 : unsigned(data_bytes_l2-1 downto 0) := (others => '1');
   
   signal r, rin: regs_t;
-  signal s_start, s_read, s_write, s_clk : std_ulogic;
-  signal s_rdata, s_wdata : std_ulogic_vector(7 downto 0);
-  
+  signal s_start, r_strobe, w_strobe, w_ready, s_clk : std_ulogic;
+  signal r_data, w_data : std_ulogic_vector(7 downto 0);
+  signal is_lsb, is_msb : boolean;
+
 begin
 
   p_clk <= s_clk;
@@ -67,13 +68,13 @@ begin
       p_stop => p_stop,
       p_selected => p_selected,
 
-      p_r_data => s_rdata,
+      p_r_data => r_data,
       p_r_ready => p_r_ready,
-      p_r_strobe => s_read,
+      p_r_strobe => r_strobe,
 
-      p_w_data => s_wdata,
-      p_w_ready => p_w_ready,
-      p_w_strobe => s_write
+      p_w_data => w_data,
+      p_w_ready => w_ready,
+      p_w_strobe => w_strobe
     );
 
   p_start <= s_start;
@@ -83,27 +84,28 @@ begin
     if s_start = '1' then
       r.addr_byte_left <= addr_bytes;
       r.data <= (others => '0');
+      r.addr <= to_01(r.addr, '0');
     elsif rising_edge(s_clk) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(p_r_data, r, s_read, s_wdata, s_write)
+  transition: process(p_r_data, r, r_strobe, w_data, w_strobe)
     variable byte_off : integer range 0 to data_bytes - 1;
   begin
     rin <= r;
 
     byte_off := to_integer(r.addr) mod data_bytes;
 
-    if s_write = '1' then
+    if w_strobe = '1' then
       if r.addr_byte_left = 0 then
-        rin.data(byte_off*8+7 downto byte_off*8) <= s_wdata;
+        rin.data(byte_off*8+7 downto byte_off*8) <= w_data;
         rin.addr <= r.addr + 1;
       else
-        rin.addr <= r.addr(r.addr'left-8 downto 0) & s_wdata;
+        rin.addr <= r.addr(r.addr'left-8 downto 0) & to_01(unsigned(w_data), '0');
         rin.addr_byte_left <= r.addr_byte_left - 1;
       end if;
-    elsif s_read = '1' then
+    elsif r_strobe = '1' then
       rin.addr <= r.addr + 1;
       if byte_off = 0 then
         rin.data <= p_r_data;
@@ -111,35 +113,34 @@ begin
     end if;
   end process;
 
-  p_addr(r.addr'left downto data_bytes_l2) <= r.addr(r.addr'left downto data_bytes_l2);
-  p_addr(data_bytes_l2-1 downto 0) <= (others => '0');
+  p_addr <= r.addr(r.addr'left downto data_bytes_l2) & addr_lsb0;
+  p_w_data <= w_data & r.data(r.data'left-8 downto 0);
+  w_ready <= '1' when r.addr_byte_left /= 0 else p_w_ready;
+  p_w_strobe <= w_strobe when r.addr_byte_left = 0 and is_msb else '0';
+  p_r_strobe <= r_strobe when is_lsb else '0';
 
+  no_lsb: if data_bytes_l2 = 0
+  generate
+    is_lsb <= true;
+    is_msb <= true;
+    r_data <= p_r_data;
+  end generate;
+
+  with_lsb: if data_bytes_l2 /= 0
+  generate
+    is_lsb <= to_01(r.addr(addr_lsb0'range), '0') = addr_lsb0;
+    is_msb <= to_01(r.addr(addr_lsb1'range), '0') = addr_lsb1;
+    rdata_gen: process(p_r_data, r)
+      variable byte_off : integer range 0 to data_bytes - 1;
+    begin
+      byte_off := to_integer(r.addr(addr_lsb0'range));
+
+      if byte_off = 0 then
+        r_data <= p_r_data(7 downto 0);
+      else
+        r_data <= r.data(byte_off*8+7 downto byte_off*8);
+      end if;
+    end process;
+  end generate;
   
-  p_w_data <= s_wdata & r.data(r.data'left-8 downto 0);
-
-  mealy: process(p_r_data, r, s_read, s_write)
-    variable byte_off : integer range 0 to data_bytes - 1;
-  begin
-    byte_off := to_integer(to_01(unsigned(r.addr), '0')) mod data_bytes;
-
-    if r.addr_byte_left = 0 and s_write = '1' and byte_off = data_bytes - 1 then
-      p_w_strobe <= '1';
-    else
-      p_w_strobe <= '0';
-    end if;
-
-    if byte_off = 0 then
-      s_rdata <= p_r_data(7 downto 0);
-    else
-      s_rdata <= r.data(byte_off*8+7 downto byte_off*8);
-    end if;
-    
-    if s_read = '1' and byte_off = 0 then
-      p_r_strobe <= '1';
-    else
-      p_r_strobe <= '0';
-    end if;
-
-  end process;
-
 end arch;

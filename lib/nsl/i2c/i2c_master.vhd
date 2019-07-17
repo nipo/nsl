@@ -204,7 +204,7 @@ begin
       when ST_START_IDLE =>
         if ready then
           step := true;
-          if p_i2c_i.sda.v = '0' then
+          if to_x01(p_i2c_i.sda.v) = '0' then
             rin.state <= ST_START_RECOVER;
           else
             rin.state <= ST_START_SDA;
@@ -232,7 +232,7 @@ begin
       when ST_START_RESTART =>
         if ready then
           step := true;
-          if p_i2c_i.sda.v = '1' then
+          if to_x01(p_i2c_i.sda.v) = '1' then
             rin.state <= ST_START_IDLE;
           else
             rin.state <= ST_START_RECOVER;
@@ -245,7 +245,7 @@ begin
         end if;
 
       when ST_STOP_SCL_RISE =>
-        if p_i2c_i.scl.v = '1' then
+        if to_x01(p_i2c_i.scl.v) = '1' then
           step := true;
           rin.state <= ST_STOP_SCL;
         end if;
@@ -259,7 +259,7 @@ begin
       when ST_STOP_SDA =>
         if ready then
           step := true;
-          if p_i2c_i.sda.v = '1' then
+          if to_x01(p_i2c_i.sda.v) = '1' then
             rin.state <= ST_DONE_STOPPED;
           else
             rin.state <= ST_STOP_IDLE;
@@ -273,7 +273,7 @@ begin
         end if;
 
       when ST_BIT_SCL_RISE =>
-        if p_i2c_i.scl.v = '1' then
+        if to_x01(p_i2c_i.scl.v) = '1' then
           double_step := true;
           rin.state <= ST_BIT_SCL_HIGH;
         end if;
@@ -283,9 +283,9 @@ begin
           rin.state <= ST_BIT_SCL_LOW;
           step := true;
           if r.bit_count /= 0 then
-            rin.data <= r.data(6 downto 0) & p_i2c_i.sda.v;
+            rin.data <= r.data(6 downto 0) & to_x01(p_i2c_i.sda.v);
           else
-            rin.ack <= not p_i2c_i.sda.v;
+            rin.ack <= not to_x01(p_i2c_i.sda.v);
           end if;
         end if;
 
@@ -363,9 +363,7 @@ begin
     end case;
 
     case r.state is
-      when ST_IDLE_STARTED
-        | ST_DONE_STARTED
-        | ST_START_SDA
+      when ST_START_SDA
         | ST_START_SCL
         | ST_START_RECOVER
         | ST_STOP_SCL
