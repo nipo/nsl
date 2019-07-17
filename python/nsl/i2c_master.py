@@ -46,21 +46,24 @@ class MasterRsp:
         self.pipe.put([int(ack)])
 
 class Memory:
-    def __init__(self, bus, addr):
+    def __init__(self, bus, addr, addr_bytes = 2):
         self.bus = bus
         self.addr = addr
+        self.addr_bytes = addr_bytes
 
-    def write(self, tag, addr, data):
+    def write(self, addr, data, **kwargs):
         self.bus.start()
-        self.bus.write([self.addr << 1, addr >> 8, addr & 0xff] + data)
+        mem_addr = list(addr.to_bytes(self.addr_bytes, "big"))
+        self.bus.write([self.addr << 1]  + mem_addr + data)
         self.bus.stop()
-        self.bus.flush(tag = tag)
+        self.bus.flush(**kwargs)
 
-    def read(self, tag, addr, data):
+    def read(self, addr, data, **kwargs):
         self.bus.start()
-        self.bus.write([self.addr << 1, addr >> 8, addr & 0xff])
+        mem_addr = list(addr.to_bytes(self.addr_bytes, "big"))
+        self.bus.write([self.addr << 1] + mem_addr)
         self.bus.start()
         self.bus.write([(self.addr << 1) | 1])
         self.bus.read(data, False)
         self.bus.stop()
-        self.bus.flush(tag = tag)
+        self.bus.flush(**kwargs)

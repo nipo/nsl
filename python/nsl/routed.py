@@ -6,7 +6,7 @@ class Routed(framed.Framed):
         framed.Framed.__init__(self, filename)
         self.last_tag = 0
 
-    def put(self, dst, src, frame, tag = None, delay = 0, end_delay = 0):
+    def put(self, dst, src, frame, tag = None, **kwargs):
         if tag is None:
             tag = (self.last_tag + 1) & 0xff
 
@@ -14,7 +14,7 @@ class Routed(framed.Framed):
 
         self.last_tag = tag
 
-        framed.Framed.put(self, header + frame, delay, end_delay)
+        framed.Framed.put(self, header + frame, **kwargs)
 
 class RoutedTarget:
     def __init__(self, routed, dst, src):
@@ -22,8 +22,8 @@ class RoutedTarget:
         self.dst = dst
         self.src = src
 
-    def put(self, frame, tag = None, delay = 0, end_delay = 0):
-        self.routed.put(self.dst, self.src, frame, tag = None, delay = delay, end_delay = end_delay)
+    def put(self, frame, **kwargs):
+        self.routed.put(self.dst, self.src, frame, **kwargs)
 
 class SplitRouted(RoutedTarget):
     def __init__(self, routed, dst, src):
@@ -33,7 +33,7 @@ class SplitRouted(RoutedTarget):
     def put(self, cmds):
         self.pending += cmds
 
-    def flush(self, tag = None):
-        RoutedTarget.put(self, self.pending, tag = tag)
+    def flush(self, **kwargs):
+        RoutedTarget.put(self, self.pending, **kwargs)
         self.pending = []
 

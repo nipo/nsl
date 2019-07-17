@@ -27,6 +27,6 @@ class SplitFramed(Framed):
     def put(self, parts):
         self.pending += parts
 
-    def flush(self, tag = None, end_delay = 0):
-        Framed.put(self, self.pending, tag = tag, end_delay = end_delay)
+    def flush(self, **kwargs):
+        Framed.put(self, self.pending, **kwargs)
         self.pending = []
