@@ -6,7 +6,8 @@ entity ram_2p_homogeneous is
   generic(
     addr_size  : integer := 10;
     byte_size  : integer := 8;
-    data_bytes : integer := 4
+    data_bytes : integer := 4;
+    registered_output : boolean := false
     );
   port(
     p_a_clk  : in  std_ulogic;
@@ -27,15 +28,24 @@ end ram_2p_homogeneous;
 architecture byte_wr_ram_rf of ram_2p_homogeneous is
 
   constant word_count : integer := 2 ** addr_size;
-  type ram_type is array (0 to word_count - 1) of std_ulogic_vector(data_bytes * byte_size - 1 downto 0);
+  subtype word_t is std_ulogic_vector(data_bytes * byte_size - 1 downto 0);
+  signal a_out_reg, b_out_reg: word_t;
+  type ram_type is array (0 to word_count - 1) of word_t;
   shared variable r_mem : ram_type := (others => (others => '-'));
-                                                       
+
 begin
-  process(p_a_clk)
+
+  a_port: process(p_a_clk)
   begin
     if rising_edge(p_a_clk) then
       if p_a_en = '1' then
-        p_a_rdata <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
+        if registered_output then
+          p_a_rdata <= a_out_reg;
+          a_out_reg <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
+        else
+          p_a_rdata <= r_mem(to_integer(to_01(unsigned(p_a_addr), '0')));
+        end if;
+
         for i in 0 to data_bytes - 1
         loop
           if p_a_wen(i) = '1' then
@@ -46,13 +56,19 @@ begin
       end if;
     end if;
   end process;
-            
-  process(p_b_clk)
+
+  b_port: process(p_b_clk)
   begin
     if rising_edge(p_b_clk)
     then
       if p_b_en = '1' then
-        p_b_rdata <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
+        if registered_output then
+          p_b_rdata <= b_out_reg;
+          b_out_reg <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
+        else
+          p_b_rdata <= r_mem(to_integer(to_01(unsigned(p_b_addr), '0')));
+        end if;
+
         for i in 0 to data_bytes - 1
         loop
           if p_b_wen(i) = '1' then

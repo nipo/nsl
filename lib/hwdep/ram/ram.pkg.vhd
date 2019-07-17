@@ -47,7 +47,8 @@ package ram is
     generic(
       addr_size  : integer := 10;
       byte_size  : integer := 8;
-      data_bytes : integer := 4
+      data_bytes : integer := 4;
+      registered_output : boolean := false
       );
     port(
       p_a_clk  : in  std_ulogic;
