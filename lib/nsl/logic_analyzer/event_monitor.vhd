@@ -52,11 +52,9 @@ begin
     end if;
   end process reg;
 
-  resync_in: util.sync.sync_reg
+  resync_in: util.sync.sync_async_reg
     generic map(
       cycle_count => 2,
-      cross_region => false,
-      async_sampler => true,
       data_width => data_width
       )
     port map(

@@ -41,14 +41,54 @@ package sync is
       );
   end component;
 
-  -- cross_region is for synchronization of a bus across two clocked design parts
-  -- async_sampler is for sampling a bus to a clock from a totally asynchronous port
   component sync_reg is
     generic(
-      cycle_count : natural range 2 to 40 := 2;
+      cycle_count : natural range 1 to 40 := 1;
       data_width : integer;
       cross_region : boolean := true;
       async_sampler : boolean := false
+      );
+    port(
+      p_clk    : in std_ulogic;
+      p_in     : in std_ulogic_vector(data_width-1 downto 0);
+      p_out    : out std_ulogic_vector(data_width-1 downto 0)
+      );
+  end component;
+
+  -- Basic multi-cycle synchronous register pipeline.  Mostly suited
+  -- for retiming.
+  component sync_multi_reg is
+    generic(
+      cycle_count : natural range 1 to 40 := 1;
+      data_width : integer
+      );
+    port(
+      p_clk    : in std_ulogic;
+      p_in     : in std_ulogic_vector(data_width-1 downto 0);
+      p_out    : out std_ulogic_vector(data_width-1 downto 0)
+      );
+  end component;
+
+  -- Enforces max skew for the whole bus will not be above the fastest
+  -- clock cycle time. Mostly suited for gray-coded data.
+  component sync_cross_reg is
+    generic(
+      cycle_count : natural range 2 to 40 := 2;
+      data_width : integer
+      );
+    port(
+      p_clk    : in std_ulogic;
+      p_in     : in std_ulogic_vector(data_width-1 downto 0);
+      p_out    : out std_ulogic_vector(data_width-1 downto 0)
+      );
+  end component;
+
+  -- Asynchronous signal sampler. Totally ignores the timing of input
+  -- port, and tries to cope with metastability.
+  component sync_async_reg is
+    generic(
+      cycle_count : natural range 2 to 40 := 2;
+      data_width : integer
       );
     port(
       p_clk    : in std_ulogic;

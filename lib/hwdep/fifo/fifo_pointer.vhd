@@ -142,11 +142,10 @@ begin
   begin
     peer_ptr_bin <= std_ulogic_vector(util.gray.gray_to_bin(peer_position_i));
 
-    decoder_pipeline: util.sync.sync_reg
+    decoder_pipeline: util.sync.sync_multi_reg
       generic map(
         cycle_count => (ptr_width + 3) / 4,
-        data_width => ptr_width+1,
-        cross_region => false
+        data_width => ptr_width+1
         )
       port map(
         p_clk => clk_i,

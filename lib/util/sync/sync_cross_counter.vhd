@@ -28,11 +28,10 @@ begin
 
   s_in_gray <= std_ulogic_vector(p_in) when input_is_gray else util.gray.bin_to_gray(p_in);
 
-  in_sync: util.sync.sync_reg
+  in_sync: util.sync.sync_multi_reg
     generic map(
       cycle_count => 1,
-      data_width => data_width,
-      cross_region => false
+      data_width => data_width
       )
     port map(
       p_clk => p_in_clk,
@@ -40,11 +39,10 @@ begin
       p_out => s_in_gray_sync
       );
 
-  gray_sync: util.sync.sync_reg
+  gray_sync: util.sync.sync_cross_reg
     generic map(
       cycle_count => cycle_count,
-      data_width => data_width,
-      cross_region => true
+      data_width => data_width
       )
     port map(
       p_clk => p_out_clk,
@@ -63,11 +61,10 @@ begin
   begin
     out_bin <= util.gray.gray_to_bin(s_out_gray);
 
-    out_sync: util.sync.sync_reg
+    out_sync: util.sync.sync_multi_reg
       generic map(
         cycle_count => decode_stage_count,
-        data_width => data_width,
-        cross_region => false
+        data_width => data_width
         )
       port map(
         p_clk => p_out_clk,

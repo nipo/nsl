@@ -119,10 +119,9 @@ begin
 
     -- only insert a 2-cycle delay (ram latency)
 
-    out_wptr: util.sync.sync_reg
+    out_wptr: util.sync.sync_multi_reg
       generic map(
-        data_width => peer_pos_t'length,
-        cross_region => false
+        data_width => peer_pos_t'length
         )
       port map(
         p_clk => clk_i(0),
@@ -130,10 +129,9 @@ begin
         peer_pos_t(p_out) => s_right.peer_pos
         );
 
-    in_rptr: util.sync.sync_reg
+    in_rptr: util.sync.sync_multi_reg
       generic map(
-        data_width => peer_pos_t'length,
-        cross_region => false
+        data_width => peer_pos_t'length
         )
       port map(
         p_clk => clk_i(0),
