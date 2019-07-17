@@ -54,6 +54,6 @@ endef
 ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p ise-build/xst
 	$(SILENT)> $@.tmp
-	$(SILENT)$(foreach s,$(sources),$(call ise_source_do,$s))
+	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),,$(call ise_source_do,$s)))
 	$(SILENT)mv -f $@.tmp $@
 

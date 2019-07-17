@@ -45,7 +45,7 @@ package sync is
   -- async_sampler is for sampling a bus to a clock from a totally asynchronous port
   component sync_reg is
     generic(
-      cycle_count : natural := 2;
+      cycle_count : natural range 2 to 40 := 2;
       data_width : integer;
       cross_region : boolean := true;
       async_sampler : boolean := false

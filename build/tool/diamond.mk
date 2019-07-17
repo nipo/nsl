@@ -16,22 +16,16 @@ define syn_hdl_do
 
 endef
 
-define syn_constraint_do
-	$(if $(filter %.sdc,$2),$(call append,$1,add_file -constraint {$2}))
+define synth_source_do
+	$(if $(filter constraint,$($2-language)),,$(call syn_hdl_do,$1,$2))
 
 endef
-
-syn_source_do=$(if $(filter constraint,$($2-language)),$(call syn_hdl_do,$1,$2),$(call syn_constraint_do,$1,$2))
 
 clean-dirs += $(build-dir)
 clean-files += $(target).bit
 
-$(build-dir)/synth.prj: $(sources) $(MAKEFILE_LIST)
-	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)> $@
-	$(call append,$@,add_file -vhdl {$(DIAMOND_PATH)/cae_library/synthesis/vhdl/machxo2.vhd})
-	$(foreach s,$(sources),$(call syn_source_do,$@,$s))
-	$(call append,$@,impl -add synth -type fpga)
+define synp_proj_opts
+	$(call append,$@,impl -add $(subst .prj,,$(notdir $@)) -type fpga)
 #	$(call append,$@,set_option -vhdl2008 1)
 	$(call append,$@,set_option -technology $(target_technology))
 	$(call append,$@,set_option -part $(target_part))
@@ -58,40 +52,75 @@ $(build-dir)/synth.prj: $(sources) $(MAKEFILE_LIST)
 	$(call append,$@,set_option -write_apr_constraint 1)
 	$(call append,$@,project -result_format edif)
 	$(call append,$@,project -result_file $(target).edi)
-	$(call append,$@,project -log_file "synth.log")
-	$(call append,$@,impl -active synth)
+	$(call append,$@,project -log_file "$(subst .prj,.log,$(notdir $@))")
+	$(call append,$@,impl -active $(subst .prj,,$(notdir $@)))
 	$(call append,$@,project -run synthesis -clean)
+endef
+
+$(build-dir)/synth_pre.prj: $(sources) $(MAKEFILE_LIST)
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)> $@
+	$(call append,$@,add_file -vhdl {$(DIAMOND_PATH)/cae_library/synthesis/vhdl/machxo2.vhd})
+	$(foreach s,$(sources),$(call synth_source_do,$@,$s))
+	$(synp_proj_opts)
+
+$(build-dir)/synth_pre/$(target).edi: $(build-dir)/synth_pre.prj
+	cd $(build-dir)/ && \
+		( $(DIAMOND_BIN)/synpwrap -prj synth_pre.prj ; \
+		  exl=$$? ; \
+		  sed -f $(BUILD_ROOT)/support/synplify_output_rewrite.sed < synth_pre.log ; \
+		  exit $$exl)
+
+$(build-dir)/port_remap.sed: $(build-dir)/synth_pre/$(target).edi
+	grep "^top port" $(build-dir)/synth_pre/.recordref | \
+		sed -e 's:top port \(.*\) \(.*\):s,\1,\2,:' > $@
+
+$(build-dir)/remapped.sdc: $(filter %.sdc,$(all-constraint-sources)) $(build-dir)/port_remap.sed
+	cat $(filter %.sdc,$^) /dev/null | sed -f $(build-dir)/port_remap.sed > $@
+
+$(build-dir)/synth.prj: $(sources) $(build-dir)/remapped.sdc $(BUILD_ROOT)/support/generic_timing_constraints_synplify.tcl $(MAKEFILE_LIST)
+	$(SILENT)mkdir -p $(dir $@)
+	$(SILENT)> $@
+	$(call append,$@,add_file -vhdl {$(DIAMOND_PATH)/cae_library/synthesis/vhdl/machxo2.vhd})
+	$(foreach s,$(sources),$(call synth_source_do,$@,$s))
+	$(call append,$@,add_file -constraint {remapped.sdc})
+	$(call append,$@,add_file -constraint {$(BUILD_ROOT)/support/generic_timing_constraints_synplify.tcl})
+	$(foreach s,$(filter %.tcl,$(all-constraint-sources)),$(call append,$@,add_file -constraint {$s}))
+	$(synp_proj_opts)
 
 $(build-dir)/synth/$(target).edi: $(build-dir)/synth.prj
-	cd $(build-dir)/ && $(DIAMOND_BIN)/synpwrap -prj synth.prj
+	cd $(build-dir)/ && \
+		( $(DIAMOND_BIN)/synpwrap -prj synth.prj ; \
+		  exl=$$? ; \
+		  sed -f $(BUILD_ROOT)/support/synplify_output_rewrite.sed < synth.log ; \
+		  exit $$exl)
 
-$(build-dir)/$(target).ngo: $(build-dir)/synth/$(target).edi
+$(build-dir)/post_synth/$(target).ngo: $(build-dir)/synth/$(target).edi
+	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(ISPFPGA_BIN)/edif2ngd \
 		-l $(target_arch) -d $(subst _,-,$(target_part)) \
-		synth/$(target).edi $(target).ngo
+		synth/$(target).edi post_synth/$(target).ngo
 
-$(build-dir)/$(target).ngd: $(build-dir)/$(target).ngo
+$(build-dir)/post_synth/$(target).ngd: $(build-dir)/post_synth/$(target).ngo
+	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(ISPFPGA_BIN)/ngdbuild \
 		-a $(target_arch) -d $(subst _,-,$(target_part)) \
 		-p $(DIAMOND_PATH)/ispfpga/$(target_dir)/data \
-		$(target).ngo $(target).ngd
-
-$(build-dir)/port_remap.sed: $(build-dir)/synth/$(target).edi
-	grep "^top port" $(build-dir)/synth/.recordref | \
-		sed -e 's:top port \(.*\) \(.*\):s,\1,\2,:' > $@
+		post_synth/$(target).ngo post_synth/$(target).ngd
 
 $(build-dir)/constraints.lpf: $(all-constraint-sources) $(build-dir)/port_remap.sed
 	cat $(filter %.lpf,$(all-constraint-sources)) | sed -f $(build-dir)/port_remap.sed > $@
 
-$(build-dir)/$(target)_map.ncd: $(build-dir)/$(target).ngd $(build-dir)/constraints.lpf
+$(build-dir)/map/$(target).ncd: $(build-dir)/post_synth/$(target).ngd $(build-dir)/constraints.lpf
+	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(ISPFPGA_BIN)/map \
 		-a $(target_arch) -p $(subst _,-,$(target_part)) -t $(target_package2) -s $(subst -,,$(target_speed)) \
 		-oc Commercial \
-		$(target).ngd -o $(target)_map.ncd \
+		post_synth/$(target).ngd -o map/$(target).ncd \
 		-pr $(target).prf -mp $(target).mrp \
 		constraints.lpf
 
-$(build-dir)/$(target).p2t:
+$(build-dir)/$(target).par.cfg:
 	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $@
 	$(call append,$@,-w)
@@ -109,7 +138,7 @@ $(build-dir)/$(target).p3t:
 	$(SILENT)> $@
 	$(call append,$@,-rem)
 	$(call append,$@,-distrce)
-	$(call append,$@,-log "$(target).log")
+	$(call append,$@,-log "$(target)_p3t.log")
 	$(call append,$@,-o "$(target).csv")
 	$(call append,$@,-pr "$(target).prf")
 
@@ -119,32 +148,34 @@ $(build-dir)/$(target).t2b:
 	$(call append,$@,-g RamCfg:Reset)
 	$(call append,$@,-path "$(realpath $(build-dir))")
 
-$(build-dir)/$(target).ncd: $(build-dir)/$(target)_map.ncd $(build-dir)/$(target).p2t $(build-dir)/$(target).p3t
+$(build-dir)/mpartrce/$(target).ncd: $(build-dir)/map/$(target).ncd $(build-dir)/$(target).par.cfg $(build-dir)/$(target).p3t
+	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(DIAMOND_BIN)/mpartrce \
-		-p $(target).p2t -f $(target).p3t \
-		-tf $(target).pt $(target)_map.ncd \
-		$(target).ncd
+		-p $(target).par.cfg -f $(target).p3t \
+		-tf $(target).pt map/$(target).ncd \
+		mpartrce/$(target).ncd
 
-$(build-dir)/$(target).prf: $(build-dir)/$(target).ncd $(build-dir)/$(target).p2t
+$(build-dir)/par/$(target).ncd: $(build-dir)/map/$(target).ncd $(build-dir)/$(target).par.cfg
+	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(ISPFPGA_BIN)/par \
-		-f $(target).p2t $(target)_map.ncd \
-		$(target).dir $(target).prf
+		-f $(target).par.cfg map/$(target).ncd \
+		par/$(target) $(target).prf
 #	cd $(build-dir) && $(ISPFPGA_BIN)/ltxt2ptxt -path . $(target).ncd
 
-$(build-dir)/$(target).jed: $(build-dir)/$(target).prf $(build-dir)/$(target).t2b
+$(build-dir)/$(target).jed: $(build-dir)/par/$(target).ncd $(build-dir)/$(target).t2b
 	cd $(build-dir) && $(ISPFPGA_BIN)/bitgen \
-		-w $(target).ncd -f $(target).t2b \
+		-w par/$(target).ncd -f $(target).t2b \
 		-jedec $(target).jed
 
 $(target).bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress off \
-		-header -mirror -of ../$@ -dev $(subst _,-,$(target_part))
+		-config_mode jtag -of ../$@ -dev $(subst _,-,$(target_part))
 
 $(target)-compressed.bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress on \
-		-header -mirror -of ../$@ -dev $(subst _,-,$(target_part))
+		-header -of ../$@ -dev $(subst _,-,$(target_part))
 
 %-ram.svf: %.bit
 	$(DIAMOND_BIN)/ddtcmd -oft -svf \

@@ -5,9 +5,9 @@ target ?= $(ip-vendor)_$(ip-library)_$(ip-name)_$(ip-version)
 
 SHELL=/bin/bash
 
-sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
-$(BUILD_ROOT)/support/generic_timing_constraints.tcl-language = constraint
-all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
+sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
+$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl-language = constraint
+all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 
 build-dir := $(target)-build
 

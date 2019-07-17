@@ -24,9 +24,9 @@ routed-reports = $(build-dir)/routed_incremental_reuse.rpt
 routed-reports = $(build-dir)/routed_clock_utilization.rpt
 routed-reports += $(placed-reports)
 
-sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
-$(BUILD_ROOT)/support/generic_timing_constraints.tcl-language = constraint
-all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints.tcl
+sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
+$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl-language = constraint
+all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 
 all: $(target).bit
 
