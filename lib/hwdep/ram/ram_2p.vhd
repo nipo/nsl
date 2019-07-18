@@ -69,8 +69,8 @@ architecture inferred of ram_2p is
   constant b_addr_lsb_bits : natural := b_addr_size - min_addr_size;
   constant a_addr_lsb_wrap : natural := 2**a_addr_lsb_bits;
   constant b_addr_lsb_wrap : natural := 2**b_addr_lsb_bits;
-  signal a_addr_lsb : natural range 0 to a_addr_lsb_wrap-1;
-  signal b_addr_lsb : natural range 0 to b_addr_lsb_wrap-1;
+  signal a_addr_lsb, a_addr_lsb_reg : natural range 0 to a_addr_lsb_wrap-1;
+  signal b_addr_lsb, b_addr_lsb_reg : natural range 0 to b_addr_lsb_wrap-1;
 
   signal a_rdata, a_wdata, b_rdata, b_wdata : word_t;
   signal a_wen, b_wen : en_t;
@@ -127,7 +127,12 @@ begin
   begin
     if rising_edge(p_a_clk) then
       if p_a_en = '1' then
-        a_addr_lsb <= to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
+        if registered_output then
+          a_addr_lsb_reg <= to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
+          a_addr_lsb <= a_addr_lsb_reg;
+        else
+          a_addr_lsb <= to_integer(to_01(unsigned(p_a_addr(a_addr_size-min_addr_size-1 downto 0)), '0'));
+        end if;
       end if;
     end if;
   end process;
@@ -158,7 +163,12 @@ begin
   begin
     if rising_edge(p_b_clk) then
       if p_b_en = '1' then
-        b_addr_lsb <= to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
+        if registered_output then
+          b_addr_lsb_reg <= to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
+          b_addr_lsb <= b_addr_lsb_reg;
+        else
+          b_addr_lsb <= to_integer(to_01(unsigned(p_b_addr(b_addr_size-min_addr_size-1 downto 0)), '0'));
+        end if;
       end if;
     end if;
   end process;
