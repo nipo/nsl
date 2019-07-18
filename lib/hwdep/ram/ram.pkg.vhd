@@ -28,7 +28,8 @@ package ram is
       addr_size : natural;
       data_size : natural;
       clk_count : natural range 1 to 2 := 1;
-      bypass : boolean := false
+      bypass : boolean := false;
+      registered_output : boolean := false
       );
     port (
       p_clk    : in  std_ulogic_vector(0 to clk_count-1);
@@ -72,7 +73,9 @@ package ram is
       a_data_byte_count : natural;
 
       b_addr_size : natural;
-      b_data_byte_count : natural
+      b_data_byte_count : natural;
+
+      registered_output : boolean := false
       );
     port (
       p_a_clk   : in  std_ulogic;

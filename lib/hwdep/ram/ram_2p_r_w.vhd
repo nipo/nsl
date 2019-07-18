@@ -9,7 +9,8 @@ entity ram_2p_r_w is
     addr_size : natural;
     data_size : natural;
     clk_count : natural range 1 to 2 := 1;
-    bypass : boolean := false
+    bypass : boolean := false;
+    registered_output : boolean := false
     );
   port (
     p_clk    : in  std_ulogic_vector(0 to clk_count-1);
@@ -33,7 +34,7 @@ begin
       addr_size => addr_size,
       word_size => data_size,
       data_word_count => 1,
-      registered_output => false
+      registered_output => registered_output
       )
     port map(
       p_a_clk => p_clk(0),

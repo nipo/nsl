@@ -10,7 +10,9 @@ entity ram_2p is
     a_data_byte_count : natural;
 
     b_addr_size : natural;
-    b_data_byte_count : natural
+    b_data_byte_count : natural;
+
+    registered_output : boolean := false
     );
   port (
     p_a_clk   : in  std_ulogic;
@@ -72,14 +74,15 @@ architecture inferred of ram_2p is
 
   signal a_rdata, a_wdata, b_rdata, b_wdata : word_t;
   signal a_wen, b_wen : en_t;
-  
+
 begin
 
   ram: hwdep.ram.ram_2p_homogeneous
     generic map(
       addr_size => min_addr_size,
       word_size => 8,
-      data_word_count => max_word_bytes
+      data_word_count => max_word_bytes,
+      registered_output => registered_output
       )
     port map(
       p_a_clk   => p_a_clk,
@@ -119,7 +122,7 @@ begin
       a_wen(lsb*a_data_byte_count+i) <= p_a_wen(i);
     end loop;
   end process;
-  
+
   a_rdata_off: process(p_a_clk)
   begin
     if rising_edge(p_a_clk) then
