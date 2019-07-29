@@ -13,17 +13,17 @@
 
 set_false_path -quiet -through [get_pins -quiet -hier *tig_reg_clr*/CLR]
 set_false_path -quiet -through [get_pins -quiet -hier -regexp -filter {name=~".*tig_reg_(q.*/[OQ]|d.*/[ID])"}]
-set_false_path -through [get_nets -quiet -hier {*_async_net*}]
+set_false_path -quiet -through [get_nets -quiet -hier {*_async_net*}]
 
 ## Cross-region resynchronization cells
 
-set reg_input_pins [get_pins -hier -regexp -filter {name=~.*cross_region_reg_d.*/D}]
-set reg_cells [get_cells -of_objects $reg_input_pins]
+set reg_input_pins [get_pins -quiet -hier -regexp -filter {name=~.*cross_region_reg_d.*/D}]
+set reg_cells [get_cells -quiet -of_objects $reg_input_pins]
 
 common::send_msg_id "NSL-1-01" "INFO" "Found [llength $reg_cells] cells for cross region"
 
-foreach {dest_clock} [get_clocks -of_objects $reg_cells] {
-    set source_clocks [get_clocks -of_objects [all_fanin -flat -only_cells $reg_input_pins]]
+foreach {dest_clock} [get_clocks -quiet -of_objects $reg_cells] {
+    set source_clocks [get_clocks -quiet -of_objects [all_fanin -flat -only_cells $reg_input_pins]]
     foreach {source_clock} $source_clocks {
         if {$dest_clock == $source_clock} {
             continue
@@ -47,8 +47,8 @@ set dpram_cells [get_cells -of_objects $dpram_output_pins]
 
 common::send_msg_id "NSL-1-01" "INFO" "Found [llength $dpram_cells] cells for FF-Ram cross region"
 
-foreach {source_clock} [get_clocks -of_objects $dpram_cells] {
-    set dest_clocks [get_clocks -of_objects [all_fanout -flat -only_cells $dpram_output_pins]]
+foreach {source_clock} [get_clocks -quiet -of_objects $dpram_cells] {
+    set dest_clocks [get_clocks -quiet -of_objects [all_fanout -flat -only_cells $dpram_output_pins]]
     foreach {dest_clock} $dest_clocks {
         if {$dest_clock == $source_clock} {
             continue
