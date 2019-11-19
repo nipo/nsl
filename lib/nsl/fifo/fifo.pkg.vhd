@@ -118,4 +118,23 @@ package fifo is
       );
   end component;
 
+  component fifo_widener
+    generic(
+      parts_c    : integer;
+      width_in_c : integer
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clk_i     : in std_ulogic;
+
+      out_data_o  : out std_ulogic_vector(parts_c*width_in_c-1 downto 0);
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+
+      in_data_i  : in  std_ulogic_vector(width_in_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic
+      );
+  end component;
+
 end package fifo;
