@@ -16,16 +16,24 @@ package fifo is
       reset_n_i   : in  std_ulogic;
       clk_i       : in  std_ulogic_vector(0 to clk_count-1);
 
-      out_data_o  : out std_ulogic_vector(data_width-1 downto 0);
-      out_ready_i : in  std_ulogic;
-      out_valid_o : out std_ulogic;
-      out_used_o  : out integer range 0 to depth;
-      out_free_o  : out integer range 0 to depth;
+      out_data_o          : out std_ulogic_vector(data_width-1 downto 0);
+      out_ready_i         : in  std_ulogic;
+      out_valid_o         : out std_ulogic;
+      -- Pessimistic fill count as seen from the output side. This counter may
+      -- never reach actual fill count of fifo.
+      out_available_min_o : out integer range 0 to depth;
+      -- Corrected fill count as seen from the output side. This
+      -- counter eventually reaches actual fill count of fifo, but
+      -- takes more resources to calculate.  Actual fill count may be
+      -- depth + 1 because of the output register of backing RAM
+      -- block.
+      out_available_o     : out integer range 0 to depth+1;
 
       in_data_i  : in  std_ulogic_vector(data_width-1 downto 0);
       in_valid_i : in  std_ulogic;
       in_ready_o : out std_ulogic;
-      in_used_o  : out integer range 0 to depth;
+      -- Pessimistic availability count as seen from the input
+      -- side. This counter may never reach actual free count of fifo.
       in_free_o  : out integer range 0 to depth
       );
   end component;

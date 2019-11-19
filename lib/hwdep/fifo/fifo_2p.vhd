@@ -14,16 +14,15 @@ entity fifo_2p is
     reset_n_i : in  std_ulogic;
     clk_i    : in  std_ulogic_vector(0 to clk_count-1);
 
-    out_data_o      : out std_ulogic_vector(data_width-1 downto 0);
-    out_ready_i     : in  std_ulogic;
-    out_valid_o     : out std_ulogic;
-    out_used_o      : out integer range 0 to depth;
-    out_free_o      : out integer range 0 to depth;
+    out_data_o          : out std_ulogic_vector(data_width-1 downto 0);
+    out_ready_i         : in  std_ulogic;
+    out_valid_o         : out std_ulogic;
+    out_available_min_o : out integer range 0 to depth;
+    out_available_o     : out integer range 0 to depth + 1;
 
     in_data_i       : in  std_ulogic_vector(data_width-1 downto 0);
     in_valid_i      : in  std_ulogic;
     in_ready_o      : out std_ulogic;
-    in_used_o       : out integer range 0 to depth;
     in_free_o       : out integer range 0 to depth
     );
 
@@ -182,10 +181,9 @@ begin
       free_count_o => s_right.free
       );
 
-  in_used_o <= to_integer(to_01(s_left.used));
   in_free_o <= to_integer(to_01(s_left.free));
-  out_used_o <= to_integer(to_01(s_right.used));
-  out_free_o <= to_integer(to_01(s_right.free));
+  out_available_min_o <= to_integer(to_01(s_right.used));
+  out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & r.valid));
 
   ram: hwdep.ram.ram_2p_r_w
     generic map(

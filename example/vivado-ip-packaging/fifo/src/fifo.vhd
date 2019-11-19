@@ -72,7 +72,7 @@ begin
       out_data_o(tdata_num_bytes*8-1 downto 0) => m_axis_tdata,
       out_ready_i => m_axis_tready,
       out_valid_o => m_axis_tvalid,
-      out_used_o => out_usage,
+      out_available_o => out_usage,
       
       in_data_i(tdata_num_bytes*8) => s_axis_tlast,
       in_data_i(tdata_num_bytes*8-1 downto 0) => s_axis_tdata,
