@@ -3,9 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-library nsl;
-use nsl.fifo.all;
-
 package fifo is
 
   component fifo_counter_checker
