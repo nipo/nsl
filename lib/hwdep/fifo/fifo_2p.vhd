@@ -183,7 +183,7 @@ begin
 
   in_free_o <= to_integer(to_01(s_left.free));
   out_available_min_o <= to_integer(to_01(s_right.used));
-  out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & r.valid));
+  out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
 
   ram: hwdep.ram.ram_2p_r_w
     generic map(
