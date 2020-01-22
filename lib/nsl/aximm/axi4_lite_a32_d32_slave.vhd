@@ -78,7 +78,7 @@ begin
         end if;
 
       when ST_WCMD =>
-        if p_axi_ms.awvalid = '1' and p_axi_ms.wvalid = '1' and p_w_ready = '1' then
+        if p_axi_ms.awvalid = '1' and p_axi_ms.wvalid = '1' then
           rin.state <= ST_WEXEC;
           rin.data <= p_axi_ms.wdata;
           rin.addr <= p_axi_ms.awaddr(rin.addr'range);
