@@ -173,7 +173,7 @@ begin
     end if;
   end process;
 
-  p_a_rdata <= a_rdata((a_addr_lsb+a_data_byte_count)*8-1 downto a_addr_lsb*8);
-  p_b_rdata <= b_rdata((b_addr_lsb+b_data_byte_count)*8-1 downto b_addr_lsb*8);
+  p_a_rdata <= a_rdata((a_addr_lsb*a_data_byte_count+a_data_byte_count)*8-1 downto a_addr_lsb*a_data_byte_count*8);
+  p_b_rdata <= b_rdata((b_addr_lsb*b_data_byte_count+b_data_byte_count)*8-1 downto b_addr_lsb*b_data_byte_count*8);
 
 end inferred;
