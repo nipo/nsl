@@ -1,5 +1,6 @@
 vhdl-sources += sync.pkg.vhd
 vhdl-sources += sync_async_reg.vhd
+vhdl-sources += sync_static_reg.vhd
 vhdl-sources += sync_multi_reg.vhd
 vhdl-sources += sync_cross_reg.vhd
 vhdl-sources += sync_reg.vhd

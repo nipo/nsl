@@ -73,6 +73,7 @@ package sync is
   -- clock cycle time. Mostly suited for gray-coded data.
   component sync_cross_reg is
     generic(
+	  stable_count : natural := 0;
       cycle_count : natural range 2 to 40 := 2;
       data_width : integer
       );
@@ -125,6 +126,17 @@ package sync is
       p_rise: out std_ulogic;
       p_fall: out std_ulogic
       );
+  end component;
+
+  component sync_static_reg is
+  generic(
+    data_width : integer
+    );
+  port(
+    p_clk     : in std_ulogic;
+    p_in      : in std_ulogic_vector(data_width-1 downto 0);
+	p_out     : out std_ulogic_vector(data_width-1 downto 0)
+    );
   end component;
 
 end package sync;
