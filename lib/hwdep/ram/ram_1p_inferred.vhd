@@ -28,12 +28,15 @@ architecture inferred of ram_1p is
 begin
 
   process (p_clk)
+    variable addr : natural range 0 to 2**addr_size-1;
   begin
+    addr := to_integer(to_01(unsigned(p_addr), '0'));
+
     if rising_edge(p_clk) then
       if p_wen = '1' then
-        r_mem(to_integer(to_01(unsigned(p_addr), '0'))) := p_wdata;
+        r_mem(addr) := p_wdata;
       end if;
-      p_rdata <= r_mem(to_integer(to_01(unsigned(p_addr), '0')));
+      p_rdata <= r_mem(addr);
     end if;
   end process;
 
