@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+from nsl.routed import Routed, SplitRouted
+from nsl.i2c_master import MasterCmd, MasterRsp, Memory
+
+import sys
+import random
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = Routed(n)
+    if n.startswith("i2c_res"):
+        t = MasterRsp(SplitRouted(f, 0xf, 0x0))
+    else:
+        t = MasterCmd(SplitRouted(f, 0x0, 0xf))
+
+    mem = Memory(t, 0x26)
+
+    t.divisor(8)
+    t.flush(tag = 2)
+
+    random.seed(42)
+
+    for retries in range(10):
+        addr = random.randint(0, 1<<16)
+        length = random.randint(1, 42)
+        tag = random.randint(1, 255)
+        tag2 = random.randint(1, 255)
+
+        data = list(random.randint(0, 255) for i in range(length))
+        
+        mem.write(addr, data)
+        mem.read(addr, data)
