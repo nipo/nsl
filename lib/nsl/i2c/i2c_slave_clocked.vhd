@@ -115,6 +115,7 @@ begin
   s_stop <= scl = '1' and sda_rise = '1';
 
   fsm: process(scl, scl_rise, scl_fall, sda, sda_rise, sda_fall,
+               s_start, s_stop,
                r, address_i,
                error_i, r_data_i, r_valid_i, w_ready_i)
   begin
@@ -216,7 +217,6 @@ begin
     end if;
   end process;
 
-  w_data_o <= r.shreg;
   stop_o <= '1' when s_stop else '0';
   start_o <= '1' when s_start else '0';
   
@@ -227,6 +227,7 @@ begin
     selected_o <= '1';
     w_valid_o <= '0';
     r_ready_o <= '0';
+    w_data_o <= r.shreg;
 
     case r.state is
       when ST_READ_WAIT =>

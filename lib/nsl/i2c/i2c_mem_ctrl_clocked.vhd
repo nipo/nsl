@@ -100,6 +100,7 @@ begin
 
   transition: process(r, s_start, s_stop,
                       s_r_ready,
+                      w_ready_i, r_valid_i, r_data_i,
                       s_w_data, s_w_valid)
     variable byte_off : integer range 0 to data_bytes - 1;
   begin
