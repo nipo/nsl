@@ -49,12 +49,11 @@ architecture rtl of fifo_pointer is
 
   type regs_t is record
     wcounter: ctr_t;
+    local_position : std_ulogic_vector(ptr_width downto 0);
     running: boolean;
   end record;
 
-  signal s_can_inc, s_ptr_equal: boolean;
-  signal s_local_position: std_ulogic_vector(ptr_width downto 0);
-  signal s_local_ptr: std_ulogic_vector(ptr_width downto 0);
+  signal s_can_inc, s_ptr_equal, s_in_same_wrap: boolean;
   signal r, rin: regs_t;
 
   signal peer_wcounter : ctr_t;
@@ -89,6 +88,7 @@ begin
       if reset_n_i = '0' then
         r.wcounter.value <= (others => '0');
         r.wcounter.wrap_toggle <= '0';
+        r.local_position <= (others => '0');
         r.running <= false;
       else
         r <= rin;
@@ -96,42 +96,48 @@ begin
     end if;
   end process;
 
-  s_local_ptr <= r.wcounter.wrap_toggle & std_ulogic_vector(r.wcounter.value);
-
   local_ptr_bin: if not gray_position
   generate
-    s_local_position <= s_local_ptr;
-
-    s_ptr_equal <= s_local_position(ptr_t'range) = peer_position_i(ptr_t'range);
+    s_ptr_equal <= r.local_position(ptr_t'range) = peer_position_i(ptr_t'range);
+    s_in_same_wrap <= peer_position_i(ptr_width) = r.local_position(ptr_width);
   end generate;
 
   local_ptr_gray: if gray_position
   generate
     signal a, b: std_ulogic_vector(ptr_width-1 downto 0);
   begin
-    s_local_position <= util.gray.bin_to_gray(unsigned(s_local_ptr));
-    a(ptr_width-2 downto 0) <= s_local_position(ptr_width-2 downto 0);
-    a(ptr_width-1) <= s_local_position(ptr_width-1) xor s_local_position(ptr_width);
+    a(ptr_width-2 downto 0) <= r.local_position(ptr_width-2 downto 0);
+    a(ptr_width-1) <= r.local_position(ptr_width-1) xor r.local_position(ptr_width);
     b(ptr_width-2 downto 0) <= peer_position_i(ptr_width-2 downto 0);
     b(ptr_width-1) <= peer_position_i(ptr_width-1) xor peer_position_i(ptr_width);
 
     s_ptr_equal <= a = b;
+    s_in_same_wrap <= peer_position_i(ptr_width) = r.local_position(ptr_width);
   end generate;
 
-  s_can_inc <= not s_ptr_equal
-    or (peer_position_i(ptr_width) = s_local_position(ptr_width)) = equal_can_move;
+  s_can_inc <= not s_ptr_equal or (s_in_same_wrap = equal_can_move);
 
   ack_o <= '1' when r.running and s_can_inc else '0';
-  local_position_o <= s_local_position;
+  local_position_o <= r.local_position;
   mem_ptr_o <= r.wcounter.value;
 
   transition: process(r, inc_i, s_can_inc)
+    variable next_value : ctr_t;
+    variable local_ptr: std_ulogic_vector(ptr_width downto 0);
   begin
     rin <= r;
     rin.running <= true;
 
     if r.running and s_can_inc and inc_i = '1' then
-      rin.wcounter <= next_ctr(r.wcounter);
+      next_value := next_ctr(r.wcounter);
+      local_ptr := next_value.wrap_toggle & std_ulogic_vector(next_value.value);
+
+      rin.wcounter <= next_value;
+      if gray_position then
+        rin.local_position <= util.gray.bin_to_gray(unsigned(local_ptr));
+      else
+        rin.local_position <= local_ptr;
+      end if;
     end if;
   end process;
 
