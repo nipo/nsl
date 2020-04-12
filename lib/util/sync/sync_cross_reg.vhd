@@ -50,9 +50,9 @@ begin
 	  end if;
 	  cur_val := metastable_reg_d(metastable_reg_d'left);
 	
-	  if last_val /= cur_val then
+	  if last_val /= cur_val and stable_count > 0 then
 	    stable_s <= stable_count - 1;
-	  elsif stable_s = 0 then
+	  elsif stable_s = 0 or stable_count = 0 then
         stable_d <= cur_val;
 	  else
 	    stable_s <= stable_s - 1;
