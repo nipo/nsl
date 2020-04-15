@@ -13,7 +13,7 @@ MAP_OPTS_GUIDED = $(MAP_OPTS)
 PAR_OPTS_GUIDED = $(PAR_OPTS)
 
 ISE = /opt/Xilinx/14.7/ISE_DS
-I = source $(ISE)/settings64.sh > /dev/null
+ISE_PRE = source $(ISE)/settings64.sh > /dev/null ;
 target ?= $(top)
 user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32)))')
 
@@ -41,7 +41,7 @@ spi-flash: $(target)-2.mcs
 	xc3sprog -v -p 2 -c proby -I$(NOPROB_ROOT)/fpga/bscan_spi.bit $(<):W:0:MCS
 
 %.mcs: %.bit
-	$I; promgen -spi -w -p mcs -o $@ -u 0 $<
+	$(ISE_PRE) promgen -spi -w -p mcs -o $@ -u 0 $<
 
 clean-files += $(target).mcs
 clean-files += $(target)-2.mcs
@@ -49,7 +49,7 @@ clean-files += $(target)-2.cfi
 clean-files += $(target)-2.prm
 
 %.bit: ise-build/%-par.ncd
-	$(SILENT)$I; bitgen $(INTF_STYLE) \
+	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
 	    -g UserID:$(user_id) \
@@ -60,7 +60,7 @@ clean-files += $(target)-2.prm
 clean-files += $(target).bit
 
 %-compressed.bit: ise-build/%-par.ncd
-	$(SILENT)$I; bitgen $(INTF_STYLE) \
+	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
 	    -g compress \
@@ -72,7 +72,7 @@ clean-files += $(target).bit
 clean-files += $(target)-compressed.bit
 
 ise-build/%-2.bit: ise-build/%-par.ncd
-	$(SILENT)$I; bitgen $(INTF_STYLE) \
+	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g spi_buswidth:2 \
 	    -g unusedpin:pullnone \
 	    -g ConfigRate:26 \
@@ -85,16 +85,16 @@ ise-build/%-2.bit: ise-build/%-par.ncd
 clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
 
 %.mcs: %.bit
-	$(SILENT)$I; promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
+	$(SILENT)$(ISE_PRE) promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
 
 ise-build/$(target)-first-map.ncd ise-build/$(target)-map.ncd:
-	$(SILENT)$I; map $(INTF_STYLE) -p $(target_part)$(target_package)$(target_speed) \
+	$(SILENT)$(ISE_PRE) map $(INTF_STYLE) -p $(target_part)$(target_package)$(target_speed) \
 		$(if $(filter %-par.ncd,$^),$(MAP_OPTS_GUIDED),$(MAP_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %.ngd,$^)" -o "$@"
 
 ise-build/$(target)-first-par.ncd ise-build/$(target)-par.ncd:
-	$(SILENT)$I; par $(INTF_STYLE) \
+	$(SILENT)$(ISE_PRE) par $(INTF_STYLE) \
 		$(if $(filter %-par.ncd,$^),$(PAR_OPTS_GUIDED),$(PAR_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %-map.ncd,$^)" "$@"
@@ -119,11 +119,11 @@ endef
 $(eval $(foreach f,$(filter %.ccf,$(all-constraint-sources)),$(call ccf_gen,$f)))
 
 ise-build/$(target).ndf: ise-build/$(target).ngc
-	$(SILENT)$I; ngc2edif $(INTF_STYLE) -w $< $@
+	$(SILENT)$(ISE_PRE) ngc2edif $(INTF_STYLE) -w $< $@
 
 ise-build/$(target).ngd: ise-build/$(target).ngc $(filter %.ucf,$(all-constraint-sources)) $(foreach f,$(filter %.ccf,$(all-constraint-sources)),ise-build/$(notdir $(f:.ccf=.ucf)))
 	$(SILENT)echo "//" > $(@:.ngd=.bmm)
-	$(SILENT)$I; ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
+	$(SILENT)$(ISE_PRE) ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
 	    $(foreach c,$(filter %.ngc,$(sources)),-sd $(dir $c)) \
 	    $(foreach c,$(filter %.ngc,$^),$(call arg_add,$c)) \
 	    $(foreach c,$(filter %.ucf,$^),$(call arg_add,-uc,$c)) \
@@ -169,7 +169,7 @@ ise-build/$(target).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) $(sources)
 #	$(SILENT)echo "-register_balancing yes" >> $@.xst
 	$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
 
-	$I; xst $(INTF_STYLE) -ifn $@.xst
+	$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst
 
 ise-build/%.twr: ise-build/%-par.ncd ise-build/%-map.pcf
-	$(SILENT)$I; trce -e 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
+	$(SILENT)$(ISE_PRE) trce -e 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
