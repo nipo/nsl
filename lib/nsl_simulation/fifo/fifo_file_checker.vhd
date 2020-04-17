@@ -73,20 +73,21 @@ begin
         nsl_simulation.file_io.slv_read(line_content, data);
         read(line_content, wait_cycles);
 
-        write(complaint, filename);
-        write(complaint, string'(" value "));
-        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data));
-        write(complaint, string'(" does not match fifo data "));
-        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data_i));
+        if not std_match(std_ulogic_vector(data), to_x01(data_i)) then
+          write(complaint, filename);
+          write(complaint, string'(" value "));
+          nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data));
+          write(complaint, string'(" does not match fifo data "));
+          nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data_i));
 
-        
-        assert std_match(std_ulogic_vector(data), to_x01(data_i))
-          report complaint.all & CR & LF
-          severity error;
+          
+          assert false
+            report complaint.all & CR & LF
+            severity error;
 
-        deallocate (complaint);
-        complaint := new string'("");
-        
+          deallocate (complaint);
+          complaint := new string'("");
+        end if;
       end if;
     end if;
   end process;
