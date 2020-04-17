@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling;
+library nsl_axi;
 
 entity axi4_lite_a32_d32_slave is
   generic (
@@ -12,8 +12,8 @@ entity axi4_lite_a32_d32_slave is
     aclk: in std_ulogic;
     aresetn: in std_ulogic := '1';
 
-    p_axi_ms: in signalling.axi4_lite.a32_d32_ms;
-    p_axi_sm: out signalling.axi4_lite.a32_d32_sm;
+    p_axi_ms: in nsl_axi.axi4_lite.a32_d32_ms;
+    p_axi_sm: out nsl_axi.axi4_lite.a32_d32_sm;
 
     p_addr : out std_ulogic_vector(addr_size-1 downto 2);
 
@@ -122,7 +122,7 @@ begin
     p_w_valid <= '0';
     p_r_ready <= '0';
 
-    p_axi_sm <= signalling.axi4_lite.a32_d32_sm_idle;
+    p_axi_sm <= nsl_axi.axi4_lite.a32_d32_sm_idle;
 
     case r.state is
       when ST_WCMD =>
