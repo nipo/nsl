@@ -1,8 +1,10 @@
 vhdl-sources += tb.vhd
-deps += nsl.framed
-deps += nsl.i2c
-deps += util.sync
-deps += testing.framed
-deps += signalling.i2c
-deps += nsl.routed
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.routed
+deps += nsl_bnoc.testing
+deps += nsl_i2c.i2c
+deps += nsl_i2c.transactor
+deps += nsl_i2c.clocked
+deps += nsl_clocking.async
+deps += nsl_simulation.driver
 
