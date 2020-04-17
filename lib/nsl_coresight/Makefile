@@ -5,3 +5,4 @@ packages += dp
 packages += swd
 packages += tpiu
 packages += testing
+packages += transactor

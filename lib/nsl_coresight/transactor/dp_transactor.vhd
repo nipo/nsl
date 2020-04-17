@@ -3,23 +3,23 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_coresight;
-use nsl_coresight.dp.all;
+use nsl_coresight.transactor.all;
 
 entity dp_transactor is
   port (
-    p_clk      : in  std_ulogic;
-    p_resetn   : in  std_ulogic;
+    clock_i      : in  std_ulogic;
+    reset_n_i   : in  std_ulogic;
 
-    p_cmd_val  : in  std_ulogic;
-    p_cmd_ack  : out std_ulogic;
-    p_cmd_data : in  dp_cmd_data;
+    cmd_valid_i  : in  std_ulogic;
+    cmd_ready_o  : out std_ulogic;
+    cmd_data_i : in  dp_cmd_data;
 
-    p_rsp_val  : out std_ulogic;
-    p_rsp_ack  : in  std_ulogic;
-    p_rsp_data : out dp_rsp_data;
+    rsp_valid_o  : out std_ulogic;
+    rsp_ready_i  : in  std_ulogic;
+    rsp_data_o : out dp_rsp_data;
 
-    p_swd_o     : out nsl_coresight.swd.swd_master_o;
-    p_swd_i     : in  nsl_coresight.swd.swd_master_i
+    swd_o     : out nsl_coresight.swd.swd_master_o;
+    swd_i     : in  nsl_coresight.swd.swd_master_i
   );
 end entity;
 
@@ -79,17 +79,17 @@ architecture rtl of dp_transactor is
   constant c_zero : unsigned(5 downto 0) := (others => '0');
   
 begin
-  reg: process (p_clk, p_resetn)
+  reg: process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
       r.swd.clk <= '0';
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swd_i)
+  transition: process (r, cmd_valid_i, cmd_data_i, rsp_ready_i, swd_i)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -116,10 +116,10 @@ begin
         rin.counter <= (others => '0');
 
       when ST_CMD_GET =>
-        if p_cmd_val = '1' then
+        if cmd_valid_i = '1' then
           rin.state <= ST_CMD_ROUTE;
-          rin.op <= p_cmd_data.op;
-          rin.data <= p_cmd_data.data;
+          rin.op <= cmd_data_i.op;
+          rin.data <= cmd_data_i.data;
         end if;
 
       when ST_CMD_ROUTE =>
@@ -203,7 +203,7 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.ack <= to_x01(p_swd_i.dio) & r.ack(2 downto 1);
+          rin.ack <= to_x01(swd_i.dio) & r.ack(2 downto 1);
           if r.cycle_count /= 0 then
             rin.cycle_count <= r.cycle_count - 1;
           else
@@ -258,8 +258,8 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.data <= to_x01(p_swd_i.dio) & r.data(31 downto 1);
-          rin.par_in <= r.par_in xor to_x01(p_swd_i.dio);
+          rin.data <= to_x01(swd_i.dio) & r.data(31 downto 1);
+          rin.par_in <= r.par_in xor to_x01(swd_i.dio);
           if r.cycle_count /= 0 then
             rin.cycle_count <= r.cycle_count - 1;
           else
@@ -272,7 +272,7 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.par_in <= r.par_in xor to_x01(p_swd_i.dio);
+          rin.par_in <= r.par_in xor to_x01(swd_i.dio);
           rin.state <= ST_DATA_TURNAROUND;
           rin.cycle_count <= r.turnaround;
         end if;
@@ -322,17 +322,17 @@ begin
           rin.swd.dio.v <= r.run_val;
         end if;
 
-        if p_rsp_ack = '1' then
+        if rsp_ready_i = '1' then
           rin.state <= ST_CMD_GET;
         end if;
     end case;
   end process;
 
-  p_swd_o <= r.swd;
-  p_cmd_ack <= '1' when r.state = ST_CMD_GET else '0';
-  p_rsp_val <= '1' when r.state = ST_RSP_PUT else '0';
-  p_rsp_data.data <= r.data;
-  p_rsp_data.ack <= r.ack;
-  p_rsp_data.par_ok <= r.par_in;
+  swd_o <= r.swd;
+  cmd_ready_o <= '1' when r.state = ST_CMD_GET else '0';
+  rsp_valid_o <= '1' when r.state = ST_RSP_PUT else '0';
+  rsp_data_o.data <= r.data;
+  rsp_data_o.ack <= r.ack;
+  rsp_data_o.par_ok <= r.par_in;
 
 end architecture;

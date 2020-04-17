@@ -3,31 +3,30 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_coresight;
-use nsl_coresight.dp.all;
+use nsl_coresight.transactor.all;
 
-entity dp_framed_swdp is
+entity dp_framed_transactor is
   port (
-    p_resetn   : in  std_ulogic;
-    p_clk      : in  std_ulogic;
+    reset_n_i   : in  std_ulogic;
+    clock_i      : in  std_ulogic;
 
-    p_cmd_val   : in nsl_bnoc.framed.framed_req;
-    p_cmd_ack   : out nsl_bnoc.framed.framed_ack;
+    cmd_i   : in nsl_bnoc.framed.framed_req;
+    cmd_o   : out nsl_bnoc.framed.framed_ack;
 
-    p_rsp_val   : out nsl_bnoc.framed.framed_req;
-    p_rsp_ack   : in nsl_bnoc.framed.framed_ack;
+    rsp_o   : out nsl_bnoc.framed.framed_req;
+    rsp_i   : in nsl_bnoc.framed.framed_ack;
 
-    p_swd_o     : out nsl_coresight.swd.swd_master_o;
-    p_swd_i     : in  nsl_coresight.swd.swd_master_i
+    swd_o     : out nsl_coresight.swd.swd_master_o;
+    swd_i     : in  nsl_coresight.swd.swd_master_i
   );
 end entity;
 
-architecture rtl of dp_framed_swdp is
+architecture rtl of dp_framed_transactor is
 
-  signal s_swd_cmd_val  : std_logic;
-  signal s_swd_cmd_ack  : std_logic;
-  signal s_swd_cmd_data : dp_cmd_data;
-  signal s_swd_rsp_val  : std_logic;
-  signal s_swd_rsp_ack  : std_logic;
+  signal s_swd_cmd_valid  : std_logic;
+  signal s_swd_cmd_ready  : std_logic;
+  signal s_swd_rsp_valid  : std_logic;
+  signal s_swd_rsp_ready  : std_logic;
   signal s_swd_rsp_data : dp_rsp_data;
 
   type state_t is (
@@ -58,10 +57,10 @@ architecture rtl of dp_framed_swdp is
 
 begin
 
-  reg: process (p_clk)
+  reg: process (clock_i)
     begin
-    if rising_edge(p_clk) then
-      if p_resetn = '0' then
+    if rising_edge(clock_i) then
+      if reset_n_i = '0' then
         r.state <= STATE_RESET;
       else
         r <= rin;
@@ -69,7 +68,7 @@ begin
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_rsp_ack, s_swd_cmd_ack, s_swd_rsp_val, s_swd_rsp_data)
+  transition: process (r, cmd_i, rsp_i, s_swd_cmd_ready, s_swd_rsp_valid, s_swd_rsp_data)
   begin
     rin <= r;
 
@@ -78,9 +77,9 @@ begin
         rin.state <= STATE_CMD_GET;
 
       when STATE_CMD_GET =>
-        if p_cmd_val.valid = '1' then
-          rin.cmd <= p_cmd_val.data;
-          rin.last <= p_cmd_val.last;
+        if cmd_i.valid = '1' then
+          rin.cmd <= cmd_i.data;
+          rin.last <= cmd_i.last;
           rin.state <= STATE_CMD_ROUTE;
         end if;
 
@@ -97,22 +96,22 @@ begin
         end if;
 
       when STATE_CMD_DATA_GET =>
-        if p_cmd_val.valid = '1' then
+        if cmd_i.valid = '1' then
           rin.cycle <= (r.cycle - 1) mod 4;
-          rin.data <= p_cmd_val.data & r.data(31 downto 8);
-          rin.last <= p_cmd_val.last;
+          rin.data <= cmd_i.data & r.data(31 downto 8);
+          rin.last <= cmd_i.last;
           if r.cycle = 0 then
             rin.state <= STATE_SWD_CMD;
           end if;
         end if;
 
       when STATE_SWD_CMD =>
-        if s_swd_cmd_ack = '1' then
+        if s_swd_cmd_ready = '1' then
           rin.state <= STATE_SWD_RSP;
         end if;
 
       when STATE_SWD_RSP =>
-        if s_swd_rsp_val = '1' then
+        if s_swd_rsp_valid = '1' then
           if std_match(r.cmd, DP_CMD_RW) then
             rin.data <= s_swd_rsp_data.data;
             rin.cmd(3) <= s_swd_rsp_data.par_ok;
@@ -122,7 +121,7 @@ begin
         end if;
 
       when STATE_RSP_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           if std_match(r.cmd, DP_CMD_R) then
             rin.cycle <= 3;
             rin.state <= STATE_RSP_DATA_PUT;
@@ -132,7 +131,7 @@ begin
         end if;
         
       when STATE_RSP_DATA_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           rin.cycle <= (r.cycle - 1) mod 4;
           rin.data <= "--------" & r.data(31 downto 8);
           if r.cycle = 0 then
@@ -145,12 +144,12 @@ begin
 
   moore: process (r)
   begin
-    s_swd_cmd_val <= '0';
-    s_swd_rsp_ack <= '0';
-    p_cmd_ack.ready <= '0';
-    p_rsp_val.valid <= '0';
-    p_rsp_val.last <= '-';
-    p_rsp_val.data <= (others => '-');
+    s_swd_cmd_valid <= '0';
+    s_swd_rsp_ready <= '0';
+    cmd_o.ready <= '0';
+    rsp_o.valid <= '0';
+    rsp_o.last <= '-';
+    rsp_o.data <= (others => '-');
 
     case r.state is
       when STATE_RESET | STATE_CMD_ROUTE =>
@@ -158,50 +157,50 @@ begin
 
       when STATE_CMD_GET
         | STATE_CMD_DATA_GET =>
-        p_cmd_ack.ready <= '1';
+        cmd_o.ready <= '1';
 
       when STATE_RSP_PUT =>
-        p_rsp_val.valid <= '1';
+        rsp_o.valid <= '1';
         if std_match(r.cmd, DP_CMD_R) then
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         else
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         end if;
-        p_rsp_val.data <= r.cmd;
+        rsp_o.data <= r.cmd;
 
       when STATE_RSP_DATA_PUT =>
-        p_rsp_val.valid <= '1';
+        rsp_o.valid <= '1';
         if r.cycle = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
-        p_rsp_val.data <= r.data(7 downto 0);
+        rsp_o.data <= r.data(7 downto 0);
 
       when STATE_SWD_CMD =>
-        s_swd_cmd_val <= '1';
+        s_swd_cmd_valid <= '1';
 
       when STATE_SWD_RSP =>
-        s_swd_rsp_ack <= '1';
+        s_swd_rsp_ready <= '1';
     end case;
   end process;
 
   swd_port: dp_transactor
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
 
-      p_cmd_val => s_swd_cmd_val,
-      p_cmd_ack => s_swd_cmd_ack,
-      p_cmd_data.op => r.cmd,
-      p_cmd_data.data => r.data,
+      cmd_valid_i => s_swd_cmd_valid,
+      cmd_ready_o => s_swd_cmd_ready,
+      cmd_data_i.op => r.cmd,
+      cmd_data_i.data => r.data,
 
-      p_rsp_val => s_swd_rsp_val,
-      p_rsp_ack => s_swd_rsp_ack,
-      p_rsp_data => s_swd_rsp_data,
+      rsp_valid_o => s_swd_rsp_valid,
+      rsp_ready_i => s_swd_rsp_ready,
+      rsp_data_o => s_swd_rsp_data,
 
-      p_swd_o => p_swd_o,
-      p_swd_i => p_swd_i
+      swd_o => swd_o,
+      swd_i => swd_i
       );
 
 end architecture;

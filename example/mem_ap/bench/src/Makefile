@@ -1,9 +1,10 @@
 vhdl-sources += tb.vhd
-deps += nsl_coresight.dp
+deps += nsl_coresight.transactor
 deps += nsl_bnoc.framed
 deps += nsl_bnoc.routed
 deps += nsl_bnoc.testing
 deps += nsl_clocking.async
+deps += nsl_simulation.driver
 deps += nsl.tick
 deps += signalling.swd
 deps += main.topcell

@@ -114,19 +114,19 @@ begin
       p_rsp_in_ack => s_swd_rsp_ack
       );
 
-  dp: nsl_coresight.dp.dp_framed_swdp
+  dp: nsl_coresight.transactor.dp_framed_transactor
     port map(
-      p_clk  => s_clk,
-      p_resetn => s_resetn_clk,
+      clock_i  => s_clk,
+      reset_n_i => s_resetn_clk,
       
-      p_cmd_val => s_swd_cmd_val,
-      p_cmd_ack => s_swd_cmd_ack,
+      cmd_i => s_cmd_swd.req,
+      cmd_o => s_cmd_swd.ack,
 
-      p_rsp_val => s_swd_rsp_val,
-      p_rsp_ack => s_swd_rsp_ack,
+      rsp_o => s_rsp_swd.req,
+      rsp_i => s_rsp_swd.ack,
 
-      p_swd_o => s_swd_master_o,
-      p_swd_i => s_swd_master_i
+      swd_o => s_swd_master_o,
+      swd_i => s_swd_master_i
       );
 
   gen: nsl_bnoc.testing.framed_file_reader
@@ -153,19 +153,17 @@ begin
       p_done => s_done(1)
       );
 
-  process
-  begin
-    s_resetn_async <= '0';
-    wait for 100 ns;
-    s_resetn_async <= '1';
-    wait;
-  end process;
-
-  clock_gen: process(s_clk)
-  begin
-    if s_done /= "11" then
-      s_clk <= not s_clk after 5 ns;
-    end if;
-  end process;
+  driver: nsl_simulation.driver.simulation_driver
+    generic map(
+      clock_count => 1,
+      reset_time => 100 ns,
+      done_count => 2
+      )
+    port map(
+      clock_period(0) => 10 ns,
+      reset_n_o => s_resetn_async,
+      clock_o(0) => s_clk,
+      done_i => s_done
+      );
 
 end;
