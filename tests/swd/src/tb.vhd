@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl, testing, coresight, util, signalling;
+library nsl_clocking, nsl_bnoc, nsl_coresight, util, signalling;
 
 architecture arch of tb is
 
@@ -13,10 +13,10 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_swd_master_o : signalling.swd.swd_master_c;
-  signal s_swd_master_i : signalling.swd.swd_master_s;
-  signal s_swd_slave_o : signalling.swd.swd_slave_c;
-  signal s_swd_slave_i : signalling.swd.swd_slave_s;
+  signal s_swd_master_o : nsl_coresight.swd.swd_master_o;
+  signal s_swd_master_i : nsl_coresight.swd.swd_master_i;
+  signal s_swd_slave_o : nsl_coresight.swd.swd_slave_o;
+  signal s_swd_slave_i : nsl_coresight.swd.swd_slave_i;
   signal s_srst : std_logic;
 
   signal s_ap_resetn : std_ulogic;
@@ -31,18 +31,18 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 to 1);
 
-  signal s_cmd_val_fifo, s_rsp_val_fifo : nsl.framed.framed_req;
-  signal s_cmd_ack_fifo, s_rsp_ack_fifo : nsl.framed.framed_ack;
-  signal s_swd_cmd_val, s_swd_rsp_val : nsl.framed.framed_req;
-  signal s_swd_cmd_ack, s_swd_rsp_ack : nsl.framed.framed_ack;
+  signal s_cmd_val_fifo, s_rsp_val_fifo : nsl_bnoc.framed.framed_req;
+  signal s_cmd_ack_fifo, s_rsp_ack_fifo : nsl_bnoc.framed.framed_ack;
+  signal s_swd_cmd_val, s_swd_rsp_val : nsl_bnoc.framed.framed_req;
+  signal s_swd_cmd_ack, s_swd_rsp_ack : nsl_bnoc.framed.framed_ack;
 
 begin
 
-  reset_sync_clk: util.sync.sync_rising_edge
+  reset_sync_clk: nsl_clocking.async.async_edge
     port map(
-      p_in => s_resetn_async,
-      p_out => s_resetn_clk,
-      p_clk => s_clk
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk,
+      clock_i => s_clk
       );
 
   swdio: process (s_swd_master_o, s_swd_slave_o)
@@ -64,11 +64,11 @@ begin
     end if;
 
     s_swd_slave_i.clk <= s_swd_master_o.clk;
-    s_swd_slave_i.dio.v <= dio;
-    s_swd_master_i.dio.v <= dio;
+    s_swd_slave_i.dio <= dio;
+    s_swd_master_i.dio <= dio;
   end process;
 
-  swdap: testing.swd.swdap
+  swdap: nsl_coresight.testing.swdap
     port map(
       p_swd_c => s_swd_slave_o,
       p_swd_s => s_swd_slave_i,
@@ -84,7 +84,7 @@ begin
       p_ap_wen => s_ap_wen
       );
 
-  ap: testing.swd.ap_sim
+  ap: nsl_coresight.testing.ap_sim
     port map(
       p_clk => s_swd_slave_i.clk,
       p_resetn => s_ap_resetn,
@@ -98,7 +98,7 @@ begin
       p_wen => s_ap_wen
       );
 
-  swd_endpoint: nsl.routed.routed_endpoint
+  swd_endpoint: nsl_bnoc.routed.routed_endpoint
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
@@ -114,7 +114,7 @@ begin
       p_rsp_in_ack => s_swd_rsp_ack
       );
 
-  dp: coresight.dp.dp_framed_swdp
+  dp: nsl_coresight.dp.dp_framed_swdp
     port map(
       p_clk  => s_clk,
       p_resetn => s_resetn_clk,
@@ -125,11 +125,11 @@ begin
       p_rsp_val => s_swd_rsp_val,
       p_rsp_ack => s_swd_rsp_ack,
 
-      p_swd_c => s_swd_master_o,
-      p_swd_s => s_swd_master_i
+      p_swd_o => s_swd_master_o,
+      p_swd_i => s_swd_master_i
       );
 
-  gen: testing.framed.framed_file_reader
+  gen: nsl_bnoc.testing.framed_file_reader
     generic map(
       filename => "swd_commands.txt"
       )
@@ -141,7 +141,7 @@ begin
       p_done => s_done(0)
       );
 
-  check0: testing.framed.framed_file_checker
+  check0: nsl_bnoc.testing.framed_file_checker
     generic map(
       filename => "swd_responses.txt"
       )
