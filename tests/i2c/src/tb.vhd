@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_bnoc, nsl_clocking, nsl_i2c;
+library nsl_bnoc, nsl_clocking, nsl_i2c, nsl_simulation;
 
 architecture arch of tb is
 
@@ -104,21 +104,17 @@ begin
       p_done => s_done(1)
       );
 
-  process
-  begin
-    s_resetn_async <= '0';
-    wait for 100 ns;
-    s_resetn_async <= '1';
-    wait;
-  end process;
-
-  clock_gen: process(s_clk)
-  begin
-    if s_done = (s_done'range => '1') then
-      assert false report "all done" severity note;
-    else
-      s_clk <= not s_clk after 50 ns;
-    end if;
-  end process;
+  driver: nsl_simulation.driver.simulation_driver
+    generic map(
+      clock_count => 1,
+      reset_time => 100 ns,
+      done_count => 2
+      )
+    port map(
+      clock_period(0) => 100 ns,
+      reset_n_o => s_resetn_async,
+      clock_o(0) => s_clk,
+      done_i => s_done
+      );
 
 end;

@@ -6,4 +6,5 @@ deps += nsl_i2c.i2c
 deps += nsl_i2c.transactor
 deps += nsl_i2c.clockfree
 deps += nsl_clocking.async
+deps += nsl_simulation.driver
 
