@@ -1,7 +1,7 @@
 ISE = /opt/Xilinx/14.7/ISE_DS
 #INTF_STYLE = -intstyle silent
+ISE_PRE = source $(ISE)/settings64.sh > /dev/null ;
 PAR_OPTS = -ol high
-ISE_PREPARE = source $(ISE)/settings64.sh > /dev/null
 target ?= $(top)
 
 simulation-time = 10 ms
@@ -33,8 +33,8 @@ sim: $(target).vcd
 clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
 
 ise-build/$(target).exe: ise-build/$(target).prj $(MAKEFILE_LIST)
-	$(SILENT)$(ISE_PREPARE) ; \
-	fuse $(INTF_STYLE) -incremental -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
+	$(SILENT)$(ISE_PRE) \
+	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
 
 $(target).vcd: ise-build/$(target).exe
 	$(SILENT)> $@.tmp
@@ -44,9 +44,14 @@ $(target).vcd: ise-build/$(target).exe
 	$(SILENT)echo 'wave add /' >> $@.tmp
 	$(SILENT)echo 'run $(simulation-time);' >> $@.tmp
 	$(SILENT)echo 'quit -f' >> $@.tmp
-	$(SILENT)$(ISE_PREPARE) ; $< -tclbatch $@.tmp
+	$(SILENT)$(ISE_PRE) $< -tclbatch $@.tmp
 
-define ise_source_do
+define ise_source_do_vhdl
+	echo "$($1-language) $($1-library) $1" >> $@.tmp
+	$(SILENT)
+endef
+
+define ise_source_do_verilog
 	echo "$($1-language) $($1-library) $1" >> $@.tmp
 	$(SILENT)
 endef
@@ -54,6 +59,6 @@ endef
 ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p ise-build/xst
 	$(SILENT)> $@.tmp
-	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),,$(call ise_source_do,$s)))
+	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),,$(call ise_source_do_$($(s)-language),$s)))
 	$(SILENT)mv -f $@.tmp $@
 
