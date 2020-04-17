@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-library util;
+library nsl_ti, nsl_clocking, nsl_io;
 
 entity tb is
 end tb;
@@ -16,6 +15,8 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(1 downto 0) := (others => '0');
   signal s_easyscale : std_ulogic;
+  signal s_easyscale_o : nsl_io.io.tristated;
+  signal s_easyscale_i : std_ulogic;
 
   signal s_dev_addr : std_ulogic_vector(7 downto 0);
   signal s_ack_req  : std_ulogic;
@@ -27,28 +28,36 @@ architecture arch of tb is
 
 begin
 
-  reset_sync_clk: util.sync.sync_rising_edge
+  reset_sync_clk: nsl_clocking.async.async_edge
     port map(
-      p_in => s_resetn_async,
-      p_out => s_resetn_clk,
-      p_clk => s_clk
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk,
+      clock_i => s_clk
       );
 
-  es: nsl.ti.ti_easyscale
+  driver: nsl_io.io.tristated_io_driver
+    port map(
+      v_i => s_easyscale_o,
+      v_o => s_easyscale_i,
+      io_io => s_easyscale
+      );
+
+  es: nsl_ti.easyscale.easyscale_master
     generic map(
-      p_clk_rate => 100000000
+      clock_rate_c => 100000000
       )
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_easyscale => s_easyscale,
-      p_dev_addr => s_dev_addr,
-      p_ack_req => s_ack_req,
-      p_reg_addr => s_reg_addr,
-      p_data => s_data,
-      p_start => s_start,
-      p_busy => s_busy,
-      p_dev_ack => s_dev_ack
+      reset_n_i => s_resetn_clk,
+      clock_i => s_clk,
+      easyscale_o => s_easyscale_o,
+      easyscale_i => s_easyscale_i,
+      dev_addr_i => s_dev_addr,
+      ack_req_i => s_ack_req,
+      reg_addr_i => s_reg_addr,
+      data_i => s_data,
+      start_i => s_start,
+      busy_o => s_busy,
+      dev_ack_o => s_dev_ack
       );
   
   process

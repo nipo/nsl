@@ -2,31 +2,28 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.ti.all;
+library nsl_ti, nsl_bnoc;
+use nsl_ti.cc.all;
 
-entity ti_framed_cc is
+entity cc_framed_transactor is
   generic(
     divisor_shift : natural := 0
     );
   port(
-    p_clk    : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i    : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_cc_resetn : out std_ulogic;
-    p_cc_dc     : out std_ulogic;
-    p_cc_ddo    : out std_ulogic;
-    p_cc_ddi    : in  std_ulogic;
-    p_cc_ddoe   : out std_ulogic;
+    cc_o : out cc_m_o;
+    cc_i : in cc_m_i;
 
-    p_cmd_val  : in nsl.framed.framed_req;
-    p_cmd_ack  : out nsl.framed.framed_ack;
-    p_rsp_val  : out nsl.framed.framed_req;
-    p_rsp_ack  : in nsl.framed.framed_ack
+    cmd_i  : in nsl_bnoc.framed.framed_req;
+    cmd_o  : out nsl_bnoc.framed.framed_ack;
+    rsp_o  : out nsl_bnoc.framed.framed_req;
+    rsp_i  : in nsl_bnoc.framed.framed_ack
     );
 end entity;
 
-architecture rtl of ti_framed_cc is
+architecture rtl of cc_framed_transactor is
   
   type state_t is (
     ST_RESET,
@@ -62,18 +59,21 @@ architecture rtl of ti_framed_cc is
   signal s_busy     :  std_ulogic;
   signal s_done     :  std_ulogic;
 
+  constant divisor_width : integer := r.divisor'length + divisor_shift;
+  signal divisor : std_ulogic_vector(divisor_width-1 downto 0);
+  
 begin
 
-  ck : process (p_clk, p_resetn)
+  ck : process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition : process (r, p_cmd_val, p_rsp_ack, s_busy, s_done, s_rdata)
+  transition : process (r, cmd_i, rsp_i, s_busy, s_done, s_rdata)
   begin
     rin <= r;
 
@@ -83,9 +83,9 @@ begin
         rin.state <= ST_CMD_GET;
 
       when ST_CMD_GET =>
-        if p_cmd_val.valid = '1' then
-          rin.last <= p_cmd_val.last;
-          rin.cmd <= p_cmd_val.data;
+        if cmd_i.valid = '1' then
+          rin.last <= cmd_i.last;
+          rin.cmd <= cmd_i.data;
           rin.state <= ST_CMD_ROUTE;
         end if;
 
@@ -93,23 +93,23 @@ begin
         rin.in_count <= 0;
         rin.out_count <= 0;
 
-        if std_match(r.cmd, TI_CC_CMD_CMD) then
+        if std_match(r.cmd, CC_CMD_CMD) then
           rin.state <= ST_DATA_GET;
           rin.in_count <= to_integer(unsigned(r.cmd(1 downto 0)));
           rin.out_count <= to_integer(unsigned(r.cmd(3 downto 2)));
           rin.wait_ready <= r.cmd(4) = '1';
 
-        elsif std_match(r.cmd, TI_CC_CMD_ACQUIRE) then
+        elsif std_match(r.cmd, CC_CMD_ACQUIRE) then
           rin.state <= ST_ACQUIRE;
 
-        elsif std_match(r.cmd, TI_CC_CMD_RESET) then
+        elsif std_match(r.cmd, CC_CMD_RESET) then
           rin.state <= ST_RELEASE;
 
-        elsif std_match(r.cmd, TI_CC_CMD_DIV) then
+        elsif std_match(r.cmd, CC_CMD_DIV) then
           rin.state <= ST_RSP_PUT;
           rin.divisor <= r.cmd(rin.divisor'range);
 
-        elsif std_match(r.cmd, TI_CC_CMD_WAIT) then
+        elsif std_match(r.cmd, CC_CMD_WAIT) then
           rin.state <= ST_WAIT;
           rin.data <= "00" & r.cmd(5 downto 0);
 
@@ -118,7 +118,7 @@ begin
         end if;
         
       when ST_RSP_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           if r.in_count = 0 then
             rin.state <= ST_CMD_GET;
           else
@@ -128,10 +128,10 @@ begin
         end if;
 
       when ST_DATA_GET =>
-        if p_cmd_val.valid = '1' then
+        if cmd_i.valid = '1' then
           rin.state <= ST_WRITE;
-          rin.data <= p_cmd_val.data;
-          rin.last <= p_cmd_val.last;
+          rin.data <= cmd_i.data;
+          rin.last <= cmd_i.last;
         end if;
 
       when ST_ACQUIRE | ST_RELEASE | ST_WAIT =>
@@ -164,7 +164,7 @@ begin
         rin.state <= ST_READ;
 
       when ST_DATA_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           if r.in_count = 0 then
             rin.state <= ST_CMD_GET;
           else
@@ -199,61 +199,61 @@ begin
 
     case r.state is
       when ST_DATA_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= r.data;
+        rsp_o.valid <= '1';
+        rsp_o.data <= r.data;
         if r.in_count = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
 
       when ST_RSP_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= r.cmd;
+        rsp_o.valid <= '1';
+        rsp_o.data <= r.cmd;
         if r.in_count = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
 
       when others =>
-        p_rsp_val.valid <= '0';
-        p_rsp_val.data <= (others => '-');
-        p_rsp_val.last <= '-';
+        rsp_o.valid <= '0';
+        rsp_o.data <= (others => '-');
+        rsp_o.last <= '-';
     end case;
 
     case r.state is
       when ST_DATA_GET | ST_CMD_GET =>
-        p_cmd_ack.ready <= '1';
+        cmd_o.ready <= '1';
 
       when others =>
-        p_cmd_ack.ready <= '0';
+        cmd_o.ready <= '0';
     end case;
   end process;
 
-  master: ti_cc_master
+  divisor(r.divisor'length+divisor_shift-1 downto divisor_shift) <= r.divisor;
+  divisor(divisor_shift-1 downto 0) <= (others => '1');
+
+  master: nsl_ti.cc.cc_master
     generic map(
       divisor_width => r.divisor'length + divisor_shift
       )
     port map(
-      p_clk => p_clk,
-      p_resetn => p_resetn,
-      p_divisor(r.divisor'length+divisor_shift-1 downto divisor_shift) => r.divisor,
-      p_divisor(divisor_shift-1 downto 0) => (others => '1'),
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      p_cc_resetn => p_cc_resetn,
-      p_cc_dc => p_cc_dc,
-      p_cc_ddoe => p_cc_ddoe,
-      p_cc_ddi => p_cc_ddi,
-      p_cc_ddo => p_cc_ddo,
+      divisor_i => divisor,
 
-      p_ready => s_ready,
-      p_rdata => s_rdata,
-      p_wdata => r.data,
+      cc_o => cc_o,
+      cc_i => cc_i,
 
-      p_cmd => s_cmd,
-      p_busy => s_busy,
-      p_done => s_done
+      ready_o => s_ready,
+      rdata_o => s_rdata,
+      wdata_i => r.data,
+
+      cmd_i => s_cmd,
+      busy_o => s_busy,
+      done_o => s_done
       );
   
 end architecture;

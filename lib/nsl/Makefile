@@ -4,7 +4,6 @@ packages += mii
 packages += spi
 packages += ftdi
 packages += logic_analyzer
-packages += ti
 packages += ioext
 packages += cs
 packages += uart

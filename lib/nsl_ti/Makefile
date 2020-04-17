@@ -1,0 +1,2 @@
+packages += cc
+packages += easyscale
