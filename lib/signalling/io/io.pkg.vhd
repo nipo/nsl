@@ -8,6 +8,11 @@ package io is
     v : std_ulogic;
   end record;
 
+  type io_oe is record
+    v : std_ulogic;
+    en : std_ulogic;
+  end record;
+
   type io_c is record
     v : std_ulogic;
     en : std_ulogic;
@@ -40,6 +45,14 @@ package io is
       control : in od_c;
       status : out od_s;
       io : inout std_logic
+      );
+    end component;
+
+  component io_en_slv_driver is
+    port(
+      output_i : in io_oe;
+      input_o : out std_ulogic;
+      io_io : inout std_logic
       );
     end component;
 
