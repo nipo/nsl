@@ -1,11 +1,13 @@
-package numeric is
+package arith is
 
   function log2(x : positive) return natural;
   function is_pow2(x : positive) return boolean;
+  function max(x, y : natural) return natural;
+  function min(x, y : natural) return natural;
 
-end package numeric;
+end package arith;
 
-package body numeric is
+package body arith is
     
   function log2(x : positive) return natural is
   begin
@@ -45,4 +47,4 @@ package body numeric is
     end if;
   end is_pow2;
 
-end package body numeric;
+end package body arith;
