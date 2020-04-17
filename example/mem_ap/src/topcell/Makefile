@@ -1,0 +1,14 @@
+vhdl-sources += main.vhd
+vhdl-sources += main.pkg.vhd
+constraint-sources += swd.ucf
+deps += hwdep.clock
+deps += hwdep.ram
+deps += hwdep.reset
+deps += signalling.io
+deps += nsl_coresight.dapbus
+deps += nsl_coresight.dp
+deps += nsl_coresight.swd
+deps += nsl_coresight.ap
+deps += nsl_axi.ram
+deps += nsl_axi.axi4_lite
+deps += nsl_clocking.async

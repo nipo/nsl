@@ -1,0 +1,178 @@
+[*]
+[*] GTKWave Analyzer v3.3.81 (w)1999-2017 BSI
+[*] Thu Apr 16 22:13:32 2020
+[*]
+[dumpfile] "/Users/nipo/projects/nsl/example/mem_ap/bench/tb.ghw"
+[dumpfile_mtime] "Thu Apr 16 22:13:25 2020"
+[dumpfile_size] 11981596
+[savefile] "/Users/nipo/projects/nsl/example/mem_ap/bench/Untitled.gtkw"
+[timestart] 2111724800000
+[size] 1440 900
+[pos] -1 -1
+*-26.451286 2111913300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.dap.
+[treeopen] top.tb.dap.dapbus_gen_m2s.
+[treeopen] top.tb.dap.dp.r.
+[treeopen] top.tb.dap.mem_ap.r.
+[treeopen] top.tb.dap.mem_m2s.
+[treeopen] top.tb.dap.mem_s2m.
+[treeopen] top.tb.dp.r.
+[treeopen] top.tb.s_swd_master_o.
+[treeopen] top.tb.swd_endpoint.r.
+[sst_width] 281
+[signals_width] 297
+[sst_expanded] 1
+[sst_vpaned_height] 274
+@28
+top.tb.swdio
+top.tb.s_swd_master_o.dio.en
+top.tb.s_swd_master_o.dio.v
+top.tb.s_swd_master_o.clk
+@c00200
+-master
+@28
+top.tb.dp.r.cycle
+top.tb.dp.r.last
+top.tb.dp.r.state
+@22
+#{top.tb.dp.r.data[31:0]} top.tb.dp.r.data[31] top.tb.dp.r.data[30] top.tb.dp.r.data[29] top.tb.dp.r.data[28] top.tb.dp.r.data[27] top.tb.dp.r.data[26] top.tb.dp.r.data[25] top.tb.dp.r.data[24] top.tb.dp.r.data[23] top.tb.dp.r.data[22] top.tb.dp.r.data[21] top.tb.dp.r.data[20] top.tb.dp.r.data[19] top.tb.dp.r.data[18] top.tb.dp.r.data[17] top.tb.dp.r.data[16] top.tb.dp.r.data[15] top.tb.dp.r.data[14] top.tb.dp.r.data[13] top.tb.dp.r.data[12] top.tb.dp.r.data[11] top.tb.dp.r.data[10] top.tb.dp.r.data[9] top.tb.dp.r.data[8] top.tb.dp.r.data[7] top.tb.dp.r.data[6] top.tb.dp.r.data[5] top.tb.dp.r.data[4] top.tb.dp.r.data[3] top.tb.dp.r.data[2] top.tb.dp.r.data[1] top.tb.dp.r.data[0]
+#{top.tb.dp.r.cmd[7:0]} top.tb.dp.r.cmd[7] top.tb.dp.r.cmd[6] top.tb.dp.r.cmd[5] top.tb.dp.r.cmd[4] top.tb.dp.r.cmd[3] top.tb.dp.r.cmd[2] top.tb.dp.r.cmd[1] top.tb.dp.r.cmd[0]
+@1401200
+-master
+@c00200
+-dp_master
+@28
+top.tb.dp.swd_port.r.par_in
+top.tb.dp.swd_port.r.par_out
+top.tb.dp.swd_port.r.is_read
+top.tb.dp.swd_port.r.run_val
+top.tb.dp.swd_port.r.cycle_count
+top.tb.dp.swd_port.r.turnaround
+top.tb.dp.swd_port.r.state
+@22
+#{top.tb.dp.swd_port.r.cmd[7:0]} top.tb.dp.swd_port.r.cmd[7] top.tb.dp.swd_port.r.cmd[6] top.tb.dp.swd_port.r.cmd[5] top.tb.dp.swd_port.r.cmd[4] top.tb.dp.swd_port.r.cmd[3] top.tb.dp.swd_port.r.cmd[2] top.tb.dp.swd_port.r.cmd[1] top.tb.dp.swd_port.r.cmd[0]
+#{top.tb.dp.swd_port.r.data[31:0]} top.tb.dp.swd_port.r.data[31] top.tb.dp.swd_port.r.data[30] top.tb.dp.swd_port.r.data[29] top.tb.dp.swd_port.r.data[28] top.tb.dp.swd_port.r.data[27] top.tb.dp.swd_port.r.data[26] top.tb.dp.swd_port.r.data[25] top.tb.dp.swd_port.r.data[24] top.tb.dp.swd_port.r.data[23] top.tb.dp.swd_port.r.data[22] top.tb.dp.swd_port.r.data[21] top.tb.dp.swd_port.r.data[20] top.tb.dp.swd_port.r.data[19] top.tb.dp.swd_port.r.data[18] top.tb.dp.swd_port.r.data[17] top.tb.dp.swd_port.r.data[16] top.tb.dp.swd_port.r.data[15] top.tb.dp.swd_port.r.data[14] top.tb.dp.swd_port.r.data[13] top.tb.dp.swd_port.r.data[12] top.tb.dp.swd_port.r.data[11] top.tb.dp.swd_port.r.data[10] top.tb.dp.swd_port.r.data[9] top.tb.dp.swd_port.r.data[8] top.tb.dp.swd_port.r.data[7] top.tb.dp.swd_port.r.data[6] top.tb.dp.swd_port.r.data[5] top.tb.dp.swd_port.r.data[4] top.tb.dp.swd_port.r.data[3] top.tb.dp.swd_port.r.data[2] top.tb.dp.swd_port.r.data[1] top.tb.dp.swd_port.r.data[0]
+#{top.tb.dp.swd_port.r.op[7:0]} top.tb.dp.swd_port.r.op[7] top.tb.dp.swd_port.r.op[6] top.tb.dp.swd_port.r.op[5] top.tb.dp.swd_port.r.op[4] top.tb.dp.swd_port.r.op[3] top.tb.dp.swd_port.r.op[2] top.tb.dp.swd_port.r.op[1] top.tb.dp.swd_port.r.op[0]
+#{top.tb.dp.swd_port.r.counter[15:0]} top.tb.dp.swd_port.r.counter[15] top.tb.dp.swd_port.r.counter[14] top.tb.dp.swd_port.r.counter[13] top.tb.dp.swd_port.r.counter[12] top.tb.dp.swd_port.r.counter[11] top.tb.dp.swd_port.r.counter[10] top.tb.dp.swd_port.r.counter[9] top.tb.dp.swd_port.r.counter[8] top.tb.dp.swd_port.r.counter[7] top.tb.dp.swd_port.r.counter[6] top.tb.dp.swd_port.r.counter[5] top.tb.dp.swd_port.r.counter[4] top.tb.dp.swd_port.r.counter[3] top.tb.dp.swd_port.r.counter[2] top.tb.dp.swd_port.r.counter[1] top.tb.dp.swd_port.r.counter[0]
+@28
+#{top.tb.dp.swd_port.r.ack[2:0]} top.tb.dp.swd_port.r.ack[2] top.tb.dp.swd_port.r.ack[1] top.tb.dp.swd_port.r.ack[0]
+@1401200
+-dp_master
+@c00200
+-DP
+@28
+top.tb.dap.dp.r.ap_state
+top.tb.dap.dp.r.ack_state
+top.tb.dap.dp.r.data_par
+top.tb.dap.dp.r.sw_state
+top.tb.dap.dp.r.turnaround
+top.tb.dap.dp.r.count
+top.tb.dap.dp.r.apndp
+top.tb.dap.dp.r.ready
+top.tb.dap.dp.r.rnw
+top.tb.dap.dp.r.ad
+@22
+#{top.tb.dap.dp.r.ctrl[31:0]} top.tb.dap.dp.r.ctrl[31] top.tb.dap.dp.r.ctrl[30] top.tb.dap.dp.r.ctrl[29] top.tb.dap.dp.r.ctrl[28] top.tb.dap.dp.r.ctrl[27] top.tb.dap.dp.r.ctrl[26] top.tb.dap.dp.r.ctrl[25] top.tb.dap.dp.r.ctrl[24] top.tb.dap.dp.r.ctrl[23] top.tb.dap.dp.r.ctrl[22] top.tb.dap.dp.r.ctrl[21] top.tb.dap.dp.r.ctrl[20] top.tb.dap.dp.r.ctrl[19] top.tb.dap.dp.r.ctrl[18] top.tb.dap.dp.r.ctrl[17] top.tb.dap.dp.r.ctrl[16] top.tb.dap.dp.r.ctrl[15] top.tb.dap.dp.r.ctrl[14] top.tb.dap.dp.r.ctrl[13] top.tb.dap.dp.r.ctrl[12] top.tb.dap.dp.r.ctrl[11] top.tb.dap.dp.r.ctrl[10] top.tb.dap.dp.r.ctrl[9] top.tb.dap.dp.r.ctrl[8] top.tb.dap.dp.r.ctrl[7] top.tb.dap.dp.r.ctrl[6] top.tb.dap.dp.r.ctrl[5] top.tb.dap.dp.r.ctrl[4] top.tb.dap.dp.r.ctrl[3] top.tb.dap.dp.r.ctrl[2] top.tb.dap.dp.r.ctrl[1] top.tb.dap.dp.r.ctrl[0]
+#{top.tb.dap.dp.r.ap_rdbuf[31:0]} top.tb.dap.dp.r.ap_rdbuf[31] top.tb.dap.dp.r.ap_rdbuf[30] top.tb.dap.dp.r.ap_rdbuf[29] top.tb.dap.dp.r.ap_rdbuf[28] top.tb.dap.dp.r.ap_rdbuf[27] top.tb.dap.dp.r.ap_rdbuf[26] top.tb.dap.dp.r.ap_rdbuf[25] top.tb.dap.dp.r.ap_rdbuf[24] top.tb.dap.dp.r.ap_rdbuf[23] top.tb.dap.dp.r.ap_rdbuf[22] top.tb.dap.dp.r.ap_rdbuf[21] top.tb.dap.dp.r.ap_rdbuf[20] top.tb.dap.dp.r.ap_rdbuf[19] top.tb.dap.dp.r.ap_rdbuf[18] top.tb.dap.dp.r.ap_rdbuf[17] top.tb.dap.dp.r.ap_rdbuf[16] top.tb.dap.dp.r.ap_rdbuf[15] top.tb.dap.dp.r.ap_rdbuf[14] top.tb.dap.dp.r.ap_rdbuf[13] top.tb.dap.dp.r.ap_rdbuf[12] top.tb.dap.dp.r.ap_rdbuf[11] top.tb.dap.dp.r.ap_rdbuf[10] top.tb.dap.dp.r.ap_rdbuf[9] top.tb.dap.dp.r.ap_rdbuf[8] top.tb.dap.dp.r.ap_rdbuf[7] top.tb.dap.dp.r.ap_rdbuf[6] top.tb.dap.dp.r.ap_rdbuf[5] top.tb.dap.dp.r.ap_rdbuf[4] top.tb.dap.dp.r.ap_rdbuf[3] top.tb.dap.dp.r.ap_rdbuf[2] top.tb.dap.dp.r.ap_rdbuf[1] top.tb.dap.dp.r.ap_rdbuf[0]
+#{top.tb.dap.dp.r.ap_wdata[31:0]} top.tb.dap.dp.r.ap_wdata[31] top.tb.dap.dp.r.ap_wdata[30] top.tb.dap.dp.r.ap_wdata[29] top.tb.dap.dp.r.ap_wdata[28] top.tb.dap.dp.r.ap_wdata[27] top.tb.dap.dp.r.ap_wdata[26] top.tb.dap.dp.r.ap_wdata[25] top.tb.dap.dp.r.ap_wdata[24] top.tb.dap.dp.r.ap_wdata[23] top.tb.dap.dp.r.ap_wdata[22] top.tb.dap.dp.r.ap_wdata[21] top.tb.dap.dp.r.ap_wdata[20] top.tb.dap.dp.r.ap_wdata[19] top.tb.dap.dp.r.ap_wdata[18] top.tb.dap.dp.r.ap_wdata[17] top.tb.dap.dp.r.ap_wdata[16] top.tb.dap.dp.r.ap_wdata[15] top.tb.dap.dp.r.ap_wdata[14] top.tb.dap.dp.r.ap_wdata[13] top.tb.dap.dp.r.ap_wdata[12] top.tb.dap.dp.r.ap_wdata[11] top.tb.dap.dp.r.ap_wdata[10] top.tb.dap.dp.r.ap_wdata[9] top.tb.dap.dp.r.ap_wdata[8] top.tb.dap.dp.r.ap_wdata[7] top.tb.dap.dp.r.ap_wdata[6] top.tb.dap.dp.r.ap_wdata[5] top.tb.dap.dp.r.ap_wdata[4] top.tb.dap.dp.r.ap_wdata[3] top.tb.dap.dp.r.ap_wdata[2] top.tb.dap.dp.r.ap_wdata[1] top.tb.dap.dp.r.ap_wdata[0]
+#{top.tb.dap.dp.r.ap_addr[15:2]} top.tb.dap.dp.r.ap_addr[15] top.tb.dap.dp.r.ap_addr[14] top.tb.dap.dp.r.ap_addr[13] top.tb.dap.dp.r.ap_addr[12] top.tb.dap.dp.r.ap_addr[11] top.tb.dap.dp.r.ap_addr[10] top.tb.dap.dp.r.ap_addr[9] top.tb.dap.dp.r.ap_addr[8] top.tb.dap.dp.r.ap_addr[7] top.tb.dap.dp.r.ap_addr[6] top.tb.dap.dp.r.ap_addr[5] top.tb.dap.dp.r.ap_addr[4] top.tb.dap.dp.r.ap_addr[3] top.tb.dap.dp.r.ap_addr[2]
+#{top.tb.dap.dp.r.data[31:0]} top.tb.dap.dp.r.data[31] top.tb.dap.dp.r.data[30] top.tb.dap.dp.r.data[29] top.tb.dap.dp.r.data[28] top.tb.dap.dp.r.data[27] top.tb.dap.dp.r.data[26] top.tb.dap.dp.r.data[25] top.tb.dap.dp.r.data[24] top.tb.dap.dp.r.data[23] top.tb.dap.dp.r.data[22] top.tb.dap.dp.r.data[21] top.tb.dap.dp.r.data[20] top.tb.dap.dp.r.data[19] top.tb.dap.dp.r.data[18] top.tb.dap.dp.r.data[17] top.tb.dap.dp.r.data[16] top.tb.dap.dp.r.data[15] top.tb.dap.dp.r.data[14] top.tb.dap.dp.r.data[13] top.tb.dap.dp.r.data[12] top.tb.dap.dp.r.data[11] top.tb.dap.dp.r.data[10] top.tb.dap.dp.r.data[9] top.tb.dap.dp.r.data[8] top.tb.dap.dp.r.data[7] top.tb.dap.dp.r.data[6] top.tb.dap.dp.r.data[5] top.tb.dap.dp.r.data[4] top.tb.dap.dp.r.data[3] top.tb.dap.dp.r.data[2] top.tb.dap.dp.r.data[1] top.tb.dap.dp.r.data[0]
+#{top.tb.dap.dp.r.dp_bank_sel[3:0]} top.tb.dap.dp.r.dp_bank_sel[3] top.tb.dap.dp.r.dp_bank_sel[2] top.tb.dap.dp.r.dp_bank_sel[1] top.tb.dap.dp.r.dp_bank_sel[0]
+#{top.tb.dap.dp.r.ap_bank_sel[3:0]} top.tb.dap.dp.r.ap_bank_sel[3] top.tb.dap.dp.r.ap_bank_sel[2] top.tb.dap.dp.r.ap_bank_sel[1] top.tb.dap.dp.r.ap_bank_sel[0]
+#{top.tb.dap.dp.r.ap_sel[7:0]} top.tb.dap.dp.r.ap_sel[7] top.tb.dap.dp.r.ap_sel[6] top.tb.dap.dp.r.ap_sel[5] top.tb.dap.dp.r.ap_sel[4] top.tb.dap.dp.r.ap_sel[3] top.tb.dap.dp.r.ap_sel[2] top.tb.dap.dp.r.ap_sel[1] top.tb.dap.dp.r.ap_sel[0]
+@28
+#{top.tb.dap.dp.r.a[1:0]} top.tb.dap.dp.r.a[1] top.tb.dap.dp.r.a[0]
+@1401200
+-DP
+@800200
+-dapbus
+@28
+top.tb.dap.dapbus_gen_s2m.slverr
+top.tb.dap.dapbus_gen_s2m.ready
+top.tb.dap.dapbus_gen_m2s.abort
+top.tb.dap.dapbus_gen_m2s.write
+top.tb.dap.dapbus_gen_m2s.enable
+top.tb.dap.dapbus_gen_m2s.sel
+@22
+#{top.tb.dap.dapbus_gen_m2s.wdata[31:0]} top.tb.dap.dapbus_gen_m2s.wdata[31] top.tb.dap.dapbus_gen_m2s.wdata[30] top.tb.dap.dapbus_gen_m2s.wdata[29] top.tb.dap.dapbus_gen_m2s.wdata[28] top.tb.dap.dapbus_gen_m2s.wdata[27] top.tb.dap.dapbus_gen_m2s.wdata[26] top.tb.dap.dapbus_gen_m2s.wdata[25] top.tb.dap.dapbus_gen_m2s.wdata[24] top.tb.dap.dapbus_gen_m2s.wdata[23] top.tb.dap.dapbus_gen_m2s.wdata[22] top.tb.dap.dapbus_gen_m2s.wdata[21] top.tb.dap.dapbus_gen_m2s.wdata[20] top.tb.dap.dapbus_gen_m2s.wdata[19] top.tb.dap.dapbus_gen_m2s.wdata[18] top.tb.dap.dapbus_gen_m2s.wdata[17] top.tb.dap.dapbus_gen_m2s.wdata[16] top.tb.dap.dapbus_gen_m2s.wdata[15] top.tb.dap.dapbus_gen_m2s.wdata[14] top.tb.dap.dapbus_gen_m2s.wdata[13] top.tb.dap.dapbus_gen_m2s.wdata[12] top.tb.dap.dapbus_gen_m2s.wdata[11] top.tb.dap.dapbus_gen_m2s.wdata[10] top.tb.dap.dapbus_gen_m2s.wdata[9] top.tb.dap.dapbus_gen_m2s.wdata[8] top.tb.dap.dapbus_gen_m2s.wdata[7] top.tb.dap.dapbus_gen_m2s.wdata[6] top.tb.dap.dapbus_gen_m2s.wdata[5] top.tb.dap.dapbus_gen_m2s.wdata[4] top.tb.dap.dapbus_gen_m2s.wdata[3] top.tb.dap.dapbus_gen_m2s.wdata[2] top.tb.dap.dapbus_gen_m2s.wdata[1] top.tb.dap.dapbus_gen_m2s.wdata[0]
+#{top.tb.dap.dapbus_gen_m2s.addr[15:2]} top.tb.dap.dapbus_gen_m2s.addr[15] top.tb.dap.dapbus_gen_m2s.addr[14] top.tb.dap.dapbus_gen_m2s.addr[13] top.tb.dap.dapbus_gen_m2s.addr[12] top.tb.dap.dapbus_gen_m2s.addr[11] top.tb.dap.dapbus_gen_m2s.addr[10] top.tb.dap.dapbus_gen_m2s.addr[9] top.tb.dap.dapbus_gen_m2s.addr[8] top.tb.dap.dapbus_gen_m2s.addr[7] top.tb.dap.dapbus_gen_m2s.addr[6] top.tb.dap.dapbus_gen_m2s.addr[5] top.tb.dap.dapbus_gen_m2s.addr[4] top.tb.dap.dapbus_gen_m2s.addr[3] top.tb.dap.dapbus_gen_m2s.addr[2]
+#{top.tb.dap.dapbus_gen_s2m.rdata[31:0]} top.tb.dap.dapbus_gen_s2m.rdata[31] top.tb.dap.dapbus_gen_s2m.rdata[30] top.tb.dap.dapbus_gen_s2m.rdata[29] top.tb.dap.dapbus_gen_s2m.rdata[28] top.tb.dap.dapbus_gen_s2m.rdata[27] top.tb.dap.dapbus_gen_s2m.rdata[26] top.tb.dap.dapbus_gen_s2m.rdata[25] top.tb.dap.dapbus_gen_s2m.rdata[24] top.tb.dap.dapbus_gen_s2m.rdata[23] top.tb.dap.dapbus_gen_s2m.rdata[22] top.tb.dap.dapbus_gen_s2m.rdata[21] top.tb.dap.dapbus_gen_s2m.rdata[20] top.tb.dap.dapbus_gen_s2m.rdata[19] top.tb.dap.dapbus_gen_s2m.rdata[18] top.tb.dap.dapbus_gen_s2m.rdata[17] top.tb.dap.dapbus_gen_s2m.rdata[16] top.tb.dap.dapbus_gen_s2m.rdata[15] top.tb.dap.dapbus_gen_s2m.rdata[14] top.tb.dap.dapbus_gen_s2m.rdata[13] top.tb.dap.dapbus_gen_s2m.rdata[12] top.tb.dap.dapbus_gen_s2m.rdata[11] top.tb.dap.dapbus_gen_s2m.rdata[10] top.tb.dap.dapbus_gen_s2m.rdata[9] top.tb.dap.dapbus_gen_s2m.rdata[8] top.tb.dap.dapbus_gen_s2m.rdata[7] top.tb.dap.dapbus_gen_s2m.rdata[6] top.tb.dap.dapbus_gen_s2m.rdata[5] top.tb.dap.dapbus_gen_s2m.rdata[4] top.tb.dap.dapbus_gen_s2m.rdata[3] top.tb.dap.dapbus_gen_s2m.rdata[2] top.tb.dap.dapbus_gen_s2m.rdata[1] top.tb.dap.dapbus_gen_s2m.rdata[0]
+@1000200
+-dapbus
+@c00200
+-dapbus_memap
+@28
+top.tb.dap.dapbus_memap_m2s.abort
+top.tb.dap.dapbus_memap_m2s.write
+top.tb.dap.dapbus_memap_m2s.enable
+top.tb.dap.dapbus_memap_m2s.sel
+top.tb.dap.dapbus_memap_s2m.slverr
+top.tb.dap.dapbus_memap_s2m.ready
+@22
+#{top.tb.dap.dapbus_memap_s2m.rdata[31:0]} top.tb.dap.dapbus_memap_s2m.rdata[31] top.tb.dap.dapbus_memap_s2m.rdata[30] top.tb.dap.dapbus_memap_s2m.rdata[29] top.tb.dap.dapbus_memap_s2m.rdata[28] top.tb.dap.dapbus_memap_s2m.rdata[27] top.tb.dap.dapbus_memap_s2m.rdata[26] top.tb.dap.dapbus_memap_s2m.rdata[25] top.tb.dap.dapbus_memap_s2m.rdata[24] top.tb.dap.dapbus_memap_s2m.rdata[23] top.tb.dap.dapbus_memap_s2m.rdata[22] top.tb.dap.dapbus_memap_s2m.rdata[21] top.tb.dap.dapbus_memap_s2m.rdata[20] top.tb.dap.dapbus_memap_s2m.rdata[19] top.tb.dap.dapbus_memap_s2m.rdata[18] top.tb.dap.dapbus_memap_s2m.rdata[17] top.tb.dap.dapbus_memap_s2m.rdata[16] top.tb.dap.dapbus_memap_s2m.rdata[15] top.tb.dap.dapbus_memap_s2m.rdata[14] top.tb.dap.dapbus_memap_s2m.rdata[13] top.tb.dap.dapbus_memap_s2m.rdata[12] top.tb.dap.dapbus_memap_s2m.rdata[11] top.tb.dap.dapbus_memap_s2m.rdata[10] top.tb.dap.dapbus_memap_s2m.rdata[9] top.tb.dap.dapbus_memap_s2m.rdata[8] top.tb.dap.dapbus_memap_s2m.rdata[7] top.tb.dap.dapbus_memap_s2m.rdata[6] top.tb.dap.dapbus_memap_s2m.rdata[5] top.tb.dap.dapbus_memap_s2m.rdata[4] top.tb.dap.dapbus_memap_s2m.rdata[3] top.tb.dap.dapbus_memap_s2m.rdata[2] top.tb.dap.dapbus_memap_s2m.rdata[1] top.tb.dap.dapbus_memap_s2m.rdata[0]
+#{top.tb.dap.dapbus_memap_m2s.wdata[31:0]} top.tb.dap.dapbus_memap_m2s.wdata[31] top.tb.dap.dapbus_memap_m2s.wdata[30] top.tb.dap.dapbus_memap_m2s.wdata[29] top.tb.dap.dapbus_memap_m2s.wdata[28] top.tb.dap.dapbus_memap_m2s.wdata[27] top.tb.dap.dapbus_memap_m2s.wdata[26] top.tb.dap.dapbus_memap_m2s.wdata[25] top.tb.dap.dapbus_memap_m2s.wdata[24] top.tb.dap.dapbus_memap_m2s.wdata[23] top.tb.dap.dapbus_memap_m2s.wdata[22] top.tb.dap.dapbus_memap_m2s.wdata[21] top.tb.dap.dapbus_memap_m2s.wdata[20] top.tb.dap.dapbus_memap_m2s.wdata[19] top.tb.dap.dapbus_memap_m2s.wdata[18] top.tb.dap.dapbus_memap_m2s.wdata[17] top.tb.dap.dapbus_memap_m2s.wdata[16] top.tb.dap.dapbus_memap_m2s.wdata[15] top.tb.dap.dapbus_memap_m2s.wdata[14] top.tb.dap.dapbus_memap_m2s.wdata[13] top.tb.dap.dapbus_memap_m2s.wdata[12] top.tb.dap.dapbus_memap_m2s.wdata[11] top.tb.dap.dapbus_memap_m2s.wdata[10] top.tb.dap.dapbus_memap_m2s.wdata[9] top.tb.dap.dapbus_memap_m2s.wdata[8] top.tb.dap.dapbus_memap_m2s.wdata[7] top.tb.dap.dapbus_memap_m2s.wdata[6] top.tb.dap.dapbus_memap_m2s.wdata[5] top.tb.dap.dapbus_memap_m2s.wdata[4] top.tb.dap.dapbus_memap_m2s.wdata[3] top.tb.dap.dapbus_memap_m2s.wdata[2] top.tb.dap.dapbus_memap_m2s.wdata[1] top.tb.dap.dapbus_memap_m2s.wdata[0]
+#{top.tb.dap.dapbus_memap_m2s.addr[15:2]} top.tb.dap.dapbus_memap_m2s.addr[15] top.tb.dap.dapbus_memap_m2s.addr[14] top.tb.dap.dapbus_memap_m2s.addr[13] top.tb.dap.dapbus_memap_m2s.addr[12] top.tb.dap.dapbus_memap_m2s.addr[11] top.tb.dap.dapbus_memap_m2s.addr[10] top.tb.dap.dapbus_memap_m2s.addr[9] top.tb.dap.dapbus_memap_m2s.addr[8] top.tb.dap.dapbus_memap_m2s.addr[7] top.tb.dap.dapbus_memap_m2s.addr[6] top.tb.dap.dapbus_memap_m2s.addr[5] top.tb.dap.dapbus_memap_m2s.addr[4] top.tb.dap.dapbus_memap_m2s.addr[3] top.tb.dap.dapbus_memap_m2s.addr[2]
+@1401200
+-dapbus_memap
+@28
+top.tb.dap.resetn
+top.tb.dap.clk
+@800200
+-Mem-AP
+@28
+top.tb.dap.mem_ap.r.tar_autoinc
+top.tb.dap.mem_ap.r.error_pending
+top.tb.dap.mem_ap.r.w_pending
+top.tb.dap.mem_ap.r.aw_pending
+top.tb.dap.mem_ap.r.state
+top.tb.dap.mem_ap.r.csw_inc[4]
+top.tb.dap.mem_ap.drw_increment
+#{top.tb.dap.mem_ap.r.csw_size[2:0]} top.tb.dap.mem_ap.r.csw_size[2] top.tb.dap.mem_ap.r.csw_size[1] top.tb.dap.mem_ap.r.csw_size[0]
+#{top.tb.dap.mem_ap.r.resp[1:0]} top.tb.dap.mem_ap.r.resp[1] top.tb.dap.mem_ap.r.resp[0]
+@22
+#{top.tb.dap.mem_ap.r.data[31:0]} top.tb.dap.mem_ap.r.data[31] top.tb.dap.mem_ap.r.data[30] top.tb.dap.mem_ap.r.data[29] top.tb.dap.mem_ap.r.data[28] top.tb.dap.mem_ap.r.data[27] top.tb.dap.mem_ap.r.data[26] top.tb.dap.mem_ap.r.data[25] top.tb.dap.mem_ap.r.data[24] top.tb.dap.mem_ap.r.data[23] top.tb.dap.mem_ap.r.data[22] top.tb.dap.mem_ap.r.data[21] top.tb.dap.mem_ap.r.data[20] top.tb.dap.mem_ap.r.data[19] top.tb.dap.mem_ap.r.data[18] top.tb.dap.mem_ap.r.data[17] top.tb.dap.mem_ap.r.data[16] top.tb.dap.mem_ap.r.data[15] top.tb.dap.mem_ap.r.data[14] top.tb.dap.mem_ap.r.data[13] top.tb.dap.mem_ap.r.data[12] top.tb.dap.mem_ap.r.data[11] top.tb.dap.mem_ap.r.data[10] top.tb.dap.mem_ap.r.data[9] top.tb.dap.mem_ap.r.data[8] top.tb.dap.mem_ap.r.data[7] top.tb.dap.mem_ap.r.data[6] top.tb.dap.mem_ap.r.data[5] top.tb.dap.mem_ap.r.data[4] top.tb.dap.mem_ap.r.data[3] top.tb.dap.mem_ap.r.data[2] top.tb.dap.mem_ap.r.data[1] top.tb.dap.mem_ap.r.data[0]
+#{top.tb.dap.mem_ap.r.tar[31:0]} top.tb.dap.mem_ap.r.tar[31] top.tb.dap.mem_ap.r.tar[30] top.tb.dap.mem_ap.r.tar[29] top.tb.dap.mem_ap.r.tar[28] top.tb.dap.mem_ap.r.tar[27] top.tb.dap.mem_ap.r.tar[26] top.tb.dap.mem_ap.r.tar[25] top.tb.dap.mem_ap.r.tar[24] top.tb.dap.mem_ap.r.tar[23] top.tb.dap.mem_ap.r.tar[22] top.tb.dap.mem_ap.r.tar[21] top.tb.dap.mem_ap.r.tar[20] top.tb.dap.mem_ap.r.tar[19] top.tb.dap.mem_ap.r.tar[18] top.tb.dap.mem_ap.r.tar[17] top.tb.dap.mem_ap.r.tar[16] top.tb.dap.mem_ap.r.tar[15] top.tb.dap.mem_ap.r.tar[14] top.tb.dap.mem_ap.r.tar[13] top.tb.dap.mem_ap.r.tar[12] top.tb.dap.mem_ap.r.tar[11] top.tb.dap.mem_ap.r.tar[10] top.tb.dap.mem_ap.r.tar[9] top.tb.dap.mem_ap.r.tar[8] top.tb.dap.mem_ap.r.tar[7] top.tb.dap.mem_ap.r.tar[6] top.tb.dap.mem_ap.r.tar[5] top.tb.dap.mem_ap.r.tar[4] top.tb.dap.mem_ap.r.tar[3] top.tb.dap.mem_ap.r.tar[2] top.tb.dap.mem_ap.r.tar[1] top.tb.dap.mem_ap.r.tar[0]
+#{top.tb.dap.mem_ap.r.addr[31:0]} top.tb.dap.mem_ap.r.addr[31] top.tb.dap.mem_ap.r.addr[30] top.tb.dap.mem_ap.r.addr[29] top.tb.dap.mem_ap.r.addr[28] top.tb.dap.mem_ap.r.addr[27] top.tb.dap.mem_ap.r.addr[26] top.tb.dap.mem_ap.r.addr[25] top.tb.dap.mem_ap.r.addr[24] top.tb.dap.mem_ap.r.addr[23] top.tb.dap.mem_ap.r.addr[22] top.tb.dap.mem_ap.r.addr[21] top.tb.dap.mem_ap.r.addr[20] top.tb.dap.mem_ap.r.addr[19] top.tb.dap.mem_ap.r.addr[18] top.tb.dap.mem_ap.r.addr[17] top.tb.dap.mem_ap.r.addr[16] top.tb.dap.mem_ap.r.addr[15] top.tb.dap.mem_ap.r.addr[14] top.tb.dap.mem_ap.r.addr[13] top.tb.dap.mem_ap.r.addr[12] top.tb.dap.mem_ap.r.addr[11] top.tb.dap.mem_ap.r.addr[10] top.tb.dap.mem_ap.r.addr[9] top.tb.dap.mem_ap.r.addr[8] top.tb.dap.mem_ap.r.addr[7] top.tb.dap.mem_ap.r.addr[6] top.tb.dap.mem_ap.r.addr[5] top.tb.dap.mem_ap.r.addr[4] top.tb.dap.mem_ap.r.addr[3] top.tb.dap.mem_ap.r.addr[2] top.tb.dap.mem_ap.r.addr[1] top.tb.dap.mem_ap.r.addr[0]
+@1000200
+-Mem-AP
+@800200
+-qxi
+@28
+top.tb.dap.mem_m2s.awvalid
+top.tb.dap.mem_s2m.awready
+@22
+#{top.tb.dap.mem_m2s.awaddr[31:0]} top.tb.dap.mem_m2s.awaddr[31] top.tb.dap.mem_m2s.awaddr[30] top.tb.dap.mem_m2s.awaddr[29] top.tb.dap.mem_m2s.awaddr[28] top.tb.dap.mem_m2s.awaddr[27] top.tb.dap.mem_m2s.awaddr[26] top.tb.dap.mem_m2s.awaddr[25] top.tb.dap.mem_m2s.awaddr[24] top.tb.dap.mem_m2s.awaddr[23] top.tb.dap.mem_m2s.awaddr[22] top.tb.dap.mem_m2s.awaddr[21] top.tb.dap.mem_m2s.awaddr[20] top.tb.dap.mem_m2s.awaddr[19] top.tb.dap.mem_m2s.awaddr[18] top.tb.dap.mem_m2s.awaddr[17] top.tb.dap.mem_m2s.awaddr[16] top.tb.dap.mem_m2s.awaddr[15] top.tb.dap.mem_m2s.awaddr[14] top.tb.dap.mem_m2s.awaddr[13] top.tb.dap.mem_m2s.awaddr[12] top.tb.dap.mem_m2s.awaddr[11] top.tb.dap.mem_m2s.awaddr[10] top.tb.dap.mem_m2s.awaddr[9] top.tb.dap.mem_m2s.awaddr[8] top.tb.dap.mem_m2s.awaddr[7] top.tb.dap.mem_m2s.awaddr[6] top.tb.dap.mem_m2s.awaddr[5] top.tb.dap.mem_m2s.awaddr[4] top.tb.dap.mem_m2s.awaddr[3] top.tb.dap.mem_m2s.awaddr[2] top.tb.dap.mem_m2s.awaddr[1] top.tb.dap.mem_m2s.awaddr[0]
+@28
+top.tb.dap.mem_m2s.wvalid
+top.tb.dap.mem_s2m.wready
+@22
+#{top.tb.dap.mem_m2s.wdata[31:0]} top.tb.dap.mem_m2s.wdata[31] top.tb.dap.mem_m2s.wdata[30] top.tb.dap.mem_m2s.wdata[29] top.tb.dap.mem_m2s.wdata[28] top.tb.dap.mem_m2s.wdata[27] top.tb.dap.mem_m2s.wdata[26] top.tb.dap.mem_m2s.wdata[25] top.tb.dap.mem_m2s.wdata[24] top.tb.dap.mem_m2s.wdata[23] top.tb.dap.mem_m2s.wdata[22] top.tb.dap.mem_m2s.wdata[21] top.tb.dap.mem_m2s.wdata[20] top.tb.dap.mem_m2s.wdata[19] top.tb.dap.mem_m2s.wdata[18] top.tb.dap.mem_m2s.wdata[17] top.tb.dap.mem_m2s.wdata[16] top.tb.dap.mem_m2s.wdata[15] top.tb.dap.mem_m2s.wdata[14] top.tb.dap.mem_m2s.wdata[13] top.tb.dap.mem_m2s.wdata[12] top.tb.dap.mem_m2s.wdata[11] top.tb.dap.mem_m2s.wdata[10] top.tb.dap.mem_m2s.wdata[9] top.tb.dap.mem_m2s.wdata[8] top.tb.dap.mem_m2s.wdata[7] top.tb.dap.mem_m2s.wdata[6] top.tb.dap.mem_m2s.wdata[5] top.tb.dap.mem_m2s.wdata[4] top.tb.dap.mem_m2s.wdata[3] top.tb.dap.mem_m2s.wdata[2] top.tb.dap.mem_m2s.wdata[1] top.tb.dap.mem_m2s.wdata[0]
+@28
+top.tb.dap.mem_m2s.arvalid
+top.tb.dap.mem_s2m.arready
+@22
+#{top.tb.dap.mem_m2s.araddr[31:0]} top.tb.dap.mem_m2s.araddr[31] top.tb.dap.mem_m2s.araddr[30] top.tb.dap.mem_m2s.araddr[29] top.tb.dap.mem_m2s.araddr[28] top.tb.dap.mem_m2s.araddr[27] top.tb.dap.mem_m2s.araddr[26] top.tb.dap.mem_m2s.araddr[25] top.tb.dap.mem_m2s.araddr[24] top.tb.dap.mem_m2s.araddr[23] top.tb.dap.mem_m2s.araddr[22] top.tb.dap.mem_m2s.araddr[21] top.tb.dap.mem_m2s.araddr[20] top.tb.dap.mem_m2s.araddr[19] top.tb.dap.mem_m2s.araddr[18] top.tb.dap.mem_m2s.araddr[17] top.tb.dap.mem_m2s.araddr[16] top.tb.dap.mem_m2s.araddr[15] top.tb.dap.mem_m2s.araddr[14] top.tb.dap.mem_m2s.araddr[13] top.tb.dap.mem_m2s.araddr[12] top.tb.dap.mem_m2s.araddr[11] top.tb.dap.mem_m2s.araddr[10] top.tb.dap.mem_m2s.araddr[9] top.tb.dap.mem_m2s.araddr[8] top.tb.dap.mem_m2s.araddr[7] top.tb.dap.mem_m2s.araddr[6] top.tb.dap.mem_m2s.araddr[5] top.tb.dap.mem_m2s.araddr[4] top.tb.dap.mem_m2s.araddr[3] top.tb.dap.mem_m2s.araddr[2] top.tb.dap.mem_m2s.araddr[1] top.tb.dap.mem_m2s.araddr[0]
+@28
+top.tb.dap.mem_s2m.rvalid
+top.tb.dap.mem_m2s.rready
+@22
+#{top.tb.dap.mem_s2m.rdata[31:0]} top.tb.dap.mem_s2m.rdata[31] top.tb.dap.mem_s2m.rdata[30] top.tb.dap.mem_s2m.rdata[29] top.tb.dap.mem_s2m.rdata[28] top.tb.dap.mem_s2m.rdata[27] top.tb.dap.mem_s2m.rdata[26] top.tb.dap.mem_s2m.rdata[25] top.tb.dap.mem_s2m.rdata[24] top.tb.dap.mem_s2m.rdata[23] top.tb.dap.mem_s2m.rdata[22] top.tb.dap.mem_s2m.rdata[21] top.tb.dap.mem_s2m.rdata[20] top.tb.dap.mem_s2m.rdata[19] top.tb.dap.mem_s2m.rdata[18] top.tb.dap.mem_s2m.rdata[17] top.tb.dap.mem_s2m.rdata[16] top.tb.dap.mem_s2m.rdata[15] top.tb.dap.mem_s2m.rdata[14] top.tb.dap.mem_s2m.rdata[13] top.tb.dap.mem_s2m.rdata[12] top.tb.dap.mem_s2m.rdata[11] top.tb.dap.mem_s2m.rdata[10] top.tb.dap.mem_s2m.rdata[9] top.tb.dap.mem_s2m.rdata[8] top.tb.dap.mem_s2m.rdata[7] top.tb.dap.mem_s2m.rdata[6] top.tb.dap.mem_s2m.rdata[5] top.tb.dap.mem_s2m.rdata[4] top.tb.dap.mem_s2m.rdata[3] top.tb.dap.mem_s2m.rdata[2] top.tb.dap.mem_s2m.rdata[1] top.tb.dap.mem_s2m.rdata[0]
+@28
+top.tb.dap.mem_s2m.bvalid
+top.tb.dap.mem_m2s.bready
+@1000200
+-qxi
+@800201
+-ram
+@23
+#{top.tb.dap.s_axi_rdata[31:0]} top.tb.dap.s_axi_rdata[31] top.tb.dap.s_axi_rdata[30] top.tb.dap.s_axi_rdata[29] top.tb.dap.s_axi_rdata[28] top.tb.dap.s_axi_rdata[27] top.tb.dap.s_axi_rdata[26] top.tb.dap.s_axi_rdata[25] top.tb.dap.s_axi_rdata[24] top.tb.dap.s_axi_rdata[23] top.tb.dap.s_axi_rdata[22] top.tb.dap.s_axi_rdata[21] top.tb.dap.s_axi_rdata[20] top.tb.dap.s_axi_rdata[19] top.tb.dap.s_axi_rdata[18] top.tb.dap.s_axi_rdata[17] top.tb.dap.s_axi_rdata[16] top.tb.dap.s_axi_rdata[15] top.tb.dap.s_axi_rdata[14] top.tb.dap.s_axi_rdata[13] top.tb.dap.s_axi_rdata[12] top.tb.dap.s_axi_rdata[11] top.tb.dap.s_axi_rdata[10] top.tb.dap.s_axi_rdata[9] top.tb.dap.s_axi_rdata[8] top.tb.dap.s_axi_rdata[7] top.tb.dap.s_axi_rdata[6] top.tb.dap.s_axi_rdata[5] top.tb.dap.s_axi_rdata[4] top.tb.dap.s_axi_rdata[3] top.tb.dap.s_axi_rdata[2] top.tb.dap.s_axi_rdata[1] top.tb.dap.s_axi_rdata[0]
+#{top.tb.dap.s_axi_wdata[31:0]} top.tb.dap.s_axi_wdata[31] top.tb.dap.s_axi_wdata[30] top.tb.dap.s_axi_wdata[29] top.tb.dap.s_axi_wdata[28] top.tb.dap.s_axi_wdata[27] top.tb.dap.s_axi_wdata[26] top.tb.dap.s_axi_wdata[25] top.tb.dap.s_axi_wdata[24] top.tb.dap.s_axi_wdata[23] top.tb.dap.s_axi_wdata[22] top.tb.dap.s_axi_wdata[21] top.tb.dap.s_axi_wdata[20] top.tb.dap.s_axi_wdata[19] top.tb.dap.s_axi_wdata[18] top.tb.dap.s_axi_wdata[17] top.tb.dap.s_axi_wdata[16] top.tb.dap.s_axi_wdata[15] top.tb.dap.s_axi_wdata[14] top.tb.dap.s_axi_wdata[13] top.tb.dap.s_axi_wdata[12] top.tb.dap.s_axi_wdata[11] top.tb.dap.s_axi_wdata[10] top.tb.dap.s_axi_wdata[9] top.tb.dap.s_axi_wdata[8] top.tb.dap.s_axi_wdata[7] top.tb.dap.s_axi_wdata[6] top.tb.dap.s_axi_wdata[5] top.tb.dap.s_axi_wdata[4] top.tb.dap.s_axi_wdata[3] top.tb.dap.s_axi_wdata[2] top.tb.dap.s_axi_wdata[1] top.tb.dap.s_axi_wdata[0]
+#{top.tb.dap.s_axi_addr[11:2]} top.tb.dap.s_axi_addr[11] top.tb.dap.s_axi_addr[10] top.tb.dap.s_axi_addr[9] top.tb.dap.s_axi_addr[8] top.tb.dap.s_axi_addr[7] top.tb.dap.s_axi_addr[6] top.tb.dap.s_axi_addr[5] top.tb.dap.s_axi_addr[4] top.tb.dap.s_axi_addr[3] top.tb.dap.s_axi_addr[2]
+@29
+top.tb.dap.s_axi_write
+@1000201
+-ram
+[pattern_trace] 1
+[pattern_trace] 0

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import sys
+from nsl import routed, swd, cs
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = routed.Routed(n)
+
+    if n.startswith("swd_res"):
+        dp = swd.MasterRsp(routed.SplitRouted(f, 0xf, 0x0))
+    else:
+        dp = swd.MasterCmd(routed.SplitRouted(f, 0x0, 0xf))
+
+    mem = swd.MemAp(dp, 0)
+
+    dp.divisor(10)
+    dp.reset(0x0ba00477)
+    dp.flush()
+
+    dp.write(False, 2, 0)
+    dp.write(False, 1, 0xffc00000)
+    dp.read(False, 1, 0xffc00000)
+    dp.flush()
+
+    mem.write32(0, 0xdeadbeef)
+    mem.read32(0, 0xdeadbeef)
+    dp.flush()
+
+    import zlib
+    dataset = [zlib.crc32(b"deadbeef" + bytes([x, x, x, x])) for x in range(16)]
+    
+    mem.write32_multiple(4, dataset)
+    mem.read32_multiple(0, [0xdeadbeef] + dataset)
+    dp.flush()
