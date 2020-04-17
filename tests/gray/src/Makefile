@@ -1,3 +1,3 @@
 vhdl-sources += tb.vhd
-deps += util.gray
+deps += nsl_math.gray
 
