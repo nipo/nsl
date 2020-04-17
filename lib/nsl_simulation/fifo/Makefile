@@ -5,6 +5,4 @@ vhdl-sources += fifo_sink.vhd
 vhdl-sources += fifo_file_reader.vhd
 vhdl-sources += fifo_file_checker.vhd
 vhdl-sources += fifo_delay.vhd
-deps += nsl.fifo
 deps += nsl_simulation.file_io
-deps += util.sync

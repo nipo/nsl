@@ -11,14 +11,14 @@ entity fifo_file_checker is
     filename: string
     );
   port (
-    p_resetn  : in  std_ulogic;
-    p_clk     : in  std_ulogic;
+    reset_n_i  : in  std_ulogic;
+    clock_i     : in  std_ulogic;
 
-    p_ready: out std_ulogic;
-    p_valid: in std_ulogic;
-    p_data: in std_ulogic_vector(width-1 downto 0);
+    ready_o: out std_ulogic;
+    valid_i: in std_ulogic;
+    data_i: in std_ulogic_vector(width-1 downto 0);
     
-    p_done: out std_ulogic
+    done_o: out std_ulogic
     );
 end fifo_file_checker;
 
@@ -34,22 +34,22 @@ architecture rtl of fifo_file_checker is
   
 begin
 
-  process (p_clk, p_resetn)
+  process (clock_i, reset_n_i)
   begin
-    if (p_resetn = '0') then
+    if (reset_n_i = '0') then
       if not is_reset then
         file_open(fd, filename, READ_MODE);
         is_reset := true;
         is_open := true;
       end if;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       is_reset := false;
     end if;
   end process;
 
-  process (p_clk)
+  process (clock_i)
   begin
-    if rising_edge(p_clk) then
+    if rising_edge(clock_i) then
       r_accept <= '0';
 
       if is_open and not is_reset then
@@ -62,13 +62,13 @@ begin
     end if;
   end process;
 
-  process (p_clk, p_valid, r_accept)
+  process (clock_i, valid_i, r_accept)
     variable data : std_logic_vector(width-1 downto 0);
     variable udata : std_ulogic_vector(width-1 downto 0);
     variable complaint : line;
   begin
-    if rising_edge(p_clk) then
-      if not is_reset and is_open and r_accept = '1' and p_valid = '1' then
+    if rising_edge(clock_i) then
+      if not is_reset and is_open and r_accept = '1' and valid_i = '1' then
         readline(fd, line_content);
         nsl_simulation.file_io.slv_read(line_content, data);
         read(line_content, wait_cycles);
@@ -77,10 +77,10 @@ begin
         write(complaint, string'(" value "));
         nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data));
         write(complaint, string'(" does not match fifo data "));
-        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(p_data));
+        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data_i));
 
         
-        assert std_match(std_ulogic_vector(data), to_x01(p_data))
+        assert std_match(std_ulogic_vector(data), to_x01(data_i))
           report complaint.all & CR & LF
           severity error;
 
@@ -91,19 +91,19 @@ begin
     end if;
   end process;
 
-  moore: process (p_clk)
+  moore: process (clock_i)
   begin
-    if falling_edge(p_clk) then
-      p_ready <= r_accept;
+    if falling_edge(clock_i) then
+      ready_o <= r_accept;
     end if;
     if not is_reset and is_open then
       if endfile(fd) then
-        p_done <= '1';
+        done_o <= '1';
       else
-        p_done <= '0';
+        done_o <= '0';
       end if;
     else
-      p_done <= '0';
+      done_o <= '0';
     end if;
   end process;
   

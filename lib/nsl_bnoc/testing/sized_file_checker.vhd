@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, testing;
+library nsl_bnoc, nsl_simulation;
 
 entity sized_file_checker is
   generic(
@@ -22,18 +22,18 @@ end entity;
 architecture rtl of sized_file_checker is
 begin
 
-  check: testing.fifo.fifo_file_checker
+  check: nsl_simulation.fifo.fifo_file_checker
     generic map(
       width => 8,
       filename => filename
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
-      p_ready => p_in_ack.ready,
-      p_valid => p_in_val.valid,
-      p_data => p_in_val.data,
-      p_done => p_done
+      reset_n_i => p_resetn,
+      clock_i => p_clk,
+      ready_o => p_in_ack.ready,
+      valid_i => p_in_val.valid,
+      data_i => p_in_val.data,
+      done_o => p_done
       );
 
 end architecture;

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, testing;
+library nsl_bnoc, nsl_simulation;
 
 entity framed_file_checker is
   generic(
@@ -25,18 +25,18 @@ architecture rtl of framed_file_checker is
   
 begin
 
-  check: testing.fifo.fifo_file_checker
+  check: nsl_simulation.fifo.fifo_file_checker
     generic map(
       width => 9,
       filename => filename
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
-      p_ready => p_in_ack.ready,
-      p_valid => p_in_val.valid,
-      p_data => s_fifo,
-      p_done => p_done
+      reset_n_i => p_resetn,
+      clock_i => p_clk,
+      ready_o => p_in_ack.ready,
+      valid_i => p_in_val.valid,
+      data_i => s_fifo,
+      done_o => p_done
       );
   s_fifo <= p_in_val.last & p_in_val.data;
 

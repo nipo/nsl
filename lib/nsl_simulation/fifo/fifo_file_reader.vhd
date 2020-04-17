@@ -11,14 +11,14 @@ entity fifo_file_reader is
     filename: string
     );
   port (
-    p_resetn  : in  std_ulogic;
-    p_clk     : in  std_ulogic;
+    reset_n_i  : in  std_ulogic;
+    clock_i     : in  std_ulogic;
 
-    p_valid: out std_ulogic;
-    p_ready: in std_ulogic;
-    p_data: out std_ulogic_vector(width-1 downto 0);
+    valid_o: out std_ulogic;
+    ready_i: in std_ulogic;
+    data_o: out std_ulogic_vector(width-1 downto 0);
     
-    p_done: out std_ulogic
+    done_o: out std_ulogic
     );
 end fifo_file_reader;
 
@@ -35,28 +35,28 @@ architecture rtl of fifo_file_reader is
 
 begin
 
-  process (p_clk, p_resetn)
+  process (clock_i, reset_n_i)
   begin
-    if (p_resetn = '0') then
+    if (reset_n_i = '0') then
       if not r_is_reset then
         file_open(fd, filename, READ_MODE);
         r_is_reset <= true;
         r_is_open <= true;
       end if;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r_is_reset <= false;
     end if;
   end process;
 
-  process (p_clk)
+  process (clock_i)
     variable line_content : line;
     variable wc : integer;
     variable data : std_logic_vector(width-1 downto 0);
   begin
     r_done <= '0';
 
-    if not r_is_reset and rising_edge(p_clk) then
-      if r_data_valid = '0' or p_ready = '1' then
+    if not r_is_reset and rising_edge(clock_i) then
+      if r_data_valid = '0' or ready_i = '1' then
         if r_wait_cycles /= 0 then
           r_data_valid <= '0';
           r_wait_cycles <= r_wait_cycles - 1;
@@ -75,18 +75,18 @@ begin
         else
           r_data_valid <= '0';
         end if;
-      elsif p_ready = '1' then
+      elsif ready_i = '1' then
         r_data_valid <= '0';
       end if;
     end if;
   end process;
   
-  moore: process (p_clk)
+  moore: process (clock_i)
   begin
-    if falling_edge(p_clk) then
-      p_data <= r_data;
-      p_valid <= r_data_valid;
-      p_done <= r_done;
+    if falling_edge(clock_i) then
+      data_o <= r_data;
+      valid_o <= r_data_valid;
+      done_o <= r_done;
     end if;
   end process;
   
