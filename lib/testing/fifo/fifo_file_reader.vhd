@@ -3,6 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
+library nsl_simulation;
+
 entity fifo_file_reader is
   generic (
     width: integer;
@@ -30,26 +32,6 @@ architecture rtl of fifo_file_reader is
   signal r_data : std_ulogic_vector(width-1 downto 0);
   signal r_data_valid : std_ulogic := '0';
   signal r_done : std_ulogic;
-
-  procedure slv_read(buf: inout line; v: out std_logic_vector) is
-    variable c: character;
-  begin
-    for i in v'range loop
-      read(buf, c);
-      case c is
-        when 'X' => v(i) := 'X';
-        when 'U' => v(i) := 'U';
-        when 'Z' => v(i) := 'Z';
-        when '0' => v(i) := '0';
-        when '1' => v(i) := '1';
-        when '-' => v(i) := '-';
-        when 'W' => v(i) := 'W';
-        when 'H' => v(i) := 'H';
-        when 'L' => v(i) := 'L';
-        when others => v(i) := '0';
-      end case;
-    end loop;
-  end procedure slv_read;
 
 begin
 
@@ -84,7 +66,7 @@ begin
             r_done <= '1';
           else
             readline(fd, line_content);
-            slv_read(line_content, data);
+            nsl_simulation.file_io.slv_read(line_content, data);
             r_data <= std_ulogic_vector(data);
             read(line_content, wc);
             r_wait_cycles <= wc;

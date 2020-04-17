@@ -3,6 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
+library nsl_simulation;
+
 entity fifo_file_checker is
   generic (
     width: integer;
@@ -27,49 +29,8 @@ architecture rtl of fifo_file_checker is
   shared variable is_reset : boolean := false;
   shared variable is_open : boolean := false;
   shared variable wait_cycles : integer := 0;
-  shared variable data : integer;
 
   signal r_accept : std_ulogic;
-
-  procedure slv_read(buf: inout line; v: out std_logic_vector) is
-    variable c: character;
-  begin
-    for i in v'range loop
-      read(buf, c);
-      case c is
-        when 'X' => v(i) := 'X';
-        when 'U' => v(i) := 'U';
-        when 'Z' => v(i) := 'Z';
-        when '0' => v(i) := '0';
-        when '1' => v(i) := '1';
-        when '-' => v(i) := '-';
-        when 'W' => v(i) := 'W';
-        when 'H' => v(i) := 'H';
-        when 'L' => v(i) := 'L';
-        when others => v(i) := '0';
-      end case;
-    end loop;
-  end procedure slv_read;
-
-  procedure slv_write(buf: inout line; v: in std_logic_vector) is
-    variable c: character;
-  begin
-    for i in v'range loop
-      case v(i) is
-        when 'X' => c := 'X';
-        when 'U' => c := 'U';
-        when 'Z' => c := 'Z';
-        when '0' => c := '0';
-        when '1' => c := '1';
-        when '-' => c := '-';
-        when 'W' => c := 'W';
-        when 'H' => c := 'H';
-        when 'L' => c := 'L';
-        when others => c := '0';
-      end case;
-      write(buf, c);
-    end loop;
-  end procedure slv_write;
   
 begin
 
@@ -109,14 +70,14 @@ begin
     if rising_edge(p_clk) then
       if not is_reset and is_open and r_accept = '1' and p_valid = '1' then
         readline(fd, line_content);
-        slv_read(line_content, data);
+        nsl_simulation.file_io.slv_read(line_content, data);
         read(line_content, wait_cycles);
 
         write(complaint, filename);
         write(complaint, string'(" value "));
-        slv_write(complaint, std_logic_vector(data));
+        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data));
         write(complaint, string'(" does not match fifo data "));
-        slv_write(complaint, std_logic_vector(p_data));
+        nsl_simulation.file_io.slv_write(complaint, std_logic_vector(p_data));
 
         
         assert std_match(std_ulogic_vector(data), to_x01(p_data))
