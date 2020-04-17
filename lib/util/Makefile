@@ -1,2 +1,1 @@
-packages += sync
 packages += activity

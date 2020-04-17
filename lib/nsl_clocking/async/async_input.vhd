@@ -3,21 +3,21 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity sync_input is
+entity async_input is
   generic (
-    N: integer := 2
+    debounce_count_c: integer := 2
   );
   port (
-    p_clk: in std_ulogic;
-    p_resetn: in std_ulogic;
-    p_input: in std_ulogic;
-    p_output: out std_ulogic;
-    p_rise: out std_ulogic;
-    p_fall: out std_ulogic
+    clock_i: in std_ulogic;
+    reset_n_i: in std_ulogic;
+    data_i: in std_ulogic;
+    data_o: out std_ulogic;
+    rising_o: out std_ulogic;
+    falling_o: out std_ulogic
   );
-end sync_input;
+end async_input;
 
-architecture arch of sync_input is
+architecture arch of async_input is
 
   type state_type is (
     S_IDLE,
@@ -28,28 +28,28 @@ architecture arch of sync_input is
    );
   signal state: state_type;
 
-  signal sreg: std_ulogic_vector(N - 1 downto 0);
-  constant SREG_MAX: std_ulogic_vector(N - 1 downto 0) := (others => '1');
-  constant SREG_MIN: std_ulogic_vector(N - 1 downto 0) := (others => '0');
+  signal sreg: std_ulogic_vector(debounce_count_c - 1 downto 0);
+  constant SREG_MAX: std_ulogic_vector(debounce_count_c - 1 downto 0) := (others => '1');
+  constant SREG_MIN: std_ulogic_vector(debounce_count_c - 1 downto 0) := (others => '0');
 
 begin
 
-  p_output <=
+  data_o <=
     '1' when state = S_RISE or state = S_HIGH else
     '0' when state = S_FALL or state = S_LOW else
-    p_input;
+    data_i;
 
-  p_rise <= '1' when state = S_RISE else '0';
-  p_fall <= '1' when state = S_FALL else '0';
+  rising_o <= '1' when state = S_RISE else '0';
+  falling_o <= '1' when state = S_FALL else '0';
 
-  process (p_clk, p_resetn)
+  process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       state <= S_IDLE;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       case state is
         when S_IDLE =>
-          if p_input = '0' then
+          if data_i = '0' then
             state <= S_LOW;
           else
             state <= S_HIGH;
@@ -72,7 +72,7 @@ begin
           end if;
       end case;
 
-      sreg <= sreg(N - 2 downto 0) & p_input;
+      sreg <= sreg(debounce_count_c - 2 downto 0) & data_i;
     end if;
   end process;
 
