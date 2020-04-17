@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, hwdep, signalling;
+library nsl_i2c, hwdep;
 
-entity i2c_mem_clocked is
+entity clocked_memory is
   generic (
     address: unsigned(7 downto 1);
     addr_width: integer range 1 to 16 := 8;
@@ -14,12 +14,12 @@ entity i2c_mem_clocked is
     reset_n_i : in std_ulogic := '1';
     clock_i : in std_ulogic;
 
-    i2c_o  : out signalling.i2c.i2c_o;
-    i2c_i  : in  signalling.i2c.i2c_i
+    i2c_o  : out nsl_i2c.i2c.i2c_o;
+    i2c_i  : in  nsl_i2c.i2c.i2c_i
   );
-end i2c_mem_clocked;
+end clocked_memory;
 
-architecture arch of i2c_mem_clocked is
+architecture arch of clocked_memory is
 
   constant addr_byte_cnt: integer := (addr_width + 7) / 8;
 
@@ -30,7 +30,7 @@ architecture arch of i2c_mem_clocked is
   
 begin
 
-  slave: nsl.i2c.i2c_mem_ctrl_clocked
+  slave: nsl_i2c.clocked.clocked_memory_controller
     generic map(
       addr_bytes => addr_byte_cnt,
       data_bytes => granularity

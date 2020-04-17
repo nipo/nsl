@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling, util;
+library nsl_i2c, nsl_math;
 
-entity i2c_mem_ctrl_clocked is
+entity clocked_memory_controller is
   generic (
     addr_bytes: integer range 1 to 4 := 2;
     data_bytes: integer range 1 to 4 := 1
@@ -15,8 +15,8 @@ entity i2c_mem_ctrl_clocked is
 
     slave_address_i: in unsigned(7 downto 1);
 
-    i2c_o  : out signalling.i2c.i2c_o;
-    i2c_i  : in  signalling.i2c.i2c_i;
+    i2c_o  : out nsl_i2c.i2c.i2c_o;
+    i2c_i  : in  nsl_i2c.i2c.i2c_i;
 
     start_o    : out std_ulogic;
     stop_o     : out std_ulogic;
@@ -32,9 +32,9 @@ entity i2c_mem_ctrl_clocked is
     w_data_o   : out std_ulogic_vector(data_bytes*8-1 downto 0);
     w_ready_i  : in  std_ulogic := '1'
     );
-end i2c_mem_ctrl_clocked;
+end clocked_memory_controller;
 
-architecture arch of i2c_mem_ctrl_clocked is
+architecture arch of clocked_memory_controller is
 
   type state_t is (
     ST_RESET,
@@ -53,7 +53,7 @@ architecture arch of i2c_mem_ctrl_clocked is
     addr_byte_left : integer range 0 to addr_bytes-1;
   end record;
 
-  constant data_bytes_l2 : natural := util.numeric.log2(data_bytes);
+  constant data_bytes_l2 : natural := nsl_math.arith.log2(data_bytes);
   constant addr_lsb0 : unsigned(data_bytes_l2-1 downto 0) := (others => '0');
 
   signal r, rin: regs_t;
@@ -63,7 +63,7 @@ architecture arch of i2c_mem_ctrl_clocked is
 
 begin
   
-  slave: nsl.i2c.i2c_slave_clocked
+  slave: nsl_i2c.clocked.clocked_slave
     port map (
       reset_n_i => reset_n_i,
       clock_i => clock_i,

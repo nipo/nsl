@@ -1,5 +1,4 @@
 packages += tick
-packages += i2c
 packages += fifo
 packages += mii
 packages += spi

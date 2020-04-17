@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library util, signalling;
+library nsl_clocking, nsl_i2c;
 
-entity i2c_slave_clocked is
+entity clocked_slave is
   generic (
     clock_freq_c : natural := 100000000
     );
@@ -14,8 +14,8 @@ entity i2c_slave_clocked is
 
     address_i : in unsigned(7 downto 1);
 
-    i2c_o  : out signalling.i2c.i2c_o;
-    i2c_i  : in  signalling.i2c.i2c_i;
+    i2c_o  : out nsl_i2c.i2c.i2c_o;
+    i2c_i  : in  nsl_i2c.i2c.i2c_i;
 
     start_o: out std_ulogic;
     stop_o: out std_ulogic;
@@ -31,9 +31,9 @@ entity i2c_slave_clocked is
     w_valid_o: out std_ulogic;
     w_ready_i: in std_ulogic := '1'
   );
-end i2c_slave_clocked;
+end clocked_slave;
 
-architecture arch of i2c_slave_clocked is
+architecture arch of clocked_slave is
 
   constant debouncer_delay : natural := 2;
 
@@ -67,39 +67,39 @@ architecture arch of i2c_slave_clocked is
     bit_left : natural range 0 to 7;
   end record;
 
-  signal s_i2c_i : signalling.i2c.i2c_i;
+  signal s_i2c_i : nsl_i2c.i2c.i2c_i;
   signal s_start, s_stop : boolean;
   signal r, rin : regs_t;
 
 begin
 
-  s_i2c_i.sda.v <= to_x01(i2c_i.sda.v);
-  s_i2c_i.scl.v <= to_x01(i2c_i.scl.v);
+  s_i2c_i.sda <= to_x01(i2c_i.sda);
+  s_i2c_i.scl <= to_x01(i2c_i.scl);
 
-  sda_sync: util.sync.sync_input
+  sda_sync: nsl_clocking.async.async_input
     generic map(
-      N => debouncer_delay
+      debounce_count_c => debouncer_delay
       )
     port map(
-      p_clk => clock_i,
-      p_resetn => reset_n_i,
-      p_input => s_i2c_i.sda.v,
-      p_output => sda,
-      p_rise => sda_rise,
-      p_fall => sda_fall
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      data_i => s_i2c_i.sda,
+      data_o => sda,
+      rising_o => sda_rise,
+      falling_o => sda_fall
       );
 
-  scl_sync: util.sync.sync_input
+  scl_sync: nsl_clocking.async.async_input
     generic map(
-      N => debouncer_delay
+      debounce_count_c => debouncer_delay
       )
     port map (
-      p_clk => clock_i,
-      p_resetn => reset_n_i,
-      p_input => s_i2c_i.scl.v,
-      p_output => scl,
-      p_rise => scl_rise,
-      p_fall => scl_fall
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      data_i => s_i2c_i.scl,
+      data_o => scl,
+      rising_o => scl_rise,
+      falling_o => scl_fall
       );
 
   regs: process(clock_i, reset_n_i)

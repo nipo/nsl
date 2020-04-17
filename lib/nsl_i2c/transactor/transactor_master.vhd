@@ -2,34 +2,34 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling;
-use nsl.i2c.all;
+library nsl_i2c;
+use nsl_i2c.transactor.all;
 
-entity i2c_master is
+entity transactor_master is
   generic(
     divisor_width : natural
     );
   port(
-    p_clk    : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i    : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_divisor  : in std_ulogic_vector(divisor_width-1 downto 0);
+    divisor_i  : in std_ulogic_vector(divisor_width-1 downto 0);
 
-    p_i2c_o  : out signalling.i2c.i2c_o;
-    p_i2c_i  : in  signalling.i2c.i2c_i;
+    i2c_o  : out nsl_i2c.i2c.i2c_o;
+    i2c_i  : in  nsl_i2c.i2c.i2c_i;
 
-    p_rack     : in  std_ulogic;
-    p_rdata    : out std_ulogic_vector(7 downto 0);
-    p_wack     : out std_ulogic;
-    p_wdata    : in  std_ulogic_vector(7 downto 0);
+    rack_i     : in  std_ulogic;
+    rdata_o    : out std_ulogic_vector(7 downto 0);
+    wack_o     : out std_ulogic;
+    wdata_i    : in  std_ulogic_vector(7 downto 0);
 
-    p_cmd      : in  i2c_cmd_t;
-    p_busy     : out std_ulogic;
-    p_done     : out std_ulogic
+    cmd_i      : in  i2c_cmd_t;
+    busy_o     : out std_ulogic;
+    done_o     : out std_ulogic
     );
 end entity;
 
-architecture rtl of i2c_master is
+architecture rtl of transactor_master is
 
   -- Start condition
   --          ___     _______
@@ -129,16 +129,16 @@ architecture rtl of i2c_master is
 
 begin
 
-  ck : process (p_clk, p_resetn)
+  ck : process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition : process (p_cmd, p_divisor, p_i2c_i, p_wdata, r, p_rack)
+  transition : process (cmd_i, divisor_i, i2c_i, wdata_i, r, rack_i)
     variable ready, step, double_step : boolean;
   begin
     rin <= r;
@@ -159,7 +159,7 @@ begin
         rin.wait_stop <= '0';
 
       when ST_IDLE_STOPPED =>
-        case p_cmd is
+        case cmd_i is
           when I2C_NOOP =>
             null;
 
@@ -180,7 +180,7 @@ begin
         end case;
 
       when ST_IDLE_STARTED =>
-        case p_cmd is
+        case cmd_i is
           when I2C_NOOP =>
             null;
 
@@ -195,16 +195,16 @@ begin
           when I2C_READ | I2C_WRITE =>
             step := true;
             rin.state <= ST_BIT_SDA_SETTLE;
-            rin.data <= p_wdata;
-            rin.sda <= p_wdata(7);
-            rin.ack <= p_rack;
+            rin.data <= wdata_i;
+            rin.sda <= wdata_i(7);
+            rin.ack <= rack_i;
             rin.bit_count <= 8;
         end case;
 
       when ST_START_IDLE =>
         if ready then
           step := true;
-          if to_x01(p_i2c_i.sda.v) = '0' then
+          if to_x01(i2c_i.sda) = '0' then
             rin.state <= ST_START_RECOVER;
           else
             rin.state <= ST_START_SDA;
@@ -232,7 +232,7 @@ begin
       when ST_START_RESTART =>
         if ready then
           step := true;
-          if to_x01(p_i2c_i.sda.v) = '1' then
+          if to_x01(i2c_i.sda) = '1' then
             rin.state <= ST_START_IDLE;
           else
             rin.state <= ST_START_RECOVER;
@@ -245,7 +245,7 @@ begin
         end if;
 
       when ST_STOP_SCL_RISE =>
-        if to_x01(p_i2c_i.scl.v) = '1' then
+        if to_x01(i2c_i.scl) = '1' then
           step := true;
           rin.state <= ST_STOP_SCL;
         end if;
@@ -259,7 +259,7 @@ begin
       when ST_STOP_SDA =>
         if ready then
           step := true;
-          if to_x01(p_i2c_i.sda.v) = '1' then
+          if to_x01(i2c_i.sda) = '1' then
             rin.state <= ST_DONE_STOPPED;
           else
             rin.state <= ST_STOP_IDLE;
@@ -273,7 +273,7 @@ begin
         end if;
 
       when ST_BIT_SCL_RISE =>
-        if to_x01(p_i2c_i.scl.v) = '1' then
+        if to_x01(i2c_i.scl) = '1' then
           double_step := true;
           rin.state <= ST_BIT_SCL_HIGH;
         end if;
@@ -283,9 +283,9 @@ begin
           rin.state <= ST_BIT_SCL_LOW;
           step := true;
           if r.bit_count /= 0 then
-            rin.data <= r.data(6 downto 0) & to_x01(p_i2c_i.sda.v);
+            rin.data <= r.data(6 downto 0) & to_x01(i2c_i.sda);
           else
-            rin.ack <= not to_x01(p_i2c_i.sda.v);
+            rin.ack <= not to_x01(i2c_i.sda);
           end if;
         end if;
 
@@ -296,7 +296,7 @@ begin
             rin.bit_count <= r.bit_count - 1;
             rin.state <= ST_BIT_SDA_SETTLE;
             rin.sda <= r.data(7);
-          elsif p_cmd = I2C_WRITE and r.ack = '0' then
+          elsif cmd_i = I2C_WRITE and r.ack = '0' then
             rin.wait_stop <= '1';
             rin.state <= ST_STOP_IDLE;
           else
@@ -305,37 +305,37 @@ begin
         end if;
 
       when ST_DONE_STARTED =>
-        if p_cmd = I2C_NOOP then
+        if cmd_i = I2C_NOOP then
           rin.state <= ST_IDLE_STARTED;
         end if;
 
       when ST_DONE_STOPPED =>
-        if p_cmd = I2C_NOOP then
+        if cmd_i = I2C_NOOP then
           rin.state <= ST_IDLE_STOPPED;
         end if;
     end case;
 
     if step then
-      rin.ctr <= to_integer(to_01(unsigned(p_divisor), '0'));
+      rin.ctr <= to_integer(to_01(unsigned(divisor_i), '0'));
     elsif double_step then
-      rin.ctr <= to_integer(to_01(unsigned(p_divisor), '0')) * 2;
+      rin.ctr <= to_integer(to_01(unsigned(divisor_i), '0')) * 2;
     end if;
   end process;
 
-  moore : process (p_cmd, r)
+  moore : process (cmd_i, r)
   begin
     case r.state is
       when ST_IDLE_STOPPED | ST_IDLE_STARTED =>
-        p_busy <= '0';
-        p_done <= '0';
+        busy_o <= '0';
+        done_o <= '0';
 
       when ST_DONE_STOPPED | ST_DONE_STARTED =>
-        p_done <= '1';
-        p_busy <= '1';
+        done_o <= '1';
+        busy_o <= '1';
 
       when others =>
-        p_done <= '0';
-        p_busy <= '1';
+        done_o <= '0';
+        busy_o <= '1';
     end case;
     
     case r.state is
@@ -350,7 +350,7 @@ begin
         | ST_STOP_SDA
         | ST_BIT_SCL_RISE
         | ST_BIT_SCL_HIGH =>
-        p_i2c_o.scl.drain <= '0';
+        i2c_o.scl.drain <= '0';
 
       when ST_IDLE_STARTED
         | ST_DONE_STARTED
@@ -359,7 +359,7 @@ begin
         | ST_STOP_IDLE
         | ST_BIT_SDA_SETTLE
         | ST_BIT_SCL_LOW =>
-        p_i2c_o.scl.drain <= '1';
+        i2c_o.scl.drain <= '1';
     end case;
 
     case r.state is
@@ -368,34 +368,36 @@ begin
         | ST_START_RECOVER
         | ST_STOP_SCL
         | ST_STOP_SCL_RISE
-        | ST_STOP_IDLE =>
-        p_i2c_o.sda.drain <= '1';
+        | ST_STOP_IDLE
+        | ST_DONE_STARTED
+        | ST_IDLE_STARTED =>
+        i2c_o.sda.drain <= '1';
 
       when ST_BIT_SCL_HIGH
         | ST_BIT_SCL_LOW
         | ST_BIT_SCL_RISE
         | ST_BIT_SDA_SETTLE =>
-        if p_cmd = I2C_READ then
+        if cmd_i = I2C_READ then
           if r.bit_count = 0 then
-            p_i2c_o.sda.drain <= r.ack;
+            i2c_o.sda.drain <= r.ack;
           else
-            p_i2c_o.sda.drain <= '0';
+            i2c_o.sda.drain <= '0';
           end if;
         else
           if r.bit_count = 0 then
-            p_i2c_o.sda.drain <= '0';
+            i2c_o.sda.drain <= '0';
           else
-            p_i2c_o.sda.drain <= not r.sda;
+            i2c_o.sda.drain <= not r.sda;
           end if;
         end if;
 
       when others =>
-        p_i2c_o.sda.drain <= '0';
+        i2c_o.sda.drain <= '0';
     end case;
 
   end process;
 
-  p_rdata <= r.data;
-  p_wack <= r.ack;
+  rdata_o <= r.data;
+  wack_o <= r.ack;
   
 end architecture;

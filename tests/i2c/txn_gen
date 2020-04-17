@@ -17,18 +17,18 @@ if __name__ == "__main__":
 
     mem = Memory(t, 0x26)
 
-    t.divisor(8)
+    t.divisor(2)
     t.flush(tag = 2)
 
     random.seed(42)
 
     for retries in range(10):
-        addr = random.randint(0, 1<<16)
-        length = random.randint(1, 42)
+        addr = random.randint(0, 1<<15)*2
+        length = random.randint(1, 21)*2
         tag = random.randint(1, 255)
         tag2 = random.randint(1, 255)
 
         data = list(random.randint(0, 255) for i in range(length))
         
-        mem.write(tag, addr, data)
-        mem.read(tag2, addr, data)
+        mem.write(addr, data, tag = tag)
+        mem.read(addr, data, tag = tag2)

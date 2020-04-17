@@ -2,25 +2,25 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling;
-use nsl.i2c.all;
+library nsl_bnoc, nsl_i2c;
+use nsl_i2c.transactor.all;
 
-entity i2c_framed_ctrl is
+entity transactor_framed_controller is
   port(
-    p_clk    : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i    : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_i2c_o  : out signalling.i2c.i2c_o;
-    p_i2c_i  : in  signalling.i2c.i2c_i;
+    i2c_o  : out nsl_i2c.i2c.i2c_o;
+    i2c_i  : in  nsl_i2c.i2c.i2c_i;
 
-    p_cmd_val  : in nsl.framed.framed_req;
-    p_cmd_ack  : out nsl.framed.framed_ack;
-    p_rsp_val  : out nsl.framed.framed_req;
-    p_rsp_ack  : in nsl.framed.framed_ack
+    cmd_i  : in nsl_bnoc.framed.framed_req;
+    cmd_o  : out nsl_bnoc.framed.framed_ack;
+    rsp_o  : out nsl_bnoc.framed.framed_req;
+    rsp_i  : in nsl_bnoc.framed.framed_ack
     );
 end entity;
 
-architecture rtl of i2c_framed_ctrl is
+architecture rtl of transactor_framed_controller is
   
   type state_t is (
     ST_RESET,
@@ -55,16 +55,16 @@ architecture rtl of i2c_framed_ctrl is
 
 begin
 
-  ck : process (p_clk, p_resetn)
+  ck : process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition : process (r, p_cmd_val, p_rsp_ack, s_busy, s_done, s_rdata, s_wack)
+  transition : process (r, cmd_i, rsp_i, s_busy, s_done, s_rdata, s_wack)
   begin
     rin <= r;
 
@@ -74,38 +74,38 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
-        if p_cmd_val.valid = '1' then
+        if cmd_i.valid = '1' then
           rin.ack <= '-';
-          rin.last <= p_cmd_val.last;
+          rin.last <= cmd_i.last;
 
-          if std_match(p_cmd_val.data, I2C_CMD_READ) then
+          if std_match(cmd_i.data, I2C_CMD_READ) then
             rin.state <= ST_READ;
-            rin.word_count <= to_integer(unsigned(p_cmd_val.data(5 downto 0)));
-            rin.ack <= p_cmd_val.data(6);
+            rin.word_count <= to_integer(unsigned(cmd_i.data(5 downto 0)));
+            rin.ack <= cmd_i.data(6);
 
-          elsif std_match(p_cmd_val.data, I2C_CMD_WRITE) then
+          elsif std_match(cmd_i.data, I2C_CMD_WRITE) then
             rin.state <= ST_DATA_GET;
-            rin.word_count <= to_integer(unsigned(p_cmd_val.data(5 downto 0)));
+            rin.word_count <= to_integer(unsigned(cmd_i.data(5 downto 0)));
 
-          elsif std_match(p_cmd_val.data, I2C_CMD_DIV) then
+          elsif std_match(cmd_i.data, I2C_CMD_DIV) then
             rin.state <= ST_RSP_PUT;
-            rin.divisor <= p_cmd_val.data(5 downto 0) & "11";
+            rin.divisor <= cmd_i.data(5 downto 0) & "11";
 
-          elsif std_match(p_cmd_val.data, I2C_CMD_START) then
+          elsif std_match(cmd_i.data, I2C_CMD_START) then
             rin.state <= ST_START;
 
-          elsif std_match(p_cmd_val.data, I2C_CMD_STOP) then
+          elsif std_match(cmd_i.data, I2C_CMD_STOP) then
             rin.state <= ST_STOP;
           end if;
         end if;
 
       when ST_RSP_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           rin.state <= ST_IDLE;
         end if;
 
       when ST_ACK_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           if r.word_count = 0 then
             rin.state <= ST_IDLE;
           else
@@ -115,7 +115,7 @@ begin
         end if;
 
       when ST_DATA_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           if r.word_count = 0 then
             rin.state <= ST_IDLE;
           else
@@ -142,10 +142,10 @@ begin
         end if;
 
       when ST_DATA_GET =>
-        if p_cmd_val.valid = '1' then
+        if cmd_i.valid = '1' then
           rin.state <= ST_WRITE;
-          rin.data <= p_cmd_val.data;
-          rin.last <= p_cmd_val.last;
+          rin.data <= cmd_i.data;
+          rin.last <= cmd_i.last;
         end if;
 
     end case;
@@ -172,62 +172,66 @@ begin
 
     case r.state is
       when ST_DATA_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= r.data;
+        rsp_o.valid <= '1';
+        rsp_o.data <= r.data;
         if r.word_count = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
 
       when ST_RSP_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= (others => '0');
-        p_rsp_val.last <= r.last;
+        rsp_o.valid <= '1';
+        rsp_o.data <= (others => '0');
+        rsp_o.last <= r.last;
 
       when ST_ACK_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= "0000000" & r.ack;
+        rsp_o.valid <= '1';
+        rsp_o.data <= "0000000" & r.ack;
         if r.word_count = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
 
       when others =>
-        p_rsp_val.valid <= '0';
-        p_rsp_val.data <= (others => '-');
-        p_rsp_val.last <= '-';
+        rsp_o.valid <= '0';
+        rsp_o.data <= (others => '-');
+        rsp_o.last <= '-';
     end case;
 
     case r.state is
       when ST_DATA_GET | ST_IDLE =>
-        p_cmd_ack.ready <= '1';
+        cmd_o.ready <= '1';
 
       when others =>
-        p_cmd_ack.ready <= '0';
+        cmd_o.ready <= '0';
     end case;
   end process;
 
   s_rack <= r.ack when r.word_count = 0 else '1';
   
-  master: i2c_master
+  master: nsl_i2c.transactor.transactor_master
     generic map(
       divisor_width => r.divisor'length
       )
     port map(
-      p_clk => p_clk,
-      p_resetn => p_resetn,
-      p_divisor => r.divisor,
-      p_i2c_o => p_i2c_o,
-      p_i2c_i => p_i2c_i,
-      p_rack => s_rack,
-      p_rdata => s_rdata,
-      p_wack => s_wack,
-      p_wdata => r.data,
-      p_cmd => s_cmd,
-      p_busy => s_busy,
-      p_done => s_done
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+
+      divisor_i => r.divisor,
+
+      i2c_o => i2c_o,
+      i2c_i => i2c_i,
+
+      rack_i => s_rack,
+      rdata_o => s_rdata,
+      wack_o => s_wack,
+      wdata_i => r.data,
+
+      cmd_i => s_cmd,
+      busy_o => s_busy,
+      done_o => s_done
       );
   
 end architecture;
