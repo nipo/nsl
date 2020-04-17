@@ -2,24 +2,22 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
-use nsl.routed.all;
+library nsl_bnoc;
 
 entity routed_endpoint is
   port(
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_cmd_in_val   : in nsl.routed.routed_req;
-    p_cmd_in_ack   : out nsl.routed.routed_ack;
-    p_cmd_out_val   : out nsl.framed.framed_req;
-    p_cmd_out_ack   : in nsl.framed.framed_ack;
+    p_cmd_in_val   : in nsl_bnoc.routed.routed_req;
+    p_cmd_in_ack   : out nsl_bnoc.routed.routed_ack;
+    p_cmd_out_val   : out nsl_bnoc.framed.framed_req;
+    p_cmd_out_ack   : in nsl_bnoc.framed.framed_ack;
 
-    p_rsp_in_val   : in nsl.routed.routed_req;
-    p_rsp_in_ack   : out nsl.routed.routed_ack;
-    p_rsp_out_val   : out nsl.framed.framed_req;
-    p_rsp_out_ack   : in nsl.framed.framed_ack
+    p_rsp_in_val   : in nsl_bnoc.routed.routed_req;
+    p_rsp_in_ack   : out nsl_bnoc.routed.routed_ack;
+    p_rsp_out_val   : out nsl_bnoc.framed.framed_req;
+    p_rsp_out_ack   : in nsl_bnoc.framed.framed_ack
     );
 end entity;
 
@@ -37,7 +35,7 @@ architecture rtl of routed_endpoint is
   
   type regs_t is record
     state: state_t;
-    cmd: framed_data_t;
+    cmd: nsl_bnoc.framed.framed_data_t;
   end record;  
 
   signal r, rin: regs_t;

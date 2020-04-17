@@ -2,10 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
-library util;
-use util.numeric.log2;
+library nsl_bnoc, nsl_math;
 
 entity framed_fifo_atomic is
   generic(
@@ -16,21 +13,21 @@ entity framed_fifo_atomic is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
-    p_in_val   : in nsl.framed.framed_req;
-    p_in_ack   : out nsl.framed.framed_ack;
+    p_in_val   : in nsl_bnoc.framed.framed_req;
+    p_in_ack   : out nsl_bnoc.framed.framed_ack;
 
-    p_out_val   : out nsl.framed.framed_req;
-    p_out_ack   : in nsl.framed.framed_ack
+    p_out_val   : out nsl_bnoc.framed.framed_req;
+    p_out_ack   : in nsl_bnoc.framed.framed_ack
     );
 end entity;
 
 architecture rtl of framed_fifo_atomic is
 
   -- Just to be able to read them back
-  signal s_out : nsl.framed.framed_bus;
-  signal s_in_ack : nsl.framed.framed_ack;
+  signal s_out : nsl_bnoc.framed.framed_bus;
+  signal s_in_ack : nsl_bnoc.framed.framed_ack;
   signal s_has_one : std_ulogic;
-  constant nw : natural := 2 ** log2(depth);
+  constant nw : natural := 2 ** nsl_math.arith.log2(depth);
 
   type regs_t is record
     flush: std_ulogic;
@@ -76,7 +73,7 @@ begin
     end if;
   end process;
   
-  fifo: nsl.framed.framed_fifo
+  fifo: nsl_bnoc.framed.framed_fifo
     generic map(
       depth => depth,
       clk_count => clk_count

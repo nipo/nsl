@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
+library nsl_bnoc;
 
 entity framed_arbitrer is
   generic(
@@ -13,15 +12,15 @@ entity framed_arbitrer is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_cmd_val   : in framed_req_array(0 to source_count - 1);
-    p_cmd_ack   : out framed_ack_array(0 to source_count - 1);
-    p_rsp_val   : out framed_req_array(0 to source_count - 1);
-    p_rsp_ack   : in framed_ack_array(0 to source_count - 1);
+    p_cmd_val   : in nsl_bnoc.framed.framed_req_array(0 to source_count - 1);
+    p_cmd_ack   : out nsl_bnoc.framed.framed_ack_array(0 to source_count - 1);
+    p_rsp_val   : out nsl_bnoc.framed.framed_req_array(0 to source_count - 1);
+    p_rsp_ack   : in nsl_bnoc.framed.framed_ack_array(0 to source_count - 1);
 
-    p_target_cmd_val   : out framed_req;
-    p_target_cmd_ack   : in framed_ack;
-    p_target_rsp_val   : in framed_req;
-    p_target_rsp_ack   : out framed_ack
+    p_target_cmd_val   : out nsl_bnoc.framed.framed_req;
+    p_target_cmd_ack   : in nsl_bnoc.framed.framed_ack;
+    p_target_rsp_val   : in nsl_bnoc.framed.framed_req;
+    p_target_rsp_ack   : out nsl_bnoc.framed.framed_ack
     );
 end entity;
 

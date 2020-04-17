@@ -2,9 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
-use nsl.sized.all;
+library nsl_bnoc;
 
 entity sized_to_framed is
   port(
@@ -13,11 +11,11 @@ entity sized_to_framed is
 
     p_inval     : out std_ulogic;
 
-    p_out_val   : out framed_req;
-    p_out_ack   : in  framed_ack;
+    p_out_val   : out nsl_bnoc.framed.framed_req;
+    p_out_ack   : in  nsl_bnoc.framed.framed_ack;
 
-    p_in_val    : in  sized_req;
-    p_in_ack    : out sized_ack
+    p_in_val    : in  nsl_bnoc.sized.sized_req;
+    p_in_ack    : out nsl_bnoc.sized.sized_ack
     );
 end entity;
 

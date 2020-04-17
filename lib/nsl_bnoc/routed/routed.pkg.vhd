@@ -2,13 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
+library nsl_bnoc;
 
 package routed is
 
-  subtype routed_req is nsl.framed.framed_req;
-  subtype routed_ack is nsl.framed.framed_ack;
+  subtype routed_req is nsl_bnoc.framed.framed_req;
+  subtype routed_ack is nsl_bnoc.framed.framed_ack;
 
   type routed_bus is record
     req: routed_req;
@@ -86,13 +85,13 @@ package routed is
 
       p_cmd_in_val   : in routed_req;
       p_cmd_in_ack   : out routed_ack;
-      p_cmd_out_val   : out nsl.framed.framed_req;
-      p_cmd_out_ack   : in nsl.framed.framed_ack;
+      p_cmd_out_val   : out nsl_bnoc.framed.framed_req;
+      p_cmd_out_ack   : in nsl_bnoc.framed.framed_ack;
 
       p_rsp_in_val   : in routed_req;
       p_rsp_in_ack   : out routed_ack;
-      p_rsp_out_val   : out nsl.framed.framed_req;
-      p_rsp_out_ack   : in nsl.framed.framed_ack
+      p_rsp_out_val   : out nsl_bnoc.framed.framed_req;
+      p_rsp_out_ack   : in nsl_bnoc.framed.framed_ack
       );
   end component;
 
@@ -118,28 +117,28 @@ package routed is
   end component;
   
   function routed_header(dst: component_id; src: component_id)
-    return nsl.framed.framed_data_t;
-  function routed_header_dst(w: nsl.framed.framed_data_t)
+    return nsl_bnoc.framed.framed_data_t;
+  function routed_header_dst(w: nsl_bnoc.framed.framed_data_t)
     return component_id;
-  function routed_header_src(w: nsl.framed.framed_data_t)
+  function routed_header_src(w: nsl_bnoc.framed.framed_data_t)
     return component_id;
 end package routed;
 
 package body routed is
 
   function routed_header(dst: component_id; src: component_id)
-    return nsl.framed.framed_data_t is
+    return nsl_bnoc.framed.framed_data_t is
   begin
-    return nsl.framed.framed_data_t(to_unsigned(src * 16 + dst, 8));
+    return nsl_bnoc.framed.framed_data_t(to_unsigned(src * 16 + dst, 8));
   end;
 
-  function routed_header_dst(w: nsl.framed.framed_data_t)
+  function routed_header_dst(w: nsl_bnoc.framed.framed_data_t)
     return component_id is
   begin
     return to_integer(unsigned(w(3 downto 0)));
   end;
   
-  function routed_header_src(w: nsl.framed.framed_data_t)
+  function routed_header_src(w: nsl_bnoc.framed.framed_data_t)
     return component_id is
   begin
     return to_integer(unsigned(w(7 downto 4)));

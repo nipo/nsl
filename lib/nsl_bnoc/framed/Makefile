@@ -4,4 +4,4 @@ vhdl-sources += framed_fifo_atomic.vhd
 vhdl-sources += framed_arbitrer.vhd
 
 deps += hwdep.fifo
-deps += util.numeric
+deps += nsl_math.arith

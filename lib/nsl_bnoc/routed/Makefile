@@ -5,5 +5,5 @@ vhdl-sources += routed_router_inbound.vhd
 vhdl-sources += routed_router_outbound.vhd
 vhdl-sources += routed_router.vhd
 
-deps += nsl.framed
+deps += nsl_bnoc.framed
 deps += hwdep.ram

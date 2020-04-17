@@ -2,29 +2,26 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.routed.all;
-library hwdep;
-use hwdep.ram.all;
+library nsl_bnoc, hwdep;
 
 entity routed_gateway is
   generic(
-    source_id: nsl.routed.component_id;
-    target_id: nsl.routed.component_id
+    source_id: nsl_bnoc.routed.component_id;
+    target_id: nsl_bnoc.routed.component_id
     );
   port(
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_cmd_in_val   : in nsl.routed.routed_req;
-    p_cmd_in_ack   : out nsl.routed.routed_ack;
-    p_cmd_out_val   : out nsl.routed.routed_req;
-    p_cmd_out_ack   : in nsl.routed.routed_ack;
+    p_cmd_in_val   : in nsl_bnoc.routed.routed_req;
+    p_cmd_in_ack   : out nsl_bnoc.routed.routed_ack;
+    p_cmd_out_val   : out nsl_bnoc.routed.routed_req;
+    p_cmd_out_ack   : in nsl_bnoc.routed.routed_ack;
 
-    p_rsp_in_val   : in nsl.routed.routed_req;
-    p_rsp_in_ack   : out nsl.routed.routed_ack;
-    p_rsp_out_val   : out nsl.routed.routed_req;
-    p_rsp_out_ack   : in nsl.routed.routed_ack
+    p_rsp_in_val   : in nsl_bnoc.routed.routed_req;
+    p_rsp_in_ack   : out nsl_bnoc.routed.routed_ack;
+    p_rsp_out_val   : out nsl_bnoc.routed.routed_req;
+    p_rsp_out_ack   : in nsl_bnoc.routed.routed_ack
     );
 end entity;
 
@@ -55,13 +52,13 @@ architecture rtl of routed_gateway is
   
   type regs_t is record
     cmd_from: std_ulogic_vector(3 downto 0);
-    cmd_to2: nsl.routed.component_id;
-    cmd_tag: nsl.framed.framed_data_t;
+    cmd_to2: nsl_bnoc.routed.component_id;
+    cmd_tag: nsl_bnoc.framed.framed_data_t;
     cmd_state: cmd_state_t;
 
     next_tag: unsigned(tag_size-1 downto 0);
 
-    rsp_from2: nsl.routed.component_id;
+    rsp_from2: nsl_bnoc.routed.component_id;
     rsp_state: rsp_state_t;
   end record;  
 
@@ -115,13 +112,13 @@ begin
 
       when CMD_GET_HEADER =>
         if p_cmd_in_val.valid = '1' then
-          rin.cmd_from <= std_ulogic_vector(to_unsigned(nsl.routed.routed_header_src(p_cmd_in_val.data), 4));
+          rin.cmd_from <= std_ulogic_vector(to_unsigned(nsl_bnoc.routed.routed_header_src(p_cmd_in_val.data), 4));
           rin.cmd_state <= CMD_GET_HEADER2;
         end if;
         
       when CMD_GET_HEADER2 =>
         if p_cmd_in_val.valid = '1' then
-          rin.cmd_to2 <= nsl.routed.routed_header_dst(p_cmd_in_val.data);
+          rin.cmd_to2 <= nsl_bnoc.routed.routed_header_dst(p_cmd_in_val.data);
           rin.cmd_state <= CMD_GET_TAG;
         end if;
         
@@ -158,7 +155,7 @@ begin
       when RSP_GET_HEADER =>
         if p_rsp_in_val.valid = '1' then
           rin.rsp_state <= RSP_GET_TAG;
-          rin.rsp_from2 <= nsl.routed.routed_header_src(p_cmd_in_val.data);
+          rin.rsp_from2 <= nsl_bnoc.routed.routed_header_src(p_cmd_in_val.data);
         end if;
         
       when RSP_GET_TAG =>
@@ -212,7 +209,7 @@ begin
         
       when CMD_PUT_HEADER =>
         p_cmd_out_val.valid <= '1';
-        p_cmd_out_val.data <= nsl.routed.routed_header(r.cmd_to2, source_id);
+        p_cmd_out_val.data <= nsl_bnoc.routed.routed_header(r.cmd_to2, source_id);
         p_cmd_out_val.last <= '0';
         
       when CMD_PUT_TAG =>
@@ -234,12 +231,12 @@ begin
         
       when RSP_PUT_HEADER =>
         p_rsp_out_val.valid <= '1';
-        p_rsp_out_val.data <= nsl.routed.routed_header(to_integer(unsigned(s_lut_source)), target_id);
+        p_rsp_out_val.data <= nsl_bnoc.routed.routed_header(to_integer(unsigned(s_lut_source)), target_id);
         p_rsp_out_val.last <= '0';
         
       when RSP_PUT_HEADER2 =>
         p_rsp_out_val.valid <= '1';
-        p_rsp_out_val.data <= nsl.routed.routed_header(0, r.rsp_from2);
+        p_rsp_out_val.data <= nsl_bnoc.routed.routed_header(0, r.rsp_from2);
         p_rsp_out_val.last <= '0';
         
       when RSP_PUT_TAG =>

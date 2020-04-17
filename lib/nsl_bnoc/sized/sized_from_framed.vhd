@@ -2,9 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
-use nsl.sized.all;
+library nsl_bnoc;
 
 entity sized_from_framed is
   generic(
@@ -14,17 +12,17 @@ entity sized_from_framed is
     p_resetn    : in  std_ulogic;
     p_clk       : in  std_ulogic;
 
-    p_in_val    : in framed_req;
-    p_in_ack    : out framed_ack;
+    p_in_val    : in nsl_bnoc.framed.framed_req;
+    p_in_ack    : out nsl_bnoc.framed.framed_ack;
 
-    p_out_val   : out sized_req;
-    p_out_ack   : in sized_ack
+    p_out_val   : out nsl_bnoc.sized.sized_req;
+    p_out_ack   : in nsl_bnoc.sized.sized_ack
     );
 end entity;
 
 architecture rtl of sized_from_framed is
 
-  signal s_data_in, s_data_out: sized_bus;
+  signal s_data_in, s_data_out: nsl_bnoc.sized.sized_bus;
 
   type state_t is (
     STATE_RESET,
@@ -89,7 +87,7 @@ begin
     end case;
   end process;
 
-  data_fifo: nsl.sized.sized_fifo
+  data_fifo: nsl_bnoc.sized.sized_fifo
     generic map(
       depth => max_txn_length,
       clk_count => 1

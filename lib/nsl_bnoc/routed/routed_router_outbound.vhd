@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.routed.all;
+library nsl_bnoc;
 
 entity routed_router_outbound is
   generic(
@@ -13,11 +12,11 @@ entity routed_router_outbound is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in nsl.routed.routed_req_array(in_port_count-1 downto 0);
-    p_in_ack   : out nsl.routed.routed_ack;
+    p_in_val   : in nsl_bnoc.routed.routed_req_array(in_port_count-1 downto 0);
+    p_in_ack   : out nsl_bnoc.routed.routed_ack;
 
-    p_out_val  : out nsl.routed.routed_req;
-    p_out_ack  : in  nsl.routed.routed_ack;
+    p_out_val  : out nsl_bnoc.routed.routed_req;
+    p_out_ack  : in  nsl_bnoc.routed.routed_ack;
 
     p_request  : in  std_ulogic_vector(in_port_count-1 downto 0);
     p_selected : out std_ulogic_vector(in_port_count-1 downto 0)
