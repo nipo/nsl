@@ -2,17 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling;
+library nsl_coresight;
 
-package swd is
+package testing is
 
   component swdap
     generic(
       idr: unsigned(31 downto 0) := X"2ba01477"
       );
     port (
-      p_swd_c : out signalling.swd.swd_slave_c;
-      p_swd_s : in signalling.swd.swd_slave_s;
+      p_swd_c : out nsl_coresight.swd.swd_slave_o;
+      p_swd_s : in nsl_coresight.swd.swd_slave_i;
       p_swd_resetn : out std_ulogic;
 
       p_ap_ready : in std_ulogic;
@@ -50,4 +50,4 @@ package swd is
       );
   end component;
 
-end package swd;
+end package testing;

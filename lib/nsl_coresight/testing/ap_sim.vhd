@@ -38,7 +38,7 @@ architecture rtl of ap_sim is
   
 begin
 
-  process (p_clk)
+  regs: process (p_clk)
   begin
     if p_resetn = '0' then
       r.waiting <= 0;
@@ -51,13 +51,13 @@ begin
   p_rdata <= r.mem(r.raddr) when r.read_pending and r.waiting = 0 else (p_rdata'range => '-');
   p_ready <= '1' when r.waiting = 0 else '0';
   
-  process (r, p_wen, p_ren, p_wdata, p_a)
+  transition: process (r, p_wen, p_ren, p_wdata, p_a)
     variable s_addr : natural range 0 to 63;
   begin
     s_addr := to_integer(to_01(p_a));
     rin <= r;
 
-    if r.waiting /= 0 then
+    if r.waiting > 0 then
       rin.waiting <= r.waiting - 1;
     else
       if r.read_pending then

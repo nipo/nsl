@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling;
-use nsl.framed.all;
+library nsl_bnoc, signalling, nsl_coresight;
 
 package dp is
   constant DP_CMD_RUN           : std_ulogic_vector(7 downto 0):= "0-------";
@@ -43,14 +42,14 @@ package dp is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_cmd_val   : in nsl.framed.framed_req;
-      p_cmd_ack   : out nsl.framed.framed_ack;
+      p_cmd_val   : in nsl_bnoc.framed.framed_req;
+      p_cmd_ack   : out nsl_bnoc.framed.framed_ack;
 
-      p_rsp_val   : out nsl.framed.framed_req;
-      p_rsp_ack   : in nsl.framed.framed_ack;
+      p_rsp_val   : out nsl_bnoc.framed.framed_req;
+      p_rsp_ack   : in nsl_bnoc.framed.framed_ack;
 
-      p_swd_c     : out signalling.swd.swd_master_c;
-      p_swd_s     : in  signalling.swd.swd_master_s
+      p_swd_o     : out nsl_coresight.swd.swd_master_o;
+      p_swd_i     : in  nsl_coresight.swd.swd_master_i
       );
   end component;
 
@@ -67,8 +66,26 @@ package dp is
       p_rsp_ack  : in  std_ulogic;
       p_rsp_data : out dp_rsp_data;
 
-      p_swd_c    : out signalling.swd.swd_master_c;
-      p_swd_s    : in  signalling.swd.swd_master_s
+      p_swd_o    : out nsl_coresight.swd.swd_master_o;
+      p_swd_i    : in  nsl_coresight.swd.swd_master_i
+      );
+  end component;
+
+  component swdp is
+    generic(
+      idr : unsigned(31 downto 0) := X"0ba00477"
+      );
+    port(
+      swd_i : in nsl_coresight.swd.swd_slave_i;
+      swd_o : out nsl_coresight.swd.swd_slave_o;
+      
+      dap_i : in nsl_coresight.dapbus.dapbus_m_i;
+      dap_o : out nsl_coresight.dapbus.dapbus_m_o;
+
+      ctrl_o : out std_ulogic_vector(31 downto 0);
+      stat_i : in std_ulogic_vector(31 downto 0);
+
+      abort_o : out std_ulogic_vector(4 downto 0)
       );
   end component;
 

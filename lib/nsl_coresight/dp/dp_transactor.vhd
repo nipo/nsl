@@ -2,9 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, coresight, signalling;
-library coresight;
-use coresight.dp.all;
+library nsl_coresight;
+use nsl_coresight.dp.all;
 
 entity dp_transactor is
   port (
@@ -19,8 +18,8 @@ entity dp_transactor is
     p_rsp_ack  : in  std_ulogic;
     p_rsp_data : out dp_rsp_data;
 
-    p_swd_c     : out signalling.swd.swd_master_c;
-    p_swd_s     : in  signalling.swd.swd_master_s
+    p_swd_o     : out nsl_coresight.swd.swd_master_o;
+    p_swd_i     : in  nsl_coresight.swd.swd_master_i
   );
 end entity;
 
@@ -72,7 +71,7 @@ architecture rtl of dp_transactor is
 
     cmd           : std_ulogic_vector(7 downto 0);
 
-    swd           : signalling.swd.swd_master_c;
+    swd           : nsl_coresight.swd.swd_master_o;
   end record;
 
   signal r, rin: regs_t;
@@ -90,7 +89,7 @@ begin
     end if;
   end process;
 
-  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swd_s)
+  transition: process (r, p_cmd_val, p_cmd_data, p_rsp_ack, p_swd_i)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -204,7 +203,7 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.ack <= to_x01(p_swd_s.dio.v) & r.ack(2 downto 1);
+          rin.ack <= to_x01(p_swd_i.dio) & r.ack(2 downto 1);
           if r.cycle_count /= 0 then
             rin.cycle_count <= r.cycle_count - 1;
           else
@@ -259,8 +258,8 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.data <= to_x01(p_swd_s.dio.v) & r.data(31 downto 1);
-          rin.par_in <= r.par_in xor to_x01(p_swd_s.dio.v);
+          rin.data <= to_x01(p_swd_i.dio) & r.data(31 downto 1);
+          rin.par_in <= r.par_in xor to_x01(p_swd_i.dio);
           if r.cycle_count /= 0 then
             rin.cycle_count <= r.cycle_count - 1;
           else
@@ -273,7 +272,7 @@ begin
           rin.swd.dio.en <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
-          rin.par_in <= r.par_in xor to_x01(p_swd_s.dio.v);
+          rin.par_in <= r.par_in xor to_x01(p_swd_i.dio);
           rin.state <= ST_DATA_TURNAROUND;
           rin.cycle_count <= r.turnaround;
         end if;
@@ -329,7 +328,7 @@ begin
     end case;
   end process;
 
-  p_swd_c <= r.swd;
+  p_swd_o <= r.swd;
   p_cmd_ack <= '1' when r.state = ST_CMD_GET else '0';
   p_rsp_val <= '1' when r.state = ST_RSP_PUT else '0';
   p_rsp_data.data <= r.data;

@@ -2,22 +2,22 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling, coresight;
-use coresight.dp.all;
+library nsl_bnoc, nsl_coresight;
+use nsl_coresight.dp.all;
 
 entity dp_framed_swdp is
   port (
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_cmd_val   : in nsl.framed.framed_req;
-    p_cmd_ack   : out nsl.framed.framed_ack;
+    p_cmd_val   : in nsl_bnoc.framed.framed_req;
+    p_cmd_ack   : out nsl_bnoc.framed.framed_ack;
 
-    p_rsp_val   : out nsl.framed.framed_req;
-    p_rsp_ack   : in nsl.framed.framed_ack;
+    p_rsp_val   : out nsl_bnoc.framed.framed_req;
+    p_rsp_ack   : in nsl_bnoc.framed.framed_ack;
 
-    p_swd_c     : out signalling.swd.swd_master_c;
-    p_swd_s     : in  signalling.swd.swd_master_s
+    p_swd_o     : out nsl_coresight.swd.swd_master_o;
+    p_swd_i     : in  nsl_coresight.swd.swd_master_i
   );
 end entity;
 
@@ -200,8 +200,8 @@ begin
       p_rsp_ack => s_swd_rsp_ack,
       p_rsp_data => s_swd_rsp_data,
 
-      p_swd_c => p_swd_c,
-      p_swd_s => p_swd_s
+      p_swd_o => p_swd_o,
+      p_swd_i => p_swd_i
       );
 
 end architecture;
