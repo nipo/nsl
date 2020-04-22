@@ -1,7 +1,6 @@
 packages += tick
 packages += fifo
 packages += mii
-packages += spi
 packages += ftdi
 packages += logic_analyzer
 packages += ioext
