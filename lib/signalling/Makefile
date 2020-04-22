@@ -4,4 +4,3 @@ packages += diff
 packages += io
 packages += spi
 packages += jtag
-packages += color
