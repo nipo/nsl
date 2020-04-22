@@ -16,8 +16,8 @@ has_tig_q=
 has_ff_cross=
 
 grep -q tig_reg_clr "$edif" && has_tig_clr=1
-grep -q tig_reg_d "$edif" && has_tig_clr=1
-grep -q tig_reg_q "$edif" && has_tig_clr=1
+grep -q tig_reg_d "$edif" && has_tig_d=1
+grep -q tig_reg_q "$edif" && has_tig_q=1
 grep -q cross_region_reg_d "$edif" && has_ff_cross=1
 
 test -n "$has_tig_clr"  && echo "PIN \"*tig_reg_clr*.CLR\" TPTHRU = \"ff_tig_clr\";"
