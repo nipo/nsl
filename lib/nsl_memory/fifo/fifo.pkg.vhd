@@ -12,7 +12,7 @@ package fifo is
       );
     port(
       reset_n_i   : in  std_ulogic;
-      clock_i       : in  std_ulogic_vector(0 to clock_count-1);
+      clock_i       : in  std_ulogic_vector(0 to clock_count_c-1);
 
       out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
       out_ready_i         : in  std_ulogic;

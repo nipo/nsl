@@ -14,11 +14,11 @@ entity ram_2p_r_w is
   port (
     clock_i    : in  std_ulogic_vector(0 to clock_count_c-1);
 
-    write_address_i  : in  std_ulogic_vector (addr_size_c-1 downto 0);
+    write_address_i  : in unsigned(addr_size_c-1 downto 0);
     write_en_i    : in  std_ulogic := '0';
     write_data_i  : in  std_ulogic_vector (data_size_c-1 downto 0) := (others => '-');
 
-    read_address_i  : in  std_ulogic_vector (addr_size_c-1 downto 0);
+    read_address_i  : in unsigned(addr_size_c-1 downto 0);
     read_en_i  : in  std_ulogic := '0';
     read_data_o : out std_ulogic_vector (data_size_c-1 downto 0)
     );

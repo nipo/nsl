@@ -141,12 +141,11 @@ begin
 
   ctr_in: nsl_memory.fifo.fifo_pointer
     generic map(
-      ptr_width => mem_ptr_t'length,
-      wrap_count => word_count_c,
-      equal_can_move => true,
-      gray_position => is_bisynchronous,
-      increment_early => false,
-      peer_ahead => true
+      ptr_width_c => mem_ptr_t'length,
+      wrap_count_c => word_count_c,
+      equal_can_move_c => true,
+      gray_position_c => is_bisynchronous,
+      peer_ahead_c => true
       )
     port map(
       reset_n_i => s_resetn(0),
@@ -162,12 +161,11 @@ begin
 
   ctr_out: nsl_memory.fifo.fifo_pointer
     generic map(
-      ptr_width => mem_ptr_t'length,
-      wrap_count => word_count_c,
-      equal_can_move => false,
-      gray_position => is_bisynchronous,
-      increment_early => true,
-      peer_ahead => false
+      ptr_width_c => mem_ptr_t'length,
+      wrap_count_c => word_count_c,
+      equal_can_move_c => false,
+      gray_position_c => is_bisynchronous,
+      peer_ahead_c => false
       )
     port map(
       reset_n_i => s_resetn(clock_count_c-1),
@@ -187,21 +185,20 @@ begin
 
   ram: nsl_memory.ram.ram_2p_r_w
     generic map(
-      addr_size => mem_ptr_t'length,
-      data_size => data_t'length,
-      clock_count_c => clock_count_c,
-      bypass => is_synchronous
+      addr_size_c => mem_ptr_t'length,
+      data_size_c => data_t'length,
+      clock_count_c => clock_count_c
       )
     port map(
-      p_clock => clock_i,
+      clock_i => clock_i,
 
-      p_waddr => std_ulogic_vector(s_left.mem_ptr),
-      p_wen => s_left.mem_en,
-      p_wdata => in_data_i,
+      write_address_i => s_left.mem_ptr,
+      write_en_i => s_left.mem_en,
+      write_data_i => in_data_i,
 
-      p_raddr => std_ulogic_vector(s_right.mem_ptr),
-      p_ren => s_right.mem_en,
-      p_rdata => s_read_data
+      read_address_i => s_right.mem_ptr,
+      read_en_i => s_right.mem_en,
+      read_data_o => s_read_data
       );
 
   in_ready_o <= s_left.inc_ack;
