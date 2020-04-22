@@ -5,7 +5,6 @@ packages += spi
 packages += ftdi
 packages += logic_analyzer
 packages += ioext
-packages += cs
 packages += uart
 packages += ws
 packages += jtag
