@@ -2,11 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.spi.all;
-use nsl.fifo.all;
-use nsl.framed.all;
-use nsl.sized.all;
+library nsl_bnoc, nsl_spi, nsl_memory;
+use nsl_spi.slave.all;
 
 --          /--------> framed async fifo ---> Sized to framed ---> out
 --          |
@@ -34,21 +31,19 @@ use nsl.sized.all;
 
 entity spi_framed_gateway is
   generic(
-    msb_first   : boolean := true
+    msb_first_c   : boolean := true
     );
   port(
-    p_framed_clk       : in  std_ulogic;
-    p_framed_resetn    : in  std_ulogic;
+    clock_i       : in  std_ulogic;
+    reset_n_i    : in  std_ulogic;
 
-    p_sck       : in  std_ulogic;
-    p_csn       : in  std_ulogic;
-    p_miso      : out std_ulogic;
-    p_mosi      : in  std_ulogic;
+    spi_i       : in nsl_spi.spi.spi_slave_i;
+    spi_o       : out nsl_spi.spi.spi_slave_o;
 
-    p_out_val   : out framed_req;
-    p_out_ack   : in  framed_ack;
-    p_in_val    : in  framed_req;
-    p_in_ack    : out framed_ack
+    outbound_o   : out nsl_bnoc.framed.framed_req;
+    outbound_i   : in  nsl_bnoc.framed.framed_ack;
+    inbound_i    : in  nsl_bnoc.framed.framed_req;
+    inbound_o    : out nsl_bnoc.framed.framed_ack
     );
 end entity;
 
@@ -71,82 +66,82 @@ architecture rtl of spi_framed_gateway is
   
   type regs_t is record
     state      : state_t;
-    header     : framed_data_t;
+    header     : nsl_bnoc.framed.framed_data_t;
     count      : std_ulogic_vector(15 downto 0);
   end record;
 
   signal r, rin: regs_t;
 
-  signal s_in_spi, s_out_spi, s_in_io, s_out_io: sized_bus;
+  signal s_inbound_spi, s_outbound_spi, s_inbound_io, s_outbound_io: nsl_bnoc.sized.sized_bus;
   signal s_from_spi_valid, s_to_spi_ready, s_out_empty_n : std_ulogic;
-  signal s_to_spi, s_from_spi : framed_data_t;
+  signal s_to_spi, s_from_spi : nsl_bnoc.framed.framed_data_t;
     
 begin
 
-  bridge_in: sized_from_framed
+  bridge_inbound: nsl_bnoc.sized.sized_from_framed
     port map(
-      p_resetn => p_framed_resetn,
-      p_clk => p_framed_clk,
-      p_in_val => p_in_val,
-      p_in_ack => p_in_ack,
-      p_out_val => s_in_io.req,
-      p_out_ack => s_in_io.ack
+      p_resetn => reset_n_i,
+      p_clk => clock_i,
+      p_in_val => inbound_i,
+      p_in_ack => inbound_o,
+      p_out_val => s_inbound_io.req,
+      p_out_ack => s_inbound_io.ack
       );
 
-  bridge_out: sized_to_framed
+  bridge_out: nsl_bnoc.sized.sized_to_framed
     port map(
-      p_resetn => p_framed_resetn,
-      p_clk => p_framed_clk,
-      p_out_val => p_out_val,
-      p_out_ack => p_out_ack,
-      p_in_val => s_out_io.req,
-      p_in_ack => s_out_io.ack
+      p_resetn => reset_n_i,
+      p_clk => clock_i,
+      p_out_val => outbound_o,
+      p_out_ack => outbound_i,
+      p_in_val => s_outbound_io.req,
+      p_in_ack => s_outbound_io.ack
       );
 
-  resync_in: fifo_async
+  resync_in: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      depth => 8,
-      data_width => 8
+      word_count_c => 8,
+      data_width_c => 8,
+      clock_count_c => 2
       )
     port map(
-      p_resetn => p_framed_resetn,
-      p_in_clk => p_framed_clk,
-      p_out_clk => p_sck,
-      p_in_valid => s_in_io.req.valid,
-      p_in_data => s_in_io.req.data,
-      p_in_ready => s_in_io.ack.ready,
-      p_out_data => s_in_spi.req.data,
-      p_out_valid => s_in_spi.req.valid,
-      p_out_ready => s_in_spi.ack.ready
+      reset_n_i => reset_n_i,
+      clock_i(0) => clock_i,
+      clock_i(1) => spi_i.sck,
+      in_valid_i => s_inbound_io.req.valid,
+      in_data_i => s_inbound_io.req.data,
+      in_ready_o => s_inbound_io.ack.ready,
+      out_data_o => s_inbound_spi.req.data,
+      out_valid_o => s_inbound_spi.req.valid,
+      out_ready_i => s_inbound_spi.ack.ready
       );
 
-  resync_out: fifo_async
+  resync_out: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      depth => 8,
-      data_width => 8
+      word_count_c => 8,
+      data_width_c => 8,
+      clock_count_c => 2
       )
     port map(
-      p_resetn => p_framed_resetn,
-      p_in_clk => p_sck,
-      p_out_clk => p_framed_clk,
-      p_in_valid => s_out_spi.req.valid,
-      p_in_data => s_out_spi.req.data,
-      p_in_ready => s_out_spi.ack.ready,
-      p_out_valid => s_out_io.req.valid,
-      p_out_data => s_out_io.req.data,
-      p_out_ready => s_out_io.ack.ready
+      reset_n_i => reset_n_i,
+      clock_i(0) => spi_i.sck,
+      clock_i(1) => clock_i,
+      in_valid_i => s_outbound_spi.req.valid,
+      in_data_i => s_outbound_spi.req.data,
+      in_ready_o => s_outbound_spi.ack.ready,
+      out_valid_o => s_outbound_io.req.valid,
+      out_data_o => s_outbound_io.req.data,
+      out_ready_i => s_outbound_io.ack.ready
       );
   
-  shreg: spi_shift_register
+  shreg: nsl_spi.shift_register.spi_shift_register
     generic map(
-      width => 8,
-      msb_first => msb_first
+      width_c => 8,
+      msb_first_c => msb_first_c
       )
     port map(
-      spi_i.sck => p_sck,
-      spi_i.cs_n => p_csn,
-      spi_i.mosi => p_mosi,
-      spi_o.miso => p_miso,
+      spi_i => spi_i,
+      spi_o => spi_o,
 
       tx_data_i => s_to_spi,
       tx_strobe_o => s_to_spi_ready,
@@ -154,11 +149,11 @@ begin
       rx_strobe_o => s_from_spi_valid
       );
   
-  regs: process(p_csn, p_sck)
+  regs: process(spi_i.cs_n, spi_i.sck)
   begin
-    if p_csn = '1' then
+    if spi_i.cs_n = '1' then
       r.state <= ST_CMD;
-    elsif rising_edge(p_sck) then
+    elsif rising_edge(spi_i.sck) then
       r <= rin;
     end if;
   end process;
@@ -191,13 +186,13 @@ begin
       when ST_TO_SPI_SIZE_L =>
         if s_to_spi_ready = '1' then
           rin.state <= ST_TO_SPI_SIZE_H;
-          rin.count(7 downto 0) <= s_in_spi.req.data;
+          rin.count(7 downto 0) <= s_inbound_spi.req.data;
         end if;
 
       when ST_TO_SPI_SIZE_H =>
         if s_to_spi_ready = '1' then
           rin.state <= ST_TO_SPI_DATA;
-          rin.count(15 downto 8) <= s_in_spi.req.data;
+          rin.count(15 downto 8) <= s_inbound_spi.req.data;
         end if;
 
       when ST_TO_SPI_DATA =>
@@ -254,20 +249,20 @@ begin
     end case;
   end process;
 
-  s_out_spi.req.data <= s_from_spi;
+  s_outbound_spi.req.data <= s_from_spi;
     
-  spi_dout: process(r, s_out_spi.req.data, s_to_spi_ready, s_from_spi_valid)
+  spi_dout: process(r, s_outbound_spi.req.data, s_to_spi_ready, s_from_spi_valid)
   begin
     case r.state is
       when ST_STATUS =>
         s_to_spi(7 downto 2) <= (others => '0');
-        s_to_spi(1) <= not s_out_io.req.valid;
-        s_to_spi(0) <= s_in_spi.req.valid;
+        s_to_spi(1) <= not s_outbound_io.req.valid;
+        s_to_spi(0) <= s_inbound_spi.req.valid;
 
       when ST_TO_SPI_SIZE_H | ST_TO_SPI_SIZE_L
         | ST_TO_SPI_DATA | ST_TO_SPI_CONT_DATA
         | ST_OVER =>
-        s_to_spi <= s_in_spi.req.data;
+        s_to_spi <= s_inbound_spi.req.data;
         
       when others =>
         s_to_spi <= (others => '-');
@@ -277,18 +272,18 @@ begin
 
     case r.state is
       when ST_TO_SPI_SIZE_L | ST_TO_SPI_SIZE_H | ST_TO_SPI_DATA | ST_TO_SPI_CONT_DATA =>
-        s_in_spi.ack.ready <= s_to_spi_ready;
+        s_inbound_spi.ack.ready <= s_to_spi_ready;
 
       when others =>
-        s_in_spi.ack.ready <= '0';
+        s_inbound_spi.ack.ready <= '0';
     end case;
 
     case r.state is
       when ST_FROM_SPI_SIZE_L | ST_FROM_SPI_SIZE_H | ST_FROM_SPI_DATA =>
-        s_out_spi.req.valid <= s_from_spi_valid;
+        s_outbound_spi.req.valid <= s_from_spi_valid;
 
       when others =>
-        s_out_spi.req.valid <= '0';
+        s_outbound_spi.req.valid <= '0';
     end case;
 
   end process;

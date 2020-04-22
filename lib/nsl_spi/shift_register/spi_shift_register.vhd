@@ -1,20 +1,20 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl, hwdep, signalling;
+library nsl_spi;
 
 entity spi_shift_register is
   generic(
-    width : natural;
-    msb_first : boolean := true
+    width_c : natural;
+    msb_first_c : boolean := true
     );
   port(
-    spi_i       : in signalling.spi.spi_slave_i;
-    spi_o       : out signalling.spi.spi_slave_o;
+    spi_i       : in nsl_spi.spi.spi_slave_i;
+    spi_o       : out nsl_spi.spi.spi_slave_o;
 
-    tx_data_i   : in  std_ulogic_vector(width - 1 downto 0);
+    tx_data_i   : in  std_ulogic_vector(width_c - 1 downto 0);
     tx_strobe_o : out std_ulogic;
-    rx_data_o   : out std_ulogic_vector(width - 1 downto 0);
+    rx_data_o   : out std_ulogic_vector(width_c - 1 downto 0);
     rx_strobe_o : out std_ulogic
     );
 end entity;
@@ -22,15 +22,15 @@ end entity;
 architecture rtl of spi_shift_register is
 
   type regs_t is record
-    bit_idx     : natural range 0 to width - 1;
-    shreg       : std_ulogic_vector(width - 1 downto 0);
+    bit_idx     : natural range 0 to width_c - 1;
+    shreg       : std_ulogic_vector(width_c - 1 downto 0);
   end record;
 
   signal r, rin: regs_t;
 
   function shreg_mosi(shreg : in std_ulogic_vector) return std_ulogic is
   begin
-    if msb_first then
+    if msb_first_c then
       return shreg(shreg'left);
     else
       return shreg(shreg'right);
@@ -39,7 +39,7 @@ architecture rtl of spi_shift_register is
 
   function shreg_shift(shreg : in std_ulogic_vector; miso : std_ulogic) return std_ulogic_vector is
   begin
-    if msb_first then
+    if msb_first_c then
       return shreg(shreg'left-1 downto 0) & miso;
     else
       return miso & shreg(shreg'left downto 1);
@@ -53,14 +53,14 @@ begin
     if spi_i.cs_n = '1' then
       r.bit_idx <= 0;
       r.shreg <= (others => '-');
-    elsif hwdep.clock.is_rising(spi_i.sck) then
+    elsif rising_edge(spi_i.sck) then
       r <= rin;
     end if;
   end process;
 
   dout: process(spi_i.sck)
   begin
-    if hwdep.clock.is_falling(spi_i.sck) then
+    if falling_edge(spi_i.sck) then
       spi_o.miso <= shreg_mosi(r.shreg);
 
       if r.bit_idx = 0 then
@@ -79,7 +79,7 @@ begin
       tx_strobe_o <= not spi_i.cs_n;
     end if;
 
-    if r.bit_idx = width - 1 then
+    if r.bit_idx = width_c - 1 then
       rx_strobe_o <= not spi_i.cs_n;
       rx_data_o <= shreg_shift(r.shreg, spi_i.mosi);
     end if;
@@ -96,7 +96,7 @@ begin
       rin.shreg <= shreg_shift(r.shreg, spi_i.mosi);
     end if;
 
-    if r.bit_idx = width - 1 then
+    if r.bit_idx = width_c - 1 then
       rin.bit_idx <= 0;
     else
       rin.bit_idx <= r.bit_idx + 1;

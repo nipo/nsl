@@ -2,40 +2,42 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.spi.all;
+library nsl_bnoc, nsl_spi;
+use nsl_spi.transactor.all;
 
-entity spi_master is
+entity spi_framed_transactor is
   generic(
-    slave_count : natural range 1 to 63 := 1
+    slave_count_c : natural range 1 to 31 := 1
     );
   port(
-    p_clk    : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i    : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_sck  : out std_ulogic;
-    p_csn  : out std_ulogic_vector(0 to slave_count-1);
-    p_mosi : out std_ulogic;
-    p_miso : in  std_ulogic;
+    sck_o  : out std_ulogic;
+    cs_n_o  : out std_ulogic_vector(0 to slave_count_c-1);
+    mosi_o : out std_ulogic;
+    miso_i : in  std_ulogic;
 
-    p_cmd_val : in  nsl.framed.framed_req;
-    p_cmd_ack : out nsl.framed.framed_ack;
-    p_rsp_val : out nsl.framed.framed_req;
-    p_rsp_ack : in  nsl.framed.framed_ack
+    cmd_i : in  nsl_bnoc.framed.framed_req;
+    cmd_o : out nsl_bnoc.framed.framed_ack;
+    rsp_o : out nsl_bnoc.framed.framed_req;
+    rsp_i : in  nsl_bnoc.framed.framed_ack
     );
 end entity;
 
-architecture rtl of spi_master is
+architecture rtl of spi_framed_transactor is
 
   type state_t is (
     ST_RESET,
     ST_IDLE,
+    ST_ROUTE,
     ST_DATA_GET,
-    ST_CS_UPDATE,
+    ST_INTERFRAME_WAIT,
     ST_SHIFT_SCK_L,
     ST_SHIFT_SCK_H,
     ST_DATA_PUT,
-    ST_RSP
+    ST_RSP,
+    ST_RSP_OUT_ONLY
     );
   
   type regs_t is record
@@ -43,7 +45,7 @@ architecture rtl of spi_master is
     cmd        : std_ulogic_vector(7 downto 0);
     shreg      : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
-    selected   : natural range 0 to 63;
+    selected   : natural range 0 to 31;
     bit_count  : natural range 0 to 7;
     last       : std_ulogic;
     div        : unsigned(4 downto 0);
@@ -55,16 +57,16 @@ architecture rtl of spi_master is
     
 begin
   
-  regs: process(p_resetn, p_clk)
+  regs: process(reset_n_i, clock_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_cmd_val, p_rsp_ack, p_miso)
+  transition: process(r, cmd_i, rsp_i, miso_i)
     variable ready : boolean;
   begin
     ready := false;
@@ -79,19 +81,27 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
-        rin.selected <= 63;
+        rin.selected <= 31;
         rin.div <= "10000";
         rin.cnt <= (others => '0');
 
       when ST_IDLE =>
-        if p_cmd_val.valid = '1' then
-          rin.last <= p_cmd_val.last;
-          rin.cmd <= p_cmd_val.data;
+        if cmd_i.valid = '1' then
+          rin.last <= cmd_i.last;
+          rin.cmd <= cmd_i.data;
+          rin.state <= ST_ROUTE;
+        end if;
+
+      when ST_ROUTE =>
+        if std_match(r.cmd, SPI_CMD_SHIFT_OUT) then
+          rin.state <= ST_DATA_GET;
+          rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
+        else
           rin.state <= ST_RSP;
         end if;
 
       when ST_RSP =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           rin.state <= ST_IDLE;
           if std_match(r.cmd, SPI_CMD_DIV) then
             rin.div <= unsigned(r.cmd(4 downto 0));
@@ -99,10 +109,9 @@ begin
           elsif std_match(r.cmd, SPI_CMD_SELECT) then
             rin.selected <= to_integer(unsigned(r.cmd(4 downto 0)));
             rin.cnt <= r.div;
-            rin.state <= ST_CS_UPDATE;
+            rin.state <= ST_INTERFRAME_WAIT;
 
-          elsif std_match(r.cmd, SPI_CMD_SHIFT_OUT)
-            or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
+          elsif std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_GET;
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
 
@@ -115,16 +124,21 @@ begin
           end if;
         end if;
 
+      when ST_RSP_OUT_ONLY =>
+        if rsp_i.ready = '1' then
+          rin.state <= ST_IDLE;
+        end if;
+
       when ST_DATA_GET =>
-        if p_cmd_val.valid = '1' then
-          rin.shreg <= p_cmd_val.data;
-          rin.mosi <= p_cmd_val.data(7);
-          rin.last <= p_cmd_val.last;
+        if cmd_i.valid = '1' then
+          rin.shreg <= cmd_i.data;
+          rin.mosi <= cmd_i.data(7);
+          rin.last <= cmd_i.last;
           rin.state <= ST_SHIFT_SCK_L;
           rin.bit_count <= 7;
         end if;
         
-      when ST_CS_UPDATE =>
+      when ST_INTERFRAME_WAIT =>
         if ready then
           rin.cnt <= r.div;
           rin.state <= ST_IDLE;
@@ -134,7 +148,7 @@ begin
         if ready then
           rin.cnt <= r.div;
           rin.state <= ST_SHIFT_SCK_H;
-          rin.shreg <= r.shreg(6 downto 0) & p_miso;
+          rin.shreg <= r.shreg(6 downto 0) & miso_i;
         end if;
 
       when ST_SHIFT_SCK_H =>
@@ -145,31 +159,32 @@ begin
 
           if r.bit_count /= 0 then
             rin.state <= ST_SHIFT_SCK_L;
-          elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
+          elsif std_match(r.cmd, SPI_CMD_SHIFT_IN)
+            or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_PUT;
-          else
-            rin.word_count <= (r.word_count - 1) mod 64;
+          else -- SPI_CMD_SHIFT_OUT
             if r.word_count /= 0 then
+              rin.word_count <= r.word_count - 1;
               rin.state <= ST_DATA_GET;
             else
-              rin.state <= ST_CS_UPDATE;
+              rin.state <= ST_RSP_OUT_ONLY;
             end if;
           end if;
         end if;
 
       when ST_DATA_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           rin.cnt <= r.div;
-          rin.word_count <= (r.word_count - 1) mod 64;
-
           if r.word_count = 0 then
-            rin.state <= ST_CS_UPDATE;
+            rin.state <= ST_INTERFRAME_WAIT;
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
+            rin.word_count <= r.word_count - 1;
             rin.shreg <= (others => '1');
             rin.mosi <= '1';
             rin.bit_count <= 7;
             rin.state <= ST_SHIFT_SCK_L;
-          else
+          else -- SPI_CMD_SHIFT_IO
+            rin.word_count <= r.word_count - 1;
             rin.state <= ST_DATA_GET;
           end if;
         end if;
@@ -177,46 +192,47 @@ begin
     end case;
   end process;
 
-  p_mosi <= r.mosi;
+  mosi_o <= r.mosi;
 
   moore: process(r)
   begin
-    p_sck <= '0';
-    p_csn <= (others => '1');
-    p_cmd_ack.ready <= '0';
-    p_rsp_val.valid <= '0';
-    p_rsp_val.last <= '-';
-    p_rsp_val.data <= (others => '-');
-    if r.selected < slave_count then
-      p_csn(r.selected) <= '0';
+    sck_o <= '0';
+    cs_n_o <= (others => '1');
+    cmd_o.ready <= '0';
+    rsp_o.valid <= '0';
+    rsp_o.last <= '-';
+    rsp_o.data <= (others => '-');
+    if r.selected < slave_count_c then
+      cs_n_o(r.selected) <= '0';
     end if;
     
     case r.state is
-      when ST_RESET | ST_CS_UPDATE | ST_SHIFT_SCK_L =>
+      when ST_RESET | ST_INTERFRAME_WAIT | ST_SHIFT_SCK_L | ST_ROUTE =>
         null;
 
       when ST_SHIFT_SCK_H =>
-        p_sck <= '1';
+        sck_o <= '1';
 
       when ST_IDLE | ST_DATA_GET =>
-        p_cmd_ack.ready <= '1';
+        cmd_o.ready <= '1';
         
-      when ST_RSP =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= r.cmd;
-        if std_match(r.cmd, SPI_CMD_SHIFT_IN) or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
-          p_rsp_val.last <= '0';
+      when ST_RSP | ST_RSP_OUT_ONLY =>
+        rsp_o.valid <= '1';
+        rsp_o.data <= r.cmd;
+        if std_match(r.cmd, SPI_CMD_SHIFT_IN)
+          or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
+          rsp_o.last <= '0';
         else
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         end if;
 
       when ST_DATA_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.data <= r.shreg;
+        rsp_o.valid <= '1';
+        rsp_o.data <= r.shreg;
         if r.word_count = 0 then
-          p_rsp_val.last <= r.last;
+          rsp_o.last <= r.last;
         else
-          p_rsp_val.last <= '0';
+          rsp_o.last <= '0';
         end if;
 
     end case;

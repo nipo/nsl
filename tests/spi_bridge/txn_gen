@@ -34,7 +34,7 @@ if __name__ == "__main__":
     random.seed(42)
 
     for i in range(10):
-        r = random.randint(1, 512)
+        r = random.randint(1, 32)
         size = r >> 1
         direction = r & 1
 
@@ -42,3 +42,8 @@ if __name__ == "__main__":
             t.to_slave(bytes([i & 0xff for i in range(size)]))
         else:
             t.from_slave(bytes([i & 0xff for i in range(size)]))
+
+    if n.startswith("master"):
+        t.pipe.select(1)
+        t.pipe.shift_out([0] * 10)
+        t.pipe.flush()

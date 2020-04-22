@@ -1,8 +1,9 @@
 vhdl-sources += tb.vhd
-deps += nsl.framed
-deps += signalling.spi
-deps += nsl.sized
-deps += util.sync
-deps += testing.framed
-deps += nsl.spi
-
+deps += nsl_bnoc.sized
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.testing
+deps += nsl_spi.spi
+deps += nsl_spi.slave
+deps += nsl_spi.transactor
+deps += nsl_clocking.async
+deps += nsl_simulation.driver
