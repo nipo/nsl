@@ -5,14 +5,15 @@ use ieee.numeric_std.all;
 package jtag is
 
   type jtag_bus is record
-    tdi : std_logic;
-    tck : std_logic;
-    tdo : std_logic;
-    tms : std_logic;
+    tdi    : std_logic;
+    trst_n : std_logic;
+    tck    : std_logic;
+    tdo    : std_logic;
+    tms    : std_logic;
   end record;
 
   type jtag_ate_o is record
-    trst : std_ulogic;
+    trst_n : std_ulogic;
     tdi : std_ulogic;
     tck : std_ulogic;
     tms : std_ulogic;

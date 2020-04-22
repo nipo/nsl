@@ -6,4 +6,3 @@ packages += logic_analyzer
 packages += ioext
 packages += uart
 packages += ws
-packages += jtag

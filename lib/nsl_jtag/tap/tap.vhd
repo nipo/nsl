@@ -1,9 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl;
+library nsl_jtag;
 
-entity jtag_tap is
+entity tap is
   generic(
     ir_len : natural
     );
@@ -28,7 +28,7 @@ entity jtag_tap is
     );
 end entity;
 
-architecture rtl of jtag_tap is
+architecture rtl of tap is
 
   signal ir, ir_shreg: std_ulogic_vector(ir_len - 1 downto 0);
 
@@ -77,7 +77,7 @@ begin
   reset_o <= s_reset;
   dr_shift_o <= s_dr_shift;
   
-  controller: nsl.jtag.jtag_tap_controller
+  controller: nsl_jtag.tap.tap_controller
     port map(
       tck_i => tck_i,
       tms_i => tms_i,

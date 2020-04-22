@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity jtag_tap_dr is
+entity tap_dr is
   generic(
     ir_len : natural;
     dr_len : natural
@@ -23,7 +23,7 @@ entity jtag_tap_dr is
     );
 end entity;
 
-architecture rtl of jtag_tap_dr is
+architecture rtl of tap_dr is
 
   signal dr, dr_shreg: std_ulogic_vector(dr_len - 1 downto 0);
   signal s_selected : boolean;

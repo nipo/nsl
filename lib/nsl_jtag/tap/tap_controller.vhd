@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-entity jtag_tap_controller is
+entity tap_controller is
   port(
     tck_i  : in  std_ulogic;
     tms_i  : in  std_ulogic;
@@ -18,7 +18,7 @@ entity jtag_tap_controller is
     );
 end entity;
 
-architecture rtl of jtag_tap_controller is
+architecture rtl of tap_controller is
 
   type state_t is (
     ST_EXIT2_DR,

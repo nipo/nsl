@@ -2,26 +2,26 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
+library nsl_jtag, nsl_bnoc;
+use nsl_jtag.ate.all;
+use nsl_jtag.transactor.all;
 
-entity jtag_framed_ate is
+entity framed_ate is
   port (
     reset_n_i   : in  std_ulogic;
     clock_i      : in  std_ulogic;
 
-    cmd_i   : in nsl.framed.framed_req;
-    cmd_o   : out nsl.framed.framed_ack;
-    rsp_o   : out nsl.framed.framed_req;
-    rsp_i   : in nsl.framed.framed_ack;
+    cmd_i   : in nsl_bnoc.framed.framed_req;
+    cmd_o   : out nsl_bnoc.framed.framed_ack;
+    rsp_o   : out nsl_bnoc.framed.framed_req;
+    rsp_i   : in nsl_bnoc.framed.framed_ack;
 
-    tck_o  : out std_ulogic;
-    tms_o  : out std_ulogic;
-    tdi_o  : out std_ulogic;
-    tdo_i  : in  std_ulogic
+    jtag_o : out nsl_jtag.jtag.jtag_ate_o;
+    jtag_i : in nsl_jtag.jtag.jtag_ate_i
     );
 end entity;
 
-architecture rtl of jtag_framed_ate is
+architecture rtl of framed_ate is
 
   type st_cmd_t is (
     ST_CMD_RESET,
@@ -49,7 +49,7 @@ architecture rtl of jtag_framed_ate is
   type regs_t is
   record
     cmd_st : st_cmd_t;
-    cmd_pending : nsl.jtag.ate_op;
+    cmd_pending : ate_op;
     cmd_op_last : std_ulogic;
     cmd_data : std_ulogic_vector(7 downto 0);
     cmd_word_left : natural range 0 to 31;
@@ -67,7 +67,7 @@ architecture rtl of jtag_framed_ate is
   
   signal s_cmd_ready : std_ulogic;
   signal s_cmd_valid : std_ulogic;
-  signal s_cmd_op    : nsl.jtag.ate_op;
+  signal s_cmd_op    : ate_op;
   signal s_cmd_data  : std_ulogic_vector(data_max_size-1 downto 0);
 
   signal s_rsp_ready : std_ulogic;
@@ -91,10 +91,10 @@ begin
   begin
     rin <= r;
 
---    do_read := (std_match(r.cmd, nsl.jtag.JTAG_SHIFT_BYTE)
---                and std_match(r.cmd, nsl.jtag.JTAG_SHIFT_BYTE_R))
---               or (std_match(r.cmd, nsl.jtag.JTAG_SHIFT_BIT)
---                   and std_match(r.cmd, nsl.jtag.JTAG_SHIFT_BIT_R));
+--    do_read := (std_match(r.cmd, JTAG_SHIFT_BYTE)
+--                and std_match(r.cmd, JTAG_SHIFT_BYTE_R))
+--               or (std_match(r.cmd, JTAG_SHIFT_BIT)
+--                   and std_match(r.cmd, JTAG_SHIFT_BIT_R));
 
     
     case r.cmd_st is
@@ -110,58 +110,58 @@ begin
 
       when ST_CMD_ROUTE =>
         if r.rsp_st = ST_RSP_IDLE then
-          if std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BYTE) then
+          if std_match(r.cmd_data, JTAG_SHIFT_BYTE) then
             rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(4 downto 0)));
             rin.cmd_bit_count_m1 <= 7;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_SHIFT;
-            if std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BYTE_W) then
+            rin.cmd_pending <= ATE_OP_SHIFT;
+            if std_match(r.cmd_data, JTAG_SHIFT_BYTE_W) then
               rin.cmd_st <= ST_CMD_DATA_GET;
             else
               rin.cmd_data <= (others => '0');
               rin.cmd_st <= ST_CMD_PUT;
             end if;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BIT) then
+          elsif std_match(r.cmd_data, JTAG_SHIFT_BIT) then
             rin.cmd_word_left <= 0;
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
-            rin.cmd_pending <= nsl.jtag.ATE_OP_SHIFT;
-            if std_match(r.cmd_data, nsl.jtag.JTAG_SHIFT_BIT_W) then
+            rin.cmd_pending <= ATE_OP_SHIFT;
+            if std_match(r.cmd_data, JTAG_SHIFT_BIT_W) then
               rin.cmd_st <= ST_CMD_DATA_GET;
             else
               rin.cmd_data <= (others => '0');
               rin.cmd_st <= ST_CMD_PUT;
             end if;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_DR_CAPTURE) then
+          elsif std_match(r.cmd_data, JTAG_CMD_DR_CAPTURE) then
             rin.cmd_word_left <= 0;
             rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_DR_CAPTURE;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_IR_CAPTURE) then
+            rin.cmd_pending <= ATE_OP_DR_CAPTURE;
+          elsif std_match(r.cmd_data, JTAG_CMD_IR_CAPTURE) then
             rin.cmd_word_left <= 0;
             rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_IR_CAPTURE;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_SWD_TO_JTAG) then
+            rin.cmd_pending <= ATE_OP_IR_CAPTURE;
+          elsif std_match(r.cmd_data, JTAG_CMD_SWD_TO_JTAG) then
             rin.cmd_st <= ST_CMD_SWD_TO_JTAG1;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_SWD_TO_JTAG_1;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_RESET_CYCLE) then
+            rin.cmd_pending <= ATE_OP_SWD_TO_JTAG_1;
+          elsif std_match(r.cmd_data, JTAG_CMD_RESET_CYCLE) then
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
             rin.cmd_word_left <= 0;
             rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_RESET;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_RTI_CYCLE) then
+            rin.cmd_pending <= ATE_OP_RESET;
+          elsif std_match(r.cmd_data, JTAG_CMD_RTI_CYCLE) then
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
             rin.cmd_word_left <= 0;
             rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_RTI;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_RESET) then
+            rin.cmd_pending <= ATE_OP_RTI;
+          elsif std_match(r.cmd_data, JTAG_CMD_RESET) then
             rin.cmd_bit_count_m1 <= 7;
             rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
-            rin.cmd_pending <= nsl.jtag.ATE_OP_RESET;
+            rin.cmd_pending <= ATE_OP_RESET;
             rin.cmd_st <= ST_CMD_PUT;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_RTI) then
+          elsif std_match(r.cmd_data, JTAG_CMD_RTI) then
             rin.cmd_bit_count_m1 <= 7;
             rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
             rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= nsl.jtag.ATE_OP_RTI;
-          elsif std_match(r.cmd_data, nsl.jtag.JTAG_CMD_DIVISOR) then
+            rin.cmd_pending <= ATE_OP_RTI;
+          elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
             rin.divisor <= to_integer(unsigned(r.cmd_data(4 downto 0)));
             rin.cmd_st <= ST_CMD_IDLE;
           else
@@ -177,7 +177,7 @@ begin
         if s_cmd_ready = '1' then
           rin.cmd_st <= ST_CMD_PUT;
           rin.cmd_word_left <= 1;
-          rin.cmd_pending <= nsl.jtag.ATE_OP_SWD_TO_JTAG_23;
+          rin.cmd_pending <= ATE_OP_SWD_TO_JTAG_23;
         end if;
 
       when ST_CMD_PUT =>
@@ -220,16 +220,16 @@ begin
         end if;
 
       when ST_RSP_ROUTE =>
-        if std_match(r.rsp_data, nsl.jtag.JTAG_SHIFT_BYTE) then
+        if std_match(r.rsp_data, JTAG_SHIFT_BYTE) then
           rin.rsp_word_left <= to_integer(unsigned(r.rsp_data(4 downto 0)));
-          if std_match(r.rsp_data, nsl.jtag.JTAG_SHIFT_BYTE_R) then
+          if std_match(r.rsp_data, JTAG_SHIFT_BYTE_R) then
             rin.rsp_st <= ST_RSP_DATA_GET;
           else
             rin.rsp_st <= ST_RSP_DATA_BLACKHOLE;
           end if;
-        elsif std_match(r.rsp_data, nsl.jtag.JTAG_SHIFT_BIT) then
+        elsif std_match(r.rsp_data, JTAG_SHIFT_BIT) then
           rin.rsp_word_left <= 0;
-          if std_match(r.rsp_data, nsl.jtag.JTAG_SHIFT_BIT_R) then
+          if std_match(r.rsp_data, JTAG_SHIFT_BIT_R) then
             rin.rsp_st <= ST_RSP_DATA_GET;
           else
             rin.rsp_st <= ST_RSP_DATA_BLACKHOLE;
@@ -318,7 +318,7 @@ begin
     end case;
   end process;
 
-  ate: nsl.jtag.jtag_ate
+  ate: jtag_ate
     generic map (
       data_max_size => data_max_size
       )
@@ -337,10 +337,8 @@ begin
       rsp_valid_o => s_rsp_valid,
       rsp_data_o => s_rsp_data,
 
-      tck_o => tck_o,
-      tms_o => tms_o,
-      tdi_o => tdi_o,
-      tdo_i => tdo_i
+      jtag_o => jtag_o,
+      jtag_i => jtag_i
       );
 
 end architecture;

@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl;
+library nsl_jtag;
 
 entity jtag_ate is
   generic (
@@ -15,7 +15,7 @@ entity jtag_ate is
 
     cmd_ready_o   : out std_ulogic;
     cmd_valid_i   : in  std_ulogic;
-    cmd_op_i      : in  nsl.jtag.ate_op;
+    cmd_op_i      : in  nsl_jtag.ate.ate_op;
     cmd_data_i    : in  std_ulogic_vector(data_max_size-1 downto 0);
     cmd_size_m1_i : in  natural range 0 to data_max_size-1;
 
@@ -23,10 +23,8 @@ entity jtag_ate is
     rsp_valid_o : out std_ulogic;
     rsp_data_o  : out std_ulogic_vector(data_max_size-1 downto 0);
 
-    tck_o  : out std_ulogic;
-    tms_o  : out std_ulogic;
-    tdi_o  : out std_ulogic;
-    tdo_i  : in  std_ulogic
+    jtag_o : out nsl_jtag.jtag.jtag_ate_o;
+    jtag_i : in nsl_jtag.jtag.jtag_ate_i
     );
 end entity;
 
@@ -96,7 +94,7 @@ begin
   rising <= r.tck = '0' and r.prescaler = 0;
   falling <= r.tck /= '0' and r.prescaler = 0;
   
-  transition: process(r, tdo_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
+  transition: process(r, jtag_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
                       rising, falling)
   begin
     rin <= r;
@@ -140,14 +138,14 @@ begin
         if cmd_valid_i = '1' and rising then
           rin.pipelining <= false;
           case cmd_op_i is
-            when nsl.jtag.ATE_OP_RESET =>
+            when nsl_jtag.ate.ATE_OP_RESET =>
               -- From state * to Reset
               rin.tms_shreg <= (others => '1');
               rin.tms_left <= cmd_size_m1_i;
               rin.tap_branch <= TAP_RESET;
               rin.state <= ST_MOVING;
 
-            when nsl.jtag.ATE_OP_RTI =>
+            when nsl_jtag.ate.ATE_OP_RTI =>
               case r.tap_branch is
                 when TAP_UNDEFINED =>
                   null;
@@ -165,7 +163,7 @@ begin
                   rin.state <= ST_MOVING;
               end case;
 
-            when nsl.jtag.ATE_OP_DR_CAPTURE =>
+            when nsl_jtag.ate.ATE_OP_DR_CAPTURE =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET =>
                   null;
@@ -184,7 +182,7 @@ begin
                   rin.state <= ST_MOVING;
               end case;
 
-            when nsl.jtag.ATE_OP_IR_CAPTURE =>
+            when nsl_jtag.ate.ATE_OP_IR_CAPTURE =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET =>
                   null;
@@ -203,7 +201,7 @@ begin
                   rin.state <= ST_MOVING;
               end case;
 
-            when nsl.jtag.ATE_OP_SWD_TO_JTAG_1 =>
+            when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG_1 =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
                   rin.tms_shreg <= "001111--";
@@ -214,7 +212,7 @@ begin
                   null;
               end case;
 
-            when nsl.jtag.ATE_OP_SWD_TO_JTAG_23 =>
+            when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG_23 =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
                   rin.tms_shreg <= "00111---";
@@ -225,7 +223,7 @@ begin
                   null;
               end case;
 
-            when nsl.jtag.ATE_OP_SHIFT =>
+            when nsl_jtag.ate.ATE_OP_SHIFT =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
                   null;
@@ -263,7 +261,7 @@ begin
         -- may sometimes be in SHIFTING_PIPELINE instead.
         if rising then
           rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
-          rin.data_shreg(r.data_shreg_insertion_index) <= tdo_i;
+          rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
           rin.data_left <= r.data_left - 1;
           if r.data_left = 0 then
             if r.pipelining then
@@ -282,7 +280,7 @@ begin
             if cmd_valid_i = '1'
               and rsp_ready_i = '1' then
               case cmd_op_i is
-                when nsl.jtag.ATE_OP_SHIFT =>
+                when nsl_jtag.ate.ATE_OP_SHIFT =>
                   rin.pipelining <= true;
                   when others => null;
               end case;
@@ -344,8 +342,9 @@ begin
     end case;
   end process;
 
-  tck_o <= r.tck;
-  tdi_o <= r.tdi;
-  tms_o <= r.tms;
+  jtag_o.tck <= r.tck;
+  jtag_o.tdi <= r.tdi;
+  jtag_o.tms <= r.tms;
+  jtag_o.trst_n <= '1';
 
 end architecture;
