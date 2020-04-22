@@ -6,4 +6,4 @@ vhdl-sources += fifo_widener.vhd
 vhdl-sources += fifo_delayed_writer.vhd
 vhdl-sources += fifo_input_stabilized.vhd
 
-deps += hwdep.fifo
+deps += nsl_memory.fifo

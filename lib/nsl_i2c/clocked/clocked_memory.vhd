@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_i2c, hwdep;
+library nsl_i2c, nsl_memory;
 
 entity clocked_memory is
   generic (
@@ -26,7 +26,6 @@ architecture arch of clocked_memory is
   signal s_write : std_ulogic;
   signal s_rdata, s_wdata : std_ulogic_vector(8*granularity-1 downto 0);
   signal s_address : unsigned(8*addr_byte_cnt-1 downto 0);
-  signal s_addr : std_ulogic_vector(addr_width-1 downto 0);
   
 begin
 
@@ -52,19 +51,17 @@ begin
       w_valid_o => s_write
     );
 
-  s_addr <= std_ulogic_vector(s_address(addr_width-1 downto 0));
-
-  ram: hwdep.ram.ram_1p
+  ram: nsl_memory.ram.ram_1p
     generic map (
-      addr_size => addr_width,
-      data_size => 8*granularity
+      addr_size_c => addr_width,
+      data_size_c => 8*granularity
     )
     port map (
-      p_clk => clock_i,
-      p_wen => s_write,
-      p_addr => s_addr,
-      p_wdata => s_wdata,
-      p_rdata => s_rdata
+      clock_i => clock_i,
+      write_en_i => s_write,
+      address_i => s_address(addr_width-1 downto 0),
+      data_i => s_wdata,
+      data_o => s_rdata
       );
 
 end arch;

@@ -4,4 +4,4 @@ vhdl-sources += clocked_memory_controller.vhd
 vhdl-sources += clocked_slave.vhd
 deps += nsl_clocking.async
 deps += nsl_math.arith
-deps += hwdep.ram
+deps += nsl_memory.ram

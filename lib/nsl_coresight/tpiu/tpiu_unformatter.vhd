@@ -14,8 +14,8 @@ use unisim.vcomponents.all;
 library nsl;
 use nsl.framed.all;
 
-library hwdep;
-use hwdep.fifo.all;
+library nsl_memory;
+use nsl_memory.fifo.all;
 
 entity tpiu_unformatter is
   generic(
@@ -78,16 +78,16 @@ architecture rtl of tpiu_unformatter is
 
 begin
 
-  fcmd: hwdep.fifo.fifo_2p
+  fcmd: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width => 16,
-      depth => 1024,
-      clk_count => 2
+      data_width_c => 16,
+      word_count_c => 1024,
+      clock_count_c => 2
       )
     port map(
       reset_n_i => p_resetn,
-      clk_i(0) => p_traceclk,
-      clk_i(1) => p_clk,
+      clock_i(0) => p_traceclk,
+      clock_i(1) => p_clk,
 
       out_data_o => cmd_dout,
       out_ready_i => cmd_ren,
@@ -98,16 +98,16 @@ begin
       in_data_i => cmd_din
       );
 
-  fdata: hwdep.fifo.fifo_2p
+  fdata: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width => 8,
-      depth => 1024,
-      clk_count => 2
+      data_width_c => 8,
+      word_count_c => 1024,
+      clock_count_c => 2
       )
     port map(
       reset_n_i => p_resetn,
-      clk_i(0) => p_traceclk,
-      clk_i(1) => p_clk,
+      clock_i(0) => p_traceclk,
+      clock_i(1) => p_clk,
 
       out_data_o => data_dout,
       out_ready_i => data_ren,

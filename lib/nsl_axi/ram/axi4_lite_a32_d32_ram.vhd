@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, hwdep;
+library nsl_axi, nsl_memory;
 
 entity axi4_lite_a32_d32_ram is
   generic (
@@ -49,17 +49,17 @@ begin
       p_r_valid => s_axi_read_done
       );
 
-  ram: hwdep.ram.ram_1p
+  ram: nsl_memory.ram.ram_1p
     generic map(
-      addr_size => mem_size_log2_c-2,
-      data_size => 32
+      addr_size_c => mem_size_log2_c-2,
+      data_size_c => 32
       )
     port map(
-      p_clk => clock_i,
-      p_addr => s_axi_addr,
-      p_wen   => s_axi_mem_wmask(0),
-      p_wdata  => s_axi_wdata,
-      p_rdata => s_axi_rdata
+      clock_i => clock_i,
+      address_i => s_axi_addr,
+      write_en_i   => s_axi_mem_wmask(0),
+      data_i  => s_axi_wdata,
+      data_o => s_axi_rdata
       );
 
   s_axi_mem_wmask <= s_axi_wmask when s_axi_write = '1' else (others => '0');

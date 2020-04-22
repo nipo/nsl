@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep;
+library nsl_memory;
 
 entity axis_fifo is
   generic(
@@ -46,21 +46,21 @@ architecture rtl axis_fifo is
 
 begin
 
-  fifo: hwdep.fifo.fifo_2p
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      depth => depth,
-      data_width => data_bytes * 8,
-      clk_count => clk_count
+      word_count_c => depth,
+      data_width_c => data_bytes * 8,
+      clock_count_c => clk_count
       )
     port map(
-      p_resetn => p_resetn,
-      p_clk => p_clk,
-      p_out_data => s_out_data,
-      p_out_read => p_out_ack.ack,
-      p_out_empty_n => p_out_val.val,
-      p_in_data => s_in_data,
-      p_in_write => p_in_val.val,
-      p_in_full_n => p_in_ack.ack
+      reset_n_i => p_resetn,
+      clock_i => p_clk,
+      out_data_o => s_out_data,
+      out_ready_i => p_out_ack.ack,
+      out_valid_o => p_out_val.val,
+      in_data_i => s_in_data,
+      in_valid_i => p_in_val.val,
+      in_ready_o => p_in_ack.ack
       );
 
   s_in_data <= p_in_val.more & p_in_val.data;

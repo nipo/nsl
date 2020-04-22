@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep, nsl_bnoc;
+library nsl_memory, nsl_bnoc;
 
 entity framed_fifo is
   generic(
@@ -25,15 +25,15 @@ architecture rtl of framed_fifo is
 
 begin
 
-  fifo: hwdep.fifo.fifo_2p
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      depth => depth,
-      data_width => 9,
-      clk_count => clk_count
+      word_count_c => depth,
+      data_width_c => 9,
+      clock_count_c => clk_count
       )
     port map(
       reset_n_i => p_resetn,
-      clk_i => p_clk,
+      clock_i => p_clk,
       out_data_o(8) => p_out_val.last,
       out_data_o(7 downto 0) => p_out_val.data,
       out_ready_i => p_out_ack.ready,

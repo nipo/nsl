@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, hwdep;
+library nsl_bnoc, nsl_memory;
 
 entity routed_gateway is
   generic(
@@ -80,23 +80,24 @@ begin
     end if;
   end process;
 
-  lut: hwdep.ram.ram_2p_r_w
+  lut: nsl_memory.ram.ram_2p_r_w
     generic map(
-      addr_size => tag_size,
-      data_size => s_lut_tag'length + s_lut_source'length
+      addr_size_c => tag_size,
+      data_size_c => s_lut_tag'length + s_lut_source'length,
+      clock_count_c => 1
       )
     port map(
-      p_clk(0) => p_clk,
+      clock_i(0) => p_clk,
 
-      p_waddr => std_ulogic_vector(r.next_tag),
-      p_wen => s_lut_write,
-      p_wdata(11 downto 8) => r.cmd_from,
-      p_wdata(7 downto 0) => r.cmd_tag,
+      write_address_i => r.next_tag,
+      write_en_i => s_lut_write,
+      write_data_i(11 downto 8) => r.cmd_from,
+      write_data_i(7 downto 0) => r.cmd_tag,
 
-      p_raddr => p_rsp_in_val.data(tag_size-1 downto 0),
-      p_ren => s_lut_read,
-      p_rdata(11 downto 8) => s_lut_source,
-      p_rdata(7 downto 0) => s_lut_tag
+      read_address_i => unsigned(p_rsp_in_val.data(tag_size-1 downto 0)),
+      read_en_i => s_lut_read,
+      read_data_o(11 downto 8) => s_lut_source,
+      read_data_o(7 downto 0) => s_lut_tag
       );
 
   s_lut_write <= '1' when r.cmd_state = CMD_PUT_TABLE else '0';

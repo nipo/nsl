@@ -6,4 +6,4 @@ vhdl-sources += routed_router_outbound.vhd
 vhdl-sources += routed_router.vhd
 
 deps += nsl_bnoc.framed
-deps += hwdep.ram
+deps += nsl_memory.ram

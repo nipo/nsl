@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_i2c, nsl_math, hwdep;
+library nsl_i2c, nsl_math, nsl_memory;
 
 entity clockfree_memory is
   generic (
@@ -52,17 +52,17 @@ begin
 
   s_address <= s_address_tmp(s_address'range);
 
-  ram: hwdep.ram.ram_1p
+  ram: nsl_memory.ram.ram_1p
     generic map (
-      addr_size => s_address'length,
-      data_size => 8*granularity
+      addr_size_c => s_address'length,
+      data_size_c => 8*granularity
     )
     port map (
-      p_clk => s_clk,
-      p_wen => s_write,
-      p_addr => std_ulogic_vector(s_address),
-      p_wdata => s_wdata,
-      p_rdata => s_rdata
+      clock_i => s_clk,
+      write_en_i => s_write,
+      address_i => std_ulogic_vector(s_address),
+      data_i => s_wdata,
+      data_o => s_rdata
       );
 
 end arch;

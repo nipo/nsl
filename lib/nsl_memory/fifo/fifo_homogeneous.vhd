@@ -2,44 +2,44 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library util, hwdep;
+library nsl_clocking, nsl_math, nsl_memory;
 
-entity fifo_2p is
+entity fifo_homogeneous is
   generic(
-    data_width   : integer;
-    depth        : integer;
-    clk_count    : natural range 1 to 2
+    data_width_c   : integer;
+    word_count_c        : integer;
+    clock_count_c    : natural range 1 to 2
     );
   port(
     reset_n_i : in  std_ulogic;
-    clk_i    : in  std_ulogic_vector(0 to clk_count-1);
+    clock_i    : in  std_ulogic_vector(0 to clock_count_c-1);
 
-    out_data_o          : out std_ulogic_vector(data_width-1 downto 0);
+    out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
     out_ready_i         : in  std_ulogic;
     out_valid_o         : out std_ulogic;
-    out_available_min_o : out integer range 0 to depth;
-    out_available_o     : out integer range 0 to depth + 1;
+    out_available_min_o : out integer range 0 to word_count_c;
+    out_available_o     : out integer range 0 to word_count_c + 1;
 
-    in_data_i       : in  std_ulogic_vector(data_width-1 downto 0);
+    in_data_i       : in  std_ulogic_vector(data_width_c-1 downto 0);
     in_valid_i      : in  std_ulogic;
     in_ready_o      : out std_ulogic;
-    in_free_o       : out integer range 0 to depth
+    in_free_o       : out integer range 0 to word_count_c
     );
 
-end fifo_2p;
+end fifo_homogeneous;
 
-architecture ram2 of fifo_2p is
+architecture ram2 of fifo_homogeneous is
 
-  constant ptr_width : natural := util.numeric.log2(depth);
+  constant ptr_width : natural := nsl_math.arith.log2(word_count_c);
   subtype mem_ptr_t is unsigned(ptr_width-1 downto 0);
   subtype peer_pos_t is std_ulogic_vector(ptr_width downto 0);
-  subtype data_t is std_ulogic_vector(data_width-1 downto 0);
-  constant c_idx_high : mem_ptr_t := to_unsigned(depth-1, ptr_width);
+  subtype data_t is std_ulogic_vector(data_width_c-1 downto 0);
+  constant c_idx_high : mem_ptr_t := to_unsigned(word_count_c-1, ptr_width);
   constant c_is_pow2 : boolean := c_idx_high = (c_idx_high'range => '1');
-  constant is_synchronous: boolean := clk_count = 1;
-  constant is_bisynchronous: boolean := clk_count = 2;
+  constant is_synchronous: boolean := clock_count_c = 1;
+  constant is_bisynchronous: boolean := clock_count_c = 2;
 
-  signal s_resetn: std_ulogic_vector(0 to clk_count-1);
+  signal s_resetn: std_ulogic_vector(0 to clock_count_c-1);
 
   type side_info_t is
   record
@@ -75,41 +75,41 @@ begin
 
   async: if not is_synchronous generate
   begin
-    reset_sync: util.sync.sync_multi_resetn
+    reset_sync: nsl_clocking.async.async_multi_reset
       generic map(
-        clk_count => 2
+        domain_count_c => 2
         )
       port map(
-        p_clk => clk_i,
-        p_resetn => reset_n_i,
-        p_resetn_sync => s_resetn
+        clock_i => clock_i,
+        master_i => reset_n_i,
+        slave_o => s_resetn
         );
 
-    out_wptr: util.sync.sync_cross_counter
+    out_wptr: nsl_clocking.interdomain.interdomain_counter
       generic map(
-        data_width => peer_pos_t'length,
-        input_is_gray => true,
-        output_is_gray => true
+        data_width_c => peer_pos_t'length,
+        input_is_gray_c => true,
+        output_is_gray_c => true
         )
       port map(
-        p_in_clk => clk_i(0),
-        p_out_clk => clk_i(clk_count-1),
-        p_in => unsigned(s_left.local_pos),
-        peer_pos_t(p_out) => s_right.peer_pos
+        clock_in_i => clock_i(0),
+        clock_out_i => clock_i(clock_count_c-1),
+        data_i => unsigned(s_left.local_pos),
+        peer_pos_t(data_o) => s_right.peer_pos
         );
 
-    in_rptr: util.sync.sync_cross_counter
+    in_rptr: nsl_clocking.interdomain.interdomain_counter
       generic map(
-        data_width => peer_pos_t'length,
-        decode_stage_count => (peer_pos_t'length + 3) / 4,
-        input_is_gray => true,
-        output_is_gray => true
+        data_width_c => peer_pos_t'length,
+        decode_stage_count_c => (peer_pos_t'length + 3) / 4,
+        input_is_gray_c => true,
+        output_is_gray_c => true
         )
       port map(
-        p_in_clk => clk_i(clk_count-1),
-        p_out_clk => clk_i(0),
-        p_in => unsigned(s_right.local_pos),
-        peer_pos_t(p_out) => s_left.peer_pos
+        clock_in_i => clock_i(clock_count_c-1),
+        clock_out_i => clock_i(0),
+        data_i => unsigned(s_right.local_pos),
+        peer_pos_t(data_o) => s_left.peer_pos
         );
   end generate;
 
@@ -118,31 +118,31 @@ begin
 
     -- only insert a 2-cycle delay (ram latency)
 
-    out_wptr: util.sync.sync_multi_reg
+    out_wptr: nsl_clocking.intradomain.intradomain_multi_reg
       generic map(
-        data_width => peer_pos_t'length
+        data_width_c => peer_pos_t'length
         )
       port map(
-        p_clk => clk_i(0),
-        p_in => std_ulogic_vector(s_left.local_pos),
-        peer_pos_t(p_out) => s_right.peer_pos
+        clock_i => clock_i(0),
+        data_i => std_ulogic_vector(s_left.local_pos),
+        peer_pos_t(data_o) => s_right.peer_pos
         );
 
-    in_rptr: util.sync.sync_multi_reg
+    in_rptr: nsl_clocking.intradomain.intradomain_multi_reg
       generic map(
-        data_width => peer_pos_t'length
+        data_width_c => peer_pos_t'length
         )
       port map(
-        p_clk => clk_i(0),
-        p_in => std_ulogic_vector(s_right.local_pos),
-        peer_pos_t(p_out) => s_left.peer_pos
+        clock_i => clock_i(0),
+        data_i => std_ulogic_vector(s_right.local_pos),
+        peer_pos_t(data_o) => s_left.peer_pos
         );
   end generate;
 
-  ctr_in: hwdep.fifo.fifo_pointer
+  ctr_in: nsl_memory.fifo.fifo_pointer
     generic map(
       ptr_width => mem_ptr_t'length,
-      wrap_count => depth,
+      wrap_count => word_count_c,
       equal_can_move => true,
       gray_position => is_bisynchronous,
       increment_early => false,
@@ -150,7 +150,7 @@ begin
       )
     port map(
       reset_n_i => s_resetn(0),
-      clk_i => clk_i(0),
+      clock_i => clock_i(0),
       inc_i => s_left.inc_req,
       ack_o => s_left.inc_ack,
       peer_position_i => s_left.peer_pos,
@@ -160,18 +160,18 @@ begin
       free_count_o => s_left.free
       );
 
-  ctr_out: hwdep.fifo.fifo_pointer
+  ctr_out: nsl_memory.fifo.fifo_pointer
     generic map(
       ptr_width => mem_ptr_t'length,
-      wrap_count => depth,
+      wrap_count => word_count_c,
       equal_can_move => false,
       gray_position => is_bisynchronous,
       increment_early => true,
       peer_ahead => false
       )
     port map(
-      reset_n_i => s_resetn(clk_count-1),
-      clk_i => clk_i(clk_count-1),
+      reset_n_i => s_resetn(clock_count_c-1),
+      clock_i => clock_i(clock_count_c-1),
       inc_i => s_right.inc_req,
       ack_o => s_right.inc_ack,
       peer_position_i => s_right.peer_pos,
@@ -185,15 +185,15 @@ begin
   out_available_min_o <= to_integer(to_01(s_right.used));
   out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
 
-  ram: hwdep.ram.ram_2p_r_w
+  ram: nsl_memory.ram.ram_2p_r_w
     generic map(
       addr_size => mem_ptr_t'length,
       data_size => data_t'length,
-      clk_count => clk_count,
+      clock_count_c => clock_count_c,
       bypass => is_synchronous
       )
     port map(
-      p_clk => clk_i,
+      p_clock => clock_i,
 
       p_waddr => std_ulogic_vector(s_left.mem_ptr),
       p_wen => s_left.mem_en,
@@ -208,10 +208,10 @@ begin
   s_left.mem_en <= s_left.inc_ack and in_valid_i;
   s_left.inc_req <= in_valid_i;
 
-  regs: process (clk_i, s_resetn)
+  regs: process (clock_i, s_resetn)
   begin
-    if clk_i(clk_count-1)'event and clk_i(clk_count-1) = '1' then
-      if s_resetn(clk_count-1) = '0' then
+    if clock_i(clock_count_c-1)'event and clock_i(clock_count_c-1) = '1' then
+      if s_resetn(clock_count_c-1) = '0' then
         r.valid <= '0';
         r.direct <= '0';
         r.data <= (others => '-');

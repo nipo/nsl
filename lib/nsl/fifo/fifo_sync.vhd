@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep;
-use hwdep.fifo.all;
+library nsl_memory;
+use nsl_memory.fifo.all;
 
 entity fifo_sync is
   generic(
@@ -27,15 +27,15 @@ end fifo_sync;
 architecture rtl of fifo_sync is
 begin
 
-  impl: hwdep.fifo.fifo_2p
+  impl: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width => data_width,
-      depth => depth,
-      clk_count => 1
+      data_width_c => data_width,
+      word_count_c => depth,
+      clock_count_c => 1
       )
     port map(
       reset_n_i => p_resetn,
-      clk_i(0) => p_clk,
+      clock_i(0) => p_clk,
 
       out_data_o => p_out_data,
       out_ready_i => p_out_ready,
