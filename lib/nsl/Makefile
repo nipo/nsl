@@ -1,7 +1,5 @@
 packages += tick
 packages += fifo
-packages += mii
-packages += ftdi
 packages += logic_analyzer
 packages += ioext
 packages += uart

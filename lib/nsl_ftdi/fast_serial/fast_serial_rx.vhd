@@ -1,25 +1,23 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl;
-
-entity ftdi_fs_rx is
+entity fast_serial_rx is
   port (
-    p_clk    : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i    : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_clk_en : out std_ulogic;
-    p_serial : in  std_ulogic;
-    p_cts    : out std_ulogic;
+    clock_en_o : out std_ulogic;
+    serial_i : in  std_ulogic;
+    cts_o    : out std_ulogic;
 
-    p_ready   : in  std_ulogic;
-    p_valid   : out std_ulogic;
-    p_data    : out std_ulogic_vector(7 downto 0);
-    p_channel : out std_ulogic
+    ready_i   : in  std_ulogic;
+    valid_o   : out std_ulogic;
+    data_o    : out std_ulogic_vector(7 downto 0);
+    channel_o : out std_ulogic
     );
-end ftdi_fs_rx;
+end fast_serial_rx;
 
-architecture arch of ftdi_fs_rx is
+architecture arch of fast_serial_rx is
   
   type state_t is (
     RESET,
@@ -41,16 +39,16 @@ architecture arch of ftdi_fs_rx is
   
 begin
   
-  regs: process (p_clk, p_resetn)
+  regs: process (clock_i, reset_n_i)
   begin
-    if (p_resetn = '0') then
+    if (reset_n_i = '0') then
       r.state <= RESET;
-    elsif (rising_edge(p_clk)) then
+    elsif (rising_edge(clock_i)) then
       r <= rin;
     end if;
   end process;
 
-  transition: process (r, p_serial, p_ready)
+  transition: process (r, serial_i, ready_i)
     variable start_bit : boolean;
   begin
     rin <= r;
@@ -62,34 +60,34 @@ begin
         rin.cts <= '0';
 
       when START_WAITING | PARALLEL_RESUME =>
-        rin.cts <= p_ready;
-        if p_serial = '0' then
+        rin.cts <= ready_i;
+        if serial_i = '0' then
           start_bit := true;
         end if;
 
       when SHIFTING =>
-        rin.data <= p_serial & r.data(8 downto 1);
+        rin.data <= serial_i & r.data(8 downto 1);
         if r.cycle /= 0 then
           rin.cycle <= r.cycle - 1;
-        elsif p_ready = '1' then
+        elsif ready_i = '1' then
           rin.state <= PARALLEL_PIPELINED;
         else
           rin.state <= PARALLEL_STALLED;
         end if;
 
       when PARALLEL_PIPELINED =>
-        assert p_ready = '1'
-          report "p_ready was asserted on previous cycle but got deasserted early"
+        assert ready_i = '1'
+          report "ready_i was asserted on previous cycle but got deasserted early"
           severity failure;
 
-        if p_serial = '0' then
+        if serial_i = '0' then
           start_bit := true;
         else
           rin.state <= START_WAITING;
         end if;
 
       when PARALLEL_STALLED =>
-        if p_ready = '1' then
+        if ready_i = '1' then
           rin.state <= PARALLEL_RESUME;
         end if;
     end case;
@@ -98,33 +96,33 @@ begin
       rin.data <= (others => '-');
       rin.state <= SHIFTING;
       rin.cycle <= 8;
-      rin.cts <= p_ready;
+      rin.cts <= ready_i;
     end if;    
   end process;
 
-  moore: process (p_clk)
+  moore: process (clock_i)
   begin
-    if falling_edge(p_clk) then
-      p_cts <= r.cts;
+    if falling_edge(clock_i) then
+      cts_o <= r.cts;
 
       case r.state is
         when PARALLEL_STALLED | RESET =>
-          p_clk_en <= '0';
+          clock_en_o <= '0';
 
         when others =>
-          p_clk_en <= '1';
+          clock_en_o <= '1';
       end case;
 
       case r.state is
         when PARALLEL_PIPELINED | PARALLEL_STALLED =>
-          p_data <= r.data(7 downto 0);
-          p_channel <= r.data(8);
-          p_valid <= '1';
+          data_o <= r.data(7 downto 0);
+          channel_o <= r.data(8);
+          valid_o <= '1';
 
         when others =>
-          p_data <= (others => '-');
-          p_channel <= '-';
-          p_valid <= '0';
+          data_o <= (others => '-');
+          channel_o <= '-';
+          valid_o <= '0';
       end case;
     end if;
   end process;
