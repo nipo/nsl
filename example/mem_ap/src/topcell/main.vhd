@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.all;
 
-library hwdep, signalling, nsl_coresight, nsl_axi, nsl_clocking;
+library nsl_hwdep, nsl_io, nsl_coresight, nsl_axi, nsl_clocking;
 
 entity top is
   port (
@@ -32,22 +32,22 @@ begin
       data_o => swd_slave.i.clk
       );
   
-  swdio_driver: signalling.io.io_en_slv_driver
+  swdio_driver: nsl_io.io.directed_io_driver
     port map(
-      output_i => swd_slave.o.dio,
-      input_o => swd_slave.i.dio,
+      v_i => swd_slave.o.dio,
+      v_o => swd_slave.i.dio,
       io_io => swdio
       );
   
-  clk_gen: hwdep.clock.clock_internal
+  clk_gen: nsl_hwdep.clock.clock_internal
     port map(
-      p_clk => clk
+      clock_o => clk
       );
 
-  reset_gen: hwdep.reset.reset_at_startup
+  reset_gen: nsl_hwdep.reset.reset_at_startup
     port map(
-      p_clk => clk,
-      p_resetn => resetn
+      clock_i => clk,
+      reset_n_o => resetn
       );
   
   dp: nsl_coresight.dp.swdp

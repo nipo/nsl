@@ -6,5 +6,5 @@ deps += nsl_bnoc.testing
 deps += nsl_clocking.async
 deps += nsl_simulation.driver
 deps += nsl.tick
-deps += signalling.swd
+deps += nsl_coresight.swd
 deps += main.topcell

@@ -1,10 +1,10 @@
 vhdl-sources += main.vhd
 vhdl-sources += main.pkg.vhd
 constraint-sources += swd.ucf
-deps += hwdep.clock
-deps += hwdep.ram
-deps += hwdep.reset
-deps += signalling.io
+deps += nsl_hwdep.clock
+deps += nsl_hwdep.reset
+deps += nsl_memory.ram
+deps += nsl_io.io
 deps += nsl_coresight.dapbus
 deps += nsl_coresight.dp
 deps += nsl_coresight.swd

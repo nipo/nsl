@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, main;
+library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, nsl_io, main;
 
 architecture arch of tb is
 
@@ -42,9 +42,13 @@ begin
       clock_i => s_clk
       );
 
-  swdio <= s_swd_master_o.dio.v when s_swd_master_o.dio.en = '1' else 'Z';
+  swd_driver: nsl_io.io.directed_io_driver
+    port map(
+      v_i => s_swd_master_o.dio,
+      v_o => s_swd_master_i.dio,
+      io_io => swdio
+      );
   swdio <= 'H';
-  s_swd_master_i.dio <= swdio;
 
   dap: main.topcell.top
     port map(
@@ -110,12 +114,13 @@ begin
   driver: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 1,
-      reset_time => 100 ns,
+      reset_count => 1,
       done_count => 2
       )
     port map(
       clock_period(0) => 10 ns,
-      reset_n_o => s_resetn_async,
+      reset_duration(0) => 100 ns,
+      reset_n_o(0) => s_resetn_async,
       clock_o(0) => s_clk,
       done_i => s_done
       );

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.all;
 
-library nsl_ws, nsl_color, hwdep;
+library nsl_ws, nsl_color, nsl_hwdep;
 
 entity top is
   port (
@@ -19,7 +19,7 @@ architecture arch of top is
 
 begin
 
-  rgen: hwdep.reset.reset_at_startup port map(s_resetn);
+  rgen: nsl_hwdep.reset.reset_at_startup port map(s_resetn);
 
   driver: nsl_ws.transactor.ws_2812_multi_driver
     generic map(
