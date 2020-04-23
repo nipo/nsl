@@ -2,103 +2,128 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-library testing;
-library util;
+library nsl_uart, nsl_clocking, nsl_simulation;
 
 entity tb is
 end tb;
 
 architecture arch of tb is
 
-  signal s_clk : std_ulogic := '0';
-  signal s_resetn_clk : std_ulogic;
+  constant parity : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_EVEN;
+  constant width : natural := 7;
+
+  signal s_clk : std_ulogic_vector(0 to 1);
+  signal s_resetn_clk : std_ulogic_vector(0 to 1);
   signal s_resetn_async : std_ulogic;
 
-  signal s_done : std_ulogic_vector(1 downto 0) := (others => '0');
+  signal s_done : std_ulogic_vector(0 downto 0) := (others => '0');
 
   signal s_uart : std_ulogic;
   signal s_accept : std_ulogic;
   signal s_data_valid : std_ulogic_vector(1 downto 0);
-  subtype word_t is std_ulogic_vector(7 downto 0);
+  subtype word_t is std_ulogic_vector(width - 1 downto 0);
   type word_array is array (natural range <>) of word_t;
   signal s_data : word_array(0 to 1);
 
 begin
 
-  reset_sync_clk: util.sync.sync_rising_edge
+  reset_sync_clk0: nsl_clocking.async.async_edge
     port map(
-      p_in => s_resetn_async,
-      p_out => s_resetn_clk,
-      p_clk => s_clk
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk(0),
+      clock_i => s_clk(0)
       );
 
-  u_in: nsl.uart.uart_8n1_tx
-    generic map(
-      p_clk_rate => 100000000,
-      baud_rate => 1000000
-      )
+  reset_sync_clk1: nsl_clocking.async.async_edge
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_data => s_data(0),
-      p_data_val => s_data_valid(0),
-      p_ready => s_accept,
-      p_uart_tx => s_uart
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk(1),
+      clock_i => s_clk(1)
       );
 
-  u_out: nsl.uart.uart_8n1_rx
+  u_in: nsl_uart.serdes.uart_tx
     generic map(
-      p_clk_rate => 100000000,
-      baud_rate => 1000000
+      divisor_width => 5,
+      bit_count_c => width,
+      stop_count_c => 1,
+      parity_c => parity
       )
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_data => s_data(1),
-      p_data_val => s_data_valid(1),
-      p_uart_rx => s_uart
+      reset_n_i => s_resetn_clk(0),
+      clock_i => s_clk(0),
+
+      divisor_i => "10000",
+    
+      data_i => s_data(0),
+      valid_i => s_data_valid(0),
+      ready_o => s_accept,
+
+      uart_o => s_uart
       );
 
-  gen: testing.fifo.fifo_counter_generator
+  u_out: nsl_uart.serdes.uart_rx
     generic map(
-      width => 8
+      divisor_width => 5,
+      bit_count_c => width,
+      stop_count_c => 1,
+      parity_c => parity
       )
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_valid => s_data_valid(0),
-      p_ready => s_accept,
-      p_data => s_data(0)
+      reset_n_i => s_resetn_clk(1),
+      clock_i => s_clk(1),
+
+      divisor_i => "01011",
+
+      data_o => s_data(1),
+      valid_o => s_data_valid(1),
+
+      uart_i => s_uart
       );
 
-  check: testing.fifo.fifo_counter_checker
+  gen: nsl_simulation.fifo.fifo_counter_generator
     generic map(
-      width => 8
+      width => width
       )
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_ready => open,
-      p_valid => s_data_valid(1),
-      p_data => s_data(1)
+      reset_n_i => s_resetn_clk(0),
+      clock_i => s_clk(0),
+      valid_o => s_data_valid(0),
+      ready_i => s_accept,
+      data_o => s_data(0)
+      );
+
+  check: nsl_simulation.fifo.fifo_counter_checker
+    generic map(
+      width => width
+      )
+    port map(
+      reset_n_i => s_resetn_clk(1),
+      clock_i => s_clk(1),
+      ready_o => open,
+      valid_i => s_data_valid(1),
+      data_i => s_data(1)
+      );
+
+  driver: nsl_simulation.driver.simulation_driver
+    generic map(
+      clock_count => 2,
+      reset_count => 1,
+      done_count => s_done'length
+      )
+    port map(
+      clock_period(0) => 5 ns,
+      clock_period(1) => 7 ns,
+      reset_duration(0) => 100 ns,
+      reset_n_o(0) => s_resetn_async,
+      clock_o => s_clk,
+      done_i => s_done
       );
 
   process
   begin
-    s_resetn_async <= '0';
-    wait for 100 ns;
-    s_resetn_async <= '1';
     wait for 1 ms;
     s_done <= (others => '1');
     wait;
-  end process;
-  
-  clock_gen: process(s_clk)
-  begin
-    if s_done /= (s_done'range => '1') then
-      s_clk <= not s_clk after 5 ns;
-    end if;
   end process;
 
 end;

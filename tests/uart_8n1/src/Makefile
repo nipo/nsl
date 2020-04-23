@@ -1,2 +1,5 @@
 vhdl-sources += tb.vhd
-deps += testing.fifo nsl.uart util.sync
+deps += nsl_simulation.fifo
+deps += nsl_simulation.driver
+deps += nsl_uart.serdes
+deps += nsl_clocking.async
