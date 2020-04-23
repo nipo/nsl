@@ -21,7 +21,7 @@ architecture rtl of axi4_lite_a32_d32_ram is
 
   signal s_axi_write, s_axi_read, s_axi_read_done, s_axi_enable : std_ulogic;
   signal s_axi_wmask, s_axi_mem_wmask : std_ulogic_vector(3 downto 0);
-  signal s_axi_addr : std_ulogic_vector(mem_size_log2_c-1 downto 2);
+  signal s_axi_addr : unsigned(mem_size_log2_c-1 downto 2);
   signal s_axi_wdata, s_axi_rdata : std_ulogic_vector(31 downto 0);
 
 begin
@@ -58,8 +58,8 @@ begin
       clock_i => clock_i,
       address_i => s_axi_addr,
       write_en_i   => s_axi_mem_wmask(0),
-      data_i  => s_axi_wdata,
-      data_o => s_axi_rdata
+      write_data_i  => s_axi_wdata,
+      read_data_o => s_axi_rdata
       );
 
   s_axi_mem_wmask <= s_axi_wmask when s_axi_write = '1' else (others => '0');

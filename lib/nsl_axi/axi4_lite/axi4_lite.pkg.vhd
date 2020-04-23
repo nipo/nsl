@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 package axi4_lite is
 
@@ -76,7 +77,7 @@ package axi4_lite is
       p_axi_ms: in a32_d32_ms;
       p_axi_sm: out a32_d32_sm;
 
-      p_addr : out std_ulogic_vector(addr_size-1 downto 2);
+      p_addr : out unsigned(addr_size-1 downto 2);
 
       p_w_data : out std_ulogic_vector(31 downto 0);
       p_w_mask : out std_ulogic_vector(3 downto 0);

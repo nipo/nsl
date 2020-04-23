@@ -15,7 +15,7 @@ entity axi4_lite_a32_d32_slave is
     p_axi_ms: in nsl_axi.axi4_lite.a32_d32_ms;
     p_axi_sm: out nsl_axi.axi4_lite.a32_d32_sm;
 
-    p_addr : out std_ulogic_vector(addr_size-1 downto 2);
+    p_addr : out unsigned(addr_size-1 downto 2);
 
     p_w_data : out std_ulogic_vector(31 downto 0);
     p_w_mask : out std_ulogic_vector(3 downto 0);
@@ -43,7 +43,7 @@ architecture rtl of axi4_lite_a32_d32_slave is
 
   type regs_t is
   record
-    addr : std_ulogic_vector(addr_size-1 downto 2);
+    addr : unsigned(addr_size-1 downto 2);
     data : std_ulogic_vector(31 downto 0);
     mask : std_ulogic_vector(3 downto 0);
     state: state_t;
@@ -81,7 +81,7 @@ begin
         if p_axi_ms.awvalid = '1' and p_axi_ms.wvalid = '1' then
           rin.state <= ST_WEXEC;
           rin.data <= p_axi_ms.wdata;
-          rin.addr <= p_axi_ms.awaddr(rin.addr'range);
+          rin.addr <= unsigned(p_axi_ms.awaddr(rin.addr'range));
           rin.mask <= p_axi_ms.wstrb;
         end if;
 
@@ -97,7 +97,7 @@ begin
 
       when ST_RCMD =>
         if p_axi_ms.arvalid = '1' then
-          rin.addr <= p_axi_ms.araddr(rin.addr'range);
+          rin.addr <= unsigned(p_axi_ms.araddr(rin.addr'range));
           rin.state <= ST_REXEC;
         end if;
 
