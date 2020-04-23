@@ -1,7 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-package axis is
+package stream is
 
   type axis_16l_ms is
   record
@@ -26,4 +27,4 @@ package axis is
 
   type axis_16l_vector is array(natural range <>) of axis_16l;
 
-end package;
+end package axis;
