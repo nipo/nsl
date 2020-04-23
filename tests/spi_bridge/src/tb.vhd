@@ -119,13 +119,14 @@ begin
   driver: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 2,
-      reset_time => 10 ns,
+      reset_count => 1,
       done_count => s_done'length
       )
     port map(
       clock_period(0) => 5 ns,
       clock_period(1) => 7 ns,
-      reset_n_o => s_resetn_async,
+      reset_duration(0) => 10 ns,
+      reset_n_o(0) => s_resetn_async,
       clock_o(0) => s_clk_master,
       clock_o(1) => s_clk_slave,
       done_i => s_done

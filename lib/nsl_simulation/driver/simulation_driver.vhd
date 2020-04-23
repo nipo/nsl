@@ -7,20 +7,21 @@ library nsl_simulation;
 entity simulation_driver is
   generic (
     clock_count : natural;
-    reset_time : time;
+    reset_count : natural;
     done_count : natural
     );
   port (
-    clock_period : in nsl_simulation.driver.time_vector(0 to clock_count);
-    reset_n_o : out std_ulogic;
-    clock_o   : out std_ulogic_vector(0 to clock_count);
+    clock_period : in nsl_simulation.driver.time_vector(0 to clock_count-1);
+    reset_duration : in nsl_simulation.driver.time_vector(0 to reset_count-1);
+    reset_n_o : out std_ulogic_vector(0 to reset_count-1);
+    clock_o   : out std_ulogic_vector(0 to clock_count-1);
     done_i : in std_ulogic_vector(0 to done_count-1)
     );
 end entity;
 
 architecture beh of simulation_driver is
   signal all_done : boolean;
-  signal clock : std_ulogic_vector(0 to clock_count);
+  signal clock : std_ulogic_vector(0 to clock_count-1);
 begin
 
   all_done <= done_i = (done_i'range => '1');
@@ -34,13 +35,16 @@ begin
     end if;
   end process;
   
-  resetter: process
-  begin
-    reset_n_o <= '0';
-    wait for reset_time;
-    reset_n_o <= '1';
-    wait;
-  end process;
+  resets: for i in 0 to reset_count-1
+  generate
+    resetter: process
+    begin
+      reset_n_o(i) <= '0';
+      wait for reset_duration(i);
+      reset_n_o(i) <= '1';
+      wait;
+    end process;
+  end generate;
 
   dones: for i in 0 to done_count-1
   generate

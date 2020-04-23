@@ -9,13 +9,14 @@ package driver is
   component simulation_driver
     generic (
       clock_count : natural;
-      reset_time : time;
+      reset_count : natural;
       done_count : natural
       );
     port (
-      clock_period : in time_vector(0 to clock_count);
-      reset_n_o : out std_ulogic;
-      clock_o   : out std_ulogic_vector(0 to clock_count);
+      clock_period : in time_vector(0 to clock_count-1);
+      reset_duration : in time_vector(0 to reset_count-1);
+      reset_n_o : out std_ulogic_vector(0 to reset_count-1);
+      clock_o   : out std_ulogic_vector(0 to clock_count-1);
       done_i : in std_ulogic_vector(0 to done_count-1)
       );
   end component;
