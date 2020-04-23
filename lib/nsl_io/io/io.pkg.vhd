@@ -11,7 +11,7 @@ package io is
 
   type directed is record
     v : std_ulogic;
-    drive : std_ulogic;
+    output : std_ulogic;
   end record;
 
   type opendrain is record

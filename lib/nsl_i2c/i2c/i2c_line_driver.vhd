@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling, nsl_i2c;
+library nsl_io, nsl_i2c;
 
 entity i2c_line_driver is
   port(
@@ -15,17 +15,17 @@ end entity;
 architecture beh of i2c_line_driver is
 begin
 
-  sda_driver: signalling.io.od_std_logic_driver
+  sda_driver: nsl_io.io.opendrain_io_driver
     port map(
-      control => bus_i.sda,
-      status.v => bus_o.sda,
+      v_i => bus_i.sda,
+      v_o => bus_o.sda,
       io => bus_io.sda
       );
 
-  scl_driver: signalling.io.od_std_logic_driver
+  scl_driver: nsl_io.io.opendrain_io_driver
     port map(
-      control => bus_i.scl,
-      status.v => bus_o.scl,
+      v_i => bus_i.scl,
+      v_o => bus_o.scl,
       io => bus_io.scl
       );
 

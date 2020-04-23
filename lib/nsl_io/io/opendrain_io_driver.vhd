@@ -17,6 +17,6 @@ architecture beh of opendrain_io_driver is
 begin
 
   io_io <= '0' when v_i.drain = '1' else 'Z';
-  v_o <= io_io;
+  v_o <= to_x01(io_io);
   
 end architecture;

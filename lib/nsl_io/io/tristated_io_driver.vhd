@@ -17,6 +17,6 @@ architecture beh of tristated_io_driver is
 begin
 
   io_io <= v_i.v when v_i.en = '1' else 'Z';
-  v_o <= io_io;
+  v_o <= to_x01(io_io);
   
 end architecture;

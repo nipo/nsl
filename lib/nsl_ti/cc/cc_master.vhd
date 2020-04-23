@@ -209,10 +209,10 @@ begin
   begin
     case r.state is
       when ST_WRITE_DC_L | ST_WRITE_DC_H =>
-        cc_o.dd.en <= '1';
+        cc_o.dd.output <= '1';
 
       when others =>
-        cc_o.dd.en <= '0';
+        cc_o.dd.output <= '0';
     end case;
 
     case r.state is

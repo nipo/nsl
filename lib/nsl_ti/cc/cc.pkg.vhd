@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, signalling;
+library nsl_bnoc, nsl_io;
 
 package cc is
 
@@ -17,7 +17,7 @@ package cc is
   type cc_m_o is
   record
     dc : std_ulogic;
-    dd : signalling.io.io_oe;
+    dd : nsl_io.io.directed;
     reset_n : std_ulogic;
   end record;
 

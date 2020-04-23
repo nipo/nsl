@@ -7,4 +7,4 @@ vhdl-sources += pad_diff_clock_input_xc6.vhd
 deps += unisim.vcomponents
 endif
 
-deps += signalling.diff
+deps += nsl_io.diff

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling;
+library nsl_io;
 
 package i2c is
 
@@ -17,8 +17,8 @@ package i2c is
   end record;
 
   type i2c_o is record
-    scl : signalling.io.od_c;
-    sda : signalling.io.od_c;
+    scl : nsl_io.io.opendrain;
+    sda : nsl_io.io.opendrain;
   end record;
 
   type i2c_i_vector is array(natural range <>) of i2c_i;

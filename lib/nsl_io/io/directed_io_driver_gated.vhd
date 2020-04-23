@@ -20,8 +20,8 @@ end entity;
 architecture beh of directed_io_driver_gated is
 begin
 
-  gate_dir_o <= gate_output_value_c when v_i.drive = '1' else not gate_output_value_c;
-  io_io <= v_i.v when v_i.drive = '1' else 'Z';
-  v_o <= io_io when v_i.drive = '0' else '-';
+  gate_dir_o <= gate_output_value_c when v_i.output = '1' else not gate_output_value_c;
+  io_io <= v_i.v when v_i.output = '1' else 'Z';
+  v_o <= to_x01(io_io) when v_i.output = '0' else '-';
   
 end architecture;

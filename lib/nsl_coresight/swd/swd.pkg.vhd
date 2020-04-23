@@ -2,12 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling;
+library nsl_io;
 
 package swd is
 
   type swd_master_o is record
-    dio : signalling.io.io_oe;
+    dio : nsl_io.io.directed;
     clk : std_ulogic;
   end record;
 
@@ -22,7 +22,7 @@ package swd is
   end record;
   
   type swd_slave_o is record
-    dio : signalling.io.io_oe;
+    dio : nsl_io.io.directed;
   end record;
 
   type swd_slave_i is record

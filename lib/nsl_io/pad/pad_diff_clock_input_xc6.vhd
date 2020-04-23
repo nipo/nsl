@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 library unisim;
-library signalling;
+library nsl_io;
 
 entity pad_diff_clock_input is
   generic(
@@ -10,8 +10,8 @@ entity pad_diff_clock_input is
     invert    : boolean := false
     );
   port(
-    p_pad : in  signalling.diff.diff_pair;
-    p_clk : out signalling.diff.diff_pair
+    p_pad : in  nsl_io.diff.diff_pair;
+    p_clk : out nsl_io.diff.diff_pair
     );
 end entity;
 

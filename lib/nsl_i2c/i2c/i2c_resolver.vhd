@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling, nsl_i2c;
+library nsl_i2c;
 
 entity i2c_resolver is
   generic(

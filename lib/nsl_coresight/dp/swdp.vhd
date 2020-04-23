@@ -378,28 +378,28 @@ begin
   swd_io: process (r) is
   begin
     swd_o.dio.v <= '-';
-    swd_o.dio.en <= '0';
+    swd_o.dio.output <= '0';
 
     case r.sw_state is
       when SW_ACK_OK =>
         swd_o.dio.v <= boolean_to_logic(r.ack_state = ACK_OK);
-        swd_o.dio.en <= '1';
+        swd_o.dio.output <= '1';
 
       when SW_ACK_WAIT =>
         swd_o.dio.v <= boolean_to_logic(r.ack_state = ACK_WAIT);
-        swd_o.dio.en <= '1';
+        swd_o.dio.output <= '1';
 
       when SW_ACK_FAULT =>
         swd_o.dio.v <= boolean_to_logic(r.ack_state = ACK_FAULT);
-        swd_o.dio.en <= '1';
+        swd_o.dio.output <= '1';
 
       when SW_DATA =>
         swd_o.dio.v <= r.data(0);
-        swd_o.dio.en <= r.rnw;
+        swd_o.dio.output <= r.rnw;
 
       when SW_DATA_PAR =>
         swd_o.dio.v <= r.data_par;
-        swd_o.dio.en <= r.rnw;
+        swd_o.dio.output <= r.rnw;
 
       when others =>
         null;

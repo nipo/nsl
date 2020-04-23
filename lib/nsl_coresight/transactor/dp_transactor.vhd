@@ -174,7 +174,7 @@ begin
       when ST_CMD_SHIFT =>
         if swclk_falling then
           rin.swd.dio.v <= r.cmd(0);
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
         elsif swclk_rising then
           if r.cycle_count /= 0 then
             rin.cycle_count <= r.cycle_count - 1;
@@ -187,7 +187,7 @@ begin
 
       when ST_CMD_TURNAROUND =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           if r.cycle_count /= 0 then
@@ -200,7 +200,7 @@ begin
 
       when ST_ACK_SHIFT =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.ack <= to_x01(swd_i.dio) & r.ack(2 downto 1);
@@ -219,7 +219,7 @@ begin
 
       when ST_ACK_TURNAROUND =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           if r.cycle_count /= 0 then
@@ -232,7 +232,7 @@ begin
 
       when ST_DATA_SHIFT_OUT =>
         if swclk_falling then
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
           rin.swd.dio.v <= r.data(0);
           rin.par_out <= r.par_out xor r.data(0);
         elsif swclk_rising then
@@ -246,7 +246,7 @@ begin
 
       when ST_PARITY_SHIFT_OUT =>
         if swclk_falling then
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
           rin.swd.dio.v <= r.par_out;
         elsif swclk_rising then
           rin.state <= ST_RUN;
@@ -255,7 +255,7 @@ begin
 
       when ST_DATA_SHIFT_IN =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.data <= to_x01(swd_i.dio) & r.data(31 downto 1);
@@ -269,7 +269,7 @@ begin
 
       when ST_PARITY_SHIFT_IN =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           rin.par_in <= r.par_in xor to_x01(swd_i.dio);
@@ -279,7 +279,7 @@ begin
 
       when ST_DATA_TURNAROUND =>
         if swclk_falling then
-          rin.swd.dio.en <= '0';
+          rin.swd.dio.output <= '0';
           rin.swd.dio.v <= '-';
         elsif swclk_rising then
           if r.cycle_count /= 0 then
@@ -292,7 +292,7 @@ begin
 
       when ST_RUN =>
         if swclk_falling then
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
           rin.swd.dio.v <= r.run_val;
         elsif swclk_rising then
           if r.cycle_count /= 0 then
@@ -304,7 +304,7 @@ begin
 
       when ST_BITBANG =>
         if swclk_falling then
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
           rin.swd.dio.v <= r.data(0);
           rin.run_val <= r.data(0);
         elsif swclk_rising then
@@ -318,7 +318,7 @@ begin
 
       when ST_RSP_PUT =>
         if swclk_falling then
-          rin.swd.dio.en <= '1';
+          rin.swd.dio.output <= '1';
           rin.swd.dio.v <= r.run_val;
         end if;
 

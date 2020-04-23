@@ -1,2 +1,2 @@
 vhdl-sources += swd.pkg.vhd
-deps += signalling.io
+deps += nsl_io.io
