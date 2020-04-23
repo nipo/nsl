@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library util;
+library nsl_clocking;
 
 entity event_monitor is
   generic(
@@ -52,15 +52,15 @@ begin
     end if;
   end process reg;
 
-  resync_in: util.sync.sync_async_reg
+  resync_in: nsl_clocking.async.async_sampler
     generic map(
-      cycle_count => 2,
-      data_width => data_width
+      cycle_count_c => 2,
+      data_width_c => data_width
       )
     port map(
-      p_clk => p_clk,
-      p_in => p_in,
-      p_out => s_resync
+      clock_i => p_clk,
+      data_i => p_in,
+      data_o => s_resync
       );
   
   s_changed <= '1' when r.cur /= r.old or r.count = (r.count'range => '1') else '0';
