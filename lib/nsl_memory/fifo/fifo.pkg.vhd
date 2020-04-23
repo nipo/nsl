@@ -57,4 +57,42 @@ package fifo is
       );
   end component;
 
+  component fifo_narrower
+    generic(
+      part_count_c : integer;
+      out_width_c : integer
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      out_data_o  : out std_ulogic_vector(width_out-1 downto 0);
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+
+      in_data_i  : in  std_ulogic_vector(part_count_c*out_width_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic
+      );
+  end component;
+
+  component fifo_widener
+    generic(
+      part_count_c    : integer;
+      in_width_c : integer
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clk_i     : in std_ulogic;
+
+      out_data_o  : out std_ulogic_vector(part_count_c*in_width_c-1 downto 0);
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+
+      in_data_i  : in  std_ulogic_vector(in_width_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic
+      );
+  end component;
+
 end package fifo;

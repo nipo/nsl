@@ -2,6 +2,8 @@ vhdl-sources += fifo.pkg.vhd
 
 vhdl-sources += fifo_pointer.vhd
 vhdl-sources += fifo_homogeneous.vhd
+vhdl-sources += fifo_narrower.vhd
+vhdl-sources += fifo_widener.vhd
 
 deps += nsl_clocking.intradomain
 deps += nsl_clocking.interdomain
