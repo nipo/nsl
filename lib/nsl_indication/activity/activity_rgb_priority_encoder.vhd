@@ -9,8 +9,8 @@ entity activity_rgb_priority_encoder is
     activity_count_c : natural
     );
   port (
-    led_o      : out nsl_color.color.rgb24;
-    colors_i   : in  nsl_color.color.rgb24_vector(activity_count_c - 1 downto 0);
+    led_o      : out nsl_color.rgb.rgb24;
+    colors_i   : in  nsl_color.rgb.rgb24_vector(activity_count_c - 1 downto 0);
     activity_i : in  std_ulogic_vector(activity_count_c - 1 downto 0)
     );
 end activity_rgb_priority_encoder;

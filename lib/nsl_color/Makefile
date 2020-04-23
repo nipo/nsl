@@ -1,1 +1,1 @@
-packages += color
+packages += rgb

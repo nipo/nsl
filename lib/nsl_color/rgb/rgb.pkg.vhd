@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-package color is
+package rgb is
 
   type rgb3 is record
     r, g, b : std_ulogic;
@@ -184,9 +184,9 @@ package color is
   constant rgb24_white_smoke             : rgb24 := (245,245,245);
   constant rgb24_white                   : rgb24 := (255,255,255);
 
-end package color;
+end package rgb;
 
-package body color is
+package body rgb is
 
   function "="(l, r : rgb24) return boolean is
   begin
@@ -284,4 +284,4 @@ package body color is
     return l xor rgb3_white;
   end "not";
 
-end package body color;
+end package body rgb;
