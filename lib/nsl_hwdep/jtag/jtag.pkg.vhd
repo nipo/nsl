@@ -2,8 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep;
-
 package jtag is
   component jtag_tap_register
     generic(

@@ -6,7 +6,7 @@ package clock is
 
   component clock_internal
     port(
-      p_clk      : out std_ulogic
+      clock_o  : out std_ulogic
       );
   end component;
 

@@ -6,7 +6,7 @@ use unisim.vcomponents.all;
 
 entity clock_internal is
   port(
-    p_clk      : out std_ulogic
+    clock_o      : out std_ulogic
     );
 end entity;
 
@@ -16,7 +16,7 @@ begin
 
   inst : startupe2
     port map (
-      cfgmclk => p_clk,
+      cfgmclk => clock_o,
       clk => '0',
       gsr => '0',
       gts => '0',

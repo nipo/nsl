@@ -5,7 +5,7 @@ library machxo2;
 
 entity clock_internal is
   port(
-    p_clk      : out std_ulogic
+    clock_o      : out std_ulogic
     );
 end entity;
 
@@ -25,7 +25,7 @@ begin
     port map(
       stdby => '0',
       sedstdby => open,
-      osc   => p_clk
+      osc   => clock_o
       );
     
 end architecture;

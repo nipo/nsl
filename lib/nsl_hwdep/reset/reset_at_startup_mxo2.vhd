@@ -5,8 +5,8 @@ library machxo2;
 
 entity reset_at_startup is
   port(
-    p_clk       : in std_ulogic;
-    p_resetn    : out std_ulogic
+    clock_i       : in std_ulogic;
+    reset_n_o    : out std_ulogic
     );
 end entity;
 
@@ -20,9 +20,9 @@ begin
       )
     port map(
       d => '1',
-      q => p_resetn,
+      q => reset_n_o,
       sp => '1',
-      ck => p_clk
+      ck => clock_i
       );
   
 end;

@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 entity clock_internal is
   port(
-    p_clk      : out std_ulogic
+    clock_o      : out std_ulogic
     );
 end entity;
 
@@ -13,7 +13,7 @@ architecture sim of clock_internal is
 
 begin
 
-  p_clk <= clock;
+  clock_o <= clock;
   clock <= not clock after 15 ns;
 
 end architecture;

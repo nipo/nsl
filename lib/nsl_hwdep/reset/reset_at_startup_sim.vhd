@@ -3,8 +3,8 @@ use ieee.std_logic_1164.all;
 
 entity reset_at_startup is
   port(
-    p_clk       : in std_ulogic;
-    p_resetn    : out std_ulogic
+    clock_i       : in std_ulogic;
+    reset_n_o    : out std_ulogic
     );
 end entity;
 
@@ -14,11 +14,11 @@ architecture gen of reset_at_startup is
 
 begin
 
-  p_resetn <= '1' when ctr = 0 else '0';
+  reset_n_o <= '1' when ctr = 0 else '0';
 
-  gen: process(p_clk)
+  gen: process(clock_i)
   begin
-    if rising_edge(p_clk) then
+    if rising_edge(clock_i) then
       if ctr /= 0 then
         ctr <= ctr - 1;
       end if;

@@ -5,8 +5,8 @@ package reset is
 
   component reset_at_startup is
     port(
-      p_clk       : in std_ulogic;
-      p_resetn    : out std_ulogic
+      clock_i       : in std_ulogic;
+      reset_n_o    : out std_ulogic
       );
   end component;
 

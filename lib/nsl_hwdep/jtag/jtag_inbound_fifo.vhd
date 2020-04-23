@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep;
-use hwdep.jtag.jtag_tap_register;
+library nsl_hwdep;
 
 entity jtag_inbound_fifo is
   generic(
@@ -36,7 +35,7 @@ architecture beh of jtag_inbound_fifo is
   
 begin
 
-  tap : hwdep.jtag.jtag_tap_register
+  tap : nsl_hwdep.jtag.jtag_tap_register
     generic map(
       id => id
       )
