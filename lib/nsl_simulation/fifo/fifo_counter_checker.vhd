@@ -10,7 +10,7 @@ entity fifo_counter_checker is
     reset_n_i  : in  std_ulogic;
     clock_i     : in  std_ulogic;
 
-    read_o: out std_ulogic;
+    ready_o: out std_ulogic;
     valid_i: in std_ulogic;
     data_i: in std_ulogic_vector(width-1 downto 0)
     );
@@ -39,6 +39,6 @@ begin
     end if;
   end process reg;
 
-  read_o <= '1';
+  ready_o <= '1';
   
 end rtl;
