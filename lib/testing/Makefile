@@ -1,2 +1,0 @@
-packages += noc
-packages += ftdi
