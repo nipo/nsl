@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling;
+library nsl_color;
 
 entity ws_2812_driver is
   generic(
@@ -11,15 +11,15 @@ entity ws_2812_driver is
     cycle_time_ns : natural := 208
     );
   port(
-    p_clk : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_data : out std_ulogic;
+    led_o : out std_ulogic;
 
-    p_led : in signalling.color.rgb24;
-    p_valid : in  std_ulogic;
-    p_ready : out std_ulogic;
-    p_last : in std_ulogic
+    color_i : in nsl_color.rgb.rgb24;
+    valid_i : in  std_ulogic;
+    ready_o : out std_ulogic;
+    last_i : in std_ulogic
     );
 end entity;
 
@@ -92,16 +92,16 @@ architecture rtl of ws_2812_driver is
   
 begin
 
-  regs: process(p_clk, p_resetn)
+  regs: process(clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_led, p_valid, p_last)
+  transition: process(r, color_i, valid_i, last_i)
   begin
     rin <= r;
 
@@ -111,24 +111,24 @@ begin
         rin.state <= WAITING;
 
       when WAITING =>
-        if p_valid = '1' then
+        if valid_i = '1' then
           case color_order(1) is
-            when 'R' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
-            when 'G' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
-            when others => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+            when 'R' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
+            when 'G' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
+            when others => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
           end case; 
           case color_order(2) is
-            when 'R' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
-            when 'G' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
-            when others => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+            when 'R' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
+            when 'G' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
+            when others => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
           end case; 
           case color_order(3) is
-            when 'R' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.r, 8));
-            when 'G' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.g, 8));
-            when others => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(p_led.b, 8));
+            when 'R' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
+            when 'G' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
+            when others => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
           end case; 
           rin.bitno <= 23;
-          rin.last <= p_last = '1';
+          rin.last <= last_i = '1';
 
           rin.timer <= ws_cycle_ticks * ws_high_cycles - 1;
           rin.state <= SHIFTING_HIGH;
@@ -176,18 +176,18 @@ begin
 
   moore: process(r)
   begin
-    p_ready <= '0';
-    p_data <= '0';
+    ready_o <= '0';
+    led_o <= '0';
 
     case r.state is
       when WAITING =>
-        p_ready <= '1';
+        ready_o <= '1';
 
       when SHIFTING_HIGH =>
-        p_data <= '1';
+        led_o <= '1';
 
       when SHIFTING_BIT =>
-        p_data <= r.shreg(r.shreg'left);
+        led_o <= r.shreg(r.shreg'left);
 
       when others =>
         null;

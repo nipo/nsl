@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl, signalling;
+library nsl_bnoc, nsl_ws, nsl_color;
 
 entity ws_2812_framed is
   generic(
@@ -11,16 +11,16 @@ entity ws_2812_framed is
     cycle_time_ns : natural := 208
     );
   port(
-    p_clk : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_data : out std_ulogic;
+    led_o : out std_ulogic;
 
-    p_cmd_val   : in nsl.framed.framed_req;
-    p_cmd_ack   : out nsl.framed.framed_ack;
+    cmd_i   : in nsl_bnoc.framed.framed_req;
+    cmd_o   : out nsl_bnoc.framed.framed_ack;
 
-    p_rsp_val   : out nsl.framed.framed_req;
-    p_rsp_ack   : in nsl.framed.framed_ack
+    rsp_o   : out nsl_bnoc.framed.framed_req;
+    rsp_i   : in nsl_bnoc.framed.framed_ack
     );
 end entity;
 
@@ -38,7 +38,7 @@ architecture rtl of ws_2812_framed is
   type regs_t is record
     state   : state_t;
     last    : std_ulogic;
-    color   : signalling.color.rgb24;
+    color   : nsl_color.rgb.rgb24;
   end record;
 
   signal r, rin : regs_t;
@@ -48,16 +48,16 @@ architecture rtl of ws_2812_framed is
 
 begin
 
-  ck : process (p_clk, p_resetn)
+  ck : process (clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition : process (r, p_cmd_val, p_rsp_ack, s_ready)
+  transition : process (r, cmd_i, rsp_i, s_ready)
   begin
     rin <= r;
 
@@ -66,10 +66,10 @@ begin
         rin.state <= ST_GET_R;
 
       when ST_GET_R =>
-        if p_cmd_val.valid = '1' then
-          rin.color.r <= to_integer(unsigned(p_cmd_val.data));
-          rin.last <= p_cmd_val.last;
-          if p_cmd_val.last = '1' then
+        if cmd_i.valid = '1' then
+          rin.color.r <= to_integer(unsigned(cmd_i.data));
+          rin.last <= cmd_i.last;
+          if cmd_i.last = '1' then
             rin.state <= ST_RUN;
           else
             rin.state <= ST_GET_G;
@@ -77,9 +77,9 @@ begin
         end if;
 
       when ST_GET_G =>
-        if p_cmd_val.valid = '1' then
-          rin.color.g <= to_integer(unsigned(p_cmd_val.data));
-          if p_cmd_val.last = '1' then
+        if cmd_i.valid = '1' then
+          rin.color.g <= to_integer(unsigned(cmd_i.data));
+          if cmd_i.last = '1' then
             rin.state <= ST_RUN;
           else
             rin.state <= ST_GET_B;
@@ -87,9 +87,9 @@ begin
         end if;
 
       when ST_GET_B =>
-        if p_cmd_val.valid = '1' then
-          rin.color.b <= to_integer(unsigned(p_cmd_val.data));
-          rin.last <= p_cmd_val.last;
+        if cmd_i.valid = '1' then
+          rin.color.b <= to_integer(unsigned(cmd_i.data));
+          rin.last <= cmd_i.last;
           rin.state <= ST_RUN;
         end if;
 
@@ -103,7 +103,7 @@ begin
         end if;
 
       when ST_RSP_PUT =>
-        if p_rsp_ack.ready = '1' then
+        if rsp_i.ready = '1' then
           rin.state <= ST_GET_R;
         end if;
     end case;
@@ -111,45 +111,45 @@ begin
 
   moore : process (r)
   begin
-    p_cmd_ack.ready <= '0';
-    p_rsp_val.valid <= '0';
-    p_rsp_val.data <= (others => '-');
-    p_rsp_val.last <= '-';
+    cmd_o.ready <= '0';
+    rsp_o.valid <= '0';
+    rsp_o.data <= (others => '-');
+    rsp_o.last <= '-';
     s_valid <= '0';
 
     case r.state is
       when ST_GET_R | ST_GET_G | ST_GET_B =>
-        p_cmd_ack.ready <= '1';
+        cmd_o.ready <= '1';
 
       when ST_RUN =>
         s_valid <= '1';
 
       when ST_RSP_PUT =>
-        p_rsp_val.valid <= '1';
-        p_rsp_val.last <= '1';
-        p_rsp_val.data <= (others => '0');
+        rsp_o.valid <= '1';
+        rsp_o.last <= '1';
+        rsp_o.data <= (others => '0');
 
       when others =>
         null;
     end case;
   end process;
 
-  master: nsl.ws.ws_2812_driver
+  master: nsl_ws.transactor.ws_2812_driver
     generic map(
       color_order => color_order,
       clk_freq_hz => clk_freq_hz,
       cycle_time_ns => cycle_time_ns
       )
     port map(
-      p_clk => p_clk,
-      p_resetn => p_resetn,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      p_data => p_data,
+      led_o => led_o,
       
-      p_led => r.color,
-      p_last => r.last,
-      p_valid => s_valid,
-      p_ready => s_ready
+      color_i => r.color,
+      last_i => r.last,
+      valid_i => s_valid,
+      ready_o => s_ready
       );
   
 end architecture;

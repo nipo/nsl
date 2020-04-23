@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library signalling, nsl;
-use signalling.color."/=";
+library nsl_color, nsl_ws;
+use nsl_color.rgb."/=";
 
 entity ws_2812_multi_driver is
   generic(
@@ -13,12 +13,12 @@ entity ws_2812_multi_driver is
     led_count : natural
     );
   port(
-    p_clk : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_data : out std_ulogic;
+    led_o : out std_ulogic;
 
-    p_led : in signalling.color.rgb24_vector(led_count-1 downto 0)
+    color_i : in nsl_color.rgb.rgb24_vector(led_count-1 downto 0)
     );
 end entity;
 
@@ -33,27 +33,27 @@ architecture rtl of ws_2812_multi_driver is
   type regs_t is
   record
     state : state_t;
-    leds : signalling.color.rgb24_vector(led_count-1 downto 0);
+    leds : nsl_color.rgb.rgb24_vector(led_count-1 downto 0);
     idx : natural range 0 to led_count-1;
   end record;
 
   signal r, rin : regs_t;
 
   signal s_valid, s_ready, s_last : std_ulogic;
-  signal s_led : signalling.color.rgb24;
+  signal s_color : nsl_color.rgb.rgb24;
 
 begin
 
-  regs: process(p_clk, p_resetn)
+  regs: process(clock_i, reset_n_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_led, s_ready)
+  transition: process(r, color_i, s_ready)
   begin
     rin <= r;
 
@@ -65,8 +65,8 @@ begin
         rin.state <= ST_WAIT;
 
       when ST_WAIT =>
-        if r.leds /= p_led then
-          rin.leds <= p_led;
+        if r.leds /= color_i then
+          rin.leds <= color_i;
           rin.state <= ST_PUT_LED;
           rin.idx <= 0;
         end if;
@@ -84,24 +84,24 @@ begin
 
   s_valid <= '1' when r.state = ST_PUT_LED else '0';
   s_last <= '1' when r.idx = led_count - 1 else '0';
-  s_led <= r.leds(r.idx);
+  s_color <= r.leds(r.idx);
 
-  master: nsl.ws.ws_2812_driver
+  master: nsl_ws.transactor.ws_2812_driver
     generic map(
       color_order => color_order,
       clk_freq_hz => clk_freq_hz,
       cycle_time_ns => cycle_time_ns
       )
     port map(
-      p_clk => p_clk,
-      p_resetn => p_resetn,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      p_data => p_data,
+      led_o => led_o,
       
-      p_led => s_led,
-      p_last => s_last,
-      p_valid => s_valid,
-      p_ready => s_ready
+      color_i => s_color,
+      last_i => s_last,
+      valid_i => s_valid,
+      ready_o => s_ready
       );
 
 end;
