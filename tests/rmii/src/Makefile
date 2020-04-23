@@ -1,2 +1,6 @@
 vhdl-sources += tb.vhd
-deps += nsl.mii util.sync testing.framed
+deps += nsl_simulation.driver
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.testing
+deps += nsl_mii.framed
+deps += nsl_clocking.async

@@ -2,19 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.mii.all;
-use nsl.framed.all;
+library nsl_bnoc, nsl_mii;
 
 entity rmii_to_framed is
   port(
-    p_clk        : in std_ulogic;
-    p_resetn     : in std_ulogic;
+    clock_i        : in std_ulogic;
+    reset_n_i     : in std_ulogic;
 
-    p_rmii_data  : in rmii_datapath;
+    rmii_i  : in nsl_mii.mii.rmii_datapath;
 
-    p_framed_val : out nsl.framed.framed_req;
-    p_framed_ack : in nsl.framed.framed_ack
+    framed_o : out nsl_bnoc.framed.framed_req
     );
 end entity;
 
@@ -41,16 +38,16 @@ architecture rtl of rmii_to_framed is
 
 begin
 
-  regs: process (p_resetn, p_clk)
+  regs: process (reset_n_i, clock_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= STATE_IDLE;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_rmii_data, p_framed_ack)
+  transition: process(r, rmii_i)
   begin
     rin <= r;
 
@@ -58,8 +55,8 @@ begin
       when STATE_IDLE =>
         rin.dibit_count <= "00";
 
-        if p_rmii_data.dv = '1' then
-          case p_rmii_data.d is
+        if rmii_i.dv = '1' then
+          case rmii_i.d is
             when "11" =>
               rin.state <= STATE_FILL;
             when "10" =>
@@ -70,15 +67,15 @@ begin
         end if;
 
       when STATE_FILL | STATE_FW =>
-        rin.shifter <= p_rmii_data.d & r.shifter(5 downto 2);
+        rin.shifter <= rmii_i.d & r.shifter(5 downto 2);
         rin.dibit_count <= r.dibit_count + 1;
 
         if r.dibit_count = "11" then
           rin.state <= STATE_FW;
-          rin.data <= p_rmii_data.d & r.shifter(5 downto 0);
+          rin.data <= rmii_i.d & r.shifter(5 downto 0);
         end if;
 
-        if r.dibit_count(0) = '1' and p_rmii_data.dv = '0' then
+        if r.dibit_count(0) = '1' and rmii_i.dv = '0' then
           rin.state <= STATE_LAST;
         end if;
         
@@ -88,33 +85,33 @@ begin
       when STATE_FLUSH =>
         rin.dibit_count <= r.dibit_count + 1;
 
-        if p_rmii_data.dv = '0' and r.dibit_count(0) = '1' then
+        if rmii_i.dv = '0' and r.dibit_count(0) = '1' then
           rin.state <= STATE_LAST;
         end if;
     end case;
   end process;
     
-  moore: process(r, p_clk)
+  moore: process(r, clock_i)
   begin
     case r.state is
       when STATE_IDLE | STATE_FILL =>
-        p_framed_val.valid <= '0';
-        p_framed_val.last <= '-';
+        framed_o.valid <= '0';
+        framed_o.last <= '-';
 
       when STATE_FW | STATE_FLUSH =>
         if r.dibit_count = "11" then
-          p_framed_val.valid <= '1';
+          framed_o.valid <= '1';
         else
-          p_framed_val.valid <= '0';
+          framed_o.valid <= '0';
         end if;
-        p_framed_val.last <= '0';
+        framed_o.last <= '0';
 
       when STATE_LAST =>
-        p_framed_val.valid <= '1';
-        p_framed_val.last <= '1';
+        framed_o.valid <= '1';
+        framed_o.last <= '1';
     end case;
   end process;
 
-  p_framed_val.data <= r.data;
+  framed_o.data <= r.data;
 
 end architecture;

@@ -5,9 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl;
-library testing;
-library util;
+library nsl_simulation, nsl_bnoc, nsl_mii, nsl_clocking;
 
 architecture arch of tb is
 
@@ -15,77 +13,73 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_framed_val : nsl.framed.framed_req_array(1 downto 0);
-  signal s_framed_ack : nsl.framed.framed_ack_array(1 downto 0);
+  signal s_framed : nsl_bnoc.framed.framed_bus_array(0 to 1);
+  signal s_rmii_data   : nsl_mii.mii.rmii_datapath;
 
-  signal s_rmii_data   : nsl.mii.rmii_datapath;
-
-  signal s_done : std_ulogic;
+  signal s_done : std_ulogic_vector(0 to 1);
 
 begin
 
-  reset_sync_clk: util.sync.sync_rising_edge
+  reset_sync_clk: nsl_clocking.async.async_edge
     port map(
-      p_in => s_resetn_async,
-      p_out => s_resetn_clk,
-      p_clk => s_clk
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk,
+      clock_i => s_clk
       );
 
-  gen: testing.framed.framed_file_reader
+  gen: nsl_bnoc.testing.framed_file_reader
     generic map(
       filename => "dataset.txt"
       )
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_out_val => s_framed_val(0),
-      p_out_ack => s_framed_ack(0),
-      p_done => open
+      p_out_val => s_framed(0).req,
+      p_out_ack => s_framed(0).ack,
+      p_done => s_done(0)
       );
 
-  check0: testing.framed.framed_file_checker
+  check0: nsl_bnoc.testing.framed_file_checker
     generic map(
       filename => "dataset.txt"
       )
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_in_val => s_framed_val(1),
-      p_in_ack => s_framed_ack(1),
-      p_done => s_done
+      p_in_val => s_framed(1).req,
+      p_in_ack => s_framed(1).ack,
+      p_done => s_done(1)
       );
 
-  to_rmii: nsl.mii.rmii_from_framed
+  to_rmii: nsl_mii.framed.rmii_from_framed
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_rmii_data => s_rmii_data,
-      p_framed_val => s_framed_val(0),
-      p_framed_ack => s_framed_ack(0)
+      reset_n_i => s_resetn_clk,
+      clock_i => s_clk,
+      rmii_o => s_rmii_data,
+      framed_i => s_framed(0).req,
+      framed_o => s_framed(0).ack
       );
 
-  from_rmii: nsl.mii.rmii_to_framed
+  from_rmii: nsl_mii.framed.rmii_to_framed
     port map(
-      p_resetn => s_resetn_clk,
-      p_clk => s_clk,
-      p_rmii_data => s_rmii_data,
-      p_framed_val => s_framed_val(1),
-      p_framed_ack => s_framed_ack(1)
+      reset_n_i => s_resetn_clk,
+      clock_i => s_clk,
+      rmii_i => s_rmii_data,
+      framed_o => s_framed(1).req
       );
-    
-  process
-  begin
-    s_resetn_async <= '0';
-    wait for 100 ns;
-    s_resetn_async <= '1';
-    wait;
-  end process;
 
-  clock_gen: process(s_clk)
-  begin
-    if s_done /= '1' then
-      s_clk <= not s_clk after 5 ns;
-    end if;
-  end process;
+  driver: nsl_simulation.driver.simulation_driver
+    generic map(
+      clock_count => 1,
+      reset_count => 1,
+      done_count => 2
+      )
+    port map(
+      clock_period(0) => 5 ns,
+      reset_duration(0) => 100 ns,
+      reset_n_o(0) => s_resetn_async,
+      clock_o(0) => s_clk,
+      done_i => s_done
+      );
 
 end;

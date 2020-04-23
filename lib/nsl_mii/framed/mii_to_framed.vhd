@@ -2,19 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.mii.all;
-use nsl.framed.all;
+library nsl_bnoc, nsl_mii;
 
 entity mii_to_framed is
   port(
-    p_clk : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_mii_data : in mii_datapath;
+    mii_i : in nsl_mii.mii.mii_datapath;
 
-    p_framed_val : out nsl.framed.framed_req;
-    p_framed_ack : in nsl.framed.framed_ack
+    framed_o : out nsl_bnoc.framed.framed_req
     );
 end entity;
 
@@ -39,41 +36,41 @@ architecture rtl of mii_to_framed is
 
 begin
 
-  regs: process (p_resetn, p_clk)
+  regs: process (reset_n_i, clock_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= STATE_FILL0;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_mii_data, p_framed_ack)
+  transition: process(r, mii_i)
   begin
     rin <= r;
 
     case r.state is
       when STATE_FILL0 =>
-        if p_mii_data.dv = '1' then
+        if mii_i.dv = '1' then
           rin.state <= STATE_FILL1;
-          rin.data_in(3 downto 0) <= p_mii_data.d;
+          rin.data_in(3 downto 0) <= mii_i.d;
         end if;
 
       when STATE_FILL1 =>
-        rin.data_in(7 downto 4) <= p_mii_data.d;
+        rin.data_in(7 downto 4) <= mii_i.d;
         rin.state <= STATE_FILL2;
 
       when STATE_FW0 | STATE_FILL2 =>
-        if p_mii_data.dv = '1' then
+        if mii_i.dv = '1' then
           rin.state <= STATE_FW1;
         else
           rin.state <= STATE_LAST;
         end if;
         rin.data_out <= r.data_in;
-        rin.data_in(3 downto 0) <= p_mii_data.d;
+        rin.data_in(3 downto 0) <= mii_i.d;
 
       when STATE_FW1 =>
-        rin.data_in(7 downto 4) <= p_mii_data.d;
+        rin.data_in(7 downto 4) <= mii_i.d;
         rin.state <= STATE_FW0;
 
       when STATE_LAST =>
@@ -81,27 +78,27 @@ begin
     end case;
   end process;
     
-  moore: process(r, p_clk)
+  moore: process(r, clock_i)
   begin
     case r.state is
       when STATE_FILL0 | STATE_FILL1 | STATE_FILL2 =>
-        p_framed_val.valid <= '0';
-        p_framed_val.last <= '1';
+        framed_o.valid <= '0';
+        framed_o.last <= '1';
 
       when STATE_FW0 =>
-        p_framed_val.valid <= '1';
-        p_framed_val.last <= '0';
+        framed_o.valid <= '1';
+        framed_o.last <= '0';
 
       when STATE_FW1 =>
-        p_framed_val.valid <= '0';
-        p_framed_val.last <= '0';
+        framed_o.valid <= '0';
+        framed_o.last <= '0';
 
       when STATE_LAST =>
-        p_framed_val.valid <= '1';
-        p_framed_val.last <= '1';
+        framed_o.valid <= '1';
+        framed_o.last <= '1';
     end case;
   end process;
 
-  p_framed_val.data <= r.data_out;
+  framed_o.data <= r.data_out;
 
 end architecture;

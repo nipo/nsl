@@ -2,22 +2,20 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.mii.all;
-use nsl.framed.all;
+library nsl_bnoc, nsl_mii;
 
 entity mii_from_framed is
   generic(
     inter_frame : natural := 56
     );
   port(
-    p_clk : in std_ulogic;
-    p_resetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    p_mii_data : out mii_datapath;
+    mii_o : out nsl_mii.mii.mii_datapath;
 
-    p_framed_val : in nsl.framed.framed_req;
-    p_framed_ack : out nsl.framed.framed_ack
+    framed_i : in nsl_bnoc.framed.framed_req;
+    framed_o : out nsl_bnoc.framed.framed_ack
     );
 end entity;
 
@@ -42,24 +40,24 @@ architecture rtl of mii_from_framed is
   
 begin
 
-  regs: process (p_resetn, p_clk)
+  regs: process (reset_n_i, clock_i)
   begin
-    if p_resetn = '0' then
+    if reset_n_i = '0' then
       r.state <= STATE_IDLE;
-    elsif rising_edge(p_clk) then
+    elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, p_framed_val)
+  transition: process(r, framed_i)
   begin
     rin <= r;
 
     case r.state is
       when STATE_IDLE =>
-        if p_framed_val.valid = '1' then
+        if framed_i.valid = '1' then
           rin.state <= STATE_FW0;
-          rin.data <= p_framed_val.data;
+          rin.data <= framed_i.data;
           rin.underflow <= '0';
           rin.done <= '0';
         end if;
@@ -73,9 +71,9 @@ begin
           rin.wait_ctr <= inter_frame;
         else
           rin.state <= STATE_FW0;
-          rin.done <= p_framed_val.last;
-          if p_framed_val.valid = '1' then
-            rin.data <= p_framed_val.data;
+          rin.done <= framed_i.last;
+          if framed_i.valid = '1' then
+            rin.data <= framed_i.data;
           else
             rin.data <= (others => 'X');
             rin.underflow <= '1';
@@ -91,33 +89,33 @@ begin
     end case;
   end process;
 
-  moore: process(r, p_clk)
+  moore: process(r, clock_i)
   begin
-    if falling_edge(p_clk) then
+    if falling_edge(clock_i) then
       case r.state is
         when STATE_IDLE =>
-          p_mii_data.dv <= '0';
-          p_mii_data.er <= '0';
-          p_mii_data.d <= (others => 'X');
-          p_framed_ack.ready <= '1';
+          mii_o.dv <= '0';
+          mii_o.er <= '0';
+          mii_o.d <= (others => 'X');
+          framed_o.ready <= '1';
 
         when STATE_FW0 =>
-          p_mii_data.dv <= '1';
-          p_mii_data.er <= r.underflow;
-          p_mii_data.d <= r.data(3 downto 0);
-          p_framed_ack.ready <= '0';
+          mii_o.dv <= '1';
+          mii_o.er <= r.underflow;
+          mii_o.d <= r.data(3 downto 0);
+          framed_o.ready <= '0';
 
         when STATE_FW1 =>
-          p_mii_data.dv <= '1';
-          p_mii_data.er <= r.underflow;
-          p_mii_data.d <= r.data(7 downto 4);
-          p_framed_ack.ready <= not r.done;
+          mii_o.dv <= '1';
+          mii_o.er <= r.underflow;
+          mii_o.d <= r.data(7 downto 4);
+          framed_o.ready <= not r.done;
 
         when STATE_IFS =>
-          p_mii_data.dv <= '0';
-          p_mii_data.er <= '0';
-          p_mii_data.d <= (others => 'X');
-          p_framed_ack.ready <= '0';
+          mii_o.dv <= '0';
+          mii_o.er <= '0';
+          mii_o.d <= (others => 'X');
+          framed_o.ready <= '0';
       end case;
     end if;
   end process;
