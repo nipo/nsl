@@ -16,12 +16,6 @@ deps += unisim.vcomponents
 endif
 endif
 
-ifeq ($(tool),isim)
-vhdl-sources += clock.pkg_body-isim.vhd
-else
-vhdl-sources += clock.pkg_body-generic.vhd
-endif
-
 ifeq ($(tool),ghdl)
 vhdl-sources += clock_internal_sim.vhd
 endif

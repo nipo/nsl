@@ -1,4 +1,5 @@
 vhdl-sources += tb.vhd
-deps += hwdep.io
-deps += hwdep.clock
-deps += signalling.diff
+deps += nsl_io.io
+deps += nsl_io.ddr
+deps += nsl_io.clock
+deps += nsl_io.diff

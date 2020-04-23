@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library hwdep, signalling;
+library nsl_io;
 
 entity tb is
 end tb;
@@ -14,7 +14,7 @@ architecture arch of tb is
   
   signal clk   : std_ulogic;
   signal io_a_d, io_b_d, io_clk   : std_ulogic;
-  signal a_clk, b_clk : signalling.diff.diff_pair;
+  signal a_clk, b_clk : nsl_io.diff.diff_pair;
 
   signal a_d, b_d : word_t := (others => '0');
 
@@ -27,25 +27,24 @@ architecture arch of tb is
   
 begin
 
-  o: hwdep.io.io_ddr_output
+  o: nsl_io.ddr.ddr_output
     port map(
-      p_clk => a_clk,
-      p_d => a_d,
-      p_dd => io_a_d
+      clock_i => a_clk,
+      d_i => a_d,
+      dd_o => io_a_d
       );
 
-  i: hwdep.io.io_ddr_input
+  i: nsl_io.ddr.ddr_input
     port map(
-      p_clk => b_clk,
-      p_dd => io_b_d,
-      p_d => b_d
+      clock_i => b_clk,
+      dd_i => io_b_d,
+      d_o => b_d
       );
 
-  cko: hwdep.io.io_ddr_output
+  cko: nsl_io.clock.clock_output_diff_to_se
     port map(
-      p_clk => a_clk,
-      p_d => "01",
-      p_dd => io_clk
+      clock_i => a_clk,
+      port_o => io_clk
       );
 
   a_clk.p <= clk;
@@ -97,6 +96,7 @@ begin
     
     end loop;
 
+    assert false report "Simulation done" severity note;
     wait;
   end process;
 

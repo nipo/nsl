@@ -1,17 +1,17 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library signalling, machxo2;
+library nsl_io, machxo2;
 
-entity io_ddr_input is
+entity ddr_input is
   port(
-    p_clk : in signalling.diff.diff_pair;
-    p_dd  : in std_ulogic;
-    p_d   : out std_ulogic_vector(1 downto 0)
+    clock_i : in nsl_io.diff.diff_pair;
+    dd_i  : in std_ulogic;
+    d_o   : out std_ulogic_vector(1 downto 0)
     );
 end entity;
 
-architecture mxo2 of io_ddr_input is
+architecture mxo2 of ddr_input is
   
 begin
 
@@ -62,11 +62,11 @@ begin
 
   pad: machxo2.components.iddrxe
     port map (
-      d => p_dd,
+      d => dd_i,
       rst => '0',
-      sclk => p_clk.n,
-      q0 => p_d(0),
-      q1 => p_d(1)
+      sclk => clock_i.n,
+      q0 => d_o(0),
+      q1 => d_o(1)
       );
 
 end architecture;
