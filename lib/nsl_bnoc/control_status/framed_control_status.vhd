@@ -20,8 +20,8 @@ entity framed_control_status is
     rsp_o   : out nsl_bnoc.framed.framed_req;
     rsp_i   : in nsl_bnoc.framed.framed_ack;
 
-    config_o : out control_status_reg_array(config_count_c-1 downto 0);
-    status_i : in  control_status_reg_array(status_count_c-1 downto 0)  := (others => (others => '-'))
+    config_o : out control_status_reg_array(0 to config_count_c-1);
+    status_i : in  control_status_reg_array(0 to status_count_c-1)  := (others => (others => '-'))
   );
 end entity;
 
@@ -54,7 +54,7 @@ architecture rtl of framed_control_status is
 
     data            : std_ulogic_vector(31 downto 0);
 
-    config          : control_status_reg_array(config_count_c-1 downto 0);
+    config          : control_status_reg_array(0 to config_count_c-1);
   end record;
 
   signal r, rin : regs_t;
