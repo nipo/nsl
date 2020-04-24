@@ -86,9 +86,9 @@ no name scoping, only library is).
 
 Some relevant examples:
 
-* hwdep.io.io_ddr_bus_input,
-* util.gray.gray_encoder,
-* coresight.dp.dp_transactor.
+* nsl_io.ddr.ddr_bus_input,
+* nsl_math.gray.gray_encoder,
+* nsl_coresight.dp.dp_transactor.
 
 Port names
 ----------
