@@ -66,7 +66,7 @@ package fifo is
       reset_n_i : in std_ulogic;
       clock_i   : in std_ulogic;
 
-      out_data_o  : out std_ulogic_vector(width_out-1 downto 0);
+      out_data_o  : out std_ulogic_vector(out_width_c-1 downto 0);
       out_ready_i : in  std_ulogic;
       out_valid_o : out std_ulogic;
 
