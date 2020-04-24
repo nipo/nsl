@@ -34,9 +34,29 @@ if __name__ == "__main__":
     ate.flush()
 
     ate.divisor(1)
+    ate.reset(50)
     ate.swd_to_jtag()
+    ate.reset(50)
     ate.flush()
 
+    tap.run()
+    tap.dr_io(32, None, IDCODE)
+    tap.run()
+    ate.flush()
+
+    ate.divisor(32)
+    ate.swd_to_jtag()
+    tap.run()
+    ate.flush(end_delay = 1000)
+
+    ate.dr_capture()
+    ate.divisor(1)
+    ate.flush(end_delay = 1000)
+    ate.shift(None, None, 32)
+    ate.flush(end_delay = 1000)
+    ate.rti()
+    ate.flush(end_delay = 1000)
+    
     tap.run()
     tap.dr_io(32, None, IDCODE)
     tap.run()

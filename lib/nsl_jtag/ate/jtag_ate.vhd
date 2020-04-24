@@ -5,13 +5,14 @@ library nsl_jtag;
 
 entity jtag_ate is
   generic (
+    prescaler_width : positive;
     data_max_size : positive := 8
     );
   port (
     reset_n_i   : in  std_ulogic;
     clock_i      : in  std_ulogic;
 
-    divisor_i  : in natural range 0 to 31 := 0;
+    divisor_i  : in natural range 0 to 2 ** prescaler_width - 1 := 0;
 
     cmd_ready_o   : out std_ulogic;
     cmd_valid_i   : in  std_ulogic;
@@ -61,15 +62,17 @@ architecture rtl of jtag_ate is
     ST_SHIFT_DONE
     );
 
+  constant tms_shreg_len : natural := 14;
+  
   type regs_t is
   record
     state : state_t;
     tap_branch : tap_branch_t;
-    prescaler : natural range 0 to 31;
+    prescaler : natural range 0 to 2 ** prescaler_width - 1;
     data_shreg : std_ulogic_vector(data_max_size-1 downto 0);
     data_shreg_insertion_index, data_left : natural range 0 to data_max_size+1;
-    tms_shreg : std_ulogic_vector(0 to 7);
-    tms_left : natural range 0 to 9;
+    tms_shreg : std_ulogic_vector(0 to tms_shreg_len-1);
+    tms_left : natural range 0 to tms_shreg_len;
     tck, tms, tdi : std_ulogic;
     pipelining : boolean;
   end record;
@@ -157,7 +160,8 @@ begin
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- go through Exit2 and Update to Rti
-                  rin.tms_shreg <= "11000000";
+                  rin.tms_shreg <= (others => '0');
+                  rin.tms_shreg(0 to 1) <= "11";
                   rin.tms_left <= cmd_size_m1_i + 2;
                   rin.tap_branch <= TAP_RTI;
                   rin.state <= ST_MOVING;
@@ -169,14 +173,16 @@ begin
                   null;
                 when TAP_RTI =>
                   -- Through Sel-DR, Capture, Ext1 to Pause
-                  rin.tms_shreg <= "1010----";
+                  rin.tms_shreg <= (others => '-');
+                  rin.tms_shreg(0 to 3) <= "1010";
                   rin.tms_left <= 3;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- Loop through Exit2, Update, Sel-DR, Capture, Ext1 to Pause
                   -- Dont touch Rti
-                  rin.tms_shreg <= "111010--";
+                  rin.tms_shreg <= (others => '-');
+                  rin.tms_shreg(0 to 5) <= "111010";
                   rin.tms_left <= 5;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
@@ -188,35 +194,27 @@ begin
                   null;
                 when TAP_RTI =>
                   -- Through Sel-DR, Sel-IR, Capture, Ext1 to Pause
-                  rin.tms_shreg <= "11010---";
+                  rin.tms_shreg <= (others => '-');
+                  rin.tms_shreg(0 to 4) <= "11010";
                   rin.tms_left <= 4;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
                   -- Loop through Exit2, Update, Sel-DR, Sel-IR, Capture, Ext1 to Pause
                   -- Dont touch Rti
-                  rin.tms_shreg <= "1111010-";
+                  rin.tms_shreg <= (others => '-');
+                  rin.tms_shreg(0 to 6) <= "1111010";
                   rin.tms_left <= 6;
                   rin.tap_branch <= TAP_REG;
                   rin.state <= ST_MOVING;
               end case;
 
-            when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG_1 =>
+            when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG =>
               case r.tap_branch is
                 when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
-                  rin.tms_shreg <= "001111--";
-                  rin.tms_left <= 5;
-                  rin.tap_branch <= TAP_UNDEFINED;
-                  rin.state <= ST_MOVING;
-                when TAP_REG =>
-                  null;
-              end case;
-
-            when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG_23 =>
-              case r.tap_branch is
-                when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
-                  rin.tms_shreg <= "00111---";
-                  rin.tms_left <= 4;
+                  rin.tms_shreg <= (others => '1');
+                  rin.tms_shreg(0 to 12) <= "0011110011100";
+                  rin.tms_left <= tms_shreg_len;
                   rin.tap_branch <= TAP_UNDEFINED;
                   rin.state <= ST_MOVING;
                 when TAP_REG =>
@@ -230,7 +228,8 @@ begin
 
                 when TAP_REG =>
                   -- From pause, go through Exit2 to Shift
-                  rin.tms_shreg <= "10------";
+                  rin.tms_shreg <= (others => '-');
+                  rin.tms_shreg(0 to 1) <= "10";
                   rin.tms_left <= 1;
                   rin.data_shreg <= cmd_data_i;
                   rin.data_left <= cmd_size_m1_i;
@@ -262,7 +261,6 @@ begin
         if rising then
           rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
           rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
-          rin.data_left <= r.data_left - 1;
           if r.data_left = 0 then
             if r.pipelining then
               rin.state <= ST_SHIFTING_PIPELINE;
@@ -271,11 +269,13 @@ begin
               -- next, so we'll go to pause.
               -- As TMS is 1 on last shift cycle,
               -- on next cycle, we are on Exit1, just go to Pause
-              rin.tms_shreg <= "0-------";
+              rin.tms_shreg <= (0 => '0',
+                                others => '-');
               rin.tms_left <= 0;
               rin.state <= ST_SHIFT_POST;
             end if;
           else
+            rin.data_left <= r.data_left - 1;
             -- We need to validate pipelining before we assert TMS up.
             if cmd_valid_i = '1'
               and rsp_ready_i = '1' then
@@ -345,6 +345,6 @@ begin
   jtag_o.tck <= r.tck;
   jtag_o.tdi <= r.tdi;
   jtag_o.tms <= r.tms;
-  jtag_o.trst_n <= '1';
+  jtag_o.trst <= '0';
 
 end architecture;

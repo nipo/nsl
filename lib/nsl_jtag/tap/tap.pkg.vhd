@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_jtag;
 
 package tap is
   
@@ -23,16 +23,13 @@ package tap is
       );
   end component;
 
-  component tap is
+  component tap_port is
     generic(
       ir_len : natural
       );
     port(
-      tck_i  : in  std_ulogic;
-      tdi_i  : in  std_ulogic;
-      tdo_o  : out std_ulogic;
-      tms_i  : in  std_ulogic;
-      trst_i : in  std_ulogic := '0';
+      jtag_i : in  nsl_jtag.jtag.jtag_ate_o := nsl_jtag.jtag.jtag_ate_o_default;
+      jtag_o : out  nsl_jtag.jtag.jtag_ate_i;
 
       -- Default instruction is the value loaded to IR when passing
       -- through TLR. Per spec, it must either be IDCODE instruction

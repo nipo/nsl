@@ -9,8 +9,7 @@ package ate is
   type ate_op is (
     ATE_OP_RESET,
     ATE_OP_RTI,
-    ATE_OP_SWD_TO_JTAG_1, -- One third of SWD To JTAG (TMS=001111)
-    ATE_OP_SWD_TO_JTAG_23, -- One third of SWD To JTAG (TMS=00111)
+    ATE_OP_SWD_TO_JTAG,
     ATE_OP_DR_CAPTURE,
     ATE_OP_IR_CAPTURE,
     ATE_OP_SHIFT
@@ -18,13 +17,14 @@ package ate is
   
   component jtag_ate
     generic (
+      prescaler_width : positive;
       data_max_size : positive := 8
       );
     port (
       reset_n_i   : in  std_ulogic;
       clock_i      : in  std_ulogic;
 
-      divisor_i  : in natural range 0 to 31 := 0;
+      divisor_i  : in natural range 0 to 2 ** prescaler_width - 1 := 0;
 
       cmd_ready_o   : out std_ulogic;
       cmd_valid_i   : in  std_ulogic;

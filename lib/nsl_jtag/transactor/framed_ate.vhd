@@ -27,10 +27,10 @@ architecture rtl of framed_ate is
     ST_CMD_RESET,
     ST_CMD_IDLE,
     ST_CMD_ROUTE,
-    ST_CMD_SWD_TO_JTAG1,
     ST_CMD_PUT,
     ST_CMD_DATA_GET,
-    ST_CMD_DATA_PUT
+    ST_CMD_DATA_PUT,
+    ST_CMD_DIV_GET
     );
 
   type st_rsp_t is (
@@ -60,7 +60,7 @@ architecture rtl of framed_ate is
     rsp_op_last, rsp_data_last : std_ulogic;
     rsp_word_left : natural range 0 to 31;
 
-    divisor : natural range 0 to 31;
+    divisor : natural range 0 to 255;
   end record;
 
   signal r, rin: regs_t;
@@ -139,8 +139,9 @@ begin
             rin.cmd_st <= ST_CMD_PUT;
             rin.cmd_pending <= ATE_OP_IR_CAPTURE;
           elsif std_match(r.cmd_data, JTAG_CMD_SWD_TO_JTAG) then
-            rin.cmd_st <= ST_CMD_SWD_TO_JTAG1;
-            rin.cmd_pending <= ATE_OP_SWD_TO_JTAG_1;
+            rin.cmd_word_left <= 0;
+            rin.cmd_st <= ST_CMD_PUT;
+            rin.cmd_pending <= ATE_OP_SWD_TO_JTAG;
           elsif std_match(r.cmd_data, JTAG_CMD_RESET_CYCLE) then
             rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
             rin.cmd_word_left <= 0;
@@ -162,8 +163,7 @@ begin
             rin.cmd_st <= ST_CMD_PUT;
             rin.cmd_pending <= ATE_OP_RTI;
           elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
-            rin.divisor <= to_integer(unsigned(r.cmd_data(4 downto 0)));
-            rin.cmd_st <= ST_CMD_IDLE;
+            rin.cmd_st <= ST_CMD_DIV_GET;
           else
             assert false
               report "Unhandled Framed JTAG ATE command"
@@ -171,13 +171,6 @@ begin
 
             rin.cmd_st <= ST_CMD_IDLE;
           end if;
-        end if;
-
-      when ST_CMD_SWD_TO_JTAG1 =>
-        if s_cmd_ready = '1' then
-          rin.cmd_st <= ST_CMD_PUT;
-          rin.cmd_word_left <= 1;
-          rin.cmd_pending <= ATE_OP_SWD_TO_JTAG_23;
         end if;
 
       when ST_CMD_PUT =>
@@ -194,6 +187,13 @@ begin
           rin.cmd_data <= cmd_i.data;
           rin.rsp_data_last <= cmd_i.last;
           rin.cmd_st <= ST_CMD_DATA_PUT;
+        end if;
+        
+      when ST_CMD_DIV_GET =>
+        if cmd_i.valid = '1' then
+          rin.divisor <= to_integer(unsigned(cmd_i.data));
+          rin.rsp_op_last <= cmd_i.last;
+          rin.cmd_st <= ST_CMD_PUT;
         end if;
 
       when ST_CMD_DATA_PUT =>
@@ -290,10 +290,10 @@ begin
       when ST_CMD_RESET | ST_CMD_ROUTE =>
         null;
 
-      when ST_CMD_IDLE | ST_CMD_DATA_GET =>
+      when ST_CMD_IDLE | ST_CMD_DATA_GET | ST_CMD_DIV_GET =>
         cmd_o.ready <= '1';
 
-      when ST_CMD_PUT | ST_CMD_DATA_PUT | ST_CMD_SWD_TO_JTAG1 =>
+      when ST_CMD_PUT | ST_CMD_DATA_PUT =>
         s_cmd_valid <= '1';
     end case;
 
@@ -320,6 +320,7 @@ begin
 
   ate: jtag_ate
     generic map (
+      prescaler_width => 8,
       data_max_size => data_max_size
       )
     port map (

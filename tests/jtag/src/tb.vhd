@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl, testing, util;
+library nsl_clocking, nsl_bnoc, nsl_jtag, nsl_simulation;
 
 architecture arch of tb is
 
@@ -13,17 +13,17 @@ architecture arch of tb is
   signal s_resetn_clk : std_ulogic;
   signal s_resetn_async : std_ulogic;
 
-  signal s_tdi, s_tdo, s_tms, s_tck: std_ulogic;
   signal s_done : std_ulogic_vector(0 to 1);
 
-  signal s_cmd_val_fifo, s_rsp_val_fifo : nsl.framed.framed_req;
-  signal s_cmd_ack_fifo, s_rsp_ack_fifo : nsl.framed.framed_ack;
-  signal s_ate_cmd_val, s_ate_rsp_val : nsl.framed.framed_req;
-  signal s_ate_cmd_ack, s_ate_rsp_ack : nsl.framed.framed_ack;
+  signal s_cmd_fifo, s_rsp_fifo : nsl_bnoc.framed.framed_bus;
+  signal s_cmd_ate, s_rsp_ate : nsl_bnoc.framed.framed_bus;
 
   signal s_tap_ir : std_ulogic_vector(3 downto 0);
   signal s_tap_reset, s_tap_run, s_tap_dr_capture,
     s_tap_dr_shift, s_tap_dr_update, s_tap_dr_in, s_tap_dr_out : std_ulogic;
+  signal ate_o : nsl_jtag.jtag.jtag_ate_o;
+  signal ate_i : nsl_jtag.jtag.jtag_ate_i;
+
   signal s_idcode_out, s_idcode_selected : std_ulogic;
   signal s_bypass_out, s_bypass_selected : std_ulogic;
 
@@ -31,54 +31,50 @@ architecture arch of tb is
 
 begin
 
-  reset_sync_clk: util.sync.sync_rising_edge
+  reset_sync_clk: nsl_clocking.async.async_edge
     port map(
-      p_in => s_resetn_async,
-      p_out => s_resetn_clk,
-      p_clk => s_clk
+      data_i => s_resetn_async,
+      data_o => s_resetn_clk,
+      clock_i => s_clk
       );
 
-  ate_endpoint: nsl.routed.routed_endpoint
+  ate_endpoint: nsl_bnoc.routed.routed_endpoint
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
 
-      p_cmd_in_val => s_cmd_val_fifo,
-      p_cmd_in_ack => s_cmd_ack_fifo,
-      p_rsp_out_val => s_rsp_val_fifo,
-      p_rsp_out_ack => s_rsp_ack_fifo,
+      p_cmd_in_val => s_cmd_fifo.req,
+      p_cmd_in_ack => s_cmd_fifo.ack,
+      p_rsp_out_val => s_rsp_fifo.req,
+      p_rsp_out_ack => s_rsp_fifo.ack,
       
-      p_cmd_out_val => s_ate_cmd_val,
-      p_cmd_out_ack => s_ate_cmd_ack,
-      p_rsp_in_val => s_ate_rsp_val,
-      p_rsp_in_ack => s_ate_rsp_ack
+      p_cmd_out_val => s_cmd_ate.req,
+      p_cmd_out_ack => s_cmd_ate.ack,
+      p_rsp_in_val => s_rsp_ate.req,
+      p_rsp_in_ack => s_rsp_ate.ack
       );
 
-  master: nsl.jtag.jtag_framed_ate
+  master: nsl_jtag.transactor.framed_ate
     port map(
       clock_i  => s_clk,
       reset_n_i => s_resetn_clk,
-      
-      cmd_i => s_ate_cmd_val,
-      cmd_o => s_ate_cmd_ack,
-      rsp_o => s_ate_rsp_val,
-      rsp_i => s_ate_rsp_ack,
-      
-      tck_o => s_tck,
-      tdi_o => s_tdi,
-      tdo_i => s_tdo,
-      tms_o => s_tms
+
+      cmd_i => s_cmd_ate.req,
+      cmd_o => s_cmd_ate.ack,
+      rsp_o => s_rsp_ate.req,
+      rsp_i => s_rsp_ate.ack,
+
+      jtag_o => ate_o,
+      jtag_i => ate_i
       );
 
-  tap: nsl.jtag.jtag_tap
+  tap: nsl_jtag.tap.tap_port
     generic map(
       ir_len => 4
       )
     port map(
-      tck_i => s_tck,
-      tdi_i => s_tdi,
-      tdo_o => s_tdo,
-      tms_i => s_tms,
+      jtag_i => ate_o,
+      jtag_o => ate_i,
 
       default_instruction_i => "0010",
 
@@ -93,13 +89,13 @@ begin
       dr_tdo_i => s_tap_dr_out
       );
 
-  idcode: nsl.jtag.jtag_tap_dr
+  idcode: nsl_jtag.tap.tap_dr
     generic map(
       ir_len => 4,
       dr_len => 32
       )
     port map(
-      tck_i => s_tck,
+      tck_i => ate_o.tck,
       tdi_i => s_tap_dr_in,
       tdo_o => s_idcode_out,
 
@@ -113,13 +109,13 @@ begin
       value_i => x"87654321"
       );
 
-  bypass: nsl.jtag.jtag_tap_dr
+  bypass: nsl_jtag.tap.tap_dr
     generic map(
       ir_len => 4,
       dr_len => 1
       )
     port map(
-      tck_i => s_tck,
+      tck_i => ate_o.tck,
       tdi_i => s_tap_dr_in,
       tdo_o => s_bypass_out,
 
@@ -145,45 +141,43 @@ begin
     end if;
   end process;
   
-  gen: testing.framed.framed_file_reader
+
+  gen: nsl_bnoc.testing.framed_file_reader
     generic map(
       filename => "ate_commands.txt"
       )
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_out_val => s_cmd_val_fifo,
-      p_out_ack => s_cmd_ack_fifo,
+      p_out_val => s_cmd_fifo.req,
+      p_out_ack => s_cmd_fifo.ack,
       p_done => s_done(0)
       );
 
-  check0: testing.framed.framed_file_checker
+  check0: nsl_bnoc.testing.framed_file_checker
     generic map(
       filename => "ate_responses.txt"
       )
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_in_val => s_rsp_val_fifo,
-      p_in_ack => s_rsp_ack_fifo,
+      p_in_val => s_rsp_fifo.req,
+      p_in_ack => s_rsp_fifo.ack,
       p_done => s_done(1)
       );
 
-  process
-  begin
-    s_resetn_async <= '0';
-    wait for 100 ns;
-    s_resetn_async <= '1';
-    wait;
-  end process;
-
-  clock_gen: process(s_clk)
-  begin
-    if s_done = (s_done'range => '1') then
-      assert false report "all done" severity note;
-    else
-      s_clk <= not s_clk after 50 ns;
-    end if;
-  end process;
+  driver: nsl_simulation.driver.simulation_driver
+    generic map(
+      clock_count => 1,
+      reset_count => 1,
+      done_count => s_done'length
+      )
+    port map(
+      clock_period(0) => 100 ns,
+      reset_duration(0) => 100 ns,
+      reset_n_o(0) => s_resetn_async,
+      clock_o(0) => s_clk,
+      done_i => s_done
+      );
 
 end;

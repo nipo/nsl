@@ -1,6 +1,9 @@
 vhdl-sources += tb.vhd
-deps += nsl.framed
-deps += nsl.jtag
-deps += util.sync
-deps += testing.framed
-deps += nsl.routed
+deps += nsl_jtag.jtag
+deps += nsl_jtag.transactor
+deps += nsl_jtag.tap
+deps += nsl_simulation.driver
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.routed
+deps += nsl_bnoc.testing
+deps += nsl_clocking.async

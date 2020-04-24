@@ -53,10 +53,6 @@ class AteBase:
     def ir_capture(self):
         self.pipe.put([0x81])
 
-    def divisor(self, value):
-        assert 1 <= value <= 0x20
-        self.pipe.put([0xc0 | (value - 1)])
-
     def shift(self, tdi, tdo, length):
         bytelength = length // 8
         if bytelength:
@@ -102,6 +98,10 @@ class AteCmd(AteBase):
             opts |= 0x08
         AteBase.shift_bits(self, opts, length, tdi)
 
+    def divisor(self, value):
+        assert 1 <= value <= 0x100
+        self.pipe.put([0x83, value - 1])
+
 class AteRsp(AteBase):
     is_cmd = False
     def shift_bytes(self, tdi, tdo, length):
@@ -122,6 +122,9 @@ class AteRsp(AteBase):
         if tdo is not None:
             opts |= 0x08
         AteBase.shift_bits(self, opts, length, tdo)
+
+    def divisor(self, value):
+        self.pipe.put([0x83])
 
 class Tap:
     def __init__(self, master, ir_len, ir_pre = 0, ir_post = 0, dr_pre = 0, dr_post = 0):

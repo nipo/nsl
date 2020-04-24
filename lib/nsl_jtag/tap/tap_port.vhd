@@ -3,16 +3,13 @@ use ieee.std_logic_1164.all;
 
 library nsl_jtag;
 
-entity tap is
+entity tap_port is
   generic(
     ir_len : natural
     );
   port(
-    tck_i  : in  std_ulogic;
-    tdi_i  : in  std_ulogic;
-    tdo_o  : out std_ulogic;
-    tms_i  : in  std_ulogic;
-    trst_i : in  std_ulogic := '0';
+    jtag_i : in  nsl_jtag.jtag.jtag_ate_o := nsl_jtag.jtag.jtag_ate_o_default;
+    jtag_o : out  nsl_jtag.jtag.jtag_ate_i;
 
     default_instruction_i   : in  std_ulogic_vector(ir_len - 1 downto 0) := (others => '1');
     ir_o          : out std_ulogic_vector(ir_len - 1 downto 0);
@@ -28,7 +25,7 @@ entity tap is
     );
 end entity;
 
-architecture rtl of tap is
+architecture rtl of tap_port is
 
   signal ir, ir_shreg: std_ulogic_vector(ir_len - 1 downto 0);
 
@@ -40,9 +37,9 @@ architecture rtl of tap is
 
 begin
 
-  shreg: process(tck_i)
+  shreg: process(jtag_i.tck)
   begin
-    if rising_edge(tck_i) then
+    if rising_edge(jtag_i.tck) then
       if s_ir_capture = '1' then
         ir_shreg <= ir_out_i & "01";
       end if;
@@ -54,34 +51,34 @@ begin
       end if;
       
       if s_ir_shift = '1' then
-        ir_shreg <= tdi_i & ir_shreg(ir_shreg'left downto 1);
+        ir_shreg <= jtag_i.tdi & ir_shreg(ir_shreg'left downto 1);
       end if;
     end if;
   end process;
 
-  tdo_gen: process(tck_i)
+  tdo_gen: process(jtag_i.tck)
   begin
-    if falling_edge(tck_i) then
+    if falling_edge(jtag_i.tck) then
       if s_ir_shift = '1' then
-        tdo_o <= ir_shreg(0);
+        jtag_o.tdo <= ir_shreg(0);
       elsif s_dr_shift = '1' then
-        tdo_o <= dr_tdo_i;
+        jtag_o.tdo <= dr_tdo_i;
       else
-        tdo_o <= 'Z';
+        jtag_o.tdo <= '-';
       end if;
     end if;
   end process;
   
   ir_o <= ir;
-  dr_tdi_o <= tdi_i;
+  dr_tdi_o <= jtag_i.tdi;
   reset_o <= s_reset;
   dr_shift_o <= s_dr_shift;
   
   controller: nsl_jtag.tap.tap_controller
     port map(
-      tck_i => tck_i,
-      tms_i => tms_i,
-      trst_i => trst_i,
+      tck_i => jtag_i.tck,
+      tms_i => jtag_i.tms,
+      trst_i => jtag_i.trst,
       reset_o => s_reset,
       run_o => run_o,
       ir_capture_o => s_ir_capture,

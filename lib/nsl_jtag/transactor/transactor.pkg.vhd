@@ -6,20 +6,20 @@ library nsl_bnoc, nsl_jtag;
 
 package transactor is
   
-  constant JTAG_SHIFT_BYTE      : std_ulogic_vector(7 downto 0) := "0-------"; -- byte count
-  constant JTAG_SHIFT_BYTE_W    : std_ulogic_vector(7 downto 0) := "-1------";
-  constant JTAG_SHIFT_BYTE_R    : std_ulogic_vector(7 downto 0) := "--1-----";
-  constant JTAG_SHIFT_BIT       : std_ulogic_vector(7 downto 0) := "111-----"; -- bit count
-  constant JTAG_SHIFT_BIT_W     : std_ulogic_vector(7 downto 0) := "---1----";
-  constant JTAG_SHIFT_BIT_R     : std_ulogic_vector(7 downto 0) := "----1---";
-  constant JTAG_CMD_DR_CAPTURE  : std_ulogic_vector(7 downto 0) := "10000000";
-  constant JTAG_CMD_IR_CAPTURE  : std_ulogic_vector(7 downto 0) := "10000001";
-  constant JTAG_CMD_SWD_TO_JTAG : std_ulogic_vector(7 downto 0) := "10000010";
-  constant JTAG_CMD_RESET_CYCLE : std_ulogic_vector(7 downto 0) := "10011---"; -- cycle count
-  constant JTAG_CMD_RTI_CYCLE   : std_ulogic_vector(7 downto 0) := "10010---"; -- cycle count
-  constant JTAG_CMD_RESET       : std_ulogic_vector(7 downto 0) := "1011----"; -- in packet of 8 cycles
-  constant JTAG_CMD_RTI         : std_ulogic_vector(7 downto 0) := "1010----"; -- in packet of 8 cycles
-  constant JTAG_CMD_DIVISOR     : std_ulogic_vector(7 downto 0) := "110-----";
+  constant JTAG_SHIFT_BYTE      : nsl_bnoc.framed.framed_data_t := "0-------"; -- byte count
+  constant JTAG_SHIFT_BYTE_W    : nsl_bnoc.framed.framed_data_t := "-1------";
+  constant JTAG_SHIFT_BYTE_R    : nsl_bnoc.framed.framed_data_t := "--1-----";
+  constant JTAG_SHIFT_BIT       : nsl_bnoc.framed.framed_data_t := "111-----"; -- bit count
+  constant JTAG_SHIFT_BIT_W     : nsl_bnoc.framed.framed_data_t := "---1----";
+  constant JTAG_SHIFT_BIT_R     : nsl_bnoc.framed.framed_data_t := "----1---";
+  constant JTAG_CMD_DR_CAPTURE  : nsl_bnoc.framed.framed_data_t := "10000000";
+  constant JTAG_CMD_IR_CAPTURE  : nsl_bnoc.framed.framed_data_t := "10000001";
+  constant JTAG_CMD_SWD_TO_JTAG : nsl_bnoc.framed.framed_data_t := "10000010";
+  constant JTAG_CMD_DIVISOR     : nsl_bnoc.framed.framed_data_t := "10000011"; -- Next byte is divisor
+  constant JTAG_CMD_RESET_CYCLE : nsl_bnoc.framed.framed_data_t := "10011---"; -- cycle count
+  constant JTAG_CMD_RTI_CYCLE   : nsl_bnoc.framed.framed_data_t := "10010---"; -- cycle count
+  constant JTAG_CMD_RESET       : nsl_bnoc.framed.framed_data_t := "1011----"; -- in packet of 8 cycles
+  constant JTAG_CMD_RTI         : nsl_bnoc.framed.framed_data_t := "1010----"; -- in packet of 8 cycles
 
   component framed_ate
     port (
