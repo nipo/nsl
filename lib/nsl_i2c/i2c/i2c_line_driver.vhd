@@ -19,14 +19,14 @@ begin
     port map(
       v_i => bus_i.sda,
       v_o => bus_o.sda,
-      io => bus_io.sda
+      io_io => bus_io.sda
       );
 
   scl_driver: nsl_io.io.opendrain_io_driver
     port map(
       v_i => bus_i.scl,
       v_o => bus_o.scl,
-      io => bus_io.scl
+      io_io => bus_io.scl
       );
 
 end architecture;
