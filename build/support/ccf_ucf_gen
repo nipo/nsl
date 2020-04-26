@@ -32,7 +32,7 @@ for i in "${!nets[@]}"; do
     net=${nets[$i]}
     token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${net})
 
-    echo "NET \"$net\" TNM_NET=\"CCF_${token}_TNM\";"
+    echo "NET \"$net\" TNM_NET=\"CCF_${token}_TNM\" | PERIOD = ${periods[$net]};"
     echo "TIMEGRP \"CCF_${token}_GRP\" = \"CCF_${token}_TNM\";"
     test -n "$has_tig_clr"  && echo "TIMESPEC \"TS_to_${token}_tig_clr\" = THRU \"ff_tig_clr\" TO \"CCF_${token}_GRP\" TIG;"
     test -n "$has_tig_d"    && echo "TIMESPEC \"TS_to_${token}_tig_d\" = THRU \"ff_tig_d\" TO \"CCF_${token}_GRP\" TIG;"
