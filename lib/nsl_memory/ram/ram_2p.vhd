@@ -38,13 +38,10 @@ begin
 end ram_2p;
 
 architecture inferred of ram_2p is
-  use nsl_math.arith.max;
-  use nsl_math.arith.min;
-  use nsl_math.arith.log2;
 
-  constant max_word_bytes : natural := max(a_data_byte_count_c, b_data_byte_count_c);
-  constant min_addr_size_c : natural := min(a_addr_size_c, b_addr_size_c);
-  constant addr_size_c : natural := a_addr_size_c + log2(a_data_byte_count_c);
+  constant max_word_bytes : natural := nsl_math.arith.max(a_data_byte_count_c, b_data_byte_count_c);
+  constant min_addr_size_c : natural := nsl_math.arith.min(a_addr_size_c, b_addr_size_c);
+  constant addr_size_c : natural := a_addr_size_c + nsl_math.arith.log2(a_data_byte_count_c);
 
   constant mem_size_c : natural := 2**min_addr_size_c;
   subtype word_t is std_ulogic_vector(max_word_bytes*8-1 downto 0);
