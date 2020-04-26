@@ -157,7 +157,7 @@ begin
     generic map(
       clock_count => 1,
       reset_count => 1,
-      done_count => 2
+      done_count => s_done'length
       )
     port map(
       clock_period(0) => 10 ns,
