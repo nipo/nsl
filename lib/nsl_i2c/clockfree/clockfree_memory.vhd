@@ -60,9 +60,9 @@ begin
     port map (
       clock_i => s_clk,
       write_en_i => s_write,
-      address_i => std_ulogic_vector(s_address),
-      data_i => s_wdata,
-      data_o => s_rdata
+      address_i => s_address,
+      write_data_i => s_wdata,
+      read_data_o => s_rdata
       );
 
 end arch;

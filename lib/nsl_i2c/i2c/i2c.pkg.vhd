@@ -21,6 +21,8 @@ package i2c is
     sda : nsl_io.io.opendrain;
   end record;
 
+  function "+"(a, b : i2c_o) return i2c_o;
+  
   type i2c_i_vector is array(natural range <>) of i2c_i;
   type i2c_o_vector is array(natural range <>) of i2c_o;
   
@@ -42,4 +44,33 @@ package i2c is
       );
   end component;
 
+  -- Also acts as a line filter
+  component i2c_line_monitor is
+    generic(
+      debounce_count_c : integer
+      );
+    port(
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      raw_i : in i2c_i;
+      filtered_o : out i2c_i;
+      start_o : out std_ulogic;
+      stop_o : out std_ulogic
+      );
+  end component;
+
 end package i2c;
+
+package body i2c is
+
+  use nsl_io.io."+";
+
+  function "+"(a, b : i2c_o) return i2c_o is
+    variable ret : i2c_o;
+  begin
+    ret.scl := a.scl + b.scl;
+    ret.sda := a.sda + b.sda;
+    return ret;
+  end function;
+
+end package body i2c;

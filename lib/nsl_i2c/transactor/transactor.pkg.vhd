@@ -28,37 +28,5 @@ package transactor is
       rsp_i  : in nsl_bnoc.framed.framed_ack
       );
   end component;
-
-  type i2c_cmd_t is (
-    I2C_NOOP,
-    I2C_START,
-    I2C_STOP,
-    I2C_WRITE,
-    I2C_READ
-    );
-  
-  component transactor_master
-    generic(
-      divisor_width : natural
-      );
-    port(
-      clock_i    : in std_ulogic;
-      reset_n_i : in std_ulogic;
-
-      divisor_i  : in std_ulogic_vector(divisor_width-1 downto 0);
-
-      i2c_o  : out nsl_i2c.i2c.i2c_o;
-      i2c_i  : in  nsl_i2c.i2c.i2c_i;
-
-      rack_i     : in  std_ulogic;
-      rdata_o    : out std_ulogic_vector(7 downto 0);
-      wack_o     : out std_ulogic;
-      wdata_i    : in  std_ulogic_vector(7 downto 0);
-
-      cmd_i      : in  i2c_cmd_t;
-      busy_o     : out std_ulogic;
-      done_o     : out std_ulogic
-      );
-  end component;
   
 end package transactor;

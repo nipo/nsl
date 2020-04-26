@@ -73,7 +73,7 @@ begin
     if r.start_ack then
       start <= false;
     elsif falling_edge(s_i2c_i.sda) then
-      start <= s_i2c_i.scl = '1';
+      start <= start or s_i2c_i.scl = '1';
     end if;
   end process;
 
@@ -82,7 +82,7 @@ begin
     if r.stop_ack then
       stop <= false;
     elsif rising_edge(s_i2c_i.sda) then
-      stop <= s_i2c_i.scl = '1';
+      stop <= stop or s_i2c_i.scl = '1';
     end if;
   end process;
 
@@ -183,33 +183,33 @@ begin
   mealy : process(r, read_ready_i, write_ready_i, error_i, s_i2c_i.scl, read_data_i)
   begin
     if falling_edge(s_i2c_i.scl) then
-      i2c_o.sda.drain <= '0';
+      i2c_o.sda.drain_n <= '1';
       case r.state is
         when ST_READ_DATA =>
           if r.bit_left = 7 then
-            i2c_o.sda.drain <= not read_data_i(7);
+            i2c_o.sda.drain_n <= read_data_i(7);
           else
-            i2c_o.sda.drain <= not r.shreg(7);
+            i2c_o.sda.drain_n <= r.shreg(7);
           end if;
 
         when ST_ADDR_ACK | ST_WRITE_ACK =>
           if error_i = '0' then
-            i2c_o.sda.drain <= '1';
+            i2c_o.sda.drain_n <= '0';
           end if;
 
         when others =>
       end case;
     end if;
 
-    i2c_o.scl.drain <= '0';
+    i2c_o.scl.drain_n <= '1';
 
     if r.can_stretch then
       case r.state is
         when ST_READ_DATA =>
-          i2c_o.scl.drain <= r.read and not read_ready_i;
+          i2c_o.scl.drain_n <= not r.read or read_ready_i;
 
         when ST_WRITE_ACK =>
-          i2c_o.scl.drain <= not write_ready_i;
+          i2c_o.scl.drain_n <= write_ready_i;
 
         when others =>
           null;

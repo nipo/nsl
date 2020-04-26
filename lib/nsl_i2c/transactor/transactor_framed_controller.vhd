@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_i2c;
 use nsl_i2c.transactor.all;
+use nsl_i2c.i2c."+";
+use nsl_i2c.master.all;
 
 entity transactor_framed_controller is
   port(
@@ -24,36 +26,106 @@ architecture rtl of transactor_framed_controller is
   
   type state_t is (
     ST_RESET,
-    ST_IDLE,
-    ST_RSP_PUT,
-    ST_ACK_PUT,
-    ST_DATA_PUT,
-    ST_DATA_GET,
-    ST_READ,
-    ST_WRITE,
-    ST_START,
-    ST_STOP
-    );
+    ST_CMD_GET,
+
+    ST_EXEC,
+
+    ST_START_RUN,
+    ST_RESTART_RUN,
+    ST_STOP_RUN,
+
+    ST_READ_RUN,
+    ST_READ_DATA,
+    ST_READ_ACK,
+    ST_READ_PUT,
+
+    ST_WRITE_GET,
+    ST_WRITE_RUN,
+    ST_WRITE_DATA,
+    ST_WRITE_ACK,
+    ST_WRITE_PUT,
+
+    ST_IO_FLUSH_GET,
+    ST_IO_FLUSH_PUT,
+
+    ST_RSP_PUT
+    );  
   
   type regs_t is record
-    state                : state_t;
-    last                 : std_ulogic;
-    ack                  : std_ulogic;
-    data                 : std_ulogic_vector(7 downto 0);
-    word_count           : natural range 0 to 63;
-    divisor              : std_ulogic_vector(7 downto 0);
+    state      : state_t;
+    last       : std_ulogic;
+    cmd        : std_ulogic_vector(7 downto 0);
+    data       : std_ulogic_vector(7 downto 0);
+    word_count : natural range 0 to 63;
+    divisor    : unsigned(10 downto 0);
   end record;
 
   signal r, rin : regs_t;
 
-  signal s_wack     :  std_ulogic;
-  signal s_rack     :  std_ulogic;
-  signal s_rdata    :  std_ulogic_vector(7 downto 0);
-  signal s_cmd      :  i2c_cmd_t;
-  signal s_busy     :  std_ulogic;
-  signal s_done     :  std_ulogic;
-
+  signal i2c_filt_i : nsl_i2c.i2c.i2c_i;
+  signal i2c_clocker_o, i2c_shifter_o : nsl_i2c.i2c.i2c_o;
+  signal start_i, stop_i : std_ulogic;
+  signal clocker_owned_i, clocker_abort_o, clocker_ready_i, clocker_valid_o : std_ulogic;
+  signal clocker_cmd_o : i2c_bus_cmd_t;
+  signal shift_enable_o, shift_send_data_o, shift_arb_ok_i : std_ulogic;
+  signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
+  signal shift_r_valid_i, shift_r_ready_o : std_ulogic;
+  signal shift_w_data_o, shift_r_data_i : std_ulogic_vector(7 downto 0);
 begin
+
+  line_mon: nsl_i2c.i2c.i2c_line_monitor
+    generic map(
+      debounce_count_c => 2
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      raw_i => i2c_i,
+      filtered_o => i2c_filt_i,
+      start_o => start_i,
+      stop_o => stop_i
+      );
+
+  clock_driver: nsl_i2c.master.master_clock_driver
+    port map(
+      clock_i   => clock_i,
+      reset_n_i => reset_n_i,
+
+      half_cycle_clock_count_i => r.divisor,
+
+      i2c_i => i2c_filt_i,
+      i2c_o => i2c_clocker_o,
+
+      ready_o => clocker_ready_i,
+      valid_i => clocker_valid_o,
+      cmd_i => clocker_cmd_o,
+
+      abort_i => clocker_abort_o,
+      owned_o => clocker_owned_i
+      );
+  
+  shifter: nsl_i2c.master.master_shift_register
+    port map(
+      clock_i  => clock_i,
+      reset_n_i => reset_n_i,
+
+      i2c_o => i2c_shifter_o,
+      i2c_i => i2c_filt_i,
+
+      start_i => start_i,
+      arb_ok_o  => shift_arb_ok_i,
+
+      enable_i => shift_enable_o,
+      send_mode_i => shift_send_data_o,
+
+      send_valid_i => shift_w_valid_o,
+      send_ready_o => shift_w_ready_i,
+      send_data_i => shift_w_data_o,
+
+      recv_valid_o => shift_r_valid_i,
+      recv_ready_i => shift_r_ready_o,
+      recv_data_o => shift_r_data_i
+      );
 
   ck : process (clock_i, reset_n_i)
   begin
@@ -64,114 +136,205 @@ begin
     end if;
   end process;
 
-  transition : process (r, cmd_i, rsp_i, s_busy, s_done, s_rdata, s_wack)
+  transition : process (clocker_owned_i, clocker_ready_i,
+                        cmd_i, r, rsp_i,
+                        shift_r_data_i, shift_r_valid_i, shift_w_ready_i)
   begin
     rin <= r;
 
     case r.state is
       when ST_RESET =>
         rin.divisor <= (others => '1');
-        rin.state <= ST_IDLE;
+        rin.state <= ST_CMD_GET;
 
-      when ST_IDLE =>
+      when ST_CMD_GET =>
         if cmd_i.valid = '1' then
-          rin.ack <= '-';
+          rin.cmd <= cmd_i.data;
           rin.last <= cmd_i.last;
+          rin.state <= ST_EXEC;
+        end if;
 
-          if std_match(cmd_i.data, I2C_CMD_READ) then
-            rin.state <= ST_READ;
-            rin.word_count <= to_integer(unsigned(cmd_i.data(5 downto 0)));
-            rin.ack <= cmd_i.data(6);
+      when ST_EXEC =>
+        if clocker_ready_i = '1' then
+          if std_match(r.cmd, I2C_CMD_READ) then
+            rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
+            if clocker_owned_i = '1' then
+              rin.state <= ST_READ_RUN;
+            else
+              rin.state <= ST_IO_FLUSH_PUT;
+            end if;
 
-          elsif std_match(cmd_i.data, I2C_CMD_WRITE) then
-            rin.state <= ST_DATA_GET;
-            rin.word_count <= to_integer(unsigned(cmd_i.data(5 downto 0)));
+          elsif std_match(r.cmd, I2C_CMD_WRITE) then
+            rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
+            if clocker_owned_i = '1' then
+              rin.state <= ST_WRITE_GET;
+            else
+              rin.state <= ST_IO_FLUSH_GET;
+            end if;
 
-          elsif std_match(cmd_i.data, I2C_CMD_DIV) then
+          elsif std_match(r.cmd, I2C_CMD_DIV) then
             rin.state <= ST_RSP_PUT;
-            rin.divisor <= cmd_i.data(5 downto 0) & "11";
+            rin.divisor <= unsigned(r.cmd(5 downto 0)) & "00000";
 
-          elsif std_match(cmd_i.data, I2C_CMD_START) then
-            rin.state <= ST_START;
+          elsif std_match(r.cmd, I2C_CMD_START) then
+            if clocker_owned_i = '1' then
+              rin.state <= ST_RESTART_RUN;
+            else
+              rin.state <= ST_START_RUN;
+            end if;
 
-          elsif std_match(cmd_i.data, I2C_CMD_STOP) then
-            rin.state <= ST_STOP;
+          elsif std_match(r.cmd, I2C_CMD_STOP) then
+            if clocker_owned_i = '1' then
+              rin.state <= ST_STOP_RUN;
+            else
+              rin.state <= ST_RSP_PUT;
+            end if;
           end if;
         end if;
 
-      when ST_RSP_PUT =>
-        if rsp_i.ready = '1' then
-          rin.state <= ST_IDLE;
-        end if;
-
-      when ST_ACK_PUT =>
-        if rsp_i.ready = '1' then
-          if r.word_count = 0 then
-            rin.state <= ST_IDLE;
-          else
-            rin.state <= ST_DATA_GET;
-            rin.word_count <= r.word_count - 1;
-          end if;
-        end if;
-
-      when ST_DATA_PUT =>
-        if rsp_i.ready = '1' then
-          if r.word_count = 0 then
-            rin.state <= ST_IDLE;
-          else
-            rin.state <= ST_READ;
-            rin.word_count <= r.word_count - 1;
-          end if;
-        end if;
-
-      when ST_START | ST_STOP =>
-        if s_done = '1' then
+      when ST_START_RUN | ST_RESTART_RUN | ST_STOP_RUN =>
+        if clocker_ready_i = '1' then
           rin.state <= ST_RSP_PUT;
         end if;
-
-      when ST_READ =>
-        if s_done = '1' then
-          rin.state <= ST_DATA_PUT;
-          rin.data <= s_rdata;
+      
+      when ST_READ_RUN =>
+        if clocker_ready_i = '1' then
+          rin.state <= ST_READ_DATA;
         end if;
 
-      when ST_WRITE =>
-        if s_done = '1' then
-          rin.state <= ST_ACK_PUT;
-          rin.ack <= s_wack;
+      when ST_READ_DATA =>
+        if shift_r_valid_i = '1' then
+          rin.state <= ST_READ_ACK;
+          rin.data <= shift_r_data_i;
         end if;
 
-      when ST_DATA_GET =>
+      when ST_READ_ACK =>
+        if shift_w_ready_i = '1' then
+          rin.state <= ST_READ_PUT;
+        end if;
+
+      when ST_READ_PUT =>
+        if rsp_i.ready = '1' then
+          rin.word_count <= (r.word_count - 1) mod 64;
+          if r.word_count = 0 then
+            rin.state <= ST_CMD_GET;
+          else
+            rin.state <= ST_READ_RUN;
+          end if;
+        end if;
+
+      when ST_WRITE_GET =>
         if cmd_i.valid = '1' then
-          rin.state <= ST_WRITE;
           rin.data <= cmd_i.data;
           rin.last <= cmd_i.last;
+          rin.state <= ST_WRITE_RUN;
+        end if;
+
+      when ST_WRITE_RUN =>
+        if clocker_ready_i = '1' then
+          rin.state <= ST_WRITE_DATA;
+        end if;
+
+      when ST_WRITE_DATA =>
+        if shift_w_ready_i = '1' then
+          rin.state <= ST_WRITE_ACK;
+        end if;
+
+      when ST_WRITE_ACK =>
+        if shift_r_valid_i = '1' then
+          rin.state <= ST_WRITE_PUT;
+          rin.data <= (0 => not shift_r_data_i(0), others => '0');
+        end if;
+
+      when ST_WRITE_PUT =>
+        if rsp_i.ready = '1' then
+          rin.word_count <= (r.word_count - 1) mod 64;
+          if r.word_count = 0 then
+            rin.state <= ST_CMD_GET;
+          else
+            rin.state <= ST_WRITE_GET;
+          end if;
+        end if;
+
+      when ST_IO_FLUSH_GET =>
+        if cmd_i.valid = '1' then
+          rin.last <= cmd_i.last;
+          rin.state <= ST_IO_FLUSH_PUT;
+        end if;
+
+      when ST_IO_FLUSH_PUT =>
+        if cmd_i.valid = '1' then
+          rin.word_count <= (r.word_count - 1) mod 64;
+          if r.word_count = 0 then
+            rin.state <= ST_CMD_GET;
+          elsif std_match(r.cmd, I2C_CMD_WRITE) then
+            rin.state <= ST_IO_FLUSH_GET;
+          end if;
+        end if;
+        
+      when ST_RSP_PUT =>
+        if rsp_i.ready = '1' then
+          rin.state <= ST_CMD_GET;
         end if;
 
     end case;
   end process;
 
+  i2c_o <= i2c_clocker_o + i2c_shifter_o;
+  clocker_abort_o <= not shift_arb_ok_i;
+
   moore : process (r)
   begin
-    case r.state is
-      when ST_START =>
-        s_cmd <= I2C_START;
-
-      when ST_STOP =>
-        s_cmd <= I2C_STOP;
-
-      when ST_READ =>
-        s_cmd <= I2C_READ;
-
-      when ST_WRITE =>
-        s_cmd <= I2C_WRITE;
-
-      when others =>
-        s_cmd <= I2C_NOOP;
-    end case;
+    clocker_valid_o <= '0';
+    clocker_cmd_o <= I2C_BUS_START;
+    cmd_o.ready <= '0';
+    rsp_o.valid <= '0';
+    rsp_o.last <= '-';
+    rsp_o.data <= (others => '-');
+    shift_enable_o <= '0';
+    shift_send_data_o <= '-';
+    shift_w_valid_o <= '0';
+    shift_r_ready_o <= '0';
+    shift_w_data_o <= (others => '-');
 
     case r.state is
-      when ST_DATA_PUT =>
+      when ST_RESET =>
+        null;
+
+      when ST_CMD_GET | ST_WRITE_GET | ST_IO_FLUSH_GET =>
+        cmd_o.ready <= '1';
+
+      when ST_EXEC =>
+        null;
+
+      when ST_START_RUN | ST_RESTART_RUN =>
+        clocker_valid_o <= '1';
+        clocker_cmd_o <= I2C_BUS_START;
+
+      when ST_STOP_RUN =>
+        clocker_valid_o <= '1';
+        clocker_cmd_o <= I2C_BUS_STOP;
+
+      when ST_READ_RUN | ST_WRITE_RUN =>
+        clocker_valid_o <= '1';
+        clocker_cmd_o <= I2C_BUS_BYTE;
+
+      when ST_READ_DATA | ST_WRITE_ACK =>
+        shift_r_ready_o <= '1';
+
+      when ST_READ_ACK =>
+        shift_w_valid_o <= '1';
+        if std_match(r.cmd, I2C_CMD_READ_NACK) and r.word_count = 0 then
+          shift_w_data_o <= (0 => '1', others => '-');
+        else
+          shift_w_data_o <= (0 => '0', others => '-');
+        end if;
+
+      when ST_WRITE_DATA =>
+        shift_w_valid_o <= '1';
+        shift_w_data_o <= r.data;
+
+      when ST_READ_PUT | ST_WRITE_PUT | ST_IO_FLUSH_PUT =>
         rsp_o.valid <= '1';
         rsp_o.data <= r.data;
         if r.word_count = 0 then
@@ -179,59 +342,29 @@ begin
         else
           rsp_o.last <= '0';
         end if;
-
+        
       when ST_RSP_PUT =>
         rsp_o.valid <= '1';
         rsp_o.data <= (others => '0');
         rsp_o.last <= r.last;
-
-      when ST_ACK_PUT =>
-        rsp_o.valid <= '1';
-        rsp_o.data <= "0000000" & r.ack;
-        if r.word_count = 0 then
-          rsp_o.last <= r.last;
-        else
-          rsp_o.last <= '0';
-        end if;
-
-      when others =>
-        rsp_o.valid <= '0';
-        rsp_o.data <= (others => '-');
-        rsp_o.last <= '-';
+      
     end case;
 
     case r.state is
-      when ST_DATA_GET | ST_IDLE =>
-        cmd_o.ready <= '1';
+
+      when ST_WRITE_RUN | ST_WRITE_DATA | ST_WRITE_ACK =>
+        shift_enable_o <= '1';
+        shift_send_data_o <= '1';
+
+      when ST_READ_RUN | ST_READ_DATA | ST_READ_ACK =>
+        shift_enable_o <= '1';
+        shift_send_data_o <= '0';
 
       when others =>
-        cmd_o.ready <= '0';
+        null;
+        
     end case;
+
   end process;
 
-  s_rack <= r.ack when r.word_count = 0 else '1';
-  
-  master: nsl_i2c.transactor.transactor_master
-    generic map(
-      divisor_width => r.divisor'length
-      )
-    port map(
-      clock_i => clock_i,
-      reset_n_i => reset_n_i,
-
-      divisor_i => r.divisor,
-
-      i2c_o => i2c_o,
-      i2c_i => i2c_i,
-
-      rack_i => s_rack,
-      rdata_o => s_rdata,
-      wack_o => s_wack,
-      wdata_i => r.data,
-
-      cmd_i => s_cmd,
-      busy_o => s_busy,
-      done_o => s_done
-      );
-  
 end architecture;

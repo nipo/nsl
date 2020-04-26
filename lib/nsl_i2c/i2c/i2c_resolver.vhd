@@ -25,10 +25,10 @@ begin
 
     l: for i in 0 to port_count-1
     loop
-      if bus_i(i).sda.drain = '1' then
+      if bus_i(i).sda.drain_n = '0' then
         sda := '0';
       end if;
-      if bus_i(i).scl.drain = '1' then
+      if bus_i(i).scl.drain_n = '0' then
         scl := '0';
       end if;
     end loop;

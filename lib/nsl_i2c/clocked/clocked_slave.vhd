@@ -222,8 +222,8 @@ begin
   
   moore: process(r)
   begin
-    i2c_o.scl.drain <= '0';
-    i2c_o.sda.drain <= '0';
+    i2c_o.scl.drain_n <= '1';
+    i2c_o.sda.drain_n <= '1';
     selected_o <= '1';
     w_valid_o <= '0';
     r_ready_o <= '0';
@@ -231,21 +231,21 @@ begin
 
     case r.state is
       when ST_READ_WAIT =>
-        i2c_o.scl.drain <= '1';
+        i2c_o.scl.drain_n <= '0';
         r_ready_o <= '1';
 
       when ST_WRITE_WAIT =>
-        i2c_o.scl.drain <= '1';
+        i2c_o.scl.drain_n <= '0';
         w_valid_o <= '1';
 
       when ST_READ_SHIFT =>
-        i2c_o.sda.drain <= not r.shreg(7);
+        i2c_o.sda.drain_n <= r.shreg(7);
 
       when ST_WRITE_ACK =>
-        i2c_o.sda.drain <= '1';
+        i2c_o.sda.drain_n <= '0';
 
       when ST_ADDR_ACK =>
-        i2c_o.sda.drain <= '1';
+        i2c_o.sda.drain_n <= '0';
 
       when ST_BUSY | ST_STOPPED | ST_ADDR | ST_ADDR_DONE =>
         selected_o <= '0';
