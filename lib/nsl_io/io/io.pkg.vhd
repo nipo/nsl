@@ -15,9 +15,14 @@ package io is
   end record;
 
   type opendrain is record
-    drain : std_ulogic;
+    -- Whether not to drain the wire.
+    -- Value of drain_n matches expected wire value.
+    drain_n : std_ulogic;
   end record;
 
+  function "+"(x, y : opendrain) return opendrain;
+  function to_tristated(x : opendrain) return tristated;
+  
   component tristated_io_driver is
     port(
       v_i : in tristated;
@@ -55,3 +60,24 @@ package io is
     end component;
   
 end package io;
+
+package body io is
+
+  function "+"(x, y : opendrain) return opendrain is
+    variable z : opendrain;
+  begin
+    z.drain_n := x.drain_n and y.drain_n;
+
+    return z;
+  end function;
+
+  function to_tristated(x : opendrain) return tristated is
+    variable z : tristated;
+  begin
+    z.v := '0';
+    z.en := not x.drain_n;
+
+    return z;
+  end function;
+
+end package body io;

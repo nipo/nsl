@@ -16,7 +16,7 @@ end entity;
 architecture beh of opendrain_io_driver is
 begin
 
-  io_io <= '0' when v_i.drain = '1' else 'Z';
+  io_io <= '0' when v_i.drain_n = '0' else 'Z';
   v_o <= to_x01(io_io);
   
 end architecture;
