@@ -58,7 +58,7 @@ package transactor is
 
       led_o : out std_ulogic;
 
-      color_i : in nsl_color.rgb.rgb24_vector(led_count-1 downto 0)
+      color_i : in nsl_color.rgb.rgb24_vector(0 to led_count-1)
       );
   end component;
   

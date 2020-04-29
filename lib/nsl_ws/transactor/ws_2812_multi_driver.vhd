@@ -18,7 +18,7 @@ entity ws_2812_multi_driver is
 
     led_o : out std_ulogic;
 
-    color_i : in nsl_color.rgb.rgb24_vector(led_count-1 downto 0)
+    color_i : in nsl_color.rgb.rgb24_vector(0 to led_count-1)
     );
 end entity;
 
@@ -33,7 +33,7 @@ architecture rtl of ws_2812_multi_driver is
   type regs_t is
   record
     state : state_t;
-    leds : nsl_color.rgb.rgb24_vector(led_count-1 downto 0);
+    leds : nsl_color.rgb.rgb24_vector(0 to led_count-1);
     idx : natural range 0 to led_count-1;
   end record;
 
