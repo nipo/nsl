@@ -1,0 +1,6 @@
+vhdl-sources += tb.vhd
+deps += nsl_data.bytestream
+deps += nsl_data.endian
+deps += nsl_data.crc
+deps += nsl_simulation.text
+deps += nsl_simulation.assertions
