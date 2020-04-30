@@ -4,7 +4,7 @@ ISE_PRE = source $(ISE)/settings64.sh > /dev/null ;
 PAR_OPTS = -ol high
 target ?= $(top)
 
-simulation-time = 10 ms
+simulation-time ?= 10 ms
 
 SHELL=/bin/bash
 
@@ -36,13 +36,13 @@ ise-build/$(target).exe: ise-build/$(target).prj $(MAKEFILE_LIST)
 	$(SILENT)$(ISE_PRE) \
 	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
 
-$(target).vcd: ise-build/$(target).exe
+$(target).vcd: ise-build/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)> $@.tmp
 	$(SILENT)echo 'onerror {resume}' >> $@.tmp
 	$(SILENT)echo 'vcd dumpfile "$@"' >> $@.tmp
 	$(SILENT)echo 'vcd dumpvars -m / -l 0' >> $@.tmp
 	$(SILENT)echo 'wave add /' >> $@.tmp
-	$(SILENT)echo 'run $(simulation-time);' >> $@.tmp
+	$(SILENT)echo 'run $(simulation-time)' >> $@.tmp
 	$(SILENT)echo 'quit -f' >> $@.tmp
 	$(SILENT)$(ISE_PRE) $< -tclbatch $@.tmp
 
