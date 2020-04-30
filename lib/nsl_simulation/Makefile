@@ -3,5 +3,6 @@ packages += fifo
 packages += text
 packages += driver
 packages += control
+packages += logging
 packages += assertions
 

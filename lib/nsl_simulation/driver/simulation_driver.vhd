@@ -3,6 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_simulation;
+use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 
 entity simulation_driver is
   generic (
@@ -20,6 +22,7 @@ entity simulation_driver is
 end entity;
 
 architecture beh of simulation_driver is
+  constant context : log_context := "simdrv";
   signal all_done : boolean;
   signal clock : std_ulogic_vector(0 to clock_count-1);
 begin
@@ -29,9 +32,8 @@ begin
   done: process(all_done)
   begin
     if all_done then
-      assert false
-        report "all done, SUCCESS"
-        severity failure;
+      log_info(context, "all done, terminating");
+      terminate(0);
     end if;
   end process;
   
@@ -51,7 +53,7 @@ begin
     gen: process
     begin
       wait until done_i(i) = '1';
-      assert false report "Done #" & integer'image(i) & " OK" severity note;
+      log_info(context, "Done #" & integer'image(i) & " OK");
       wait;
     end process;
   end generate;
@@ -71,7 +73,7 @@ begin
         wait for half_period;
       end loop;
 
-      assert false report "clock " & integer'image(i) & " stopped" severity note;
+      log_info(context, "clock #" & integer'image(i) & " stopped");
       wait;
     end process;
   end generate;
