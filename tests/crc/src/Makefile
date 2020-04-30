@@ -4,3 +4,4 @@ deps += nsl_data.endian
 deps += nsl_data.crc
 deps += nsl_simulation.text
 deps += nsl_simulation.assertions
+deps += nsl_simulation.logging
