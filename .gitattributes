@@ -1,0 +1,5 @@
+*.vhd		text
+*.rst		text
+*.sh		text eol=lf
+Makefile	text eol=lf
+*.mk		text eol=lf
