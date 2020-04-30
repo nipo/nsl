@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export IFS=$' \t\n\r'
+
 declare -a nets
 declare -A periods
 
@@ -29,8 +31,8 @@ test -n "$has_tig_static_d"    && echo "PIN \"*tig_reg_static_d*\" TPTHRU = \"ff
 test -n "$has_ff_cross" && echo "PIN \"*cross_region_reg_d*.D\" TPTHRU = \"ff_cross\";"
 
 for i in "${!nets[@]}"; do
-    net=${nets[$i]}
-    token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${net})
+    net="${nets[$i]}"
+    token="$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${net})"
 
     echo "NET \"$net\" TNM_NET=\"CCF_${token}_TNM\" | PERIOD = ${periods[$net]};"
     echo "TIMEGRP \"CCF_${token}_GRP\" = \"CCF_${token}_TNM\";"
@@ -42,20 +44,20 @@ done
 
 if [ -n "$has_ff_cross" ] ; then
     for i in "${!nets[@]}"; do
-        source=${nets[$i]}
-        source_token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${source})
-        source_period=${periods[$source]}
+        source="${nets[$i]}"
+        source_token="$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${source})"
+        source_period="${periods[$source]}"
 
         for j in "${!nets[@]}"; do
             [ "$i" = "$j" ] && continue
 
-            dest=${nets[$j]}
-            dest_token=$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${dest})
-            dest_period=${periods[$dest]}
+            dest="${nets[$j]}"
+            dest_token="$(sed "s:[^a-zA-Z0-9]:_:g" <<< ${dest})"
+            dest_period="${periods[$dest]}"
 
-            min_period=${source_period}
+            min_period="${source_period}"
             if [ $(bc -l <<< "${dest_period}<${source_period}") = 1 ] ; then
-                min_period=${dest_period}
+                min_period="${dest_period}"
             fi
             
             echo "TIMESPEC \"TS_from_${source_token}_to_${dest_token}_resync\" = FROM \"CCF_${source_token}_GRP\" THRU \"ff_cross\" TO \"CCF_${dest_token}_GRP\" ${min_period} ns DATAPATHONLY;"
