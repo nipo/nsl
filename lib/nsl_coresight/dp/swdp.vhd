@@ -206,6 +206,16 @@ begin
                   
                 when "11" => -- RdBuf
                   rin.data <= r.ap_rdbuf;
+                  case r.ap_state is
+                    when AP_IDLE =>
+                      rin.ack_state <= ACK_OK;
+
+                    when AP_ERROR =>
+                      rin.ack_state <= ACK_FAULT;
+
+                    when others =>
+                      rin.ack_state <= ACK_WAIT;
+                  end case;
 
                 when others =>
                   null;
