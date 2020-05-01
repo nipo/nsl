@@ -26,8 +26,8 @@ begin
     selected := to_integer(unsigned(s_i.addr(15 downto 8)));
 
     s_o.ready <= '1';
-    s_o.rdata <= (others => '-');
-    s_o.slverr <= '1';
+    s_o.rdata <= (others => '0');
+    s_o.slverr <= '0';
 
     lp: for i in 0 to access_port_count-1
     loop
