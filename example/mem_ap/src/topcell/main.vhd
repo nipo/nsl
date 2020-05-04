@@ -135,7 +135,7 @@ begin
       mem_i => mem_bus.sm
       );
 
-  axi_slave: nsl_axi.ram.axi4_lite_a32_d32_ram
+  axi_slave: nsl_axi.bram.axi4_lite_a32_d32_ram
     generic map(
       mem_size_log2_c => mem_size_log2_c
       )

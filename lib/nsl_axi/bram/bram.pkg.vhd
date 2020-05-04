@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_axi;
 
-package ram is
+package bram is
 
   component axi4_lite_a32_d32_ram is
     generic (
@@ -19,4 +19,4 @@ package ram is
       );
   end component;
 
-end package ram;
+end package bram;
