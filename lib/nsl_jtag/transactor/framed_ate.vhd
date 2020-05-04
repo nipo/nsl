@@ -40,8 +40,7 @@ architecture rtl of framed_ate is
     ST_RSP_PUT,
     ST_RSP_DATA_BLACKHOLE,
     ST_RSP_DATA_GET,
-    ST_RSP_DATA_PUT,
-    ST_RSP_DATA_STATUS_PUT
+    ST_RSP_DATA_PUT
     );
 
   constant data_max_size : natural := 8;
@@ -50,14 +49,14 @@ architecture rtl of framed_ate is
   record
     cmd_st : st_cmd_t;
     cmd_pending : ate_op;
-    cmd_op_last : std_ulogic;
+    cmd_last : std_ulogic;
     cmd_data : std_ulogic_vector(7 downto 0);
     cmd_word_left : natural range 0 to 31;
     cmd_bit_count_m1 : natural range 0 to data_max_size-1;
 
     rsp_st : st_rsp_t;
     rsp_data : std_ulogic_vector(7 downto 0);
-    rsp_op_last, rsp_data_last : std_ulogic;
+    rsp_last : std_ulogic;
     rsp_word_left : natural range 0 to 31;
 
     divisor : natural range 0 to 255;
@@ -102,75 +101,73 @@ begin
         rin.cmd_st <= ST_CMD_IDLE;
 
       when ST_CMD_IDLE =>
-        if cmd_i.valid = '1' then
+        if r.rsp_st = ST_RSP_IDLE and cmd_i.valid = '1' then
           rin.cmd_data <= cmd_i.data;
-          rin.cmd_op_last <= cmd_i.last;
+          rin.cmd_last <= cmd_i.last;
           rin.cmd_st <= ST_CMD_ROUTE;
         end if;
 
       when ST_CMD_ROUTE =>
-        if r.rsp_st = ST_RSP_IDLE then
-          if std_match(r.cmd_data, JTAG_SHIFT_BYTE) then
-            rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(4 downto 0)));
-            rin.cmd_bit_count_m1 <= 7;
-            rin.cmd_pending <= ATE_OP_SHIFT;
-            if std_match(r.cmd_data, JTAG_SHIFT_BYTE_W) then
-              rin.cmd_st <= ST_CMD_DATA_GET;
-            else
-              rin.cmd_data <= (others => '0');
-              rin.cmd_st <= ST_CMD_PUT;
-            end if;
-          elsif std_match(r.cmd_data, JTAG_SHIFT_BIT) then
-            rin.cmd_word_left <= 0;
-            rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
-            rin.cmd_pending <= ATE_OP_SHIFT;
-            if std_match(r.cmd_data, JTAG_SHIFT_BIT_W) then
-              rin.cmd_st <= ST_CMD_DATA_GET;
-            else
-              rin.cmd_data <= (others => '0');
-              rin.cmd_st <= ST_CMD_PUT;
-            end if;
-          elsif std_match(r.cmd_data, JTAG_CMD_DR_CAPTURE) then
-            rin.cmd_word_left <= 0;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_DR_CAPTURE;
-          elsif std_match(r.cmd_data, JTAG_CMD_IR_CAPTURE) then
-            rin.cmd_word_left <= 0;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_IR_CAPTURE;
-          elsif std_match(r.cmd_data, JTAG_CMD_SWD_TO_JTAG) then
-            rin.cmd_word_left <= 0;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_SWD_TO_JTAG;
-          elsif std_match(r.cmd_data, JTAG_CMD_RESET_CYCLE) then
-            rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
-            rin.cmd_word_left <= 0;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_RESET;
-          elsif std_match(r.cmd_data, JTAG_CMD_RTI_CYCLE) then
-            rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
-            rin.cmd_word_left <= 0;
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_RTI;
-          elsif std_match(r.cmd_data, JTAG_CMD_RESET) then
-            rin.cmd_bit_count_m1 <= 7;
-            rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
-            rin.cmd_pending <= ATE_OP_RESET;
-            rin.cmd_st <= ST_CMD_PUT;
-          elsif std_match(r.cmd_data, JTAG_CMD_RTI) then
-            rin.cmd_bit_count_m1 <= 7;
-            rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
-            rin.cmd_st <= ST_CMD_PUT;
-            rin.cmd_pending <= ATE_OP_RTI;
-          elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
-            rin.cmd_st <= ST_CMD_DIV_GET;
+        if std_match(r.cmd_data, JTAG_SHIFT_BYTE) then
+          rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(4 downto 0)));
+          rin.cmd_bit_count_m1 <= 7;
+          rin.cmd_pending <= ATE_OP_SHIFT;
+          if std_match(r.cmd_data, JTAG_SHIFT_BYTE_W) then
+            rin.cmd_st <= ST_CMD_DATA_GET;
           else
-            assert false
-              report "Unhandled Framed JTAG ATE command"
-              severity warning;
-
-            rin.cmd_st <= ST_CMD_IDLE;
+            rin.cmd_data <= (others => '0');
+            rin.cmd_st <= ST_CMD_PUT;
           end if;
+        elsif std_match(r.cmd_data, JTAG_SHIFT_BIT) then
+          rin.cmd_word_left <= 0;
+          rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
+          rin.cmd_pending <= ATE_OP_SHIFT;
+          if std_match(r.cmd_data, JTAG_SHIFT_BIT_W) then
+            rin.cmd_st <= ST_CMD_DATA_GET;
+          else
+            rin.cmd_data <= (others => '0');
+            rin.cmd_st <= ST_CMD_PUT;
+          end if;
+        elsif std_match(r.cmd_data, JTAG_CMD_DR_CAPTURE) then
+          rin.cmd_word_left <= 0;
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_DR_CAPTURE;
+        elsif std_match(r.cmd_data, JTAG_CMD_IR_CAPTURE) then
+          rin.cmd_word_left <= 0;
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_IR_CAPTURE;
+        elsif std_match(r.cmd_data, JTAG_CMD_SWD_TO_JTAG) then
+          rin.cmd_word_left <= 0;
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_SWD_TO_JTAG;
+        elsif std_match(r.cmd_data, JTAG_CMD_RESET_CYCLE) then
+          rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
+          rin.cmd_word_left <= 0;
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_RESET;
+        elsif std_match(r.cmd_data, JTAG_CMD_RTI_CYCLE) then
+          rin.cmd_bit_count_m1 <= to_integer(unsigned(r.cmd_data(2 downto 0)));
+          rin.cmd_word_left <= 0;
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_RTI;
+        elsif std_match(r.cmd_data, JTAG_CMD_RESET) then
+          rin.cmd_bit_count_m1 <= 7;
+          rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
+          rin.cmd_pending <= ATE_OP_RESET;
+          rin.cmd_st <= ST_CMD_PUT;
+        elsif std_match(r.cmd_data, JTAG_CMD_RTI) then
+          rin.cmd_bit_count_m1 <= 7;
+          rin.cmd_word_left <= to_integer(unsigned(r.cmd_data(3 downto 0)));
+          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_pending <= ATE_OP_RTI;
+        elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
+          rin.cmd_st <= ST_CMD_DIV_GET;
+        else
+          assert false
+            report "Unhandled Framed JTAG ATE command"
+            severity warning;
+
+          rin.cmd_st <= ST_CMD_IDLE;
         end if;
 
       when ST_CMD_PUT =>
@@ -185,15 +182,15 @@ begin
       when ST_CMD_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.cmd_data <= cmd_i.data;
-          rin.rsp_data_last <= cmd_i.last;
+          rin.cmd_last <= cmd_i.last;
           rin.cmd_st <= ST_CMD_DATA_PUT;
         end if;
         
       when ST_CMD_DIV_GET =>
         if cmd_i.valid = '1' then
           rin.divisor <= to_integer(unsigned(cmd_i.data));
-          rin.rsp_op_last <= cmd_i.last;
-          rin.cmd_st <= ST_CMD_PUT;
+          rin.cmd_last <= cmd_i.last;
+          rin.cmd_st <= ST_CMD_IDLE;
         end if;
 
       when ST_CMD_DATA_PUT =>
@@ -214,9 +211,7 @@ begin
       when ST_RSP_IDLE =>
         if r.cmd_st = ST_CMD_ROUTE then
           rin.rsp_st <= ST_RSP_ROUTE;
-          rin.rsp_op_last <= r.cmd_op_last;
           rin.rsp_data <= r.cmd_data;
-          rin.rsp_data_last <= r.cmd_op_last;
         end if;
 
       when ST_RSP_ROUTE =>
@@ -238,7 +233,7 @@ begin
           rin.rsp_st <= ST_RSP_PUT;
         end if;
 
-      when ST_RSP_PUT | ST_RSP_DATA_STATUS_PUT =>
+      when ST_RSP_PUT =>
         if rsp_i.ready = '1' then
           rin.rsp_st <= ST_RSP_IDLE;
         end if;
@@ -253,7 +248,7 @@ begin
         if rsp_i.ready = '1' then
           if r.rsp_word_left = 0 then
             rin.rsp_data <= (others => '0');
-            rin.rsp_st <= ST_RSP_DATA_STATUS_PUT;
+            rin.rsp_st <= ST_RSP_PUT;
           else
             rin.rsp_word_left <= r.rsp_word_left - 1;
             rin.rsp_st <= ST_RSP_DATA_GET;
@@ -264,7 +259,7 @@ begin
         if s_rsp_valid = '1' then
           if r.rsp_word_left = 0 then
             rin.rsp_data <= (others => '0');
-            rin.rsp_st <= ST_RSP_DATA_STATUS_PUT;
+            rin.rsp_st <= ST_RSP_PUT;
           else
             rin.rsp_word_left <= r.rsp_word_left - 1;
           end if;
@@ -290,7 +285,12 @@ begin
       when ST_CMD_RESET | ST_CMD_ROUTE =>
         null;
 
-      when ST_CMD_IDLE | ST_CMD_DATA_GET | ST_CMD_DIV_GET =>
+      when ST_CMD_IDLE =>
+        if r.rsp_st = ST_RSP_IDLE then
+          cmd_o.ready <= '1';
+        end if;
+          
+      when ST_CMD_DATA_GET | ST_CMD_DIV_GET =>
         cmd_o.ready <= '1';
 
       when ST_CMD_PUT | ST_CMD_DATA_PUT =>
@@ -303,11 +303,7 @@ begin
 
       when ST_RSP_PUT =>
         rsp_o.valid <= '1';
-        rsp_o.last <= r.rsp_op_last;
-
-      when ST_RSP_DATA_STATUS_PUT =>
-        rsp_o.valid <= '1';
-        rsp_o.last <= r.rsp_data_last;
+        rsp_o.last <= r.cmd_last;
 
       when ST_RSP_DATA_PUT =>
         rsp_o.valid <= '1';
