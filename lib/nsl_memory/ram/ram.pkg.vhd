@@ -23,6 +23,28 @@ package ram is
       );
   end component;
 
+  -- A single-port RAM with registered ouptut and multi-word write.
+  -- Address is base address of data word group
+  -- I.e. this memory stores 2**addr_size_c * data_word_count_c * word_size_c bits.
+  component ram_1p_multi
+    generic (
+      addr_size_c : natural;
+      word_size_c : natural := 8;
+      data_word_count_c : integer := 4
+      );
+    port (
+      clock_i : in std_ulogic;
+
+      address_i : in unsigned(addr_size_c-1 downto 0);
+      enable_i : in std_ulogic := '1';
+
+      write_en_i : in std_ulogic_vector(data_word_count_c-1 downto 0);
+      write_data_i : in std_ulogic_vector(word_size_c * data_word_count_c-1 downto 0);
+
+      read_data_o : out std_ulogic_vector(word_size_c * data_word_count_c-1 downto 0)
+      );
+  end component;
+
   -- A dual-port RAM with optionally two clocks, one port read, one
   -- port write.
   --
