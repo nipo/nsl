@@ -5,5 +5,5 @@ vhdl-sources += rmii_from_framed.vhd
 vhdl-sources += rmii_to_framed.vhd
 vhdl-sources += rmii_framed.vhd
 deps += nsl_clocking.async
-deps += nsl_mii.mii
 deps += nsl_bnoc.framed
+deps += nsl_mii.mii
