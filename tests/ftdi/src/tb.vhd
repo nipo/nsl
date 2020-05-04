@@ -8,22 +8,17 @@ end tb;
 
 architecture arch of tb is
 
-   signal s_ftdi_clk  : std_ulogic;
-   signal s_ftdi_data : std_logic_vector(7 downto 0);
-   signal s_ftdi_rxfn : std_ulogic;
-   signal s_ftdi_txen : std_ulogic;
-   signal s_ftdi_rdn  : std_ulogic;
-   signal s_ftdi_wrn  : std_ulogic;
-   signal s_ftdi_oen  : std_ulogic;
-
-  constant width : integer := 8;
-
   type fifo is
   record 
     ready : std_ulogic;
     valid : std_ulogic;
-    data : std_ulogic_vector(width-1 downto 0);
+    data : std_ulogic_vector(8-1 downto 0);
   end record;
+
+  signal slave_bus: nsl_ftdi.ft245.ft245_sync_fifo_slave_bus;
+  signal master_bus: nsl_ftdi.ft245.ft245_sync_fifo_master_bus;
+
+  constant use_drivers : boolean := true;
 
   signal
     s_slave_gen_out,
@@ -55,7 +50,7 @@ begin
 
   slave_gen: nsl_simulation.fifo.fifo_counter_generator
     generic map(
-      width => width
+      width => 8
       )
     port map(
       reset_n_i => s_resetn_slave_clk,
@@ -68,7 +63,7 @@ begin
 
   slave_gen_fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width_c => width,
+      data_width_c => 8,
       word_count_c => 128,
       clock_count_c => 1
       )
@@ -87,7 +82,7 @@ begin
 
   slave_check: nsl_simulation.fifo.fifo_counter_checker
     generic map(
-      width => width
+      width => 8
       )
     port map(
       reset_n_i => s_resetn_slave_clk,
@@ -100,7 +95,7 @@ begin
 
   slave_check_fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width_c => width,
+      data_width_c => 8,
       word_count_c => 128,
       clock_count_c => 1
       )
@@ -121,13 +116,8 @@ begin
     port map(
       clock_i => s_clk_slave,
 
-      ftdi_clk_o => s_ftdi_clk,
-      ftdi_data_io => s_ftdi_data,
-      ftdi_rxf_n_o => s_ftdi_rxfn,
-      ftdi_txe_n_o => s_ftdi_txen,
-      ftdi_rd_n_i => s_ftdi_rdn,
-      ftdi_wr_n_i => s_ftdi_wrn,
-      ftdi_oe_n_i => s_ftdi_oen,
+      bus_o => slave_bus.o,
+      bus_i => slave_bus.i,
 
       out_data_i => s_slave_gate_out.data,
       out_valid_i => s_slave_gate_out.valid,
@@ -147,7 +137,7 @@ begin
 
   master_gen: nsl_simulation.fifo.fifo_counter_generator
     generic map(
-      width => width
+      width => 8
       )
     port map(
       reset_n_i => s_resetn_master_clk,
@@ -160,7 +150,7 @@ begin
 
   master_gen_fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width_c => width,
+      data_width_c => 8,
       word_count_c => 128,
       clock_count_c => 1
       )
@@ -179,7 +169,7 @@ begin
 
   master_check: nsl_simulation.fifo.fifo_counter_checker
     generic map(
-      width => width
+      width => 8
       )
     port map(
       reset_n_i => s_resetn_master_clk,
@@ -192,7 +182,7 @@ begin
 
   master_check_fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width_c => width,
+      data_width_c => 8,
       word_count_c => 128,
       clock_count_c => 1
       )
@@ -214,13 +204,8 @@ begin
       clock_o => s_clk_master,
       reset_n_i => s_resetn_master_clk,
 
-      ftdi_clk_i => s_ftdi_clk,
-      ftdi_data_io => s_ftdi_data,
-      ftdi_rxf_n_i => s_ftdi_rxfn,
-      ftdi_txe_n_i => s_ftdi_txen,
-      ftdi_rd_n_o => s_ftdi_rdn,
-      ftdi_wr_n_o => s_ftdi_wrn,
-      ftdi_oe_n_o => s_ftdi_oen,
+      bus_o => master_bus.o,
+      bus_i => master_bus.i,
 
       out_data_i => s_master_gate_out.data,
       out_valid_i => s_master_gate_out.valid,
@@ -231,6 +216,56 @@ begin
       in_valid_o => s_master_gate_in.valid
       );
 
+  without_drivers: if not use_drivers
+  generate
+    transp: nsl_ftdi.ft245.ft245_sync_fifo_transport
+      port map(
+        slave_i => slave_bus.o,
+        slave_o => slave_bus.i,
+        master_i => master_bus.o,
+        master_o => master_bus.i
+        );
+  end generate;
+
+  with_drivers: if use_drivers
+  generate
+    signal fifo_clk   : std_ulogic;
+    signal fifo_data  : std_logic_vector(7 downto 0);
+    signal fifo_rxf_n : std_ulogic;
+    signal fifo_txe_n : std_ulogic;
+    signal fifo_rd_n  : std_ulogic;
+    signal fifo_wr_n  : std_ulogic;
+    signal fifo_oe_n  : std_ulogic;
+  begin
+    md: nsl_ftdi.ft245.ft245_sync_fifo_master_driver
+      port map(
+        bus_i => master_bus.o,
+        bus_o => master_bus.i,
+
+        ft245_clk_i => fifo_clk,
+        ft245_data_io => fifo_data,
+        ft245_rxf_n_i => fifo_rxf_n,
+        ft245_txe_n_i => fifo_txe_n,
+        ft245_rd_n_o => fifo_rd_n,
+        ft245_wr_n_o => fifo_wr_n,
+        ft245_oe_n_o => fifo_oe_n
+        );
+
+    sd: nsl_ftdi.ft245.ft245_sync_fifo_slave_driver
+      port map(
+        bus_i => slave_bus.o,
+        bus_o => slave_bus.i,
+
+        ft245_clk_o => fifo_clk,
+        ft245_data_io => fifo_data,
+        ft245_rxf_n_o => fifo_rxf_n,
+        ft245_txe_n_o => fifo_txe_n,
+        ft245_rd_n_i => fifo_rd_n,
+        ft245_wr_n_i => fifo_wr_n,
+        ft245_oe_n_i => fifo_oe_n
+        );
+  end generate;
+  
   driver: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 1,
