@@ -49,15 +49,16 @@ begin
       p_r_valid => s_axi_read_done
       );
 
-  ram: nsl_memory.ram.ram_1p
+  ram: nsl_memory.ram.ram_1p_multi
     generic map(
       addr_size_c => mem_size_log2_c-2,
-      data_size_c => 32
+      word_size_c => 8,
+      data_word_count_c => 4
       )
     port map(
       clock_i => clock_i,
       address_i => s_axi_addr,
-      write_en_i   => s_axi_mem_wmask(0),
+      write_en_i   => s_axi_mem_wmask,
       write_data_i  => s_axi_wdata,
       read_data_o => s_axi_rdata
       );
