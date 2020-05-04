@@ -2,12 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.all;
 
-library nsl_hwdep, nsl_io, nsl_coresight, nsl_axi, nsl_clocking;
+library nsl_hwdep, nsl_io, nsl_coresight, nsl_axi, nsl_clocking, nsl_color, nsl_indication, nsl_ws;
 
 entity top is
   port (
     swclk: in std_ulogic;
-    swdio: inout std_logic
+    swdio: inout std_logic;
+    leds : out std_logic
   );
 end top;
 
@@ -22,9 +23,39 @@ architecture arch of top is
   signal mem_bus : nsl_axi.axi4_lite.a32_d32;
   
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
-
+  signal act: std_ulogic;
+  signal colors : nsl_color.rgb.rgb24_vector(0 to 2);
+  
 begin
 
+  colors(0) <= nsl_color.rgb.rgb24_blue when act = '1' else nsl_color.rgb.rgb24_black;
+  colors(1) <= nsl_color.rgb.rgb24_red when act = '1' else nsl_color.rgb.rgb24_black;
+  colors(2) <= nsl_color.rgb.rgb24_blue;
+  
+  mon: nsl_indication.activity.activity_monitor
+    generic map(
+      blink_cycles_c => 50000000 / 10,
+      on_value_c => '1'
+      )
+    port map(
+      reset_n_i => resetn,
+      clock_i => clk,
+      togglable_i => swd_slave.i.clk,
+      activity_o => act
+      );
+
+  led_driver: nsl_ws.transactor.ws_2812_multi_driver
+    generic map(
+      clk_freq_hz => 50000000,
+      led_count => 3
+      )
+    port map(
+      clock_i => clk,
+      reset_n_i => resetn,
+      led_o => leds,
+      color_i => colors
+      );
+  
   deglitcher: nsl_clocking.async.async_deglitcher
     port map(
       clock_i => clk,

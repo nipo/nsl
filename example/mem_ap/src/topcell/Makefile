@@ -12,3 +12,6 @@ deps += nsl_coresight.ap
 deps += nsl_axi.ram
 deps += nsl_axi.axi4_lite
 deps += nsl_clocking.async
+deps += nsl_indication.activity
+deps += nsl_color.rgb
+deps += nsl_ws.transactor
