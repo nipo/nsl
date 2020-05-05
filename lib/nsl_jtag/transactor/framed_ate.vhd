@@ -56,7 +56,6 @@ architecture rtl of framed_ate is
 
     rsp_st : st_rsp_t;
     rsp_data : std_ulogic_vector(7 downto 0);
-    rsp_last : std_ulogic;
     rsp_word_left : natural range 0 to 31;
 
     divisor : natural range 0 to 255;
