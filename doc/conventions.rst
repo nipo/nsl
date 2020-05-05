@@ -121,8 +121,8 @@ Examples:
 * clock_i, reset_i, reset_n_i,
 * iq_tdata_i, iq_tvalid_i, iq_tready_o,
 * duty_cycle_i, led_o,
-* signalling.color.rgb24,
-* signalling.diff.diff_pair.
+* nsl_color.rgb.rgb24,
+* nsl_io.diff.diff_pair.
 
 Generic names
 -------------
