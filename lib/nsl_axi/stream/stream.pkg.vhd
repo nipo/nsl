@@ -27,4 +27,4 @@ package stream is
 
   type axis_16l_vector is array(natural range <>) of axis_16l;
 
-end package axis;
+end package stream;
