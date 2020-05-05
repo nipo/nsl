@@ -2,6 +2,8 @@ tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
 source-types += vhdl verilog ngc bd constraint
 
+uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
+
 .SUFFIXES:
 
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
@@ -138,10 +140,16 @@ all-$1-sources := $(foreach f,$(sources),$(if $(filter $1,$($f-language)),$f))
 
 endef
 
+lib_order :=
+
 $(eval $(call library_scan,$(top-lib)))
 $(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
 $(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
 $(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
+
+lib_subtree_inv = $(if $(filter $1,$2),,$(foreach l,$($1-lib-deps),$(call lib_subtree_inv,$l,$2 $1)) $1)
+libraries := $(call uniq,$(call lib_subtree_inv,$(top-lib),))
+sources := $(foreach l,$(libraries),$($l-lib-sources))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 
