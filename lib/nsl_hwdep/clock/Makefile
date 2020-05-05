@@ -1,10 +1,5 @@
 vhdl-sources += clock.pkg.vhd
 
-ifneq ($(filter $(tool),isim),)
-vhdl-sources += clock_internal_spartan6.vhd
-deps += unisim.vcomponents
-endif
-
 ifneq ($(filter xc%,$(target_part)),)
 ifneq ($(filter xc6slx%,$(target_part)),)
 vhdl-sources += clock_internal_spartan6.vhd

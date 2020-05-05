@@ -1,8 +1,8 @@
 vhdl-sources += reset.pkg.vhd
 
-ifneq ($(filter $(tool),isim vivado ise),)
+ifneq ($(filter xc%,$(target_part)),)
 vhdl-sources += reset_at_startup_xc.vhd
-deps += unisim
+deps += unisim.vcomponents
 endif
 
 ifneq ($(filter lattice-machxo2,$(hwdep)),)
