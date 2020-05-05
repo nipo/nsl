@@ -98,7 +98,7 @@ begin
   falling <= r.tck /= '0' and r.prescaler = 0;
   
   transition: process(r, jtag_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
-                      rising, falling)
+                      rising, falling, divisor_i)
   begin
     rin <= r;
 
