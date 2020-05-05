@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 library nsl_axi;
 
-package axis is
+package testing is
 
   component axis_16l_file_reader is
     generic(
@@ -35,4 +35,4 @@ package axis is
       );
   end component;
 
-end package axis;
+end package testing;

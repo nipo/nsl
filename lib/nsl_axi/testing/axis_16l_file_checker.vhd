@@ -22,7 +22,7 @@ end entity;
 architecture rtl of axis_16l_file_checker is
 begin
 
-  check: testing.fifo.fifo_file_checker
+  check: nsl_simulation.fifo.fifo_file_checker
     generic map(
       width => 17,
       filename => filename
