@@ -48,6 +48,7 @@ include $3/Makefile
 
 $$(if $$(vhdl-version),$$(warning Package $1.$2 tries to set VHDL version, ignored))
 _tmp-sources :=
+source-types := $$(sort $$(sources-types))
 $(foreach l,$(source-types),$$(eval $$(foreach s,$$($l-sources),$$(call declare_source,$3/$$s,$l,$1,$2))))
 
 $1.$2-sources := $$(_tmp-sources)

@@ -7,8 +7,6 @@ SHELL=/bin/bash
 
 build-dir := vivado-build
 
-source-types += dcp
-
 synth-reports = $(build-dir)/synth.rpt
 link-reports = $(build-dir)/link_opt_drc.rpt
 link-reports += $(synth-reports)
@@ -24,10 +22,6 @@ routed-reports = $(build-dir)/routed_timing_summary.rpt
 routed-reports = $(build-dir)/routed_incremental_reuse.rpt
 routed-reports = $(build-dir)/routed_clock_utilization.rpt
 routed-reports += $(placed-reports)
-
-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
-$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl-language = constraint
-all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 
 include $(TOOL_ROOT)/vivado-create.inc.mk
 
