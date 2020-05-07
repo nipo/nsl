@@ -7,7 +7,7 @@ entity interdomain_static_reg is
     data_width_c : integer
     );
   port(
-    clock_i : in  std_ulogic;
+    input_clock_i : in  std_ulogic;
     data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
     data_o  : out std_ulogic_vector(data_width_c-1 downto 0)
     );
@@ -28,9 +28,9 @@ architecture rtl of interdomain_static_reg is
 
 begin
 
-  clock : process(clock_i)
+  clock : process(input_clock_i)
   begin
-    if rising_edge(clock_i) then
+    if rising_edge(input_clock_i) then
       tig_static_reg_d <= data_i;
     end if;
   end process clock;
