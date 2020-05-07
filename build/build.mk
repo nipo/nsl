@@ -3,6 +3,10 @@ work-srcdir ?= $(SRC_DIR)/src
 source-types += vhdl verilog ngc bd constraint
 
 uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
+runiq = $(if $1,$(call runiq,$(filter-out $(lastword $1),$1)) $(lastword $1))
+deep_deps = $(if $(filter $1,$2),,$1 $(foreach p,$($1-deps-unsorted),$(call deep_deps,$p,$1 $2)))
+filter-many = $(foreach w,$1,$(filter $w,$2))
+filter-out-many = $(if $2,$(call filter-out-many,$(filter-out $(firstword $2),$1),$(filter-out $(firstword $2),$2)),$1)
 
 .SUFFIXES:
 
@@ -34,7 +38,7 @@ define package_scan
 
 
 $(foreach l,$(source-types),$(call source-list-cleanup,$l))
-deps := $1
+deps :=
 pkg := $1.$2
 srcdir := $$(shell cd $$(shell pwd) ; cd $$(dir $$(lastword $$(MAKEFILE_LIST))) ; pwd)
 
@@ -44,8 +48,9 @@ _tmp-sources :=
 $(foreach l,$(source-types),$$(eval $$(foreach s,$$($l-sources),$$(call declare_source,$3/$$s,$l,$1))))
 
 $$(pkg)-sources := $$(_tmp-sources)
-$$(pkg)-deps := $$(deps)
+$$(pkg)-deps-unsorted := $$(deps)
 $$(pkg)-library := $1
+$1-packages += $$(pkg)
 
 endef
 
@@ -59,6 +64,7 @@ define _library_scan
 
 libraries += $1
 
+$1-packages :=
 srcdir := $($1-srcdir)
 ifeq ($$(srcdir),)
 srcdir := $(LIB_ROOT)/$1
@@ -72,13 +78,15 @@ deps :=
 
 include $$(srcdir)/Makefile
 
-$1-deps := $$(deps)
-$1-library := $1
+$1._bare-deps-unsorted := $$(deps)
+$1._bare-library := $1
+$1-packages += $1._bare
 
 _tmp-sources :=
 $(foreach l,$(source-types),$$(eval $$(foreach s,$$($l-sources),$$(call declare_source,$$(srcdir)/$$s,$l,$1))))
 
-$1-sources := $$(_tmp-sources)
+$1._bare-sources := $$(_tmp-sources)
+$1._bare-sources := $$(_tmp-sources)
 
 $$(eval $$(foreach p,$$(packages),$$(call package_scan,$1,$$p,$$(srcdir)/$$p)))
 
@@ -89,12 +97,12 @@ library_name = $(word 1,$(subst ., ,$1))
 
 ifeq ($(words $(top-parts)),1)
 top-lib := work
-top-package :=
+top-package := _bare
 top-entity := $(top-parts)
 else
 ifeq ($(words $(top-parts)),2)
 top-lib := $(word 1,$(top-parts))
-top-package := 
+top-package := _bare
 top-entity := $(word 2,$(top-parts))
 else
 ifeq ($(words $(top-parts)),3)
@@ -104,6 +112,7 @@ top-entity := $(word 3,$(top-parts))
 endif
 endif
 endif
+top-lib-package := $(top-lib).$(top-package)
 
 parts-scanned :=
 sources :=
@@ -113,12 +122,11 @@ define part_scan
 
 ifeq ($$(filter $1,$$(parts-scanned)),)
 
-$$(eval $$(foreach l,$$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll)))),$$(call library_scan,$$l)))
+$$(eval $$(foreach l,$$(sort $$(foreach ll,$$($1-deps-unsorted),$$(call library_name,$$(ll)))),$$(call library_scan,$$l)))
 
 parts-scanned += $1
 
-#$$(info $2 $1 - lib deps: $$(sort $$(foreach ll,$$($1-deps),$$(call library_name,$$(ll) $1))))
-$$(eval $$(foreach d,$$($1-deps),$$(call part_scan,$$(d),_$2)))
+$$(eval $$(foreach d,$$($1-deps-unsorted),$$(call part_scan,$$(d),_$2)))
 
 $$($1-library)-lib-sources += $$($1-sources)
 sources += $$($1-sources)
@@ -129,9 +137,48 @@ endif
 
 endef
 
-define lib_deps_calc
+# 1 a set of packages
+# 2 a set of packages that are done
+# -> return packages with no deps first
+only-pkg-nodeps = $(sort $(foreach i,$1,$(if $(call filter-out-many,$($i-intradeps-unsorted),$2 $i),,$i)))
+not-empty-or-circular-dep = $(if $1,$1,$(error Circular dependency within $2))
+pkg-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(call only-pkg-nodeps,$1,$2),$1) $(call pkg-donedeps-first,$(call filter-out-many,$1,$2 $(call only-pkg-nodeps,$1,$2)),$2 $(call only-pkg-nodeps,$1,$2)))
 
-$(1)-lib-deps := $(sort $(filter-out $1,$(foreach p,$(filter $1%,$(parts-scanned)),$(foreach d,$($p-deps),$($d-library)))))
+# 1 a set of libs
+# 2 a set of libs that are done
+# -> return libs with empty set of undone deps, recurse of others
+only-lib-nodeps = $(sort $(foreach i,$1,$(if $(call filter-out-many,$($i-libdeps-unsorted),$2 $i),,$i)))
+lib-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(call only-lib-nodeps,$1,$2)) $(call lib-donedeps-first,$(call filter-out-many,$1,$2 $(call only-lib-nodeps,$1,$2)),$2 $(call only-lib-nodeps,$1,$2)))
+
+# For a package, calculates
+#  all packages deps,
+#  intra-library package deps.
+define package_deep_deps_calc
+$1-deepdeps-unsorted := $(sort $(call deep_deps,$1))
+$1-intradeps-unsorted := $(sort $(filter $($1-library).%,$($1-deps-unsorted)))
+
+endef
+
+# For a library, calculates
+#  all packages deps for a given library,
+#  other libraries for a given library
+define lib_deps_calc
+$(1)-deps-unsorted := $(sort $(foreach p,$($1-packages),$($p-deps-unsorted)))
+$(1)-libdeps-unsorted := $(sort $(foreach t,$(foreach p,$($(1)-packages),$($p-deepdeps-unsorted)),$($t-library)))
+
+endef
+
+# For a library, calculates
+#  internal package order (using only enabled packages)
+define lib_enable_calc
+$1-packages := $(call pkg-donedeps-first,$(call filter-many,$($1-packages),$(enabled-packages)))
+
+endef
+
+# For a library, calculates
+#  ordered source set
+define lib_build_calc
+$1-sources := $(foreach p,$($1-packages),$($p-sources))
 
 endef
 
@@ -140,16 +187,29 @@ all-$1-sources := $(foreach f,$(sources),$(if $(filter $1,$($f-language)),$f))
 
 endef
 
-lib_order :=
+####
+## We are ready to process
+####
 
+## Start reading top library
 $(eval $(call library_scan,$(top-lib)))
-$(eval $(call part_scan,$(top-lib)$(if $(top-package),.$(top-package),),))
-$(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
-$(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
+## Recurse down to all libraries
+$(eval $(call part_scan,$(top-lib).$(top-package),))
+## Calculate all packages deps
+all-packages := $(foreach l,$(libraries),$($l-packages))
+$(eval $(foreach p,$(all-packages),$(call package_deep_deps_calc,$p)))
 
-lib_subtree_inv = $(if $(filter $1,$2),,$(foreach l,$($1-lib-deps),$(call lib_subtree_inv,$l,$2 $1)) $1)
-libraries := $(call uniq,$(call lib_subtree_inv,$(top-lib),))
-sources := $(foreach l,$(libraries),$($l-lib-sources))
+enabled-packages := $($(top-lib).$(top-package)-deepdeps-unsorted)
+
+## Dependency reordering
+$(eval $(foreach l,$(libraries),$(call lib_deps_calc,$l)))
+$(eval $(foreach l,$(libraries),$(call lib_enable_calc,$l)))
+$(eval $(foreach l,$(libraries),$(call lib_build_calc,$l)))
+$(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
+libraries := $(call lib-donedeps-first,$(libraries),)
+
+## All sources
+sources := $(foreach l,$(libraries),$($l-sources))
 
 include $(BUILD_ROOT)/tool/$(tool).mk
 
