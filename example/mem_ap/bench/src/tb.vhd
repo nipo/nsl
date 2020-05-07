@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, nsl_io, main;
+
 entity tb is
 end tb;
-
-library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, nsl_io, main;
 
 architecture arch of tb is
 
@@ -53,7 +53,8 @@ begin
   dap: main.topcell.top
     port map(
       swclk => s_swd_master_o.clk,
-      swdio => swdio
+      swdio => swdio,
+      leds => open
       );
   
   swd_endpoint: nsl_bnoc.routed.routed_endpoint

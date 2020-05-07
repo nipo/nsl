@@ -5,7 +5,8 @@ package topcell is
   component top is
     port (
       swclk: in std_ulogic;
-      swdio: inout std_logic
+      swdio: inout std_logic;
+      leds: out std_logic
       );
   end component;
 end package topcell;
