@@ -1,5 +1,3 @@
-VHDL_VERSION=93
-VHDL_VARIANT=c
 GHDL=ghdl
 target ?= $(top-entity)
 
@@ -9,30 +7,40 @@ simulate: $(target).ghw
 
 .PHONY: FORCE
 
-GHDL_OPTS = --std=$(VHDL_VERSION)$(VHDL_VARIANT) --ieee=synopsys
-lib_cf = $(if $(filter $(top-lib),$1),,ghdl-build/$1/)$1-obj$(VHDL_VERSION).cf
-#lib_cf = ghdl-build/$1/$1-obj$(VHDL_VERSION).cf
+_GHDL_STD_93=93c
+_GHDL_STD_08=08
+_GHDL_CF_SUFFIX_93=93
+_GHDL_CF_SUFFIX_08=08
+workdir = $(if $(filter $(top-lib),$1),,ghdl-build/$1/)
+lib_cf = $(call workdir,$1)$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
-define ghdl_source_do_vhdl
-	$(GHDL) \
-		$2 \
-		 --workdir=$$(dir $$@) \
-		$(foreach l,$(libraries),-Pghdl-build/$l) \
-		$(GHDL_OPTS) \
+define ghdl-source-run
+$(GHDL) $1 \
+		--workdir=$(call workdir,$($2-library)) \
+		$(foreach l,$($($2-library)-libdeps-unsorted),-Pghdl-build/$l) \
+		--std=$(_GHDL_STD_$($($2-library)-vhdl-version)) \
 		-v \
-		--work=$($1-library) \
-		$1
+		--work=$($2-library) \
+		$2
 	$(SILENT)
 endef
 
-define ghdl_lib_do
-$(call lib_cf,$1): $(foreach l,$($1-lib-deps),$(call lib_cf,$($l-library))) $($1-lib-sources)
-	$(SILENT)echo Updating $$@, depends on $$^
-	$(SILENT)mkdir -p $$(dir $$@)
-	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do_$($s-language),$s,-i))
-	$(SILENT)$(foreach s,$($1-lib-sources),$(call ghdl_source_do_$($s-language),$s,-a))
+define vhdl-source-do
+$(call ghdl-source-run,-a,$1)
+	$(SILENT)$(call ghdl-source-run,-i,$1)
+	$(SILENT)
+endef
 
-clean-dirs += $(filter-out ./,$(dir $(call lib_cf,$1)))
+define ghdl-library-rules
+
+$(call lib_cf,$1): $(foreach l,$($1-libdeps-unsorted),$(call lib_cf,$($l-library))) $($1-sources) $(MAKEFILE_LIST)
+	$(SILENT)echo Updating $1
+	$(SILENT)echo   packages: $($1-packages)
+	$(SILENT)echo   lib deps: $($1-libdeps-unsorted)
+	$(SILENT)mkdir -p $$(dir $$@)
+	$(SILENT)$(foreach s,$($1-sources),$(call $($s-language)-source-do,$s))
+
+clean-dirs += $(if $(filter $1,$(top-lib)),,$(call lib_cf,$1))
 
 $(target): $(call lib_cf,$1)
 
@@ -40,19 +48,18 @@ endef
 
 clean-dirs += ghdl-build
 
-#$(info $(libraries))
-$(eval $(foreach l,$(libraries),$(call ghdl_lib_do,$l)))
+$(eval $(foreach l,$(libraries),$(call ghdl-library-rules,$l)))
 
 $(target): FORCE
 	$(SILENT)$(GHDL) -e -v \
 		$(GHDL_OPTS) \
-		$(foreach l,$(filter %.cf,$^),-P$(dir $l)) \
+		$(sort $(foreach l,$(filter %.cf,$^),-P$(dir $l))) \
 		$(top-entity)
 
 $(target).ghw: $(target)
 	$(SILENT)$(GHDL) -r -v \
 		$(GHDL_OPTS) \
-		$(foreach l,$(libraries),-P$(dir $(call lib_cf,$l))) \
+		$(sort $(foreach l,$(filter %.cf,$^),-P$(dir $l))) \
 		$(top-entity) --wave=$@
 
 clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf *.lst $(target)

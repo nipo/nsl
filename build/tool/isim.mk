@@ -28,6 +28,8 @@ clean-files += $(target).vcd
 clean-files += $(target).vcd.tmp
 clean-dirs += isim
 
+$(call exclude-libs,unisim)
+
 sim: $(target).vcd
 
 clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb

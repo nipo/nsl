@@ -3,6 +3,8 @@ ISE_PREPARE = source $(ISE)/settings64.sh > /dev/null
 
 SHELL=/bin/bash
 
+$(call exclude-libs,unisim)
+
 tmp-dir := planahead-tmp
 
 define hdl_add

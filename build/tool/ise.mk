@@ -19,6 +19,8 @@ user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32
 
 export I
 
+$(call exclude-libs,unisim)
+
 SHELL=/bin/bash
 
 clean-files += par_usage_statistics.html
@@ -136,25 +138,24 @@ ise-build/$(target).ngd: ise-build/$(target).ngc $(filter %.ucf,$(all-constraint
 .PRECIOUS: %-map.pcf
 
 define ise_source_vhdl_do
-	echo "vhdl $($1-library) $1" >> $@.prj
+echo "vhdl $($1-library) $1" >> $@.prj
 	$(SILENT)
 endef
 
 define ise_source_verilog_do
-	echo "vlog $($1-library) $1" >> $@.prj
+echo "vlog $($1-library) $1" >> $@.prj
 	$(SILENT)
 endef
 
 define file_append
-	$(SILENT)cat $1 >> $2
-
+cat $1 >> $2
+	$(SILENT)
 endef
 
-ise-build/$(target).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) $(sources) $(OPTS)
+ise-build/$(target).ngc: $(sources) $(OPTS)
 	$(SILENT)mkdir -p ise-build/xst
 	$(SILENT)> $@.prj
 	$(SILENT)$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$s))
-
 	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@.xst
 	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@.xst
 	$(SILENT)echo "run" >> $@.xst
@@ -167,9 +168,8 @@ ise-build/$(target).ngc: $(foreach l,$(libraries),$($l-vhdl-sources)) $(sources)
 #	$(SILENT)echo "-lc No" >> $@.xst
 	$(SILENT)echo "-equivalent_register_removal no" >> $@.xst
 #	$(SILENT)echo "-register_balancing yes" >> $@.xst
-	$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
-
-	$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst
+	$(SILENT)$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
+	$(SILENT)$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst
 
 ise-build/%.twr: ise-build/%-par.ncd ise-build/%-map.pcf
 	$(SILENT)$(ISE_PRE) trce -e 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
