@@ -138,30 +138,36 @@ ise-build/$(target).ngd: ise-build/$(target).ngc $(filter %.ucf,$(all-constraint
 .PRECIOUS: %-map.pcf
 
 define ise_source_vhdl_do
-echo "vhdl $($1-library) $1" >> $@.prj
-	$(SILENT)
+	$(SILENT)echo 'vhdl $($2-library) $2' >> $1
+
 endef
 
 define ise_source_verilog_do
-echo "vlog $($1-library) $1" >> $@.prj
-	$(SILENT)
+	$(SILENT)echo 'vlog $($2-library) $2' >> $1
+
 endef
 
 define file_append
-cat $1 >> $2
-	$(SILENT)
+	$(SILENT)cat $1 >> $2
+
 endef
 
-ise-build/$(target).ngc: $(sources) $(OPTS)
-	$(SILENT)mkdir -p ise-build/xst
+clean-files += ise-build/$(target).prj
+clean-files += ise-build/$(target).ngc
+clean-files += ise-build/$(target).twr
+
+ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)> $@.prj
-	$(SILENT)$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$s))
+	$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$@,$s))
+
+ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
+	$(SILENT)mkdir -p ise-build/xst
 	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@.xst
 	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@.xst
 	$(SILENT)echo "run" >> $@.xst
 	$(SILENT)echo "-p $(target_part)$(target_package)$(target_speed)" >> $@.xst
 	$(SILENT)echo "-top $(top-entity)" >> $@.xst
-	$(SILENT)echo "-ifn $@.prj" >> $@.xst
+	$(SILENT)echo "-ifn $<" >> $@.xst
 	$(SILENT)echo "-ofn $@" >> $@.xst
 	$(SILENT)echo "-max_fanout 15" >> $@.xst
 	$(SILENT)echo "-read_cores yes" >> $@.xst

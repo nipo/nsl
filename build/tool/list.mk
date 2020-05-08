@@ -64,6 +64,15 @@ library-info:
 	$(SILENT)echo " - all: $($(LIBRARY)-all-packages)"
 	$(SILENT)echo " - enabled: $($(LIBRARY)-enabled-packages)"
 	$(SILENT)echo " - ordered: $($(LIBRARY)-packages)"
+	$(SILENT)echo "Sources:"
+	$(SILENT)$(foreach s,$($(LIBRARY)-sources),$(call list_source_list,$s))
+
+package-info:
+	$(SILENT)echo "Info"
+	$(SILENT)echo " - Deps: $($(PACKAGE)-deps-unsorted)"
+	$(SILENT)echo " - Deep deps: $($(PACKAGE)-deepdeps-unsorted)"
+	$(SILENT)echo "Sources:"
+	$(SILENT)$(foreach s,$($(PACKAGE)-sources),$(call list_source_list,$s))
 
 list:
 	$(SILENT)echo "Dependencies:"
