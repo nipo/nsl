@@ -157,6 +157,7 @@ clean-files += ise-build/$(target).ngc
 clean-files += ise-build/$(target).twr
 
 ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
+	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $@.prj
 	$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$@,$s))
 
