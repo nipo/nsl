@@ -142,23 +142,21 @@ begin
 
   decode_position: if gray_position_c
   generate
-    signal peer_ptr_bin : std_ulogic_vector(ptr_width_c downto 0);
-    signal peer_ptr_bin_relaxed : std_ulogic_vector(ptr_width_c downto 0);
+    signal peer_ptr_bin_relaxed : unsigned(ptr_width_c downto 0);
   begin
-    peer_ptr_bin <= std_ulogic_vector(nsl_math.gray.gray_to_bin(peer_position_i));
-
-    decoder_pipeline: nsl_clocking.intradomain.intradomain_multi_reg
+    decoder: nsl_math.gray.gray_decoder_pipelined
       generic map(
         cycle_count_c => (ptr_width_c + 3) / 4,
-        data_width_c => ptr_width_c+1
+        data_width_c => ptr_width_c + 1
         )
       port map(
         clock_i => clock_i,
-        data_i => peer_ptr_bin,
-        data_o => peer_ptr_bin_relaxed
+        gray_i => peer_position_i,
+        binary_o => peer_ptr_bin_relaxed
         );
+
     peer_wcounter.wrap_toggle <= peer_ptr_bin_relaxed(peer_ptr_bin_relaxed'left);
-    peer_wcounter.value <= unsigned(peer_ptr_bin_relaxed(peer_ptr_bin_relaxed'left-1 downto 0));
+    peer_wcounter.value <= peer_ptr_bin_relaxed(peer_ptr_bin_relaxed'left-1 downto 0);
   end generate;
 
   forward_position: if not gray_position_c
