@@ -7,6 +7,18 @@ package gray is
   function bin_to_gray(binary : unsigned) return std_ulogic_vector;
   function gray_to_bin(gray : std_ulogic_vector) return unsigned;
 
+  component gray_decoder_pipelined
+    generic(
+      cycle_count_c : natural;
+      data_width_c : integer
+      );
+    port(
+      clock_i : in std_ulogic;
+      gray_i : in std_ulogic_vector(data_width_c-1 downto 0);
+      binary_o : out unsigned(data_width_c-1 downto 0)
+      );
+  end component;
+
 end package gray;
 
 package body gray is
