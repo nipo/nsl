@@ -36,6 +36,27 @@ package fifo is
       );
   end component;
 
+  -- Basic register slice. Decouples timing constraints between input and
+  -- output port. This is actually a 2-depth fifo.
+  component fifo_register_slice is
+    generic(
+      data_width_c : integer
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      out_data_o  : out std_ulogic_vector(data_width_c-1 downto 0);
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+
+      in_data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic
+      );
+
+  end component;
+
   component fifo_pointer is
     generic(
       ptr_width_c         : natural;

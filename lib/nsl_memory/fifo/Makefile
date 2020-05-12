@@ -1,6 +1,7 @@
 vhdl-sources += fifo.pkg.vhd
 
 vhdl-sources += fifo_pointer.vhd
+vhdl-sources += fifo_register_slice.vhd
 vhdl-sources += fifo_homogeneous.vhd
 vhdl-sources += fifo_narrower.vhd
 vhdl-sources += fifo_widener.vhd
