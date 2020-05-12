@@ -57,19 +57,16 @@ begin
 
   out_as_bin: if not output_is_gray_c
   generate
-    signal out_bin: unsigned(data_i'range);
   begin
-    out_bin <= nsl_math.gray.gray_to_bin(s_out_gray);
-
-    out_sync: nsl_clocking.intradomain.intradomain_multi_reg
+    decoder: nsl_math.gray.gray_decoder_pipelined
       generic map(
         cycle_count_c => decode_stage_count_c,
         data_width_c => data_width_c
         )
       port map(
         clock_i => clock_out_i,
-        data_i => std_ulogic_vector(out_bin),
-        unsigned(data_o) => data_o
+        gray_i => s_out_gray,
+        binary_o => data_o
         );
   end generate;
 
