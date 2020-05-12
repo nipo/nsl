@@ -8,7 +8,9 @@ entity fifo_homogeneous is
   generic(
     data_width_c   : integer;
     word_count_c        : integer;
-    clock_count_c    : natural range 1 to 2
+    clock_count_c    : natural range 1 to 2;
+    input_slice_c : boolean := true;
+    output_slice_c : boolean := true
     );
   port(
     reset_n_i : in  std_ulogic;
@@ -67,8 +69,70 @@ architecture ram2 of fifo_homogeneous is
 
   signal r, rin: regs_t;
 
+  signal int_in_data_i       : std_ulogic_vector(data_width_c-1 downto 0);
+  signal int_in_valid_i      : std_ulogic;
+  signal int_in_ready_o      : std_ulogic;
+
+  signal int_out_data_o       : std_ulogic_vector(data_width_c-1 downto 0);
+  signal int_out_valid_o      : std_ulogic;
+  signal int_out_ready_i      : std_ulogic;
+
 begin
 
+  with_input_slice: if input_slice_c
+  generate
+    input_slice: nsl_memory.fifo.fifo_register_slice
+      generic map(
+        data_width_c => data_width_c
+        )
+      port map(
+        clock_i => clock_i(0),
+        reset_n_i => s_resetn(0),
+
+        out_data_o => int_in_data_i,
+        out_ready_i => int_in_ready_o,
+        out_valid_o => int_in_valid_i,
+
+        in_data_i => in_data_i,
+        in_valid_i => in_valid_i,
+        in_ready_o => in_ready_o
+        );
+  end generate;
+
+  without_input_slice: if not input_slice_c
+  generate
+    int_in_data_i <= in_data_i;
+    int_in_valid_i <= in_valid_i;
+    in_ready_o <= int_in_ready_o;
+  end generate;
+
+  with_output_slice: if output_slice_c
+  generate
+    output_slice: nsl_memory.fifo.fifo_register_slice
+      generic map(
+        data_width_c => data_width_c
+        )
+      port map(
+        clock_i => clock_i(1),
+        reset_n_i => s_resetn(1),
+
+        out_data_o => out_data_o,
+        out_ready_i => out_ready_i,
+        out_valid_o => out_valid_o,
+
+        in_data_i => int_out_data_o,
+        in_valid_i => int_out_valid_o,
+        in_ready_o => int_out_ready_i
+        );
+  end generate;
+
+  without_output_slice: if not output_slice_c
+  generate
+    out_data_o <= int_out_data_o;
+    out_valid_o <= int_out_valid_o;
+    int_out_ready_i <= out_ready_i;
+  end generate;
+  
   assert is_synchronous or c_is_pow2
     report "Bisynchronous fifos can only work for power-of-two depths"
     severity failure;
@@ -179,9 +243,20 @@ begin
       free_count_o => s_right.free
       );
 
-  in_free_o <= to_integer(to_01(s_left.free));
-  out_available_min_o <= to_integer(to_01(s_right.used));
-  out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
+  in_counter: process(clock_i(0))
+  begin
+    if rising_edge(clock_i(0)) then
+      in_free_o <= to_integer(to_01(s_left.free));
+    end if;
+  end process;
+
+  out_counter: process(clock_i(clock_count_c-1))
+  begin
+    if rising_edge(clock_i(clock_count_c-1)) then
+      out_available_min_o <= to_integer(to_01(s_right.used));
+      out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
+    end if;
+  end process;
 
   ram: nsl_memory.ram.ram_2p_r_w
     generic map(
@@ -194,16 +269,16 @@ begin
 
       write_address_i => s_left.mem_ptr,
       write_en_i => s_left.mem_en,
-      write_data_i => in_data_i,
+      write_data_i => int_in_data_i,
 
       read_address_i => s_right.mem_ptr,
       read_en_i => s_right.mem_en,
       read_data_o => s_read_data
       );
 
-  in_ready_o <= s_left.inc_ack;
-  s_left.mem_en <= s_left.inc_ack and in_valid_i;
-  s_left.inc_req <= in_valid_i;
+  int_in_ready_o <= s_left.inc_ack;
+  s_left.mem_en <= s_left.inc_ack and int_in_valid_i;
+  s_left.inc_req <= int_in_valid_i;
 
   regs: process (clock_i, s_resetn)
   begin
@@ -218,26 +293,26 @@ begin
     end if;
   end process;
 
-  transition: process(out_ready_i, r, s_right.mem_ptr, s_read_data, s_right.inc_ack)
+  transition: process(int_out_ready_i, r, s_right.mem_ptr, s_read_data, s_right.inc_ack)
   begin
     rin <= r;
 
     rin.direct <= s_right.inc_ack;
 
-    if r.valid = '0' and out_ready_i = '0' then
+    if r.valid = '0' and int_out_ready_i = '0' then
       rin.valid <= r.direct;
       rin.data <= s_read_data;
       rin.addr <= s_right.mem_ptr;
-    elsif r.valid = '1' and out_ready_i = '1' then
+    elsif r.valid = '1' and int_out_ready_i = '1' then
       rin.valid <= '0';
       rin.data <= (others => '-');
       rin.addr <= (others => '-');
     end if;
   end process;
 
-  s_right.inc_req <= out_ready_i or (not r.valid and not r.direct);
-  s_right.mem_en <= s_right.inc_ack and (out_ready_i or not r.valid);
-  out_valid_o <= r.valid or r.direct;
-  out_data_o <= r.data when r.valid = '1' else s_read_data;
+  s_right.inc_req <= int_out_ready_i or (not r.valid and not r.direct);
+  s_right.mem_en <= s_right.inc_ack and (int_out_ready_i or not r.valid);
+  int_out_valid_o <= r.valid or r.direct;
+  int_out_data_o <= r.data when r.valid = '1' else s_read_data;
 
 end ram2;

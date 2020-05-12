@@ -8,7 +8,9 @@ package fifo is
     generic(
       data_width_c   : integer;
       word_count_c        : integer;
-      clock_count_c    : natural range 1 to 2
+      clock_count_c    : natural range 1 to 2;
+      input_slice_c : boolean := true;
+      output_slice_c : boolean := true
       );
     port(
       reset_n_i   : in  std_ulogic;
