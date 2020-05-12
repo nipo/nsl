@@ -106,7 +106,7 @@ all-libraries += $1
 $(call directory-ingress,$1,_bare,$(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1),$2)
 
 #$ (info $1 **** packages: $$($1._bare-sub-packages))
-$1-vhdl-version := $$($1._bare-vhdl-version)
+$1-vhdl-version := $$(if $$($1._bare-vhdl-version),$$($1._bare-vhdl-version),93)
 $1._bare-vhdl-version :=
 $$(eval $$(foreach p,$$($1._bare-sub-packages),$$(call package-ingress,$1,$$p,$$(if $$($1-srcdir),$$($1-srcdir),$(LIB_ROOT)/$1)/$$p,$2)))
 $$(eval $$(call ensure-package-deps-parsed,$1._bare,$2))
