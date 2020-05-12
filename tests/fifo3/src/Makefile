@@ -1,4 +1,3 @@
 vhdl-sources += tb.vhd
-deps += util.sync
-deps += nsl.fifo
+deps += nsl_memory.fifo
 

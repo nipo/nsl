@@ -6,7 +6,7 @@ use std.textio.all;
 entity tb is
 end tb;
 
-library nsl, util;
+library nsl_memory;
 
 architecture arch of tb is
 
@@ -105,23 +105,26 @@ architecture arch of tb is
   
 begin
 
-  fifo: nsl.fifo.fifo_async
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width => width,
-      depth => 16
+      data_width_c => width,
+      word_count_c => 16,
+      clock_count_c => 2,
+      input_slice_c => true
       )
     port map(
-      p_resetn => s_resetn_async,
+      reset_n_i => s_resetn_async,
 
-      p_in_clk => l.clock,
-      p_in_data => l.data,
-      p_in_valid => l.valid,
-      p_in_ready => l.ready,
+      clock_i(0) => l.clock,
+      clock_i(1) => r.clock,
 
-      p_out_clk => r.clock,
-      p_out_data => r.data,
-      p_out_ready => r.ready,
-      p_out_valid => r.valid
+      in_data_i => l.data,
+      in_valid_i => l.valid,
+      in_ready_o => l.ready,
+
+      out_data_o => r.data,
+      out_ready_i => r.ready,
+      out_valid_o => r.valid
       );
 
   input_gen: process
