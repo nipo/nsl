@@ -172,7 +172,7 @@ endef
 #  ordered source set
 define lib_build_calc
 #$ (info $1 sources: $(foreach p,$($1-packages),$($p-sources)))
-$1-sources := $(foreach p,$($1-packages),$($p-sources))
+$1-sources := $(call uniq,$(foreach p,$($1-packages),$($p-sources)))
 sources += $$($1-sources)
 
 endef
