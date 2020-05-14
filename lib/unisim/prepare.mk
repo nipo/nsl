@@ -1,31 +1,45 @@
-ISE = $(HOME)/local/opt/Xilinx/14.7
+ISE = /opt/Xilinx/14.7
 ISE_VHDL = $(ISE)/ISE_DS/ISE/vhdl/src
 UNISIM_VHDL = $(ISE_VHDL)/unisims
 
-ISE_UNISIM_SRC := $(shell cat $(UNISIM_VHDL)/primitive/vhdl_analyze_order | uniq)
+all: copy
 
-update: Makefile
+copy: .prepared
 
-Makefile: $(ISE_UNISIM_SRC) unisim_VPKG.vhd unisim_VCOMP.vhd
-	@> $@
-	@for src in $^ ; do \
-		echo vhdl-sources += $${src} >> $@ ; \
-	done
+clean:
 
-unisim_VPKG.vhd: $(UNISIM_VHDL)/unisim_VPKG.vhd
-	@cp $< $@
+internal := 1
+include Makefile
 
-unisim_VCOMP.vhd: $(UNISIM_VHDL)/unisim_VCOMP.vhd
-	@cp $< $@
+define src-declare
 
-define component_declare
+clean-files += $1/$2
 
-$(1): $$(UNISIM_VHDL)/primitive/$(1)
-	@cp $$< $$@
+$1/copy: $(wildcard $(UNISIM_VHDL)/$2 $(UNISIM_VHDL)/primitive/$2)
 
 endef
 
-$(eval $(foreach i,$(ISE_UNISIM_SRC),$(call component_declare,$i)))
+define pkg-declare
+
+vhdl-sources :=
+
+include $1/Makefile
+
+.prepared: $1/copy
+
+$$(eval $$(foreach s,$$(vhdl-sources),$$(call src-declare,$1,$$s)))
+
+$1/copy:
+	cp $$^ $1/
+
+endef
+
+$(eval $(foreach p,$(packages),$(call pkg-declare,$p)))
+
+clean-files += .prepared
+
+.prepared:
+	touch $@
 
 clean:
-	rm -f Makefile *.vhd
+	rm -f $(clean-files)
