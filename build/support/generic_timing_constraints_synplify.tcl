@@ -3,11 +3,13 @@
 # Ignore Output path of registers named *tig_reg_d*
 # Ignore Input path of registers named *tig_reg_q*
 # Ignore Reset path of registers named *tig_reg_clr*
+# Ignore Preset path of registers named *tig_reg_pre*
 # Ignore path through nets named *async_net*
 # Apply cross-region paths for registers named *cross_region_reg_d*
 # Apply read-clock timings for TDP-Ram that were demoted to Registers
 
 set_false_path -through [get_pins -quiet -hier *tig_reg_clr*/CLR]
+set_false_path -through [get_pins -quiet -hier *tig_reg_pre*/PRE]
 #set_false_path -through [get_pins -quiet -hier -regexp -filter {name=~".*tig_reg_(q.*/[ZOQ]|d.*/[DI]).*"}]
 set_false_path -through [get_pins -quiet -hier {*tig_reg_q*/Z}]
 set_false_path -through [get_pins -quiet -hier {*tig_reg_q*/O}]

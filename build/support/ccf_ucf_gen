@@ -13,18 +13,21 @@ while read net period ; do
 done
 
 has_tig_clr=
+has_tig_pre=
 has_tid_d=
 has_tig_q=
 has_static_tig_d=
 has_ff_cross=
 
 grep -q tig_reg_clr "$edif" && has_tig_clr=1
+grep -q tig_reg_pre "$edif" && has_tig_pre=1
 grep -q tig_reg_d "$edif" && has_tig_d=1
 grep -q tig_reg_q "$edif" && has_tig_q=1
 grep -q tig_static_reg_d "$edif" && has_static_tig_d=1
 grep -q cross_region_reg_d "$edif" && has_ff_cross=1
 
 test -n "$has_tig_clr"  && echo "PIN \"*tig_reg_clr*.CLR\" TPTHRU = \"ff_tig_clr\";"
+test -n "$has_tig_pre"  && echo "PIN \"*tig_reg_pre*.PRE\" TPTHRU = \"ff_tig_pre\";"
 test -n "$has_tig_d"    && echo "PIN \"*tig_reg_d*.D\" TPTHRU = \"ff_tig_d\";"
 test -n "$has_tig_q"    && echo "PIN \"*tig_reg_q*.Q\" TPTHRU = \"ff_tig_q\";"
 test -n "$has_tig_static_d"    && echo "PIN \"*tig_reg_static_d*\" TPTHRU = \"ff_tig_static_d\";"
@@ -37,6 +40,7 @@ for i in "${!nets[@]}"; do
     echo "NET \"$net\" TNM_NET=\"CCF_${token}_TNM\" | PERIOD = ${periods[$net]};"
     echo "TIMEGRP \"CCF_${token}_GRP\" = \"CCF_${token}_TNM\";"
     test -n "$has_tig_clr"  && echo "TIMESPEC \"TS_to_${token}_tig_clr\" = THRU \"ff_tig_clr\" TO \"CCF_${token}_GRP\" TIG;"
+    test -n "$has_tig_pre"  && echo "TIMESPEC \"TS_to_${token}_tig_pre\" = THRU \"ff_tig_pre\" TO \"CCF_${token}_GRP\" TIG;"
     test -n "$has_tig_d"    && echo "TIMESPEC \"TS_to_${token}_tig_d\" = THRU \"ff_tig_d\" TO \"CCF_${token}_GRP\" TIG;"
     test -n "$has_tig_static_d" && echo "TIMESPEC \"TS_to_${token}_tig_static_d\" = THRU \"ff_tig_static_d\" TO \"CCF_${token}_GRP\" TIG;"
     test -n "$has_tig_q"    && echo "TIMESPEC \"TS_to_${token}_tig_q\" = FROM \"CCF_${token}_GRP\" THRU \"ff_tig_q\" TIG;"
