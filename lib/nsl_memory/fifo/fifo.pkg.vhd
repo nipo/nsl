@@ -9,8 +9,9 @@ package fifo is
       data_width_c   : integer;
       word_count_c        : integer;
       clock_count_c    : natural range 1 to 2;
-      input_slice_c : boolean := true;
-      output_slice_c : boolean := true
+      input_slice_c : boolean := false;
+      output_slice_c : boolean := false;
+      register_counters_c : boolean := false
       );
     port(
       reset_n_i   : in  std_ulogic;

@@ -9,8 +9,9 @@ entity fifo_homogeneous is
     data_width_c   : integer;
     word_count_c        : integer;
     clock_count_c    : natural range 1 to 2;
-    input_slice_c : boolean := true;
-    output_slice_c : boolean := true
+    input_slice_c : boolean := false;
+    output_slice_c : boolean := false;
+    register_counters_c : boolean := false
     );
   port(
     reset_n_i : in  std_ulogic;
@@ -243,21 +244,31 @@ begin
       free_count_o => s_right.free
       );
 
-  in_counter: process(clock_i(0))
-  begin
-    if rising_edge(clock_i(0)) then
-      in_free_o <= to_integer(to_01(s_left.free));
-    end if;
-  end process;
+  registered_counters: if register_counters_c
+  generate
+    in_counter: process(clock_i(0))
+    begin
+      if rising_edge(clock_i(0)) then
+        in_free_o <= to_integer(to_01(s_left.free));
+      end if;
+    end process;
 
-  out_counter: process(clock_i(clock_count_c-1))
-  begin
-    if rising_edge(clock_i(clock_count_c-1)) then
-      out_available_min_o <= to_integer(to_01(s_right.used));
-      out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
-    end if;
-  end process;
+    out_counter: process(clock_i(clock_count_c-1))
+    begin
+      if rising_edge(clock_i(clock_count_c-1)) then
+        out_available_min_o <= to_integer(to_01(s_right.used));
+        out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
+      end if;
+    end process;
+  end generate;
 
+  non_registered_counters: if not register_counters_c
+  generate
+    in_free_o <= to_integer(to_01(s_left.free));
+    out_available_min_o <= to_integer(to_01(s_right.used));
+    out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
+  end generate;
+  
   ram: nsl_memory.ram.ram_2p_r_w
     generic map(
       addr_size_c => mem_ptr_t'length,
