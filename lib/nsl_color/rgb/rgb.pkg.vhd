@@ -184,10 +184,55 @@ package rgb is
   constant rgb24_white_smoke             : rgb24 := (245,245,245);
   constant rgb24_white                   : rgb24 := (255,255,255);
 
+  function rgb24_to_suv(color: rgb24;
+                        lsb_right: boolean := true;
+                        color_order: string := "RGB") return std_ulogic_vector;
+  
 end package rgb;
 
 package body rgb is
 
+  function bit_reverse(i : std_ulogic_vector) return std_ulogic_vector is
+    constant w : natural := i'length;
+    alias iv : std_ulogic_vector(w-1 downto 0) is i;
+    variable ret : std_ulogic_vector(0 to w-1);
+  begin
+    bits: for i in 0 to w-1
+    loop
+      ret(i) := iv(i);
+    end loop;
+    return ret;
+  end bit_reverse;
+
+  function rgb24_to_suv_lsb_right(color: rgb24;
+                                  color_order: string := "RGB")
+    return std_ulogic_vector is
+    variable a, b, c : natural range 0 to 255;
+    variable ret : std_ulogic_vector(23 downto 0);
+  begin
+    case color_order(1) is
+      when 'R' => a := color.r;
+      when 'G' => a := color.g;
+      when others => a := color.b;
+    end case;
+    case color_order(2) is
+      when 'R' => b := color.r;
+      when 'G' => b := color.g;
+      when others => b := color.b;
+    end case;
+    case color_order(3) is
+      when 'R' => c := color.r;
+      when 'G' => c := color.g;
+      when others => c := color.b;
+    end case;
+
+    ret(23 downto 16) := std_ulogic_vector(to_unsigned(a, 8));
+    ret(15 downto 8) := std_ulogic_vector(to_unsigned(b, 8));
+    ret(7 downto 0) := std_ulogic_vector(to_unsigned(c, 8));
+
+    return ret;
+  end rgb24_to_suv_lsb_right;
+  
   function "="(l, r : rgb24) return boolean is
   begin
     return l.r = r.r and l.g = r.g and l.b = r.b;
@@ -283,5 +328,21 @@ package body rgb is
   begin
     return l xor rgb3_white;
   end "not";
+  
+  function rgb24_to_suv(color: rgb24;
+                        lsb_right : boolean := true;
+                        color_order: string := "RGB")
+    return std_ulogic_vector is
+    variable color_order_swapped : string(1 to 3);
+  begin
+    if lsb_right then
+      return rgb24_to_suv_lsb_right(color, color_order);
+    else
+      color_order_swapped(1) := color_order(3);
+      color_order_swapped(2) := color_order(2);
+      color_order_swapped(3) := color_order(1);
+      return bit_reverse(rgb24_to_suv_lsb_right(color, color_order_swapped));
+    end if;
+  end rgb24_to_suv;
 
 end package body rgb;
