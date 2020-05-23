@@ -1,2 +1,1 @@
 set_io led  95
-set_io clk  21

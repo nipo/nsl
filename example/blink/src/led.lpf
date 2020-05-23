@@ -1,0 +1,2 @@
+BANK 3 VCCIO 2.5 V;
+LOCATE COMP "led" SITE "107";
