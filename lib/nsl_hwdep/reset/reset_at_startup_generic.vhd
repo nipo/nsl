@@ -10,18 +10,18 @@ end entity;
 
 architecture gen of reset_at_startup is
 
-  signal ctr: integer range 0 to 4 := 4;
+  signal sh : std_ulogic_vector(0 to 8) := (others => '0');
+  attribute keep : string;
+  attribute keep of sh : signal is "TRUE";
 
 begin
 
-  reset_n_o <= '1' when ctr = 0 else '0';
+  reset_n_o <= sh(0);
 
   gen: process(clock_i)
   begin
     if rising_edge(clock_i) then
-      if ctr /= 0 then
-        ctr <= ctr - 1;
-      end if;
+      sh <= sh(1 to 8) & '1';
     end if;
   end process;
 

@@ -19,3 +19,8 @@ ifneq ($(filter lattice-machxo2,$(hwdep)),)
 vhdl-sources += clock_internal_mxo2.vhd
 deps += machxo2.components
 endif
+
+ifneq ($(filter lattice-ice40,$(hwdep)),)
+vhdl-sources += clock_internal_ice40.vhd
+deps += sb_ice
+endif
