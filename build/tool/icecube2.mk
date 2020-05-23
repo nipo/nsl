@@ -1,9 +1,11 @@
-ICECUBE2 = /opt/iCEcube2.2017.01
+ICECUBE2 = /opt/Lattice/iCEcube2.2017.08
 SBT = $(ICECUBE2)/sbt_backend
 SBT_OPT_BIN = $(SBT)/bin/linux/opt
 SBT_OPT_LIB = $(SBT)/lib/linux/opt
 DEVICES_DIR = $(SBT)/devices
 SYNTHESIS_TOOL ?= synplify
+
+#$(call exclude-libs,sb_ice)
 
 include $(BUILD_ROOT)/tool/icecube-devices.mk
 
@@ -81,7 +83,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		$(build-dir)/synth/$(target).edf \
 		$(build-dir)/synth \
 		-p$(target_package) \
-		-y$(subst $(space),$(comma),$(all-constraint-sources)) \
+		-y$(subst $(space),$(comma),$(sort $(all-constraint-sources))) \
 		-c \
 		--devicename $(target_part)
 	$(SILENT)cp $(build-dir)/Temp/sbt_temp.sdc $@

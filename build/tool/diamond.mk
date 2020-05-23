@@ -1,9 +1,11 @@
-DIAMOND_PATH = /usr/local/diamond/3.10_x64
+DIAMOND_PATH = /usr/local/diamond/3.11_x64
 PRE=bindir=$(DIAMOND_PATH)/bin/lin64 . $(DIAMOND_PATH)/bin/lin64/diamond_env && 
 DIAMOND_BIN = $(PRE) $(DIAMOND_PATH)/bin/lin64
 ISPFPGA_BIN = $(PRE) $(DIAMOND_PATH)/ispfpga/bin/lin64
 DIAMOND_LIB_PATH = $(DIAMOND_PATH)/ispfpga/$(target_dir)/data
 build-dir := diamond-build
+
+$(call exclude-libs,machxo2)
 
 all: $(target).bit
 
@@ -170,7 +172,7 @@ $(build-dir)/$(target).jed: $(build-dir)/par/$(target).ncd $(build-dir)/$(target
 $(target).bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress off \
-		-config_mode jtag -of ../$@ -dev $(subst _,-,$(target_part))
+		-of ../$@ -dev $(subst _,-,$(target_part))
 
 $(target)-compressed.bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
