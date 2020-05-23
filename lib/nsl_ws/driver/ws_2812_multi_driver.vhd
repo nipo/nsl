@@ -9,7 +9,11 @@ entity ws_2812_multi_driver is
   generic(
     color_order : string := "GRB";
     clk_freq_hz : natural;
-    cycle_time_ns : natural := 208;
+    error_ns : natural := 150;
+    t0h_ns : natural := 350;
+    t0l_ns : natural := 1360;
+    t1h_ns : natural := 1360;
+    t1l_ns : natural := 350;
     led_count : natural
     );
   port(
@@ -86,11 +90,15 @@ begin
   s_last <= '1' when r.idx = led_count - 1 else '0';
   s_color <= r.leds(r.idx);
 
-  master: nsl_ws.transactor.ws_2812_driver
+  master: nsl_ws.driver.ws_2812_driver
     generic map(
       color_order => color_order,
       clk_freq_hz => clk_freq_hz,
-      cycle_time_ns => cycle_time_ns
+      error_ns => error_ns,
+      t0h_ns => t0h_ns,
+      t0l_ns => t0l_ns,
+      t1h_ns => t1h_ns,
+      t1l_ns => t1l_ns
       )
     port map(
       clock_i => clock_i,

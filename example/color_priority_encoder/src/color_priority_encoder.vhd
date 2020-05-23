@@ -19,19 +19,24 @@ architecture arch of top is
 
 begin
 
-  rgen: nsl_hwdep.reset.reset_at_startup port map(s_resetn);
+  rgen: nsl_hwdep.reset.reset_at_startup
+    port map(
+      clock_i => clk,
+      reset_n_o => s_resetn
+      );
 
-  driver: nsl_ws.transactor.ws_2812_multi_driver
+  driver: nsl_ws.driver.ws_2812_multi_driver
     generic map(
       clk_freq_hz => 12000000,
-      cycle_time_ns => 166,
-      led_count => 1
+      color_order => "RGB",
+      led_count => 2
       )
     port map(
       clock_i => clk,
       reset_n_i => s_resetn,
       led_o => led,
-      color_i(0) => s_color
+      color_i(0) => s_color,
+      color_i(1) => s_color
       );
 
   en <= '1';

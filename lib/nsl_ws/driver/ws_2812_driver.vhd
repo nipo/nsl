@@ -8,7 +8,11 @@ entity ws_2812_driver is
   generic(
     color_order : string := "GRB";
     clk_freq_hz : natural;
-    cycle_time_ns : natural := 208
+    error_ns : natural := 150;
+    t0h_ns : natural := 350;
+    t0l_ns : natural := 1360;
+    t1h_ns : natural := 1360;
+    t1l_ns : natural := 350
     );
   port(
     clock_i : in std_ulogic;
@@ -62,12 +66,21 @@ architecture rtl of ws_2812_driver is
   -- Reset timing (time between lines) is, depending on datasheets, at
   -- least 64 cycles.
 
-  
+
+  constant bit_ns : natural := ((t0l_ns + t0h_ns) + (t1l_ns + t1h_ns)) / 2;
+  constant bit_cycles : natural := (bit_ns + error_ns) / (error_ns * 2);
+  constant cycle_time_ns : natural := bit_ns / bit_cycles;
+
   constant ws_cycle_hz : natural := 1000000000 / cycle_time_ns;
   constant ws_cycle_ticks : natural := (clk_freq_hz + ws_cycle_hz - 1) / ws_cycle_hz;
-  constant ws_high_cycles : natural := 2;
-  constant ws_bit_cycles : natural := 2;
-  constant ws_low_cycles : natural := 2;
+
+  constant t0h_cycles : natural := (t0h_ns + cycle_time_ns / 2) / cycle_time_ns;
+  constant t1h_cycles : natural := (t1h_ns + cycle_time_ns / 2) / cycle_time_ns;
+
+  constant ws_high_cycles : natural := t0h_cycles;
+  constant ws_bit_cycles : natural := t1h_cycles - t0h_cycles;
+  constant ws_low_cycles : natural := bit_cycles - t1h_cycles;
+
   constant ws_reset_cycles : natural := 64;
 
   type state_t is (
@@ -81,7 +94,8 @@ architecture rtl of ws_2812_driver is
   
   type regs_t is
   record
-    timer : natural range 0 to ws_cycle_ticks * ws_reset_cycles - 1;
+    divisor : natural range 0 to ws_cycle_ticks - 1;
+    cycle_counter : natural range 0 to ws_reset_cycles - 1;
     bitno : natural range 0 to 23;
     last : boolean;
     state : state_t;
@@ -105,69 +119,67 @@ begin
   begin
     rin <= r;
 
+    rin.divisor <= ws_cycle_ticks - 1;
+
     case r.state is
       when RESET =>
-        rin.timer <= 0;
         rin.state <= WAITING;
 
       when WAITING =>
         if valid_i = '1' then
-          case color_order(1) is
-            when 'R' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
-            when 'G' => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
-            when others => rin.shreg(23 downto 16) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
-          end case; 
-          case color_order(2) is
-            when 'R' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
-            when 'G' => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
-            when others => rin.shreg(15 downto 8) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
-          end case; 
-          case color_order(3) is
-            when 'R' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.r, 8));
-            when 'G' => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.g, 8));
-            when others => rin.shreg(7 downto 0) <= std_ulogic_vector(to_unsigned(color_i.b, 8));
-          end case; 
+          rin.shreg <= nsl_color.rgb.rgb24_to_suv(
+            color => color_i,
+            lsb_right => true,
+            color_order => color_order);
           rin.bitno <= 23;
           rin.last <= last_i = '1';
 
-          rin.timer <= ws_cycle_ticks * ws_high_cycles - 1;
+          rin.cycle_counter <= ws_high_cycles - 1;
           rin.state <= SHIFTING_HIGH;
         end if;
 
       when SHIFTING_HIGH =>
-        if r.timer /= 0 then
-          rin.timer <= r.timer - 1;
+        if r.divisor /= 0 then
+          rin.divisor <= r.divisor - 1;
+        elsif r.cycle_counter /= 0 then
+          rin.cycle_counter <= r.cycle_counter - 1;
         else
-          rin.timer <= ws_cycle_ticks * ws_bit_cycles - 1;
+          rin.cycle_counter <= ws_bit_cycles - 1;
           rin.state <= SHIFTING_BIT;
         end if;
 
       when SHIFTING_BIT =>
-        if r.timer /= 0 then
-          rin.timer <= r.timer - 1;
+        if r.divisor /= 0 then
+          rin.divisor <= r.divisor - 1;
+        elsif r.cycle_counter /= 0 then
+          rin.cycle_counter <= r.cycle_counter - 1;
         else
-          rin.timer <= ws_cycle_ticks * ws_low_cycles - 1;
+          rin.cycle_counter <= ws_low_cycles - 1;
           rin.state <= SHIFTING_LOW;
         end if;
 
       when SHIFTING_LOW =>
-        if r.timer /= 0 then
-          rin.timer <= r.timer - 1;
+        if r.divisor /= 0 then
+          rin.divisor <= r.divisor - 1;
+        elsif r.cycle_counter /= 0 then
+          rin.cycle_counter <= r.cycle_counter - 1;
         elsif r.bitno /= 0 then
           rin.shreg <= r.shreg(r.shreg'left-1 downto 0) & '-';
           rin.bitno <= r.bitno - 1;
-          rin.timer <= ws_cycle_ticks * ws_high_cycles - 1;
+          rin.cycle_counter <= ws_high_cycles - 1;
           rin.state <= SHIFTING_HIGH;
         elsif r.last then
           rin.state <= FLUSHING;
-          rin.timer <= ws_cycle_ticks * ws_reset_cycles - 1;
+          rin.cycle_counter <= ws_reset_cycles - 1;
         else
           rin.state <= WAITING;
         end if;
 
       when FLUSHING =>
-        if r.timer /= 0 then
-          rin.timer <= r.timer - 1;
+        if r.divisor /= 0 then
+          rin.divisor <= r.divisor - 1;
+        elsif r.cycle_counter /= 0 then
+          rin.cycle_counter <= r.cycle_counter - 1;
         else
           rin.state <= WAITING;
         end if;
