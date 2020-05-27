@@ -1,0 +1,1 @@
+NET "led"     LOC =  "P34" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;
