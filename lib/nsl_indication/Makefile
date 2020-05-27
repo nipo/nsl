@@ -1,1 +1,2 @@
 packages += activity
+packages += morse
