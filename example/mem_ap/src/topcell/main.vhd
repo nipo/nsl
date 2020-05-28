@@ -44,7 +44,7 @@ begin
       activity_o => act
       );
 
-  led_driver: nsl_ws.transactor.ws_2812_multi_driver
+  led_driver: nsl_ws.driver.ws_2812_multi_driver
     generic map(
       clk_freq_hz => 50000000,
       led_count => 3
