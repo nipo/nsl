@@ -30,9 +30,13 @@ SHELL=/bin/bash
 
 all: $(target).bin
 
-define syn_source_do
-	echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(target)-build/synth.prj
-	$(SILENT)
+define syn-add-vhdl
+	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(target)-build/synth.prj
+
+endef
+define syn-add-vhdl
+	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(target)-build/synth.prj
+
 endef
 
 # Synthesis
@@ -42,7 +46,7 @@ endef
 $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $(build-dir)/synth.prj
-	$(SILENT)$(foreach s,$(sources),$(call syn_source_do,$s))
+	$(foreach s,$(sources),$(call syn-add-$($s-language),$s))
 	$(SILENT)echo "impl -add synth -type fpga" >> $(build-dir)/synth.prj
 #	$(SILENT)echo "set_option -vhdl2008 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -technology SBTiCE40" >> $(build-dir)/synth.prj
@@ -86,7 +90,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		-y$(subst $(space),$(comma),$(sort $(all-constraint-sources))) \
 		-c \
 		--devicename $(target_part)
-	$(SILENT)cp $(build-dir)/Temp/sbt_temp.sdc $@
+	$(SILENT)cp $(build-dir)/synth/AutoConstraint_$(top-entity).sdc $@
 
 clean-dirs += $(build-dir)
 
