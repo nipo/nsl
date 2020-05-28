@@ -173,7 +173,6 @@ endef
 define lib_build_calc
 #$ (info $1 sources: $(foreach p,$($1-packages),$($p-sources)))
 $1-sources := $(call uniq,$(foreach p,$($1-packages),$($p-sources)))
-sources += $$($1-sources)
 
 endef
 
@@ -205,9 +204,24 @@ endef
 # Remove multiple libraries from build variables
 exclude-libs = $(eval $(call exclude-libs-internal,$1))
 define exclude-libs-internal
-sources := $(foreach l,$(call filter-out-many,$(libraries),$1),$($l-sources))
-libraries := $(call filter-out-many,$(libraries),$1)
+$(eval $(call exclude-libs-internal-1,$1))
+$(eval $(call exclude-libs-internal-2,$1))
+$(eval $(call exclude-libs-internal-3))
+
+endef
+
+define exclude-libs-internal-1
+libraries := $(call uniq,$(call filter-out-many,$(libraries),$1))
+
+endef
+
+define exclude-libs-internal-2
 $(foreach l,$(libraries),$(call exclude-libs-lib,$l,$1))
+endef
+
+define exclude-libs-internal-3
+$(foreach t,$(source-types),$(call source_type_gather,$t))
+sources := $(foreach l,$(libraries),$($l-sources))
 
 endef
 
@@ -259,10 +273,10 @@ $(eval $(foreach l,$(all-libraries),$(call lib_enable_calc,$l)))
 $(eval $(foreach l,$(all-libraries),$(call lib_deps_calc,$l)))
 
 ## Enabled libraries and sources
-sources :=
 $(eval $(foreach l,$(all-libraries),$(call lib_build_calc,$l)))
 $(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
-libraries := $(call lib-donedeps-first,$(all-libraries),)
+libraries := $(call uniq,$(call lib-donedeps-first,$(all-libraries),))
+sources := $(foreach l,$(libraries),$($l-sources))
 
 TOOL_ROOT := $(BUILD_ROOT)/tool/
 include $(TOOL_ROOT)/$(tool).mk
