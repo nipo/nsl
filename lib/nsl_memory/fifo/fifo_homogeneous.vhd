@@ -33,7 +33,7 @@ end fifo_homogeneous;
 
 architecture ram2 of fifo_homogeneous is
 
-  constant ptr_width : natural := nsl_math.arith.log2(word_count_c);
+  constant ptr_width : natural := nsl_math.arith.log2(word_count_c-1);
   subtype mem_ptr_t is unsigned(ptr_width-1 downto 0);
   subtype peer_pos_t is std_ulogic_vector(ptr_width downto 0);
   subtype data_t is std_ulogic_vector(data_width_c-1 downto 0);
