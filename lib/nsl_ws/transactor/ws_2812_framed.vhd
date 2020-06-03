@@ -71,7 +71,7 @@ begin
 
       when ST_GET_R =>
         if cmd_i.valid = '1' then
-          rin.color.r <= to_integer(unsigned(cmd_i.data));
+          rin.color.r <= unsigned(cmd_i.data);
           rin.last <= cmd_i.last;
           if cmd_i.last = '1' then
             rin.state <= ST_RUN;
@@ -82,7 +82,7 @@ begin
 
       when ST_GET_G =>
         if cmd_i.valid = '1' then
-          rin.color.g <= to_integer(unsigned(cmd_i.data));
+          rin.color.g <= unsigned(cmd_i.data);
           if cmd_i.last = '1' then
             rin.state <= ST_RUN;
           else
@@ -92,7 +92,7 @@ begin
 
       when ST_GET_B =>
         if cmd_i.valid = '1' then
-          rin.color.b <= to_integer(unsigned(cmd_i.data));
+          rin.color.b <= unsigned(cmd_i.data);
           rin.last <= cmd_i.last;
           rin.state <= ST_RUN;
         end if;

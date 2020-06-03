@@ -63,9 +63,9 @@ begin
 
     case r.state is
       when ST_RESET =>
-        rin.leds <= (others => (r => 0,
-                                g => 0,
-                                b => 0));
+        rin.leds <= (others => (r => (others => '0'),
+                                g => (others => '0'),
+                                b => (others => '0')));
         rin.state <= ST_WAIT;
 
       when ST_WAIT =>
