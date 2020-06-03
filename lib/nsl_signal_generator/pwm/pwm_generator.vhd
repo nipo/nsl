@@ -67,8 +67,8 @@ begin
       rin.prescaler <= r.prescaler_duration;
     else
       rin.active <= false;
-      if r.active then
-        rin.counter <= resize(r.inactive_duration, counter_width_c);
+      if r.active and r.inactive_duration /= 0 then
+        rin.counter <= resize(r.inactive_duration, counter_width_c) - 1;
         rin.active <= false;
       else
         update := true;
@@ -79,9 +79,14 @@ begin
       rin.prescaler <= prescaler_i;
       rin.prescaler_duration <= prescaler_i;
       rin.inactive_duration <= inactive_duration_i;
-      rin.counter <= resize(active_duration_i, counter_width_c);
       rin.active_value <= active_value_i;
-      rin.active <= true;
+      if active_duration_i = 0 then
+        rin.active <= false;
+        rin.counter <= resize(inactive_duration_i, counter_width_c) - 1;
+      else
+        rin.counter <= resize(active_duration_i, counter_width_c) - 1;
+        rin.active <= true;
+      end if;
     end if;
   end process;
 

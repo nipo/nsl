@@ -5,8 +5,8 @@ use ieee.numeric_std.all;
 package pwm is
 
   -- Generates a periodic PWM signal:
-  -- - active_duration_i + 1 ticks with pwm_o = active_value_i,
-  -- - inactive_duration_i + 1 ticks with pwm_o = not active_value_i.
+  -- - active_duration_i ticks with pwm_o = active_value_i,
+  -- - inactive_duration_i ticks with pwm_o = not active_value_i.
   --
   -- One tick lasts prescaler_i + 1 clock cycles.
   --
@@ -33,9 +33,9 @@ package pwm is
 
       -- Prescaler minus 1. (divides clock by prescaler_i+1)
       prescaler_i : in unsigned;
-      -- Active duration in prescaler cycles - 1
+      -- Active duration in prescaler cycles
       active_duration_i : in unsigned;
-      -- Inactive duration in prescaler cycles - 1
+      -- Inactive duration in prescaler cycles
       inactive_duration_i : in unsigned;
       active_value_i : std_ulogic := '1'
       );
