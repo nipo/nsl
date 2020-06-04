@@ -124,12 +124,12 @@ $(target).zip: $(build-dir)/ip/component.xml
 
 ifneq ($(vivado_ip_repo_path),)
 
-all: $(vivado_ip_repo_path)/packs/$(target).zip $(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml
+all: $(vivado_ip_repo_path)/packs/$(target).zip $(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)_v$(ip-version)-r$(ip-revision)/component.xml
 
 $(vivado_ip_repo_path)/packs/$(target).zip: $(target).zip
 	cp $< $@
 
-$(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)/component.xml: $(target).zip
+$(vivado_ip_repo_path)/module/$(ip-library)/$(ip-name)_v$(ip-version)-r$(ip-revision)/component.xml: $(target).zip
 	rm -rf $(dir $@)
 	mkdir -p $(dir $@)
 	unzip -d $(dir $@) $<
