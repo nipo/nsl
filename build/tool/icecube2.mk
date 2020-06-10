@@ -28,14 +28,10 @@ target ?= $(top)
 
 SHELL=/bin/bash
 
-all: $(target).bin
+all: $(target).bin $(target).hex $(target).nvcm $(target).tar
 
 define syn-add-vhdl
-	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(target)-build/synth.prj
-
-endef
-define syn-add-vhdl
-	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(target)-build/synth.prj
+	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(build-dir)/synth.prj
 
 endef
 
@@ -79,7 +75,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo "project -run synthesis -clean" >> $(build-dir)/synth.prj
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/synpwrap/synpwrap \
-		-prj $(build-dir)/synth.prj
+		-prj $(build-dir)/synth.prj || (cat $(build-dir)/synth.log ; exit 1)
 	$(SILENT)mkdir -p $(build-dir)/synth/oadb-$(top-entity)
 	$(SILENT)$(ICECUBE2_PREPARE) \
 	$(SBT_OPT_BIN)/edifparser \
@@ -87,7 +83,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		$(build-dir)/synth/$(target).edf \
 		$(build-dir)/synth \
 		-p$(target_package) \
-		-y$(subst $(space),$(comma),$(sort $(all-constraint-sources))) \
+		-y$(subst $(space),$(comma),$(sort $(foreach s,$(sources),$(if $(filter $($s-language),constraint),$s)))) \
 		-c \
 		--devicename $(target_part)
 	$(SILENT)cp $(build-dir)/synth/AutoConstraint_$(top-entity).sdc $@
@@ -173,6 +169,9 @@ $(build-dir)/$(top-entity)_bitmap.nvcm : $(build-dir)/routed/$(target).sdc
 
 $(target).%: $(build-dir)/$(top-entity)_bitmap.%
 	cp $< $@
+
+$(target).tar: $(build-dir)
+	tar cf $@ $<
 
 clean-files += stdout.log
 clean-files += stdout.log.bak
