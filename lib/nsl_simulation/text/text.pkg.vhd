@@ -1,15 +1,22 @@
-library ieee, nsl_data;
+library ieee, nsl_data, nsl_math;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 use std.textio.all;
 use nsl_data.bytestream.all;
+use nsl_math.fixed.all;
 
 package text is
 
   function to_string(v: in std_ulogic_vector) return string;
   function to_string(v: in std_logic_vector) return string;
   function to_string(v: in bit_vector) return string;
+  function to_string(v: in real) return string;
+  function to_string(v: in integer) return string;
+  function to_string(v: in boolean) return string;
   function to_string(data : byte_string) return string;
+  function to_string(value: sfixed) return string;
+  function to_string(value: ufixed) return string;
 
   function to_hex_string(v: in std_ulogic_vector) return string;
   function to_hex_string(v: in std_logic_vector) return string;
@@ -39,6 +46,20 @@ package body text is
       write(ret, c);
     end loop;
 
+    return ret.all;
+  end function to_string;
+
+  function to_string(v: in real) return string is
+    variable ret: line := new string'("");
+  begin
+    write(ret, v);
+    return ret.all;
+  end function to_string;
+
+  function to_string(v: in integer) return string is
+    variable ret: line := new string'("");
+  begin
+    write(ret, v);
     return ret.all;
   end function to_string;
 
@@ -111,6 +132,32 @@ package body text is
   function to_hex_string(v: in std_logic_vector) return string is
   begin
     return to_hex_string(to_bitvector(v));
+  end function;
+
+  function to_string(value: ufixed) return string
+  is
+    constant int : string := to_string(to_suv(value(value'left downto 0)));
+    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
+  begin
+    return int & "." & frac;
+  end function;
+
+  function to_string(value: sfixed) return string
+  is
+    constant int : string := to_string(to_suv(value(value'left downto 0)));
+    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
+  begin
+    return int & "." & frac;
+  end function;
+
+  function to_string(v: in boolean) return string
+  is
+  begin
+    if v then
+      return "true";
+    else
+      return "false";
+    end if;
   end function;
 
 end package body;
