@@ -2,8 +2,8 @@ package arith is
 
   function log2(x : positive) return natural;
   function is_pow2(x : positive) return boolean;
-  function max(x, y : natural) return natural;
-  function min(x, y : natural) return natural;
+  function max(x, y : integer) return integer;
+  function min(x, y : integer) return integer;
 
 end package arith;
 
@@ -18,7 +18,7 @@ package body arith is
     end if;
   end log2;
     
-  function max(x, y : natural) return natural is
+  function max(x, y : integer) return integer is
   begin
     if x < y then
       return y;
@@ -27,7 +27,7 @@ package body arith is
     end if;
   end max;
 
-  function min(x, y : natural) return natural is
+  function min(x, y : integer) return integer is
   begin
     if x < y then
       return x;
