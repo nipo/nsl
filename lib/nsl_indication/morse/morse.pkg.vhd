@@ -70,6 +70,8 @@ package morse is
   constant morse_dollar      : morse_character_t := "11001000";  -- ...-..-
   constant morse_at          : morse_character_t := "01010110";  -- .--.-.
 
+  type morse_string is array(positive range <>) of morse_character_t;
+  
   -- Tee is always encoded as 1 symbol time,
   -- Tah is always encoded as 3 symbol time,
   -- Inter-symbol is encoded as 1 duration,
