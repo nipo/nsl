@@ -12,7 +12,8 @@ package stepper is
 
   component step_accumulator is
     generic (
-      counter_width_c : natural
+      counter_width_c : natural;
+      allow_wrap_c : boolean := false
       );
     port (
       reset_n_i     : in  std_ulogic;

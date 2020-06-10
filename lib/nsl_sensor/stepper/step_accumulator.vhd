@@ -7,7 +7,8 @@ use nsl_sensor.stepper.all;
 
 entity step_accumulator is
   generic (
-    counter_width_c : natural
+    counter_width_c : natural;
+    allow_wrap_c : boolean := false
     );
   port (
     reset_n_i     : in  std_ulogic;
@@ -37,9 +38,9 @@ begin
         value <= low_value_i;
       elsif high_i = '1' then
         value <= high_value_i;
-      elsif step_i = STEP_INCREMENT then
+      elsif step_i = STEP_INCREMENT and (allow_wrap_c or value /= high_value_i) then
         value <= value + 1;
-      elsif step_i = STEP_DECREMENT then
+      elsif step_i = STEP_DECREMENT and (allow_wrap_c or value /= low_value_i) then
         value <= value - 1;
       end if;
     end if;
