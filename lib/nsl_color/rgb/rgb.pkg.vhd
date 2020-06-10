@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 package rgb is
 
@@ -187,6 +188,17 @@ package rgb is
   function rgb24_to_suv(color: rgb24;
                         lsb_right: boolean := true;
                         color_order: string := "RGB") return std_ulogic_vector;
+
+  function rgb24_from_suv(color: std_ulogic_vector;
+                          lsb_right: boolean := true;
+                          color_order: string := "RGB") return rgb24;
+
+  function to_rgb24(r, g, b : real) return rgb24;
+
+  -- h : angle (radians)
+  -- s : [0..1]
+  -- v : [0..1]
+  function rgb24_from_hsv(h, s, v : real) return rgb24;
   
 end package rgb;
 
@@ -232,6 +244,40 @@ package body rgb is
 
     return std_ulogic_vector(ret);
   end rgb24_to_suv_lsb_right;
+
+  function rgb24_from_suv_lsb_right(color: std_ulogic_vector;
+                                    color_order: string := "RGB") return rgb24
+  is
+    alias rc : std_ulogic_vector(color'length-1 downto 0) is color;
+    variable ret: rgb24 := rgb24_black;
+  begin
+    if color'length /= 24 then
+      assert false
+        report "RGB24 from suv only works for vector of length 24, returning black"
+        severity warning;
+      return ret;
+    end if;
+
+    case color_order(1) is
+      when 'R' => ret.r := unsigned(rc(23 downto 16));
+      when 'G' => ret.g := unsigned(rc(23 downto 16));
+      when others => ret.b := unsigned(rc(23 downto 16));
+    end case;
+
+    case color_order(2) is
+      when 'R' => ret.r := unsigned(rc(15 downto 8));
+      when 'G' => ret.g := unsigned(rc(15 downto 8));
+      when others => ret.b := unsigned(rc(15 downto 8));
+    end case;
+
+    case color_order(3) is
+      when 'R' => ret.r := unsigned(rc(7 downto 0));
+      when 'G' => ret.g := unsigned(rc(7 downto 0));
+      when others => ret.b := unsigned(rc(7 downto 0));
+    end case;
+
+    return ret;
+  end function;
   
   function "="(l, r : rgb24) return boolean is
   begin
@@ -344,5 +390,59 @@ package body rgb is
       return bit_reverse(rgb24_to_suv_lsb_right(color, color_order_swapped));
     end if;
   end rgb24_to_suv;
+
+  function rgb24_from_suv(color: std_ulogic_vector;
+                          lsb_right: boolean := true;
+                          color_order: string := "RGB") return rgb24
+  is
+    variable color_order_swapped : string(1 to 3);
+  begin
+    if lsb_right then
+      return rgb24_from_suv_lsb_right(color, color_order);
+    else
+      color_order_swapped(1) := color_order(3);
+      color_order_swapped(2) := color_order(2);
+      color_order_swapped(3) := color_order(1);
+      return rgb24_from_suv_lsb_right(bit_reverse(color), color_order_swapped);
+    end if;
+  end function;
+
+  function realminmax(x, v, y : real) return real
+  is
+  begin
+    return realmin(realmax(x, v), y);
+  end function;
+
+  function to_rgb24(r, g, b : real) return rgb24
+  is
+    variable ret : rgb24;
+  begin
+    ret.r := to_unsigned(integer(realminmax(0.0, r, 1.0) * 255.0), 8);
+    ret.g := to_unsigned(integer(realminmax(0.0, g, 1.0) * 255.0), 8);
+    ret.b := to_unsigned(integer(realminmax(0.0, b, 1.0) * 255.0), 8);
+
+    return ret;
+  end function;
+
+  function rgb24_from_hsv(h, s, v : real) return rgb24
+  is
+    variable ar, ag, ab, hr, hg, hb : real;
+    variable sr, vr : real;
+  begin
+    ar := h / math_pi mod 2.0 - 1.0;
+    ag := (h + math_pi * 4.0 / 3.0) / math_pi mod 2.0 - 1.0;
+    ab := (h + math_pi * 2.0 / 3.0) / math_pi mod 2.0 - 1.0;
+    hr := realminmax(0.0, -1.0 + abs(ar) * 3.0, 1.0);
+    hg := realminmax(0.0, -1.0 + abs(ag) * 3.0, 1.0);
+    hb := realminmax(0.0, -1.0 + abs(ab) * 3.0, 1.0);
+
+    sr := realminmax(0.0, s, 1.0);
+    vr := realminmax(0.0, v, 1.0);
+    hr := hr * s + (1.0 - s);
+    hg := hg * s + (1.0 - s);
+    hb := hb * s + (1.0 - s);
+
+    return to_rgb24(hr * v, hg * v, hb * v);
+  end function;
 
 end package body rgb;
