@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color, nsl_bnoc;
+library nsl_color;
 
 package driver is
 
