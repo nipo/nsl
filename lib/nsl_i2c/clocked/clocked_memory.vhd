@@ -60,8 +60,8 @@ begin
       clock_i => clock_i,
       write_en_i => s_write,
       address_i => s_address(addr_width-1 downto 0),
-      data_i => s_wdata,
-      data_o => s_rdata
+      write_data_i => s_wdata,
+      read_data_o => s_rdata
       );
 
 end arch;
