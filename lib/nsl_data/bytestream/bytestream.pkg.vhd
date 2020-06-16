@@ -10,6 +10,9 @@ package bytestream is
   function from_suv(blob: std_ulogic_vector) return byte_string;
   function byte_from_hex(blob: byte_hex_string) return byte;
   function from_hex(blob: string) return byte_string;
+
+  function "="(l, r : byte_string) return boolean;
+  function "/="(l, r : byte_string) return boolean;
   
 end package bytestream;
 
@@ -75,6 +78,30 @@ package body bytestream is
     end loop;
 
     return ret;
+  end function;
+
+  function "="(l, r : byte_string) return boolean is
+    alias lv : byte_string(0 to l'length-1) is l;
+    alias rv : byte_string(0 to r'length-1) is r;
+    variable result : boolean;
+  begin
+    t: if l'length /= r'length THEN
+      assert false
+        report "Vectors of differing sizes passed"
+        severity failure;
+      result := false;
+    else
+      result := true;
+      fe: for i in lv'range loop
+        result := result and (lv(i) = rv(i));
+      end loop;
+    end if;
+    return result;
+  end function;
+    
+  function "/="(l, r : byte_string) return boolean is
+  begin
+    return not (l = r);
   end function;
 
 end package body bytestream;
