@@ -5,11 +5,11 @@ target ?= $(ip-vendor)_$(ip-library)_$(ip-name)_$(ip-version)
 
 SHELL=/bin/bash
 
+$(call exclude-libs,unisim xilinxcorelib)
+
 sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl-language = constraint
 all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
-
-$(call exclude-libs,unisim xilinxcorelib)
 
 build-dir := $(target)-build
 
@@ -30,8 +30,8 @@ define constraint_add
 	$(SILENT)echo 'set fobj [get_files -of_object $$cstrset_obj [list "*$$fname"]]' >> $@
 	$(SILENT)echo 'set_property "file_type" "$(if $(filter %.xdc,$1),xdc)$(if $(filter %.tcl,$1),tcl)" $$fobj' >> $@
 	$(SILENT)echo 'set_property used_in_implementation true $$fobj' >> $@
-	$(SILENT)echo 'set_property "library" "$($1-library)" $$fobj' >> $@
-	$(SILENT)echo 'if { $$last_constraint != "" } { reorder_files -after [get_property name $$last_constraint] [get_property name $$fobj] }' >> $@
+#	$(SILENT)echo 'set_property "library" "$($1-library)" $$fobj' >> $@
+#	$(SILENT)echo 'if { $$last_constraint != "" } { reorder_files -after [get_property name $$last_constraint] [get_property name $$fobj] }' >> $@
 	$(SILENT)echo 'set last_constraint $$fobj' >> $@
 	$(SILENT)echo 'set constraints_handles [list]' >> $@
 	$(SILENT)
