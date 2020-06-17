@@ -194,7 +194,7 @@ begin
                       rin.data <= unsigned(stat_i);
                       
                     when "0001" => -- DLCR
-                      rin.data(9 downto 8) <= to_unsigned(rin.turnaround, 2);
+                      rin.data(9 downto 8) <= to_unsigned(r.turnaround, 2);
                       rin.data(7 downto 0) <= X"43";
 
                     when others =>
