@@ -29,19 +29,27 @@ architecture beh of step_accumulator is
 
 begin
 
-  regs: process(reset_n_i, clock_i)
+  regs: process(reset_n_i, clock_i, low_value_i)
   begin
     if reset_n_i = '0' then
-      value <= (others => '0');
+      value <= low_value_i;
     elsif rising_edge(clock_i) then
       if low_i = '1' then
         value <= low_value_i;
       elsif high_i = '1' then
         value <= high_value_i;
-      elsif step_i = STEP_INCREMENT and (allow_wrap_c or value /= high_value_i) then
-        value <= value + 1;
-      elsif step_i = STEP_DECREMENT and (allow_wrap_c or value /= low_value_i) then
-        value <= value - 1;
+      elsif step_i = STEP_INCREMENT then
+        if value /= high_value_i then
+          value <= value + 1;
+        elsif allow_wrap_c then
+          value <= low_value_i;
+        end if;
+      elsif step_i = STEP_DECREMENT then
+        if value /= low_value_i then
+          value <= value - 1;
+        elsif allow_wrap_c then
+          value <= high_value_i;
+        end if;
       end if;
     end if;
   end process;
