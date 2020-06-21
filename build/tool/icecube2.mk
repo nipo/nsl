@@ -28,10 +28,20 @@ target ?= $(top)
 
 SHELL=/bin/bash
 
-all: $(target).bin $(target).hex $(target).nvcm $(target).tar
+all: $(target).bin $(target).tar
 
 define syn-add-vhdl
 	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(build-dir)/synth.prj
+
+endef
+
+define syn-add-verilog
+	$(SILENT)echo 'add_file -$($1-language) -lib $($1-library) "$1"' >> $(build-dir)/synth.prj
+
+endef
+
+define syn-add-constraint
+	$(SILENT)echo '$(if $(filter %.pcf,$1),# ,)add_file -$($1-language) "$1"' >> $(build-dir)/synth.prj
 
 endef
 
@@ -62,7 +72,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo "set_option -fixgatedclocks 2" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -fixgeneratedclocks 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -popfeed 0" >> $(build-dir)/synth.prj
-	$(SILENT)echo "set_option -constprop 0" >> $(build-dir)/synth.prj
+	$(SILENT)echo "set_option -constprop 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -createhierarchy 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -symbolic_fsm_compiler 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -compiler_compatible 0" >> $(build-dir)/synth.prj
@@ -77,13 +87,14 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		$(SBT_OPT_BIN)/synpwrap/synpwrap \
 		-prj $(build-dir)/synth.prj || (cat $(build-dir)/synth.log ; exit 1)
 	$(SILENT)mkdir -p $(build-dir)/synth/oadb-$(top-entity)
+	cat $(filter %.pcf,$(sources)) < /dev/null > $(build-dir)/synth/phys_constraints.pcf
 	$(SILENT)$(ICECUBE2_PREPARE) \
 	$(SBT_OPT_BIN)/edifparser \
 		$(target_dev) \
 		$(build-dir)/synth/$(target).edf \
 		$(build-dir)/synth \
 		-p$(target_package) \
-		-y$(subst $(space),$(comma),$(sort $(foreach s,$(sources),$(if $(filter $($s-language),constraint),$s)))) \
+		-y$(build-dir)/synth/phys_constraints.pcf \
 		-c \
 		--devicename $(target_part)
 	$(SILENT)cp $(build-dir)/synth/AutoConstraint_$(top-entity).sdc $@
