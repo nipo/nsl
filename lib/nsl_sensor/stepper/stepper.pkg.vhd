@@ -10,6 +10,19 @@ package stepper is
     STEP_DECREMENT
     );
 
+  component step_divisor is
+    generic (
+      divisor_c : natural := 2
+      );
+    port (
+      reset_n_i     : in  std_ulogic;
+      clock_i       : in  std_ulogic;
+
+      step_i        : in step;
+      step_o        : out step
+      );
+  end component;
+
   component step_accumulator is
     generic (
       counter_width_c : natural;
