@@ -12,14 +12,14 @@ end entity;
 architecture mxo2 of clock_internal is
 
   attribute NOM_FREQ : string;
-  attribute NOM_FREQ of inst : label is "66.5";
+  attribute NOM_FREQ of inst : label is "38.0";
   
 begin
 
   inst : machxo2.components.osch
     -- synthesis translate_off
     generic map(
-      nom_freq => "66.5"
+      nom_freq => "38.0"
       )
     -- synthesis translate_on
     port map(
