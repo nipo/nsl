@@ -31,7 +31,7 @@ define synp_proj_opts
 #	$(call append,$@,set_option -vhdl2008 1)
 	$(call append,$@,set_option -technology $(target_technology))
 	$(call append,$@,set_option -part $(target_part))
-	$(call append,$@,set_option -package $(target_package2))
+	$(call append,$@,set_option -package $(target_package))
 	$(call append,$@,set_option -speed_grade $(target_speed))
 #	$(call append,$@,set_option -speed_part_companion "")
 	$(call append,$@,set_option -top_module $(top-lib).$(top-entity))
@@ -116,7 +116,7 @@ $(build-dir)/constraints.lpf: $(all-constraint-sources) $(build-dir)/port_remap.
 $(build-dir)/map/$(target).ncd: $(build-dir)/post_synth/$(target).ngd $(build-dir)/constraints.lpf
 	@mkdir -p $(dir $@)
 	cd $(build-dir) && $(ISPFPGA_BIN)/map \
-		-a $(target_arch) -p $(subst _,-,$(target_part)) -t $(target_package2) -s $(subst -,,$(target_speed)) \
+		-a $(target_arch) -p $(subst _,-,$(target_part)) -t $(target_package) -s $(subst -,,$(target_speed)) \
 		-oc Commercial \
 		post_synth/$(target).ngd -o map/$(target).ncd \
 		-pr $(target).prf -mp $(target).mrp \
