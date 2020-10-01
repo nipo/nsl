@@ -97,7 +97,14 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		-y$(build-dir)/synth/phys_constraints.pcf \
 		-c \
 		--devicename $(target_part)
-	$(SILENT)cp $(build-dir)/synth/AutoConstraint_$(top-entity).sdc $@
+	$(SILENT)#cat $(filter %.sdc,$(sources)) < /dev/null > $@
+	$(SILENT)> $@
+	$(SILENT)if [ -e $(build-dir)/synth/AutoConstraint_$(top-entity).sdc ] ; then \
+		cat $(build-dir)/synth/AutoConstraint_$(top-entity).sdc >> $@ ; \
+	else if [ -e $(build-dir)/Temp/sbt_temp.sdc ] ; then \
+		cat $(build-dir)/Temp/sbt_temp.sdc >> $@ ; \
+	fi ; \
+	fi
 
 clean-dirs += $(build-dir)
 
