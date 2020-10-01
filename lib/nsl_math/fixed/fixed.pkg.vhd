@@ -7,6 +7,25 @@ library nsl_math;
 
 package fixed is
 
+  -- Fixed point data types.
+  -- Type definition range bounds are important in this type.
+  --
+  -- Here, in both cases, x >= y, x and y are integer (posivite or negative) values.
+  --
+  -- ufixed(x downto y) is a value in [0    .. 2^(x+1) - 2^y] in 2^y steps.
+  -- sfixed(x downto y) is a value in [-2^x .. 2^x     - 2^y] in 2^y steps.
+  -- sfixed's MSB is sign bit.
+  --
+  -- Binary functions only handle cases where datatypes match.
+  -- "resize" function may be used before using binary functions, if needed.
+  --
+  -- If y >= 0, behavior of these datatypes matches unsigned/signed (apart from
+  -- restristions on binary functions).
+  --
+  -- Conversion from/to real is defined and usable at compile-time,
+  -- allowing to use VHDL standard mathematical function to generate
+  -- compile-time sfixed/ufixed constants.
+
   subtype fixed_bit is std_ulogic;
   type sfixed is array(integer range <>) of fixed_bit;
   type ufixed is array(integer range <>) of fixed_bit;
