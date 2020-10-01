@@ -5,64 +5,59 @@ use ieee.numeric_std.all;
 package jtag is
   component jtag_tap_register
     generic(
-      id    : natural range 1 to 4
+      id_c    : natural range 1 to 4
       );
     port(
-      p_tck     : out std_ulogic;
-      p_reset   : out std_ulogic;
-      p_selected: out std_ulogic;
-      p_capture : out std_ulogic;
-      p_shift   : out std_ulogic;
-      p_update  : out std_ulogic;
-      p_tdi     : out std_ulogic;
-      p_tdo     : in  std_ulogic
+      tck_o     : out std_ulogic;
+      reset_o   : out std_ulogic;
+      selected_o: out std_ulogic;
+      capture_o : out std_ulogic;
+      shift_o   : out std_ulogic;
+      update_o  : out std_ulogic;
+      tdi_o     : out std_ulogic;
+      tdo_i     : in  std_ulogic
       );
   end component;
 
   component jtag_reg
     generic(
-      width : integer;
-      id    : natural
+      width_c : integer;
+      id_c    : natural
       );
     port(
-      p_clk       : out std_ulogic;
-      p_resetn    : out std_ulogic;
+      clock_o    : out std_ulogic;
+      reset_n_o  : out std_ulogic;
       
-      p_inbound_data   : out std_ulogic_vector(width-1 downto 0);
-      p_inbound_update : out std_ulogic;
+      data_o     : out std_ulogic_vector(width_c-1 downto 0);
+      update_o   : out std_ulogic;
 
-      p_outbound_data     : in std_ulogic_vector(width-1 downto 0);
-      p_outbound_captured : out std_ulogic
+      data_i     : in std_ulogic_vector(width_c-1 downto 0);
+      capture_o  : out std_ulogic
       );
   end component;
 
   component jtag_inbound_fifo
     generic(
-      width : natural;
-      id    : natural;
-      sync_word_width : natural
+      id_c      : natural
       );
     port(
-      p_clk       : out std_ulogic;
-      p_resetn    : out std_ulogic;
-      sync_word : std_ulogic_vector(sync_word_width-1 downto 0);
-
-      p_data  : out std_ulogic_vector(width-1 downto 0);
-      p_val   : out std_ulogic
+      clock_o   : out std_ulogic;
+      reset_n_o : out std_ulogic;
+      sync_i    : in  std_ulogic_vector;
+      data_o    : out std_ulogic_vector;
+      valid_o   : out std_ulogic
       );
   end component;
 
   component jtag_outbound_fifo
     generic(
-      width : natural;
-      id    : natural
+      id_c      : natural
       );
     port(
-      p_clk       : out std_ulogic;
-      p_resetn    : out std_ulogic;
-
-      p_data  : in std_ulogic_vector(width-1 downto 0);
-      p_ack   : out std_ulogic
+      clock_o   : out std_ulogic;
+      reset_n_o : out std_ulogic;
+      data_i    : in std_ulogic_vector;
+      ready_o   : out std_ulogic
       );
   end component;
   

@@ -6,17 +6,15 @@ library nsl_hwdep;
 
 entity jtag_inbound_fifo is
   generic(
-    width : natural;
-    id    : natural;
-    sync_word_width: natural
+    id_c    : natural
     );
   port(
-    p_clk       : out std_ulogic;
-    p_resetn    : out std_ulogic;
-    sync_word : std_ulogic_vector(sync_word_width-1 downto 0);
+    clock_o    : out std_ulogic;
+    reset_n_o  : out std_ulogic;
+    sync_i     : in std_ulogic_vector;
 
-    p_data  : out std_ulogic_vector(width-1 downto 0);
-    p_val   : out std_ulogic
+    data_o     : out std_ulogic_vector;
+    valid_o    : out std_ulogic
     );
 end entity;
 
@@ -24,10 +22,11 @@ architecture beh of jtag_inbound_fifo is
 
   signal s_clk, s_shift, s_tdi, s_reset, s_capture, s_update, s_selected: std_ulogic;
 
+  constant max_width : natural := nsl_math.arith.max(data_o'length, sync_i'length)
+  
   type regs_t is record
-    reg: std_ulogic_vector(width-1 downto 0);
-    sync_reg: std_ulogic_vector(sync_word'range);
-    bit_counter: natural range 0 to width-1;
+    reg: std_ulogic_vector(max_width-1 downto 0);
+    bit_counter: natural range 0 to data_o'length-1;
     synced: boolean;
   end record;
 
@@ -37,23 +36,23 @@ begin
 
   tap : nsl_hwdep.jtag.jtag_tap_register
     generic map(
-      id => id
+      id_c => id_c
       )
     port map(
-      p_tck      => s_clk,
-      p_reset    => s_reset,
-      p_selected => s_selected,
-      p_capture  => s_capture,
-      p_shift    => s_shift,
-      p_update   => s_update,
-      p_tdi      => s_tdi,
-      p_tdo      => r.reg(0)
+      tck_o      => s_clk,
+      reset_o    => s_reset,
+      selected_o => s_selected,
+      capture_o  => s_capture,
+      shift_o    => s_shift,
+      update_o   => s_update,
+      tdi_o      => s_tdi,
+      tdo_i      => r.reg(0)
       );
 
-  p_resetn <= not s_reset;
-  p_clk <= s_clk;
-  p_data <= rin.reg;
-  p_val <= '1' when r.bit_counter = 0 and s_shift = '1' and r.synced else '0';
+  reset_n_o <= not s_reset;
+  clock_o <= s_clk;
+  data_o <= rin.reg(data_o'length-1 downto 0);
+  valid_o <= '1' when r.bit_counter = 0 and s_shift = '1' and r.synced else '0';
   
   regs: process(s_reset, s_clk)
   begin
@@ -65,27 +64,26 @@ begin
   end process;
 
   transition: process(r, s_capture, s_selected, s_shift, s_tdi, s_update,
-                      sync_word)
-    variable sval: std_ulogic_vector(sync_word'range);
+                      sync_i)
   begin
-    sval := s_tdi & r.sync_reg(sync_word'high downto sync_word'low + 1);
     rin <= r;
     
     if s_capture = '1' or s_update = '1' or s_selected = '0' then
-      rin.sync_reg <= (others => '0');
+      rin.reg <= (others => '0');
       rin.synced <= false;
     elsif s_shift = '1' then
+      rin.reg <= s_tdi & r.reg(r.reg'left downto 1);
+
       if not r.synced then
-        rin.sync_reg <= sval;
-        if sval = sync_word then
+        if r.reg = sync_i then
           rin.synced <= true;
-          rin.bit_counter <= width - 1;
+          rin.bit_counter <= data_o'length - 2;
         end if;
       else
-        rin.reg <= s_tdi & r.reg(width-1 downto 1);
-        rin.bit_counter <= r.bit_counter - 1;
         if r.bit_counter = 0 then
-          rin.bit_counter <= width - 1;
+          rin.bit_counter <= data_o'length - 1;
+        else
+          rin.bit_counter <= r.bit_counter - 1;
         end if;
       end if;
     end if;

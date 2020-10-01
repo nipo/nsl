@@ -7,17 +7,17 @@ use unisim.vcomponents.all;
 
 entity jtag_tap_register is
   generic(
-    id    : natural range 1 to 4
+    id_c    : natural range 1 to 4
     );
   port(
-    p_tck     : out std_ulogic;
-    p_reset   : out std_ulogic;
-    p_selected: out std_ulogic;
-    p_capture : out std_ulogic;
-    p_shift   : out std_ulogic;
-    p_update  : out std_ulogic;
-    p_tdi     : out std_ulogic;
-    p_tdo     : in  std_ulogic
+    tck_o     : out std_ulogic;
+    reset_o   : out std_ulogic;
+    selected_o: out std_ulogic;
+    capture_o : out std_ulogic;
+    shift_o   : out std_ulogic;
+    update_o  : out std_ulogic;
+    tdi_o     : out std_ulogic;
+    tdo_i     : in  std_ulogic
     );
 end entity;
 
@@ -26,17 +26,17 @@ begin
 
   inst: bscan_spartan6
     generic map(
-      jtag_chain => id
+      jtag_chain => id_c
       )
     port map(
-      capture => p_capture,
-      reset   => p_reset,
-      tck     => p_tck,
-      sel     => p_selected,
-      shift   => p_shift,
-      tdi     => p_tdi,
-      update  => p_update,
-      tdo     => p_tdo
+      capture => capture_o,
+      reset   => reset_o,
+      tck     => tck_o,
+      sel     => selected_o,
+      shift   => shift_o,
+      tdi     => tdi_o,
+      update  => update_o,
+      tdo     => tdo_i
       );
 
 end architecture;
