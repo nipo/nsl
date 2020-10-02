@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library nsl_clocking;
+
 entity async_input is
   generic (
     debounce_count_c: integer := 2
