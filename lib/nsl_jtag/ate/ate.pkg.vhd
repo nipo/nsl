@@ -18,7 +18,8 @@ package ate is
   component jtag_ate
     generic (
       prescaler_width : positive;
-      data_max_size : positive := 8
+      data_max_size : positive := 8;
+      allow_pipelining : boolean := true
       );
     port (
       reset_n_i   : in  std_ulogic;
