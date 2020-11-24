@@ -114,8 +114,8 @@ begin
         data_width_c => data_width_c
         )
       port map(
-        clock_i => clock_i(1),
-        reset_n_i => s_resetn(1),
+        clock_i => clock_i(clock_count_c-1),
+        reset_n_i => s_resetn(clock_count_c-1),
 
         out_data_o => out_data_o,
         out_ready_i => out_ready_i,
