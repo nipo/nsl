@@ -97,7 +97,6 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		-y$(build-dir)/synth/phys_constraints.pcf \
 		-c \
 		--devicename $(target_part)
-	$(SILENT)#cat $(filter %.sdc,$(sources)) < /dev/null > $@
 	$(SILENT)> $@
 	$(SILENT)if [ -e $(build-dir)/synth/AutoConstraint_$(top-entity).sdc ] ; then \
 		cat $(build-dir)/synth/AutoConstraint_$(top-entity).sdc >> $@ ; \
@@ -105,6 +104,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		cat $(build-dir)/Temp/sbt_temp.sdc >> $@ ; \
 	fi ; \
 	fi
+	#$(SILENT)cat $(filter %.sdc,$(sources)) /dev/null >> $@
 
 clean-dirs += $(build-dir)
 
@@ -134,7 +134,7 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		$(target_dev) \
 		$(build-dir)/synth/oadb-$(top-entity) \
 		--package $(target_package) \
-		--outdir $(dir $@) \
+		--outdir $(dir $@). \
 		--translator $(SBT)/bin/sdc_translator.tcl \
 		--src_sdc_file $< \
 		--dst_sdc_file $(dir $@)/packed/$(notdir $@) \
@@ -145,7 +145,7 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		$(build-dir)/synth/oadb-$(top-entity) \
 		$(target_lib) \
 		$(dir $@)/packed/$(notdir $@) \
-		--outdir $(dir $@) \
+		--outdir $(dir $@). \
 		--sdf_file $(dir $@)/routed.sdf \
 		--pin_permutation
 	$(SILENT)$(ICECUBE2_PREPARE) \
@@ -178,7 +178,7 @@ $(build-dir)/$(top-entity)_bitmap.nvcm : $(build-dir)/routed/$(target).sdc
 		--design $(build-dir)/synth/oadb-$(top-entity) \
 		--device_name $(target_part) \
 		--package $(target_package) \
-		--outdir $(build-dir)/ \
+		--outdir $(build-dir) \
 		--low_power on \
 		--init_ram on \
 		--init_ram_bank 1111 \
@@ -189,7 +189,7 @@ $(target).%: $(build-dir)/$(top-entity)_bitmap.%
 	cp $< $@
 
 $(target).tar: $(build-dir)
-	tar cf $@ $<
+	tar -C $(build-dir) -cf $@ .
 
 clean-files += stdout.log
 clean-files += stdout.log.bak
