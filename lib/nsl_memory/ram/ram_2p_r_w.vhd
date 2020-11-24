@@ -33,7 +33,8 @@ begin
       addr_size_c => addr_size_c,
       word_size_c => data_size_c,
       data_word_count_c => 1,
-      registered_output_c => registered_output_c
+      registered_output_c => registered_output_c,
+      b_can_write_c => false
       )
     port map(
       a_clock_i => clock_i(0),

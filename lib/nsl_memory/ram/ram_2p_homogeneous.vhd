@@ -7,7 +7,8 @@ entity ram_2p_homogeneous is
     addr_size_c  : integer := 10;
     word_size_c  : integer := 8;
     data_word_count_c : integer := 4;
-    registered_output_c : boolean := false
+    registered_output_c : boolean := false;
+    b_can_write_c : boolean := true
     );
   port(
     a_clock_i    : in  std_ulogic;
@@ -69,13 +70,15 @@ begin
           b_data_o <= dpram_reg(to_integer(to_01(b_address_i, '0')));
         end if;
 
-        for i in 0 to data_word_count_c - 1
-        loop
-          if b_write_en_i(i) = '1' then
-            dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
-              := b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-          end if;
-        end loop;
+        if b_can_write_c then
+          for i in 0 to data_word_count_c - 1
+          loop
+            if b_write_en_i(i) = '1' then
+              dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
+                := b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
+            end if;
+          end loop;
+        end if;
       end if;
     end if;
   end process;

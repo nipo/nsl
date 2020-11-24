@@ -86,7 +86,8 @@ package ram is
       addr_size_c : integer := 10;
       word_size_c : integer := 8;
       data_word_count_c : integer := 4;
-      registered_output_c : boolean := false
+      registered_output_c : boolean := false;
+      b_can_write_c : boolean := true
       );
     port(
       a_clock_i : in std_ulogic;
