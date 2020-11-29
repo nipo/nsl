@@ -165,7 +165,7 @@ begin
     loop
       wait until s_resetn_async = '1';
 
-      wait for half_period(iter).right_init;
+      wait for half_period(iter).right_init * 2;
       wait until falling_edge(r.clock);
 
       for i in 0 to 2 ** width -1
