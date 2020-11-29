@@ -18,4 +18,25 @@ package intradomain is
       );
   end component;
 
+  -- Pipelined counter, with minimal timing requirements on inc_i.
+  component intradomain_counter is
+  generic(
+    width_c : positive;
+
+    min_c : unsigned;
+    max_c : unsigned;
+    reset_c : unsigned
+    );
+  port(
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
+
+    increment_i : in std_ulogic;
+    value_o  : out unsigned(width_c-1 downto 0);
+    next_o : out unsigned(width_c-1 downto 0);
+    -- Whether value_o is matching max_c, i.e. next value is min_c
+    wrap_o : out std_ulogic
+    );
+  end component;
+
 end package intradomain;
