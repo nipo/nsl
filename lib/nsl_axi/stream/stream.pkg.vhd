@@ -27,4 +27,27 @@ package stream is
 
   type axis_16l_vector is array(natural range <>) of axis_16l;
 
+  type axis_8l_ms is
+  record
+    tdata  : std_ulogic_vector (7 downto 0);
+    tvalid : std_ulogic;
+    tlast  : std_ulogic;
+  end record;
+
+  type axis_8l_sm is
+  record
+    tready : std_ulogic;
+  end record;
+
+  type axis_8l_sm_vector is array(natural range <>) of axis_8l_sm;
+  type axis_8l_ms_vector is array(natural range <>) of axis_8l_ms;
+
+  type axis_8l is
+  record
+    m2s: axis_8l_ms;
+    s2m: axis_8l_sm;
+  end record;
+
+  type axis_8l_vector is array(natural range <>) of axis_8l;
+
 end package stream;
