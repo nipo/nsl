@@ -9,7 +9,7 @@ package jtag is
       );
     port(
       tck_o     : out std_ulogic;
-      reset_o   : out std_ulogic;
+      reset_n_o : out std_ulogic;
       selected_o: out std_ulogic;
       capture_o : out std_ulogic;
       shift_o   : out std_ulogic;
@@ -41,11 +41,13 @@ package jtag is
       id_c      : natural
       );
     port(
-      clock_o   : out std_ulogic;
-      reset_n_o : out std_ulogic;
-      sync_i    : in  std_ulogic_vector;
-      data_o    : out std_ulogic_vector;
-      valid_o   : out std_ulogic
+      clock_i        : in  std_ulogic;
+      reset_n_i      : in  std_ulogic;
+      jtag_reset_n_o : out std_ulogic;
+      data_o         : out std_ulogic_vector;
+      last_o         : out std_ulogic;
+      valid_o        : out std_ulogic;
+      ready_i        : in  std_ulogic
       );
   end component;
 
@@ -54,10 +56,13 @@ package jtag is
       id_c      : natural
       );
     port(
-      clock_o   : out std_ulogic;
-      reset_n_o : out std_ulogic;
-      data_i    : in std_ulogic_vector;
-      ready_o   : out std_ulogic
+      clock_i        : in  std_ulogic;
+      reset_n_i      : in  std_ulogic;
+      jtag_reset_n_o : out std_ulogic;
+      data_i         : in  std_ulogic_vector;
+      valid_i        : in  std_ulogic;
+      last_i         : in  std_ulogic;
+      ready_o        : out std_ulogic
       );
   end component;
   

@@ -24,7 +24,7 @@ end entity;
 
 architecture beh of jtag_reg is
 
-  signal s_clk, s_shift, s_tdi, s_reset, s_capture, s_selected: std_ulogic;
+  signal s_clk, s_shift, s_tdi, s_capture, s_selected: std_ulogic;
   signal s_reg: std_ulogic_vector(width_c-1 downto 0);
   
 begin
@@ -35,7 +35,7 @@ begin
       )
     port map(
       capture_o  => s_capture,
-      reset_o    => s_reset,
+      reset_n_o  => reset_n_o,
       tck_o      => s_clk,
       selected_o => s_selected,
       shift_o    => s_shift,
@@ -44,7 +44,6 @@ begin
       tdo_i      => s_reg(0)
       );
 
-  reset_n_o <= not s_reset;
   clock_o <= s_clk;
   capture_o <= s_capture;
   data_o <= s_reg;
@@ -52,12 +51,10 @@ begin
   h: process(s_clk)
   begin
     if rising_edge(s_clk) then
-      if s_selected = '1' then
-        if s_capture = '1' then
-          s_reg <= data_i;
-        elsif s_shift = '1' then
-          s_reg <= s_tdi & s_reg(width_c-1 downto 1);
-        end if;
+      if s_capture = '1' then
+        s_reg <= data_i;
+      elsif s_shift = '1' then
+        s_reg <= s_tdi & s_reg(width_c-1 downto 1);
       end if;
     end if;
   end process;

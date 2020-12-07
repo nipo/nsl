@@ -2,78 +2,65 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep;
+library nsl_hwdep, nsl_clocking;
 
 entity jtag_outbound_fifo is
   generic(
     id_c    : natural
     );
   port(
-    clock_o       : out std_ulogic;
-    reset_n_o    : out std_ulogic;
+    clock_i        : in  std_ulogic;
+    reset_n_i      : in  std_ulogic;
+    jtag_reset_n_o : out std_ulogic;
 
-    data_o  : in std_ulogic_vector;
-    ready_o   : out std_ulogic
+    data_i  : in  std_ulogic_vector;
+    valid_i : in  std_ulogic;
+    last_i  : in  std_ulogic;
+    ready_o : out std_ulogic
     );
 end entity;
 
 architecture beh of jtag_outbound_fifo is
 
-  signal s_clk, s_shift, s_capture, s_reset, s_selected: std_ulogic;
-
-  type regs_t is record
-    reg: std_ulogic_vector(data_o'length-1 downto 0);
-    bit_counter: natural range 0 to data_o'length-1;
-  end record;
-
-  signal r, rin: regs_t;
-
+  signal jtag_data : std_ulogic_vector(data_i'length + 1 downto 0);
+  signal jtag_capture : std_ulogic;
+  signal jtag_reset_n, reset_n, jtag_clock : std_ulogic;
+  
 begin
 
-  tap : nsl_hwdep.jtag.jtag_tap_register
+  reset_n <= jtag_reset_n and reset_n_i;
+  jtag_reset_n_o <= jtag_reset_n;
+
+  reg : nsl_hwdep.jtag.jtag_reg
     generic map(
+      width_c => jtag_data'length,
       id_c => id_c
       )
     port map(
-      tck_o      => s_clk,
-      reset_o    => s_reset,
-      selected_o => s_selected,
-      capture_o  => s_capture,
-      shift_o    => s_shift,
-      update_o   => open,
-      tdi_o      => open,
-      tdo_i      => rin.reg(0)
+      clock_o => jtag_clock,
+      reset_n_o => jtag_reset_n,
+
+      data_i => jtag_data,
+      capture_o => jtag_capture
       );
 
-  reset_n_o <= not s_reset;
-  clock_o <= s_clk;
-  ready_o <= '1' when r.bit_counter = data_o'length - 1 and s_shift = '1' and s_selected = '1' else '0';
+  resync: nsl_clocking.interdomain.interdomain_fifo_slice
+    generic map(
+      data_width_c => jtag_data'length - 1
+      )
+    port map(
+      reset_n_i => reset_n,
+      clock_i(0) => clock_i,
+      clock_i(1) => jtag_clock,
 
-  regs: process(s_clk)
-  begin
-    if rising_edge(s_clk) then
-      r <= rin;
-    end if;
-  end process;
+      in_data_i(data_i'range) => data_i,
+      in_data_i(data_i'length) => last_i,
+      in_valid_i => valid_i,
+      in_ready_o => ready_o,
 
-  transition: process(data_o, r, s_capture, s_selected, s_shift)
-  begin
-    rin <= r;
-
-    if s_capture = '1' or s_selected = '0' then
-      rin.bit_counter <= data_o'length - 1;
-    elsif s_shift = '1' then
-      if r.bit_counter = data_o'length - 1 then
-        rin.reg <= data_o;
-      else
-        rin.reg <= '-' & r.reg(data_o'length-1 downto 1);
-      end if;
-      if r.bit_counter = 0 then
-        rin.bit_counter <= data_o'length - 1;
-      else
-        rin.bit_counter <= r.bit_counter - 1;
-      end if;
-    end if;
-  end process;
+      out_data_o => jtag_data(jtag_data'length-2 downto 0),
+      out_valid_o => jtag_data(jtag_data'length-1),
+      out_ready_i => jtag_capture
+      );
 
 end architecture;

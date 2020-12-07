@@ -13,3 +13,5 @@ vhdl-sources += jtag_tap_register_7series.vhd
 deps += unisim.vcomponents
 endif
 endif
+
+deps += nsl_clocking.interdomain

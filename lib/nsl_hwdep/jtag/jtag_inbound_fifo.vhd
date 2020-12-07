@@ -2,91 +2,69 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep;
+library nsl_hwdep, nsl_math, nsl_clocking;
 
 entity jtag_inbound_fifo is
   generic(
     id_c    : natural
     );
   port(
-    clock_o    : out std_ulogic;
-    reset_n_o  : out std_ulogic;
-    sync_i     : in std_ulogic_vector;
+    clock_i        : in std_ulogic;
+    reset_n_i      : in std_ulogic;
+    jtag_reset_n_o : out std_ulogic;
 
-    data_o     : out std_ulogic_vector;
-    valid_o    : out std_ulogic
+    data_o  : out std_ulogic_vector;
+    last_o  : out std_ulogic;
+    valid_o : out std_ulogic;
+    ready_i : in  std_ulogic
     );
 end entity;
 
 architecture beh of jtag_inbound_fifo is
 
-  signal s_clk, s_shift, s_tdi, s_reset, s_capture, s_update, s_selected: std_ulogic;
-
-  constant max_width : natural := nsl_math.arith.max(data_o'length, sync_i'length)
-  
-  type regs_t is record
-    reg: std_ulogic_vector(max_width-1 downto 0);
-    bit_counter: natural range 0 to data_o'length-1;
-    synced: boolean;
-  end record;
-
-  signal r, rin: regs_t;
+  signal jtag_din, jtag_dout : std_ulogic_vector(data_o'length downto 0);
+  signal jtag_update : std_ulogic;
+  signal jtag_reset_n, reset_n, jtag_clock : std_ulogic;
   
 begin
 
-  tap : nsl_hwdep.jtag.jtag_tap_register
+  reset_n <= jtag_reset_n and reset_n_i;
+  jtag_reset_n_o <= jtag_reset_n;
+  jtag_dout(jtag_dout'left downto 1) <= (others => '0');
+  
+  reg : nsl_hwdep.jtag.jtag_reg
     generic map(
+      width_c => jtag_din'length,
       id_c => id_c
       )
     port map(
-      tck_o      => s_clk,
-      reset_o    => s_reset,
-      selected_o => s_selected,
-      capture_o  => s_capture,
-      shift_o    => s_shift,
-      update_o   => s_update,
-      tdi_o      => s_tdi,
-      tdo_i      => r.reg(0)
+      clock_o => jtag_clock,
+      reset_n_o => jtag_reset_n,
+
+      data_o => jtag_din,
+      update_o => jtag_update,
+
+      data_i => jtag_dout,
+      capture_o => open
       );
 
-  reset_n_o <= not s_reset;
-  clock_o <= s_clk;
-  data_o <= rin.reg(data_o'length-1 downto 0);
-  valid_o <= '1' when r.bit_counter = 0 and s_shift = '1' and r.synced else '0';
-  
-  regs: process(s_reset, s_clk)
-  begin
-    if s_reset = '1' then
-      r.synced <= false;
-    elsif rising_edge(s_clk) then
-      r <= rin;
-    end if;
-  end process;
+  resync: nsl_clocking.interdomain.interdomain_fifo_slice
+    generic map(
+      data_width_c => jtag_din'length
+      )
+    port map(
+      reset_n_i => reset_n,
+      clock_i(0) => jtag_clock,
+      clock_i(1) => clock_i,
 
-  transition: process(r, s_capture, s_selected, s_shift, s_tdi, s_update,
-                      sync_i)
-  begin
-    rin <= r;
-    
-    if s_capture = '1' or s_update = '1' or s_selected = '0' then
-      rin.reg <= (others => '0');
-      rin.synced <= false;
-    elsif s_shift = '1' then
-      rin.reg <= s_tdi & r.reg(r.reg'left downto 1);
+      out_data_o(data_o'range) => data_o,
+      out_data_o(data_o'length) => last_o,
+      out_ready_i => ready_i,
+      out_valid_o => valid_o,
 
-      if not r.synced then
-        if r.reg = sync_i then
-          rin.synced <= true;
-          rin.bit_counter <= data_o'length - 2;
-        end if;
-      else
-        if r.bit_counter = 0 then
-          rin.bit_counter <= data_o'length - 1;
-        else
-          rin.bit_counter <= r.bit_counter - 1;
-        end if;
-      end if;
-    end if;
-  end process;
+      in_data_i => jtag_din,
+      in_valid_i => jtag_update,
+      in_ready_o => jtag_dout(0)
+      );
 
 end architecture;
