@@ -1,0 +1,41 @@
+#!/bin/bash
+
+#export IFS=$' \t\n\r'
+
+#declare -a nets
+#declare -A periods
+
+constraint="$1"
+edif="$2"
+
+# grep create_clock "${constraint}" | sed 's/^create_clock.*-period \([0-9\.]\+\) .*-name {\([^}]*\)}.*$/\2 \1/' | while read net period ; do
+#     nets+=($net)
+#     periods[$net]=$period
+# done
+
+has_tig_clr=
+has_tig_pre=
+has_tid_d=
+has_tig_q=
+has_static_tig_d=
+has_ff_cross=
+
+exit 0
+
+grep -q tig_reg_clr "$edif" && has_tig_clr=1
+grep -q tig_reg_pre "$edif" && has_tig_pre=1
+grep -q tig_reg_d "$edif" && has_tig_d=1
+grep -q tig_reg_q "$edif" && has_tig_q=1
+grep -q tig_static_reg_d "$edif" && has_static_tig_d=1
+grep -q cross_region_reg_d "$edif" && has_ff_cross=1
+
+test -n "$has_tig_clr"  && echo "set_false_path -to [get_pins {*tig_reg_clr*/CLR}]"
+test -n "$has_tig_pre"  && echo "set_false_path -to [get_pins {*tig_reg_pre*/PRE}]"
+test -n "$has_tig_d"    && echo "set_false_path -to [get_pins {*tig_reg_d*/Z}]"
+test -n "$has_tig_d"    && echo "set_false_path -to [get_pins {*tig_reg_d*/O}]"
+test -n "$has_tig_d"    && echo "set_false_path -to [get_pins {*tig_reg_d*/D}]"
+test -n "$has_tig_q"    && echo "set_false_path -from [get_pins {*tig_reg_q*/Z}]"
+test -n "$has_tig_q"    && echo "set_false_path -from [get_pins {*tig_reg_q*/O}]"
+test -n "$has_tig_q"    && echo "set_false_path -from [get_pins {*tig_reg_q*/Q}]"
+
+exit 0

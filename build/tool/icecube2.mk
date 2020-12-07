@@ -67,16 +67,16 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo "set_option -maxfan 10000" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -disable_io_insertion 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -pipe 1" >> $(build-dir)/synth.prj
-	$(SILENT)echo "set_option -retiming 0" >> $(build-dir)/synth.prj
+	$(SILENT)echo "set_option -retiming 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -update_models_cp 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -fixgatedclocks 2" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -fixgeneratedclocks 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -popfeed 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -constprop 1" >> $(build-dir)/synth.prj
-	$(SILENT)echo "set_option -createhierarchy 0" >> $(build-dir)/synth.prj
+	$(SILENT)echo "set_option -createhierarchy 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -symbolic_fsm_compiler 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -compiler_compatible 0" >> $(build-dir)/synth.prj
-	$(SILENT)echo "set_option -resource_sharing 1" >> $(build-dir)/synth.prj
+	$(SILENT)echo "set_option -resource_sharing 0" >> $(build-dir)/synth.prj
 	$(SILENT)echo "set_option -write_apr_constraint 1" >> $(build-dir)/synth.prj
 	$(SILENT)echo "project -result_format edif" >> $(build-dir)/synth.prj
 	$(SILENT)echo "project -result_file synth/$(notdir $@)" >> $(build-dir)/synth.prj
@@ -86,6 +86,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/synpwrap/synpwrap \
 		-prj $(build-dir)/synth.prj || (cat $(build-dir)/synth.log ; exit 1)
+	$(SILENT)cat $(build-dir)/synth.log
 	$(SILENT)mkdir -p $(build-dir)/synth/oadb-$(top-entity)
 	cat $(filter %.pcf,$(sources)) < /dev/null > $(build-dir)/synth/phys_constraints.pcf
 	$(SILENT)$(ICECUBE2_PREPARE) \
@@ -104,7 +105,7 @@ $(build-dir)/synth/$(target).sdc: $(sources) $(MAKEFILE_LIST)
 		cat $(build-dir)/Temp/sbt_temp.sdc >> $@ ; \
 	fi ; \
 	fi
-	#$(SILENT)cat $(filter %.sdc,$(sources)) /dev/null >> $@
+	-bash $(BUILD_ROOT)/support/synplify_sdc_gen $(build-dir)/Temp/sbt_temp.sdc $(build-dir)/synth/$(target).edf >> $@
 
 clean-dirs += $(build-dir)
 
