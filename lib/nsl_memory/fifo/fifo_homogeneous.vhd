@@ -248,14 +248,14 @@ begin
   generate
     in_counter: process(clock_i(0))
     begin
-      if rising_edge(clock_i(0)) then
+      if not clock_i(0)'stable and clock_i(0) = '1' then
         in_free_o <= to_integer(to_01(s_left.free));
       end if;
     end process;
 
     out_counter: process(clock_i(clock_count_c-1))
     begin
-      if rising_edge(clock_i(clock_count_c-1)) then
+      if not clock_i(clock_count_c-1)'stable and clock_i(clock_count_c-1) = '1' then
         out_available_min_o <= to_integer(to_01(s_right.used));
         out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
       end if;
