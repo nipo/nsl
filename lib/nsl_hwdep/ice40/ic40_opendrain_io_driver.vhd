@@ -23,11 +23,11 @@ begin
     port map(
       packagepin => io_io,
       dout0 => v_i.drain_n,
-      dout1 => open,
-      clockenable => open,
+      dout1 => v_i.drain_n,
+      clockenable => '0',
       latchinputvalue => '0',
-      inputclk => open,
-      outputclk => open,
+      inputclk => '0',
+      outputclk => '0',
       din1 => open,
       din0 => open
       );
