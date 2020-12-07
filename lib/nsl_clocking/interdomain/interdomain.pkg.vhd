@@ -65,4 +65,23 @@ package interdomain is
       );
   end component;
 
+  -- This is a one word data register with two clocks
+  component interdomain_fifo_slice
+    generic(
+      data_width_c   : integer
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic_vector(0 to 1);
+
+      out_data_o  : out std_ulogic_vector(data_width_c-1 downto 0);
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+
+      in_data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic
+      );
+  end component;
+
 end package interdomain;

@@ -1,4 +1,5 @@
 vhdl-sources += interdomain.pkg.vhd
+vhdl-sources += interdomain_fifo_slice.vhd
 vhdl-sources += interdomain_reg.vhd
 vhdl-sources += interdomain_counter.vhd
 vhdl-sources += interdomain_static_reg.vhd
