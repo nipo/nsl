@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color;
+library nsl_color, nsl_math, nsl_signal_generator;
 
 entity rgb24_pwm_driver is
   generic (
@@ -21,15 +21,17 @@ end entity;
 architecture beh of rgb24_pwm_driver is
 
   signal a_r, a_g, a_b, i_r, i_g, i_b : unsigned(8 downto 0);
+  constant mag : positive := nsl_math.arith.log2(clock_prescaler_c);
+  constant prescaler_c : unsigned(mag-1 downto 0) := to_unsigned(clock_prescaler_c, mag);
 
 begin
 
   a_r <= "0" & color_i.r;
   a_g <= "0" & color_i.g;
   a_b <= "0" & color_i.b;
-  i_r <= unsigned("100000000") - a_r;
-  i_g <= unsigned("100000000") - a_g;
-  i_b <= unsigned("100000000") - a_b;
+  i_r <= to_unsigned(256 - to_integer(a_r), 9);
+  i_g <= to_unsigned(256 - to_integer(a_g), 9);
+  i_b <= to_unsigned(256 - to_integer(a_b), 9);
 
   r_pwm: nsl_signal_generator.pwm.pwm_generator
     port map(
@@ -43,6 +45,7 @@ begin
       active_duration_i => a_r,
       inactive_duration_i => i_r,
 
+      sync_o => open,
       active_value_i => active_value_c
       );
 
@@ -58,6 +61,7 @@ begin
       active_duration_i => a_g,
       inactive_duration_i => i_g,
 
+      sync_o => open,
       active_value_i => active_value_c
       );
 
@@ -73,7 +77,8 @@ begin
       active_duration_i => a_b,
       inactive_duration_i => i_b,
 
+      sync_o => open,
       active_value_i => active_value_c
       );
 
-end architecture;
+end architecture beh;

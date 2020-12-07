@@ -20,4 +20,4 @@ package rgb_led is
       );
   end component;
 
-end package activity;
+end package rgb_led;
