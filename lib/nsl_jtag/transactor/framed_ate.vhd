@@ -37,6 +37,7 @@ architecture rtl of framed_ate is
     ST_RSP_RESET,
     ST_RSP_IDLE,
     ST_RSP_ROUTE,
+    ST_RSP_WAIT_CMD_IDLE,
     ST_RSP_PUT,
     ST_RSP_DATA_BLACKHOLE,
     ST_RSP_DATA_GET,
@@ -228,7 +229,14 @@ begin
           else
             rin.rsp_st <= ST_RSP_DATA_BLACKHOLE;
           end if;
+        elsif std_match(r.rsp_data, JTAG_CMD_DIVISOR) then
+          rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;
         else
+          rin.rsp_st <= ST_RSP_PUT;
+        end if;
+
+      when ST_RSP_WAIT_CMD_IDLE =>
+        if r.cmd_st = ST_CMD_IDLE then
           rin.rsp_st <= ST_RSP_PUT;
         end if;
 
@@ -297,7 +305,7 @@ begin
     end case;
 
     case r.rsp_st is
-      when ST_RSP_RESET | ST_RSP_ROUTE | ST_RSP_IDLE =>
+      when ST_RSP_RESET | ST_RSP_ROUTE | ST_RSP_IDLE | ST_RSP_WAIT_CMD_IDLE =>
         null;
 
       when ST_RSP_PUT =>
