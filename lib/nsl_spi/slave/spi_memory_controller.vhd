@@ -38,7 +38,8 @@ architecture rtl of spi_memory_controller is
     addr_bytes_c_left : natural range 0 to addr_bytes_c-1;
     addr : unsigned(mem_addr_o'range);
     wdata : std_ulogic_vector(7 downto 0);
-    writing, write_pending, read_pending: boolean;
+    writing: boolean;
+    write_pending, read_pending: std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -55,19 +56,19 @@ begin
     elsif rising_edge(spi_i.sck) then
       r <= rin;
     end if;
-
-    if mem_w_done_i = '1' or spi_i.cs_n = '1' then
-      r.write_pending <= false;
-    end if;
-
-    if mem_r_done_i = '1' or spi_i.cs_n = '1' then
-      r.read_pending <= false;
-    end if;
   end process;
 
-  transition: process(r, rx_data, rx_strobe, tx_strobe)
+  transition: process(r, rx_data, rx_strobe, tx_strobe, mem_w_done_i, mem_r_done_i)
   begin
     rin <= r;
+
+    if mem_w_done_i = '1' then
+      rin.write_pending <= '0';
+    end if;
+
+    if mem_r_done_i = '1' then
+      rin.read_pending <= '0';
+    end if;
 
     case r.state is
       when ST_CMD =>
@@ -102,23 +103,23 @@ begin
 
         if rx_strobe = '1' then
           if r.writing then
-            rin.write_pending <= true;
+            rin.write_pending <= '1';
             rin.wdata <= rx_data;
           else
             -- Set read pending here, it relaxes the timing for downstream
             -- memory implementation.
-            rin.read_pending <= true;
+            rin.read_pending <= '1';
           end if;
         end if;
     end case;
   end process;
 
   mem_addr_o <= r.addr;
-  mem_r_strobe_o <= '1' when r.read_pending else '0';
-  mem_w_strobe_o <= '1' when r.write_pending else '0';
-  mem_w_data_o <= r.wdata when r.write_pending else (others => '-');
+  mem_r_strobe_o <= r.read_pending;
+  mem_w_strobe_o <= r.write_pending;
+  mem_w_data_o <= r.wdata;
   selected_o <= not spi_i.cs_n;
-  tx_data <= mem_r_data_i when r.state = ST_DATA else (others => '-');
+  tx_data <= mem_r_data_i when r.state = ST_DATA else x"66";
 
   shreg: nsl_spi.shift_register.spi_shift_register
     generic map(
