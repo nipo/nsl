@@ -42,7 +42,8 @@ package slave is
   -- A SPI slave that allows to talk to a pair of framed pipes.
   component spi_framed_gateway
     generic(
-      msb_first_c   : boolean := true
+      msb_first_c   : boolean := true;
+      max_txn_length_c : positive := 128
       );
     port(
       clock_i   : in std_ulogic;

@@ -31,7 +31,8 @@ use nsl_spi.slave.all;
 
 entity spi_framed_gateway is
   generic(
-    msb_first_c   : boolean := true
+    msb_first_c   : boolean := true;
+    max_txn_length_c : positive := 128
     );
   port(
     clock_i       : in  std_ulogic;
@@ -79,6 +80,9 @@ architecture rtl of spi_framed_gateway is
 begin
 
   bridge_inbound: nsl_bnoc.sized.sized_from_framed
+    generic map(
+      max_txn_length => max_txn_length_c
+      )
     port map(
       p_resetn => reset_n_i,
       p_clk => clock_i,
