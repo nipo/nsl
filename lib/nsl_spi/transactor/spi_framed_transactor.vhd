@@ -7,7 +7,7 @@ use nsl_spi.transactor.all;
 
 entity spi_framed_transactor is
   generic(
-    slave_count_c : natural range 1 to 31 := 1
+    slave_count_c : natural range 1 to 15 := 1
     );
   port(
     clock_i    : in std_ulogic;
@@ -33,8 +33,8 @@ architecture rtl of spi_framed_transactor is
     ST_ROUTE,
     ST_DATA_GET,
     ST_INTERFRAME_WAIT,
-    ST_SHIFT_SCK_L,
-    ST_SHIFT_SCK_H,
+    ST_SHIFT_SCK_IDLE,
+    ST_SHIFT_SCK_ASSERTED,
     ST_DATA_PUT,
     ST_RSP,
     ST_RSP_OUT_ONLY
@@ -45,12 +45,13 @@ architecture rtl of spi_framed_transactor is
     cmd        : std_ulogic_vector(7 downto 0);
     shreg      : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
-    selected   : natural range 0 to 31;
+    selected   : natural range 0 to 15;
     bit_count  : natural range 0 to 7;
     last       : std_ulogic;
     div        : unsigned(4 downto 0);
     cnt        : unsigned(4 downto 0);
     mosi       : std_ulogic;
+    cpol       : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -81,9 +82,10 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
-        rin.selected <= 31;
+        rin.selected <= 15;
         rin.div <= "10000";
         rin.cnt <= (others => '0');
+        rin.cpol <= '0';
 
       when ST_IDLE =>
         if cmd_i.valid = '1' then
@@ -107,7 +109,8 @@ begin
             rin.div <= unsigned(r.cmd(4 downto 0));
 
           elsif std_match(r.cmd, SPI_CMD_SELECT) then
-            rin.selected <= to_integer(unsigned(r.cmd(4 downto 0)));
+            rin.selected <= to_integer(unsigned(r.cmd(3 downto 0)));
+            rin.cpol <= r.cmd(4);
             rin.cnt <= r.div;
             rin.state <= ST_INTERFRAME_WAIT;
 
@@ -116,9 +119,8 @@ begin
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
-            rin.state <= ST_SHIFT_SCK_L;
+            rin.state <= ST_SHIFT_SCK_IDLE;
             rin.shreg <= (others => '1');
-            rin.mosi <= '1';
             rin.bit_count <= 7;
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
           end if;
@@ -132,9 +134,9 @@ begin
       when ST_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.shreg <= cmd_i.data;
-          rin.mosi <= cmd_i.data(7);
+          rin.cnt <= r.div;
           rin.last <= cmd_i.last;
-          rin.state <= ST_SHIFT_SCK_L;
+          rin.state <= ST_SHIFT_SCK_IDLE;
           rin.bit_count <= 7;
         end if;
         
@@ -144,21 +146,22 @@ begin
           rin.state <= ST_IDLE;
         end if;
         
-      when ST_SHIFT_SCK_L =>
+      when ST_SHIFT_SCK_IDLE =>
+        rin.mosi <= r.shreg(7);
+
         if ready then
           rin.cnt <= r.div;
-          rin.state <= ST_SHIFT_SCK_H;
+          rin.state <= ST_SHIFT_SCK_ASSERTED;
           rin.shreg <= r.shreg(6 downto 0) & miso_i;
         end if;
 
-      when ST_SHIFT_SCK_H =>
+      when ST_SHIFT_SCK_ASSERTED =>
         if ready then
           rin.cnt <= r.div;
-          rin.mosi <= r.shreg(7);
-          rin.bit_count <= (r.bit_count - 1) mod 8;
 
+          rin.bit_count <= (r.bit_count - 1) mod 8;
           if r.bit_count /= 0 then
-            rin.state <= ST_SHIFT_SCK_L;
+            rin.state <= ST_SHIFT_SCK_IDLE;
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN)
             or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_PUT;
@@ -180,9 +183,8 @@ begin
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
             rin.word_count <= r.word_count - 1;
             rin.shreg <= (others => '1');
-            rin.mosi <= '1';
             rin.bit_count <= 7;
-            rin.state <= ST_SHIFT_SCK_L;
+            rin.state <= ST_SHIFT_SCK_IDLE;
           else -- SPI_CMD_SHIFT_IO
             rin.word_count <= r.word_count - 1;
             rin.state <= ST_DATA_GET;
@@ -196,7 +198,7 @@ begin
 
   moore: process(r)
   begin
-    sck_o <= '0';
+    sck_o <= r.cpol;
     cs_n_o <= (others => '1');
     cmd_o.ready <= '0';
     rsp_o.valid <= '0';
@@ -207,11 +209,11 @@ begin
     end if;
     
     case r.state is
-      when ST_RESET | ST_INTERFRAME_WAIT | ST_SHIFT_SCK_L | ST_ROUTE =>
+      when ST_RESET | ST_INTERFRAME_WAIT | ST_SHIFT_SCK_IDLE | ST_ROUTE =>
         null;
 
-      when ST_SHIFT_SCK_H =>
-        sck_o <= '1';
+      when ST_SHIFT_SCK_ASSERTED =>
+        sck_o <= not r.cpol;
 
       when ST_IDLE | ST_DATA_GET =>
         cmd_o.ready <= '1';

@@ -6,16 +6,18 @@ library nsl_bnoc, nsl_spi;
 
 package transactor is
 
-  constant SPI_CMD_SHIFT_OUT : nsl_bnoc.framed.framed_data_t := "10------";
-  constant SPI_CMD_SHIFT_IN  : nsl_bnoc.framed.framed_data_t := "01------";
-  constant SPI_CMD_SHIFT_IO  : nsl_bnoc.framed.framed_data_t := "11------";
-  constant SPI_CMD_SELECT    : nsl_bnoc.framed.framed_data_t := "000-----";
-  constant SPI_CMD_UNSELECT  : nsl_bnoc.framed.framed_data_t := "00011111";
-  constant SPI_CMD_DIV       : nsl_bnoc.framed.framed_data_t := "001-----";
+  constant SPI_CMD_SHIFT_OUT    : nsl_bnoc.framed.framed_data_t := "10------";
+  constant SPI_CMD_SHIFT_IN     : nsl_bnoc.framed.framed_data_t := "01------";
+  constant SPI_CMD_SHIFT_IO     : nsl_bnoc.framed.framed_data_t := "11------";
+  constant SPI_CMD_SELECT       : nsl_bnoc.framed.framed_data_t := "000-----";
+  constant SPI_CMD_SELECT_CPOL0 : nsl_bnoc.framed.framed_data_t := "---0----";
+  constant SPI_CMD_SELECT_CPOL1 : nsl_bnoc.framed.framed_data_t := "---1----";
+  constant SPI_CMD_UNSELECT     : nsl_bnoc.framed.framed_data_t := "000-1111";
+  constant SPI_CMD_DIV          : nsl_bnoc.framed.framed_data_t := "001-----";
 
   component spi_framed_transactor
     generic(
-      slave_count_c : natural range 1 to 31 := 1
+      slave_count_c : natural range 1 to 15 := 1
       );
     port(
       clock_i   : in std_ulogic;
