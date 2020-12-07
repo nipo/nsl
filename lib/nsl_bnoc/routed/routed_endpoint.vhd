@@ -29,6 +29,8 @@ architecture rtl of routed_endpoint is
     ST_PUT_HEADER,
     ST_GET_TAG,
     ST_PUT_TAG,
+    ST_PUT_TAG_LAST,
+    ST_FORWARD_BOTH,
     ST_FORWARD_CMD,
     ST_FORWARD_RSP
     );
@@ -61,8 +63,11 @@ begin
 
       when ST_GET_HEADER =>
         if p_cmd_in_val.valid = '1' then
-          rin.cmd <= p_cmd_in_val.data(3 downto 0) & p_cmd_in_val.data(7 downto 4);
-          rin.state <= ST_PUT_HEADER;
+          -- ignore short frames
+          if p_cmd_in_val.last = '0' then
+            rin.cmd <= p_cmd_in_val.data(3 downto 0) & p_cmd_in_val.data(7 downto 4);
+            rin.state <= ST_PUT_HEADER;
+          end if;
         end if;
 
       when ST_PUT_HEADER =>
@@ -73,11 +78,31 @@ begin
       when ST_GET_TAG =>
         if p_cmd_in_val.valid = '1' then
           rin.cmd <= p_cmd_in_val.data;
-          rin.state <= ST_PUT_TAG;
+          if p_cmd_in_val.last = '1' then
+            -- Special treatment for empty frames
+            rin.state <= ST_PUT_TAG_LAST;
+          else
+            rin.state <= ST_PUT_TAG;
+          end if;
         end if;
 
       when ST_PUT_TAG =>
         if p_rsp_out_ack.ready = '1' then
+          rin.state <= ST_FORWARD_BOTH;
+        end if;
+
+      when ST_PUT_TAG_LAST =>
+        if p_rsp_out_ack.ready = '1' then
+          rin.state <= ST_GET_HEADER;
+        end if;
+
+      when ST_FORWARD_BOTH =>
+        if p_cmd_in_val.valid = '1' and p_cmd_out_ack.ready = '1' and p_cmd_in_val.last = '1'
+          and p_rsp_in_val.valid = '1' and p_rsp_out_ack.ready = '1' and p_rsp_in_val.last = '1' then
+          rin.state <= ST_GET_HEADER;
+        elsif p_cmd_in_val.valid = '1' and p_cmd_out_ack.ready = '1' and p_cmd_in_val.last = '1' then
+          rin.state <= ST_FORWARD_RSP;
+        elsif p_rsp_in_val.valid = '1' and p_rsp_out_ack.ready = '1' and p_rsp_in_val.last = '1' then
           rin.state <= ST_FORWARD_CMD;
         end if;
 
@@ -93,7 +118,7 @@ begin
     end case;
   end process;
 
-  mux: process(r, p_cmd_in_val, p_cmd_out_ack, p_rsp_in_val, p_rsp_out_ack)
+  mux: process(p_cmd_in_val, p_cmd_out_ack, p_rsp_in_val, p_rsp_out_ack, r)
   begin
     p_cmd_out_val.valid <= '0';
     p_cmd_out_val.data <= (others => '-');
@@ -116,12 +141,21 @@ begin
         p_rsp_out_val.valid <= '1';
         p_rsp_out_val.data <= r.cmd;
         p_rsp_out_val.last <= '0';
+
+      when ST_PUT_TAG_LAST =>
+        p_rsp_out_val.valid <= '1';
+        p_rsp_out_val.data <= r.cmd;
+        p_rsp_out_val.last <= '1';
         
-      when ST_FORWARD_CMD =>
+      when ST_FORWARD_BOTH =>
         p_cmd_out_val <= p_cmd_in_val;
         p_cmd_in_ack <= p_cmd_out_ack;
         p_rsp_out_val <= p_rsp_in_val;
         p_rsp_in_ack <= p_rsp_out_ack;
+        
+      when ST_FORWARD_CMD =>
+        p_cmd_out_val <= p_cmd_in_val;
+        p_cmd_in_ack <= p_cmd_out_ack;
 
       when ST_FORWARD_RSP =>
         p_rsp_out_val <= p_rsp_in_val;

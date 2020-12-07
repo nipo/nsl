@@ -62,7 +62,7 @@ begin
         rin.selected <= 0;
 
       when STATE_IDLE =>
-        if p_in_val.valid = '1' then
+        if p_in_val.valid = '1' and p_in_val.last /= '1' then
           rin.state <= STATE_FLUSH_HEADER;
           rin.header <= p_in_val.data;
           rin.selected <= routing_table(to_integer(unsigned(p_in_val.data(3 downto 0))));
