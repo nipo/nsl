@@ -14,10 +14,10 @@ entity routed_endpoint is
     p_cmd_out_val   : out nsl_bnoc.framed.framed_req;
     p_cmd_out_ack   : in nsl_bnoc.framed.framed_ack;
 
-    p_rsp_in_val   : in nsl_bnoc.routed.routed_req;
-    p_rsp_in_ack   : out nsl_bnoc.routed.routed_ack;
-    p_rsp_out_val   : out nsl_bnoc.framed.framed_req;
-    p_rsp_out_ack   : in nsl_bnoc.framed.framed_ack
+    p_rsp_in_val   : in nsl_bnoc.framed.framed_req;
+    p_rsp_in_ack   : out nsl_bnoc.framed.framed_ack;
+    p_rsp_out_val   : out nsl_bnoc.routed.routed_req;
+    p_rsp_out_ack   : in nsl_bnoc.routed.routed_ack
     );
 end entity;
 

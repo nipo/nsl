@@ -88,10 +88,10 @@ package routed is
       p_cmd_out_val   : out nsl_bnoc.framed.framed_req;
       p_cmd_out_ack   : in nsl_bnoc.framed.framed_ack;
 
-      p_rsp_in_val   : in routed_req;
-      p_rsp_in_ack   : out routed_ack;
-      p_rsp_out_val   : out nsl_bnoc.framed.framed_req;
-      p_rsp_out_ack   : in nsl_bnoc.framed.framed_ack
+      p_rsp_in_val   : in nsl_bnoc.framed.framed_req;
+      p_rsp_in_ack   : out nsl_bnoc.framed.framed_ack;
+      p_rsp_out_val   : out routed_req;
+      p_rsp_out_ack   : in routed_ack
       );
   end component;
 
