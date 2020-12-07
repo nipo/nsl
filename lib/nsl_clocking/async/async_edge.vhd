@@ -18,13 +18,14 @@ end async_edge;
 architecture rtl of async_edge is
 
   attribute keep : string;
-
+  attribute syn_preserve : boolean;
 begin
 
   async_pre: if async_reset_c and target_value_c = '0'
   generate
     signal tig_reg_pre : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_pre : signal is "TRUE";
+    attribute syn_preserve of tig_reg_pre : signal is true;
   begin
     forward: process (clock_i, data_i)
     begin
@@ -42,6 +43,7 @@ begin
   generate
     signal tig_reg_clr : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_clr : signal is "TRUE";
+    attribute syn_preserve of tig_reg_clr : signal is true;
   begin
     forward: process (clock_i, data_i)
     begin
@@ -59,6 +61,7 @@ begin
   generate
     signal tig_reg_d : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_d : signal is "TRUE";
+    attribute syn_preserve of tig_reg_d : signal is true;
   begin
     forward: process (clock_i)
       constant opposed_value_c : std_ulogic := not target_value_c;

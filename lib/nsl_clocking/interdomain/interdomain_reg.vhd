@@ -21,7 +21,7 @@ architecture rtl of interdomain_reg is
   type word_vector_t is array (natural range <>) of word_t;
   attribute keep : string;
   attribute async_reg : string;
-  attribute syn_keep : boolean;
+  attribute syn_preserve : boolean;
   attribute nomerge : string;
 
   signal stable_s : natural range 0 to stable_count_c;
@@ -29,8 +29,8 @@ architecture rtl of interdomain_reg is
   signal metastable_reg_d : word_vector_t (0 to cycle_count_c-2);
   attribute keep of cross_region_reg_d, metastable_reg_d : signal is "TRUE";
   attribute async_reg of cross_region_reg_d, metastable_reg_d : signal is "TRUE";
-  attribute syn_keep of cross_region_reg_d, metastable_reg_d : signal is true;
-  attribute nomerge of cross_region_reg_d, metastable_reg_d : signal is "";
+  attribute syn_preserve of cross_region_reg_d, metastable_reg_d : signal is true;
+  attribute nomerge of cross_region_reg_d, metastable_reg_d : signal is "TRUE";
 
 begin
 

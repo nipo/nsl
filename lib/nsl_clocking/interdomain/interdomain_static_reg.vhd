@@ -18,12 +18,12 @@ architecture rtl of interdomain_static_reg is
   subtype word_t is std_ulogic_vector(data_width_c-1 downto 0);
   type word_vector_t is array (natural range <>) of word_t;
   attribute keep     : string;
-  attribute syn_keep : boolean;
+  attribute syn_preserve : boolean;
   attribute nomerge  : string;
 
   signal tig_static_reg_d                : word_t;
   attribute keep of tig_static_reg_d     : signal is "TRUE";
-  attribute syn_keep of tig_static_reg_d : signal is true;
+  attribute syn_preserve of tig_static_reg_d : signal is true;
   attribute nomerge of tig_static_reg_d  : signal is "";
 
 begin
