@@ -19,7 +19,7 @@ begin
     generic map(
       ddr_alignment => "C0",
       init => '0',
-      srtype => "SYNC")
+      srtype => "ASYNC")
    port map (
       q => dd_o,
       c0 => clock_i.p,
