@@ -9,6 +9,8 @@ package io is
     en : std_ulogic;
   end record;
 
+  type tristated_vector is array (natural range <>) of tristated;
+
   type directed is record
     v : std_ulogic;
     output : std_ulogic;
@@ -28,6 +30,17 @@ package io is
       v_i : in tristated;
       v_o : out std_ulogic;
       io_io : inout std_logic
+      );
+    end component;
+  
+  component tristated_vector_io_driver is
+    generic(
+      width_c : natural
+      );
+    port(
+      v_i : in tristated_vector(width_c-1 downto 0);
+      v_o : out std_ulogic_vector(width_c-1 downto 0);
+      io_io : inout std_logic_vector(width_c-1 downto 0)
       );
     end component;
 
