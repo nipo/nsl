@@ -36,7 +36,7 @@ _VIVADO_CONSTRAINT_TYPE_tcl = TCL
 
 define _vivado-add-constraint
 	$(call file-append,$1,set f [add_files -norecurse -fileset $$_constr_fileset_name [file normalize {$2}]])
-	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))"} $$f)
+	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "synthesis implementation simulation"} $$f)
 
 endef
 
@@ -53,7 +53,6 @@ define vivado-tcl-sources-append
 	$(foreach s,$(sources),$(call _vivado-add-$($s-language)-before,$1,$s))
 	$(foreach s,$(sources),$(call _vivado-add-$($s-language),$1,$s))
 	$(call _vivado-add-constraint,$1,$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl)
-	$(call file-append,$1,set_property -dict {"used_in" "implementation simulation" "used_in_synthesis" "0"} $$f)
 	$(call file-append,$1,set_property "top" "$(top-entity)" $$_sources_fileset)
 
 endef
