@@ -14,6 +14,8 @@ entity spi_fifo_transport_master is
     clock_i     : in  std_ulogic;
     reset_n_i   : in  std_ulogic;
 
+    enable_i    : in  std_ulogic := '1';
+
     spi_o       : out nsl_spi.spi.spi_slave_i;
     spi_i       : in  nsl_spi.spi.spi_slave_o;
     irq_n_i     : in  std_ulogic;
@@ -68,7 +70,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, spi_i, irq_n_i, tx_data_i, tx_valid_i, rx_ready_i)
+  transition: process(r, spi_i, irq_n_i, tx_data_i, tx_valid_i, rx_ready_i, enable_i)
     variable peer_ready, peer_valid : std_ulogic;
     variable peer_data : std_ulogic_vector(width_c-1 downto 0);
   begin
@@ -86,15 +88,17 @@ begin
         rin.pad_count <= 3;
 
       when ST_IDLE =>
-        if r.div /= 0 then
-          rin.div <= r.div - 1;
-        elsif irq_n_i = '0' or r.txd_valid = '1' then
-          rin.state <= ST_SHIFT_START;
-          rin.div <= divisor_c - 1;
-        elsif r.pad_count /= 0 then
-          rin.pad_count <= r.pad_count - 1;
-          rin.state <= ST_SHIFT_START;
-          rin.div <= divisor_c - 1;
+        if enable_i = '1' then
+          if r.div /= 0 then
+            rin.div <= r.div - 1;
+          elsif irq_n_i = '0' or r.txd_valid = '1' then
+            rin.state <= ST_SHIFT_START;
+            rin.div <= divisor_c - 1;
+          elsif r.pad_count /= 0 then
+            rin.pad_count <= r.pad_count - 1;
+            rin.state <= ST_SHIFT_START;
+            rin.div <= divisor_c - 1;
+          end if;
         end if;
 
       when ST_SHIFT_START =>

@@ -16,6 +16,8 @@ package fifo_transport is
       clock_i     : in  std_ulogic;
       reset_n_i   : in  std_ulogic;
 
+      enable_i    : in  std_ulogic := '1';
+
       spi_o       : out nsl_spi.spi.spi_slave_i;
       spi_i       : in  nsl_spi.spi.spi_slave_o;
       irq_n_i     : in  std_ulogic;
