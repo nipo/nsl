@@ -61,7 +61,7 @@ begin
     elsif r.debouncer /= 0 then
       rin.debouncer <= r.debouncer - 1;
     else
-      rin.debouncer <= debounce_count_c;
+      rin.debouncer <= debounce_count_c - 1;
       rin.cur <= synced;
     end if;
 
