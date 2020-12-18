@@ -11,16 +11,24 @@ entity clock_internal is
 end entity;
 
 architecture sp6 of clock_internal is
+
+  signal int_clk : std_ulogic;
   
 begin
 
   inst : startup_spartan6
    port map (
-     cfgmclk => clock_o,
+     cfgmclk => int_clk,
      clk => '0',
      gsr => '0',
      gts => '0',
      keyclearb => '0'
    );
+
+  buf_clock: unisim.vcomponents.bufg
+    port map(
+      i => int_clk,
+      o => clock_o
+      );
 
 end architecture;
