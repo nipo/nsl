@@ -23,7 +23,7 @@ end entity;
 
 architecture spartan6 of jtag_tap_register is
 
-  signal reset, capture, selected, update, shift : std_ulogic;
+  signal tck, tdo, reset, capture, selected, update, shift : std_ulogic;
   
 begin
 
@@ -40,12 +40,19 @@ begin
     port map(
       capture => capture,
       reset   => reset,
-      tck     => tck_o,
+      tck     => tck,
       sel     => selected,
       shift   => shift,
       tdi     => tdi_o,
       update  => update,
-      tdo     => tdo_i
+      tdo     => tdo
       );
+
+  tck_buf: bufg
+    port map(
+      i => tck,
+      o => tck_o
+      );
+  tdo <= tdo_i;
 
 end architecture;
