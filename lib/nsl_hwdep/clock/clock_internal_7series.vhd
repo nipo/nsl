@@ -20,11 +20,11 @@ begin
       clk => '0',
       gsr => '0',
       gts => '0',
-      keyclearb => '0',
+      keyclearb => '1',
       pack => '0',
       usrcclko => '0',
       USRCCLKTS => '0',
-      USRDONEO => '0',
+      USRDONEO => '1',
       USRDONETS => '0'
       );
 
