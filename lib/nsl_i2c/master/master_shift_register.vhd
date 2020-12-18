@@ -79,7 +79,7 @@ begin
     end if;
   end process;
 
-  transition : process (i2c_i, r,
+  transition : process (i2c_i, r, start_i,
                         enable_i, send_mode_i,
                         send_valid_i, send_data_i,
                         recv_ready_i)

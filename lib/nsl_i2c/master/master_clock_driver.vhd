@@ -91,7 +91,7 @@ begin
     end if;
   end process;
 
-  transition : process (i2c_i, r, valid_i, cmd_i,
+  transition : process (i2c_i, r, valid_i, cmd_i, abort_i,
                         half_cycle_clock_count_i,
                         idle_timeout_clock_count_i)
   begin

@@ -32,7 +32,9 @@ begin
       clock_i => clock_i,
       reset_n_i => reset_n_i,
       data_i => raw_i.scl,
-      data_o => scl_filtered
+      data_o => scl_filtered,
+      rising_o => open,
+      falling_o => open
       );
 
   sda: nsl_clocking.async.async_input
