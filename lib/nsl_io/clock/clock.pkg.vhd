@@ -20,4 +20,11 @@ package clock is
       );
   end component;
 
+  component clock_output_se_to_diff is
+    port(
+      clock_i  : in std_ulogic;
+      pin_o : out nsl_io.diff.diff_pair
+      );
+  end component;
+
 end package clock;
