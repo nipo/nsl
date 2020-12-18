@@ -73,7 +73,7 @@ begin
     end if;
   end process;
 
-  transition : process (r, cmd_i, rsp_i, s_busy, s_done, s_rdata)
+  transition : process (r, cmd_i, rsp_i, s_busy, s_done, s_rdata, s_ready)
   begin
     rin <= r;
 
