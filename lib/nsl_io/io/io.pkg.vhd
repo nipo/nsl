@@ -16,6 +16,8 @@ package io is
     output : std_ulogic;
   end record;
 
+  type directed_vector is array (natural range <>) of directed;
+  
   type opendrain is record
     -- Whether not to drain the wire.
     -- Value of drain_n matches expected wire value.
