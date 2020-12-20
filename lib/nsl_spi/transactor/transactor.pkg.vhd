@@ -12,12 +12,18 @@ package transactor is
   constant SPI_CMD_SELECT       : nsl_bnoc.framed.framed_data_t := "000-----";
   constant SPI_CMD_SELECT_CPOL0 : nsl_bnoc.framed.framed_data_t := "---0----";
   constant SPI_CMD_SELECT_CPOL1 : nsl_bnoc.framed.framed_data_t := "---1----";
-  constant SPI_CMD_UNSELECT     : nsl_bnoc.framed.framed_data_t := "000-1111";
+  constant SPI_CMD_SELECT_CPHA0 : nsl_bnoc.framed.framed_data_t := "----0---";
+  constant SPI_CMD_SELECT_CPHA1 : nsl_bnoc.framed.framed_data_t := "----1---";
+  constant SPI_CMD_SELECT_MODE0 : nsl_bnoc.framed.framed_data_t := "---00---";
+  constant SPI_CMD_SELECT_MODE1 : nsl_bnoc.framed.framed_data_t := "---01---";
+  constant SPI_CMD_SELECT_MODE2 : nsl_bnoc.framed.framed_data_t := "---10---";
+  constant SPI_CMD_SELECT_MODE3 : nsl_bnoc.framed.framed_data_t := "---11---";
+  constant SPI_CMD_UNSELECT     : nsl_bnoc.framed.framed_data_t := "000--111";
   constant SPI_CMD_DIV          : nsl_bnoc.framed.framed_data_t := "001-----";
 
   component spi_framed_transactor
     generic(
-      slave_count_c : natural range 1 to 15 := 1
+      slave_count_c : natural range 1 to 7 := 1
       );
     port(
       clock_i   : in std_ulogic;
