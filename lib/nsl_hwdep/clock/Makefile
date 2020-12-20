@@ -1,6 +1,7 @@
 vhdl-sources += clock.pkg.vhd
 
 ifneq ($(filter xc%,$(target_part)),)
+vhdl-sources += clock_buffer_xilinx.vhd
 ifneq ($(filter xc6slx%,$(target_part)),)
 vhdl-sources += clock_internal_spartan6.vhd
 deps += unisim.vcomponents
