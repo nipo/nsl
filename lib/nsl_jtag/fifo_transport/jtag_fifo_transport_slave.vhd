@@ -226,6 +226,8 @@ begin
     if jtag_word_out_ready = '1' then
       rin.sent_tx_valid <= r.txd_used;
       rin.sent_rx_ready <= not r.rxd_used;
+      rin.peer_ready <= '0';
+      rin.peer_valid <= '0';
     end if;
 
     if jtag_word_in_valid = '1' then
