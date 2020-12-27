@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+from nsl.framed import SplitFramed
+from nsl.dacx0508 import MasterCmd, MasterRsp
+
+import sys
+import random
+
+if __name__ == "__main__":
+    clock_period = 10e-9
+
+    n = sys.argv[1]
+
+    f = SplitFramed(n)
+    if n.startswith("dac_res"):
+        t = MasterRsp(f)
+    else:
+        t = MasterCmd(f)
+
+    t.current_set(0, 0)
+    t.flush(end_delay = 100)
+
+    rise_time = 1e-3
+    rise_cycles = rise_time / clock_period
+
+    t.current_set(0, 0)
+    t.increment_set(32000 / rise_cycles)
+    t.target_set(32000)
+    t.flush(end_delay = rise_cycles + 10000)
+
+    t.target_set(0)
+    t.flush(end_delay = 200000)
+
+    t.increment_set(64000 / rise_cycles / 2)
+    t.target_set(64000)
+    t.flush(end_delay = rise_cycles * .5)
+    t.increment_set(64000 / rise_cycles)
+    t.flush(end_delay = rise_cycles)

@@ -1,0 +1,102 @@
+[*]
+[*] GTKWave Analyzer v3.3.81 (w)1999-2017 BSI
+[*] Sun Dec 27 16:55:31 2020
+[*]
+[dumpfile] "/Users/nipo/projects/nsl/tests/dacx0508/tb.ghw"
+[dumpfile_mtime] "Sun Dec 27 16:48:32 2020"
+[dumpfile_size] 14585073
+[savefile] "/Users/nipo/projects/nsl/tests/dacx0508/test.gtkw"
+[timestart] 0
+[size] 1410 864
+[pos] -1 -1
+*-24.742794 45000290 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.gen.
+[treeopen] top.tb.gen.gen.
+[treeopen] top.tb.host.
+[treeopen] top.tb.host.cmd.
+[treeopen] top.tb.host.cmd.req.
+[treeopen] top.tb.host.rsp.
+[treeopen] top.tb.host.rsp.req.
+[treeopen] top.tb.sloper.r.
+[treeopen] top.tb.to_spi.cmd.
+[treeopen] top.tb.to_spi.cmd.req.
+[treeopen] top.tb.to_spi.rsp.
+[treeopen] top.tb.to_spi.rsp.req.
+[sst_width] 193
+[signals_width] 184
+[sst_expanded] 1
+[sst_vpaned_height] 261
+@29
+top.tb.reset_n
+@28
+top.tb.clock
+top.tb.gen.gen.r_data_valid
+top.tb.gen.gen.r_wait_cycles
+@800200
+-cmd
+@28
+top.tb.host.cmd.req.valid
+top.tb.host.cmd.req.last
+@22
+#{top.tb.host.cmd.req.data[7:0]} top.tb.host.cmd.req.data[7] top.tb.host.cmd.req.data[6] top.tb.host.cmd.req.data[5] top.tb.host.cmd.req.data[4] top.tb.host.cmd.req.data[3] top.tb.host.cmd.req.data[2] top.tb.host.cmd.req.data[1] top.tb.host.cmd.req.data[0]
+@28
+top.tb.host.cmd.ack.ready
+@1000200
+-cmd
+@800200
+-rsp
+@28
+top.tb.host.rsp.ack.ready
+top.tb.host.rsp.req.valid
+top.tb.host.rsp.req.last
+@22
+#{top.tb.host.rsp.req.data[7:0]} top.tb.host.rsp.req.data[7] top.tb.host.rsp.req.data[6] top.tb.host.rsp.req.data[5] top.tb.host.rsp.req.data[4] top.tb.host.rsp.req.data[3] top.tb.host.rsp.req.data[2] top.tb.host.rsp.req.data[1] top.tb.host.rsp.req.data[0]
+@1000200
+-rsp
+@28
+top.tb.sloper.r.computer_state
+top.tb.sloper.r.master_rsp_state
+top.tb.sloper.r.master_cmd_state
+top.tb.sloper.r.slave_state
+@22
+#{top.tb.sloper.r.increment[3:-9]} top.tb.sloper.r.increment[3] top.tb.sloper.r.increment[2] top.tb.sloper.r.increment[1] top.tb.sloper.r.increment[0] top.tb.sloper.r.increment[-1] top.tb.sloper.r.increment[-2] top.tb.sloper.r.increment[-3] top.tb.sloper.r.increment[-4] top.tb.sloper.r.increment[-5] top.tb.sloper.r.increment[-6] top.tb.sloper.r.increment[-7] top.tb.sloper.r.increment[-8] top.tb.sloper.r.increment[-9]
+#{top.tb.sloper.r.target[15:0]} top.tb.sloper.r.target[15] top.tb.sloper.r.target[14] top.tb.sloper.r.target[13] top.tb.sloper.r.target[12] top.tb.sloper.r.target[11] top.tb.sloper.r.target[10] top.tb.sloper.r.target[9] top.tb.sloper.r.target[8] top.tb.sloper.r.target[7] top.tb.sloper.r.target[6] top.tb.sloper.r.target[5] top.tb.sloper.r.target[4] top.tb.sloper.r.target[3] top.tb.sloper.r.target[2] top.tb.sloper.r.target[1] top.tb.sloper.r.target[0]
+#{top.tb.sloper.r.current[15:-9]} top.tb.sloper.r.current[15] top.tb.sloper.r.current[14] top.tb.sloper.r.current[13] top.tb.sloper.r.current[12] top.tb.sloper.r.current[11] top.tb.sloper.r.current[10] top.tb.sloper.r.current[9] top.tb.sloper.r.current[8] top.tb.sloper.r.current[7] top.tb.sloper.r.current[6] top.tb.sloper.r.current[5] top.tb.sloper.r.current[4] top.tb.sloper.r.current[3] top.tb.sloper.r.current[2] top.tb.sloper.r.current[1] top.tb.sloper.r.current[0] top.tb.sloper.r.current[-1] top.tb.sloper.r.current[-2] top.tb.sloper.r.current[-3] top.tb.sloper.r.current[-4] top.tb.sloper.r.current[-5] top.tb.sloper.r.current[-6] top.tb.sloper.r.current[-7] top.tb.sloper.r.current[-8] top.tb.sloper.r.current[-9]
+@28
+top.tb.sloper.r.parameters_changed
+top.tb.sloper.r.current_dirty
+top.tb.sloper.r.substract
+@800200
+-to_spi
+@28
+top.tb.to_spi.cmd.req.valid
+top.tb.to_spi.cmd.req.last
+@22
+#{top.tb.to_spi.cmd.req.data[7:0]} top.tb.to_spi.cmd.req.data[7] top.tb.to_spi.cmd.req.data[6] top.tb.to_spi.cmd.req.data[5] top.tb.to_spi.cmd.req.data[4] top.tb.to_spi.cmd.req.data[3] top.tb.to_spi.cmd.req.data[2] top.tb.to_spi.cmd.req.data[1] top.tb.to_spi.cmd.req.data[0]
+@28
+top.tb.to_spi.cmd.ack.ready
+@1000200
+-to_spi
+@800200
+-from_spi
+@22
+#{top.tb.to_spi.rsp.req.data[7:0]} top.tb.to_spi.rsp.req.data[7] top.tb.to_spi.rsp.req.data[6] top.tb.to_spi.rsp.req.data[5] top.tb.to_spi.rsp.req.data[4] top.tb.to_spi.rsp.req.data[3] top.tb.to_spi.rsp.req.data[2] top.tb.to_spi.rsp.req.data[1] top.tb.to_spi.rsp.req.data[0]
+@28
+top.tb.to_spi.rsp.req.valid
+top.tb.to_spi.rsp.req.last
+top.tb.to_spi.rsp.ack.ready
+@1000200
+-from_spi
+@800200
+-spi
+@28
+top.tb.cs_n
+top.tb.miso
+top.tb.mosi
+top.tb.sck
+@1000200
+-spi
+[pattern_trace] 1
+[pattern_trace] 0
