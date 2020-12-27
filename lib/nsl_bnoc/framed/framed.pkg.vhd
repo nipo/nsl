@@ -45,6 +45,7 @@ package framed is
   component framed_fifo_atomic is
     generic(
       depth : natural;
+      txn_depth : natural := 4;
       clk_count  : natural range 1 to 2
       );
     port(
