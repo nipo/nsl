@@ -11,6 +11,8 @@ package crc is
   subtype crc32 is crc_state(31 downto 0);
 
   function "not"(x:crc_state) return crc_state;
+  function "="(x, y:crc_state) return boolean;
+  function "/="(x, y:crc_state) return boolean;
   function bitswap(x:crc_state) return crc_state;
   
   -- CRC update function when inserting 1 bit to feedback register.
@@ -64,6 +66,16 @@ package body crc is
       ret(i) := not ret(i);
     end loop;
     return ret;
+  end function;
+
+  function "="(x, y:crc_state) return boolean is
+  begin
+    return std_ulogic_vector(x) = std_ulogic_vector(y);
+  end function;
+
+  function "/="(x, y:crc_state) return boolean is
+  begin
+    return std_ulogic_vector(x) = std_ulogic_vector(y);
   end function;
 
   function bitswap(x:crc_state) return crc_state is
