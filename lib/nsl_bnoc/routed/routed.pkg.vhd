@@ -78,6 +78,12 @@ package routed is
       );
   end component;
 
+  -- This components strips routing information from routed network, pipes the
+  -- frame in a framed network, and waits for exactly one response frame back,
+  -- where it inserts back reverse routing information and tag.
+  --
+  -- Command/response frames must be balanced. Tag of response will match tag
+  -- from command.
   component routed_endpoint
     port(
       p_resetn   : in  std_ulogic;
@@ -92,6 +98,37 @@ package routed is
       p_rsp_in_ack   : out nsl_bnoc.framed.framed_ack;
       p_rsp_out_val   : out routed_req;
       p_rsp_out_ack   : in routed_ack
+      );
+  end component;
+
+  -- This component strips incoming routing information for routed
+  -- network initiated frames, and inserts routing information to framed
+  -- network frames to push them in the routed network.
+  --
+  -- Target routing information is a pseudo-static parameter, but may
+  -- be modified.  Source ID is a network parameter.
+  --
+  -- Tag added to incoming frames will be taken from last-seen routed message.
+  -- This may not be strictly timely ordered because of fifos.
+  component routed_framed_gateway is
+    generic(
+      source_id_c : component_id
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      target_id_i : in component_id;
+
+      routed_in_i   : in routed_req;
+      routed_in_o   : out routed_ack;
+      framed_out_o  : out nsl_bnoc.framed.framed_req;
+      framed_out_i  : in nsl_bnoc.framed.framed_ack;
+
+      framed_in_i   : in nsl_bnoc.framed.framed_req;
+      framed_in_o   : out nsl_bnoc.framed.framed_ack;
+      routed_out_o  : out routed_req;
+      routed_out_i  : in routed_ack
       );
   end component;
 
