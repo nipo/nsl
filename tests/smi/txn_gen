@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+
+import sys
+from nsl import framed, smi
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+    f = framed.SplitFramed(n)
+    if n.startswith("smi_res"):
+        t = smi.MasterRsp(f)
+    else:
+        t = smi.MasterCmd(f)
+
+    t.c22_read(0x11, 0x1b, (0, 0), 1)
+    t.flush()
+    t.c22_write(0x11, 0x1b, 0x9669)
+    t.flush()
+    t.c45_addr(0x11, 0x1b, 0x9669)
+    t.flush()
+    t.c45_write(0x11, 0x1b, 0x9669)
+    t.flush()
+    t.c45_read(0x11, 0x1b, (0, 0), 1)
+    t.flush()
+    t.c45_read_inc(0x11, 0x1b, (0, 0), 1)
+    t.flush()
+    
