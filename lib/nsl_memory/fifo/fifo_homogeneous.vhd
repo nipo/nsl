@@ -142,6 +142,7 @@ begin
   begin
     reset_sync: nsl_clocking.async.async_multi_reset
       generic map(
+        debounce_count_c => 4,
         domain_count_c => 2
         )
       port map(
