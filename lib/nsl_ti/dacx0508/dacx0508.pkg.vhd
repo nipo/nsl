@@ -31,7 +31,13 @@ package dacx0508 is
       dac_resolution_c : integer range 12 to 16 := 16;
       -- Increment register span
       increment_msb_c : integer range 0 to 15 := 7;
-      increment_lsb_c : integer range -16 to 0 := -8
+      increment_lsb_c : integer range -16 to 0 := -8;
+      -- Minimal time (cycles) to wait beetween two commands
+      -- issued to the SPI controller
+      min_command_interval_c : natural range 1 to 10000000 := 1;
+      -- Maximal count of pending commands. Setting 1 disables
+      -- pipelining
+      max_pending_command_c : natural range 1 to 511 := 1
       );
     port(
       reset_n_i   : in  std_ulogic;
