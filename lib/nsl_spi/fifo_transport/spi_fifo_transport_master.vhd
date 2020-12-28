@@ -7,7 +7,7 @@ entity spi_fifo_transport_master is
   generic(
     width_c : positive;
     -- SPI Clock divisor from fifo clock
-    divisor_c : integer range 2 to 65536
+    divisor_c : integer range 1 to 65536
     );
   port(
     -- clocks the fifo
