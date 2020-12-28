@@ -303,9 +303,9 @@ begin
 
       when ST_COMPUTER_STOP_CALC =>
         if r.substract then
-          rin.stop <= (w_target + w_increment)(r.stop'range);
+          rin.stop <= resize(w_target + w_increment, r.stop'left, r.stop'right);
         else
-          rin.stop <= (w_target - w_increment)(r.stop'range);
+          rin.stop <= resize(w_target - w_increment, r.stop'left, r.stop'right);
         end if;
         rin.computer_state <= ST_COMPUTER_RUN;
 
