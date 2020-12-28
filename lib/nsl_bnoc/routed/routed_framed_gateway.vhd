@@ -37,7 +37,7 @@ architecture rtl of routed_framed_gateway is
     );
   
   type regs_t is record
-    cmd_state, rsp_state: state_t;
+    r2f_state, f2r_state: state_t;
     last_tag: nsl_bnoc.framed.framed_data_t;
   end record;  
 
@@ -48,8 +48,8 @@ begin
   regs: process(clock_i, reset_n_i)
   begin
     if reset_n_i = '0' then
-      r.cmd_state <= ST_RESET;
-      r.rsp_state <= ST_RESET;
+      r.r2f_state <= ST_RESET;
+      r.f2r_state <= ST_RESET;
     elsif rising_edge(clock_i) then
       r <= rin;
     end if;
@@ -59,13 +59,13 @@ begin
   begin
     rin <= r;
 
-    case r.cmd_state is
+    case r.r2f_state is
       when ST_RESET =>
-        rin.cmd_state <= ST_IDLE;
+        rin.r2f_state <= ST_IDLE;
 
       when ST_IDLE =>
         if routed_in_i.valid = '1' then
-          rin.cmd_state <= ST_ROUTE;
+          rin.r2f_state <= ST_ROUTE;
         end if;
 
       when ST_ROUTE =>
@@ -73,9 +73,9 @@ begin
 
           -- ignore short frames
           if routed_in_i.last = '1' then
-            rin.cmd_state <= ST_IDLE;
+            rin.r2f_state <= ST_IDLE;
           else
-            rin.cmd_state <= ST_TAG;
+            rin.r2f_state <= ST_TAG;
           end if;
         end if;
         
@@ -85,40 +85,40 @@ begin
 
           -- ignore short frames
           if routed_in_i.last = '1' then
-            rin.cmd_state <= ST_IDLE;
+            rin.r2f_state <= ST_IDLE;
           else
-            rin.cmd_state <= ST_FORWARD;
+            rin.r2f_state <= ST_FORWARD;
           end if;
         end if;
 
       when ST_FORWARD =>
         if routed_in_i.valid = '1' and framed_out_i.ready = '1' and routed_in_i.last = '1' then
-          rin.cmd_state <= ST_IDLE;
+          rin.r2f_state <= ST_IDLE;
         end if;
     end case;
 
-    case r.rsp_state is
+    case r.f2r_state is
       when ST_RESET =>
-        rin.rsp_state <= ST_IDLE;
+        rin.f2r_state <= ST_IDLE;
 
       when ST_IDLE =>
         if framed_in_i.valid = '1' then
-          rin.rsp_state <= ST_ROUTE;
+          rin.f2r_state <= ST_ROUTE;
         end if;
 
       when ST_ROUTE =>
         if routed_out_i.ready = '1' then
-          rin.rsp_state <= ST_TAG;
+          rin.f2r_state <= ST_TAG;
         end if;
         
       when ST_TAG =>
         if routed_out_i.ready = '1' then
-          rin.rsp_state <= ST_FORWARD;
+          rin.f2r_state <= ST_FORWARD;
         end if;
 
       when ST_FORWARD =>
         if framed_in_i.valid = '1' and routed_out_i.ready = '1' and framed_in_i.last = '1' then
-          rin.rsp_state <= ST_IDLE;
+          rin.f2r_state <= ST_IDLE;
         end if;
     end case;
   end process;
@@ -135,7 +135,7 @@ begin
     routed_out_o.last <= '-';
     framed_in_o.ready <= '0';
 
-    case r.cmd_state is
+    case r.r2f_state is
       when ST_RESET | ST_IDLE =>
         null;
         
@@ -147,7 +147,7 @@ begin
         routed_in_o <= framed_out_i;
     end case;
 
-    case r.rsp_state is
+    case r.f2r_state is
       when ST_RESET | ST_IDLE =>
         null;
         
