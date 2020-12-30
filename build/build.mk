@@ -7,10 +7,13 @@ source-types += vhdl verilog ngc bd constraint
 SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; pwd)
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
 LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
+TOOL_ROOT := $(BUILD_ROOT)/tool/
 
 PYTHONPATH=$(BUILD_ROOT)/../python
 
 export PYTHONPATH
+
+-include $(TOOL_ROOT)/$(tool)-pre.mk
 
 # Uniq without reordering (unlike sort), keeping first entry
 # <word list>
@@ -278,7 +281,6 @@ $(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
 libraries := $(call uniq,$(call lib-donedeps-first,$(all-libraries),))
 sources := $(foreach l,$(libraries),$($l-sources))
 
-TOOL_ROOT := $(BUILD_ROOT)/tool/
 include $(TOOL_ROOT)/$(tool).mk
 
 ifeq ($(V),)

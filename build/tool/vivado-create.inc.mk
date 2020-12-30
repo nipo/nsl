@@ -1,3 +1,5 @@
+$(call exclude-libs,unisim xilinxcorelib)
+
 define file-clear
 	$(SILENT)mkdir -p $(dir $1)
 	$(SILENT)> $1
@@ -37,6 +39,18 @@ _VIVADO_CONSTRAINT_TYPE_tcl = TCL
 define _vivado-add-constraint
 	$(call file-append,$1,set f [add_files -norecurse -fileset $$_constr_fileset_name [file normalize {$2}]])
 	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "synthesis implementation simulation"} $$f)
+
+endef
+
+define _vivado-add-implementation_constraint
+	$(call file-append,$1,set f [add_files -norecurse -fileset $$_constr_fileset_name [file normalize {$2}]])
+	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "implementation"} $$f)
+
+endef
+
+define _vivado-add-synthesis_constraint
+	$(call file-append,$1,set f [add_files -norecurse -fileset $$_constr_fileset_name [file normalize {$2}]])
+	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "synthesis"} $$f)
 
 endef
 

@@ -1,8 +1,6 @@
 VIVADO = /opt/Xilinx/Vivado/2017.4
 VIVADO_PREPARE = source $(VIVADO)/settings64.sh > /dev/null
 
-$(call exclude-libs,unisim xilinxcorelib)
-
 SHELL=/bin/bash
 
 build-dir := vivado-build
@@ -25,7 +23,7 @@ routed-reports += $(placed-reports)
 
 include $(TOOL_ROOT)/vivado-create.inc.mk
 
-all: $(target).bit
+all:
 
 $(target).bit: $(build-dir)/bitstream.bit
 	cp $< $@
