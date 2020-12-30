@@ -48,7 +48,11 @@ begin
       tdo     => tdo
       );
 
-  tck_o <= tck;
+  tck_buf: bufg
+    port map(
+      i => tck,
+      o => tck_o
+      );
   tdo <= tdo_i;
 
 end architecture;
