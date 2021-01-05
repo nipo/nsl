@@ -12,6 +12,9 @@ end entity;
 architecture sp6 of clock_internal is
 
   signal int_clk : std_ulogic;
+
+  attribute period: string;
+  attribute period of int_clk : signal is "16 ns";
   
 begin
 

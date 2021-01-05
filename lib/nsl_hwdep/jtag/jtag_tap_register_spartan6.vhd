@@ -24,6 +24,9 @@ end entity;
 architecture spartan6 of jtag_tap_register is
 
   signal tck, tdo, reset, capture, selected, update, shift : std_ulogic;
+
+  attribute period: string;
+  attribute period of tck : signal is "20 ns";
   
 begin
 
