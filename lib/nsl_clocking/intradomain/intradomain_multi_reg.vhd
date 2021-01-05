@@ -16,9 +16,13 @@ end intradomain_multi_reg;
 
 architecture rtl of intradomain_multi_reg is
   
+  attribute shreg_extract : string;
+
   subtype word_t is std_ulogic_vector(data_width_c-1 downto 0);
   type word_vector_t is array (natural range <>) of word_t;
   signal r_regs : word_vector_t (0 to cycle_count_c-1);
+
+  attribute shreg_extract of r_regs : signal is "false";
 
 begin
 
