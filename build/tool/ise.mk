@@ -171,6 +171,7 @@ ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
 	$(SILENT)echo "-ifn $<" >> $@.xst
 	$(SILENT)echo "-ofn $@" >> $@.xst
 	$(SILENT)echo "-max_fanout 15" >> $@.xst
+	$(SILENT)echo "-keep_hierarchy soft" >> $@.xst
 	$(SILENT)echo "-read_cores yes" >> $@.xst
 #	$(SILENT)echo "-lc No" >> $@.xst
 	$(SILENT)echo "-equivalent_register_removal no" >> $@.xst
