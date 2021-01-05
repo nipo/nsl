@@ -10,3 +10,4 @@ deps += nsl_data.bytestream
 deps += nsl_io.diff
 deps += nsl_io.clock
 deps += nsl_io.ddr
+deps += nsl_clocking.intradomain
