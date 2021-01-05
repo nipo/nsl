@@ -17,6 +17,7 @@ end async_edge;
 
 architecture rtl of async_edge is
 
+  attribute shreg_extract : string;
   attribute keep : string;
   attribute syn_preserve : boolean;
 begin
@@ -25,6 +26,7 @@ begin
   generate
     signal tig_reg_pre : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_pre : signal is "TRUE";
+    attribute shreg_extract of tig_reg_pre : signal is "false";
     attribute syn_preserve of tig_reg_pre : signal is true;
   begin
     forward: process (clock_i, data_i)
@@ -43,6 +45,7 @@ begin
   generate
     signal tig_reg_clr : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_clr : signal is "TRUE";
+    attribute shreg_extract of tig_reg_clr : signal is "false";
     attribute syn_preserve of tig_reg_clr : signal is true;
   begin
     forward: process (clock_i, data_i)
@@ -61,6 +64,7 @@ begin
   generate
     signal tig_reg_d : std_ulogic_vector(0 to cycle_count_c-1);
     attribute keep of tig_reg_d : signal is "TRUE";
+    attribute shreg_extract of tig_reg_d : signal is "false";
     attribute syn_preserve of tig_reg_d : signal is true;
   begin
     forward: process (clock_i)
