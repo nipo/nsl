@@ -136,7 +136,7 @@ class Tap:
         self.dr_post = dr_post
 
     def divisor(self, value = 16):
-        self.master.divisor(16)
+        self.master.divisor(value)
 
     def ir_io(self, tdi = -1, tdo = None):
         self.master.ir_capture()
