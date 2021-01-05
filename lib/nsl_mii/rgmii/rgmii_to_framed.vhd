@@ -21,12 +21,13 @@ end entity;
 architecture beh of rgmii_to_framed is
 
   constant pre_byte : std_ulogic_vector(7 downto 0) := x"55";
-  constant sfd_byte : std_ulogic_vector(7 downto 0) := x"5d";
+  constant sfd_byte : std_ulogic_vector(7 downto 0) := x"d5";
 
   type state_t is (
     ST_RESET,
     ST_IDLE,
-    ST_PRE,
+    ST_WAIT_PRE,
+    ST_WAIT_SFD,
     ST_FILL,
     ST_FORWARD,
     ST_VALID,
@@ -39,7 +40,7 @@ architecture beh of rgmii_to_framed is
     state : state_t;
     buf : nsl_data.bytestream.byte_string(0 to 5);
     fcs : crc32;
-    ctr : natural range 0 to 5;
+    ctr : natural range 0 to 7;
   end record;
 
   signal r, rin: regs_t;
@@ -64,19 +65,40 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
-        if rgmii_i.valid = '1' and rgmii_i.data = pre_byte then
-          rin.state <= ST_PRE;
+        if rgmii_i.valid = '1' then
+          rin.state <= ST_WAIT_PRE;
+          -- Allow first PRE byte to come within 8 next bytes
+          rin.ctr <= 7;
         end if;
 
-      when ST_PRE =>
+      when ST_WAIT_PRE =>
         if rgmii_i.valid = '0' then
           rin.state <= ST_IDLE;
         elsif rgmii_i.data = pre_byte then
-          null;
+          rin.state <= ST_WAIT_SFD;
+          -- Allow SFD to come after 5 PRE
+          rin.ctr <= 4;
+        elsif r.ctr /= 0 then
+          rin.ctr <= r.ctr - 1;
+        else
+          rin.state <= ST_IGNORE;
+        end if;
+
+      when ST_WAIT_SFD =>
+        if rgmii_i.valid = '0' then
+          rin.state <= ST_IDLE;
         elsif rgmii_i.data = sfd_byte then
-          rin.fcs <= crc_ieee_802_3_init;
-          rin.state <= ST_FILL;
-          rin.ctr <= 5;
+          if r.ctr = 0 then
+            rin.fcs <= crc_ieee_802_3_init;
+            rin.state <= ST_FILL;
+            rin.ctr <= 5;
+          else
+            rin.state <= ST_IGNORE;
+          end if;
+        elsif rgmii_i.data = pre_byte then
+          if r.ctr /= 0 then
+            rin.ctr <= r.ctr - 1;
+          end if;
         else
           rin.state <= ST_IGNORE;
         end if;

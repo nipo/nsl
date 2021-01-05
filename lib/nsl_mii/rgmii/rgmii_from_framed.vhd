@@ -37,7 +37,7 @@ architecture beh of rgmii_from_framed is
   constant ctr_max : natural := nsl_math.arith.max(max_pad-1, ipg_c-1);
   constant pad_byte : std_ulogic_vector(7 downto 0) := x"00";
   constant pre_byte : std_ulogic_vector(7 downto 0) := x"55";
-  constant sfd_byte : std_ulogic_vector(7 downto 0) := x"5d";
+  constant sfd_byte : std_ulogic_vector(7 downto 0) := x"d5";
   
   type regs_t is
   record
@@ -72,7 +72,6 @@ begin
         if r.ctr /= 0 then
           rin.ctr <= r.ctr - 1;
         else
-          rin.ctr <= ipg_c - 1;
           rin.state <= ST_IDLE;
         end if;
 
@@ -99,6 +98,7 @@ begin
         end if;
 
         if framed_i.valid = '0' then
+          rin.ctr <= ipg_c - 1;
           rin.state <= ST_FLUSH;
         elsif framed_i.valid = '1' and framed_i.last = '1' then
           if r.ctr /= 0 then
@@ -129,9 +129,12 @@ begin
         end if;
 
       when ST_FLUSH =>
+        if r.ctr /= 0 then
+          rin.ctr <= r.ctr - 1;
+        end if;
+
         if framed_i.valid = '1' and framed_i.last = '1' then
           rin.state <= ST_IPG;
-          rin.ctr <= ipg_c - 1;
         end if;
     end case;
   end process;
