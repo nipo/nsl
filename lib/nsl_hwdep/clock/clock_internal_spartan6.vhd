@@ -2,7 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 library unisim;
-use unisim.vcomponents.all;
 
 entity clock_internal is
   port(
@@ -16,7 +15,7 @@ architecture sp6 of clock_internal is
   
 begin
 
-  inst : startup_spartan6
+  inst : unisim.vcomponents.startup_spartan6
    port map (
      cfgmclk => int_clk,
      clk => '0',
