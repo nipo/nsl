@@ -181,3 +181,6 @@ ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
 
 ise-build/%.twr: ise-build/%-par.ncd ise-build/%-map.pcf
 	$(SILENT)$(ISE_PRE) trce -e 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
+
+ise-build/%.vhd: ise-build/%.ncd
+	$(SILENT)$(ISE_PRE) netgen -sim -ofmt vhdl -w $< $@

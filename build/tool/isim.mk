@@ -28,7 +28,7 @@ clean-files += $(target).vcd
 clean-files += $(target).vcd.tmp
 clean-dirs += isim
 
-$(call exclude-libs,unisim)
+$(call exclude-libs,unisim simprim)
 
 sim: $(target).vcd
 
