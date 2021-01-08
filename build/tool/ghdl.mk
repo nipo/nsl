@@ -25,8 +25,9 @@ define ghdl-library-rules
 		--workdir=$(call workdir,$1) \
 		$(sort $(foreach l,$($$1-libdeps-unsorted),-P$(call workdir,$l))) \
 		--std=$(_GHDL_STD_$($1-vhdl-version)) \
+		$($l-ghdl-flags) \
 		--work=$1 \
-		$($1-sources)
+		$(foreach f,$($1-sources),$(if $(filter vhdl,$($f-language)),$f))
 
 endef
 
@@ -37,11 +38,13 @@ $(target): $(sources) $(MAKEFILE_LIST)
 		--workdir=$(call workdir,$(top-lib)) \
 		--std=$(_GHDL_STD_$($(top-lib)-vhdl-version)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(foreach l,$(libraries),$($l-ghdl-flags)) \
 		--work=$(top-lib) $(top-entity)
 	$(SILENT)$(GHDL) -c -v \
 		--workdir=$(call workdir,$(top-lib)) \
 		--std=$(_GHDL_STD_$($(top-lib)-vhdl-version)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(foreach l,$(libraries),$($l-ghdl-flags)) \
 		--work=$(top-lib) -e $(top-entity)
 
 $(target).ghw: $(target)
