@@ -8,3 +8,4 @@ work.tb.vcd.tmp
 ise-build
 Default.wcfg
 isim1.wdb
+*.gtkw
