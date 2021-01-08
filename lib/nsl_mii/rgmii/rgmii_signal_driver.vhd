@@ -25,9 +25,6 @@ architecture beh of rgmii_signal_driver is
   signal clock_from_phy: nsl_io.diff.diff_pair;
   signal mac_o_pre : rgmii_pipe;
 
-  attribute period: string;
-  attribute period of phy_i.c : signal is "8 ns";
-
 begin
 
   -- Output side
