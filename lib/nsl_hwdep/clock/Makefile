@@ -10,10 +10,14 @@ ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += clock_internal_7series.vhd
 deps += unisim.vcomponents
 endif
-endif
-
+else
 ifeq ($(tool),ghdl)
 vhdl-sources += clock_internal_sim.vhd
+endif
+endif
+
+ifeq ($(tool),efinity)
+vhdl-sources += clock_internal_efinix.vhd
 endif
 
 ifneq ($(filter lattice-machxo2,$(hwdep)),)
