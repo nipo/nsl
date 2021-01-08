@@ -10,6 +10,7 @@ package text is
 
   function to_string(v: in std_ulogic_vector) return string;
   function to_string(v: in std_logic_vector) return string;
+  function to_string(v: in std_ulogic) return string;
   function to_string(v: in bit_vector) return string;
   function to_string(v: in real) return string;
   function to_string(v: in integer) return string;
@@ -26,24 +27,28 @@ end package;
 
 package body text is
 
+  function to_string(v : in std_ulogic) return string is
+  begin
+    case v is
+      when 'X' => return "X";
+      when 'U' => return "U";
+      when 'Z' => return "Z";
+      when '0' => return "0";
+      when '1' => return "1";
+      when '-' => return "-";
+      when 'W' => return "W";
+      when 'H' => return "H";
+      when 'L' => return "L";
+      when others => return "0";
+    end case;
+  end function;    
+
   function to_string(v: in std_ulogic_vector) return string is
     variable c: character;
     variable ret: line := new string'("");
   begin
     for i in v'range loop
-      case v(i) is
-        when 'X' => c := 'X';
-        when 'U' => c := 'U';
-        when 'Z' => c := 'Z';
-        when '0' => c := '0';
-        when '1' => c := '1';
-        when '-' => c := '-';
-        when 'W' => c := 'W';
-        when 'H' => c := 'H';
-        when 'L' => c := 'L';
-        when others => c := '0';
-      end case;
-      write(ret, c);
+      write(ret, to_string(v(i)));
     end loop;
 
     return ret.all;

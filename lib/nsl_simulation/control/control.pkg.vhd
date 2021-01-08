@@ -13,7 +13,7 @@ package body control is
   procedure terminate(retval : integer) is
   begin
     assert false
-      report "Terminating with error leve: " & integer'image(retval)
+      report "Terminating with error level: " & integer'image(retval)
       severity failure;
   end procedure;
   
