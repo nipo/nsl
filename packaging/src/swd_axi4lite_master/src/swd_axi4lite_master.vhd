@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_coresight, nsl_axi, nsl_clocking;
+library nsl_coresight, nsl_axi, nsl_clocking, nsl_hwdep;
 
 entity swd_axi4lite_master is
   generic(
@@ -89,19 +89,16 @@ begin
   swdio_t <= not swd_bus.o.dio.output;
   swdio_o <= swd_bus.o.dio.v;
   swd_bus.i.dio <= swdio_i;
-
-  deglitcher: nsl_clocking.async.async_deglitcher
-    port map(
-      clock_i => aclk,
-      data_i => swclk,
-      data_o => swd_bus.i.clk
-      );
+  swd_bus.i.clk <= swclk;
   
-  dp: nsl_coresight.dp.swdp
+  dp: nsl_coresight.dp.swdp_sync
     generic map(
       idr => dp_idr
       )
     port map(
+      ref_clock_i => aclk,
+      ref_reset_n_i => aresetn,
+
       swd_i => swd_bus.i,
       swd_o => swd_bus.o,
 
