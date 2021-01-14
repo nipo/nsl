@@ -85,6 +85,7 @@ architecture beh of swdp is
     ctrl : unsigned(31 downto 0);
   end record;
   signal r_reset_counter : natural range 0 to 49;
+  signal dap_i_int : nsl_coresight.dapbus.dapbus_m_i;
 
   signal r, rin: regs_t;
   
@@ -113,7 +114,7 @@ begin
     end if;
   end process;
 
-  fsm: process(r, swd_i.dio, dap_i, stat_i)
+  fsm: process(r, swd_i.dio, dap_i_int, stat_i)
     variable swdio : std_ulogic;
   begin
     rin <= r;
@@ -370,18 +371,18 @@ begin
         null;
 
       when AP_READ =>
-        if dap_i.ready = '1' then
-          if dap_i.slverr = '1' then
+        if dap_i_int.ready = '1' then
+          if dap_i_int.slverr = '1' then
             rin.ap_state <= AP_ERROR;
           else
             rin.ap_state <= AP_IDLE;
           end if;
-          rin.ap_rdbuf <= unsigned(dap_i.rdata);
+          rin.ap_rdbuf <= unsigned(dap_i_int.rdata);
         end if;
 
       when AP_WRITE =>
-        if dap_i.ready = '1' then
-          if dap_i.slverr = '1' then
+        if dap_i_int.ready = '1' then
+          if dap_i_int.slverr = '1' then
             rin.ap_state <= AP_ERROR;
           else
             rin.ap_state <= AP_IDLE;
@@ -389,7 +390,7 @@ begin
         end if;
 
       when AP_ABORT =>
-        if dap_i.ready = '1' then
+        if dap_i_int.ready = '1' then
           rin.ap_state <= AP_IDLE;
         end if;
     end case;
@@ -454,5 +455,12 @@ begin
   end process;
 
   ctrl_o <= std_ulogic_vector(r.ctrl);
+
+  sync_in : nsl_coresight.dapbus.dapbus_m_i_sync
+    port map(
+      clock_i => swd_i.clk,
+      dapbus_i => dap_i,
+      dapbus_o => dap_i_int
+      );
   
 end architecture;
