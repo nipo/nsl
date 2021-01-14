@@ -84,4 +84,27 @@ package interdomain is
       );
   end component;
 
+  -- Resynchronizer for mesochronous data buses. Frequency for both
+  -- clocks must be exactly the same, relative phase is unknown and
+  -- unimportant.
+  --
+  -- Component must be reset if glitches happen on any of its clocks.
+  --
+  -- Validity output is meaningful after at least one cycle of the
+  -- output clock. It asserts for validity of data bus, i.e. that this
+  -- value happened on the input bus while not reset.
+  component interdomain_mesochronous_resync is
+    generic(
+      data_width_c   : integer
+      );
+    port(
+      reset_n_i   : in std_ulogic;
+      clock_i   : in std_ulogic_vector(0 to 1);
+
+      data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
+      data_o  : out std_ulogic_vector(data_width_c-1 downto 0);
+      valid_o : out std_ulogic
+      );
+  end component;
+
 end package interdomain;
