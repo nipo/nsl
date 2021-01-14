@@ -13,7 +13,8 @@ entity async_stabilizer is
   port(
     clock_i    : in std_ulogic;
     data_i     : in std_ulogic_vector(data_width_c-1 downto 0);
-    data_o    : out std_ulogic_vector(data_width_c-1 downto 0)
+    data_o     : out std_ulogic_vector(data_width_c-1 downto 0);
+    stable_o   : out std_ulogic
     );
 end async_stabilizer;
 
@@ -41,14 +42,17 @@ begin
   begin
     if rising_edge(clock_i) then
       prev_sampled_d <= sampled_s;
-	
-	  if prev_sampled_d /= sampled_s then
-	    unstable_s <= stable_count_c - 1;
-	  elsif unstable_s /= 0 then
-	    unstable_s <= unstable_s - 1;
-	  else
+    
+      if prev_sampled_d /= sampled_s then
+        unstable_s <= stable_count_c - 1;
+        stable_o <= '0';
+      elsif unstable_s /= 0 then
+        unstable_s <= unstable_s - 1;
+        stable_o <= '0';
+      else
         last_stable_d <= prev_sampled_d;
-	  end if;
+        stable_o <= '1';
+      end if;
 
     end if;
   end process clock;

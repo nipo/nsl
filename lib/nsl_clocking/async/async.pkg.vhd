@@ -89,7 +89,8 @@ package async is
     port(
       clock_i    : in std_ulogic;
       data_i     : in std_ulogic_vector(data_width_c-1 downto 0);
-      data_o    : out std_ulogic_vector(data_width_c-1 downto 0)
+      data_o     : out std_ulogic_vector(data_width_c-1 downto 0);
+      stable_o   : out std_ulogic
       );
   end component;
 
