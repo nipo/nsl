@@ -14,13 +14,16 @@ entity dapbus_m_o_sync is
 end entity;
 
 architecture beh of dapbus_m_o_sync is
+
+  signal stable, enable_in, enable_out : std_ulogic;
+
 begin
 
   data_sync: nsl_clocking.async.async_stabilizer
     generic map(
       stable_count_c => 1,
-      cycle_count_c => 1,
-      data_width_c => 1 + 1 + 14 + 32 + 1
+      cycle_count_c => 2,
+      data_width_c => 1 + 1 + 14 + 32 + 1 + 1
       )
     port map(
       clock_i => clock_i,
@@ -29,23 +32,17 @@ begin
       data_i(15 downto 2) => dapbus_i.addr,
       data_i(47 downto 16) => dapbus_i.wdata,
       data_i(48) => dapbus_i.abort,
+      data_i(49) => enable_in,
       data_o(0) => dapbus_o.sel,
       data_o(1) => dapbus_o.write,
       data_o(15 downto 2) => dapbus_o.addr,
       data_o(47 downto 16) => dapbus_o.wdata,
-      data_o(48) => dapbus_o.abort
+      data_o(48) => dapbus_o.abort,
+      data_o(49) => enable_out,
+      stable_o => stable
       );
 
-  en_sync: nsl_clocking.async.async_stabilizer
-    generic map(
-      stable_count_c => 2,
-      cycle_count_c => 1,
-      data_width_c => 1
-      )
-    port map(
-      clock_i => clock_i,
-      data_i(0) => dapbus_i.enable,
-      data_o(0) => dapbus_o.enable
-      );
+  dapbus_o.enable <= stable and enable_out;
+  enable_in <= dapbus_i.sel and dapbus_i.enable;
 
 end architecture;
