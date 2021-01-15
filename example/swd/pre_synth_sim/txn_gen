@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+
+import sys
+from nsl import routed, swd, cs
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = routed.Routed(n)
+
+    if n.startswith("swd_res"):
+        t = swd.MasterRsp(routed.SplitRouted(f, 0xf, 0x0))
+    else:
+        t = swd.MasterCmd(routed.SplitRouted(f, 0x0, 0xf))
+
+    t.divisor(10)
+    t.reset(0x0ba00477)
+    t.flush()
+
+    mem = swd.MemAp(t, 0)
+
+    mem.write32_multiple(0, [0xdeadbeef, 0xdecafbad])
+    mem.read32_multiple(0, [0xdeadbeef, 0xdecafbad])
+
+    t.flush()
