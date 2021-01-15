@@ -58,6 +58,7 @@ begin
     port map(
       clock_i => clock_i,
       address_i => s_axi_addr,
+      enable_i => s_axi_enable,
       write_en_i   => s_axi_mem_wmask,
       write_data_i  => s_axi_wdata,
       read_data_o => s_axi_rdata
