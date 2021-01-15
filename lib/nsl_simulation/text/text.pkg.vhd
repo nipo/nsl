@@ -96,13 +96,11 @@ package body text is
 
   function to_hex_string(v: in bit_vector) return string is
     variable ret: string(1 to (v'length + 3) / 4);
-    alias xv: bit_vector(4 to v'length+3) is v;
-    variable t : bit_vector(4  to ret'length*4+3) := (others => '0');
+    constant pad : bit_vector(1 to ret'length*4 - v'length) := (others => '0');
+    constant t : bit_vector(4  to ret'length*4+3) := pad & v;
     variable nibble : bit_vector(3 downto 0);
     variable c : character;
   begin
-    t(xv'range) := xv;
-
     for i in ret'range loop
       nibble := t(4 * i to 4 * i + 3);
       case nibble is
