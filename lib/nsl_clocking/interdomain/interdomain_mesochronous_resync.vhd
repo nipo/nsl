@@ -22,7 +22,8 @@ architecture beh of interdomain_mesochronous_resync is
   subtype word_t is std_ulogic_vector(data_width_c-1 downto 0);
   type word_vector_t is array (natural range <>) of word_t;
 
-  signal cross_region_reg_d : word_vector_t(0 to 3);
+  signal storage : word_vector_t(0 to 3);
+  signal cross_region_reg_d : word_t;
   signal ctr_in, ctr_out : natural range 0 to 3;
   signal reset_n_in, reset_n_out : std_ulogic;
 
@@ -34,7 +35,7 @@ architecture beh of interdomain_mesochronous_resync is
   attribute keep of cross_region_reg_d : signal is "TRUE";
   attribute syn_keep of cross_region_reg_d : signal is true;
   attribute async_reg of cross_region_reg_d : signal is "TRUE";
-  attribute nomerge of cross_region_reg_d : signal is "";
+  attribute nomerge of cross_region_reg_d : signal is "TRUE";
   
 begin
 
@@ -74,7 +75,7 @@ begin
       for i in 0 to 3
       loop
         if i = ctr_in then
-          cross_region_reg_d(i) <= data_i;
+          storage(i) <= data_i;
         end if;
       end loop;
     end if;
@@ -91,8 +92,10 @@ begin
         valid_o <= '1';
       end if;
 
-      data_o <= cross_region_reg_d(ctr_out);
+      cross_region_reg_d <= storage(ctr_out);
     end if;
   end process;
-  
+
+  data_o <= cross_region_reg_d;
+
 end architecture;
