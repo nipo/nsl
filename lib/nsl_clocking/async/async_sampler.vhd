@@ -28,7 +28,7 @@ architecture rtl of async_sampler is
   attribute keep of tig_reg_d, metastable_reg_d : signal is "TRUE";
   attribute syn_keep of tig_reg_d, metastable_reg_d : signal is true;
   attribute async_reg of tig_reg_d, metastable_reg_d : signal is "TRUE";
-  attribute nomerge of tig_reg_d, metastable_reg_d : signal is "";
+  attribute nomerge of tig_reg_d, metastable_reg_d : signal is "TRUE";
 begin
 
   clock: process (clock_i)
