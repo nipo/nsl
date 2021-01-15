@@ -29,7 +29,7 @@ architecture inferred of ram_1p_multi is
 
 begin
 
-  process (clock_i)
+  process (clock_i, address_i)
     variable addr : natural range 0 to 2**addr_size_c-1;
   begin
     addr := to_integer(to_01(address_i, '0'));
