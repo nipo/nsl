@@ -65,7 +65,6 @@ begin
   process (clock_i, valid_i, r_accept)
     variable data : std_logic_vector(width-1 downto 0);
     variable udata : std_ulogic_vector(width-1 downto 0);
-    variable complaint : line;
   begin
     if rising_edge(clock_i) then
       if not is_reset and is_open and r_accept = '1' and valid_i = '1' then
@@ -74,19 +73,10 @@ begin
         read(line_content, wait_cycles);
 
         if not std_match(std_ulogic_vector(data), to_x01(data_i)) then
-          write(complaint, filename);
-          write(complaint, string'(" value "));
-          nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data));
-          write(complaint, string'(" does not match fifo data "));
-          nsl_simulation.file_io.slv_write(complaint, std_logic_vector(data_i));
-
-          
-          assert false
-            report complaint.all & CR & LF
-            severity error;
-
-          deallocate (complaint);
-          complaint := new string'("");
+          nsl_simulation.assertions.assert_equal("value vs. fifo data",
+                                                 std_ulogic_vector(data),
+                                                 to_x01(data_i),
+                                                 error);
         end if;
       end if;
     end if;
