@@ -1,4 +1,5 @@
 ip += activity_monitor
+ip += axi4lite_jtag_transactor
 ip += axis_ws2812
 ip += axis_ws2812_column_driver
 ip += framed_spi_controller
