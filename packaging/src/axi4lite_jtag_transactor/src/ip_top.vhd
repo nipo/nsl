@@ -78,7 +78,7 @@ architecture rtl of ip_top is
 
   signal bresp, rresp : std_ulogic_vector(1 downto 0);
   signal rdata : std_ulogic_vector(31 downto 0);
-  signal tck : std_ulogic;
+  signal tck, trst : std_ulogic;
   
 begin
   
@@ -114,7 +114,7 @@ begin
       jtag_o.tck => tck,
       jtag_o.tms => jtag_tms,
       jtag_o.tdi => jtag_tdi,
-      jtag_o.trst => open,
+      jtag_o.trst => trst,
       jtag_i.tdo => jtag_tdo,
       jtag_i.rtck => tck
       );
