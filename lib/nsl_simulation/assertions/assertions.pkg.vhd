@@ -98,8 +98,8 @@ package body assertions is
   begin
     if a /= b then
       assert_equal_failure("UNK", what,
-                           """" & to_string(a) & "' (x""" & to_hex_string(a) & """)",
-                           """" & to_string(b) & "' (x""" & to_hex_string(b) & """)",
+                           """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
+                           """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
                            sev);
     end if;
   end procedure;
@@ -159,8 +159,8 @@ package body assertions is
   begin
     if a /= b then
       assert_equal_failure(context, what,
-                           """" & to_string(a) & "' (x""" & to_hex_string(a) & """",
-                           """" & to_string(b) & "' (x""" & to_hex_string(b) & """",
+                           """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
+                           """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
                            sev);
     end if;
   end procedure;
