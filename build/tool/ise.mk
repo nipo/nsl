@@ -177,7 +177,7 @@ ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
 	$(SILENT)echo "-equivalent_register_removal no" >> $@.xst
 #	$(SILENT)echo "-register_balancing yes" >> $@.xst
 	$(SILENT)$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
-	$(SILENT)$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst
+	$(SILENT)$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst -ofn $@.log
 
 ise-build/%.twr: ise-build/%-par.ncd ise-build/%-map.pcf
 	$(SILENT)$(ISE_PRE) trce -e 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
