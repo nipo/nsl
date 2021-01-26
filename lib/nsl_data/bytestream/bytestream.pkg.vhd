@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 package bytestream is
 
@@ -10,9 +11,13 @@ package bytestream is
   function from_suv(blob: std_ulogic_vector) return byte_string;
   function byte_from_hex(blob: byte_hex_string) return byte;
   function from_hex(blob: string) return byte_string;
+  function to_byte(c : character) return byte;
+  function to_byte_string(s : string) return byte_string;
 
   function "="(l, r : byte_string) return boolean;
   function "/="(l, r : byte_string) return boolean;
+
+  constant null_byte_string : byte_string(1 to 0) := (others => x"00");
   
 end package bytestream;
 
@@ -102,6 +107,22 @@ package body bytestream is
   function "/="(l, r : byte_string) return boolean is
   begin
     return not (l = r);
+  end function;
+
+  function to_byte(c : character) return byte is
+  begin
+    return byte(to_unsigned(character'pos(c), 8));
+  end function;
+
+  function to_byte_string(s : string) return byte_string is
+    alias ss : string(1 to s'length) is s;
+    variable ret : byte_string(1 to s'length);
+  begin
+    for i in ss'range
+    loop
+      ret(i) := to_byte(ss(i));
+    end loop;
+    return ret;
   end function;
 
 end package body bytestream;
