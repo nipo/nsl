@@ -17,6 +17,7 @@ package rom is
     port (
       clock_i : in std_ulogic;
 
+      read_i : in std_ulogic := '1';
       address_i : in unsigned(word_addr_size_c-1 downto 0);
       data_o : out std_ulogic_vector(8*word_byte_count_c-1 downto 0)
       );
