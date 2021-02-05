@@ -44,7 +44,7 @@ begin
     end if;
   end process reg;
 
-  process (in_valid_i, out_ready_i, r)
+  process (in_valid_i, in_data_i, out_ready_i, r)
   begin
     rin <= r;
 
