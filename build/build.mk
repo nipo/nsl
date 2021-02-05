@@ -131,15 +131,15 @@ endef
 # $2 a set of packages that are done
 # -> return packages with no deps first
 only-pkg-nodeps = $(sort $(foreach i,$1,$(if $(call filter-out-many,$($i-intradeps-unsorted),$2 $i),,$i)))
-not-empty-or-circular-dep = $(if $1,$1,$(error Circular dependency within $2))
-pkg-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(call only-pkg-nodeps,$1,$2),$1) $(call pkg-donedeps-first,$(call filter-out-many,$1,$2 $(call only-pkg-nodeps,$1,$2)),$2 $(call only-pkg-nodeps,$1,$2)))
+not-empty-or-circular-dep = $(if $1,$1,$(error Circular dependency within $2, $3))
+pkg-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(call only-pkg-nodeps,$1,$2),$1,$2) $(call pkg-donedeps-first,$(call filter-out-many,$1,$2 $(call only-pkg-nodeps,$1,$2)),$2 $(call only-pkg-nodeps,$1,$2)))
 
 # <libraries> <libraries>
 # $1 a set of libs
 # $2 a set of libs that are done
 # -> return libs with empty set of undone deps, recurse of others
 only-lib-nodeps = $(sort $(foreach i,$1,$(if $(call filter-out-many,$($i-libdeps-unsorted),$2 $i),,$i)))
-lib-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(strip $(call only-lib-nodeps,$1,$2)) $(call lib-donedeps-first,$(call filter-out-many,$1,$2 $(call only-lib-nodeps,$1,$2)),$2 $(call only-lib-nodeps,$1,$2))))
+lib-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(strip $(call only-lib-nodeps,$1,$2)) $(call lib-donedeps-first,$(call filter-out-many,$1,$2 $(call only-lib-nodeps,$1,$2)),$2 $(call only-lib-nodeps,$1,$2)),$2))
 
 # <package_name>
 # For a package, calculates
