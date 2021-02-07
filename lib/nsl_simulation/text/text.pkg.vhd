@@ -15,10 +15,13 @@ package text is
   function to_string(v: in real) return string;
   function to_string(v: in integer) return string;
   function to_string(v: in boolean) return string;
+  function to_string(v: in unsigned) return string;
   function to_string(data : byte_string) return string;
   function to_string(value: sfixed) return string;
   function to_string(value: ufixed) return string;
+  function to_string(value: time) return string;
 
+  function to_hex_string(data : byte_string) return string;
   function to_hex_string(v: in std_ulogic_vector) return string;
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
@@ -94,6 +97,24 @@ package body text is
     return ret.all;
   end function;
 
+  function to_string(v: in unsigned) return string
+  is
+  begin
+    return "x""" & to_hex_string(std_ulogic_vector(v)) & """";
+  end function;
+
+  function to_hex_string(data : byte_string) return string is
+    alias din : byte_string(0 to data'length-1) is data;
+    variable ret : string(0 to data'length*2-1);
+  begin
+    for i in din'range
+    loop
+      ret(i*2 to i*2+1) := to_hex_string(std_ulogic_vector(din(i)));
+    end loop;
+
+    return ret;
+  end function;
+
   function to_hex_string(v: in bit_vector) return string is
     variable ret: string(1 to (v'length + 3) / 4);
     constant pad : bit_vector(1 to ret'length*4 - v'length) := (others => '0');
@@ -161,6 +182,12 @@ package body text is
     else
       return "false";
     end if;
+  end function;
+
+  function to_string(value: time) return string
+  is
+  begin
+    return time'image(value);
   end function;
 
 end package body;
