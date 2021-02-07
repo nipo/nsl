@@ -79,7 +79,7 @@ package body bytestream is
 
     for i in ret'range
     loop
-      ret(i) := byte_from_hex(blob(i * 2 + 1 to i * 2 + 2));
+      ret(i) := byte_from_hex(xblob(i * 2 + 1 to i * 2 + 2));
     end loop;
 
     return ret;
