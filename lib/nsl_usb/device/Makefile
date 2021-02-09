@@ -1,0 +1,16 @@
+vhdl-sources += device.pkg.vhd 
+vhdl-sources += bus_interface_utmi8.vhd    
+vhdl-sources += bus_interface_ulpi8.vhd  
+vhdl-sources += device_ep_in_noop.vhd
+vhdl-sources += device_ep_bulk_out.vhd
+vhdl-sources += device_ep_bulk_in.vhd
+vhdl-sources += device_ep_intr_in.vhd
+
+deps += nsl_usb.sie
+deps += nsl_usb.ulpi
+deps += nsl_usb.utmi
+deps += nsl_math.arith
+deps += nsl_memory.ram
+deps += nsl_logic.bool
+deps += nsl_data.bytestream
+deps += nsl_clocking.async
