@@ -5,3 +5,4 @@ packages += utmi
 packages += ulpi
 packages += sie
 packages += device
+packages += func
