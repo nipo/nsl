@@ -100,6 +100,7 @@ ise-build/$(target)-first-par.ncd ise-build/$(target)-par.ncd:
 		$(if $(filter %-par.ncd,$^),$(PAR_OPTS_GUIDED),$(PAR_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %-map.ncd,$^)" "$@"
+	$(SILENT)test 0 -eq `grep -c UNLOC $(@:.ncd=_pad.csv)` || (echo "There are unconstrained IOs"; exit 1)
 
 ise-build/$(target)-first-map.ncd: ise-build/$(target).ngd
 ise-build/$(target)-first-par.ncd: ise-build/$(target)-first-map.ncd
