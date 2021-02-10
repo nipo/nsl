@@ -24,11 +24,21 @@ entity sie_descriptor is
     string_6 : string := "";
     string_7 : string := "";
     string_8 : string := "";
-    string_9 : string := ""
+    string_9 : string := "";
+    raw_0 : byte_string := null_byte_string;
+    raw_1 : byte_string := null_byte_string;
+    raw_2 : byte_string := null_byte_string;
+    raw_3 : byte_string := null_byte_string;
+    raw_4 : byte_string := null_byte_string;
+    raw_5 : byte_string := null_byte_string;
+    raw_6 : byte_string := null_byte_string;
+    raw_7 : byte_string := null_byte_string
     );
   port(
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
+
+    string_10_i : in string := "";
 
     cmd_i : in descriptor_cmd;
     rsp_o : out descriptor_rsp
@@ -36,121 +46,41 @@ entity sie_descriptor is
 end entity sie_descriptor;
 
 architecture beh of sie_descriptor is
-
-  constant string_0: byte_string(1 to 4) := language(16#0409#);
-
-  constant device_descriptor_offset : integer := 0;
-  constant device_qualifier_offset  : integer := device_descriptor_offset + device_descriptor'length;
-  constant fs_config_1_offset       : integer := device_qualifier_offset + device_qualifier'length;
-  constant hs_config_1_offset       : integer := fs_config_1_offset + fs_config_1'length;
-  constant string_0_offset          : integer := hs_config_1_offset + hs_config_1'length;
-  constant string_1_offset          : integer := string_0_offset + string_0'length;
-  constant string_2_offset          : integer := string_1_offset + string_descriptor_length(string_1);
-  constant string_3_offset          : integer := string_2_offset + string_descriptor_length(string_2);
-  constant string_4_offset          : integer := string_3_offset + string_descriptor_length(string_3);
-  constant string_5_offset          : integer := string_4_offset + string_descriptor_length(string_4);
-  constant string_6_offset          : integer := string_5_offset + string_descriptor_length(string_5);
-  constant string_7_offset          : integer := string_6_offset + string_descriptor_length(string_6);
-  constant string_8_offset          : integer := string_7_offset + string_descriptor_length(string_7);
-  constant string_9_offset          : integer := string_8_offset + string_descriptor_length(string_8);
-  constant desc_total_size          : integer := string_9_offset + string_descriptor_length(string_9);
   
-  constant desc_blob: byte_string(0 to desc_total_size-1) :=
-    device_descriptor & device_qualifier
-    & fs_config_1 & hs_config_1
-    & string_0
-    & string_from_ascii(string_1)
-    & string_from_ascii(string_2)
-    & string_from_ascii(string_3)
-    & string_from_ascii(string_4)
-    & string_from_ascii(string_5)
-    & string_from_ascii(string_6)
-    & string_from_ascii(string_7)
-    & string_from_ascii(string_8)
-    & string_from_ascii(string_9)
-    ;
-
-  type desc_info_t is
-  record
-    address: integer range 0 to desc_total_size;
-    length: integer range 0 to 255;
-    exists: boolean;
-  end record;
-
-  function min_1(i:integer) return integer is
-  begin
-    if i /= 0 then
-      return i - 1;
-    else
-      return 0;
-    end if;
-  end function;
-
-  function rr(address, length : integer) return desc_info_t is
-  begin
-    return desc_info_t'(address => address,
-                        length => length,
-                        exists => length /= 0);
-  end function;
-
-  function desc_info_get(dtype  : descriptor_type_t;
-                         index  : unsigned;
-                         hs : std_ulogic)
-    return desc_info_t
+  function desc_item_fs_hs(dtype  : descriptor_type_t;
+                           index  : integer;
+                           fs_data, hs_data : byte_string) return byte_string
   is
   begin
-    case dtype is
-      when DESCRIPTOR_TYPE_DEVICE =>
-        return rr(device_descriptor_offset,
-                  device_descriptor'length);
+    if fs_data'length = 0 or hs_data'length = 0 then
+      return null_byte_string;
+    end if;
 
-      when DESCRIPTOR_TYPE_CONFIGURATION =>
-        if index = 0 then
-          if hs_supported_c and hs = '1' then
-            return rr(hs_config_1_offset, hs_config_1'length);
-          else
-            return rr(fs_config_1_offset, fs_config_1'length);
-          end if;
-        end if;
-
-      when DESCRIPTOR_TYPE_STRING =>
-        case to_integer(index) is
-          when 0 => return rr(string_0_offset, string_0'length);
-          when 1 => return rr(string_1_offset, string_descriptor_length(string_1));
-          when 2 => return rr(string_2_offset, string_descriptor_length(string_2));
-          when 3 => return rr(string_3_offset, string_descriptor_length(string_3));
-          when 4 => return rr(string_4_offset, string_descriptor_length(string_4));
-          when 5 => return rr(string_5_offset, string_descriptor_length(string_5));
-          when 6 => return rr(string_6_offset, string_descriptor_length(string_6));
-          when 7 => return rr(string_7_offset, string_descriptor_length(string_7));
-          when 8 => return rr(string_8_offset, string_descriptor_length(string_8));
-          when 9 => return rr(string_9_offset, string_descriptor_length(string_9));
-          when others =>
-            null;
-        end case;
-
-      when DESCRIPTOR_TYPE_DEVICE_QUALIFIER =>
-        if hs_supported_c then
-          return rr(device_qualifier_offset, device_qualifier'length);
-        end if;
-
-      when DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION =>
-        if hs_supported_c and index = 0 then
-          if hs = '1' then
-            return rr(fs_config_1_offset, fs_config_1'length);
-          else
-            return rr(hs_config_1_offset, hs_config_1'length);
-          end if;
-        end if;
-
-      when others =>
-        null;
-    end case;
-
-    return rr(0, 0);
+    if not hs_supported_c then
+      return sie_descriptor_entry(dtype, index, fs_data);
+    end if;
+    
+    return sie_descriptor_entry(dtype, index, fs_data, true, false)
+         & sie_descriptor_entry(dtype, index, hs_data, true, true);
   end function;
 
-  constant desc_blob_size_l2 : natural := nsl_math.arith.log2(desc_total_size);
+  constant desc_blob: byte_string :=
+    sie_descriptor_entry(DESCRIPTOR_TYPE_DEVICE, 0, device_descriptor)
+    & desc_item_fs_hs(DESCRIPTOR_TYPE_CONFIGURATION, 0, fs_config_1, hs_config_1)
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 0, language(16#0409#))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 1, string_from_ascii(string_1))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 2, string_from_ascii(string_2))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 3, string_from_ascii(string_3))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 4, string_from_ascii(string_4))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 5, string_from_ascii(string_5))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 6, string_from_ascii(string_6))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 7, string_from_ascii(string_7))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 8, string_from_ascii(string_8))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_STRING, 9, string_from_ascii(string_9))
+    & sie_descriptor_entry(DESCRIPTOR_TYPE_DEVICE_QUALIFIER, 0, device_qualifier)
+    & raw_0 & raw_1 & raw_2 & raw_3 & raw_4 & raw_5 & raw_6 & raw_7;
+
+  constant desc_blob_size_l2 : natural := nsl_math.arith.log2(desc_blob'length);
 
   constant desc_blob_padding : byte_string(1 to 2**desc_blob_size_l2-desc_blob'length) :=
     (others => byte'(x"00"));
@@ -159,7 +89,11 @@ architecture beh of sie_descriptor is
     ST_RESET,
     ST_IDLE,
     ST_READ_FILL,
-    ST_SEARCH_SEEK
+    ST_SEARCH_SEEK,
+    ST_SEARCH_CMP_SIZE,
+    ST_SEARCH_CMP_TYPE,
+    ST_SEARCH_CMP_INDEX,
+    ST_SEARCH_DECIDE
     );
   
   type regs_t is
@@ -173,11 +107,16 @@ architecture beh of sie_descriptor is
     start, size_last, rptr : unsigned(desc_blob_size_l2-1 downto 0);
 
     exists : std_ulogic;
+
+    vstring_byte : byte;
+    vstring_mode : boolean;
   end record;
 
   signal r, rin : regs_t;
   signal s_do_read : std_ulogic;
   signal s_rom_rdata : byte;
+
+  alias vstring_value : string(1 to string_10_i'length) is string_10_i;
   
 begin
 
@@ -190,10 +129,11 @@ begin
     end if;
   end process;
 
-  transition: process(r, cmd_i, s_rom_rdata)
-    variable di : desc_info_t;
+  transition: process(r, cmd_i, s_rom_rdata, vstring_value)
+    variable do_vstring_read : boolean;
   begin
     rin <= r;
+    do_vstring_read := false;
 
     case r.state is
       when ST_RESET =>
@@ -214,6 +154,7 @@ begin
           rin.state <= ST_READ_FILL;
         elsif cmd_i.read = '1' and r.rptr /= r.size_last then
           rin.rptr <= r.rptr + 1;
+          do_vstring_read := true;
         end if;
 
       when ST_READ_FILL =>
@@ -222,26 +163,99 @@ begin
         else
           rin.rptr <= r.rptr + 1;
         end if;
+        do_vstring_read := true;
         rin.state <= ST_IDLE;
         
       when ST_SEARCH_SEEK =>
-        di := desc_info_get(r.dtype, r.index, r.hs);
-        rin.start <= to_unsigned(di.address, rin.start'length);
-        rin.size_last <= to_unsigned(di.address + di.length, rin.start'length);
-        rin.exists <= to_logic(di.exists);
-        rin.state <= ST_IDLE;
+        rin.vstring_mode <= false;
+        rin.rptr <= r.rptr + 1;
+        rin.state <= ST_SEARCH_CMP_SIZE;
 
+        if hs_supported_c
+          and r.dtype = DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION then
+          rin.hs <= not r.hs;
+          rin.dtype <= DESCRIPTOR_TYPE_CONFIGURATION;
+        end if;
+
+        if vstring_value'length /= 0
+          and r.dtype = DESCRIPTOR_TYPE_STRING
+          and r.index = 10 then
+          rin.exists <= '1';
+          rin.vstring_mode <= true;
+          rin.size_last <= to_unsigned(vstring_value'length * 2 + 2, rin.size_last'length);
+          rin.start <= (others => '0');
+          rin.rptr <= (others => '0');
+          rin.state <= ST_IDLE;
+        end if;
+
+      when ST_SEARCH_CMP_SIZE =>
+        rin.rptr <= r.rptr + 1;
+        rin.state <= ST_SEARCH_CMP_TYPE;
+        if s_rom_rdata = (s_rom_rdata'range => '0') then
+          -- Search over
+          rin.state <= ST_IDLE;
+          rin.size_last <= (others => '0');
+          rin.rptr <= (others => '0');
+          rin.exists <= '0';
+        else
+          rin.size_last <= resize(unsigned(s_rom_rdata), rin.size_last'length);
+        end if;
+
+      when ST_SEARCH_CMP_TYPE =>
+        rin.rptr <= r.rptr + 1;
+        rin.state <= ST_SEARCH_CMP_INDEX;
+        if descriptor_type_t(s_rom_rdata) /= r.dtype then
+          rin.exists <= '0';
+        end if;
+
+      when ST_SEARCH_CMP_INDEX =>
+        rin.state <= ST_SEARCH_DECIDE;
+        if unsigned(s_rom_rdata(5 downto 0)) /= r.index
+          or (s_rom_rdata(7) = '1' and s_rom_rdata(6) /= r.hs) then
+          rin.exists <= '0';
+        end if;
+
+      when ST_SEARCH_DECIDE =>
+        if r.exists = '1' then
+          rin.start <= r.rptr;
+          rin.state <= ST_IDLE;
+          rin.size_last <= r.rptr + r.size_last;
+          rin.rptr <= (others => '0');
+        else
+          rin.exists <= '1';
+          rin.state <= ST_SEARCH_SEEK;
+          rin.rptr <= r.rptr + r.size_last;
+        end if;
     end case;
+
+    if vstring_value'length /= 0 and r.vstring_mode and do_vstring_read then
+      if r.rptr = 0 then
+        rin.vstring_byte <= byte(to_unsigned(vstring_value'length * 2 + 2, 8));
+      elsif r.rptr = 1 then
+        rin.vstring_byte <= byte(DESCRIPTOR_TYPE_STRING);
+      elsif r.rptr(0) = '1' then
+        rin.vstring_byte <= (others => '0');
+      else
+        rin.vstring_byte <= byte(to_unsigned(character'pos(vstring_value(to_integer(r.rptr(r.rptr'left downto 1)))), 8));
+      end if;
+    end if;
+
   end process;
 
   mealy: process(r, cmd_i, s_rom_rdata)
   begin
     s_do_read <= '0';
 
-    rsp_o.last <= to_logic(r.rptr = r.size_last);
     rsp_o.exists <= r.exists;
     rsp_o.lookup_done <= '0';
-    rsp_o.data <= s_rom_rdata;
+
+    rsp_o.last <= to_logic(r.rptr = r.size_last);
+
+    if vstring_value'length /= 0 and r.vstring_mode then
+      rsp_o.data <= r.vstring_byte;
+    else
+      rsp_o.data <= s_rom_rdata;
+    end if;
 
     case r.state is
       when ST_IDLE =>
@@ -251,6 +265,10 @@ begin
       when ST_READ_FILL =>
         s_do_read <= '1';
         rsp_o.lookup_done <= '1';
+
+      when ST_SEARCH_SEEK
+        | ST_SEARCH_CMP_INDEX | ST_SEARCH_CMP_TYPE | ST_SEARCH_CMP_SIZE =>
+        s_do_read <= '1';
 
       when others =>
         null;

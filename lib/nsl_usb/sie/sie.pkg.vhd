@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data;
+library nsl_usb, nsl_data, nsl_logic;
 use nsl_usb.utmi.all;
 use nsl_usb.usb.all;
 use nsl_data.bytestream.byte;
@@ -74,13 +74,16 @@ package sie is
 
   -- transfer_cmd and transfer_rsp contain all information about a
   -- transfer.  A transfer usually has 3 phases: TOKEN, DATA,
-  -- HANDSHAKE.  Main command/response design here is something happens only
-  -- when cmd.phase = rsp.phase.
+  -- HANDSHAKE.  Main command/response design here is: information
+  -- flow through the interface only when cmd.phase = rsp.phase.
   --
   -- All transfer is driven by commander.
   -- - It may cancel transfer any time and go back to NONE.
   -- - It controls 'nxt' signal, which guards data exchange, in both
   --   directions.
+  -- - Responder must be able to accept packet at any time (and handle
+  --   overflows nicely), it must be able to feed IN transfers without
+  --   pause.
   --
   -- Commander and Responder state machines should walk accross the three
   -- phases coherently.
@@ -279,6 +282,28 @@ package sie is
     );
 
   -- SIE Descriptor lookup
+
+  -- EP0 queries the descriptor block in three phases:
+  --
+  -- 1. EP0 triggers lookup of a descriptor by /type/ and
+  --    /index/. Next cycle after /lookup/ is asserted on command
+  --    channel, /lookup_done/ deasserts until descriptor is found (or
+  --    not). Availability of descriptor is responded through
+  --    /exists/. Selected descriptor is internally registered in
+  --    descriptor block.
+  --
+  -- 2. EP0 needs to read the previously-selected descriptor from a
+  --    given /offset/ (Data retransmission requires to seek back
+  --    sometimes).  /seek/ is asserted on command interface with a
+  --    base offset.  No more than 2 cycles after, /data/ exposes the
+  --    byte of descriptor data at said offset.
+  --
+  -- 3. EP0 streams the descriptor. Any cycle where /read/ is asserted
+  --    on command interface, current data byte is assumed to be
+  --    consumed and next data byte will be available on response
+  --    interface on next cycle.  When descriptor block presents the
+  --    last byte of descriptor, it asserts /last/ during the same
+  --    cycle.
   
   type descriptor_cmd is
   record
@@ -302,13 +327,26 @@ package sie is
     last      : std_ulogic;
   end record;
 
+  -- Serializer for sie_descriptor raw entries
+  function sie_descriptor_entry(dtype  : descriptor_type_t;
+                                index  : integer;
+                                data   : byte_string;
+                                speed_dependant : boolean := false;
+                                hs_only : boolean := false)
+    return byte_string;
+
   component sie_descriptor is
     generic (
       hs_supported_c : boolean := false;
       device_descriptor : byte_string;
       device_qualifier : byte_string := null_byte_string;
+      -- Configuration #1 descriptor, for FS and HS. Endpoint MPS
+      -- changes. See example in func/serial_port.vhd to see how to use a
+      -- function to avoid repeating too much.
       fs_config_1 : byte_string;
       hs_config_1 : byte_string := null_byte_string;
+      -- String descriptors. ASCII string is converted to UTF-16
+      -- internally.
       string_1 : string := "";
       string_2 : string := "";
       string_3 : string := "";
@@ -317,11 +355,26 @@ package sie is
       string_6 : string := "";
       string_7 : string := "";
       string_8 : string := "";
-      string_9 : string := ""
+      string_9 : string := "";
+      -- User-defined additional descriptors. Must be serialized
+      -- with help of sie_descriptor_entry.
+      raw_0 : byte_string := null_byte_string;
+      raw_1 : byte_string := null_byte_string;
+      raw_2 : byte_string := null_byte_string;
+      raw_3 : byte_string := null_byte_string;
+      raw_4 : byte_string := null_byte_string;
+      raw_5 : byte_string := null_byte_string;
+      raw_6 : byte_string := null_byte_string;
+      raw_7 : byte_string := null_byte_string
       );
     port(
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
+
+      -- String 10 can be non-constant. A string of any size may be connected
+      -- here. It will be converted to UTF-16 when descriptor is read.
+      -- This is mostly useful for a serial number.
+      string_10_i : in string := "";
 
       cmd_i : in descriptor_cmd;
       rsp_o : out descriptor_rsp
@@ -364,7 +417,8 @@ package sie is
 
   component sie_transfer is
     generic (
-      hs_supported_c : boolean := false
+      hs_supported_c : boolean := false;
+      phy_clock_rate_c : integer := 60000000
       );
     port (
       clock_i     : in  std_ulogic;
@@ -446,6 +500,8 @@ end package;
 
 package body sie is
 
+  use nsl_logic.bool.all;
+
   function transfer_has_data_out(transfer: transfer_t) return boolean
   is
   begin
@@ -457,6 +513,28 @@ package body sie is
   is
   begin
     return transfer = TRANSFER_IN;
+  end function;
+
+  function sie_descriptor_entry(dtype  : descriptor_type_t;
+                                index  : integer;
+                                data   : byte_string;
+                                speed_dependant : boolean := false;
+                                hs_only : boolean := false) return byte_string
+  is
+    variable ret : byte_string(0 to data'length+3-1);
+  begin
+    if data'length = 0 then
+      return null_byte_string;
+    end if;
+
+    ret(0) := byte(to_unsigned(data'length, 8));
+    ret(1) := byte(dtype);
+    ret(2) := byte(to_unsigned(index, 8));
+    ret(2)(7) := to_logic(speed_dependant);
+    ret(2)(6) := to_logic(hs_only);
+    ret(3 to ret'right) := data;
+
+    return ret;
   end function;
 
 end package body;

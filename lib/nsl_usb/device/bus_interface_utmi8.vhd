@@ -43,6 +43,8 @@ entity bus_interface_utmi8 is
     phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
     phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
 
+    string_10_i : in string := "";
+    
     transfer_cmd_tap_o : out transfer_cmd;
     transfer_rsp_tap_o : out transfer_rsp;
 
@@ -129,7 +131,8 @@ begin
 
   transfer_engine: nsl_usb.sie.sie_transfer
     generic map (
-      hs_supported_c => hs_supported_c
+      hs_supported_c => hs_supported_c,
+      phy_clock_rate_c => phy_clock_rate_c
       )
     port map (
       clock_i       => phy_system_i.clock,
@@ -224,6 +227,8 @@ begin
     port map(
       clock_i => phy_system_i.clock,
       reset_n_i => s_app_reset_n,
+
+      string_10_i => string_10_i,
 
       cmd_i => s_desc_cmd,
       rsp_o => s_desc_rsp

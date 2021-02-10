@@ -11,7 +11,8 @@ use nsl_logic.bool.all;
 
 entity sie_transfer is
   generic (
-    hs_supported_c : boolean := false
+    hs_supported_c : boolean := false;
+    phy_clock_rate_c : integer := 60000000
     );
   port (
     clock_i     : in  std_ulogic;
@@ -67,20 +68,20 @@ architecture beh of sie_transfer is
 
     ST_IGNORE
     );
-  
-  function to_tick(s : real) return integer
+
+  function t_cycles(s : real) return integer
   is
   begin
-    return integer(60.0e6 * s);
+    return integer(s * real(phy_clock_rate_c));
   end function;
 
   -- USB2 7.1.19
   -- ULPI 3.8.2.6.1
---  constant host_wait_timeout_fs_c : integer := bit_count_cycles_fs(18) + 20;
---  constant host_wait_timeout_hs_c : integer := bit_count_cycles_hs(816) + 20;
-  constant host_wait_timeout_fs_c : integer := to_tick(6.0e-6);
-  constant host_wait_timeout_hs_c : integer := to_tick(6.0e-6);
-  constant app_wait_timeout_c : integer := bit_count_cycles_hs(192) - 4; -- 400ns
+--  constant host_wait_timeout_fs_c : integer := bit_count_cycles_fs(18, phy_clock_rate_c/1000000) + 20;
+--  constant host_wait_timeout_hs_c : integer := bit_count_cycles_hs(816, phy_clock_rate_c/1000000) + 20;
+  constant host_wait_timeout_fs_c : integer := t_cycles(6.0e-6);
+  constant host_wait_timeout_hs_c : integer := t_cycles(6.0e-6);
+  constant app_wait_timeout_c : integer := bit_count_cycles_hs(192, phy_clock_rate_c/1000000) - 4; -- ~400ns
 
   constant timeout_max_c : integer := nsl_logic.bool.if_else(
     hs_supported_c,

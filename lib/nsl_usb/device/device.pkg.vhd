@@ -46,6 +46,8 @@ package device is
       phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
       phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
 
+      string_10_i : in string := "";
+
       transfer_cmd_tap_o : out transfer_cmd;
       transfer_rsp_tap_o : out transfer_rsp;
 
@@ -87,6 +89,8 @@ package device is
 
       phy_o : out nsl_usb.ulpi.ulpi8_link2phy;
       phy_i : in  nsl_usb.ulpi.ulpi8_phy2link;
+
+      string_10_i : in string := "";
 
       transfer_cmd_tap_o : out transfer_cmd;
       transfer_rsp_tap_o : out transfer_rsp;

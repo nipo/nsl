@@ -41,6 +41,8 @@ entity bus_interface_ulpi8 is
     phy_o : out nsl_usb.ulpi.ulpi8_link2phy;
     phy_i : in  nsl_usb.ulpi.ulpi8_phy2link;
 
+    string_10_i : in string := "";
+
     transfer_cmd_tap_o : out transfer_cmd;
     transfer_rsp_tap_o : out transfer_rsp;
 
@@ -105,6 +107,8 @@ begin
       phy_data_o => utmi_data_to_phy,
       phy_data_i => utmi_data_from_phy,
 
+      string_10_i => string_10_i,
+      
       transfer_cmd_tap_o => transfer_cmd_tap_o,
       transfer_rsp_tap_o => transfer_rsp_tap_o,
       
