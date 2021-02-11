@@ -1,0 +1,39 @@
+set_io led_r  41
+set_io led_g  39
+set_io led_b  40
+set_io phy_data[0] 46
+set_io phy_data[1] 47
+set_io phy_data[2] 48
+set_io phy_data[3] 2
+set_io phy_data[4] 3
+set_io phy_data[5] 4
+set_io phy_data[6] 6
+set_io phy_data[7] 9
+set_io phy_stp 10
+set_io phy_dir 11
+set_io phy_nxt 12
+set_io phy_reset 13
+set_io phy_clk 20
+
+# set_io trace_d[3] 42
+# set_io trace_d[2] 38
+# set_io trace_d[1] 37
+# set_io trace_d[0] 36
+# set_io trace_clk 35
+# set_io vio_fault 32
+# set_io rtck 31
+# set_io srst 28
+# set_io tdi 27
+# set_io tdo 26
+# set_io tck 25
+# set_io tms 23
+# set_io vio_ctrl[0] 21
+# set_io vio_ctrl[1] 45
+# set_io vio_ctrl[2] 44
+# set_io vio_feed 43
+# set_io scl 19
+# set_io sda 18
+# set_io flash_miso 17
+# set_io flash_mosi 14
+# set_io flash_sck 15
+# set_io flash_cs 16

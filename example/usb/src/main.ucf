@@ -1,0 +1,30 @@
+NET "phy_clk"     LOC = "P84" | IOSTANDARD = LVCMOS33 | BUFG = CLK | TNM_NET = "phy_clk";
+
+TIMESPEC TS_phy_clk = PERIOD phy_clk 16.67 ns HIGH 50%;
+
+NET "phy_*" IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW;
+
+NET "phy_data<0>" LOC = "P83";
+NET "phy_data<1>" LOC = "P82";
+NET "phy_data<2>" LOC = "P81";
+NET "phy_data<3>" LOC = "P80";
+NET "phy_data<4>" LOC = "P79";
+NET "phy_data<5>" LOC = "P78";
+NET "phy_data<6>" LOC = "P75";
+NET "phy_data<7>" LOC = "P74";
+
+NET "phy_stp"     LOC = "P88";
+NET "phy_nxt"     LOC = "P92";
+NET "phy_dir"     LOC = "P85";
+NET "phy_reset"   LOC = "P87";
+
+NET "phy_*" OFFSET = OUT 11.67ns AFTER phy_clk;
+NET "phy_*" OFFSET = IN 5ns  VALID 13.67ns BEFORE phy_clk;
+
+# Active high
+NET "led"     LOC =  "P34" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;
+
+# Active low, hardware debounce
+NET "btn"     LOC =  "P127" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;
+
+# NET "io_en"        LOC =  "P32" | IOSTANDARD = LVCMOS25 | DRIVE = 12 | SLEW = SLOW;     # Enable buffers, if any, active high
