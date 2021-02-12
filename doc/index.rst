@@ -77,13 +77,15 @@ Components currently available in the HDL library include:
 
   * FTDI "synchronous serial" to fifo bridge,
 
-  * (R)MII to fifo bridge,
+  * (R)MII to fifo bridge, RGMII,
 
   * SPI slave to fifo bridge,
 
   * JTAG register to fifo bridge,
 
-  * UART to fifo bridge.
+  * UART to fifo bridge,
+
+  * USB function.
 
 * Utilities for a test-bench framework.
 
