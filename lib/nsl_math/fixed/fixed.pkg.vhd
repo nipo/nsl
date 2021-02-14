@@ -45,6 +45,8 @@ package fixed is
   function "-"(a, b: ufixed) return ufixed;
   function "-"(a: ufixed) return sfixed;
   function "not"(a: ufixed) return ufixed;
+  function shr(a: ufixed; l : natural) return ufixed;
+  function shra(a: ufixed; l : natural) return ufixed;
 
   function "="(a, b: ufixed) return boolean;
   function "/="(a, b: ufixed) return boolean;
@@ -134,6 +136,36 @@ package body fixed is
 
     ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
 
+    return ret;
+  end function;
+
+  function shr(a: ufixed; l : natural) return ufixed
+  is
+    variable ret : ufixed(a'range);
+    constant w : integer := a'length - l;
+  begin
+    ret := (others => '0');
+    if w > 0 then
+      ret(ret'right + w - 1 downto ret'right)
+        := a(a'left downto a'left - w + 1);
+    end if;
+    return ret;
+  end function;
+
+  function shra(a: ufixed; l : natural) return ufixed
+  is
+    variable ret : ufixed(a'range);
+    constant w : integer := a'length - l;
+  begin
+    if a(a'left) = '1' then
+      ret := (others => '1');
+    else
+      ret := (others => '0');
+    end if;
+    if w > 0 then
+      ret(ret'right + w - 1 downto ret'right)
+        := a(a'left downto a'left - w + 1);
+    end if;
     return ret;
   end function;
 
