@@ -104,20 +104,23 @@ package body fixed is
   is
     constant sat_min : ufixed(left downto right) := (others => '0');
     constant sat_max : ufixed(left downto right) := (others => '1');
+    variable ret : ufixed(left downto right);
   begin
     if value <= 0.0 then
       return sat_min;
     elsif value >= 2.0**left then
       return sat_max;
     else
-      return ufixed(to_unsigned(integer(value * 2.0 ** (-right)), left - right + 1));
+      ret := ufixed(to_unsigned(integer(value * 2.0 ** (-right)), left - right + 1));
+      return ret;
     end if;
   end function;
 
   function to_real(value : ufixed) return real
   is
+    alias xv : ufixed(value'length-1 downto 0) is value;
   begin
-    return real(to_integer(unsigned(value))) * 2.0 ** value'right;
+    return real(to_integer(unsigned(xv))) * 2.0 ** real(value'right);
   end function;
 
   function resize(value : ufixed;
