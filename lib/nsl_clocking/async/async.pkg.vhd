@@ -94,4 +94,21 @@ package async is
       );
   end component;
 
+  component async_recovery is
+    generic(
+      clock_i_hz_c : natural;
+      tick_skip_max_c : natural := 2;
+      tick_i_hz_c : natural;
+      tick_o_hz_c : natural;
+      target_ppm_c : natural
+      );
+    port (
+      clock_i : in  std_ulogic;
+      reset_n_i : in std_ulogic;
+      tick_valid_i : in std_ulogic := '1';
+      tick_i : in std_ulogic;
+      tick_o : out std_ulogic
+      );
+  end component;
+
 end package async;
