@@ -11,14 +11,16 @@ use nsl_logic.bool.if_else;
 
 package func is
 
+  constant null_string : string := "";
+  
   component serial_port is
     generic (
       vendor_id_c            : unsigned(15 downto 0);
       product_id_c           : unsigned(15 downto 0);
       device_version_c       : unsigned(15 downto 0);
-      manufacturer_c         : string                := "";
-      product_c              : string                := "";
-      serial_c               : string                := "";
+      manufacturer_c         : string                := null_string;
+      product_c              : string                := null_string;
+      serial_c               : string                := null_string;
       hs_supported_c         : boolean               := false;
       self_powered_c         : boolean               := false;
       phy_clock_rate_c : integer := 60000000;
@@ -31,7 +33,7 @@ package func is
       hs_o        : out std_ulogic;
       suspend_o   : out std_ulogic;
       online_o    : out std_ulogic;
-      serial_i    : in string := "";
+      serial_i    : in string := null_string;
 
       rx_valid_o     : out std_ulogic;
       rx_data_o      : out byte;
