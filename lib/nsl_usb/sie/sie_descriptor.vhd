@@ -150,7 +150,7 @@ begin
           rin.index <= cmd_i.index;
           rin.state <= ST_SEARCH_SEEK;
         elsif cmd_i.seek = '1' then
-          rin.rptr <= r.start + cmd_i.offset;
+          rin.rptr <= r.start + resize(cmd_i.offset, r.rptr'length);
           rin.state <= ST_READ_FILL;
         elsif cmd_i.read = '1' and r.rptr /= r.size_last then
           rin.rptr <= r.rptr + 1;
