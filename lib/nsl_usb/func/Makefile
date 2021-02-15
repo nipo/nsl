@@ -1,5 +1,6 @@
-vhdl-sources += func.pkg.vhd 
-vhdl-sources += serial_port.vhd  
+vhdl-sources += func.pkg.vhd
+vhdl-sources += serial_port.vhd
+vhdl-sources += vendor_bulk_pair.vhd
 
 deps += nsl_clocking.async
 deps += nsl_logic.bool
