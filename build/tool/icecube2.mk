@@ -129,7 +129,7 @@ $(build-dir)/placed/$(target).sdc: $(build-dir)/synth/$(target).sdc
 # Route resulting file
 $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)mkdir -p $(dir $@)/packed
+	$(SILENT)mkdir -p $(dir $@)packed
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/packer \
 		$(target_dev) \
@@ -138,16 +138,16 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		--outdir $(dir $@). \
 		--translator $(SBT)/bin/sdc_translator.tcl \
 		--src_sdc_file $< \
-		--dst_sdc_file $(dir $@)/packed/$(notdir $@) \
+		--dst_sdc_file $(dir $@)packed/$(notdir $@) \
 		--devicename $(target_part)
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/sbrouter \
 		$(target_dev) \
 		$(build-dir)/synth/oadb-$(top-entity) \
 		$(target_lib) \
-		$(dir $@)/packed/$(notdir $@) \
+		$(dir $@)packed/$(notdir $@) \
 		--outdir $(dir $@). \
-		--sdf_file $(dir $@)/routed.sdf \
+		--sdf_file $(dir $@)routed.sdf \
 		--pin_permutation
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/netlister \
@@ -157,15 +157,15 @@ $(build-dir)/routed/$(target).sdc: $(build-dir)/placed/$(target).sdc
 		--view rt \
 		--device $(target_dev) \
 		--splitio \
-		--in-sdc-file  \
-		--out-sdc-file $(dir $@)/$(target).sdc
+		--in-sdc-file $(dir $@)packed/$(notdir $@) \
+		--out-sdc-file $@
 	$(SILENT)$(ICECUBE2_PREPARE) \
 		$(SBT_OPT_BIN)/sbtimer \
 		--des-lib $(build-dir)/synth/oadb-$(top-entity) \
 		--lib-file $(target_lib) \
-		--sdc-file $(dir $@)/$(target).sdc \
-		--sdf-file $(dir $@)/routed.sdf \
-		--report-file $(dir $@)/timing.rpt \
+		--sdc-file $@ \
+		--sdf-file $(dir $@)routed.sdf \
+		--report-file $(dir $@)timing.rpt \
 		--device-file $(target_dev) \
 		--timing-summary
 
