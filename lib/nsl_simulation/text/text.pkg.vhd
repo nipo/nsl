@@ -25,7 +25,20 @@ package text is
   function to_hex_string(v: in std_ulogic_vector) return string;
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
-  
+
+  -- Returns an index to add to haystack'left. If returns -1, needle
+  -- is not found.
+  function strchr(haystack : string;
+                  needle : character;
+                  start_index : integer := 0) return integer;
+  -- Search for needle, either at begin/end of string, or separated by
+  -- separator.
+  function strfind(haystack, needle : string;
+                   separator : character) return boolean;
+  -- Search for needle in haystack (like libc's strstr, with inverted
+  -- response boolean value)
+  function strfind(haystack, needle : string) return boolean;
+
 end package;
 
 package body text is
@@ -184,10 +197,53 @@ package body text is
     end if;
   end function;
 
+  function strchr(haystack : string;
+                  needle : character;
+                  start_index : integer := 0) return integer
+  is
+  begin
+    if start_index >= haystack'length or start_index < 0 then
+      return -1;
+    end if;
+
+    for offset in haystack'left + start_index to haystack'right
+    loop
+      if haystack(offset) = needle then
+        return offset;
+      end if;
+    end loop;
+
+    return -1;
+  end function;
+
   function to_string(value: time) return string
   is
   begin
     return time'image(value);
+  end function;
+
+  function strfind(haystack, needle : string) return boolean
+  is
+  begin
+    if needle'length > haystack'length then
+      return false;
+    end if;
+
+    for offset in haystack'left to haystack'right - needle'length + 1
+    loop
+      if haystack(offset to offset + needle'length - 1) = needle then
+        return true;
+      end if;
+    end loop;
+
+    return false;
+  end function;
+
+  function strfind(haystack, needle : string;
+                   separator : character) return boolean
+  is
+  begin
+    return strfind(separator & haystack & separator, needle);
   end function;
 
 end package body;
