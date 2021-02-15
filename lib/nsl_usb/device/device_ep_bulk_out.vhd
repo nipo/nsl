@@ -19,8 +19,8 @@ entity device_ep_bulk_out is
     clock_i   : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    transfer_i : in  transfer_cmd;
-    transfer_o : out transfer_rsp;
+    transaction_i : in  transaction_cmd;
+    transaction_o : out transaction_rsp;
 
     valid_o     : out std_ulogic;
     data_o      : out byte;
@@ -59,7 +59,7 @@ architecture beh of device_ep_bulk_out is
 
     fifo_wptr,
       fifo_rptr,
-      transfer_offset,
+      transaction_offset,
       mps_mask : ptr_t;
 
     toggle              : std_ulogic;
@@ -89,22 +89,22 @@ begin
 
   s_do_read <= (ready_i or not r.read_buffer_valid)
             and to_logic(r.fifo_rptr /= r.fifo_wptr);
-  s_do_write <= to_logic(transfer_i.phase = PHASE_DATA and r.state = ST_TAKE)
-                and transfer_i.nxt;
+  s_do_write <= to_logic(transaction_i.phase = PHASE_DATA and r.state = ST_TAKE)
+                and transaction_i.nxt;
 
-  transition: process(transfer_i, r, ready_i, s_do_read) is
+  transition: process(transaction_i, r, ready_i, s_do_read) is
     variable free_size : ptr_t;
   begin
     rin <= r;
 
-    free_size := buffer_size_c + r.fifo_rptr - r.fifo_wptr - r.transfer_offset;
+    free_size := buffer_size_c + r.fifo_rptr - r.fifo_wptr - r.transaction_offset;
     rin.can_take_mps <= (r.mps_mask and free_size) /= (ptr_t'range => '0');
 
     rin.available <= r.fifo_wptr - r.fifo_rptr;
 
     -- Precomputation of MPS limit
     -- MPS is a power of two, mask will take MSBs.
-    if hs_supported_c and transfer_i.hs = '1' then
+    if hs_supported_c and transaction_i.hs = '1' then
       rin.mps_mask <= not to_ptr(BULK_MPS_HS - 1);
     else
       rin.mps_mask <= not to_ptr(2 ** fs_mps_l2_c - 1);
@@ -120,10 +120,10 @@ begin
         rin.read_buffer_valid  <= '0';
         
       when ST_IDLE =>
-        rin.transfer_offset <= to_ptr(0);
+        rin.transaction_offset <= to_ptr(0);
 
         if not r.halted then
-          case transfer_i.phase is
+          case transaction_i.phase is
             when PHASE_NONE =>
               null;
 
@@ -140,8 +140,8 @@ begin
 
             when PHASE_HANDSHAKE =>
               if hs_supported_c
-                and transfer_i.hs = '1'
-                and transfer_i.transfer = TRANSFER_PING then
+                and transaction_i.hs = '1'
+                and transaction_i.transaction = TRANSACTION_PING then
                 if r.can_take_mps then
                   rin.state <= ST_ACK;
                 else
@@ -155,7 +155,7 @@ begin
         end if;
 
       when ST_TAKE =>
-        case transfer_i.phase is
+        case transaction_i.phase is
           when PHASE_NONE =>
             rin.state <= ST_IDLE;
 
@@ -164,14 +164,14 @@ begin
             null;
 
           when PHASE_DATA =>
-            if transfer_i.toggle /= r.toggle then
+            if transaction_i.toggle /= r.toggle then
               -- Already got it
               rin.state <= ST_IGNORE_ACK;
 
-            elsif transfer_i.nxt = '1' then
-              rin.transfer_offset <= r.transfer_offset + 1;
+            elsif transaction_i.nxt = '1' then
+              rin.transaction_offset <= r.transaction_offset + 1;
 
-              if (r.transfer_offset and r.mps_mask) /= 0 then
+              if (r.transaction_offset and r.mps_mask) /= 0 then
                 -- Next cycle is an overflow, avoid this
                 rin.state <= ST_NAK;
               end if;
@@ -181,29 +181,29 @@ begin
             -- Commits the OUT
             rin.toggle <= not r.toggle;
             rin.state <= ST_ACK;
-            rin.fifo_wptr <= r.fifo_wptr + r.transfer_offset;
+            rin.fifo_wptr <= r.fifo_wptr + r.transaction_offset;
         end case;
 
       when ST_NAK =>
-        if transfer_i.phase = PHASE_NONE then
+        if transaction_i.phase = PHASE_NONE then
           rin.state <= ST_IDLE;
         end if;
 
       when ST_IGNORE_ACK =>
-        if transfer_i.phase = PHASE_HANDSHAKE then
+        if transaction_i.phase = PHASE_HANDSHAKE then
           rin.state <= ST_ACK;
         end if;
 
       when ST_ACK =>
-        if transfer_i.phase = PHASE_NONE then
+        if transaction_i.phase = PHASE_NONE then
           rin.state <= ST_IDLE;
         end if;
     end case;
 
-    if transfer_i.clear = '1' then
+    if transaction_i.clear = '1' then
       rin.halted <= false;
       rin.toggle <= '0';
-    elsif transfer_i.halt = '1' then
+    elsif transaction_i.halt = '1' then
       rin.halted <= true;
     end if;
 
@@ -213,7 +213,7 @@ begin
     end if;
   end process;
 
-  s_mem_woff <= r.transfer_offset and not r.mps_mask;
+  s_mem_woff <= r.transaction_offset and not r.mps_mask;
   s_mem_wptr <= resize(r.fifo_wptr + s_mem_woff, s_mem_wptr'length);
   
   storage: nsl_memory.ram.ram_2p_r_w
@@ -228,7 +228,7 @@ begin
 
       write_address_i => s_mem_wptr,
       write_en_i => s_do_write,
-      write_data_i => transfer_i.data,
+      write_data_i => transaction_i.data,
 
       read_address_i => r.fifo_rptr(mem_ptr_t'range),
       read_en_i => s_do_read,
@@ -237,32 +237,32 @@ begin
 
   moore: process(r) is
   begin
-    transfer_o <= TRANSFER_RSP_IDLE;
+    transaction_o <= TRANSACTION_RSP_IDLE;
 
     case r.state is
       when ST_RESET | ST_IDLE =>
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.phase <= PHASE_TOKEN;
 
       when ST_TAKE | ST_IGNORE_ACK =>
-        transfer_o.phase <= PHASE_DATA;
+        transaction_o.phase <= PHASE_DATA;
 
       when ST_ACK =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.phase <= PHASE_HANDSHAKE;
         if r.can_take_mps then
-          transfer_o.handshake <= HANDSHAKE_ACK;
+          transaction_o.handshake <= HANDSHAKE_ACK;
         else
-          transfer_o.handshake <= HANDSHAKE_NYET;
+          transaction_o.handshake <= HANDSHAKE_NYET;
         end if;
 
       when ST_NAK =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
-        transfer_o.handshake <= HANDSHAKE_NAK;
+        transaction_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.handshake <= HANDSHAKE_NAK;
     end case;
 
-    transfer_o.halted <= to_logic(r.halted);
+    transaction_o.halted <= to_logic(r.halted);
     if r.halted then
-      transfer_o.phase <= PHASE_HANDSHAKE;
-      transfer_o.handshake <= HANDSHAKE_STALL;
+      transaction_o.phase <= PHASE_HANDSHAKE;
+      transaction_o.handshake <= HANDSHAKE_STALL;
     end if;
   end process;
     

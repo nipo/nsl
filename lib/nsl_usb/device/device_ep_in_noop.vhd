@@ -10,14 +10,14 @@ entity device_ep_in_noop is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    transfer_i : in  transfer_cmd;
-    transfer_o : out transfer_rsp
+    transaction_i : in  transaction_cmd;
+    transaction_o : out transaction_rsp
     );
 end entity;
 
 architecture beh of device_ep_in_noop is
 begin
 
-  transfer_o <= TRANSFER_RSP_ERROR;
+  transaction_o <= TRANSACTION_RSP_ERROR;
   
 end architecture;

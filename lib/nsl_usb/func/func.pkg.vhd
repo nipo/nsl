@@ -47,8 +47,8 @@ package func is
 
       tx_flush_i   : in  std_ulogic := '0';
 
-      transfer_cmd_tap_o : out nsl_usb.sie.transfer_cmd;
-      transfer_rsp_tap_o : out nsl_usb.sie.transfer_rsp;
+      transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
+      transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;
 
       phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
       phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
@@ -91,8 +91,8 @@ package func is
 
       tx_flush_i   : in  std_ulogic := '0';
 
-      transfer_cmd_tap_o : out nsl_usb.sie.transfer_cmd;
-      transfer_rsp_tap_o : out nsl_usb.sie.transfer_rsp;
+      transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
+      transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;
 
       phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
       phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;

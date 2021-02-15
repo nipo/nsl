@@ -1,8 +1,8 @@
 vhdl-sources += sie.pkg.vhd 
 vhdl-sources += sie_management.vhd    
 vhdl-sources += sie_packet.vhd  
-vhdl-sources += sie_transfer.vhd
-vhdl-sources += sie_transfer_router.vhd
+vhdl-sources += sie_transaction.vhd
+vhdl-sources += sie_transaction_router.vhd
 vhdl-sources += sie_ep0.vhd
 vhdl-sources += sie_descriptor.vhd
 

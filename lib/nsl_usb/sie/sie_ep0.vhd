@@ -20,8 +20,8 @@ entity sie_ep0 is
     dev_addr_o   : out device_address_t;
     configured_o : out std_ulogic;
 
-    transfer_i : in  transfer_cmd;
-    transfer_o : out transfer_rsp;
+    transaction_i : in  transaction_cmd;
+    transaction_o : out transaction_rsp;
 
     halted_in_i : in std_ulogic_vector(1 to in_ep_count_c);
     halt_in_o : out std_ulogic_vector(1 to in_ep_count_c);
@@ -44,7 +44,7 @@ architecture beh of sie_ep0 is
   -- with a OUT Data Stage), matching states are not defined, we'll
   -- use STATUS_ERROR for them.
   type status_t is (
-    -- Sends STALL to any Data transfer
+    -- Sends STALL to any Data transaction
     STATUS_ERROR,
     -- ZLP Data IN, STALL Data Out
     STATUS_NODATA_DONE,
@@ -114,7 +114,7 @@ architecture beh of sie_ep0 is
 
     state           : state_t;
 
-    transfer        : transfer_t;
+    transaction        : transaction_t;
     phase           : phase_t;
 
     -- Control logic
@@ -145,18 +145,18 @@ begin
     end if;
   end process;
 
-  transition: process(r, transfer_i, descriptor_i, halted_in_i, halted_out_i) is
+  transition: process(r, transaction_i, descriptor_i, halted_in_i, halted_out_i) is
     variable setup : setup_t;
   begin
     setup := setup_unpack(r.setup);
 
     rin <= r;
 
-    rin.hs <= transfer_i.hs;
+    rin.hs <= transaction_i.hs;
 
-    if r.transfer /= transfer_i.transfer
-      or transfer_i.transfer = TRANSFER_NONE
-      or transfer_i.phase = PHASE_NONE then
+    if r.transaction /= transaction_i.transaction
+      or transaction_i.transaction = TRANSACTION_NONE
+      or transaction_i.phase = PHASE_NONE then
       -- Default catchall resetter
       rin.state <= ST_IDLE;
     end if;
@@ -172,29 +172,29 @@ begin
         
       when ST_IDLE =>
         rin.phase <= PHASE_NONE;
-        rin.transfer <= transfer_i.transfer;
+        rin.transaction <= transaction_i.transaction;
 
-        if transfer_i.phase /= PHASE_NONE then
+        if transaction_i.phase /= PHASE_NONE then
           -- default
           rin.state <= ST_STALL;
           rin.ptr <= to_unsigned(0, rin.ptr'length);
 
-          case transfer_i.transfer is
-            when TRANSFER_SETUP =>
+          case transaction_i.transaction is
+            when TRANSACTION_SETUP =>
               rin.state <= ST_EP0_SETUP;
               rin.phase <= PHASE_DATA;
               rin.stage <= STAGE_SETUP;
 
-            when TRANSFER_OUT =>
+            when TRANSACTION_OUT =>
               rin.state <= ST_EP0_OUT;
               rin.phase <= PHASE_DATA;
 
-            when TRANSFER_IN =>
+            when TRANSACTION_IN =>
               rin.ptr <= r.checkpoint;
               rin.state <= ST_EP0_IN;
               rin.phase <= PHASE_TOKEN;
 
-            when TRANSFER_PING =>
+            when TRANSACTION_PING =>
               if r.stage = STAGE_OUT_STATUS then
                 rin.state <= ST_EP0_PING;
                 rin.phase <= PHASE_TOKEN;
@@ -208,10 +208,10 @@ begin
       when ST_EP0_SETUP =>
         case r.phase is
           when PHASE_DATA =>
-            case transfer_i.phase is
+            case transaction_i.phase is
               when PHASE_DATA =>
-                if transfer_i.nxt = '1' then
-                  rin.setup <= r.setup(1 to 7) & transfer_i.data;
+                if transaction_i.nxt = '1' then
+                  rin.setup <= r.setup(1 to 7) & transaction_i.data;
                   rin.ptr <= r.ptr + 1;
                 end if;
 
@@ -227,7 +227,7 @@ begin
             end case;
 
           when PHASE_HANDSHAKE =>
-            case transfer_i.phase is
+            case transaction_i.phase is
               when PHASE_NONE =>
                 rin.checkpoint <= to_unsigned(0, rin.checkpoint'length);
                 rin.ptr <= to_unsigned(0, rin.ptr'length);
@@ -375,7 +375,7 @@ begin
         -- adter status stage
         if r.stage = STAGE_IN_STATUS
           and r.status = STATUS_NODATA_DONE
-          and transfer_i.phase = PHASE_HANDSHAKE then
+          and transaction_i.phase = PHASE_HANDSHAKE then
           rin.dev_addr <= r.dev_addr_next;
         end if;
 
@@ -409,14 +409,14 @@ begin
         end if;
 
       when ST_EP0_IN_DESC_DATA_RUN =>
-        if (transfer_i.phase = PHASE_DATA and transfer_i.nxt = '1')
+        if (transaction_i.phase = PHASE_DATA and transaction_i.nxt = '1')
           or r.valid = '0' then
           rin.data <= descriptor_i.data;
           rin.last <= descriptor_i.last;
           rin.valid <= '1';
         end if;
 
-        if transfer_i.phase = PHASE_DATA and transfer_i.nxt = '1' then
+        if transaction_i.phase = PHASE_DATA and transaction_i.nxt = '1' then
           rin.ptr <= r.ptr + 1;
           if r.ptr = r.len_m1 -- Setup size overflow
             or r.last = '1' -- Descriptor end
@@ -467,7 +467,7 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_EP0_OUT =>
-        rin.phase <= transfer_i.phase;
+        rin.phase <= transaction_i.phase;
         -- catchall resetter will take it
         null;
 
@@ -475,7 +475,7 @@ begin
         null;
 
       when ST_EP0_IN_BUFFER_DATA_RUN =>
-        if transfer_i.phase = PHASE_DATA and transfer_i.nxt = '1' then
+        if transaction_i.phase = PHASE_DATA and transaction_i.nxt = '1' then
           rin.data <= (others => '0');
           rin.ptr <= r.ptr + 1;
           if r.ptr = r.len_m1 then
@@ -484,8 +484,8 @@ begin
         end if;
 
       when ST_EP0_IN_DESC_HANDSHAKE =>
-        if transfer_i.phase = PHASE_HANDSHAKE then
-          case transfer_i.handshake is
+        if transaction_i.phase = PHASE_HANDSHAKE then
+          case transaction_i.handshake is
             when HANDSHAKE_ACK =>
               rin.checkpoint <= r.ptr;
               rin.phase <= PHASE_NONE;
@@ -498,20 +498,20 @@ begin
         end if;
 
       when ST_EP0_IN_HANDSHAKE =>
-        if transfer_i.phase = PHASE_HANDSHAKE then
+        if transaction_i.phase = PHASE_HANDSHAKE then
           rin.status <= STATUS_READ_DONE;
           rin.state <= ST_IDLE;
         end if;
     end case;
   end process;
 
-  transfer_moore: process(r)
+  transaction_moore: process(r)
   begin
-    transfer_o.phase <= PHASE_NONE;
-    transfer_o.toggle <= '-';
-    transfer_o.data <= (others => '-');
-    transfer_o.last <= '-';
-    transfer_o.handshake <= HANDSHAKE_SILENT;
+    transaction_o.phase <= PHASE_NONE;
+    transaction_o.toggle <= '-';
+    transaction_o.data <= (others => '-');
+    transaction_o.last <= '-';
+    transaction_o.handshake <= HANDSHAKE_SILENT;
     
     case r.state is
       when ST_RESET | ST_IDLE
@@ -522,72 +522,72 @@ begin
         null;
 
       when ST_DESCRIPTOR_LOOKUP | ST_DESCRIPTOR_ROUTE =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
-        transfer_o.handshake <= HANDSHAKE_ACK;
+        transaction_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.handshake <= HANDSHAKE_ACK;
         
       when ST_STALL =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
-        transfer_o.handshake <= HANDSHAKE_STALL;
+        transaction_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.handshake <= HANDSHAKE_STALL;
         
       when ST_EP0_SETUP =>
-        transfer_o.phase <= r.phase;
+        transaction_o.phase <= r.phase;
         if r.stage = STAGE_SETUP then
-          transfer_o.handshake <= HANDSHAKE_ACK;
+          transaction_o.handshake <= HANDSHAKE_ACK;
         else
-          transfer_o.handshake <= HANDSHAKE_NAK;
+          transaction_o.handshake <= HANDSHAKE_NAK;
         end if;
 
       when ST_CONTROL_ENDPOINT_HALT_READ | ST_EP0_IN_BUFFER_DATA_FILL
         | ST_EP0_IN_DESC_DATA_SEEKING | ST_EP0_IN_DESC_DATA_FILL =>
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.phase <= PHASE_TOKEN;
         
       when ST_EP0_IN_BUFFER_DATA_RUN =>
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.data <= r.data;
-        transfer_o.last <= to_logic(r.ptr = r.len_m1);
-        transfer_o.toggle <= '1';
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.data <= r.data;
+        transaction_o.last <= to_logic(r.ptr = r.len_m1);
+        transaction_o.toggle <= '1';
 
       when ST_EP0_IN_DESC_DATA_RUN =>
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.data <= r.data;
-        transfer_o.last <= to_logic(
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.data <= r.data;
+        transaction_o.last <= to_logic(
           r.ptr = r.len_m1 or r.last = '1' or r.ptr(mps_m1_c'range) = mps_m1_c
           );
-        transfer_o.toggle <= not r.ptr(mps_m1_c'left + 1);
+        transaction_o.toggle <= not r.ptr(mps_m1_c'left + 1);
 
       when ST_EP0_IN_HANDSHAKE | ST_EP0_IN_DESC_HANDSHAKE =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.phase <= PHASE_HANDSHAKE;
         if r.last = '1' then
-          transfer_o.handshake <= HANDSHAKE_ACK;
+          transaction_o.handshake <= HANDSHAKE_ACK;
         end if;
 
       when ST_EP0_OUT =>
-        transfer_o.phase <= r.phase;
+        transaction_o.phase <= r.phase;
         case r.status is
           when STATUS_ERROR | STATUS_NODATA_DONE =>
-            transfer_o.handshake <= HANDSHAKE_STALL;
+            transaction_o.handshake <= HANDSHAKE_STALL;
           when STATUS_READ_DONE | STATUS_READ_BUFFER | STATUS_READ_DESCRIPTOR =>
-            transfer_o.handshake <= HANDSHAKE_ACK;
+            transaction_o.handshake <= HANDSHAKE_ACK;
         end case;
 
       when ST_EP0_PING =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.phase <= PHASE_HANDSHAKE;
         case r.status is
           when STATUS_ERROR | STATUS_NODATA_DONE =>
-            transfer_o.handshake <= HANDSHAKE_STALL;
+            transaction_o.handshake <= HANDSHAKE_STALL;
           when STATUS_READ_DONE | STATUS_READ_BUFFER | STATUS_READ_DESCRIPTOR =>
-            transfer_o.handshake <= HANDSHAKE_ACK;
+            transaction_o.handshake <= HANDSHAKE_ACK;
         end case;
 
       when ST_EP0_IN_OTHER =>
-        transfer_o.toggle <= '1';
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.toggle <= '1';
+        transaction_o.phase <= PHASE_HANDSHAKE;
         case r.status is
           when STATUS_ERROR =>
-            transfer_o.handshake <= HANDSHAKE_STALL;
+            transaction_o.handshake <= HANDSHAKE_STALL;
           when STATUS_NODATA_DONE | STATUS_READ_DONE
             | STATUS_READ_BUFFER | STATUS_READ_DESCRIPTOR =>
-            transfer_o.handshake <= HANDSHAKE_ACK;
+            transaction_o.handshake <= HANDSHAKE_ACK;
         end case;
     end case;
   end process;
@@ -645,7 +645,7 @@ begin
   dev_addr_o <= r.dev_addr;
   configured_o <= r.configured;
   
-  desc_mealy: process(r, transfer_i) is
+  desc_mealy: process(r, transaction_i) is
     variable setup : setup_t;
   begin
     setup := setup_unpack(r.setup);
@@ -679,7 +679,7 @@ begin
         descriptor_o.read <= '1';
 
       when ST_EP0_IN_DESC_DATA_RUN =>
-        descriptor_o.read <= transfer_i.nxt;
+        descriptor_o.read <= transaction_i.nxt;
 
       when others =>
         null;

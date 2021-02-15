@@ -9,7 +9,7 @@ use nsl_usb.utmi.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
 
-entity sie_transfer is
+entity sie_transaction is
   generic (
     hs_supported_c : boolean := false;
     phy_clock_rate_c : integer := 60000000
@@ -28,12 +28,12 @@ entity sie_transfer is
     packet_in_o   : out packet_in_cmd;
     packet_in_i   : in  packet_in_rsp;
 
-    transfer_o : out transfer_cmd;
-    transfer_i : in  transfer_rsp
+    transaction_o : out transaction_cmd;
+    transaction_i : in  transaction_rsp
     );
-end entity sie_transfer;
+end entity sie_transaction;
 
-architecture beh of sie_transfer is
+architecture beh of sie_transaction is
 
   type state_t is (
     ST_RESET,
@@ -143,7 +143,7 @@ begin
   end process;
 
   transition: process(r, packet_out_i, packet_in_i,
-                      transfer_i, hs_i, dev_addr_i,
+                      transaction_i, hs_i, dev_addr_i,
                       host_wait_timeout_c) is
     variable put, take : boolean;
   begin
@@ -238,8 +238,8 @@ begin
         end if;
 
       when ST_IN_DATA_WAIT_APP =>
-        rin.toggle <= transfer_i.toggle;
-        case transfer_i.phase is
+        rin.toggle <= transaction_i.toggle;
+        case transaction_i.phase is
           when PHASE_NONE | PHASE_TOKEN =>
             -- App is not ready yet
             null;
@@ -254,13 +254,13 @@ begin
 
           when PHASE_HANDSHAKE =>
             -- IN Zlp if ACK, else error
-            case transfer_i.handshake is
+            case transaction_i.handshake is
               when HANDSHAKE_ACK =>
                 rin.state <= ST_IN_DATA_SEND_ZLP;
                 rin.wait_timeout <= 0;
 
               when others =>
-                rin.handshake <= transfer_i.handshake;
+                rin.handshake <= transaction_i.handshake;
                 rin.state <= ST_IN_HANDSHAKE_WAIT_TX;
                 rin.wait_timeout <= 0;
             end case;
@@ -268,16 +268,16 @@ begin
 
       when ST_IN_DATA_BUFFER_FILL =>
         if r.data_buf(0).valid = '0' then
-          rin.data_buf(0).data <= transfer_i.data;
-          rin.data_buf(0).last <= transfer_i.last;
+          rin.data_buf(0).data <= transaction_i.data;
+          rin.data_buf(0).last <= transaction_i.last;
           rin.data_buf(0).valid <= '1';
         elsif r.data_buf(1).valid = '0' then
-          rin.data_buf(1).data <= transfer_i.data;
-          rin.data_buf(1).last <= transfer_i.last;
+          rin.data_buf(1).data <= transaction_i.data;
+          rin.data_buf(1).last <= transaction_i.last;
           rin.data_buf(1).valid <= '1';
           rin.state <= ST_IN_DATA_SEND_PID;
         end if;
-        if transfer_i.last = '1' then
+        if transaction_i.last = '1' then
           rin.state <= ST_IN_DATA_SEND_PID;
         end if;
 
@@ -299,16 +299,16 @@ begin
                and r.data_buf(1).valid = '0';
         take := packet_in_i.ready = '1';
         if put and take then
-          rin.data_buf(0).data <= transfer_i.data;
-          rin.data_buf(0).last <= transfer_i.last;
+          rin.data_buf(0).data <= transaction_i.data;
+          rin.data_buf(0).last <= transaction_i.last;
           rin.data_buf(0).valid <= '1';
         elsif take then
           rin.data_buf(0) <= r.data_buf(1);
           rin.data_buf(1).valid <= '0';
           rin.data_buf(1).last <= '0';
         elsif put then
-          rin.data_buf(1).data <= transfer_i.data;
-          rin.data_buf(1).last <= transfer_i.last;
+          rin.data_buf(1).data <= transaction_i.data;
+          rin.data_buf(1).last <= transaction_i.last;
           rin.data_buf(1).valid <= '1';
         end if;
 
@@ -341,12 +341,12 @@ begin
         end if;
 
       when ST_IN_HANDSHAKE_TELL_APP =>
-        -- IN transfer is over
+        -- IN transaction is over
         rin.state <= ST_TOKEN_WAIT_PID;
 
       when ST_IN_HANDSHAKE_WAIT_TX =>
         if packet_in_i.ready = '1' then
-          -- Error token was sent, transfer over
+          -- Error token was sent, transaction over
           rin.state <= ST_TOKEN_WAIT_PID;
         end if;
         
@@ -392,7 +392,7 @@ begin
         end if;
 
       when ST_OUT_HANDSHAKE_WAIT_APP | ST_SETUP_HANDSHAKE_WAIT_APP =>
-        case transfer_i.phase is
+        case transaction_i.phase is
           when PHASE_NONE | PHASE_TOKEN =>
             -- App cancelled response
             rin.state <= ST_TOKEN_WAIT_PID;
@@ -401,7 +401,7 @@ begin
             null;
 
           when PHASE_HANDSHAKE =>
-            rin.handshake <= transfer_i.handshake;
+            rin.handshake <= transaction_i.handshake;
             rin.wait_timeout <= 0;
             if r.state = ST_SETUP_HANDSHAKE_WAIT_APP then
               rin.state <= ST_SETUP_HANDSHAKE_WAIT_TX;
@@ -412,12 +412,12 @@ begin
 
       when ST_OUT_HANDSHAKE_WAIT_TX | ST_SETUP_HANDSHAKE_WAIT_TX | ST_PING_HANDSHAKE_WAIT_TX =>
         if packet_in_i.ready = '1' then
-          -- OUT/SETUP/PING Transfer done
+          -- OUT/SETUP/PING Transaction done
           rin.state <= ST_TOKEN_WAIT_PID;
         end if;
 
       when ST_PING_HANDSHAKE_WAIT_APP =>
-        case transfer_i.phase is
+        case transaction_i.phase is
           when PHASE_NONE =>
             -- App cancelled response
             rin.state <= ST_TOKEN_WAIT_PID;
@@ -428,7 +428,7 @@ begin
             null;
 
           when PHASE_HANDSHAKE =>
-            rin.handshake <= transfer_i.handshake;
+            rin.handshake <= transaction_i.handshake;
             rin.wait_timeout <= 0;
             rin.state <= ST_PING_HANDSHAKE_WAIT_TX;
         end case;
@@ -439,7 +439,7 @@ begin
         end if;
     end case;
 
-    -- For any state where app is following the transfer, we should
+    -- For any state where app is following the transaction, we should
     -- not have a NONE phase
     case r.state is
       when ST_RESET =>
@@ -453,7 +453,7 @@ begin
         | ST_PING_HANDSHAKE_WAIT_TX
         | ST_IN_DATA_SEND_PID | ST_IN_HANDSHAKE_WAIT_PID
         | ST_IN_HANDSHAKE_TELL_APP | ST_IN_HANDSHAKE_WAIT_TX =>
-        if transfer_i.phase = PHASE_NONE then
+        if transaction_i.phase = PHASE_NONE then
           rin.state <= ST_TOKEN_WAIT_PID;
           rin.wait_timeout <= 0;
         end if;
@@ -464,7 +464,7 @@ begin
 
     -- For any state where we do not expect data from host (or
     -- actually expect a PID), we take any token PID as a cancellation
-    -- of current transfer.
+    -- of current transaction.
     case r.state is
       when ST_RESET =>
         -- Dont handle anything in reset.
@@ -554,125 +554,125 @@ begin
     end case;
   end process;
 
-  transfer_moore: process(r) is
+  transaction_moore: process(r) is
   begin
-    transfer_o <= TRANSFER_CMD_IDLE;
+    transaction_o <= TRANSACTION_CMD_IDLE;
 
-    transfer_o.hs <= r.hs;
-    transfer_o.ep_no <= r.token(10 downto 7);
-    transfer_o.data <= (others => '-');
-    transfer_o.nxt <= '0';
-    transfer_o.toggle <= r.pid(3);
-    transfer_o.handshake <= r.handshake;
+    transaction_o.hs <= r.hs;
+    transaction_o.ep_no <= r.token(10 downto 7);
+    transaction_o.data <= (others => '-');
+    transaction_o.nxt <= '0';
+    transaction_o.toggle <= r.pid(3);
+    transaction_o.handshake <= r.handshake;
 
     case r.state is
       when ST_RESET =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_TOKEN_WAIT_PID =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_TOKEN_WAIT_1 =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_TOKEN_WAIT_2 =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_TOKEN_WAIT_COMMIT =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_TOKEN_ROUTE =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
 
       when ST_SETUP_DATA_WAIT_PID =>
-        transfer_o.transfer <= TRANSFER_SETUP;
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.transaction <= TRANSACTION_SETUP;
+        transaction_o.phase <= PHASE_TOKEN;
 
       when ST_SETUP_DATA_FORWARD =>
-        transfer_o.transfer <= TRANSFER_SETUP;
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.nxt <= r.data_buf(0).valid;
-        transfer_o.data <= r.data_buf(0).data;
+        transaction_o.transaction <= TRANSACTION_SETUP;
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.nxt <= r.data_buf(0).valid;
+        transaction_o.data <= r.data_buf(0).data;
 
       when ST_SETUP_HANDSHAKE_WAIT_APP =>
-        transfer_o.transfer <= TRANSFER_SETUP;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_SETUP;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_SETUP_HANDSHAKE_WAIT_TX =>
-        transfer_o.transfer <= TRANSFER_SETUP;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_SETUP;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_OUT_DATA_WAIT_PID =>
-        transfer_o.transfer <= TRANSFER_OUT;
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.transaction <= TRANSACTION_OUT;
+        transaction_o.phase <= PHASE_TOKEN;
 
       when ST_OUT_DATA_FORWARD =>
-        transfer_o.transfer <= TRANSFER_OUT;
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.nxt <= r.data_buf(0).valid;
-        transfer_o.data <= r.data_buf(0).data;
+        transaction_o.transaction <= TRANSACTION_OUT;
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.nxt <= r.data_buf(0).valid;
+        transaction_o.data <= r.data_buf(0).data;
 
       when ST_OUT_HANDSHAKE_WAIT_APP =>
-        transfer_o.transfer <= TRANSFER_OUT;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_OUT;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_OUT_HANDSHAKE_WAIT_TX =>
-        transfer_o.transfer <= TRANSFER_OUT;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_OUT;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_PING_HANDSHAKE_WAIT_APP =>
-        transfer_o.transfer <= TRANSFER_PING;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_PING;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_PING_HANDSHAKE_WAIT_TX =>
-        transfer_o.transfer <= TRANSFER_PING;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_PING;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_IN_DATA_WAIT_APP =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_TOKEN;
 
       when ST_IN_DATA_SEND_ZLP =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_TOKEN;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_TOKEN;
 
       when ST_IN_DATA_SEND_PID =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.nxt <= '0';
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.nxt <= '0';
 
       when ST_IN_DATA_BUFFER_FILL =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.nxt <= not r.data_buf(1).valid;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.nxt <= not r.data_buf(1).valid;
 
       when ST_IN_DATA_FORWARD =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_DATA;
-        transfer_o.nxt <= not r.data_buf(1).valid
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_DATA;
+        transaction_o.nxt <= not r.data_buf(1).valid
                           and not (r.data_buf(0).last or r.data_buf(1).last);
 
       when ST_IN_HANDSHAKE_WAIT_PID =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_IN_HANDSHAKE_TELL_APP =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_IN_HANDSHAKE_WAIT_TX =>
-        transfer_o.transfer <= TRANSFER_IN;
-        transfer_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.transaction <= TRANSACTION_IN;
+        transaction_o.phase <= PHASE_HANDSHAKE;
 
       when ST_IGNORE =>
-        transfer_o.transfer <= TRANSFER_NONE;
-        transfer_o.phase <= PHASE_NONE;
+        transaction_o.transaction <= TRANSACTION_NONE;
+        transaction_o.phase <= PHASE_NONE;
     end case;
   end process;
 

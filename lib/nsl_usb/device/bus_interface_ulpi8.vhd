@@ -43,13 +43,13 @@ entity bus_interface_ulpi8 is
 
     string_10_i : in string := "";
 
-    transfer_cmd_tap_o : out transfer_cmd;
-    transfer_rsp_tap_o : out transfer_rsp;
+    transaction_cmd_tap_o : out transaction_cmd;
+    transaction_rsp_tap_o : out transaction_rsp;
 
-    transfer_out_o : out transfer_cmd_vector(1 to out_ep_count_c);
-    transfer_out_i : in  transfer_rsp_vector(1 to out_ep_count_c);
-    transfer_in_o : out transfer_cmd_vector(1 to in_ep_count_c);
-    transfer_in_i : in  transfer_rsp_vector(1 to in_ep_count_c)
+    transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
+    transaction_out_i : in  transaction_rsp_vector(1 to out_ep_count_c);
+    transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
+    transaction_in_i : in  transaction_rsp_vector(1 to in_ep_count_c)
     );
 end entity;
 
@@ -109,13 +109,13 @@ begin
 
       string_10_i => string_10_i,
       
-      transfer_cmd_tap_o => transfer_cmd_tap_o,
-      transfer_rsp_tap_o => transfer_rsp_tap_o,
+      transaction_cmd_tap_o => transaction_cmd_tap_o,
+      transaction_rsp_tap_o => transaction_rsp_tap_o,
       
-      transfer_out_o => transfer_out_o,
-      transfer_out_i => transfer_out_i,
-      transfer_in_o => transfer_in_o,
-      transfer_in_i => transfer_in_i
+      transaction_out_o => transaction_out_o,
+      transaction_out_i => transaction_out_i,
+      transaction_in_o => transaction_in_o,
+      transaction_in_i => transaction_in_i
       );
 
 end architecture;

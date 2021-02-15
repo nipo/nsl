@@ -45,13 +45,13 @@ entity bus_interface_utmi8 is
 
     string_10_i : in string := "";
     
-    transfer_cmd_tap_o : out transfer_cmd;
-    transfer_rsp_tap_o : out transfer_rsp;
+    transaction_cmd_tap_o : out transaction_cmd;
+    transaction_rsp_tap_o : out transaction_rsp;
 
-    transfer_out_o : out transfer_cmd_vector(1 to out_ep_count_c);
-    transfer_out_i : in  transfer_rsp_vector(1 to out_ep_count_c);
-    transfer_in_o : out transfer_cmd_vector(1 to in_ep_count_c);
-    transfer_in_i : in  transfer_rsp_vector(1 to in_ep_count_c)
+    transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
+    transaction_out_i : in  transaction_rsp_vector(1 to out_ep_count_c);
+    transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
+    transaction_in_i : in  transaction_rsp_vector(1 to in_ep_count_c)
     );
 end entity;
 
@@ -67,8 +67,8 @@ architecture beg of bus_interface_utmi8 is
 
   signal s_dev_addr       : device_address_t;
 
-  signal s_transfer_cmd, s_transfer_ep0_cmd : transfer_cmd;
-  signal s_transfer_rsp, s_transfer_ep0_rsp : transfer_rsp;
+  signal s_transaction_cmd, s_transaction_ep0_cmd : transaction_cmd;
+  signal s_transaction_rsp, s_transaction_ep0_rsp : transaction_rsp;
 
   signal s_desc_cmd : nsl_usb.sie.descriptor_cmd;
   signal s_desc_rsp : nsl_usb.sie.descriptor_rsp;
@@ -87,8 +87,8 @@ begin
   tap: process(phy_system_i.clock)
   begin
     if rising_edge(phy_system_i.clock) then
-      transfer_cmd_tap_o <= s_transfer_cmd;
-      transfer_rsp_tap_o <= s_transfer_rsp;
+      transaction_cmd_tap_o <= s_transaction_cmd;
+      transaction_rsp_tap_o <= s_transaction_rsp;
     end if;
   end process;
 
@@ -129,7 +129,7 @@ begin
       in_i => s_packet_in_cmd
       );
 
-  transfer_engine: nsl_usb.sie.sie_transfer
+  transaction_engine: nsl_usb.sie.sie_transaction
     generic map (
       hs_supported_c => hs_supported_c,
       phy_clock_rate_c => phy_clock_rate_c
@@ -145,11 +145,11 @@ begin
       packet_in_i => s_packet_in_rsp,
       packet_in_o => s_packet_in_cmd,
 
-      transfer_o => s_transfer_cmd,
-      transfer_i => s_transfer_rsp
+      transaction_o => s_transaction_cmd,
+      transaction_i => s_transaction_rsp
       );
 
-  router: nsl_usb.sie.sie_transfer_router
+  router: nsl_usb.sie.sie_transaction_router
     generic map(
       in_ep_count_c => in_ep_count_c,
       out_ep_count_c => out_ep_count_c
@@ -158,11 +158,11 @@ begin
       clock_i       => phy_system_i.clock,
       reset_n_i     => s_app_reset_n,
 
-      transfer_i => s_transfer_cmd,
-      transfer_o => s_transfer_rsp,
+      transaction_i => s_transaction_cmd,
+      transaction_o => s_transaction_rsp,
 
-      transfer_ep0_o => s_transfer_ep0_cmd,
-      transfer_ep0_i => s_transfer_ep0_rsp,
+      transaction_ep0_o => s_transaction_ep0_cmd,
+      transaction_ep0_i => s_transaction_ep0_rsp,
 
       halted_in_o => s_halted_in,
       halt_in_i => s_halt_in,
@@ -172,11 +172,11 @@ begin
       halt_out_i => s_halt_out,
       clear_out_i => s_clear_out,
 
-      transfer_in_o => transfer_in_o,
-      transfer_in_i => transfer_in_i,
+      transaction_in_o => transaction_in_o,
+      transaction_in_i => transaction_in_i,
 
-      transfer_out_o => transfer_out_o,
-      transfer_out_i => transfer_out_i
+      transaction_out_o => transaction_out_o,
+      transaction_out_i => transaction_out_i
       );
   
   ep0: nsl_usb.sie.sie_ep0
@@ -192,8 +192,8 @@ begin
       dev_addr_o       => s_dev_addr,
       configured_o     => online_o,
 
-      transfer_i => s_transfer_ep0_cmd,
-      transfer_o => s_transfer_ep0_rsp,
+      transaction_i => s_transaction_ep0_cmd,
+      transaction_o => s_transaction_ep0_rsp,
 
       halted_in_i => s_halted_in,
       halt_in_o => s_halt_in,

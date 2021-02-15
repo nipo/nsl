@@ -48,13 +48,13 @@ package device is
 
       string_10_i : in string := "";
 
-      transfer_cmd_tap_o : out transfer_cmd;
-      transfer_rsp_tap_o : out transfer_rsp;
+      transaction_cmd_tap_o : out transaction_cmd;
+      transaction_rsp_tap_o : out transaction_rsp;
 
-      transfer_out_o : out transfer_cmd_vector(1 to out_ep_count_c);
-      transfer_out_i : in  transfer_rsp_vector(1 to out_ep_count_c);
-      transfer_in_o : out transfer_cmd_vector(1 to in_ep_count_c);
-      transfer_in_i : in  transfer_rsp_vector(1 to in_ep_count_c)
+      transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
+      transaction_out_i : in  transaction_rsp_vector(1 to out_ep_count_c);
+      transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
+      transaction_in_i : in  transaction_rsp_vector(1 to in_ep_count_c)
       );
   end component;
 
@@ -92,13 +92,13 @@ package device is
 
       string_10_i : in string := "";
 
-      transfer_cmd_tap_o : out transfer_cmd;
-      transfer_rsp_tap_o : out transfer_rsp;
+      transaction_cmd_tap_o : out transaction_cmd;
+      transaction_rsp_tap_o : out transaction_rsp;
 
-      transfer_out_o : out transfer_cmd_vector(1 to out_ep_count_c);
-      transfer_out_i : in  transfer_rsp_vector(1 to out_ep_count_c);
-      transfer_in_o : out transfer_cmd_vector(1 to in_ep_count_c);
-      transfer_in_i : in  transfer_rsp_vector(1 to in_ep_count_c)
+      transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
+      transaction_out_i : in  transaction_rsp_vector(1 to out_ep_count_c);
+      transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
+      transaction_in_i : in  transaction_rsp_vector(1 to in_ep_count_c)
       );
   end component;
 
@@ -112,8 +112,8 @@ package device is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp;
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
 
       valid_o     : out std_ulogic;
       data_o      : out byte;
@@ -132,8 +132,8 @@ package device is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp;
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
 
       valid_i : in  std_ulogic;
       data_i  : in  byte;
@@ -149,8 +149,8 @@ package device is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp;
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
 
       valid_i   : in  std_ulogic;
       ready_o   : out std_ulogic;
@@ -164,8 +164,8 @@ package device is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp
       );
   end component;
 

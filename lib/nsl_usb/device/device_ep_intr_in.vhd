@@ -16,8 +16,8 @@ entity device_ep_intr_in is
     clock_i   : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    transfer_i : in  transfer_cmd;
-    transfer_o : out transfer_rsp;
+    transaction_i : in  transaction_cmd;
+    transaction_o : out transaction_rsp;
 
     valid_i   : in  std_ulogic;
     ready_o   : out std_ulogic;
@@ -71,7 +71,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, transfer_i, valid_i, data_i) is
+  transition: process(r, transaction_i, valid_i, data_i) is
   begin
     rin <= r;
     
@@ -88,7 +88,7 @@ begin
           rin.data <= data_i;
         end if;
 
-        if not r.halted and transfer_i.phase /= PHASE_NONE then
+        if not r.halted and transaction_i.phase /= PHASE_NONE then
           if not r.pending then
             rin.state  <= ST_NAK;
           else
@@ -98,13 +98,13 @@ begin
         end if;
 
       when ST_NAK =>
-        if transfer_i.phase = PHASE_NONE then
+        if transaction_i.phase = PHASE_NONE then
           rin.state <= ST_IDLE;
         end if;
 
       when ST_SEND =>
         if packet_size_c /= 0 then
-          case transfer_i.phase is
+          case transaction_i.phase is
             when PHASE_NONE =>
               rin.state <= ST_IDLE;
 
@@ -113,7 +113,7 @@ begin
               null;
 
             when PHASE_DATA =>
-              if transfer_i.nxt = '1' then
+              if transaction_i.nxt = '1' then
                 if r.ptr = packet_size_c-1 then
                   rin.state <= ST_HANDSHAKE;
                 else
@@ -127,7 +127,7 @@ begin
           end case;
         else
           -- Zero-length interrupt endpoint
-          case transfer_i.phase is
+          case transaction_i.phase is
             when PHASE_NONE =>
               rin.state <= ST_IDLE;
 
@@ -141,9 +141,9 @@ begin
         end if;
 
       when ST_HANDSHAKE =>
-        case transfer_i.phase is
+        case transaction_i.phase is
           when PHASE_HANDSHAKE =>
-            case transfer_i.handshake is
+            case transaction_i.handshake is
               when HANDSHAKE_ACK =>
                 rin.pending <= false;
                 rin.toggle <= not r.toggle;
@@ -169,39 +169,39 @@ begin
   moore: process(r) is
   begin
     ready_o <= '0';
-    transfer_o <= TRANSFER_RSP_IDLE;
+    transaction_o <= TRANSACTION_RSP_IDLE;
 
-    transfer_o.toggle  <= r.toggle;
-    transfer_o.data <= r.data(r.ptr);
-    transfer_o.last <= to_logic(r.ptr = packet_size_c-1);
+    transaction_o.toggle  <= r.toggle;
+    transaction_o.data <= r.data(r.ptr);
+    transaction_o.last <= to_logic(r.ptr = packet_size_c-1);
 
     case r.state is
       when ST_IDLE =>
-        transfer_o.phase <= PHASE_TOKEN;
-        transfer_o.handshake <= HANDSHAKE_ACK;
+        transaction_o.phase <= PHASE_TOKEN;
+        transaction_o.handshake <= HANDSHAKE_ACK;
         ready_o <= '1';
 
       when ST_NAK | ST_RESET =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
-        transfer_o.handshake <= HANDSHAKE_NAK;
+        transaction_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.handshake <= HANDSHAKE_NAK;
 
       when ST_SEND =>
         if packet_size_c /= 0 then
-          transfer_o.phase <= PHASE_DATA;
+          transaction_o.phase <= PHASE_DATA;
         else
-          transfer_o.phase <= PHASE_HANDSHAKE;
+          transaction_o.phase <= PHASE_HANDSHAKE;
         end if;
-        transfer_o.handshake <= HANDSHAKE_ACK;
+        transaction_o.handshake <= HANDSHAKE_ACK;
 
       when ST_HANDSHAKE =>
-        transfer_o.phase <= PHASE_HANDSHAKE;
-        transfer_o.handshake <= HANDSHAKE_ACK;
+        transaction_o.phase <= PHASE_HANDSHAKE;
+        transaction_o.handshake <= HANDSHAKE_ACK;
     end case;
 
-    transfer_o.halted <= to_logic(r.halted);
+    transaction_o.halted <= to_logic(r.halted);
     if r.halted then
-      transfer_o.phase <= PHASE_HANDSHAKE;
-      transfer_o.handshake <= HANDSHAKE_STALL;
+      transaction_o.phase <= PHASE_HANDSHAKE;
+      transaction_o.handshake <= HANDSHAKE_STALL;
     end if;
   end process;
 

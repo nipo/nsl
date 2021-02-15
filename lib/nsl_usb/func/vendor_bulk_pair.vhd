@@ -43,8 +43,8 @@ entity vendor_bulk_pair is
 
     tx_flush_i   : in  std_ulogic := '0';
 
-    transfer_cmd_tap_o : out transfer_cmd;
-    transfer_rsp_tap_o : out transfer_rsp;
+    transaction_cmd_tap_o : out transaction_cmd;
+    transaction_rsp_tap_o : out transaction_rsp;
 
     phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
     phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
@@ -57,10 +57,10 @@ architecture beh of vendor_bulk_pair is
 
   constant data_ep_no_c  : endpoint_idx_t := 1;
 
-  signal s_out_cmd : transfer_cmd_vector(1 to 1);
-  signal s_out_rsp : transfer_rsp_vector(s_out_cmd'range);
-  signal s_in_cmd : transfer_cmd_vector(1 to 1);
-  signal s_in_rsp : transfer_rsp_vector(s_in_cmd'range);
+  signal s_out_cmd : transaction_cmd_vector(1 to 1);
+  signal s_out_rsp : transaction_rsp_vector(s_out_cmd'range);
+  signal s_in_cmd : transaction_cmd_vector(1 to 1);
+  signal s_in_rsp : transaction_rsp_vector(s_in_cmd'range);
 
   signal app_reset_n : std_ulogic;
   
@@ -146,13 +146,13 @@ begin
       phy_data_o => phy_data_o,
       phy_data_i => phy_data_i,
 
-      transfer_cmd_tap_o => transfer_cmd_tap_o,
-      transfer_rsp_tap_o => transfer_rsp_tap_o,
+      transaction_cmd_tap_o => transaction_cmd_tap_o,
+      transaction_rsp_tap_o => transaction_rsp_tap_o,
 
-      transfer_out_o => s_out_cmd,
-      transfer_out_i => s_out_rsp,
-      transfer_in_o => s_in_cmd,
-      transfer_in_i => s_in_rsp
+      transaction_out_o => s_out_cmd,
+      transaction_out_i => s_out_rsp,
+      transaction_in_o => s_in_cmd,
+      transaction_in_i => s_in_rsp
       );
 
   bulk_in : nsl_usb.device.device_ep_bulk_in
@@ -165,8 +165,8 @@ begin
       clock_i   => phy_system_i.clock,
       reset_n_i => app_reset_n,
 
-      transfer_i => s_in_cmd(data_ep_no_c),
-      transfer_o => s_in_rsp(data_ep_no_c),
+      transaction_i => s_in_cmd(data_ep_no_c),
+      transaction_o => s_in_rsp(data_ep_no_c),
       
       valid_i => tx_valid_i,
       data_i  => tx_data_i,
@@ -186,8 +186,8 @@ begin
       clock_i   => phy_system_i.clock,
       reset_n_i => app_reset_n,
 
-      transfer_i => s_out_cmd(data_ep_no_c),
-      transfer_o => s_out_rsp(data_ep_no_c),
+      transaction_i => s_out_cmd(data_ep_no_c),
+      transaction_o => s_out_rsp(data_ep_no_c),
 
       valid_o => rx_valid_o,
       data_o  => rx_data_o,

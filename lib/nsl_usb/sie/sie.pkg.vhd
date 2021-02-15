@@ -43,19 +43,19 @@ package sie is
     last    : std_ulogic;
   end record;
 
-  -- SIE Transfer layer
+  -- SIE Transaction layer
   -- This is a Token / Data / Handshake triplet context
 
-  type transfer_t is (
-    TRANSFER_NONE,
-    TRANSFER_SETUP,
-    TRANSFER_OUT,
-    TRANSFER_IN,
-    TRANSFER_PING
+  type transaction_t is (
+    TRANSACTION_NONE,
+    TRANSACTION_SETUP,
+    TRANSACTION_OUT,
+    TRANSACTION_IN,
+    TRANSACTION_PING
     );
 
-  function transfer_has_data_out(transfer: transfer_t) return boolean;
-  function transfer_has_data_in(transfer: transfer_t) return boolean;
+  function transaction_has_data_out(transaction: transaction_t) return boolean;
+  function transaction_has_data_in(transaction: transaction_t) return boolean;
   
   type phase_t is (
     PHASE_NONE,
@@ -72,29 +72,29 @@ package sie is
     HANDSHAKE_STALL
     );
 
-  -- transfer_cmd and transfer_rsp contain all information about a
-  -- transfer.  A transfer usually has 3 phases: TOKEN, DATA,
+  -- transaction_cmd and transaction_rsp contain all information about a
+  -- transaction.  A transaction usually has 3 phases: TOKEN, DATA,
   -- HANDSHAKE.  Main command/response design here is: information
   -- flow through the interface only when cmd.phase = rsp.phase.
   --
-  -- All transfer is driven by commander.
-  -- - It may cancel transfer any time and go back to NONE.
+  -- All transaction is driven by commander.
+  -- - It may cancel transaction any time and go back to NONE.
   -- - It controls 'nxt' signal, which guards data exchange, in both
   --   directions.
   -- - Responder must be able to accept packet at any time (and handle
-  --   overflows nicely), it must be able to feed IN transfers without
+  --   overflows nicely), it must be able to feed IN transactions without
   --   pause.
   --
   -- Commander and Responder state machines should walk accross the three
   -- phases coherently.
   --
-  -- - For OUT/SETUP/PING transfers, responder should be in Data phase as soon as
+  -- - For OUT/SETUP/PING transactions, responder should be in Data phase as soon as
   --   possible after TOKEN, as there is no back-pressure from responder.
   --
   --    Cmd state machine:  None ---> Token ---> Data -+-> Handshake
   --                                    |              |
   --                                    \--------------/
-  --                                      Ping or ZLP transfers
+  --                                      Ping or ZLP transactions
   --
   --    Rsp state machine:  None ---> Data -+-> Handshake
   --                         |              |
@@ -141,7 +141,7 @@ package sie is
   --                                             None
   --
   --
-  -- - For IN transfers, responder may take a few cycles to move to
+  -- - For IN transactions, responder may take a few cycles to move to
   --   Data phase.  Responder may skip Data phase and go to Handshare
   --   directly. This implies either a ZLP (when Handshare = ACK) or
   --   an error PID in lieu of DATA0/1.
@@ -156,7 +156,7 @@ package sie is
   --    Rsp state machine:  None ---> Token ---> Data -+-> Handshake
   --                                    |              |
   --                                    \--------------/
-  --                                  ZLP or Error transfer.
+  --                                  ZLP or Error transaction.
   --
   --   Timeline
   --
@@ -198,10 +198,10 @@ package sie is
   --        None
   --
   
-  type transfer_cmd is
+  type transaction_cmd is
   record
     ep_no    : endpoint_no_t;
-    transfer : transfer_t;
+    transaction : transaction_t;
     phase    : phase_t;
 
     -- Indicates SIE in is High-Speed mode. Constant '0' if HS is not
@@ -217,19 +217,19 @@ package sie is
     -- Cycle synchronous
     nxt      : std_ulogic;
 
-    -- Valid when phase = DATA and transfer = SETUP/OUT, guarded by nxt
+    -- Valid when phase = DATA and transaction = SETUP/OUT, guarded by nxt
     toggle   : std_ulogic;
     data     : byte;
 
-    -- Valid when phase = HANDSHAKE or transfer = IN
+    -- Valid when phase = HANDSHAKE or transaction = IN
     handshake : handshake_t;
   end record;
 
-  type transfer_cmd_vector is array(integer range <>) of transfer_cmd;
+  type transaction_cmd_vector is array(integer range <>) of transaction_cmd;
   
-  constant TRANSFER_CMD_IDLE : transfer_cmd := (
+  constant TRANSACTION_CMD_IDLE : transaction_cmd := (
     ep_no => (others => '-'),
-    transfer => TRANSFER_NONE,
+    transaction => TRANSACTION_NONE,
     phase => PHASE_NONE,
 
     hs => '0',
@@ -242,19 +242,19 @@ package sie is
     handshake => HANDSHAKE_SILENT
     );
 
-  type transfer_rsp is
+  type transaction_rsp is
   record
-    -- For IN transfers, if phase never reaches DATA and goes to
+    -- For IN transactions, if phase never reaches DATA and goes to
     -- handshake straight, either a ZLP (ACK/NYET) or an error
     -- condition (STALL/NAK) is sent.
     phase    : phase_t;
 
-    -- Valid when phase = DATA and transfer = IN
+    -- Valid when phase = DATA and transaction = IN
     toggle   : std_ulogic;
     data     : byte;
     last     : std_ulogic;
 
-    -- Valid when phase = HANDSHAKE and transfer = OUT/SETUP/PING
+    -- Valid when phase = HANDSHAKE and transaction = OUT/SETUP/PING
     handshake : handshake_t;
 
     -- Only meaningful for endpoints, tells to control whether
@@ -262,9 +262,9 @@ package sie is
     halted : std_ulogic;
   end record;
 
-  type transfer_rsp_vector is array(integer range <>) of transfer_rsp;
+  type transaction_rsp_vector is array(integer range <>) of transaction_rsp;
 
-  constant TRANSFER_RSP_IDLE : transfer_rsp := (
+  constant TRANSACTION_RSP_IDLE : transaction_rsp := (
     phase => PHASE_NONE,
     toggle => '-',
     data => (others => '-'),
@@ -272,7 +272,7 @@ package sie is
     handshake => HANDSHAKE_SILENT,
     halted => '0'
     );
-  constant TRANSFER_RSP_ERROR : transfer_rsp := (
+  constant TRANSACTION_RSP_ERROR : transaction_rsp := (
     phase => PHASE_HANDSHAKE,
     toggle => '-',
     data => (others => '-'),
@@ -415,7 +415,7 @@ package sie is
       );
   end component sie_packet;
 
-  component sie_transfer is
+  component sie_transaction is
     generic (
       hs_supported_c : boolean := false;
       phy_clock_rate_c : integer := 60000000
@@ -434,12 +434,12 @@ package sie is
       packet_in_o   : out packet_in_cmd;
       packet_in_i   : in  packet_in_rsp;
 
-      transfer_o : out transfer_cmd;
-      transfer_i : in  transfer_rsp
+      transaction_o : out transaction_cmd;
+      transaction_i : in  transaction_rsp
       );
   end component;
       
-  component sie_transfer_router is
+  component sie_transaction_router is
     generic (
       in_ep_count_c, out_ep_count_c : endpoint_idx_t
       );
@@ -447,11 +447,11 @@ package sie is
       clock_i     : in  std_ulogic;
       reset_n_i   : in  std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp;
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
 
-      transfer_ep0_o : out transfer_cmd;
-      transfer_ep0_i : in transfer_rsp;
+      transaction_ep0_o : out transaction_cmd;
+      transaction_ep0_i : in transaction_rsp;
 
       halted_in_o : out std_ulogic_vector(1 to in_ep_count_c);
       halt_in_i : in std_ulogic_vector(1 to in_ep_count_c);
@@ -461,12 +461,12 @@ package sie is
       halt_out_i : in std_ulogic_vector(1 to out_ep_count_c);
       clear_out_i : in std_ulogic_vector(1 to out_ep_count_c);
 
-      transfer_in_o : out transfer_cmd_vector(1 to in_ep_count_c);
-      transfer_in_i : in transfer_rsp_vector(1 to in_ep_count_c);
-      transfer_out_o : out transfer_cmd_vector(1 to out_ep_count_c);
-      transfer_out_i : in transfer_rsp_vector(1 to out_ep_count_c)
+      transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
+      transaction_in_i : in transaction_rsp_vector(1 to in_ep_count_c);
+      transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
+      transaction_out_i : in transaction_rsp_vector(1 to out_ep_count_c)
       );
-  end component sie_transfer_router;
+  end component sie_transaction_router;
 
   component sie_ep0 is
     generic (
@@ -480,8 +480,8 @@ package sie is
       dev_addr_o   : out device_address_t;
       configured_o : out std_ulogic;
 
-      transfer_i : in  transfer_cmd;
-      transfer_o : out transfer_rsp;
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
 
       halted_in_i : in std_ulogic_vector(1 to in_ep_count_c);
       halt_in_o : out std_ulogic_vector(1 to in_ep_count_c);
@@ -502,17 +502,17 @@ package body sie is
 
   use nsl_logic.bool.all;
 
-  function transfer_has_data_out(transfer: transfer_t) return boolean
+  function transaction_has_data_out(transaction: transaction_t) return boolean
   is
   begin
-    return transfer = TRANSFER_OUT
-      or transfer = TRANSFER_SETUP;
+    return transaction = TRANSACTION_OUT
+      or transaction = TRANSACTION_SETUP;
   end function;
 
-  function transfer_has_data_in(transfer: transfer_t) return boolean
+  function transaction_has_data_in(transaction: transaction_t) return boolean
   is
   begin
-    return transfer = TRANSFER_IN;
+    return transaction = TRANSACTION_IN;
   end function;
 
   function sie_descriptor_entry(dtype  : descriptor_type_t;
