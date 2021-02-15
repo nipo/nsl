@@ -111,6 +111,32 @@ begin
                       blob => string_from_ascii("1234"),
                       mps => 64);
 
+    log_info("Testing Little IO");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "01",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "01",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "02",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "02",
+                      handshake_pid => PID_ACK);
+
     log_info("Testing Bulk IO");
     log_info("* Bulk OUT toggle");
     utmi_transfer_out(s2p, p2s,
