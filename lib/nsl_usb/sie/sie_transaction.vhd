@@ -79,7 +79,7 @@ architecture beh of sie_transaction is
   -- ULPI 3.8.2.6.1
 --  constant host_wait_timeout_fs_c : integer := bit_count_cycles_fs(18, phy_clock_rate_c/1000000) + 20;
 --  constant host_wait_timeout_hs_c : integer := bit_count_cycles_hs(816, phy_clock_rate_c/1000000) + 20;
-  constant host_wait_timeout_fs_c : integer := t_cycles(6.0e-6);
+  constant host_wait_timeout_fs_c : integer := t_cycles(7.0e-6);
   constant host_wait_timeout_hs_c : integer := t_cycles(6.0e-6);
   constant app_wait_timeout_c : integer := bit_count_cycles_hs(192, phy_clock_rate_c/1000000) - 4; -- ~400ns
 

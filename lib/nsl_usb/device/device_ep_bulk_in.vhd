@@ -202,7 +202,7 @@ begin
                 null;
             end case;
 
-          when PHASE_TOKEN | PHASE_DATA =>
+          when PHASE_DATA =>
             null;
 
           when others =>

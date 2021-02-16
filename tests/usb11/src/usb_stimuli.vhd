@@ -415,6 +415,26 @@ BEGIN
  -- recv_D0   (usb);
     send_ACK  (usb);
 
+    list("write and read 1x too much 0xff");
+    --**************************************************--
+    list(T_No, 42);
+    out_token(usb, X"02",X"1");
+    send_D1   (usb, (X"E1",X"01",X"06",X"00",X"FF",X"FF",X"FF",X"FF",
+                     X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",
+                     X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",X"FF",
+                     X"FF",X"FF",X"FF"));
+    wait_slv  (usb);
+    list(T_No, 13);
+    in_token(usb, X"02",X"1");
+    wait_slv  (usb);
+ -- recv_D1   (usb, ());
+    send_ACK  (usb);
+
+    in_token(usb, X"02",X"1");
+    wait_slv  (usb);
+ -- recv_D1   (usb, );
+    send_ACK  (usb);
+
     ASSERT FALSE REPORT"End of Test" SEVERITY FAILURE;
   END PROCESS;
 
