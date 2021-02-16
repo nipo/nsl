@@ -11,7 +11,7 @@ architecture sim of tb is
   signal usb_dn         : std_logic := 'L';
   signal usb_dp         : std_logic := 'Z';
   signal reset_n_sync     : std_logic := '1';
-  signal rst_neg_ext, dut_ready    : std_logic;
+  signal rst_neg_ext    : std_logic;
 
 BEGIN
 
@@ -36,9 +36,6 @@ BEGIN
       usb_dn      => usb_dn
       );
 
-  usb_dp <= 'L' when reset_n_sync ='0' or dut_ready = '0' else 'H' after 10 ns;
-  usb_dn <= 'L';
-
   reset_n_sync_drive: process
   begin
     reset_n_sync <= '0';
@@ -53,7 +50,6 @@ BEGIN
       )
     port map(
       reset_n_i       => rst_neg_ext,
-      ready_o         => dut_ready,
       d_p_io          => usb_dp,
       d_n_io          => usb_dn
       );

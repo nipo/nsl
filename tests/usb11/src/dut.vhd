@@ -10,7 +10,6 @@ entity dut is
     );
   port(
     reset_n_i : in std_logic;
-    ready_o : out std_logic;
     d_p_io : inout std_logic;
     d_n_io : inout std_logic
   );
@@ -31,8 +30,8 @@ architecture beh of dut is
 
   signal online : std_ulogic;
 
-  signal bus_tx : nsl_usb.usb.usb_io_c; 
-  signal bus_rx : nsl_usb.usb.usb_io_s;
+  signal bus_tx : nsl_usb.io.usb_io_c; 
+  signal bus_rx : nsl_usb.io.usb_io_s;
 
 begin
 
@@ -62,14 +61,18 @@ begin
       data_o => reset_n_int
       );
 
-  bus_driver: nsl_usb.usb.usb_io_driver
+  bus_driver: nsl_usb.io.io_fs_driver
+    generic map(
+      dp_pullup_active_c => 'H'
+      )
     port map(
       bus_i => bus_tx,
       bus_o => bus_rx,
-      bus_io.p => d_p_io,
-      bus_io.n => d_n_io
+      bus_io.dp => d_p_io,
+      bus_io.dm => d_n_io,
+      dp_pullup_control_io => d_p_io
       );
-
+  
   utmi_fs_phy: nsl_usb.fs_phy.fs_utmi8_phy
     generic map(
       ref_clock_mhz_c => clock_rate_mhz
@@ -86,8 +89,6 @@ begin
       utmi_system_i => utmi_system_to_phy,
       utmi_system_o => utmi_system_from_phy
       );
-
-  ready_o <= '1' when utmi_system_to_phy.op_mode = UTMI_OP_MODE_NORMAL else '0';
   
   usb_device: nsl_usb.func.serial_port
     generic map(

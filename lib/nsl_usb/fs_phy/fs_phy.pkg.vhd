@@ -15,8 +15,8 @@ package fs_phy is
       reset_n_i     : in std_ulogic;
       tx_diff_mode_i : in std_ulogic := '1';
 
-      bus_o : out nsl_usb.usb.usb_io_c; 
-      bus_i : in nsl_usb.usb.usb_io_s;
+      bus_o : out nsl_usb.io.usb_io_c; 
+      bus_i : in nsl_usb.io.usb_io_s;
 
       utmi_data_i   : in  nsl_usb.utmi.utmi_data8_sie2phy;
       utmi_data_o   : out nsl_usb.utmi.utmi_data8_phy2sie;
@@ -32,7 +32,7 @@ package fs_phy is
       fs_ce            : in  std_ulogic;
       diff_mode_i      : in  std_ulogic;
 
-      bus_o : out nsl_usb.usb.usb_io_c; 
+      bus_o : out nsl_usb.io.usb_io_c; 
 
       dataout_i        : in  byte;
       txvalid_i        : in  std_ulogic;
@@ -49,7 +49,7 @@ package fs_phy is
       reset_n_i       : in  std_ulogic;
 
       fs_ce_o         : out std_ulogic;
-      bus_i : in nsl_usb.usb.usb_io_s;
+      bus_i : in nsl_usb.io.usb_io_s;
 
       datain_o        : out byte;
       rxvalid_o       : out std_ulogic;

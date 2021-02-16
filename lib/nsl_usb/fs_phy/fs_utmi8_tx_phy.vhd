@@ -40,7 +40,7 @@ entity fs_utmi8_tx_phy is
     fs_ce     : in std_ulogic;
     diff_mode_i  : in std_ulogic;
 
-    bus_o : out nsl_usb.usb.usb_io_c; 
+    bus_o : out nsl_usb.io.usb_io_c; 
 
     dataout_i : in  byte;
     txvalid_i : in  std_ulogic;
@@ -301,16 +301,16 @@ begin
   p_txdpn: process (clock_i, reset_n_i)
   begin
     if reset_n_i ='0' then
-      bus_o.p <= '1';
-      bus_o.n <= '0';
+      bus_o.dp <= '1';
+      bus_o.dm <= '0';
     elsif rising_edge(clock_i) then
       if fs_ce ='1' then
         if diff_mode_i = '1' then
-          bus_o.p <= not append_eop and     sd_nrzi_o;
-          bus_o.n <= not append_eop and not sd_nrzi_o;
+          bus_o.dp <= not append_eop and     sd_nrzi_o;
+          bus_o.dm <= not append_eop and not sd_nrzi_o;
         else
-          bus_o.p <= sd_nrzi_o;
-          bus_o.n <= append_eop;
+          bus_o.dp <= sd_nrzi_o;
+          bus_o.dm <= append_eop;
         end if;
       end if;
     end if;

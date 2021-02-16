@@ -214,29 +214,6 @@ package usb is
   function bit_count_cycles_fs(bit_count : integer; ref_clock_mhz : integer := 60) return integer;
   function bit_count_cycles_hs(bit_count : integer; ref_clock_mhz : integer := 60) return integer;
 
-  type usb_io_c is
-  record
-    p, n, oe : std_ulogic;
-  end record;
-
-  type usb_io_s is
-  record
-    p, n : std_ulogic;
-  end record;
-
-  type usb_lines is
-  record
-    p, n : std_logic;
-  end record;
-
-  component usb_io_driver is
-    port(
-      bus_o : out usb_io_s; 
-      bus_i : in usb_io_c;
-      bus_io : inout usb_lines
-      );
-  end component;
-
 end package;
 
 package body usb is

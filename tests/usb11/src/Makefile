@@ -10,6 +10,7 @@ deps += nsl_clocking.async
 deps += nsl_memory.fifo
 deps += nsl_usb.usb
 deps += nsl_usb.utmi
+deps += nsl_usb.io
 deps += nsl_usb.fs_phy
 deps += nsl_usb.func
 

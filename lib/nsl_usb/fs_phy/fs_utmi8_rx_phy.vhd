@@ -42,7 +42,7 @@ entity fs_utmi8_rx_phy is
     reset_n_i             : in  std_ulogic;
 
     fs_ce_o         : out std_ulogic;
-    bus_i : nsl_usb.usb.usb_io_s;
+    bus_i : nsl_usb.io.usb_io_s;
 
     datain_o        : out byte;
     rxvalid_o       : out std_ulogic;
@@ -97,8 +97,8 @@ architecture rtl of fs_utmi8_rx_phy is
   
 begin
 
-  rxdp <= to_x01(bus_i.p);
-  rxdn <= to_x01(bus_i.n);
+  rxdp <= to_x01(bus_i.dp);
+  rxdn <= to_x01(bus_i.dm);
   rxd <= rxdp and not rxdn;
  
   --====================================================================================--
