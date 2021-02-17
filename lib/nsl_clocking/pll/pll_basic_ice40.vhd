@@ -159,6 +159,25 @@ architecture ice40 of pll_basic is
     else
       best_params.filter_range := 6;
     end if;
+
+    assert false
+      report "Synthesizing iCE40 PLL, "
+      & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
+      & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
+      severity note;
+
+    assert best_found
+      report "Cannot find a matching configuration"
+      severity failure;
+
+    assert false
+      report "Best option: divr=" & to_string(best_params.divr+1) & ", "
+      & "divf=" & to_string(best_params.divf+1) & ", "
+      & "divq=" & to_string(2**best_params.divq) & ", "
+      & "filter_range=" & to_string(best_params.filter_range) & ", "
+      & "vco=" & to_string(fin_r / real(best_params.divr + 1) * real(best_params.divf + 1) / 1.0e6) & "MHz, "
+      & "fout error=" & to_string(real(fout_err) / 1.0e6) & "MHz"
+      severity note;
     
     return best_params;
   end function;
