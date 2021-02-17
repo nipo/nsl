@@ -4,6 +4,8 @@ package arith is
   function is_pow2(x : positive) return boolean;
   function max(x, y : integer) return integer;
   function min(x, y : integer) return integer;
+  function gcd(x, y : integer) return integer;
+  function lcm(x, y : integer) return integer;
 
 end package arith;
 
@@ -47,4 +49,36 @@ package body arith is
     end if;
   end is_pow2;
 
+  function gcd(x, y : integer) return integer is
+  begin
+    if y < x then
+      return gcd(y, x);
+    end if;
+
+    -- x <= y, always
+
+    if x = y or x = 0 then
+      return y;
+    end if;
+
+    if (x mod 2) = 0 then
+      if (y mod 2) = 0 then
+        return 2 * gcd(x / 2, y / 2);
+      else
+        return gcd(x / 2, y);
+      end if;
+    else
+      if (y mod 2) = 0 then
+        return gcd(x, y / 2);
+      else
+        return gcd((y - x) / 2, x);
+      end if;
+    end if;
+  end function;
+
+  function lcm(x, y : integer) return integer is
+  begin
+    return x / gcd(x, y) * y;
+  end function;
+  
 end package body arith;
