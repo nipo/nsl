@@ -1,5 +1,9 @@
 vhdl-sources += pll.pkg.vhd
 
+ifeq ($(tool),ghdl)
+vhdl-sources += pll_basic_simulation.vhd
+endif
+
 ifneq ($(filter lattice-ice40,$(hwdep)),)
 vhdl-sources += pll_basic_ice40.vhd
 deps += nsl_data.text
