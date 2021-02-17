@@ -71,17 +71,13 @@ package body text is
   end function to_string;
 
   function to_string(v: in real) return string is
-    variable ret: line := new string'("");
   begin
-    write(ret, v);
-    return ret.all;
+    return real'image(v);
   end function to_string;
 
   function to_string(v: in integer) return string is
-    variable ret: line := new string'("");
   begin
-    write(ret, v);
-    return ret.all;
+    return integer'image(v);
   end function to_string;
 
   function to_string(v: in std_logic_vector) return string is
