@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_simulation, nsl_data;
 use nsl_data.bytestream.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_simulation.logging.all;
 
 package assertions is

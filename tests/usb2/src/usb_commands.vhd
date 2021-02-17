@@ -8,7 +8,7 @@ use nsl_usb.usb.all;
 use nsl_usb.utmi.all;
 use nsl_usb.debug.all;
 use nsl_simulation.logging.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_data.endian.all;

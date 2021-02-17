@@ -3,9 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-library nsl_usb, nsl_data, nsl_simulation;
+library nsl_usb, nsl_data;
 use nsl_usb.usb.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_data.endian.all;
@@ -194,7 +194,7 @@ package body debug is
       when PID_SPLIT => return "Split";
       when PID_PING => return "Ping";
       when PID_RESERVED => return "Reserved";
-      when others => return nsl_simulation.text.to_string(unsigned(pid));
+      when others => return nsl_data.text.to_string(unsigned(pid));
     end case;
   end function;
 

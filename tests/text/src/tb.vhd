@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_data, nsl_simulation;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 
 entity tb is

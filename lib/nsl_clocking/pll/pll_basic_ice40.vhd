@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_simulation;
-use nsl_simulation.text.all;
+library nsl_data;
+use nsl_data.text.all;
 
 entity pll_basic is
   generic(

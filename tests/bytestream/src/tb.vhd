@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data, nsl_simulation;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 
 entity tb is

@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim, nsl_math, nsl_logic, nsl_simulation;
+library unisim, nsl_math, nsl_logic, nsl_data;
 use nsl_logic.bool.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 
 entity pll_basic is
   generic(

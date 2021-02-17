@@ -4,7 +4,7 @@ use std.textio.all;
 
 library nsl_math, nsl_simulation;
 use nsl_math.fixed.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_simulation.logging.all;
 use ieee.math_real.all;
 

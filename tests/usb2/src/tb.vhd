@@ -6,7 +6,7 @@ use work.usb_commands.all;
 library nsl_simulation, nsl_usb, nsl_data;
 use nsl_simulation.logging.all;
 use nsl_simulation.control.all;
-use nsl_simulation.text.all;
+use nsl_data.text.all;
 use nsl_usb.usb.all;
 use nsl_usb.descriptor.all;
 use nsl_data.bytestream.all;
