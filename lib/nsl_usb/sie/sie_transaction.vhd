@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data, nsl_logic;
+library nsl_usb, nsl_data, nsl_logic, nsl_math;
 use nsl_usb.usb.all;
 use nsl_usb.sie.all;
 use nsl_usb.utmi.all;
@@ -85,7 +85,7 @@ architecture beh of sie_transaction is
 
   constant timeout_max_c : integer := nsl_logic.bool.if_else(
     hs_supported_c,
-    host_wait_timeout_hs_c,
+    nsl_math.arith.max(host_wait_timeout_hs_c, host_wait_timeout_fs_c),
     host_wait_timeout_fs_c);
 
   subtype timeout_t is integer range 0 to timeout_max_c;
