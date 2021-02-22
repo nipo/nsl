@@ -365,7 +365,9 @@ package sie is
       raw_4 : byte_string := null_byte_string;
       raw_5 : byte_string := null_byte_string;
       raw_6 : byte_string := null_byte_string;
-      raw_7 : byte_string := null_byte_string
+      raw_7 : byte_string := null_byte_string;
+
+      string_10_i_length_c : natural := 0
       );
     port(
       clock_i : in std_ulogic;
@@ -374,7 +376,7 @@ package sie is
       -- String 10 can be non-constant. A string of any size may be connected
       -- here. It will be converted to UTF-16 when descriptor is read.
       -- This is mostly useful for a serial number.
-      string_10_i : in string := "";
+      string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
 
       cmd_i : in descriptor_cmd;
       rsp_o : out descriptor_rsp

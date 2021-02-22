@@ -29,7 +29,8 @@ entity bus_interface_utmi8 is
 
     phy_clock_rate_c : integer := 60000000;
     in_ep_count_c  : endpoint_idx_t := 0;
-    out_ep_count_c : endpoint_idx_t := 0
+    out_ep_count_c : endpoint_idx_t := 0;
+    string_10_i_length_c : natural := 0
     );
   port (
     reset_n_i     : in  std_ulogic;
@@ -43,7 +44,7 @@ entity bus_interface_utmi8 is
     phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
     phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
 
-    string_10_i : in string := "";
+    string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
     
     transaction_cmd_tap_o : out transaction_cmd;
     transaction_rsp_tap_o : out transaction_rsp;
@@ -222,7 +223,9 @@ begin
       string_6          => string_6_c,
       string_7          => string_7_c,
       string_8          => string_8_c,
-      string_9          => string_9_c
+      string_9          => string_9_c,
+
+      string_10_i_length_c => string_10_i_length_c
       )
     port map(
       clock_i => phy_system_i.clock,

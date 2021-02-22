@@ -32,13 +32,14 @@ entity sie_descriptor is
     raw_4 : byte_string := null_byte_string;
     raw_5 : byte_string := null_byte_string;
     raw_6 : byte_string := null_byte_string;
-    raw_7 : byte_string := null_byte_string
+    raw_7 : byte_string := null_byte_string;
+    string_10_i_length_c : natural := 0
     );
   port(
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    string_10_i : in string := "";
+    string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
 
     cmd_i : in descriptor_cmd;
     rsp_o : out descriptor_rsp

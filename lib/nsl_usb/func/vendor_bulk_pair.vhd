@@ -21,7 +21,8 @@ entity vendor_bulk_pair is
     self_powered_c         : boolean               := false;
     phy_clock_rate_c : integer := 60000000;
     bulk_fs_mps_l2_c : integer range 3 to 6 := 6;
-    bulk_mps_count_l2_c : integer := 1
+    bulk_mps_count_l2_c : integer := 1;
+    serial_i_length_c : natural := 0
     );
   port (
     reset_n_i     : in  std_ulogic;
@@ -29,7 +30,7 @@ entity vendor_bulk_pair is
     hs_o        : out std_ulogic;
     suspend_o   : out std_ulogic;
     online_o    : out std_ulogic;
-    serial_i    : in string := "";
+    serial_i    : in string(1 to serial_i_length_c) := (others => nul);
 
     rx_valid_o     : out std_ulogic;
     rx_data_o      : out byte;
@@ -129,7 +130,9 @@ begin
       string_3_c => serial_c,
       
       in_ep_count_c => s_in_cmd'length,
-      out_ep_count_c => s_out_cmd'length
+      out_ep_count_c => s_out_cmd'length,
+
+      string_10_i_length_c => serial_i_length_c
       )
     port map(
       reset_n_i => reset_n_i,

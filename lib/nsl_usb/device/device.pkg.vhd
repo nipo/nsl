@@ -32,7 +32,9 @@ package device is
 
       phy_clock_rate_c : integer := 60000000;
       in_ep_count_c  : endpoint_idx_t := 0;
-      out_ep_count_c : endpoint_idx_t := 0
+      out_ep_count_c : endpoint_idx_t := 0;
+
+      string_10_i_length_c : natural := 0
       );
     port (
       reset_n_i     : in  std_ulogic;
@@ -46,7 +48,7 @@ package device is
       phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
       phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
 
-      string_10_i : in string := "";
+      string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
 
       transaction_cmd_tap_o : out transaction_cmd;
       transaction_rsp_tap_o : out transaction_rsp;
@@ -78,7 +80,9 @@ package device is
 
       phy_clock_rate_c : integer := 60000000;
       in_ep_count_c  : endpoint_idx_t := 0;
-      out_ep_count_c : endpoint_idx_t := 0
+      out_ep_count_c : endpoint_idx_t := 0;
+
+      string_10_i_length_c : natural := 0
       );
     port (
       reset_n_i     : in  std_ulogic;
@@ -90,7 +94,7 @@ package device is
       phy_o : out nsl_usb.ulpi.ulpi8_link2phy;
       phy_i : in  nsl_usb.ulpi.ulpi8_phy2link;
 
-      string_10_i : in string := "";
+      string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
 
       transaction_cmd_tap_o : out transaction_cmd;
       transaction_rsp_tap_o : out transaction_rsp;
