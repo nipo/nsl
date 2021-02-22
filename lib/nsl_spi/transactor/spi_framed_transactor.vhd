@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_spi;
+library nsl_bnoc, nsl_spi, nsl_io;
 use nsl_spi.transactor.all;
 
 entity spi_framed_transactor is
@@ -14,7 +14,7 @@ entity spi_framed_transactor is
     reset_n_i : in std_ulogic;
 
     sck_o  : out std_ulogic;
-    cs_n_o  : out std_ulogic_vector(0 to slave_count_c-1);
+    cs_n_o  : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
     mosi_o : out std_ulogic;
     miso_i : in  std_ulogic;
 
@@ -218,13 +218,13 @@ begin
   moore: process(r)
   begin
     sck_o <= r.sck;
-    cs_n_o <= (others => '1');
+    cs_n_o <= (others => (drain_n => '1'));
     cmd_o.ready <= '0';
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
     rsp_o.data <= (others => '-');
     if r.selected < slave_count_c then
-      cs_n_o(r.selected) <= '0';
+      cs_n_o(r.selected).drain_n <= '0';
     end if;
     
     case r.state is

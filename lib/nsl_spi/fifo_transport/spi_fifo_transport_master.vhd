@@ -16,8 +16,8 @@ entity spi_fifo_transport_master is
 
     enable_i    : in  std_ulogic := '1';
 
-    spi_o       : out nsl_spi.spi.spi_slave_i;
-    spi_i       : in  nsl_spi.spi.spi_slave_o;
+    spi_o       : out nsl_spi.spi.spi_master_o;
+    spi_i       : in  nsl_spi.spi.spi_master_i;
     irq_n_i     : in  std_ulogic;
 
     tx_data_i   : in  std_ulogic_vector(width_c - 1 downto 0);
@@ -176,7 +176,7 @@ begin
 
   moore: process(r)
   begin
-    spi_o.cs_n <= '1';
+    spi_o.cs_n.drain_n <= '1';
     spi_o.sck <= '0';
     spi_o.mosi <= r.mosi;
     tx_ready_o <= '0';
@@ -195,10 +195,10 @@ begin
 
     case r.state is
       when ST_SHIFT_END | ST_SHIFT_START | ST_SHIFT_L =>
-        spi_o.cs_n <= '0';
+        spi_o.cs_n.drain_n <= '0';
 
       when ST_SHIFT_H =>
-        spi_o.cs_n <= '0';
+        spi_o.cs_n.drain_n <= '0';
         spi_o.sck <= '1';
 
       when others =>

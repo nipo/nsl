@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_io;
+
 package spi is
 
   type spi_bus is record
@@ -18,6 +20,16 @@ package spi is
   end record;
 
   type spi_slave_o is record
+    miso : std_ulogic;
+  end record;
+
+  type spi_master_o is record
+    mosi : std_ulogic;
+    sck  : std_ulogic;
+    cs_n : nsl_io.io.opendrain;
+  end record;
+
+  type spi_master_i is record
     miso : std_ulogic;
   end record;
 

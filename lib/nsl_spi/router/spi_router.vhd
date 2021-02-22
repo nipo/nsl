@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi;
+library nsl_spi, nsl_io;
 
 entity spi_router is
   generic(
@@ -13,7 +13,7 @@ entity spi_router is
     spi_o  : out nsl_spi.spi.spi_slave_o;
 
     sck_o  : out std_ulogic;
-    cs_n_o : out std_ulogic_vector(0 to slave_count_c-1);
+    cs_n_o : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
     mosi_o : out std_ulogic;
     miso_i : in  std_ulogic_vector(0 to slave_count_c-1)
     );
@@ -86,10 +86,10 @@ begin
   moore: process(spi_i.sck)
   begin
     if falling_edge(spi_i.sck) then
-      cs_n_o <= (others => '1');
+      cs_n_o <= (others => (drain_n => '1'));
 
       if r.selected and r.valid then
-        cs_n_o(r.target) <= '0';
+        cs_n_o(r.target).drain_n <= '0';
       end if;
     end if;
   end process;

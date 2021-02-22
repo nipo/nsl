@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_simulation, nsl_clocking, nsl_spi, nsl_ti;
+library nsl_bnoc, nsl_simulation, nsl_clocking, nsl_spi, nsl_ti, nsl_io;
 
 entity tb is
 end tb;
@@ -10,7 +10,8 @@ end tb;
 architecture arch of tb is
 
   signal clock, reset_n : std_ulogic;
-  signal sck, mosi, miso, cs_n : std_ulogic;
+  signal sck, mosi, miso : std_ulogic;
+  signal cs_n : nsl_io.io.opendrain;
   signal done : std_ulogic_vector(0 to 1);
 
   type framed_io is
@@ -99,7 +100,7 @@ begin
       master_rsp_i => to_spi.rsp.req,
       master_rsp_o => to_spi.rsp.ack
       );
-
+  
   spi_inst: nsl_spi.transactor.spi_framed_transactor
     generic map(
       slave_count_c => 1

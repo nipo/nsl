@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi;
+library nsl_spi, nsl_io;
 
 package router is
 
@@ -15,7 +15,7 @@ package router is
       spi_o  : out nsl_spi.spi.spi_slave_o;
 
       sck_o  : out std_ulogic;
-      cs_n_o : out std_ulogic_vector(0 to slave_count_c-1);
+      cs_n_o : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
       mosi_o : out std_ulogic;
       miso_i : in  std_ulogic_vector(0 to slave_count_c-1)
       );
