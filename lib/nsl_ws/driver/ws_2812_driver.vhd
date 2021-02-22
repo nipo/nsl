@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color;
+library nsl_color, nsl_logic;
+use nsl_logic.bool.to_logic;
 
 entity ws_2812_driver is
   generic(
@@ -12,7 +13,9 @@ entity ws_2812_driver is
     t0h_ns : natural := 350;
     t0l_ns : natural := 1360;
     t1h_ns : natural := 1360;
-    t1l_ns : natural := 350
+    t1l_ns : natural := 350;
+    driver_inverted_c : boolean := false;
+    attenuation_l2_c : integer range 0 to 7 := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -128,7 +131,7 @@ begin
       when WAITING =>
         if valid_i = '1' then
           rin.shreg <= nsl_color.rgb.rgb24_to_suv(
-            color => color_i,
+            color => nsl_color.rgb.attenuate(color_i, attenuation_l2_c),
             lsb_right => true,
             color_order => color_order);
           rin.bitno <= 23;
@@ -189,17 +192,17 @@ begin
   moore: process(r)
   begin
     ready_o <= '0';
-    led_o <= '0';
+    led_o <= to_logic(driver_inverted_c);
 
     case r.state is
       when WAITING =>
         ready_o <= '1';
 
       when SHIFTING_HIGH =>
-        led_o <= '1';
+        led_o <= to_logic(not driver_inverted_c);
 
       when SHIFTING_BIT =>
-        led_o <= r.shreg(r.shreg'left);
+        led_o <= r.shreg(r.shreg'left) xor to_logic(driver_inverted_c);
 
       when others =>
         null;

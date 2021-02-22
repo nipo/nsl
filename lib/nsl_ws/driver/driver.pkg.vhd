@@ -14,7 +14,9 @@ package driver is
       t0h_ns : natural := 350;
       t0l_ns : natural := 1360;
       t1h_ns : natural := 1360;
-      t1l_ns : natural := 350
+      t1l_ns : natural := 350;
+      driver_inverted_c : boolean := false;
+      attenuation_l2_c : integer range 0 to 7 := 0
       );
     port(
       clock_i : in std_ulogic;
@@ -38,7 +40,9 @@ package driver is
       t0l_ns : natural := 1360;
       t1h_ns : natural := 1360;
       t1l_ns : natural := 350;
-      led_count : natural
+      led_count : natural;
+      driver_inverted_c : boolean := false;
+      attenuation_l2_c : integer range 0 to 7 := 0
       );
     port(
       clock_i : in std_ulogic;

@@ -14,7 +14,9 @@ entity ws_2812_multi_driver is
     t0l_ns : natural := 1360;
     t1h_ns : natural := 1360;
     t1l_ns : natural := 350;
-    led_count : natural
+    led_count : natural;
+    driver_inverted_c : boolean := false;
+    attenuation_l2_c : integer range 0 to 7 := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -98,7 +100,9 @@ begin
       t0h_ns => t0h_ns,
       t0l_ns => t0l_ns,
       t1h_ns => t1h_ns,
-      t1l_ns => t1l_ns
+      t1l_ns => t1l_ns,
+      driver_inverted_c => driver_inverted_c,
+      attenuation_l2_c => attenuation_l2_c
       )
     port map(
       clock_i => clock_i,
