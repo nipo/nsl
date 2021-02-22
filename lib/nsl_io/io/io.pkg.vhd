@@ -24,6 +24,8 @@ package io is
     drain_n : std_ulogic;
   end record;
 
+  type opendrain_vector is array (natural range <>) of opendrain;
+
   function "+"(x, y : opendrain) return opendrain;
   function to_tristated(x : opendrain) return tristated;
   
