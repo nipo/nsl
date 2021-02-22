@@ -12,6 +12,7 @@ package bytestream is
   function byte_from_hex(blob: byte_hex_string) return byte;
   function from_hex(blob: string) return byte_string;
   function to_byte(c : character) return byte;
+  function to_byte(i : integer) return byte;
   function to_byte_string(s : string) return byte_string;
 
   function "="(l, r : byte_string) return boolean;
@@ -107,6 +108,12 @@ package body bytestream is
   function "/="(l, r : byte_string) return boolean is
   begin
     return not (l = r);
+  end function;
+
+  function to_byte(i : integer) return byte
+  is
+  begin
+    return byte(to_unsigned(i, 8));
   end function;
 
   function to_byte(c : character) return byte is
