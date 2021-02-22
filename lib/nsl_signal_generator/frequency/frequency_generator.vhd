@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_math;
+
 entity frequency_generator is
   generic (
     clock_rate_c : positive
@@ -32,6 +34,8 @@ architecture beh of frequency_generator is
 
   signal r, rin : regs_t;
 
+  signal frequency : signed(max_bit_count-1 downto 0);
+
 begin
 
   assert frequency_i'length < max_bit_count - 1
@@ -41,18 +45,21 @@ begin
   regs: process(clock_i, reset_n_i) is
   begin
     if reset_n_i = '0' then
-      r.counter <= 0;
+      r.counter <= (others => '0');
       r.value <= '1';
     elsif rising_edge(clock_i) then
       r <= rin;
     end if;
   end process;
 
-  transition: process(r, frequency_i) is
+  frequency <= signed(resize(frequency_i, frequency'length));
+  
+  transition: process(r, frequency) is
   begin
+    rin <= r;
 
-    rin.offset <= frequency_i - half_rate;
-    rin.freq <= frequency_i;
+    rin.offset <= frequency - half_rate;
+    rin.freq <= frequency;
 
     if r.counter < 0 then
       rin.counter <= r.counter - r.offset;
