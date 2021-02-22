@@ -100,6 +100,27 @@ package ulpi is
       );
   end component;
 
+  component ulpi8_line_driver_clock_master is
+    generic(
+      reset_active_c : std_ulogic := '1'
+      );
+    port(
+      clock_i : in std_ulogic;
+
+      data_io: inout std_logic_vector(7 downto 0);
+      dir_i: in std_ulogic;
+      nxt_i: in std_ulogic;
+      stp_o: out std_ulogic;
+      reset_o: out std_ulogic;
+      clock_o: out std_ulogic;
+
+      ulpi_tap_o : out std_ulogic_vector(11 downto 0);
+
+      bus_o : out ulpi8_phy2link;
+      bus_i : in ulpi8_link2phy
+      );
+  end component;
+
   component utmi8_ulpi8_converter is
     port(
       reset_n_i : in std_ulogic;
