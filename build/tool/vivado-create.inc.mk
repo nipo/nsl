@@ -50,7 +50,7 @@ endef
 
 define _vivado-add-synthesis_constraint
 	$(call file-append,$1,set f [add_files -norecurse -fileset $$_constr_fileset_name [file normalize {$2}]])
-	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "synthesis"} $$f)
+	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_CONSTRAINT_TYPE_$(lastword $(subst ., ,$2)))" "used_in" "synthesis implementation"} $$f)
 
 endef
 
