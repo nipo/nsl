@@ -39,6 +39,8 @@ package rgb is
   function "/="(l, r : rgb24) return boolean;
   function "="(l, r : rgb24_vector) return boolean;
   function "/="(l, r : rgb24_vector) return boolean;
+  function attenuate(c : rgb24;
+                     att_l2 : integer range 0 to 7) return rgb24;
 
   constant rgb24_maroon                  : rgb24 := (x"80",x"00",x"00");
   constant rgb24_dark_red                : rgb24 := (x"8B",x"00",x"00");
@@ -443,6 +445,17 @@ package body rgb is
     hb := hb * s + (1.0 - s);
 
     return to_rgb24(hr * v, hg * v, hb * v);
+  end function;
+
+  function attenuate(c : rgb24;
+                     att_l2 : integer range 0 to 7) return rgb24
+  is
+    variable ret : rgb24;
+  begin
+    ret.r := c.r srl att_l2;
+    ret.g := c.g srl att_l2;
+    ret.b := c.b srl att_l2;
+    return ret;
   end function;
 
 end package body rgb;
