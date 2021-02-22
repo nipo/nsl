@@ -130,7 +130,7 @@ begin
 
   uid: nsl_hwdep.uid.uid32_reader
     port map(
-      clock_i => phy_clk,
+      clock_i => ulpi.phy2link.clock,
       reset_n_i => reset_n,
       uid_o => s_device_uid
       );
@@ -151,7 +151,7 @@ begin
       )
     port map(
       reset_n_i => reset_n_sys,
-      clock_i(0) => phy_clk,
+      clock_i(0) => ulpi.phy2link.clock,
 
       out_data_o => tx_data,
       out_ready_i => tx_ready,
