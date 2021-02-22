@@ -10,6 +10,8 @@ use nsl_logic.bool.all;
 
 entity utmi8_ulpi8_converter is
   port(
+    reset_n_i : in std_ulogic;
+
     ulpi_i : in ulpi8_phy2link;
     ulpi_o : out ulpi8_link2phy;
 
@@ -45,7 +47,6 @@ architecture beh of utmi8_ulpi8_converter is
   record
     state: state_t;
 
-    reset_timeout : integer range 0 to 63;
     last_dir : std_ulogic;
     
     -- rx buffer
@@ -76,9 +77,9 @@ architecture beh of utmi8_ulpi8_converter is
 
 begin
 
-  regs: process(ulpi_i.clock, utmi_system_i.reset)
+  regs: process(ulpi_i.clock, reset_n_i)
   begin
-    if utmi_system_i.reset = '1' then
+    if reset_n_i = '0' then
       r.state <= ST_RESET;
     elsif rising_edge(ulpi_i.clock) then
       r <= rin;
@@ -91,8 +92,14 @@ begin
 
     rin.last_dir <= ulpi_i.dir;
     
-    if r.reset_timeout /= 0 then
-      rin.reset_timeout <= r.reset_timeout - 1;
+    if utmi_system_i.reset = '1' then
+      rin.func_ctrl_dirty <= true;
+      rin.otg_ctrl_dirty <= true;
+      rin.xcvr_select <= UTMI_MODE_FS;
+      rin.term_select <= UTMI_MODE_HS;
+      rin.op_mode <= UTMI_OP_MODE_NORMAL;
+      rin.suspend <= false;
+      rin.state <= ST_RX;
     end if;
     
     case r.state is
@@ -103,7 +110,6 @@ begin
         rin.term_select <= UTMI_MODE_HS;
         rin.op_mode <= UTMI_OP_MODE_NORMAL;
         rin.suspend <= false;
-        rin.reset_timeout <= 63;
         rin.state <= ST_RX;
         
       when ST_RX =>
@@ -134,9 +140,7 @@ begin
         end if;
         
       when ST_TX_IDLE =>
-        if r.reset_timeout /= 0 then
-          null;
-        elsif r.otg_ctrl_dirty then
+        if r.otg_ctrl_dirty then
           rin.state <= ST_OTG_CTRL_WRITE_CMD;
         elsif r.func_ctrl_dirty then
           rin.state <= ST_FUNC_CTRL_WRITE_CMD;

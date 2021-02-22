@@ -82,6 +82,9 @@ package ulpi is
   function ulpi_cmd_noop return byte;
   
   component ulpi8_line_driver is
+    generic(
+      reset_active_c : std_ulogic := '1'
+      );
     port(
       data_io: inout std_logic_vector(7 downto 0);
       dir_i: in std_ulogic;
@@ -99,6 +102,8 @@ package ulpi is
 
   component utmi8_ulpi8_converter is
     port(
+      reset_n_i : in std_ulogic;
+
       ulpi_i : in ulpi8_phy2link;
       ulpi_o : out ulpi8_link2phy;
 

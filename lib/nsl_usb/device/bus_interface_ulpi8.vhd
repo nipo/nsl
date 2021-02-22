@@ -65,6 +65,8 @@ begin
 
   utmi_converter: nsl_usb.ulpi.utmi8_ulpi8_converter
     port map(
+      reset_n_i => reset_n_i,
+
       ulpi_i => phy_i,
       ulpi_o => phy_o,
 

@@ -1,10 +1,13 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_usb;
+library nsl_usb, nsl_hwdep;
 use nsl_usb.ulpi.all;
 
 entity ulpi8_line_driver is
+  generic(
+    reset_active_c : std_ulogic := '1'
+    );
   port(
     data_io: inout std_logic_vector(7 downto 0);
     dir_i: in std_ulogic;
@@ -39,13 +42,17 @@ begin
     end if;
   end process;
 
-  reset_o <= bus_i.reset;
+  reset_o <= reset_active_c when bus_i.reset = '1' else not reset_active_c;
   stp_o <= bus_i.stp;
 
   data_io <= std_logic_vector(bus_i.data) when dir_i = '0' and last_dir = '0' else (others => 'Z');
   bus_o.data <= std_ulogic_vector(data_io) when dir_i = '1' and last_dir = '1' else (others => '-');
 
-  bus_o.clock <= clock_i;
+  clock_buffer_inst: nsl_hwdep.clock.clock_buffer
+    port map(
+      clock_i => clock_i,
+      clock_o => bus_o.clock
+      );
   bus_o.dir <= dir_i;
   bus_o.nxt <= nxt_i;
   
