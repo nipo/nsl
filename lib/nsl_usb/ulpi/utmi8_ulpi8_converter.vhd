@@ -114,29 +114,31 @@ begin
         
       when ST_RX =>
         rin.rx_valid <= '0';
-        if ulpi_i.nxt = '0' then
-          rin.line_state <= to_usb_symbol(ulpi_i.data(1 downto 0));
-          case ulpi_i.data(5 downto 4) is
-            when "00" =>
-              rin.rx_active <= '0';
-              rin.rx_error <= '0';
-              rin.host_disconnect <= '0';
-            when "01" =>
-              rin.rx_active <= '1';
-              rin.rx_error <= '0';
-              rin.host_disconnect <= '0';
-            when "11" =>
-              rin.rx_active <= '1';
-              rin.rx_error <= '1';
-              rin.host_disconnect <= '0';
-            when others =>
-              rin.rx_active <= '0';
-              rin.rx_error <= '0';
-              rin.host_disconnect <= '1';
-          end case;
-        else
-          rin.rx_valid <= '1';
-          rin.rx_data <= ulpi_i.data;
+        if ulpi_i.dir = '1' and r.last_dir = '1' then
+          if ulpi_i.nxt = '0' then
+            rin.line_state <= to_usb_symbol(ulpi_i.data(1 downto 0));
+            case ulpi_i.data(5 downto 4) is
+              when "00" =>
+                rin.rx_active <= '0';
+                rin.rx_error <= '0';
+                rin.host_disconnect <= '0';
+              when "01" =>
+                rin.rx_active <= '1';
+                rin.rx_error <= '0';
+                rin.host_disconnect <= '0';
+              when "11" =>
+                rin.rx_active <= '1';
+                rin.rx_error <= '1';
+                rin.host_disconnect <= '0';
+              when others =>
+                rin.rx_active <= '0';
+                rin.rx_error <= '0';
+                rin.host_disconnect <= '1';
+            end case;
+          else
+            rin.rx_valid <= '1';
+            rin.rx_data <= ulpi_i.data;
+          end if;
         end if;
         
       when ST_TX_IDLE =>
