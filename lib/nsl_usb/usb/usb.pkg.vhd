@@ -120,6 +120,7 @@ package usb is
     USB_SYMBOL_SE1
     );
   function to_usb_symbol(ls : std_ulogic_vector(1 downto 0)) return usb_symbol_t;
+  function to_logic(ls : usb_symbol_t) return std_ulogic_vector;
 
   type usb_symbol_vector is array(natural range <>) of usb_symbol_t;
 
@@ -374,6 +375,17 @@ package body usb is
       when "01" => return USB_SYMBOL_J;
       when "10" => return USB_SYMBOL_K;
       when others => return USB_SYMBOL_SE1;
+    end case;
+  end function;
+
+  function to_logic(ls : usb_symbol_t) return std_ulogic_vector
+  is
+  begin
+    case ls is
+      when USB_SYMBOL_SE0 => return "00";
+      when USB_SYMBOL_J => return "01";
+      when USB_SYMBOL_K => return "10";
+      when others => return "11";
     end case;
   end function;
   
