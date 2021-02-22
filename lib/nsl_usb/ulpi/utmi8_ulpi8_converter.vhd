@@ -3,12 +3,17 @@ use ieee.std_logic_1164.all;
 
 library nsl_usb, nsl_data, nsl_logic;
 use nsl_data.bytestream.all;
+use nsl_data.text.strfind;
 use nsl_usb.usb.all;
 use nsl_usb.utmi.all;
 use nsl_usb.ulpi.all;
 use nsl_logic.bool.all;
 
 entity utmi8_ulpi8_converter is
+  generic(
+    phy_model_c : string := "GENERIC";
+    dpdm_swap_c : boolean := false
+    );
   port(
     reset_n_i : in std_ulogic;
 
@@ -36,6 +41,13 @@ architecture beh of utmi8_ulpi8_converter is
     ST_FUNC_CTRL_WRITE_CMD,
     ST_FUNC_CTRL_WRITE_DATA,
 
+    ST_SMSC_SWAP_WRITE_CMD,
+    ST_SMSC_SWAP_WRITE_DATA,
+
+    ST_TI_SWAP_WRITE_CMD,
+    ST_TI_SWAP_WRITE_ADDR,
+    ST_TI_SWAP_WRITE_DATA,
+
     ST_TX_START,
     ST_TX_PID_SEND,
     ST_TX_FORWARD,
@@ -48,7 +60,7 @@ architecture beh of utmi8_ulpi8_converter is
     state: state_t;
 
     last_dir : std_ulogic;
-    
+
     -- rx buffer
     rx_valid : std_ulogic;
     rx_data : byte;
@@ -70,12 +82,22 @@ architecture beh of utmi8_ulpi8_converter is
     op_mode : utmi_op_mode_t;
 
     func_ctrl_dirty : boolean;
+    smsc_swap_dirty : boolean;
+    ti_swap_dirty : boolean;
     otg_ctrl_dirty : boolean;
   end record;
 
   signal r, rin: regs_t;
 
 begin
+
+  assert not dpdm_swap_c or ulpi_phy_dpdm_swap_method(phy_model_c) /= DPDM_SWAP_NONE
+    report "DP/DM Swap requested for an unsupported Phy model: " & phy_model_c
+    severity failure;
+
+  assert dpdm_swap_c and ulpi_phy_dpdm_swap_method(phy_model_c) /= DPDM_SWAP_NONE
+    report "DP/DM Swap requested for model" & phy_model_c
+    severity note;
 
   regs: process(ulpi_i.clock, reset_n_i)
   begin
@@ -91,7 +113,7 @@ begin
     rin <= r;
 
     rin.last_dir <= ulpi_i.dir;
-    
+
     if utmi_system_i.reset = '1' then
       rin.func_ctrl_dirty <= true;
       rin.otg_ctrl_dirty <= true;
@@ -101,17 +123,19 @@ begin
       rin.suspend <= false;
       rin.state <= ST_RX;
     end if;
-    
+
     case r.state is
       when ST_RESET =>
         rin.func_ctrl_dirty <= true;
+        rin.smsc_swap_dirty <= ulpi_phy_dpdm_swap_method(phy_model_c) = DPDM_SWAP_SMSC;
+        rin.ti_swap_dirty <= ulpi_phy_dpdm_swap_method(phy_model_c) = DPDM_SWAP_TI;
         rin.otg_ctrl_dirty <= true;
         rin.xcvr_select <= UTMI_MODE_FS;
         rin.term_select <= UTMI_MODE_HS;
         rin.op_mode <= UTMI_OP_MODE_NORMAL;
         rin.suspend <= false;
         rin.state <= ST_RX;
-        
+
       when ST_RX =>
         rin.rx_valid <= '0';
         if ulpi_i.dir = '1' and r.last_dir = '1' then
@@ -140,9 +164,13 @@ begin
             rin.rx_data <= ulpi_i.data;
           end if;
         end if;
-        
+
       when ST_TX_IDLE =>
-        if r.otg_ctrl_dirty then
+        if r.smsc_swap_dirty then
+          rin.state <= ST_SMSC_SWAP_WRITE_CMD;
+        elsif r.ti_swap_dirty then
+          rin.state <= ST_TI_SWAP_WRITE_CMD;
+        elsif r.otg_ctrl_dirty then
           rin.state <= ST_OTG_CTRL_WRITE_CMD;
         elsif r.func_ctrl_dirty then
           rin.state <= ST_FUNC_CTRL_WRITE_CMD;
@@ -156,17 +184,49 @@ begin
       when ST_OTG_CTRL_WRITE_CMD =>
         if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
           rin.state <= ST_OTG_CTRL_WRITE_DATA;
-          rin.otg_ctrl_dirty <= false;
+        end if;
+
+      when ST_SMSC_SWAP_WRITE_CMD =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.state <= ST_SMSC_SWAP_WRITE_DATA;
+        end if;
+
+      when ST_TI_SWAP_WRITE_CMD =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.state <= ST_TI_SWAP_WRITE_ADDR;
         end if;
 
       when ST_FUNC_CTRL_WRITE_CMD =>
         if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
           rin.state <= ST_FUNC_CTRL_WRITE_DATA;
-          rin.func_ctrl_dirty <= false;
         end if;
 
-      when ST_OTG_CTRL_WRITE_DATA | ST_FUNC_CTRL_WRITE_DATA =>
-        if ulpi_i.nxt = '1' then
+      when ST_TI_SWAP_WRITE_ADDR =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.state <= ST_TI_SWAP_WRITE_DATA;
+        end if;
+
+      when ST_OTG_CTRL_WRITE_DATA =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.otg_ctrl_dirty <= false;
+          rin.state <= ST_TX_OVER;
+        end if;
+
+      when ST_FUNC_CTRL_WRITE_DATA =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.func_ctrl_dirty <= false;
+          rin.state <= ST_TX_OVER;
+        end if;
+
+      when ST_SMSC_SWAP_WRITE_DATA =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.smsc_swap_dirty <= false;
+          rin.state <= ST_TX_OVER;
+        end if;
+
+      when ST_TI_SWAP_WRITE_DATA =>
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
+          rin.ti_swap_dirty <= false;
           rin.state <= ST_TX_OVER;
         end if;
 
@@ -183,7 +243,7 @@ begin
           end if;
         end if;
 
-        if ulpi_i.nxt = '1' then
+        if ulpi_i.nxt = '1' and ulpi_i.dir = '0' then
           if r.tx_data_over and r.tx_data_fillness = 0 then
             rin.state <= ST_TX_OVER;
           else
@@ -238,7 +298,7 @@ begin
       rin.suspend <= utmi_system_i.suspend;
       rin.func_ctrl_dirty <= true;
     end if;
-    
+
     case r.state is
       when ST_RESET =>
         null;
@@ -270,7 +330,7 @@ begin
   end process;
 
   utmi_system_o.clock <= ulpi_i.clock;
-  
+
   moore: process(r)
   begin
     ulpi_o.data <= ulpi_cmd_noop;
@@ -301,6 +361,30 @@ begin
       when ST_OTG_CTRL_WRITE_CMD =>
         ulpi_o.data <= ulpi_cmd_reg_write(ULPI_REG_OTG_CTRL_WRITE);
 
+      when ST_SMSC_SWAP_WRITE_CMD =>
+        if dpdm_swap_c then
+          ulpi_o.data <= ulpi_cmd_reg_write(ULPI_USB33XX_USB_IO_SET);
+        else
+          ulpi_o.data <= ulpi_cmd_reg_write(ULPI_USB33XX_USB_IO_CLR);
+        end if;
+
+      when ST_SMSC_SWAP_WRITE_DATA =>
+        ulpi_o.data <= "00000010";
+
+      when ST_TI_SWAP_WRITE_CMD =>
+        ulpi_o.data <= ulpi_cmd_reg_write(ULPI_REG_EXT);
+
+      when ST_TI_SWAP_WRITE_ADDR =>
+        -- Bit is active low
+        if dpdm_swap_c then
+          ulpi_o.data <= byte(ULPI_TUSB1210_VENDOR_SPECIFIC2_CLR);
+        else
+          ulpi_o.data <= byte(ULPI_TUSB1210_VENDOR_SPECIFIC2_SET);
+        end if;
+
+      when ST_TI_SWAP_WRITE_DATA =>
+        ulpi_o.data <= "01000000";
+
       when ST_OTG_CTRL_WRITE_DATA =>
         ulpi_o.data <= (others => '0');
 
@@ -324,12 +408,12 @@ begin
       when ST_TX_FORWARD =>
         utmi_data_o.tx_ready <= to_logic(r.tx_data_fillness < 2 and not r.tx_data_over);
         ulpi_o.data <= r.tx_data(0);
-        
+
       when ST_TX_OVER =>
         ulpi_o.stp <= '1';
         ulpi_o.data <= ulpi_cmd_noop;
     end case;
-    
+
   end process;
-  
+
 end architecture;

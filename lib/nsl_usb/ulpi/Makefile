@@ -9,3 +9,4 @@ deps += nsl_usb.usb
 deps += nsl_usb.utmi
 deps += nsl_logic.bool
 deps += nsl_data.bytestream
+deps += nsl_data.text
