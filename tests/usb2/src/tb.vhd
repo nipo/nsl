@@ -158,6 +158,7 @@ begin
                       hex_data => to_hex_string(byte_range(x"80", x"bf")),
                       handshake_pid => PID_ACK);
 
+    utmi_wait(s2p, p2s, 1 us);
     log_info("* Bulk IN merged");
     log_info("* Bulk IN retransmission");
     utmi_transfer_in(s2p, p2s,
@@ -287,6 +288,7 @@ begin
                       hex_data => to_hex_string(byte_range(x"00", x"1f")),
                       handshake_pid => PID_ACK);
 
+    utmi_wait(s2p, p2s, 1 us);
     -- But here, it should contain e0->1f
     log_info("* Transfer can merge the two last OUTs");
     utmi_transfer_in(s2p, p2s,

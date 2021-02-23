@@ -285,7 +285,7 @@ package body usb_commands is
   is
     constant packet : byte_string := pid_byte(pid) & data;
     variable rxdata : byte_string(0 to 8191 + 3);
-    variable rx_ptr : integer range rxdata'left to rxdata'right;
+    variable rx_ptr : integer;
   begin
     log_debug("   < " & packet_to_string(packet));
 

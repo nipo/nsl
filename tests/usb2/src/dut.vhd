@@ -57,7 +57,8 @@ begin
       hs_supported_c => true,
       self_powered_c => false,
       bulk_fs_mps_l2_c => 6,
-      bulk_mps_count_l2_c => 1
+      bulk_mps_count_l2_c => 1,
+      serial_i_length_c => 4
       )
     port map(
       phy_system_o => utmi_system_o,

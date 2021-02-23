@@ -35,16 +35,15 @@ end entity;
 architecture beh of device_ep_bulk_in is
 
   constant mps_l2_c : integer := if_else(hs_supported_c, 9, fs_mps_l2_c);
-  subtype ptr_t is unsigned(mps_l2_c + mps_count_l2_c downto 0);
-  subtype mem_ptr_t is unsigned(mps_l2_c + mps_count_l2_c - 1 downto 0);
+  constant fifo_word_count_l2_c: integer := mps_l2_c + mps_count_l2_c;
+
+  subtype ptr_t is unsigned(fifo_word_count_l2_c downto 0);
+  constant mps_max_c : integer := 2 ** mps_l2_c;
 
   function to_ptr(i: integer) return ptr_t is
   begin
     return to_unsigned(i, ptr_t'length);
   end function;
-
-  constant buffer_size_c : ptr_t := to_ptr(2 ** (mps_l2_c + mps_count_l2_c));
-  constant mps_max_c : integer := 2 ** mps_l2_c;
 
   type state_t is (
     ST_IDLE,
@@ -55,27 +54,28 @@ architecture beh of device_ep_bulk_in is
     ST_SEND,
     ST_HANDSHAKE
     );
-  
+
   type regs_t is
   record
     state : state_t;
 
-    fifo_wptr,
-      fifo_rptr,
-      transaction_rptr,
-      transaction_end_ptr : ptr_t;
+    transaction_left, last_size, mps_mask : ptr_t;
 
     flush          : boolean;
     last_was_short : boolean;
     last_was_acked : boolean;
     toggle         : std_ulogic;
     halted         : boolean;
+
+    do_commit, do_rollback : std_ulogic;
+    tx_buffer : std_ulogic_vector(7 downto 0);
   end record;
 
-  signal s_rdata : byte;
-  signal s_do_read, s_do_write, s_full_n  : std_ulogic;
-  
   signal r, rin : regs_t;
+
+  signal fifo_out_data : std_ulogic_vector(7 downto 0);
+  signal fifo_out_available : unsigned(fifo_word_count_l2_c downto 0);
+  signal fifo_out_valid, fifo_out_ready : std_ulogic;
 
 begin
 
@@ -83,9 +83,8 @@ begin
   begin
     if reset_n_i = '0' then
       r.state              <= ST_IDLE;
-      r.fifo_rptr          <= (others => '0');
-      r.transaction_rptr      <= (others => '0');
-      r.fifo_wptr          <= (others => '0');
+      r.transaction_left   <= to_ptr(0);
+      r.last_size          <= to_ptr(0);
 
       r.last_was_short <= true;
       r.last_was_acked <= true;
@@ -99,66 +98,74 @@ begin
     end if;
   end process;
 
-  transition: process(r, transaction_i, valid_i, data_i, flush_i, s_full_n) is
+  transition: process(r, transaction_i, flush_i,
+                      fifo_out_available, fifo_out_valid, fifo_out_data) is
     variable max_txsize : ptr_t;
-    variable empty : boolean;
   begin
     rin <= r;
-    empty := r.fifo_rptr = r.fifo_wptr;
 
+    rin.do_rollback <= '0';
+    rin.do_commit <= '0';
+
+    -- Precomputation of MPS limit
+    -- MPS is a power of two, mask will take MSBs.
     if hs_supported_c and transaction_i.hs = '1' then
-      max_txsize := to_ptr(BULK_MPS_HS);
+      rin.mps_mask <= not to_ptr(BULK_MPS_HS - 1);
     else
-      max_txsize := to_ptr(2 ** fs_mps_l2_c);
+      rin.mps_mask <= not to_ptr(2 ** fs_mps_l2_c - 1);
     end if;
 
     if flush_i = '1' then
       rin.flush <= true;
     end if;
-    
+
     case r.state is
       when ST_IDLE =>
-        rin.transaction_rptr <= r.fifo_rptr;
-
         if not r.halted and transaction_i.phase /= PHASE_NONE then
           rin.last_was_short <= true;
-          if empty then
+          if fifo_out_valid = '0' then
             if r.flush or not r.last_was_short or not r.last_was_acked then
               rin.state <= ST_ZLP_START;
             else
               rin.state  <= ST_NAK;
             end if;
-          elsif not r.last_was_acked and r.fifo_rptr = r.transaction_end_ptr then
+          elsif not r.last_was_acked and r.last_size = 0 then
             -- (8.6.4 p. 234)
             -- The data transmitter must guarantee that any retried
             -- data packet is identical (same length and content)
             rin.state <= ST_ZLP_START;
           else
             if r.last_was_acked then
-              rin.transaction_end_ptr <= r.fifo_rptr + max_txsize;
+              rin.transaction_left <= (not r.mps_mask);
+            else
+              rin.transaction_left <= r.last_size - 1;
             end if;
             rin.state <= ST_FILL;
+            rin.last_was_acked <= false;
+            rin.last_size <= to_ptr(0);
+            rin.last_was_short <= false;
           end if;
         end if;
 
       when ST_STALL | ST_NAK =>
         if transaction_i.phase = PHASE_NONE then
+          rin.do_rollback <= '1';
           rin.state <= ST_IDLE;
         end if;
 
-      when ST_FILL =>
-        rin.last_was_acked <= false;
-        rin.state <= ST_SEND;
-        rin.transaction_rptr <= r.transaction_rptr + 1;
-        rin.last_was_short <= false;
-
       when ST_ZLP_START =>
         rin.last_was_acked <= false;
+        rin.last_size <= to_ptr(0);
         rin.state <= ST_HANDSHAKE;
+
+      when ST_FILL =>
+        rin.tx_buffer <= fifo_out_data;
+        rin.state <= ST_SEND;
 
       when ST_SEND =>
         case transaction_i.phase is
           when PHASE_NONE =>
+            rin.do_rollback <= '1';
             rin.state <= ST_IDLE;
 
           when PHASE_TOKEN =>
@@ -167,10 +174,12 @@ begin
 
           when PHASE_DATA =>
             if transaction_i.nxt = '1' then
-              if r.transaction_rptr = r.fifo_wptr or r.transaction_rptr = r.transaction_end_ptr then
+              rin.tx_buffer <= fifo_out_data;
+              rin.last_size <= r.last_size + 1;
+              rin.transaction_left <= r.transaction_left - 1;
+
+              if r.transaction_left = 0 or fifo_out_valid = '0' then
                 rin.state <= ST_HANDSHAKE;
-              else
-                rin.transaction_rptr <= r.transaction_rptr + 1;
               end if;
             end if;
 
@@ -180,15 +189,14 @@ begin
         end case;
 
       when ST_HANDSHAKE =>
-        rin.transaction_end_ptr <= r.transaction_rptr;
-        rin.last_was_short <= r.transaction_rptr /= r.fifo_rptr + max_txsize;
+        rin.last_was_short <= (r.last_size and r.mps_mask) = to_ptr(0);
 
         case transaction_i.phase is
           when PHASE_HANDSHAKE =>
             case transaction_i.handshake is
               when HANDSHAKE_ACK =>
                 rin.last_was_acked <= true;
-                rin.fifo_rptr <= r.transaction_rptr;
+                rin.do_commit <= '1';
                 rin.toggle <= not r.toggle;
                 rin.state <= ST_IDLE;
                 if r.last_was_short then
@@ -196,6 +204,7 @@ begin
                 end if;
 
               when HANDSHAKE_NAK =>
+                rin.do_rollback <= '1';
                 rin.state <= ST_IDLE;
 
               when others =>
@@ -206,6 +215,7 @@ begin
             null;
 
           when others =>
+            rin.do_rollback <= '1';
             rin.state <= ST_IDLE;
         end case;
     end case;
@@ -216,46 +226,43 @@ begin
     elsif transaction_i.halt = '1' then
       rin.halted <= true;
     end if;
-
-    if s_full_n = '1' and valid_i = '1' then
-      rin.fifo_wptr <= r.fifo_wptr + 1;
-    end if;
   end process;
 
-  s_full_n <= to_logic(r.fifo_wptr /= r.fifo_rptr + buffer_size_c);
-  s_do_read <= (to_logic(r.state = ST_SEND and transaction_i.phase = PHASE_DATA) and transaction_i.nxt) or to_logic(r.state = ST_FILL);
-  s_do_write <= valid_i and s_full_n;
-
-  storage: nsl_memory.ram.ram_2p_r_w
+  fifo: nsl_memory.fifo.fifo_cancellable
     generic map(
-      addr_size_c => mem_ptr_t'length,
-      data_size_c => 8,
-      clock_count_c => 1,
-      registered_output_c => false
+      word_count_l2_c => fifo_word_count_l2_c,
+      data_width_c => 8
       )
     port map(
-      clock_i(0) => clock_i,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      write_address_i => r.fifo_wptr(mem_ptr_t'range),
-      write_en_i => s_do_write,
-      write_data_i => data_i,
+      out_data_o      => fifo_out_data,
+      out_valid_o     => fifo_out_valid,
+      out_ready_i     => fifo_out_ready,
+      out_commit_i     => r.do_commit,
+      out_rollback_i   => r.do_rollback,
+      out_available_o => fifo_out_available,
 
-      read_address_i => r.transaction_rptr(mem_ptr_t'range),
-      read_en_i => s_do_read,
-      read_data_o => s_rdata
+      in_data_i       => data_i,
+      in_valid_i      => valid_i,
+      in_ready_o      => ready_o,
+      in_free_o       => room_o
       );
 
-  ready_o <= s_full_n;
-  room_o <= r.fifo_rptr + buffer_size_c - r.fifo_wptr;
+  fifo_out_ready <= to_logic(r.state = ST_FILL)
+                    or to_logic(r.state = ST_SEND
+                                and transaction_i.phase = PHASE_DATA
+                                and transaction_i.nxt = '1'
+                                and r.transaction_left /= 0);
 
-  moore: process(r, s_rdata) is
+  moore: process(r, fifo_out_valid) is
   begin
     transaction_o <= TRANSACTION_RSP_IDLE;
 
     transaction_o.toggle  <= r.toggle;
-    transaction_o.data <= s_rdata;
-    transaction_o.last <= to_logic(r.transaction_rptr = r.fifo_wptr
-                          or r.transaction_rptr = r.transaction_end_ptr);
+    transaction_o.last <= to_logic(r.transaction_left = 0 or fifo_out_valid = '0');
+    transaction_o.data <= r.tx_buffer;
 
     case r.state is
       when ST_IDLE | ST_FILL =>
