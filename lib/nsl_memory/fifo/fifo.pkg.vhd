@@ -119,4 +119,51 @@ package fifo is
       );
   end component;
 
+  -- This component has two sets of read/write pointers, one actual set, and
+  -- one speculative set. Reads and writes can be cancelled / committed and
+  -- replayed ad libitum.
+  --
+  -- If data is flowing at the same time commit or rollback are asserted,
+  -- whether data that flowed at the exact same cycle is committed/rolled back
+  -- is undefined.
+  --
+  -- If commit/rollback is not used for one of the ports, just leave
+  -- assignments to their default values. Data will always end up to
+  -- be committed.
+  --
+  -- When issuing rollback, port may not be ready the next cycle. Handshaking
+  -- will be correct, though.
+  component fifo_cancellable
+    generic(
+      data_width_c    : integer;
+      word_count_l2_c : integer
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i       : in  std_ulogic;
+
+      out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
+      out_ready_i         : in  std_ulogic;
+      out_valid_o         : out std_ulogic;
+      -- When asserted, commits the buffer as taken, and moves the actual
+      -- read pointer to current speculative position.
+      out_commit_i : in std_ulogic := '1';
+      -- When asserted, read data since last commit is assumed to be lost and
+      -- read pointer is rolled back to last read position.
+      out_rollback_i : in std_ulogic := '0';
+      -- Reflects actual availability in *committed* space. This does not take
+      -- into account speculative read/writes to the fifo.
+      out_available_o : out unsigned(word_count_l2_c downto 0);
+
+      in_data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic;
+      in_commit_i : in std_ulogic := '1';
+      in_rollback_i : in std_ulogic := '0';
+      -- Reflects actual free space in *committed* space. This does not take
+      -- into account speculative read/writes to the fifo.
+      in_free_o : out unsigned(word_count_l2_c downto 0)
+      );
+  end component;
+
 end package fifo;
