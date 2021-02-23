@@ -50,4 +50,26 @@ package stream is
 
   type axis_8l_vector is array(natural range <>) of axis_8l;
 
+  component axis_8l_fifo is
+    generic(
+      word_count_c : natural;
+      clock_count_c  : natural range 1 to 2;
+      input_slice_c : boolean := false;
+      output_slice_c : boolean := false;
+      register_counters_c : boolean := false
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic_vector(0 to clock_count_c-1);
+
+      in_i   : in axis_8l_ms;
+      in_o   : out axis_8l_sm;
+      free_o : out integer range 0 to word_count_c;
+
+      out_i   : in axis_8l_sm;
+      out_o   : out axis_8l_ms;
+      available_o : out integer range 0 to word_count_c + 1
+      );
+  end component;
+
 end package stream;
