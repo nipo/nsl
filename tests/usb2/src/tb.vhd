@@ -1,7 +1,6 @@
-library work, ieee;
+library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.usb_commands.all;
 
 library nsl_simulation, nsl_usb, nsl_data;
 use nsl_simulation.logging.all;
@@ -12,6 +11,7 @@ use nsl_usb.descriptor.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_data.prbs.all;
+use nsl_usb.testing.all;
 
 entity tb is
 end tb;

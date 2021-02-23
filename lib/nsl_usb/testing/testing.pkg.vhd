@@ -13,7 +13,7 @@ use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_data.endian.all;
 
-package usb_commands is
+package testing is
   
   type utmi8_s2p is
   record
@@ -151,9 +151,9 @@ package usb_commands is
 
   constant cycle_time : time := 16666 ps;
 
-end usb_commands;
+end testing;
 
-package body usb_commands is
+package body testing is
   
   procedure utmi_init(signal s2p: in utmi8_s2p;
                       signal p2s: out utmi8_p2s)
@@ -583,4 +583,4 @@ package body usb_commands is
                       from_hex(data), mps);
   end procedure;
 
-end usb_commands;
+end testing;
