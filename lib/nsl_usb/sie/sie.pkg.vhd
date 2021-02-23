@@ -264,6 +264,14 @@ package sie is
 
   type transaction_rsp_vector is array(integer range <>) of transaction_rsp;
 
+  type transaction_bus is
+  record
+    cmd: transaction_cmd;
+    rsp: transaction_rsp;
+  end record;
+  
+  type transaction_bus_vector is array(integer range <>) of transaction_bus;
+  
   constant TRANSACTION_RSP_IDLE : transaction_rsp := (
     phase => PHASE_NONE,
     toggle => '-',
