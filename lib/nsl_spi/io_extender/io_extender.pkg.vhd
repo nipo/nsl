@@ -13,7 +13,10 @@ package io_extender is
       reset_n_i    : in std_ulogic;
       clock_i      : in std_ulogic;
 
-      data_i       : in std_ulogic_vector(7 downto 0);
+      -- Shifted from left to right. For a 74x59[45], use a descending
+      -- vector, it will be shifted MSB first. If multiple chips are
+      -- chained, farther from controller is MSB.
+      data_i       : in std_ulogic_vector;
       ready_o      : out std_ulogic;
 
       sr_d_o       : out std_ulogic;

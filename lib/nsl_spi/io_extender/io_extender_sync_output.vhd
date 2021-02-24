@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity ioext_sync_output is
+entity io_extender_sync_output is
   generic(
     clock_divisor_c : natural
     );
@@ -10,7 +10,7 @@ entity ioext_sync_output is
     reset_n_i : in std_ulogic;
     clock_i   : in std_ulogic;
 
-    data_i  : in  std_ulogic_vector(7 downto 0);
+    data_i  : in  std_ulogic_vector;
     ready_o : out std_ulogic;
 
     sr_d_o      : out std_ulogic;
@@ -19,7 +19,7 @@ entity ioext_sync_output is
     );
 end entity;
 
-architecture beh of ioext_sync_output is
+architecture beh of io_extender_sync_output is
 
   type state_t is (
     STATE_RESET,
@@ -31,9 +31,10 @@ architecture beh of ioext_sync_output is
     );
 
   type regs_t is record
-    data: std_ulogic_vector(7 downto 0);
+    last_value, shreg: std_ulogic_vector(0 to data_i'length-1);
     state: state_t;
-    bit_ctr: natural range 0 to 7;
+    changed: boolean;
+    bit_ctr: natural range 0 to data_i'length-1;
     clk_div: natural range 0 to clock_divisor_c-1;
   end record;
   
@@ -54,19 +55,25 @@ begin
   begin
     rin <= r;
 
+    if data_i /= r.last_value then
+      rin.changed <= true;
+    end if;
+    
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_START;
 
       when STATE_IDLE =>
-        if data_i /= r.data then
+        if r.changed then
           rin.state <= STATE_START;
         end if;
 
       when STATE_START =>
-        rin.data <= data_i;
+        rin.last_value <= data_i;
+        rin.shreg <= data_i;
+        rin.changed <= false;
         rin.state <= STATE_SHIFT_LOW;
-        rin.bit_ctr <= 7;
+        rin.bit_ctr <= data_i'length - 1;
         rin.clk_div <= clock_divisor_c - 1;
 
       when STATE_SHIFT_LOW =>
@@ -86,6 +93,7 @@ begin
             rin.state <= STATE_STROBE;
           else
             rin.bit_ctr <= r.bit_ctr - 1;
+            rin.shreg <= r.shreg(1 to r.shreg'right) & "-";
             rin.state <= STATE_SHIFT_LOW;
           end if;
         end if;
@@ -101,7 +109,7 @@ begin
 
   moore: process(r)
   begin
-    sr_d_o <= r.data(r.bit_ctr);
+    sr_d_o <= r.shreg(0);
     sr_strobe_o <= '0';
     sr_clock_o <= '0';
     ready_o <= '0';
