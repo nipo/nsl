@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
-  
+
   type framed_req is record
     data : framed_data_t;
     last : std_ulogic;
@@ -15,12 +15,12 @@ package framed is
   type framed_ack is record
     ready  : std_ulogic;
   end record;
-  
+
   type framed_bus is record
     req: framed_req;
     ack: framed_ack;
   end record;
-  
+
   type framed_req_array is array(natural range <>) of framed_req;
   type framed_ack_array is array(natural range <>) of framed_ack;
   type framed_bus_array is array(natural range <>) of framed_bus;
@@ -77,6 +77,39 @@ package framed is
       p_target_cmd_ack   : in framed_ack;
       p_target_rsp_val   : in framed_req;
       p_target_rsp_ack   : out framed_ack
+      );
+  end component;
+
+  -- This component creates a framed context from a fifo + flush
+  -- operation.
+  --
+  -- Flush lags one cycle after matching data cycle,
+  -- whatever the data flowing through during this later cycle.
+  --
+  -- This creates three frames containing data [0, 1, 2] on the output:
+  --            _   _   _   _   _   _   _   _   _   _   _   _   _   _
+  -- clock_i \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \
+  --         _______________________________________________
+  -- ready_o                                                \_________
+  --             ___________         _______________________     _____
+  -- valid_i ___/           \_______/                       \___/
+  -- data_i  ---X 0 X 1 X 2 X-------X 0 X 1 X 2 X 0 X 1 X 2 X---X 8 X
+  --                             ___             ___             ___
+  -- flush_i ___________________/   \___________/   \___________/   \_
+  --
+  component framed_committer is
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      data_i : in framed_data_t;
+      valid_i : in std_ulogic;
+      ready_o : out std_ulogic;
+
+      flush_i : in std_ulogic;
+
+      req_o : out framed_req;
+      ack_i : in framed_ack
       );
   end component;
 
