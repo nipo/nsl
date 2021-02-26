@@ -46,6 +46,9 @@ entity bus_interface_utmi8 is
 
     string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
     
+    frame_number_o : out frame_no_t;
+    frame_o        : out std_ulogic;
+
     transaction_cmd_tap_o : out transaction_cmd;
     transaction_rsp_tap_o : out transaction_rsp;
 
@@ -146,6 +149,9 @@ begin
       packet_in_i => s_packet_in_rsp,
       packet_in_o => s_packet_in_cmd,
 
+      frame_number_o => frame_number_o,
+      frame_o => frame_o,
+      
       transaction_o => s_transaction_cmd,
       transaction_i => s_transaction_rsp
       );

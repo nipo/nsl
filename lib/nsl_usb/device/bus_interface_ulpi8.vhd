@@ -47,6 +47,9 @@ entity bus_interface_ulpi8 is
     transaction_cmd_tap_o : out transaction_cmd;
     transaction_rsp_tap_o : out transaction_rsp;
 
+    frame_number_o : out frame_no_t;
+    frame_o        : out std_ulogic;
+
     transaction_out_o : out transaction_cmd_vector(1 to out_ep_count_c);
     transaction_out_i : in  transaction_rsp_vector(1 to out_ep_count_c);
     transaction_in_o : out transaction_cmd_vector(1 to in_ep_count_c);
@@ -114,6 +117,9 @@ begin
 
       string_10_i => string_10_i,
       
+      frame_number_o => frame_number_o,
+      frame_o => frame_o,
+
       transaction_cmd_tap_o => transaction_cmd_tap_o,
       transaction_rsp_tap_o => transaction_rsp_tap_o,
       

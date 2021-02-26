@@ -50,6 +50,9 @@ package device is
 
       string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
 
+      frame_number_o : out frame_no_t;
+      frame_o        : out std_ulogic;
+
       transaction_cmd_tap_o : out transaction_cmd;
       transaction_rsp_tap_o : out transaction_rsp;
 
@@ -95,6 +98,9 @@ package device is
       phy_i : in  nsl_usb.ulpi.ulpi8_phy2link;
 
       string_10_i : in string(1 to string_10_i_length_c) := (others => nul);
+
+      frame_number_o : out frame_no_t;
+      frame_o        : out std_ulogic;
 
       transaction_cmd_tap_o : out transaction_cmd;
       transaction_rsp_tap_o : out transaction_rsp;

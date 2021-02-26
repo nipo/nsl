@@ -44,6 +44,9 @@ entity vendor_bulk_pair is
 
     tx_flush_i   : in  std_ulogic := '0';
 
+    frame_number_o : out frame_no_t;
+    frame_o        : out std_ulogic;
+
     transaction_cmd_tap_o : out transaction_cmd;
     transaction_rsp_tap_o : out transaction_rsp;
 
@@ -149,6 +152,9 @@ begin
       phy_data_o => phy_data_o,
       phy_data_i => phy_data_i,
 
+      frame_number_o => frame_number_o,
+      frame_o => frame_o,
+      
       transaction_cmd_tap_o => transaction_cmd_tap_o,
       transaction_rsp_tap_o => transaction_rsp_tap_o,
 

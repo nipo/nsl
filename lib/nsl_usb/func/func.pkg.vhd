@@ -49,6 +49,9 @@ package func is
 
       tx_flush_i   : in  std_ulogic := '0';
 
+      frame_number_o : out frame_no_t;
+      frame_o        : out std_ulogic;
+
       transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
       transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;
 
@@ -93,6 +96,9 @@ package func is
       tx_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
       tx_flush_i   : in  std_ulogic := '0';
+
+      frame_number_o : out frame_no_t;
+      frame_o        : out std_ulogic;
 
       transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
       transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;
