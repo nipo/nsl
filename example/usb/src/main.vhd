@@ -73,6 +73,7 @@ begin
   ulpi_driver: nsl_usb.ulpi.ulpi8_line_driver
     port map(
       clock_i => phy_clk,
+
       reset_o => phy_reset,
       data_io => phy_data,
       dir_i => phy_dir,
@@ -85,6 +86,8 @@ begin
 
   utmi_converter: nsl_usb.ulpi.utmi8_ulpi8_converter
     port map(
+      reset_n_i => reset_n,
+
       ulpi_i => ulpi.phy2link,
       ulpi_o => ulpi.link2phy,
       
@@ -103,6 +106,7 @@ begin
       product_c => "Serial loopback demo",
       hs_supported_c => true,
       bulk_mps_count_l2_c => 2,
+      serial_i_length_c => s_device_serial'length,
       self_powered_c => false
       )
     port map(
