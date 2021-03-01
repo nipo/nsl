@@ -38,11 +38,13 @@ define ghdl-compile-rules
 	$(SILENT)$(GHDL) -m \
 		--workdir=$(call workdir,$(top-lib)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity)
 	$(SILENT)$(GHDL) -e \
 		--workdir=$(call workdir,$(top-lib)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity)
 endef
@@ -51,6 +53,7 @@ define ghdl-run-rules
 	$(SILENT)$(GHDL) -r \
 		--workdir=$(call workdir,$(top-lib)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity) \
 		 --wave=$@ --ieee-asserts=disable
