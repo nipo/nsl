@@ -6,3 +6,4 @@ endif
 
 packages += vpkg
 packages += vcomponents
+unisim-ghdl-flags = -fsynopsys -frelaxed-rules -fexplicit
