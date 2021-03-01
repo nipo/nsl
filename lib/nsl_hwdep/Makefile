@@ -4,3 +4,4 @@ packages += reset
 packages += ice40
 packages += uid
 packages += config
+packages += xadc
