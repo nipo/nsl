@@ -54,6 +54,24 @@ package utmi is
     rx_error : std_ulogic;
   end record;
 
+  type utmi8_phy2sie is
+  record
+    data: utmi_data8_phy2sie;
+    system: utmi_system_phy2sie;
+  end record;
+
+  type utmi8_sie2phy is
+  record
+    data: utmi_data8_sie2phy;
+    system: utmi_system_sie2phy;
+  end record;
+
+  type utmi8_bus is
+  record
+    phy2sie: utmi8_phy2sie;
+    sie2phy: utmi8_sie2phy;
+  end record;
+
 end package utmi;
 
 package body utmi is
