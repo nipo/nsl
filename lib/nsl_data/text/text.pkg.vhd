@@ -26,12 +26,22 @@ package text is
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
 
+  -- For a string composed of a space-separated collection of "token(params)"
+  -- groups, return /params/ for a given token key.
+  -- No spaces are allowed in params
+  function str_param_extract(str, key: string) return string;
+  
   -- Returns an index to add to haystack'left. If returns -1, needle
   -- is not found.
   function strchr(haystack : string;
                   needle : character;
                   start_index : integer := 0) return integer;
-  -- Search for needle, either at begin/end of string, or separated by
+  -- Return index of substring
+  function strstr(haystack, needle : string;
+                  start_index : integer := 0) return integer;
+
+
+-- Search for needle, either at begin/end of string, or separated by
   -- separator.
   function strfind(haystack, needle : string;
                    separator : character) return boolean;
@@ -212,6 +222,24 @@ package body text is
     return -1;
   end function;
 
+  function strstr(haystack, needle : string;
+                  start_index : integer := 0) return integer
+  is
+  begin
+    if needle'length > haystack'length then
+      return -1;
+    end if;
+
+    for offset in haystack'left to haystack'right - needle'length + 1
+    loop
+      if haystack(offset to offset + needle'length - 1) = needle then
+        return offset;
+      end if;
+    end loop;
+
+    return -1;
+  end function;
+
   function to_string(value: time) return string
   is
   begin
@@ -221,18 +249,7 @@ package body text is
   function strfind(haystack, needle : string) return boolean
   is
   begin
-    if needle'length > haystack'length then
-      return false;
-    end if;
-
-    for offset in haystack'left to haystack'right - needle'length + 1
-    loop
-      if haystack(offset to offset + needle'length - 1) = needle then
-        return true;
-      end if;
-    end loop;
-
-    return false;
+    return strstr(haystack, needle) >= 0;
   end function;
 
   function strfind(haystack, needle : string;
@@ -240,6 +257,25 @@ package body text is
   is
   begin
     return strfind(separator & haystack & separator, needle);
+  end function;
+
+  function str_param_extract(str, key: string)
+    return string
+  is
+    constant tmp : string(1 to str'length + 2) := " " & str & " ";
+    variable start, stop: integer;
+  begin
+    start := strstr(tmp, " "&key&"(");
+    if start < 0 then
+      return "";
+    end if;
+
+    stop := strstr(tmp, ") ", start + key'length + 2);
+    if stop < 0 then
+      return "";
+    end if;
+
+    return tmp(start + key'length + 2 to stop - 1);
   end function;
 
 end package body;
