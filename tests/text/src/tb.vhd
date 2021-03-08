@@ -22,41 +22,28 @@ begin
   begin
     -- LRM: Hex strings are equal to 4-bit string expandedx in lexical
     -- order.
-    assert v_asc_b = v_asc_x
-      report "Literal failure"
-      severity failure;
-    assert v_desc_b = v_desc_x
-      report "Literal failure"
-      severity failure;
-
-    assert to_string(v_asc_b) = "0001001000110100"
-      report "to_string(""0001001000110100""/asc) failure"
-      severity failure;
-    assert to_hex_string(v_asc_b) = "1234"
-      report "to_hex_string(x""1234""/asc) failure"
-      severity failure;
-
-    assert to_string(v_desc_b) = "1101111010101101"
-      report "to_string(""1101111010101101""/desc) failure"
-      severity failure;
-    assert to_hex_string(v_desc_b) = "dead"
-      report "to_hex_string(x""dead""/desc) failure"
-      severity failure;
-
-    assert to_string(v_asc_short) = "0001001000110"
-      report "to_string(""0001001000110""/asc) failure"
-      severity failure;
-    assert to_string(v_desc_short) = "1101111010101"
-      report "to_string(""1101111010101""/desc) failure"
-      severity failure;
-
-    assert to_hex_string(v_asc_short) = "1230"
-      report "to_hex_string(""0001001000110""/asc) != ""1234"" (= " & to_hex_string(v_asc_short) & ")"
-      severity failure;
-
-    assert to_hex_string(v_desc_short) = "dea8"
-      report "to_hex_string(""1101111010101""/asc) != ""dea8"" (= " & to_hex_string(v_desc_short) & ")"
-      severity failure;
+    assert_equal("Literals", v_asc_b, v_asc_x, failure);
+    assert_equal("Literals", v_desc_b, v_desc_x, failure);
+    assert_equal("to_string", to_string(v_asc_b), "0001001000110100", failure);
+    assert_equal("to_hex_string", to_hex_string(v_asc_b), "1234", failure);
+    assert_equal("to_string", to_string(v_desc_b), "1101111010101101", failure);
+    assert_equal("to_hex_string", to_hex_string(v_desc_b), "dead", failure);
+    assert_equal("to_string", to_string(v_asc_short), "0001001000110", failure);
+    assert_equal("to_string", to_string(v_desc_short), "1101111010101", failure);
+    assert_equal("to_hex_string", to_hex_string(v_asc_short), "0246", failure);
+    assert_equal("to_hex_string", to_hex_string(v_desc_short), "1bd5", failure);
+    assert_equal("str_param_extract",
+                 str_param_extract("something(something_params) other(other_params)",
+                                   "something"), "something_params",
+                 failure);
+    assert_equal("str_param_extract",
+                 str_param_extract("something(something_params) other(other_params)",
+                                   "lol"), "",
+                 failure);
+    assert_equal("str_param_extract",
+                 str_param_extract("something(something_params(nested)) other(other_params)",
+                                   "something_params"), "",
+                 failure);
 
     assert false report "Test0 Done" severity note;
     wait;
