@@ -4,6 +4,7 @@ vhdl-sources += rgmii_from_framed.vhd
 vhdl-sources += rgmii_to_framed.vhd
 
 deps += nsl_math.arith
+deps += nsl_bnoc.framed
 deps += nsl_hwdep.clock
 deps += nsl_data.crc
 deps += nsl_data.bytestream
