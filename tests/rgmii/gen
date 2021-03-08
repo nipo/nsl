@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+prig = """
+FFFFFFFFFFFF0011 2233445508004500  002E000000004011 F685C0A8016FC0A8  017A00090009001A 0000000000000000  0000000000000000 00000000
+"""
+prig = bytes.fromhex(prig.replace(" ", "").replace("\n", ""))
+
+def put(payload):
+    for n, b in enumerate(payload):
+        last = n == len(payload) - 1
+        b = bin(b | 0x100)[3:]
+        if last:
+            print("1"+b, 50)
+        else:
+            print("0"+b, 10)
+
+
+put(prig[:-4])
+put(b'lol')
