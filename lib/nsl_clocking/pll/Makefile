@@ -10,8 +10,8 @@ deps += nsl_data.text
 deps += sb_ice
 endif
 
-ifneq ($(filter xc6slx%,$(target_part)),)
-vhdl-sources += pll_basic_spartan6.vhd
+ifneq ($(filter xc6slx%,$(target_part))$(filter xc7%,$(target_part)),)
+vhdl-sources += pll_basic_series67.vhd
 deps += unisim.vcomponents
 deps += nsl_math.arith
 deps += nsl_data.text

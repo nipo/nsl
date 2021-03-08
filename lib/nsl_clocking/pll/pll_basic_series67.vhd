@@ -43,7 +43,7 @@ architecture s6 of pll_basic is
     variable freq_lcm, mult : integer;
     variable ret : params;
   begin
-    freq_lcm := nsl_math.arith.lcm(input_hz_c, output_hz_c);
+    freq_lcm := nsl_math.arith.lcm(fin, fout);
     mult := constraints.fmin / freq_lcm;
     if mult = 0 or mult * freq_lcm < constraints.fmin then
       mult := mult + 1;
@@ -94,14 +94,15 @@ architecture s6 of pll_basic is
     return pll_variant
   is
   begin
-    if strfind(hw_variant, "S6_PLL", ' ') then
-      return S6_PLL;
-    else
+    if strfind(hw_variant, "type=dcm", ',') then
       return S6_DCM;
+    else
+      return S6_PLL;
     end if;
   end function;
 
-  constant variant : pll_variant := variant_get(hw_variant_c);
+  constant series67_params := str_param_extract(hw_variant_c, "series67");
+  constant variant : pll_variant := variant_get(series67);
 
   signal s_reset : std_ulogic;
   

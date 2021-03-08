@@ -4,6 +4,22 @@ use ieee.numeric_std.all;
 
 package pll is
 
+  -- hw_variant_c are a list of parameters to specify hardware-specific hints.
+  -- They are in the form "target1(param=value,token) target2(param=value)"
+  --
+  -- Available targets:
+  -- - "series67(type=...)"
+  --     type: "pll" or "dcm": Use a PLL or a DCM block, defaults to PLL
+  -- - "ice40(type=...,out=...)"
+  --     type: "core" or "pad": Use PLL40_CORE or PLL40_PAD, defaults to pad
+  --     out: "core" or "global": Output clock port selection, defaults to global
+  -- - "machxo2()"
+  --     none.
+  -- - "simulation()"
+  --     none.
+  --
+  -- You may specify multiple parameter sets for different architectures, this
+  -- way, design will be portable across those targets.
   component pll_basic
     generic(
       input_hz_c  : natural;

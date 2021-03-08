@@ -191,7 +191,7 @@ architecture ice40 of pll_basic is
     return pll_variant
   is
   begin
-    if strfind(hw_variant, "PLL40_CORE", ' ') then
+    if strfind(hw_variant, "type=core", ',') then
       return PLL_CORE;
     else
       return PLL_PAD;
@@ -207,7 +207,7 @@ architecture ice40 of pll_basic is
     return pll_output
   is
   begin
-    if strfind(hw_variant, "PLLOUTCORE", ' ') then
+    if strfind(hw_variant, "out=core", ',') then
       return OUTPUT_CORE;
     else
       return OUTPUT_GLOBAL;
@@ -215,13 +215,14 @@ architecture ice40 of pll_basic is
   end function;
   
   -- Now the settings
-  
+
+  constant ice40_params := str_param_extract(hw_variant_c, "ice40");
   constant pll_constraints : ice40_pll_constraints := (533.0e6, 1066.0e6);
   constant params : ice40_pll_params := ice40_pll_params_generate(input_hz_c,
                                                                   output_hz_c,
                                                                   pll_constraints);
-  constant variant : pll_variant := ice40_pll_variant_get(hw_variant_c);
-  constant output : pll_output := ice40_pll_output_get(hw_variant_c);
+  constant variant : pll_variant := ice40_pll_variant_get(ice40_params);
+  constant output : pll_output := ice40_pll_output_get(ice40_params);
 
   constant divf_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divf, 7)));
   constant divr_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divr, 7)));
