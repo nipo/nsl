@@ -33,7 +33,12 @@ package assertions is
                          a : in unsigned;
                          b : in unsigned;
                          sev : in severity_level);
-  
+
+  procedure assert_equal(what: in string;
+                         a : in string;
+                         b : in string;
+                         sev : in severity_level);
+    
   procedure assert_equal(what: in string;
                          a : in byte_string;
                          b : in byte_string;
@@ -67,6 +72,12 @@ package assertions is
                          what: in string;
                          a : in unsigned;
                          b : in unsigned;
+                         sev : in severity_level);
+  
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in string;
+                         b : in string;
                          sev : in severity_level);
   
   procedure assert_equal(context: in log_context;
@@ -151,6 +162,16 @@ package body assertions is
     end if;
   end procedure;
 
+  procedure assert_equal(what: in string;
+                         a : in string;
+                         b : in string;
+                         sev : in severity_level) is
+  begin
+    if a /= b then
+      assert_equal_failure("UNK", what, a, b, sev);
+    end if;
+  end procedure;
+
   procedure assert_equal(context: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
@@ -214,6 +235,17 @@ package body assertions is
                            to_string(a),
                            to_string(b),
                            sev);
+    end if;
+  end procedure;
+  
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in string;
+                         b : in string;
+                         sev : in severity_level) is
+  begin
+    if a /= b then
+      assert_equal_failure(context, what, a, b, sev);
     end if;
   end procedure;
 
