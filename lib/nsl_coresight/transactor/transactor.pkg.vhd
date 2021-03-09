@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_coresight;
+library nsl_bnoc, nsl_coresight, nsl_io;
 
 package transactor is
 
@@ -10,6 +10,7 @@ package transactor is
   constant DP_CMD_RUN_0         : std_ulogic_vector(7 downto 0):= "00------";
   constant DP_CMD_RUN_1         : std_ulogic_vector(7 downto 0):= "01------";
   constant DP_CMD_TURNAROUND    : std_ulogic_vector(7 downto 0):= "110100--";
+  constant DP_CMD_SYSTEM_RESET  : std_ulogic_vector(7 downto 0):= "1101100-";
   constant DP_CMD_ABORT         : std_ulogic_vector(7 downto 0):= "11000000";
   constant DP_CMD_DIVISOR       : std_ulogic_vector(7 downto 0):= "11000001";
   constant DP_CMD_BITBANG       : std_ulogic_vector(7 downto 0):= "111-----";
@@ -50,7 +51,9 @@ package transactor is
       rsp_i : in  nsl_bnoc.framed.framed_ack;
 
       swd_o : out nsl_coresight.swd.swd_master_o;
-      swd_i : in  nsl_coresight.swd.swd_master_i
+      swd_i : in  nsl_coresight.swd.swd_master_i;
+
+      system_reset_n_o : out nsl_io.io.opendrain
       );
   end component;
 

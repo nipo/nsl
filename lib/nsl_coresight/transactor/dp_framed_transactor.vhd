@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_coresight;
+library nsl_bnoc, nsl_coresight, nsl_io;
 use nsl_coresight.transactor.all;
 
 entity dp_framed_transactor is
@@ -17,7 +17,9 @@ entity dp_framed_transactor is
     rsp_i   : in nsl_bnoc.framed.framed_ack;
 
     swd_o     : out nsl_coresight.swd.swd_master_o;
-    swd_i     : in  nsl_coresight.swd.swd_master_i
+    swd_i     : in  nsl_coresight.swd.swd_master_i;
+
+    system_reset_n_o : out nsl_io.io.opendrain
   );
 end entity;
 
@@ -51,6 +53,8 @@ architecture rtl of dp_framed_transactor is
     cycle           : natural range 0 to 3;
 
     data            : std_ulogic_vector(31 downto 0);
+
+    srst_drive : std_ulogic;
   end record;
 
   signal r, rin : regs_t;
@@ -75,6 +79,7 @@ begin
     case r.state is
       when STATE_RESET =>
         rin.state <= STATE_CMD_GET;
+        rin.srst_drive <= '0';
 
       when STATE_CMD_GET =>
         if cmd_i.valid = '1' then
@@ -91,6 +96,9 @@ begin
           rin.state <= STATE_CMD_DATA_GET;
           rin.cycle <= 1;
           rin.data <= (others => '0');
+        elsif std_match(r.cmd, DP_CMD_SYSTEM_RESET) then
+          rin.state <= STATE_RSP_PUT;
+          rin.srst_drive <= r.cmd(0);
         else
           rin.state <= STATE_SWD_CMD;
         end if;
@@ -150,6 +158,7 @@ begin
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
     rsp_o.data <= (others => '-');
+    system_reset_n_o.drain_n <= not r.srst_drive;
 
     case r.state is
       when STATE_RESET | STATE_CMD_ROUTE =>
