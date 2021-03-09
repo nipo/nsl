@@ -23,6 +23,7 @@ architecture arch of top is
   signal state : state_t;
   signal valid, ready, last : std_ulogic;
   signal char : nsl_indication.morse.morse_character_t;
+  signal led_n : std_ulogic;
   
 begin
 
@@ -37,6 +38,8 @@ begin
       reset_n_o => reset_n
       );
 
+  led <= not led_n;
+  
   morse: nsl_indication.morse.morse_encoder
     generic map(
       clock_rate_c => 50000000
@@ -50,7 +53,7 @@ begin
       ready_o => ready,
       data_i => char,
 
-      morse_o => led
+      morse_o => led_n
       );
   
   process (reset_n, clock)

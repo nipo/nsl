@@ -12,3 +12,4 @@ usage_statistics_webtalk.html
 *.html
 ise-build
 webtalk.log
+*.fs
