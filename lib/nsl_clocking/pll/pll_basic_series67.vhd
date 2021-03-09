@@ -101,8 +101,8 @@ architecture s6 of pll_basic is
     end if;
   end function;
 
-  constant series67_params := str_param_extract(hw_variant_c, "series67");
-  constant variant : pll_variant := variant_get(series67);
+  constant series67_params:string := str_param_extract(hw_variant_c, "series67");
+  constant variant : pll_variant := variant_get(series67_params);
 
   signal s_reset : std_ulogic;
   
