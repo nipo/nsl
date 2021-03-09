@@ -286,9 +286,7 @@ begin
           end if;
 
         when ST_SHIFT_PIPE_RSP =>
-          if rsp_ready_i = '1' then
-            rin.state <= ST_SHIFT_PIPE_CMD;
-          end if;
+          rin.state <= ST_SHIFT_PIPE_CMD;
 
         when ST_SHIFT_PIPE_CMD =>
           rin.data_shreg <= cmd_data_i;

@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_io;
+
 package jtag is
 
   type jtag_bus is record
@@ -22,7 +24,7 @@ package jtag is
   constant jtag_ate_o_default : jtag_ate_o := ( '0', '1', '0', '1');
   
   type jtag_ate_i is record
-    tdo: std_ulogic;
+    tdo : std_ulogic;
     rtck: std_ulogic;
   end record;
 

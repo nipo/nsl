@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_bnoc;
+library nsl_jtag, nsl_bnoc, nsl_io;
 use nsl_jtag.ate.all;
 use nsl_jtag.transactor.all;
 
@@ -17,7 +17,9 @@ entity framed_ate is
     rsp_i   : in nsl_bnoc.framed.framed_ack;
 
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
-    jtag_i : in nsl_jtag.jtag.jtag_ate_i
+    jtag_i : in nsl_jtag.jtag.jtag_ate_i;
+
+    system_reset_n_o : out nsl_io.io.opendrain
     );
 end entity;
 
@@ -60,6 +62,8 @@ architecture rtl of framed_ate is
     rsp_word_left : natural range 0 to 31;
 
     divisor : natural range 0 to 255;
+
+    srst_drive : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -99,6 +103,7 @@ begin
     case r.cmd_st is
       when ST_CMD_RESET =>
         rin.cmd_st <= ST_CMD_IDLE;
+        rin.srst_drive <= '0';
 
       when ST_CMD_IDLE =>
         if r.rsp_st = ST_RSP_IDLE and cmd_i.valid = '1' then
@@ -162,6 +167,9 @@ begin
           rin.cmd_pending <= ATE_OP_RTI;
         elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
           rin.cmd_st <= ST_CMD_DIV_GET;
+        elsif std_match(r.cmd_data, JTAG_CMD_SYS_RESET) then
+          rin.cmd_st <= ST_CMD_IDLE;
+          rin.srst_drive <= r.cmd_data(0);
         else
           assert false
             report "Unhandled Framed JTAG ATE command"
@@ -287,6 +295,7 @@ begin
     s_rsp_ready <= '0';
     s_cmd_valid <= '0';
     rsp_o.last <= '-';
+    system_reset_n_o.drain_n <= not r.srst_drive;
 
     case r.cmd_st is
       when ST_CMD_RESET | ST_CMD_ROUTE =>

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_jtag;
+library nsl_bnoc, nsl_jtag, nsl_io;
 
 package transactor is
   
@@ -16,6 +16,7 @@ package transactor is
   constant JTAG_CMD_IR_CAPTURE  : nsl_bnoc.framed.framed_data_t := "10000001";
   constant JTAG_CMD_SWD_TO_JTAG : nsl_bnoc.framed.framed_data_t := "10000010";
   constant JTAG_CMD_DIVISOR     : nsl_bnoc.framed.framed_data_t := "10000011"; -- Next byte is divisor
+  constant JTAG_CMD_SYS_RESET   : nsl_bnoc.framed.framed_data_t := "1000010-"; -- Set system reset (active high)
   constant JTAG_CMD_RESET_CYCLE : nsl_bnoc.framed.framed_data_t := "10011---"; -- cycle count
   constant JTAG_CMD_RTI_CYCLE   : nsl_bnoc.framed.framed_data_t := "10010---"; -- cycle count
   constant JTAG_CMD_RESET       : nsl_bnoc.framed.framed_data_t := "1011----"; -- in packet of 8 cycles
@@ -32,7 +33,9 @@ package transactor is
       rsp_i   : in nsl_bnoc.framed.framed_ack;
 
       jtag_o : out nsl_jtag.jtag.jtag_ate_o;
-      jtag_i : in nsl_jtag.jtag.jtag_ate_i
+      jtag_i : in nsl_jtag.jtag.jtag_ate_i;
+
+      system_reset_n_o : out nsl_io.io.opendrain
       );
   end component;
   
