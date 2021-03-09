@@ -25,6 +25,10 @@ vhdl-sources += clock_buffer_machxo2.vhd
 deps += machxo2.components
 endif
 
+ifneq ($(filter gowin,$(hwdep)),)
+vhdl-sources += clock_internal_gowin.vhd
+endif
+
 ifneq ($(filter lattice-ice40,$(hwdep)),)
 vhdl-sources += clock_internal_ice40.vhd
 vhdl-sources += clock_buffer_ice40.vhd
