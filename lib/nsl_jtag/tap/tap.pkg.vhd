@@ -10,7 +10,7 @@ package tap is
     port(
       tck_i  : in  std_ulogic;
       tms_i  : in  std_ulogic;
-      trst_i : in  std_ulogic := '0';
+      trst_i : in  std_ulogic := '1';
 
       reset_o      : out std_ulogic;
       run_o        : out std_ulogic;

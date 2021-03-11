@@ -7,10 +7,15 @@ library nsl_io;
 package jtag is
 
   type jtag_bus is record
+    -- Should be pulled up
     tdi  : std_logic;
+    -- TAP reset, active low per IEEE1149.1
+    -- Should be pulled up for normal operation
     trst : std_logic;
+    -- Default level is not clearly specified, but usually 0
     tck  : std_logic;
     tdo  : std_logic;
+    -- Should be pulled up
     tms  : std_logic;
   end record;
 
@@ -21,7 +26,7 @@ package jtag is
     tms  : std_ulogic;
   end record;
 
-  constant jtag_ate_o_default : jtag_ate_o := ( '0', '1', '0', '1');
+  constant jtag_ate_o_default : jtag_ate_o := ('0','1', '0', '1');
   
   type jtag_ate_i is record
     tdo : std_ulogic;

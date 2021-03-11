@@ -317,7 +317,12 @@ begin
     jtag_o.tck <= r.tck_shreg(0);
     jtag_o.tdi <= r.data_shreg(0);
     jtag_o.tms <= r.tms_shreg(0);
-    jtag_o.trst <= '0';
+    if r.tap_branch = TAP_RESET then
+      jtag_o.trst <= '0';
+    else
+      jtag_o.trst <= '1';
+    end if;
+
     rsp_data_o <= r.data_shreg;
 
     case r.state is
