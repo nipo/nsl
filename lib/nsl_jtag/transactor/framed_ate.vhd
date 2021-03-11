@@ -329,11 +329,12 @@ begin
         s_rsp_ready <= '1';
     end case;
   end process;
-
+  
   ate: jtag_ate
     generic map (
       prescaler_width => 8,
-      data_max_size => data_max_size
+      data_max_size => data_max_size,
+      allow_pipelining => false
       )
     port map (
       reset_n_i => reset_n_i,
