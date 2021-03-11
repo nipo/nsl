@@ -44,7 +44,8 @@ $(build-dir)/main.tcl: $(sources) $(MAKEFILE_LIST)
 
 $(build-dir)/impl/pnr/$(target).fs: $(build-dir)/main.tcl
 	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)cat $< | (cd $(build-dir) ; $(GOWIN_BIN)/gw_sh)
+	$(SILENT)cat $< | (cd $(build-dir) ; $(GOWIN_BIN)/gw_sh) | tee $(build-dir)/build.log
+	$(SILENT)test -z "$$(grep -l ERROR $(build-dir)/build.log)"
 
 $(target).%: $(build-dir)/impl/pnr/$(target).%
 	cp $< $@ && chmod +w $@
