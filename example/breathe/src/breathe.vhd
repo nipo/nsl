@@ -58,9 +58,7 @@ begin
 
   process (reset_n, clock)
   begin
-    if reset_n = '0' then
-      state <= ST_RESET;
-    elsif rising_edge(clock) then
+    if rising_edge(clock) then
       case state is
         when ST_RESET =>
           state <= ST_UP;
@@ -86,6 +84,10 @@ begin
             end if;
           end if;
       end case;
+    end if;
+
+    if reset_n = '0' then
+      state <= ST_RESET;
     end if;
   end process;
   

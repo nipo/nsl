@@ -81,6 +81,9 @@ begin
 
   regs: process(reset_n_i, clock_i) is
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state              <= ST_IDLE;
       r.transaction_left   <= to_ptr(0);
@@ -93,8 +96,6 @@ begin
       r.halted <= false;
 
       r.flush <= false;
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

@@ -31,10 +31,11 @@ begin
   begin
     forward: process (clock_i, data_i)
     begin
+      if rising_edge(clock_i) then
+        tig_reg_pre <= tig_reg_pre(tig_reg_pre'left + 1 to tig_reg_pre'right) & "0";
+      end if;
       if data_i = '1' then
         tig_reg_pre <= (others => '1');
-      elsif rising_edge(clock_i) then
-        tig_reg_pre <= tig_reg_pre(tig_reg_pre'left + 1 to tig_reg_pre'right) & "0";
       end if;
     end process;
 
@@ -50,10 +51,11 @@ begin
   begin
     forward: process (clock_i, data_i)
     begin
+      if rising_edge(clock_i) then
+        tig_reg_clr <= tig_reg_clr(tig_reg_clr'left + 1 to tig_reg_clr'right) & "1";
+      end if;
       if data_i = '0' then
         tig_reg_clr <= (others => '0');
-      elsif rising_edge(clock_i) then
-        tig_reg_clr <= tig_reg_clr(tig_reg_clr'left + 1 to tig_reg_clr'right) & "1";
       end if;
     end process;
 

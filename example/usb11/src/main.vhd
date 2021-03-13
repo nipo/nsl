@@ -235,10 +235,7 @@ begin
 
   blinker_r_p : process(reset_n, internal_clock)
   begin
-    if reset_n = '0' then
-      blinker_r_ctr <= internal_clock_freq / 2 - 1;
-      blinker_r <= '0';
-    elsif rising_edge(internal_clock) then
+    if rising_edge(internal_clock) then
       if blinker_r_ctr /= 0 then
         blinker_r_ctr <= blinker_r_ctr - 1;
       else
@@ -246,14 +243,16 @@ begin
         blinker_r <= not blinker_r;
       end if;
     end if;
+
+    if reset_n = '0' then
+      blinker_r_ctr <= internal_clock_freq / 2 - 1;
+      blinker_r <= '0';
+    end if;
   end process;
 
   blinker_b_p : process(reset_merged_n, external_clock)
   begin
-    if reset_merged_n = '0' then
-      blinker_b_ctr <= external_clock_freq / 2 - 1;
-      blinker_b <= '0';
-    elsif rising_edge(external_clock) then
+    if rising_edge(external_clock) then
       if blinker_b_ctr /= 0 then
         blinker_b_ctr <= blinker_b_ctr - 1;
         blinker_b <= blinker_b;
@@ -262,6 +261,13 @@ begin
         blinker_b <= not blinker_b;
       end if;
     end if;
+
+    if reset_merged_n = '0' then
+      blinker_b_ctr <= external_clock_freq / 2 - 1;
+      blinker_b <= '0';
+    end if;
   end process;
 
+  
+  
 end arch;

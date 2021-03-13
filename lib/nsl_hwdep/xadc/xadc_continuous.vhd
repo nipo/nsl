@@ -181,9 +181,7 @@ begin
   -- Latch output values when read
   regs: process(clock_i, reset_n_i)
   begin
-    if reset_n_i = '0' then
-      value_o <= (others => (others => '0'));
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       for i in config_c'range
       loop
         if config_c(i).channel_no = to_integer(s_status.channel)
@@ -191,6 +189,9 @@ begin
           value_o(i) <= ufixed(s_drp_rsp.data(15 downto 4));
         end if;
       end loop;
+    end if;
+    if reset_n_i = '0' then
+      value_o <= (others => (others => '0'));
     end if;
   end process;
   

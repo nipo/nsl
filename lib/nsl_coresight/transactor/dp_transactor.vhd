@@ -81,11 +81,12 @@ architecture rtl of dp_transactor is
 begin
   reg: process (clock_i, reset_n_i)
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
       r.swd.clk <= '0';
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

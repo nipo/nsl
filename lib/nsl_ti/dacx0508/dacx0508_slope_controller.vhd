@@ -116,6 +116,9 @@ begin
 
   regs: process(reset_n_i, clock_i)
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.slave_state <= ST_SLAVE_RESET;
       r.master_cmd_state <= ST_MASTER_CMD_RESET;
@@ -128,8 +131,6 @@ begin
       r.current <= (others => '0');
       r.target <= (others => '0');
       r.target_reg <= (others => '0');
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

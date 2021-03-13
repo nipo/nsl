@@ -119,6 +119,9 @@ begin
   
   regs: process(spi_reset_n, spi_i.sck)
   begin
+    if rising_edge(spi_i.sck) then
+      r <= rin;
+    end if;
     if spi_reset_n = '0' then
       r.txd_valid <= '0';
       r.rxd_valid <= '0';
@@ -126,8 +129,6 @@ begin
       r.sent_rx_ready <= '0';
       r.txd <= (others => '-');
       r.rxd <= (others => '-');
-    elsif rising_edge(spi_i.sck) then
-      r <= rin;
     end if;
   end process;
 
@@ -173,10 +174,11 @@ begin
 
   irq: process(r, spi_i, tx_valid, tx_valid_i)
   begin
+    if rising_edge(spi_i.sck) and spi_i.cs_n = '0' then
+      pending_irq <= '0';
+    end if;
     if r.rxd_valid = '1' or tx_valid = '1' or tx_valid_i = '1' or r.txd_valid = '1' then
       pending_irq <= '1';
-    elsif rising_edge(spi_i.sck) and spi_i.cs_n = '0' then
-      pending_irq <= '0';
     end if;
   end process;
 

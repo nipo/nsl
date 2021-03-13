@@ -54,17 +54,12 @@ begin
     variable period_time : time;
     variable period_s : real;
   begin
-    if reset_n_i = '0' then
-      last_clock_i_edge <= 0 ps;
-
-      clock_i_period_lp <= clock_i_period_c;
-      clock_i_stable_to_go <= stable_cycle_count_c - 1;
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       if last_clock_i_edge /= 0 ps then
         period_time := now - last_clock_i_edge;
         period_s := to_real(period_time);
         clock_i_period_lp <= clock_i_period_lp
-          + (period_s - clock_i_period_lp) / input_lowpass_factor_c;
+                             + (period_s - clock_i_period_lp) / input_lowpass_factor_c;
       end if;
 
       if abs(period_s - clock_i_period_lp)
@@ -77,6 +72,12 @@ begin
       end if;
 
       last_clock_i_edge <= now;
+    end if;
+    if reset_n_i = '0' then
+      last_clock_i_edge <= 0 ps;
+
+      clock_i_period_lp <= clock_i_period_c;
+      clock_i_stable_to_go <= stable_cycle_count_c - 1;
     end if;
   end process clock_i_measure;
 

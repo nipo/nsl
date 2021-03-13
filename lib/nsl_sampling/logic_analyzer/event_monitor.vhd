@@ -43,12 +43,13 @@ begin
 
   reg: process (p_clk, p_resetn)
   begin
+    if rising_edge(p_clk) then
+      r <= rin;
+    end if;
     if p_resetn = '0' then
       r.cur <= (others => '0');
       r.old <= (others => '0');
       r.count <= (others => '0');
-    elsif rising_edge(p_clk) then
-      r <= rin;
     end if;
   end process reg;
 

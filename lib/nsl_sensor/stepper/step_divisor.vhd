@@ -26,9 +26,7 @@ begin
 
   regs: process(reset_n_i, clock_i)
   begin
-    if reset_n_i = '0' then
-      value <= 0;
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       step_o <= STEP_STABLE;
       if step_i = STEP_INCREMENT then
         if value /= divisor_c - 1 then
@@ -45,6 +43,9 @@ begin
           step_o <= STEP_DECREMENT;
         end if;
       end if;
+    end if;
+    if reset_n_i = '0' then
+      value <= 0;
     end if;
   end process;
   

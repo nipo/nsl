@@ -100,12 +100,13 @@ begin
   
   regs: process(reset_n_i, clock_i) is
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_IDLE;
       r.vsel <= (others => '0');
       r.vsel_next <= (others => '0');
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

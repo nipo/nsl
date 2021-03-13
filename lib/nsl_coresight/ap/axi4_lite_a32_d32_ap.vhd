@@ -75,10 +75,11 @@ begin
 
   regs: process(clk_i, reset_n_i)
   begin
+    if rising_edge(clk_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(clk_i) then
-      r <= rin;
     end if;
   end process;
 

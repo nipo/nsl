@@ -82,12 +82,13 @@ begin
 
   regs : process(s_clk, start_s)
   begin
+    if rising_edge(s_clk) then
+      r <= rin;
+    end if;
     if start_s = '1' then
       r.addr_byte_left <= addr_bytes_c;
       r.data           <= (others => '0');
       r.addr           <= to_01(r.addr, '0');
-    elsif rising_edge(s_clk) then
-      r <= rin;
     end if;
   end process;
 

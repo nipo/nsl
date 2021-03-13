@@ -44,11 +44,12 @@ begin
   
   regs: process(clock_i, reset_n_i) is
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.counter <= (others => '0');
       r.value <= '1';
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

@@ -67,10 +67,11 @@ begin
   
   regs: process (clock, reset_sync)
   begin
+    if rising_edge(clock) then
+      r <= rin;
+    end if;
     if reset_sync = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(clock) then
-      r <= rin;
     end if;
   end process;
   

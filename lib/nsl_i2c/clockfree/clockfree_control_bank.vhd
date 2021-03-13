@@ -59,12 +59,13 @@ begin
 
   i2c_irq: process(raise_irq_i, s_i2c_clk)
   begin
-    if raise_irq_i = '1' then
-      i2c_irq_n_o <= '0';
-    elsif rising_edge(s_i2c_clk) then
+    if rising_edge(s_i2c_clk) then
       if s_i2c_read = '1' then
         i2c_irq_n_o <= '1';
       end if;
+    end if;
+    if raise_irq_i = '1' then
+      i2c_irq_n_o <= '0';
     end if;
   end process;
 

@@ -96,14 +96,15 @@ begin
 
   regs: process(clock_i, reset_n_i) is
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.skip_count <= 0;
       r.tick_i_acc <= to_i_ctr(0.0);
       r.tick_i_acc_lp <= tick_i_period_uf;
       r.tick_io_acc <= to_io_ctr(0.0);
       r.tick_i_valid <= false;
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

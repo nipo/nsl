@@ -41,10 +41,11 @@ begin
   
   regs: process (clock_i, reset_n_i)
   begin
-    if (reset_n_i = '0') then
-      r.state <= RESET;
-    elsif (rising_edge(clock_i)) then
+    if rising_edge(clock_i) then
       r <= rin;
+    end if;
+    if reset_n_i = '0' then
+      r.state <= RESET;
     end if;
   end process;
 

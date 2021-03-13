@@ -69,10 +69,11 @@ begin
 
   read_done: process(clock_i, reset_n_i)
   begin
+    if rising_edge(clock_i) then
+      s_axi_read_done <= s_axi_read;
+    end if;
     if reset_n_i = '0' then
       s_axi_read_done <= '0';
-    elsif rising_edge(clock_i) then
-      s_axi_read_done <= s_axi_read;
     end if;
   end process;
 

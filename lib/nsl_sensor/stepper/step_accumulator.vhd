@@ -31,9 +31,7 @@ begin
 
   regs: process(reset_n_i, clock_i, low_value_i)
   begin
-    if reset_n_i = '0' then
-      value <= low_value_i;
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       if low_i = '1' then
         value <= low_value_i;
       elsif high_i = '1' then
@@ -51,6 +49,9 @@ begin
           value <= high_value_i;
         end if;
       end if;
+    end if;
+    if reset_n_i = '0' then
+      value <= low_value_i;
     end if;
   end process;
 

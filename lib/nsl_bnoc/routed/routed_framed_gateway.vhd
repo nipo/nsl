@@ -47,11 +47,12 @@ begin
 
   regs: process(clock_i, reset_n_i)
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.r2f_state <= ST_RESET;
       r.f2r_state <= ST_RESET;
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

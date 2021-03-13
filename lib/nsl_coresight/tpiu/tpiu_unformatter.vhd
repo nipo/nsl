@@ -126,15 +126,7 @@ begin
     variable idx           : unsigned(3 downto 0);
   begin
 
-    if (p_resetn = '0') then
-      
-      filt_data    <= (others => '0');
-      filt_valid   <= (others => '0');
-      synchronised <= false;
-      offset       <= 0;
-      filt_idx     <= (others => '0');
-
-    elsif rising_edge(p_traceclk) then
+    if rising_edge(p_traceclk) then
 
       filt_data_v  := std_ulogic_vector(SHIFT_RIGHT(unsigned(filt_data), 2*trace_width));
       filt_valid_v := std_ulogic_vector(SHIFT_RIGHT(unsigned(filt_valid), 2*trace_width));
@@ -172,7 +164,15 @@ begin
       filt_valid <= filt_valid_v;
 
     end if;
+    if p_resetn = '0' then
+      
+      filt_data    <= (others => '0');
+      filt_valid   <= (others => '0');
+      synchronised <= false;
+      offset       <= 0;
+      filt_idx     <= (others => '0');
 
+    end if;
   end process filter;
 
   framer : process(p_traceclk, p_resetn)
@@ -182,14 +182,7 @@ begin
 
   begin
 
-    if p_resetn = '0' then
-      
-      frame_valid  <= (others => '0');
-      frame_data   <= (others => '0');
-      frame_idx    <= (others => '0');
-      auxiliary    <= (others => '0');
-
-    elsif rising_edge(p_traceclk) then
+    if rising_edge(p_traceclk) then
       frame_valid_v := frame_valid;
       frame_data_v  := frame_data;
 
@@ -218,15 +211,23 @@ begin
       frame_data <= frame_data_v;
 
     end if;
+    if p_resetn = '0' then
+      
+      frame_valid  <= (others => '0');
+      frame_data   <= (others => '0');
+      frame_idx    <= (others => '0');
+      auxiliary    <= (others => '0');
 
+    end if;
   end process framer;
 
   fullp : process(p_traceclk, p_resetn)
   begin
+    if rising_edge(p_traceclk) and synchronised and (cmd_ready = '0' or data_ready = '0') then
+      p_overflow <= '1';
+    end if;
     if p_resetn = '0' then
       p_overflow <= '0';
-    elsif rising_edge(p_traceclk) and synchronised and (cmd_ready = '0' or data_ready = '0') then
-      p_overflow <= '1';
     end if;
   end process fullp;
 
@@ -236,17 +237,7 @@ begin
     variable data_v      : std_ulogic_vector(7 downto 0);
     variable nullid      : std_ulogic;
   begin
-    if p_resetn = '0' then
-      curr_id   <= (others => '0');
-      next_id   <= (others => '0');
-      fifo_cnt  <= (others => '0');
-      data_din  <= (others => '0');
-      cmd_din   <= (others => '0');
-      pid       <= '0';
-      cmd_wen   <= '0';
-      data_wen  <= '0';
-
-    elsif rising_edge(p_traceclk) then
+    if rising_edge(p_traceclk) then
       data_en_v   := false;
       data_v      := (others => '0');
       cmd_wen     <= '0';
@@ -316,13 +307,22 @@ begin
       end if;
     end if;
 
+    if p_resetn = '0' then
+      curr_id   <= (others => '0');
+      next_id   <= (others => '0');
+      fifo_cnt  <= (others => '0');
+      data_din  <= (others => '0');
+      cmd_din   <= (others => '0');
+      pid       <= '0';
+      cmd_wen   <= '0';
+      data_wen  <= '0';
+
+    end if;
   end process splitter;
 
   outdata : process(p_clk, p_resetn)
   begin
-    if p_resetn = '0' then
-      state     <= STATE_RESET;
-    elsif rising_edge(p_clk) then
+    if rising_edge(p_clk) then
       case state is
         when STATE_RESET =>
           state <= STATE_WAIT_CMD;
@@ -348,6 +348,9 @@ begin
             cnt <= cnt - 1;
           end if;
       end case;
+    end if;
+    if p_resetn = '0' then
+      state     <= STATE_RESET;
     end if;
   end process outdata;
 

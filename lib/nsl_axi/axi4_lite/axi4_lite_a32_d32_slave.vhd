@@ -55,10 +55,11 @@ begin
 
   regs: process(aclk, aresetn)
   begin
+    if rising_edge(aclk) then
+      r <= rin;
+    end if;
     if aresetn = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(aclk) then
-      r <= rin;
     end if;
   end process;
 

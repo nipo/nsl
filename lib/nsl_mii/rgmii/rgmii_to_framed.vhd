@@ -49,10 +49,11 @@ begin
 
   regs: process(reset_n_i, rgmii_i.clock)
   begin
+    if rising_edge(rgmii_i.clock) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(rgmii_i.clock) then
-      r <= rin;
     end if;
   end process;
 

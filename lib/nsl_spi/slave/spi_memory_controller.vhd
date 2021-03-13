@@ -50,11 +50,12 @@ begin
 
   regs: process(mem_r_done_i, mem_w_done_i, spi_i)
   begin
+    if rising_edge(spi_i.sck) then
+      r <= rin;
+    end if;
     if spi_i.cs_n = '1' then
       r.state <= ST_CMD;
       r.writing <= false;
-    elsif rising_edge(spi_i.sck) then
-      r <= rin;
     end if;
   end process;
 

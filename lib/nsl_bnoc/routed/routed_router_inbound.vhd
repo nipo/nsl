@@ -45,10 +45,11 @@ begin
 
   clk: process(p_clk, p_resetn)
   begin
+    if rising_edge(p_clk) then
+      r <= rin;
+    end if;
     if p_resetn = '0' then
       r.state <= STATE_RESET;
-    elsif rising_edge(p_clk) then
-      r <= rin;
     end if;
   end process;
 

@@ -53,11 +53,12 @@ begin
 
   regs: process(spi_i.sck, spi_i.cs_n)
   begin
+    if rising_edge(spi_i.sck) then
+      r <= rin;
+    end if;
     if spi_i.cs_n = '1' then
       r.selected <= false;
       r.valid <= false;
-    elsif rising_edge(spi_i.sck) then
-      r <= rin;
     end if;
   end process regs;
 

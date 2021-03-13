@@ -79,10 +79,11 @@ begin
 
   stop_detect : process(s_i2c_i.sda, r.stop_ack)
   begin
+    if rising_edge(s_i2c_i.sda) then
+      stop <= stop or s_i2c_i.scl = '1';
+    end if;
     if r.stop_ack then
       stop <= false;
-    elsif rising_edge(s_i2c_i.sda) then
-      stop <= stop or s_i2c_i.scl = '1';
     end if;
   end process;
 
@@ -92,10 +93,11 @@ begin
       r.can_stretch <= true;
     end if;
 
+    if rising_edge(s_i2c_i.scl) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_NOT_SELECTED;
-    elsif rising_edge(s_i2c_i.scl) then
-      r <= rin;
     end if;
   end process;
 

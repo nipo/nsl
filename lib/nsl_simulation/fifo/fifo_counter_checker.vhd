@@ -27,15 +27,16 @@ begin
   
   reg: process (clock_i, reset_n_i)
   begin
-    if (reset_n_i = '0') then
-      r_last <= (others => '1');
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       if valid_i = '1' then
         if s_next /= data_i then
           report "Discontinuity in fifo stream, got " & integer'image(to_integer(unsigned(data_i))) & ", expected " & integer'image(to_integer(unsigned(s_next)));
         end if;
         r_last <= data_i;
       end if;
+    end if;
+    if (reset_n_i = '0') then
+      r_last <= (others => '1');
     end if;
   end process reg;
 

@@ -43,12 +43,13 @@ begin
   
   regs: process(clock_i, reset_n_i)
   begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.cur <= '0';
       r.prev <= '0';
       r.debouncer <= 0;
-    elsif rising_edge(clock_i) then
-      r <= rin;
     end if;
   end process;
 

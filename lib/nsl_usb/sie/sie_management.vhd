@@ -84,10 +84,11 @@ begin
 
   regs: process(phy_system_i.clock, reset_n_i) is
   begin
+    if rising_edge(phy_system_i.clock) then
+      r <= rin;
+    end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-    elsif rising_edge(phy_system_i.clock) then
-      r <= rin;
     end if;
   end process;
 

@@ -40,10 +40,11 @@ begin
 
   regs: process (p_clk)
   begin
+    if rising_edge(p_clk) then
+      r <= rin;
+    end if;
     if p_resetn = '0' then
       r.waiting <= 0;
-    elsif rising_edge(p_clk) then
-      r <= rin;
     end if;
   end process;
 

@@ -24,12 +24,13 @@ begin
 
   reg: process (clock_i, reset_n_i)
   begin
-    if (reset_n_i = '0') then
-      r_counter <= (others => '0');
-    elsif rising_edge(clock_i) then
+    if rising_edge(clock_i) then
       if ready_i = '1' then
         r_counter <= std_ulogic_vector(unsigned(r_counter) + 1);
       end if;
+    end if;
+    if (reset_n_i = '0') then
+      r_counter <= (others => '0');
     end if;
   end process reg;
 
