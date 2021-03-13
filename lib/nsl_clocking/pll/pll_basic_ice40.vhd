@@ -73,7 +73,7 @@ architecture ice40 of pll_basic is
       EXTERNAL_DIVIDE_FACTOR : integer := 1
       );
     port (
-      PACKAGEPIN : inout std_logic;
+      PACKAGEPIN : in std_logic;
       PLLOUTCORE : out std_logic;
       PLLOUTGLOBAL : out std_logic;
       EXTFEEDBACK : in std_logic;
