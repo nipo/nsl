@@ -216,7 +216,7 @@ architecture ice40 of pll_basic is
   
   -- Now the settings
 
-  constant ice40_params := str_param_extract(hw_variant_c, "ice40");
+  constant ice40_params : string := str_param_extract(hw_variant_c, "ice40");
   constant pll_constraints : ice40_pll_constraints := (533.0e6, 1066.0e6);
   constant params : ice40_pll_params := ice40_pll_params_generate(input_hz_c,
                                                                   output_hz_c,
