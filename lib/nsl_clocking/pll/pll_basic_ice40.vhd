@@ -225,10 +225,10 @@ architecture ice40 of pll_basic is
   constant output : pll_output := ice40_pll_output_get(ice40_params);
 
   constant divf_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divf, 7)));
-  constant divr_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divr, 7)));
-  constant divq_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divq, 7)));
+  constant divr_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divr, 4)));
+  constant divq_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.divq, 3)));
   constant filter_range_c : bit_vector := to_bitvector(std_logic_vector(to_unsigned(params.filter_range, 3)));
-  
+
 begin
 
   inst_core_core: if variant = PLL_CORE and output = OUTPUT_CORE
