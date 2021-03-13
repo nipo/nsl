@@ -61,7 +61,7 @@ package body endian is
   begin
     for i in mem_data'range
     loop
-      word(i * 8 + 7 downto i * 8) := unsigned(to_stdlogicvector(mem_data(i)));
+      word(i * 8 + 7 downto i * 8) := unsigned(std_logic_vector(mem_data(i)));
     end loop;
 
     return word;
