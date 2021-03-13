@@ -7,7 +7,7 @@ use nsl_spi.transactor.all;
 
 entity spi_framed_transactor is
   generic(
-    slave_count_c : natural range 1 to 15 := 1
+    slave_count_c : natural range 1 to 7 := 1
     );
   port(
     clock_i    : in std_ulogic;
@@ -43,7 +43,7 @@ architecture rtl of spi_framed_transactor is
   
   type regs_t is record
     state      : state_t;
-    cmd        : std_ulogic_vector(7 downto 0);
+    cmd        : nsl_bnoc.framed.framed_data_t;
     shreg      : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
     selected   : natural range 0 to 7;
