@@ -12,8 +12,8 @@ architecture ice of clock_buffer is
 
   component SB_GB
     port (
-      user_signal_to_global_buffer:in std_logic;
-      global_buffer_output:out std_logic
+      USER_SIGNAL_TO_GLOBAL_BUFFER:in std_logic;
+      GLOBAL_BUFFER_OUTPUT:out std_logic
       );
   end component;
 
@@ -21,8 +21,8 @@ begin
 
   gb: sb_gb
     port map(
-      user_signal_to_global_buffer => clock_i,
-      global_buffer_output => clock_o
+      USER_SIGNAL_TO_GLOBAL_BUFFER => clock_i,
+      GLOBAL_BUFFER_OUTPUT => clock_o
       );
-  
+
 end architecture;
