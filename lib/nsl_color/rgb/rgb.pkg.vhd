@@ -409,37 +409,53 @@ package body rgb is
     end if;
   end function;
 
-  function realminmax(x, v, y : real) return real
+  function clamp(x, v, y : real) return real
   is
   begin
-    return realmin(realmax(x, v), y);
+    if x > v then
+      return x;
+    elsif v > y then
+      return y;
+    else
+      return v;
+    end if;
   end function;
 
   function to_rgb24(r, g, b : real) return rgb24
   is
     variable ret : rgb24;
   begin
-    ret.r := to_unsigned(integer(realminmax(0.0, r, 1.0) * 255.0), 8);
-    ret.g := to_unsigned(integer(realminmax(0.0, g, 1.0) * 255.0), 8);
-    ret.b := to_unsigned(integer(realminmax(0.0, b, 1.0) * 255.0), 8);
+    ret.r := to_unsigned(integer(clamp(0.0, r, 1.0) * 255.0), 8);
+    ret.g := to_unsigned(integer(clamp(0.0, g, 1.0) * 255.0), 8);
+    ret.b := to_unsigned(integer(clamp(0.0, b, 1.0) * 255.0), 8);
 
     return ret;
   end function;
 
+  -- returns (v / math_pi) mod 2.0;
+  function over_2pi(v: real) return real
+  is
+    variable complete, ret : real;
+  begin
+    ret := v / math_pi / 2.0;
+    ret := ret - floor(ret);
+    return ret * 2.0;    
+  end function;
+  
   function rgb24_from_hsv(h, s, v : real) return rgb24
   is
     variable ar, ag, ab, hr, hg, hb : real;
     variable sr, vr : real;
   begin
-    ar := h / math_pi mod 2.0 - 1.0;
-    ag := (h + math_pi * 4.0 / 3.0) / math_pi mod 2.0 - 1.0;
-    ab := (h + math_pi * 2.0 / 3.0) / math_pi mod 2.0 - 1.0;
-    hr := realminmax(0.0, -1.0 + abs(ar) * 3.0, 1.0);
-    hg := realminmax(0.0, -1.0 + abs(ag) * 3.0, 1.0);
-    hb := realminmax(0.0, -1.0 + abs(ab) * 3.0, 1.0);
+    ar := over_2pi(h / math_pi) - 1.0;
+    ag := over_2pi(h + math_pi * 4.0 / 3.0) - 1.0;
+    ab := over_2pi(h + math_pi * 2.0 / 3.0) - 1.0;
+    hr := clamp(0.0, -1.0 + abs(ar) * 3.0, 1.0);
+    hg := clamp(0.0, -1.0 + abs(ag) * 3.0, 1.0);
+    hb := clamp(0.0, -1.0 + abs(ab) * 3.0, 1.0);
 
-    sr := realminmax(0.0, s, 1.0);
-    vr := realminmax(0.0, v, 1.0);
+    sr := clamp(0.0, s, 1.0);
+    vr := clamp(0.0, v, 1.0);
     hr := hr * s + (1.0 - s);
     hg := hg * s + (1.0 - s);
     hb := hb * s + (1.0 - s);
