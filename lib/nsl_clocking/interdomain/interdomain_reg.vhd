@@ -43,20 +43,20 @@ begin
         & cross_region_reg_d;
       cross_region_reg_d <= data_i;
       
-	  if cycle_count_c = 2 then
-	    last_val := cross_region_reg_d;
-	  else
-	    last_val := metastable_reg_d(metastable_reg_d'left+1);
-	  end if;
-	  cur_val := metastable_reg_d(metastable_reg_d'left);
-	
-	  if last_val /= cur_val and stable_count_c > 0 then
-	    stable_s <= stable_count_c - 1;
-	  elsif stable_s = 0 or stable_count_c = 0 then
+      if cycle_count_c = 2 then
+        last_val := cross_region_reg_d;
+      else
+        last_val := metastable_reg_d(metastable_reg_d'left+1);
+      end if;
+      cur_val := metastable_reg_d(metastable_reg_d'left);
+      
+      if stable_count_c /= 0 and last_val /= cur_val then
+        stable_s <= stable_count_c - 1;
+      elsif stable_s = 0 or stable_count_c = 0 then
         stable_d <= cur_val;
-	  else
-	    stable_s <= stable_s - 1;
-	  end if;
+      else
+        stable_s <= stable_s - 1;
+      end if;
 
     end if;
   end process clock;
