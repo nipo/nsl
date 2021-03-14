@@ -95,12 +95,14 @@ package body crc is
     variable shifted : crc_state(init'range);
     variable one_out : std_ulogic;
   begin
+    -- synthesis translate_off
     assert init'ascending = poly'ascending
       report "Init and polynom directions must match"
       severity failure;
     assert init'length = poly'length
       report "Init and polynom sizes must match"
       severity failure;
+    -- synthesis translate_on
 
     if init'ascending then
       if insert_msb then
@@ -132,12 +134,14 @@ package body crc is
                       word : std_ulogic_vector) return crc_state is
     variable state : crc_state(init'range) := init;
   begin
+    -- synthesis translate_off
     assert state'ascending = poly'ascending
       report "State and polynom directions must match"
       severity failure;
     assert state'length = poly'length
       report "State and polynom sizes must match"
       severity failure;
+    -- synthesis translate_on
 
     if pop_lsb then
       for i in word'low to word'high
