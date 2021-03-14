@@ -36,7 +36,7 @@ $(call ghdl-library-analyze-rules,$1)
 
 endef
 
-$(target).vhd: $(sources) $(MAKEFILE_LIST)
+define ghdl-analyze
 	$(SILENT)mkdir -p ghdl-build
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
 	$(SILENT)$(GHDL) -m \
@@ -45,13 +45,60 @@ $(target).vhd: $(sources) $(MAKEFILE_LIST)
 		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity)
+endef
+
+define yosys-ghdl-ingress
+endef
+
+$(call workdir,$(target).vhd): $(sources) $(MAKEFILE_LIST)
+	$(ghdl-analyze)
+	$(SILENT)$(GHDL) --synth  -v \
+		--workdir=$(call workdir,$(top-lib)) \
+		$(foreach l,$(libraries),-P$(call workdir,$l)) \
+		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
+		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
+		--work=$(top-lib) $(top-entity) > $@ || (rm $@ ; exit 1)
+
+$(call workdir,$(target)-analyze.ys): $(sources) $(MAKEFILE_LIST)
+	$(ghdl-analyze)
+	$(SILENT)> $@
 	$(SILENT)echo ghdl \
 		--workdir=$(call workdir,$(top-lib)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
 		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
-		--work=$(top-lib) $(top-entity) > $(call workdir,$(target)-synth.ys)
-	$(SILENT)echo "synth_ice40 -top $(top-entity) -retime -relut -blif $(call workdir,$(target).blif)" >> $(call workdir,$(target)-synth.ys)
-	$(SILENT)$(YOSYS) -m $(YOSYS-GHDL) -s $(call workdir,$(target)-synth.ys)
+		--work=$(top-lib) $(top-entity) >> $@
+
+$(call workdir,$(target).v): $(call workdir,$(target)-analyze.ys)
+	$(SILENT)echo "script $<" > $@.ys
+	$(SILENT)echo "write_verilog $@" >> $@.ys
+	$(SILENT)$(YOSYS) -m $(YOSYS-GHDL) -s $@.ys
+
+$(call workdir,$(target)-opt.v): $(call workdir,$(target)-analyze.ys)
+	$(SILENT)echo "script $<" > $@.ys
+	$(SILENT)echo "select $(top-entity)" > $@
+	$(SILENT)echo "flatten" >> $@.ys
+	$(SILENT)echo "opt" >> $@.ys
+	$(SILENT)echo "write_verilog $@" >> $@.ys
+	$(SILENT)$(YOSYS) -m $(YOSYS-GHDL) -s $@.ys
+
+$(call workdir,$(target)-ice40.json): $(call workdir,$(target)-analyze.ys)
+	$(SILENT)echo "script $<" > $@.ys
+	$(SILENT)echo "synth_ice40 -top $(top-entity) -json $@" >> $@.ys
+	$(SILENT)$(YOSYS) -m $(YOSYS-GHDL) -s $@.ys
+
+$(call workdir,$(target)-ice40.pcf): $(filter %.pcf,$(sources)) $(MAKEFILE_LIST)
+	cat $(filter %.pcf,$^) < /dev/null > $@
+
+$(call workdir,$(target)-ice40.asc): $(call workdir,$(target)-ice40.json) $(call workdir,$(target)-ice40.pcf)
+	nextpnr-ice40 --up5k \
+		--package sg48 \
+		--pcf $(filter %.pcf,$^) \
+		--asc $@ \
+		--json $< \
+		--top '$(top-entity)'
+
+$(call workdir,$(target)-ice40.bin): $(call workdir,$(target)-ice40.asc)
+	icepack $< $@
 
 clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf *.lst $(target)
