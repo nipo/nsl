@@ -1,6 +1,7 @@
 ifneq ($(wildcard $(srcdir)/../.prepared)$(internal),)
 vhdl-sources += unisim_VCOMP.vhd
 
+ifeq ($(target-usage),simulation)
 vhdl-sources += AND2B1L.vhd
 vhdl-sources += AUTOBUF.vhd
 vhdl-sources += BSCAN_VIRTEX6.vhd
@@ -1131,6 +1132,7 @@ vhdl-sources += STARTBUF_VIRTEX4.vhd
 vhdl-sources += STARTUP_VIRTEX4.vhd
 vhdl-sources += USR_ACCESS_VIRTEX4.vhd
 vhdl-sources += IBUFDS_GTHE1.vhd
+endif
 
 deps += unisim.vpkg
 endif

@@ -1,5 +1,6 @@
 GHDL=ghdl
 target ?= $(top-entity)
+target-usage = simulation
 
 simulate: $(target).ghw
 

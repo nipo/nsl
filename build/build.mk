@@ -1,6 +1,7 @@
 tool ?= debug
 work-srcdir ?= $(SRC_DIR)/src
 source-types += vhdl verilog ngc bd constraint
+target-usage = synthesis
 
 .SUFFIXES:
 

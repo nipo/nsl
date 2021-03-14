@@ -3,6 +3,7 @@ ISE = /opt/Xilinx/14.7/ISE_DS
 ISE_PRE = source $(ISE)/settings64.sh > /dev/null ;
 PAR_OPTS = -ol high
 target ?= $(top)
+target-usage = simulation
 
 simulation-time ?= 10 ms
 

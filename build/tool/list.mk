@@ -1,3 +1,4 @@
+target-usage = simulation
 
 define pkg_dirdep_list
 echo "        directly depends on $1"

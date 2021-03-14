@@ -1,6 +1,7 @@
 VHDL_VERSION=1993
 NVC=nvc
 target ?= $(top)
+target-usage = simulation
 
 upper = $(shell echo "$1" | tr a-z A-Z)
 elab_target := work/_WORK.$(call upper,$(target)).final.bc
