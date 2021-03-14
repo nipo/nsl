@@ -54,7 +54,9 @@ architecture beh of sc202_driver is
 
   signal r, rin: regs_t;
 
-  function to_vsel(voltage: real) return std_ulogic_vector
+  subtype vsel_t is std_ulogic_vector(3 downto 0);
+
+  function to_vsel(voltage: real) return vsel_t
   is
   begin
     if voltage >= 3.3  then return "1111"; end if;
@@ -75,23 +77,22 @@ architecture beh of sc202_driver is
     return "0000";
   end function;
 
-  -- Iterate over all possible set-point values.  This builds a lookup
-  -- table from input ufixed to output control bits.
-  -- If more bits than necessary are available as inputs, optimizer
-  -- should cancel them away.
-  function to_vsel(voltage: ufixed; scale: real) return std_ulogic_vector
+  type vsel_vector is array(integer range <>) of vsel_t;
+
+  function vsel_gen(l, r: integer; scale: real) return vsel_vector
   is
-    variable vf: ufixed(voltage'range);
+    variable ret: vsel_vector(0 to 2**(l-r+1)-1);
   begin
-    for i in 0 to 2**voltage'length - 1
+    for i in ret'range
     loop
-      vf := ufixed(to_unsigned(i, voltage'length));
-      if vf = voltage then
-        return to_vsel(to_real(vf) * scale);
-      end if;
+      ret(i) := to_vsel(real(i) * (2.0 ** real(r)) * scale);
     end loop;
-    return "0000";
+    return ret;
   end function;
+
+  constant vsel_c : vsel_vector := vsel_gen(voltage'left,
+                                            voltage'right,
+                                            voltage_i_scale_c);
   
 begin
 
@@ -111,10 +112,12 @@ begin
   end process;
 
   transition: process(r, voltage) is
+    variable idx: unsigned(voltage'length-1 downto 0);
   begin
     rin <= r;
 
-    rin.vsel_next <= to_vsel(voltage, voltage_i_scale_c);
+    idx := unsigned(voltage);
+    rin.vsel_next <= vsel_c(to_integer(idx));
     
     case r.state is
       when ST_IDLE =>
