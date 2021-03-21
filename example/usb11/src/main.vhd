@@ -203,7 +203,7 @@ begin
       rsp_i => comm_spi.post_fifo.rsp.ack
       );
 
-  sb: if false
+  sb: if true
   generate
     g_driver: nsl_hwdep.ice40.ice40_opendrain_io_driver
       port map(
@@ -224,7 +224,7 @@ begin
         );
   end generate;
 
-  no_sb: if true
+  no_sb: if false
   generate
     led_r_o <= blinker_r;
     led_g_o <= online_n;

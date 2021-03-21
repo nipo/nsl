@@ -5,6 +5,7 @@ constraint-sources += main.sdc
 endif
 ifeq ($(hwdep),lattice-machxo2)
 constraint-sources += main.lpf
+constraint-sources += main-clock.py
 endif
 
 deps += nsl_hwdep.clock
