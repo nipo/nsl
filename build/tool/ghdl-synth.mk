@@ -90,10 +90,12 @@ $(call workdir,$(target)-ice40.json): $(call workdir,$(target)-analyze.ys)
 $(call workdir,$(target)-ice40.pcf): $(filter %.pcf,$(sources)) $(MAKEFILE_LIST)
 	cat $(filter %.pcf,$^) < /dev/null > $@
 
-$(call workdir,$(target)-ice40.asc): $(call workdir,$(target)-ice40.json) $(call workdir,$(target)-ice40.pcf)
+$(call workdir,$(target)-ice40.asc): $(call workdir,$(target)-ice40.json) $(call workdir,$(target)-ice40.pcf) $(filter %-clock.py,$(constraint-sources))
+	cat $(filter %-clock.py,$(constraint-sources)) < /dev/null > $(call workdir,pre-pack.py)
 	nextpnr-ice40 --up5k \
 		--package sg48 \
 		--pcf $(filter %.pcf,$^) \
+		--pre-pack $(call workdir,pre-pack.py) \
 		--asc $@ \
 		--json $< \
 		--top '$(top-entity)'
