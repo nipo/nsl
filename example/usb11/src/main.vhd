@@ -79,7 +79,7 @@ begin
     generic map(
       input_hz_c => external_clock_freq,
       output_hz_c => internal_clock_freq,
-      hw_variant_c => "PLL40_CORE PLLOUTGLOBAL"
+      hw_variant_c => "ice40(out=global,in=core)"
       )
     port map(
       clock_i => external_clock,
