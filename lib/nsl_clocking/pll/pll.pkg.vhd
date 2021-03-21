@@ -10,8 +10,8 @@ package pll is
   -- Available targets:
   -- - "series67(type=...)"
   --     type: "pll" or "dcm": Use a PLL or a DCM block, defaults to PLL
-  -- - "ice40(type=...,out=...)"
-  --     type: "core" or "pad": Use PLL40_CORE or PLL40_PAD, defaults to pad
+  -- - "ice40(in=...,out=...)"
+  --     in: "core" or "pad": Use PLL40_CORE or PLL40_PAD, defaults to pad
   --     out: "core" or "global": Output clock port selection, defaults to global
   -- - "machxo2()"
   --     none.

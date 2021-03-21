@@ -191,7 +191,7 @@ architecture ice40 of pll_basic is
     return pll_variant
   is
   begin
-    if strfind(hw_variant, "type=core", ',') then
+    if strfind(hw_variant, "in=core", ',') then
       return PLL_CORE;
     else
       return PLL_PAD;
