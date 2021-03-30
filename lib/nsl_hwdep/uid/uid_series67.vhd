@@ -29,7 +29,7 @@ architecture xil of uid32_reader is
   record
     state : state_t;
 
-    counter : integer range 36 downto 8;
+    counter : integer range 36 downto 0;
     crc32 : crc32;
   end record;
 
