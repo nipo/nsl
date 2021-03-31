@@ -83,7 +83,6 @@ begin
       );
 
   a_wdata_gen: process(a_data_i)
-    variable i : natural;
   begin
     for i in 0 to a_addr_lsb_wrap-1
     loop
@@ -94,7 +93,6 @@ begin
 
   a_wen_gen: process(a_address_i, a_write_en_i)
     variable lsb : natural range 0 to a_addr_lsb_wrap-1;
-    variable i : natural;
   begin
     lsb := to_integer(to_01(a_address_i(a_addr_size_c-min_addr_size_c-1 downto 0), '0'));
     a_wen <= (others => '0');
@@ -120,7 +118,6 @@ begin
   end process;
 
   b_wdata_gen: process(b_data_i)
-    variable i : natural;
   begin
     for i in 0 to b_addr_lsb_wrap-1
     loop
