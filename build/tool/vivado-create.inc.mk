@@ -67,6 +67,7 @@ define vivado-tcl-sources-append
 	$(foreach s,$(sources),$(call _vivado-add-$($s-language)-before,$1,$s))
 	$(foreach s,$(sources),$(call _vivado-add-$($s-language),$1,$s))
 	$(call _vivado-add-constraint,$1,$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl)
+	$(call _vivado-add-constraint,$1,$(BUILD_ROOT)/support/vivado-userid.tcl)
 	$(call file-append,$1,set_property "top" "$(top-entity)" $$_sources_fileset)
 
 endef
