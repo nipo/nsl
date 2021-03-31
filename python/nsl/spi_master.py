@@ -9,11 +9,11 @@ class MasterCmd:
     def div(self, div):
         self.pipe.put([0x20 | (div - 1)])
 
-    def select(self, slave):
-        self.pipe.put([slave])
+    def select(self, slave, mode = 0):
+        self.pipe.put([(mode << 3) | slave])
 
     def unselect(self):
-        self.pipe.put([0x1f])
+        self.pipe.put([0x7])
 
     def shift_out(self, data):
         for offset in range(0, len(data), 0x40):
@@ -47,11 +47,11 @@ class MasterRsp:
     def div(self, div):
         self.pipe.put([0x20 | (div - 1)])
 
-    def select(self, slave):
-        self.pipe.put([slave])
+    def select(self, slave, mode = 0):
+        self.pipe.put([(mode << 3) | slave])
 
     def unselect(self):
-        self.pipe.put([0x1f])
+        self.pipe.put([0x07])
 
     def shift_out(self, data):
         for offset in range(0, len(data), 0x40):
@@ -84,21 +84,22 @@ class Master:
         self.pipe.div(div)
         self.pipe.flush(end_delay = 50)
 
-    def to_slave(self, data):
+    def to_slave(self, data, target = 0):
         l = len(data) - 1
 
-        self.pipe.select(0)
+        self.pipe.select(target)
         self.pipe.shift_out([0x80, l & 0xff, l >> 8])
         self.pipe.shift_out(data)
         self.pipe.unselect()
         self.pipe.flush()
 
-    def from_slave(self, data):
+    def from_slave(self, data, target = 0):
         l = len(data) - 1
 
-        self.pipe.select(0)
+        self.pipe.select(target)
         self.pipe.shift_out([0xc0])
         self.pipe.shift_in([l & 0xff, l >> 8])
         self.pipe.shift_in(data)
         self.pipe.unselect()
         self.pipe.flush()
+        
