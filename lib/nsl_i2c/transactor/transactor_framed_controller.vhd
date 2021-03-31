@@ -264,7 +264,7 @@ begin
         end if;
 
       when ST_IO_FLUSH_PUT =>
-        if cmd_i.valid = '1' then
+        if rsp_i.ready = '1' then
           rin.word_count <= (r.word_count - 1) mod 64;
           if r.word_count = 0 then
             rin.state <= ST_CMD_GET;
@@ -352,7 +352,6 @@ begin
     end case;
 
     case r.state is
-
       when ST_WRITE_RUN | ST_WRITE_DATA | ST_WRITE_ACK =>
         shift_enable_o <= '1';
         shift_send_data_o <= '1';
