@@ -156,6 +156,8 @@ begin
           rin.cnt <= r.div;
           rin.state <= ST_SELECTED_POST;
           rin.selected <= to_integer(unsigned(r.cmd(2 downto 0)));
+          rin.sck <= r.cpol xor r.cpha;
+          rin.mosi <= '0';
         end if;
         
       when ST_SELECTED_POST =>
