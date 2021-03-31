@@ -41,4 +41,25 @@ package transactor is
       );
   end component;
 
+  component spi_muxed_transactor
+    generic(
+      extender_slave_no_c: integer;
+      muxed_slave_no_c: integer
+      );
+    port(
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      slave_cmd_i : in  nsl_bnoc.framed.framed_req;
+      slave_cmd_o : out nsl_bnoc.framed.framed_ack;
+      slave_rsp_o : out nsl_bnoc.framed.framed_req;
+      slave_rsp_i : in  nsl_bnoc.framed.framed_ack;
+
+      master_cmd_i : in  nsl_bnoc.framed.framed_ack;
+      master_cmd_o : out nsl_bnoc.framed.framed_req;
+      master_rsp_o : out nsl_bnoc.framed.framed_ack;
+      master_rsp_i : in  nsl_bnoc.framed.framed_req
+      );
+  end component;
+
 end package transactor;

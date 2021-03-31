@@ -143,6 +143,7 @@ begin
       when ST_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.shreg <= cmd_i.data;
+          rin.mosi <= cmd_i.data(7);
           rin.cnt <= r.div;
           rin.last <= cmd_i.last;
           rin.state <= ST_SHIFT_FIRST_HALF;
