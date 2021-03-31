@@ -36,13 +36,13 @@ begin
 
   process (clock_i, reset_n_i)
   begin
-    if rising_edge(clock_i) then
-      is_reset := false;
-    end if;
     if (reset_n_i = '0') then
-      if not is_reset then
+      is_reset := true;
+      is_open := false;
+    elsif rising_edge(clock_i) then
+      if is_reset then
         file_open(fd, filename, READ_MODE);
-        is_reset := true;
+        is_reset := false;
         is_open := true;
       end if;
     end if;
