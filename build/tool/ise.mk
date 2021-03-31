@@ -144,7 +144,7 @@ define ise_source_vhdl_do
 endef
 
 define ise_source_verilog_do
-	$(SILENT)echo 'vlog $($2-library) $2' >> $1
+	$(SILENT)echo 'verilog $($2-library) $2' >> $1
 
 endef
 
