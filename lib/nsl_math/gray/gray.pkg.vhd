@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 package gray is
 
   function bin_to_gray(binary : unsigned) return std_ulogic_vector;
-  function gray_to_bin(gray : std_ulogic_vector) return unsigned;
+  function gray_to_bin(encoded : std_ulogic_vector) return unsigned;
 
   component gray_decoder_pipelined
     generic(
@@ -32,9 +32,9 @@ package body gray is
     return binary_suv xor ("0" & binary_suv(binary_suv'left downto 1));
   end function;
   
-  function gray_to_bin(gray : std_ulogic_vector) return unsigned is
-    constant g_left: integer := gray'length-1;
-    alias gray_suv: std_ulogic_vector(g_left downto 0) is gray;
+  function gray_to_bin(encoded : std_ulogic_vector) return unsigned is
+    constant g_left: integer := encoded'length-1;
+    alias encoded_suv: std_ulogic_vector(g_left downto 0) is encoded;
     variable binary_suv: std_ulogic_vector(g_left downto 0);
   begin
     bit_loop: for i in 0 to g_left
@@ -42,7 +42,7 @@ package body gray is
       binary_suv(i) := '0';
       bit_loop2: for j in i to g_left
       loop
-        binary_suv(i) := binary_suv(i) xor gray_suv(j);
+        binary_suv(i) := binary_suv(i) xor encoded_suv(j);
       end loop;
     end loop;
 
