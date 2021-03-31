@@ -211,9 +211,9 @@ package body rgb is
     alias iv : std_ulogic_vector(w-1 downto 0) is i;
     variable ret : std_ulogic_vector(0 to w-1);
   begin
-    bits: for i in 0 to w-1
+    bits: for x in 0 to w-1
     loop
-      ret(i) := iv(i);
+      ret(x) := iv(x);
     end loop;
     return ret;
   end bit_reverse;
