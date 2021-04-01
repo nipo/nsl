@@ -1,0 +1,61 @@
+[*]
+[*] GTKWave Analyzer v3.3.81 (w)1999-2017 BSI
+[*] Thu Apr  1 12:23:37 2021
+[*]
+[dumpfile] "/Users/nipo/projects/nsl/tests/nco/tb.ghw"
+[dumpfile_mtime] "Thu Apr  1 12:22:56 2021"
+[dumpfile_size] 28537153
+[savefile] "/Users/nipo/projects/nsl/tests/nco/tb.gtkw"
+[timestart] 13113659380
+[size] 1294 777
+[pos] -1 -1
+*-30.346895 15045830926 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.driver.
+[treeopen] top.tb.nco.
+[treeopen] top.tb.nco.sinus.
+[treeopen] top.tb.nco.sinus.r.
+[treeopen] top.tb.nco.sinus.storage.
+[sst_width] 193
+[signals_width] 266
+[sst_expanded] 1
+[sst_vpaned_height] 230
+@28
+top.tb.s_freq_r
+top.tb.nco.sinus.r.s0_index_invert
+@22
+#{top.tb.nco.sinus.r.s0_index[8:0]} top.tb.nco.sinus.r.s0_index[8] top.tb.nco.sinus.r.s0_index[7] top.tb.nco.sinus.r.s0_index[6] top.tb.nco.sinus.r.s0_index[5] top.tb.nco.sinus.r.s0_index[4] top.tb.nco.sinus.r.s0_index[3] top.tb.nco.sinus.r.s0_index[2] top.tb.nco.sinus.r.s0_index[1] top.tb.nco.sinus.r.s0_index[0]
+@28
+top.tb.nco.sinus.r.s0_value_invert
+top.tb.nco.sinus.r.s1_value_invert
+@22
+#{top.tb.nco.sinus.r.s1_index[8:0]} top.tb.nco.sinus.r.s1_index[8] top.tb.nco.sinus.r.s1_index[7] top.tb.nco.sinus.r.s1_index[6] top.tb.nco.sinus.r.s1_index[5] top.tb.nco.sinus.r.s1_index[4] top.tb.nco.sinus.r.s1_index[3] top.tb.nco.sinus.r.s1_index[2] top.tb.nco.sinus.r.s1_index[1] top.tb.nco.sinus.r.s1_index[0]
+@10022
+>829690
+#{top.tb.nco.sinus.r.s1_index[8:0]} top.tb.nco.sinus.r.s1_index[8] top.tb.nco.sinus.r.s1_index[7] top.tb.nco.sinus.r.s1_index[6] top.tb.nco.sinus.r.s1_index[5] top.tb.nco.sinus.r.s1_index[4] top.tb.nco.sinus.r.s1_index[3] top.tb.nco.sinus.r.s1_index[2] top.tb.nco.sinus.r.s1_index[1] top.tb.nco.sinus.r.s1_index[0]
+@28
+>0
+top.tb.nco.sinus.r.s2_value_invert
+@22
+#{top.tb.nco.sinus.s2_rom_value[15:0]} top.tb.nco.sinus.s2_rom_value[15] top.tb.nco.sinus.s2_rom_value[14] top.tb.nco.sinus.s2_rom_value[13] top.tb.nco.sinus.s2_rom_value[12] top.tb.nco.sinus.s2_rom_value[11] top.tb.nco.sinus.s2_rom_value[10] top.tb.nco.sinus.s2_rom_value[9] top.tb.nco.sinus.s2_rom_value[8] top.tb.nco.sinus.s2_rom_value[7] top.tb.nco.sinus.s2_rom_value[6] top.tb.nco.sinus.s2_rom_value[5] top.tb.nco.sinus.s2_rom_value[4] top.tb.nco.sinus.s2_rom_value[3] top.tb.nco.sinus.s2_rom_value[2] top.tb.nco.sinus.s2_rom_value[1] top.tb.nco.sinus.s2_rom_value[0]
+@90022
+#{top.tb.nco.sinus.r.s3_value[0:-10]} top.tb.nco.sinus.r.s3_value[0] top.tb.nco.sinus.r.s3_value[-1] top.tb.nco.sinus.r.s3_value[-2] top.tb.nco.sinus.r.s3_value[-3] top.tb.nco.sinus.r.s3_value[-4] top.tb.nco.sinus.r.s3_value[-5] top.tb.nco.sinus.r.s3_value[-6] top.tb.nco.sinus.r.s3_value[-7] top.tb.nco.sinus.r.s3_value[-8] top.tb.nco.sinus.r.s3_value[-9] top.tb.nco.sinus.r.s3_value[-10]
+@20000
+-
+-
+@22
+#{top.tb.nco.sinus.r.s3_value[0:-10]} top.tb.nco.sinus.r.s3_value[0] top.tb.nco.sinus.r.s3_value[-1] top.tb.nco.sinus.r.s3_value[-2] top.tb.nco.sinus.r.s3_value[-3] top.tb.nco.sinus.r.s3_value[-4] top.tb.nco.sinus.r.s3_value[-5] top.tb.nco.sinus.r.s3_value[-6] top.tb.nco.sinus.r.s3_value[-7] top.tb.nco.sinus.r.s3_value[-8] top.tb.nco.sinus.r.s3_value[-9] top.tb.nco.sinus.r.s3_value[-10]
+@90028
+top.tb.s_value_r
+@20000
+-
+-
+-
+@10023
+#{top.tb.s_value[0:-10]} top.tb.s_value[0] top.tb.s_value[-1] top.tb.s_value[-2] top.tb.s_value[-3] top.tb.s_value[-4] top.tb.s_value[-5] top.tb.s_value[-6] top.tb.s_value[-7] top.tb.s_value[-8] top.tb.s_value[-9] top.tb.s_value[-10]
+@20000
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
