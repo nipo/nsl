@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_math, nsl_data;
+library nsl_math, nsl_data, nsl_memory;
 use nsl_math.fixed.all;
 
 entity rect_table is
@@ -44,23 +44,29 @@ architecture beh of rect_table is
   signal r, rin: regs_t;
   signal rdata: dt_word_type;
 
-  function table_precalc() return nsl_data.bytestream.byte_string is
-    variable sinus : sfixed(sinus_o'range);
-    variable cosinus : sfixed(sinus_o'range);
+  function table_precalc(sl, sr, cl, cr, al, ar: integer)
+    return nsl_data.bytestream.byte_string
+  is
+    variable sinus : sfixed(sl downto sr);
+    variable cosinus : sfixed(cl downto cr);
     variable angle_r, sinus_r, cosinus_r : real;
-    variable ret : nsl_data.bytestream.byte_string(0 to ((2**angle_i'length) * dt_byte_count)-1);
+    variable ret : nsl_data.bytestream.byte_string(0 to ((2**(al-ar+1)) * dt_byte_count)-1);
     variable entry : dt_word_type;
   begin
-    each_angle: for i in 0 to 2**angle_i'length-1
+    each_angle: for i in ret'range
     loop
-      angle_r := i * 2.0 ** angle_i'right;
+      angle_r := real(i) * (2.0 ** ar);
       sinus_r := sin(angle_r * math_pi);
       cosinus_r := cos(angle_r * math_pi);
-      sinus := to_sfixed(sinus_r, sinus'left, sinus'right);
-      cosinus := to_sfixed(cosinus_r, cosinus'left, cosinus'right);
-      entry(sinus_o'length-1 downto 0) := to_suv(sinus);
-      entry(sinus_o'length + cosinus_o'length-1 downto sinus_o'length) := to_suv(cosinus);
-      ret(dt_byte_count*i to dt_byte_count * i + dt_byte_count) := nsl_data.endian.to_le(entry);
+      sinus := to_sfixed(sinus_r, sl, sr);
+      cosinus := to_sfixed(cosinus_r, cl, cr);
+
+      entry := (others => '-');
+      entry(sl-sr downto 0) := to_suv(sinus);
+      entry(cl-cr+sl-sr+1 downto sl-sr+1) := to_suv(cosinus);
+
+      ret(dt_byte_count*i to dt_byte_count * i + dt_byte_count - 1)
+        := nsl_data.endian.to_le(unsigned(entry));
     end loop;
     return ret;
   end function;
@@ -114,7 +120,6 @@ begin
   begin
     valid_o <= '0';
     ready_o <= '0';
-    value_o <= (others => '-');
 
     case r.state is
       when ST_RESET | ST_READING =>
@@ -130,7 +135,9 @@ begin
     generic map(
       word_addr_size_c => angle_i'length,
       word_byte_count_c => dt_byte_count,
-      contents_c => table_precalc()
+      contents_c => table_precalc(sinus_o'left, sinus_o'right,
+                                  cosinus_o'left, cosinus_o'right,
+                                  angle_i'left, angle_i'right)
       )
     port map(
       clock_i => clock_i,
