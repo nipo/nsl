@@ -110,7 +110,7 @@ package body fixed is
   begin
     if value <= 0.0 then
       return sat_min;
-    elsif value >= 2.0**left then
+    elsif value >= 2.0 ** (left+1) - 2.0 ** right then
       return sat_max;
     else
       ret := ufixed(to_unsigned(integer(value * 2.0 ** (-right)), left - right + 1));
