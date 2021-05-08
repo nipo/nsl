@@ -17,7 +17,7 @@ package transactor is
 
   -- Command structure:
   -- [C22_READ    | PHYAD] [000 |  ADDR] -> [DATA_H] [DATA_L] [STATUS]
-  -- [C22_WRITE   | PHYAD] [000 |  ADDR] -> [STATUS]
+  -- [C22_WRITE   | PHYAD] [000 |  ADDR] [DATA_H] [DATA_L] -> [STATUS]
   -- [C45_ADDR    | PRTAD] [000 | DEVAD] [ADDR_H] [ADDR_L] -> [STATUS]
   -- [C45_WRITE   | PRTAD] [000 | DEVAD] [DATA_H] [DATA_L] -> [STATUS]
   -- [C45_READ    | PRTAD] [000 | DEVAD] -> [DATA_H] [DATA_L] [STATUS]
