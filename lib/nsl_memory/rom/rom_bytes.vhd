@@ -39,7 +39,7 @@ architecture beh of rom_bytes is
   begin
     for i in 0 to ret'length-1
     loop
-      tmp := blob(i*word_byte_count_c to (i+1)*word_byte_count_c-1);
+      tmp := blob(blob'left + i*word_byte_count_c to blob'left + (i+1) * word_byte_count_c - 1);
       if little_endian_c then
         ret(i) := nsl_data.endian.from_le(tmp);
       else
