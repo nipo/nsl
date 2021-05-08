@@ -20,18 +20,18 @@ end entity;
 
 architecture beh of rgb24_pwm_driver is
 
-  signal a_r, a_g, a_b, i_r, i_g, i_b : unsigned(8 downto 0);
+  signal a_r, a_g, a_b, i_r, i_g, i_b : unsigned(7 downto 0);
   constant mag : positive := nsl_math.arith.log2(clock_prescaler_c);
   constant prescaler_c : unsigned(mag-1 downto 0) := to_unsigned(clock_prescaler_c, mag);
 
 begin
 
-  a_r <= "0" & color_i.r;
-  a_g <= "0" & color_i.g;
-  a_b <= "0" & color_i.b;
-  i_r <= to_unsigned(256 - to_integer(a_r), 9);
-  i_g <= to_unsigned(256 - to_integer(a_g), 9);
-  i_b <= to_unsigned(256 - to_integer(a_b), 9);
+  a_r <= color_i.r;
+  a_g <= color_i.g;
+  a_b <= color_i.b;
+  i_r <= not a_r;
+  i_g <= not a_g;
+  i_b <= not a_b;
 
   r_pwm: nsl_signal_generator.pwm.pwm_generator
     port map(
