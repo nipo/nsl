@@ -3,12 +3,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data;
-use nsl_bnoc.routed.all;
+use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 
-package routed_transactor is
+package framed_transactor is
   
-  component routed_transactor_once
+  component framed_transactor_once
     generic(
       config_c : byte_string
       );
@@ -17,16 +17,18 @@ package routed_transactor is
       clock_i     : in  std_ulogic;
       done_o      : out std_ulogic;
 
-      cmd_o  : out routed_req;
-      cmd_i  : in routed_ack;
-      rsp_i  : in routed_req;
-      rsp_o  : out routed_ack
+      cmd_o  : out framed_req;
+      cmd_i  : in framed_ack;
+      rsp_i  : in framed_req;
+      rsp_o  : out framed_ack
       );
   end component;
 
-  function transaction(srcid, dstid : component_id;
-                       tag : byte;
-                       command : byte_string) return byte_string;
+  function framed_transaction(command : byte_string) return byte_string;
+
+  function routed_transaction(srcid, dstid : component_id;
+                              tag : byte;
+                              command : byte_string) return byte_string;
 
   function i2c_div(div: positive) return byte_string;
 
@@ -45,25 +47,35 @@ package routed_transactor is
   function smi_c45_write(prtad, devad: natural;
                          data: unsigned) return byte_string;
 
-end package routed_transactor;
+end package framed_transactor;
 
-package body routed_transactor is
+package body framed_transactor is
 
-  function transaction(srcid, dstid : component_id;
-                       tag : byte;
-                       command : byte_string) return byte_string
+  function framed_transaction(command : byte_string) return byte_string
+  is
+    variable header : byte_string(1 to 1);
+  begin
+    header(1) := to_byte(command'length);
+
+    return header & command;
+  end function;
+
+  function routed_header(dst: component_id; src: component_id)
+    return nsl_bnoc.framed.framed_data_t is
+  begin
+    return nsl_bnoc.framed.framed_data_t(to_unsigned(src * 16 + dst, 8));
+  end;
+
+  function routed_transaction(srcid, dstid : component_id;
+                              tag : byte;
+                              command : byte_string) return byte_string
   is
     variable route_header : byte := routed_header(dst => dstid, src => srcid);
-    variable ret : byte_string(1 to command'length + 3);
+    variable header : byte_string(1 to 2);
   begin
-    ret(1) := to_byte(ret'length-2);
-    ret(2) := route_header;
-    ret(3) := tag;
-    for i in 0 to command'length-1
-    loop
-      ret(4+i) := command(command'left + i);
-    end loop;
-    return ret;
+    header(1) := route_header;
+    header(2) := tag;
+    return framed_transaction(header & command);
   end function;
 
   function i2c_div(div: positive) return byte_string
@@ -198,4 +210,4 @@ package body routed_transactor is
       & smi_c22_write(prtad, 14, data);
   end function;
 
-end package body routed_transactor;
+end package body framed_transactor;

@@ -3,10 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, nsl_memory, nsl_math;
-use nsl_bnoc.routed.all;
+use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 
-entity routed_transactor_once is
+entity framed_transactor_once is
   generic(
     config_c : byte_string
     );
@@ -15,14 +15,14 @@ entity routed_transactor_once is
     clock_i     : in  std_ulogic;
     done_o      : out std_ulogic;
 
-    cmd_o  : out routed_req;
-    cmd_i  : in routed_ack;
-    rsp_i  : in routed_req;
-    rsp_o  : out routed_ack
+    cmd_o  : out framed_req;
+    cmd_i  : in framed_ack;
+    rsp_i  : in framed_req;
+    rsp_o  : out framed_ack
     );
 end entity;
 
-architecture beh of routed_transactor_once is
+architecture beh of framed_transactor_once is
 
   function rom_init_val(contents: byte_string) return byte_string
   is
