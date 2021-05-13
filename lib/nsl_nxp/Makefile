@@ -1,0 +1,1 @@
+packages += pcal6524
