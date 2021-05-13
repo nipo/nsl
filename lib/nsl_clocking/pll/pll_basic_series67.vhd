@@ -1,10 +1,12 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
-library unisim, nsl_math, nsl_logic, nsl_data;
+library unisim, nsl_math, nsl_logic, nsl_data, nsl_clocking;
 use nsl_logic.bool.all;
 use nsl_data.text.all;
+use nsl_clocking.pll_config_series67.all;
 
 entity pll_basic is
   generic(
@@ -29,79 +31,54 @@ architecture s6 of pll_basic is
     fin_factor : integer;
     fout_factor : integer;
   end record;
-
-  type constraints is
-  record
-    fmin, fmax : integer;
-    in_factor_max, out_factor_max : integer;
-    mode : string(1 to 3);
-  end record;
   
   function pll_params_calc(fin, fout : integer;
-                           constraints : constraints) return params
+                           mode: string) return params
   is
-    variable freq_lcm, mult : integer;
+    constant bounds : constraints := constraints_get(mode);
+    variable freq_lcm, vco_mult : integer;
     variable ret : params;
   begin
     freq_lcm := nsl_math.arith.lcm(fin, fout);
-    mult := constraints.fmin / freq_lcm;
-    if mult = 0 or mult * freq_lcm < constraints.fmin then
-      mult := mult + 1;
+    vco_mult := integer(trunc(real(bounds.fmax) / real(freq_lcm)));
+    if vco_mult = 0 then
+      vco_mult := 1;
     end if;
 
-    ret.vco_freq := freq_lcm * mult;
+    ret.vco_freq := freq_lcm * vco_mult;
     ret.fin_factor := ret.vco_freq / fin;
     ret.fout_factor := ret.vco_freq / fout;
 
     assert false
-      report "Synthesizing S6 " & constraints.mode & ", " 
+      report "Synthesizing " & bounds.mode & ", " 
       & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
       & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
       severity note;
     assert false
       report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
       & "vco_freq=" & to_string(real(ret.vco_freq) / 1.0e6) & "MHz "
-      & "(min=" & to_string(real(constraints.fmin) / 1.0e6) & "MHz, "
-      & "max=" & to_string(real(constraints.fmax) / 1.0e6) & "MHz), "
+      & "(min=" & to_string(real(bounds.fmin) / 1.0e6) & "MHz, "
+      & "max=" & to_string(real(bounds.fmax) / 1.0e6) & "MHz), "
       & "= fin * " & to_string(ret.fin_factor) & ", "
       & "= fout * " & to_string(ret.fout_factor)
       severity note;
 
-    assert constraints.fmin <= ret.vco_freq and ret.vco_freq <= constraints.fmax
+    assert bounds.fmin <= ret.vco_freq and ret.vco_freq <= bounds.fmax
       report "Needed VCO frequency is out of range"
       severity failure;
 
-    assert ret.fout_factor <= constraints.out_factor_max
+    assert ret.fout_factor <= bounds.out_factor_max
       report "Clock output frequency is out of range"
       severity failure;
 
-    assert ret.fin_factor <= constraints.in_factor_max
+    assert ret.fin_factor <= bounds.in_factor_max
       report "Clock input frequency is out of range"
       severity failure;
 
     return ret;
   end function;
 
-  constant pll_constraints : constraints := (400000000, 1000000000, 64, 128, "PLL");
-  constant dcm_constraints : constraints := (5000000, 375000000, 32, 32, "DCM");
-
-  type pll_variant is (
-    S6_PLL,
-    S6_DCM
-    );
-
-  function variant_get(hw_variant : string)
-    return pll_variant
-  is
-  begin
-    if strfind(hw_variant, "type=dcm", ',') then
-      return S6_DCM;
-    else
-      return S6_PLL;
-    end if;
-  end function;
-
-  constant series67_params:string := str_param_extract(hw_variant_c, "series67");
+  constant series67_params : string := str_param_extract(hw_variant_c, "series67");
   constant variant : pll_variant := variant_get(series67_params);
 
   signal s_reset : std_ulogic;
@@ -110,12 +87,12 @@ begin
 
   s_reset <= not reset_n_i;
 
-  use_pll: if variant = S6_PLL
+  use_s6pll: if variant = S6_PLL
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
     constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, pll_constraints);
+      input_hz_c, output_hz_c, "PLL");
     signal s_feedback : std_ulogic;
   begin
     
@@ -140,12 +117,81 @@ begin
         );
   end generate;
 
-  use_dcm: if variant = S6_DCM
+  use_s7pll: if variant = S7_PLL
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
     constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, dcm_constraints);
+      input_hz_c, output_hz_c, "PLL");
+    signal s_feedback : std_ulogic;
+  begin
+    
+    pll_inst: unisim.vcomponents.plle2_adv
+      generic map (
+        divclk_divide        => 1,
+        clkfbout_mult        => p.fin_factor,
+        clkout0_divide       => p.fout_factor,
+        clkin1_period        => input_period_ns_c,
+        ref_jitter1          => 0.125
+        )
+      port map (
+        rst                 => s_reset,
+        clkin1              => clock_i,
+        clkin2              => '0',
+        clkinsel            => '1',
+
+        clkout0             => clock_o,
+        locked              => locked_o,
+
+        daddr => "0000000",
+        dclk => '0',
+        den => '0',
+        di => x"0000",
+        dwe => '0',
+
+        pwrdwn => '0',
+        
+        clkfbin             => s_feedback,
+        clkfbout            => s_feedback
+        );
+  end generate;
+
+  use_s7mmcm: if variant = S7_MMCM
+  generate
+    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
+
+    constant p : params := pll_params_calc(
+      input_hz_c, output_hz_c, "MMCM");
+    signal s_feedback : std_ulogic;
+  begin
+    
+    mmcm_inst: unisim.vcomponents.mmcm_base
+      generic map (
+        divclk_divide        => 1,
+        clkfbout_mult_f      => real(p.fin_factor),
+        clkout0_divide_f     => real(p.fout_factor),
+        clkin1_period        => input_period_ns_c,
+        ref_jitter1          => 0.125
+        )
+      port map (
+        rst                 => s_reset,
+        pwrdwn              => '0',
+        clkin1              => clock_i,
+
+        clkout0             => clock_o,
+        locked              => locked_o,
+
+        clkfbin             => s_feedback,
+        clkfbout            => s_feedback
+        );
+  end generate;
+
+  use_s6dcm: if variant = S6_DCM
+  generate
+    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
+
+    constant p : params := pll_params_calc(
+      input_hz_c, output_hz_c, "DCM");
     signal s_feedback : std_ulogic;
     constant is_d2 : boolean := p.fin_factor = 1;
   begin
