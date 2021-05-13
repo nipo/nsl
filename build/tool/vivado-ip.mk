@@ -11,8 +11,6 @@ sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl-language = constraint
 all-constraint-sources += $(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl
 
-build-dir := $(target)-build
-
 define source_add
 	echo 'set fname [file normalize "$1"]' >> $@
 	$(SILENT)echo 'add_files -norecurse -fileset $$srcset_obj [list "$$fname"]' >> $@

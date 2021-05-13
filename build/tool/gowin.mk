@@ -2,8 +2,6 @@ GOWIN = /opt/Gowin/1.9.7.01Beta
 GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 
-build-dir := gowin-build
-
 target ?= $(top)
 
 SHELL=/bin/bash

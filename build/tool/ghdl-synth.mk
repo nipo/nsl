@@ -18,8 +18,8 @@ _GHDL_CF_SUFFIX_08=08
 
 lib_cf = $(call workdir,$1)/$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
-clean-dirs += ghdl-build
-workdir = ghdl-build/$1
+clean-dirs += $(build-dir)
+workdir = $(build-dir)/$1
 ghdl-library-analyze-rules :=
 
 define ghdl-library-rules
@@ -37,7 +37,7 @@ $(call ghdl-library-analyze-rules,$1)
 endef
 
 define ghdl-analyze
-	$(SILENT)mkdir -p ghdl-build
+	$(SILENT)mkdir -p $(build-dir)
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
 	$(SILENT)$(GHDL) -m \
 		--workdir=$(call workdir,$(top-lib)) \

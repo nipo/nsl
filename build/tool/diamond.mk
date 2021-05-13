@@ -3,7 +3,6 @@ PRE=bindir=$(DIAMOND_PATH)/bin/lin64 . $(DIAMOND_PATH)/bin/lin64/diamond_env &&
 DIAMOND_BIN = $(PRE) $(DIAMOND_PATH)/bin/lin64
 ISPFPGA_BIN = $(PRE) $(DIAMOND_PATH)/ispfpga/bin/lin64
 DIAMOND_LIB_PATH = $(DIAMOND_PATH)/ispfpga/$(target_dir)/data
-build-dir := diamond-build
 
 $(call exclude-libs,machxo2)
 

@@ -33,13 +33,13 @@ $(call exclude-libs,unisim simprim)
 
 sim: $(target).vcd
 
-clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
+clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
 
-ise-build/$(target).exe: ise-build/$(target).prj $(MAKEFILE_LIST)
+$(build-dir)/$(target).exe: $(build-dir)/$(target).prj $(MAKEFILE_LIST)
 	$(SILENT)$(ISE_PRE) \
 	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
 
-$(target).vcd: ise-build/$(target).exe $(MAKEFILE_LIST)
+$(target).vcd: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)> $@.tmp
 	$(SILENT)echo 'onerror {resume}' >> $@.tmp
 	$(SILENT)echo 'vcd dumpfile "$@"' >> $@.tmp
@@ -59,8 +59,8 @@ define ise_source_do_verilog
 	$(SILENT)
 endef
 
-ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
-	$(SILENT)mkdir -p ise-build/xst
+$(build-dir)/$(target).prj: $(sources) $(MAKEFILE_LIST)
+	$(SILENT)mkdir -p $(build-dir)/xst
 	$(SILENT)> $@.tmp
 	$(SILENT)$(foreach s,$(sources),$(if $(filter constraint,$($s-language)),,$(call ise_source_do_$($(s)-language),$s)))
 	$(SILENT)mv -f $@.tmp $@

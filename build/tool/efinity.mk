@@ -10,21 +10,21 @@ elang-vhdl-2008=vhdl_2008
 elang=$(elang-$($(1)-language)-$($($(1)-package)-vhdl-version))
 
 $(target).vdb: $(sources) $(MAKEFILE_LIST)
-	mkdir -p efinity-build
-	mkdir -p efinity-build/map
+	mkdir -p $(build-dir)
+	mkdir -p $(build-dir)/map
 	$(MAP) --project $(target) --root $(top-entity) \
 		--binary-db $@ \
 		--device $(target_part) \
 		--family $(target_family) \
 		--syn_options mode=speed \
 		--veri_option verilog_mode=verilog_2k,vhdl_mode=vhdl_93 \
-		--work-dir efinity-build/ \
-		--output-dir efinity-build/map/ \
+		--work-dir $(build-dir)/ \
+		--output-dir $(build-dir)/map/ \
 		$(foreach s,$(sources), --v $s,t:$(call elang,$s),l:$($s-library))
 
 $(target).route: $(target).vdb
-	mkdir -p efinity-build
-	mkdir -p efinity-build/pnr
+	mkdir -p $(build-dir)
+	mkdir -p $(build-dir)/pnr
 	$(PNR) --circuit $(target) \
 		--family $(target_family) \
 		--device $(target_part) \
@@ -34,8 +34,8 @@ $(target).route: $(target).vdb
 		--place_file $(@:.route=.place) \
 		--route_file $@ \
 		--sync_file $@.sync.csv \
-		--work_dir efinity-build/ \
-		--output_dir efinity-build/pnr/ \
+		--work_dir $(build-dir)/ \
+		--output_dir $(build-dir)/pnr/ \
 		--timing_analysis on --load_delay_matrix
 
 $(target).hex: $(target).lbf

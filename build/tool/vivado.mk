@@ -3,8 +3,6 @@ VIVADO_PREPARE = source $(VIVADO)/settings64.sh > /dev/null
 
 SHELL=/bin/bash
 
-build-dir := vivado-build
-
 synth-reports = $(build-dir)/synth.rpt
 link-reports = $(build-dir)/link_opt_drc.rpt
 link-reports += $(synth-reports)

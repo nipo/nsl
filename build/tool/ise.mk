@@ -50,7 +50,7 @@ clean-files += $(target)-2.mcs
 clean-files += $(target)-2.cfi
 clean-files += $(target)-2.prm
 
-%.bit: ise-build/%-par.ncd
+%.bit: $(build-dir)/%-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
@@ -61,7 +61,7 @@ clean-files += $(target)-2.prm
 
 clean-files += $(target).bit
 
-%-compressed.bit: ise-build/%-par.ncd
+%-compressed.bit: $(build-dir)/%-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
@@ -73,7 +73,7 @@ clean-files += $(target).bit
 
 clean-files += $(target)-compressed.bit
 
-ise-build/%-2.bit: ise-build/%-par.ncd
+$(build-dir)/%-2.bit: $(build-dir)/%-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g spi_buswidth:2 \
 	    -g unusedpin:pullnone \
@@ -84,28 +84,28 @@ ise-build/%-2.bit: ise-build/%-par.ncd
 	    -w $< \
 	    $@
 
-clean-dirs += ise-build _xmsgs xlnx_auto_0_xdb
+clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
 
 %.mcs: %.bit
 	$(SILENT)$(ISE_PRE) promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
 
-ise-build/$(target)-first-map.ncd ise-build/$(target)-map.ncd:
+$(build-dir)/$(target)-first-map.ncd $(build-dir)/$(target)-map.ncd:
 	$(SILENT)$(ISE_PRE) map $(INTF_STYLE) -p $(target_part)$(target_package)$(target_speed) \
 		$(if $(filter %-par.ncd,$^),$(MAP_OPTS_GUIDED),$(MAP_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %.ngd,$^)" -o "$@"
 
-ise-build/$(target)-first-par.ncd ise-build/$(target)-par.ncd:
+$(build-dir)/$(target)-first-par.ncd $(build-dir)/$(target)-par.ncd:
 	$(SILENT)$(ISE_PRE) par $(INTF_STYLE) \
 		$(if $(filter %-par.ncd,$^),$(PAR_OPTS_GUIDED),$(PAR_OPTS)) \
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %-map.ncd,$^)" "$@"
 	$(SILENT)test 0 -eq `grep -c UNLOC $(@:.ncd=_pad.csv)` || (echo "There are unconstrained IOs"; exit 1)
 
-ise-build/$(target)-first-map.ncd: ise-build/$(target).ngd
-ise-build/$(target)-first-par.ncd: ise-build/$(target)-first-map.ncd
-ise-build/$(target)-map.ncd: ise-build/$(target).ngd ise-build/$(target)-first-par.ncd
-ise-build/$(target)-par.ncd: ise-build/$(target)-map.ncd ise-build/$(target)-first-par.ncd
+$(build-dir)/$(target)-first-map.ncd: $(build-dir)/$(target).ngd
+$(build-dir)/$(target)-first-par.ncd: $(build-dir)/$(target)-first-map.ncd
+$(build-dir)/$(target)-map.ncd: $(build-dir)/$(target).ngd $(build-dir)/$(target)-first-par.ncd
+$(build-dir)/$(target)-par.ncd: $(build-dir)/$(target)-map.ncd $(build-dir)/$(target)-first-par.ncd
 
 define arg_add
 \$(empty_variable)
@@ -114,19 +114,19 @@ endef
 
 define ccf_gen
 
-ise-build/$(notdir $(f:.ccf=.ucf)): $f ise-build/$(target).ndf
-	bash $(BUILD_ROOT)/support/ccf_ucf_gen ise-build/$(target).ndf < $$< > $$@
+$(build-dir)/$(notdir $(f:.ccf=.ucf)): $f $(build-dir)/$(target).ndf
+	bash $(BUILD_ROOT)/support/ccf_ucf_gen $(build-dir)/$(target).ndf < $$< > $$@
 
 endef
 
 $(eval $(foreach f,$(filter %.ccf,$(all-constraint-sources)),$(call ccf_gen,$f)))
 
-ise-build/$(target).ndf: ise-build/$(target).ngc
+$(build-dir)/$(target).ndf: $(build-dir)/$(target).ngc
 	$(SILENT)$(ISE_PRE) ngc2edif $(INTF_STYLE) -w $< $@
 
-ise-build/$(target).ngd: ise-build/$(target).ngc $(filter %.ucf,$(all-constraint-sources)) $(foreach f,$(filter %.ccf,$(all-constraint-sources)),ise-build/$(notdir $(f:.ccf=.ucf)))
+$(build-dir)/$(target).ngd: $(build-dir)/$(target).ngc $(filter %.ucf,$(all-constraint-sources)) $(foreach f,$(filter %.ccf,$(all-constraint-sources)),$(build-dir)/$(notdir $(f:.ccf=.ucf)))
 	$(SILENT)echo "//" > $(@:.ngd=.bmm)
-	$(SILENT)$(ISE_PRE) ngdbuild $(INTF_STYLE) -quiet -dd ise-build \
+	$(SILENT)$(ISE_PRE) ngdbuild $(INTF_STYLE) -quiet -dd $(build-dir) \
 	    $(foreach c,$(filter %.ngc,$(sources)),-sd $(dir $c)) \
 	    $(foreach c,$(filter %.ngc,$^),$(call arg_add,$c)) \
 	    $(foreach c,$(filter %.ucf,$^),$(call arg_add,-uc,$c)) \
@@ -153,19 +153,19 @@ define file_append
 
 endef
 
-clean-files += ise-build/$(target).prj
-clean-files += ise-build/$(target).ngc
-clean-files += ise-build/$(target).twr
+clean-files += $(build-dir)/$(target).prj
+clean-files += $(build-dir)/$(target).ngc
+clean-files += $(build-dir)/$(target).twr
 
-ise-build/$(target).prj: $(sources) $(MAKEFILE_LIST)
+$(build-dir)/$(target).prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(dir $@)
 	$(SILENT)> $@
 	$(foreach s,$(sources),$(call ise_source_$($s-language)_do,$@,$s))
 
-ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
-	$(SILENT)mkdir -p ise-build/xst
-	$(SILENT)echo 'set -tmpdir "ise-build/xst"' > $@.xst
-	$(SILENT)echo 'set -xsthdpdir "ise-build"' >> $@.xst
+$(build-dir)/$(target).ngc: $(build-dir)/$(target).prj $(OPS)
+	$(SILENT)mkdir -p $(build-dir)/xst
+	$(SILENT)echo 'set -tmpdir "$(build-dir)/xst"' > $@.xst
+	$(SILENT)echo 'set -xsthdpdir "$(build-dir)"' >> $@.xst
 	$(SILENT)echo "run" >> $@.xst
 	$(SILENT)echo "-p $(target_part)$(target_package)$(target_speed)" >> $@.xst
 	$(SILENT)echo "-top $(top-entity)" >> $@.xst
@@ -180,8 +180,8 @@ ise-build/$(target).ngc: ise-build/$(target).prj $(OPS)
 	$(SILENT)$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
 	$(SILENT)$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst -ofn $@.log
 
-ise-build/%.twr: ise-build/%-par.ncd ise-build/%-map.pcf
+$(build-dir)/%.twr: $(build-dir)/%-par.ncd $(build-dir)/%-map.pcf
 	$(SILENT)$(ISE_PRE) trce -v 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
 
-ise-build/%.vhd: ise-build/%.ncd
+$(build-dir)/%.vhd: $(build-dir)/%.ncd
 	$(SILENT)$(ISE_PRE) netgen -sim -ofmt vhdl -w $< $@

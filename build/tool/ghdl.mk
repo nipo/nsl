@@ -17,12 +17,12 @@ _GHDL_CF_SUFFIX_08=08
 
 lib_cf = $(call workdir,$1)/$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
-clean-dirs += ghdl-build
+clean-dirs += $(build-dir)
 
 ifeq ($(GHDL_LLVM),)
 # GHDL Without LLVM
 
-workdir = $(if $(filter $(top-lib),$1),.,ghdl-build)
+workdir = $(if $(filter $(top-lib),$1),.,$(build-dir))
 
 define ghdl-library-analyze-rules
 	$(SILENT)$(GHDL) -a \
@@ -63,7 +63,7 @@ endef
 else
 # GHDL + LLVM mode
 
-workdir = ghdl-build/$1
+workdir = $(build-dir)/$1
 ghdl-library-analyze-rules :=
 define ghdl-compile-rules
 	$(SILENT)$(GHDL) -m -v \
@@ -102,7 +102,7 @@ $(call ghdl-library-analyze-rules,$1)
 endef
 
 $(target): $(sources) $(MAKEFILE_LIST)
-	$(SILENT)mkdir -p ghdl-build
+	$(SILENT)mkdir -p $(build-dir)
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
 	$(call ghdl-compile-rules)
 

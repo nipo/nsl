@@ -1,5 +1,5 @@
 
-simulate: cocotb-build/Makefile
+simulate: $(build-dir)/Makefile
 	$(MAKE) -C $(dir $<) sim
 
 define append
@@ -12,7 +12,7 @@ define source_append_vhdl
 
 endef
 
-cocotb-build/Makefile: FORCE
+$(build-dir)/Makefile: FORCE
 	mkdir -p $(dir $@)
 	> $@
 	$(call append,$@,PWD=$$(shell pwd))

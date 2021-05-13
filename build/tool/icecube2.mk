@@ -12,8 +12,6 @@ include $(BUILD_ROOT)/tool/icecube-devices.mk
 target_dev := $(DEVICES_DIR)/$(call ice-resolve-name,dev,$(target_part),$(target_package),$(target_speed))
 target_lib := $(DEVICES_DIR)/$(call ice-resolve-name,lib,$(target_part),$(target_package),$(target_speed))
 
-build-dir := $(target)-build
-
 empty :=
 space := $(empty) $(empty)
 comma := ,
