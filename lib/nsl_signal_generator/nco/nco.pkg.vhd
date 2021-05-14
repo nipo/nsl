@@ -15,6 +15,7 @@ package nco is
     port (
       clock_i: in std_ulogic;
       reset_n_i : in std_ulogic;
+      -- In turns, i.e. (1/(2*pi)) radians
       angle_increment_i : in ufixed;
       value_o : out sfixed
       );

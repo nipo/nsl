@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math;
+library nsl_math, nsl_signal_generator;
 use nsl_math.fixed.all;
 
 entity nco_sinus is
@@ -22,7 +22,7 @@ architecture beh of nco_sinus is
 
   type regs_t is
   record
-    angle_acc : ufixed(0 downto angle_increment_i'right);
+    angle_acc : ufixed(-1 downto angle_increment_i'right);
   end record;
 
   signal r, rin: regs_t;
@@ -30,8 +30,8 @@ architecture beh of nco_sinus is
 
 begin
 
-  assert angle_increment_i'left <= 0
-    report "angle_i'left must be <= 0"
+  assert angle_increment_i'left <= -1
+    report "angle_i'left must be <= -1"
     severity failure;
 
   regs: process(clock_i, reset_n_i) is
@@ -53,7 +53,7 @@ begin
 
   s_angle <= r.angle_acc(s_angle'range);
 
-  sinus: nsl_math.trigonometry.sinus_stream
+  sinus: nsl_signal_generator.sinus.sinus_stream
     generic map(
       scale_c => scale_c
       )

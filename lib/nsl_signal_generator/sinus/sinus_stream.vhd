@@ -3,9 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_math, nsl_data, nsl_memory, nsl_simulation;
+library nsl_math, nsl_data, nsl_memory;
 use nsl_math.fixed.all;
-use nsl_simulation.logging.all;
+use nsl_math.real_ext.all;
 
 entity sinus_stream is
   generic (
@@ -26,36 +26,24 @@ architecture beh of sinus_stream is
   constant dt_byte_count : integer := (dt_bit_count + 7) / 8;
   subtype dt_word_type is std_ulogic_vector(dt_byte_count * 8 - 1 downto 0);
 
-  -- Only store sinus in [0 .. 0.5] range (0 to pi/2), rest of it
-  -- will be computed.
-  function table_precalc(vl, vr, al, ar: integer)
-    return nsl_data.bytestream.byte_string
+  -- Only store sinus for input values in [0 .. 0.25] angle range (0
+  -- to pi/2), rest of it will be computed.
+  function table_precalc(aw: integer)
+    return real_vector
   is
-    variable value : ufixed(vl downto vr);
-    variable angle_r, value_r : real;
-    variable ret : nsl_data.bytestream.byte_string(0 to ((2 ** (al-ar+1)) * dt_byte_count)-1);
-    variable entry : dt_word_type;
+    variable ret : real_vector(0 to (2 ** aw)-1);
   begin
-    each_angle: for i in 0 to (2 ** (al-ar+1))-1
+    each_angle: for i in ret'range
     loop
-      angle_r := real(i) * (2.0 ** ar);
-      value_r := sin(angle_r * math_pi) * scale_c;
-
-      value := to_ufixed(value_r, vl, vr);
-
-      entry := (others => '-');
-      entry(value'length-1 downto 0) := to_suv(value);
-
-      ret(dt_byte_count * i to dt_byte_count * i + dt_byte_count - 1)
-        := nsl_data.endian.to_le(unsigned(entry));
+      ret(i) := sin(real(i) / real(2 ** aw) * MATH_PI_OVER_2) * scale_c;
     end loop;
 
     return ret;
   end function;
 
   -- Decompose angle input as:
-  -- 0 -1 -2 ... angle_i'right
-  -- A  B xxxxxxxxxxxxxxxxxxxx
+  -- -1 -2 -3 ... angle_i'right
+  --  A  B  xxxxxxxxxxxxxxxxxxxx
   --
   -- A is rom output inversion enable
   -- B is rom index inversion enable
@@ -74,14 +62,14 @@ architecture beh of sinus_stream is
     s3_value : sfixed(value_o'left downto value_o'right);
   end record;
 
-  signal s2_rom_value: dt_word_type;
+  signal s2_value: ufixed(value_o'left-1 downto value_o'right);
   
   signal r, rin: regs_t;
 
 begin
 
-  assert angle_i'left = 0
-    report "angle_i'left must be 0"
+  assert angle_i'left = -1
+    report "angle_i'left must be -1"
     severity failure;
 
   regs: process(clock_i) is
@@ -91,8 +79,7 @@ begin
     end if;
   end process;
   
-  transition: process(r, angle_i, s2_rom_value)
-    variable s2_value: ufixed(value_o'left-1 downto value_o'right);
+  transition: process(r, angle_i, s2_value)
   begin
     rin <= r;
 
@@ -110,7 +97,6 @@ begin
     rin.s2_value_invert <= r.s1_value_invert;
     -- rin.s2_rom_value <= rom_lookup(r.s1_index)
 
-    s2_value := ufixed(s2_rom_value(s2_value'length-1 downto 0));
     if r.s2_value_invert = '1' then
       rin.s3_value <= - s2_value;
     else
@@ -118,18 +104,16 @@ begin
     end if;
   end process;
 
-  storage: nsl_memory.rom.rom_bytes
+  storage: nsl_memory.rom_fixed.rom_ufixed
     generic map(
-      word_addr_size_c => r.s1_index'length,
-      word_byte_count_c => dt_byte_count,
-      contents_c => table_precalc(value_o'left-1, value_o'right,
-                                  angle_i'left-2, angle_i'right)
+      values_c => table_precalc(r.s1_index'length)
       )
     port map(
       clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
       address_i => r.s1_index,
-      data_o => s2_rom_value
+      value_o => s2_value
       );
 
   value_o <= r.s3_value;
