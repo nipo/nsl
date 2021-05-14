@@ -15,14 +15,15 @@ architecture arch of tb is
   signal s_clock : std_ulogic;
   signal s_reset_n : std_ulogic;
 
-  signal s_mi_i_f, s_mi_o_f : ufixed(-1 downto -10);
-  signal s_mi_i_r, s_mi_o_r : real;
+  signal s_mi_i_f, s_mi_b_f, s_mi_r_f : ufixed(-1 downto -10);
+  signal s_mi_i_r, s_mi_b_r, s_mi_r_r : real;
   signal s_done : std_ulogic_vector(0 to 0);
 
 begin
 
   s_mi_i_r <= to_real(s_mi_i_f);
-  s_mi_o_r <= to_real(s_mi_o_f);
+  s_mi_b_r <= to_real(s_mi_b_f);
+  s_mi_r_r <= to_real(s_mi_r_f);
 
   st: process
   begin
@@ -41,6 +42,10 @@ begin
     s_mi_i_f <= (others => '1');
     wait for 2 us;
     s_mi_i_f <= (others => '0');
+    wait for 1 us;
+    s_mi_i_f <= (others => '1');
+    wait for 2 us;
+    s_mi_i_f <= (others => '0');
     wait for 2 us;
     s_mi_i_f <= (others => '1');
     wait for 2 us;
@@ -53,7 +58,7 @@ begin
     wait;
   end process;
 
-  filter: nsl_dsp.gaussian.gaussian_approx_ufixed
+  rc: nsl_dsp.gaussian.gaussian_rc_ufixed
     generic map(
       symbol_sample_count_c => internal_clock_freq / symbol_per_s,
       bt_c => 0.5
@@ -63,7 +68,20 @@ begin
       reset_n_i => s_reset_n,
 
       in_i => s_mi_i_f,
-      out_o => s_mi_o_f
+      out_o => s_mi_r_f
+      );
+
+  box: nsl_dsp.gaussian.gaussian_box_ufixed
+    generic map(
+      symbol_sample_count_c => internal_clock_freq / symbol_per_s,
+      bt_c => 0.5
+      )
+    port map(
+      clock_i => s_clock,
+      reset_n_i => s_reset_n,
+
+      in_i => s_mi_i_f,
+      out_o => s_mi_b_f
       );
   
   driver: nsl_simulation.driver.simulation_driver
