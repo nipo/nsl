@@ -42,11 +42,16 @@ package fixed is
                   constant left, right : integer) return ufixed;
 
   function "+"(a, b: ufixed) return ufixed;
+  function mul(a, b: ufixed;
+               constant left, right : integer) return ufixed;
+  function mul(a, b: sfixed;
+               constant left, right : integer) return sfixed;
   function "-"(a, b: ufixed) return ufixed;
   function "-"(a: ufixed) return sfixed;
   function "not"(a: ufixed) return ufixed;
   function shr(a: ufixed; l : natural) return ufixed;
   function shra(a: ufixed; l : natural) return ufixed;
+  function shr(a: sfixed; l : natural) return sfixed;
 
   function "="(a, b: ufixed) return boolean;
   function "/="(a, b: ufixed) return boolean;
@@ -169,6 +174,23 @@ package body fixed is
     return ret;
   end function;
 
+  function shr(a: sfixed; l : natural) return sfixed
+  is
+    variable ret : sfixed(a'range);
+    constant w : integer := a'length - l;
+  begin
+    if a(a'left) = '1' then
+      ret := (others => '1');
+    else
+      ret := (others => '0');
+    end if;
+    if w > 0 then
+      ret(ret'right + w - 1 downto ret'right)
+        := a(a'left downto a'left - w + 1);
+    end if;
+    return ret;
+  end function;
+
   function "+"(a, b: ufixed) return ufixed
   is
     variable ret : ufixed(a'range);
@@ -182,6 +204,38 @@ package body fixed is
 
     ret := ufixed(unsigned(to_suv(a)) + unsigned(to_suv(b)));
     return ret;
+  end function;
+
+  function mul(a, b: ufixed;
+               constant left, right : integer) return ufixed
+  is
+    variable au : unsigned(a'length-1 downto 0);
+    variable bu : unsigned(b'length-1 downto 0);
+    variable ru : unsigned(a'length+b'length-1 downto 0);
+    variable rf : ufixed(a'right+b'right+ru'length-1 downto a'right+b'right);
+  begin
+    au := unsigned(to_suv(a));
+    bu := unsigned(to_suv(b));
+    ru := au * bu;
+    rf := ufixed(ru);
+
+    return resize(rf, left, right);
+  end function;
+
+  function mul(a, b: sfixed;
+               constant left, right : integer) return sfixed
+  is
+    variable as : signed(a'length-1 downto 0);
+    variable bs : signed(b'length-1 downto 0);
+    variable rs : signed(a'length+b'length-1 downto 0);
+    variable rf : sfixed(a'right+b'right+rs'length-1 downto a'right+b'right);
+  begin
+    as := signed(to_suv(a));
+    bs := signed(to_suv(b));
+    rs := as * bs;
+    rf := sfixed(rs);
+
+    return resize(rf, left, right);
   end function;
 
   function "-"(a, b: ufixed) return ufixed
