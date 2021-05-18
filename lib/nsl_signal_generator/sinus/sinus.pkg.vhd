@@ -9,7 +9,7 @@ package sinus is
 
   -- Pipelined sinus calculation.
   -- Delay from input to output is unspecidied but constant.
-  component sinus_stream is
+  component sinus_stream_table is
     generic (
       -- Scale to apply to result before outputting it
       scale_c : real := 1.0
@@ -25,6 +25,21 @@ package sinus is
       -- Sin in [-1 .. +1], multiplied by scale.  It is up to
       -- instantiation to ensure value_o can fit [-scale_c : scale_c]
       -- range. Value is saturated to sfixed range if it does not fit.
+      value_o : out sfixed
+      );
+  end component;    
+
+  component sinus_stream is
+    generic (
+      scale_c : real := 1.0;
+      -- "table". See above
+      implementation_c : string := "table"
+      );
+    port (
+      clock_i: in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      angle_i : in ufixed;
       value_o : out sfixed
       );
   end component;    
