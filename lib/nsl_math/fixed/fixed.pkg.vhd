@@ -40,6 +40,8 @@ package fixed is
 
   function resize(value : ufixed;
                   constant left, right : integer) return ufixed;
+  function resize_saturate(value : ufixed;
+                           constant left, right : integer) return ufixed;
 
   function "+"(a, b: ufixed) return ufixed;
   function mul(a, b: ufixed;
@@ -47,7 +49,7 @@ package fixed is
   function mul(a, b: sfixed;
                constant left, right : integer) return sfixed;
   function "-"(a, b: ufixed) return ufixed;
-  function "-"(a: ufixed) return sfixed;
+  function "-"(a: ufixed) return ufixed;
   function "not"(a: ufixed) return ufixed;
   function shr(a: ufixed; l : natural) return ufixed;
   function shra(a: ufixed; l : natural) return ufixed;
@@ -71,6 +73,8 @@ package fixed is
 
   function resize(value : sfixed;
                   constant left, right : integer) return sfixed;
+  function resize_saturate(value : sfixed;
+                           constant left, right : integer) return sfixed;
 
   function "abs"(a: sfixed) return ufixed;
   function "+"(a, b: sfixed) return sfixed;
@@ -118,7 +122,7 @@ package body fixed is
     elsif value >= 2.0 ** (left+1) - 2.0 ** right then
       return sat_max;
     else
-      ret := ufixed(to_unsigned(integer(value * 2.0 ** (-right)), left - right + 1));
+      ret := ufixed(to_unsigned(integer(0.5 + (value * 2.0 ** (-right))), left - right + 1));
       return ret;
     end if;
   end function;
@@ -140,6 +144,22 @@ package body fixed is
     ret := (others => '0');
 
     ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
+    ret(overlap_right-1 downto ret'right) := (others => value(overlap_right));
+
+    return ret;
+  end function;
+
+  function resize_saturate(value : ufixed;
+                           constant left, right : integer) return ufixed
+  is
+    variable ret : ufixed(left downto right);
+  begin
+    ret := resize(value, left, right);
+
+    if value'left > left
+      and value(value'left downto left+1) /= (value'left downto left+1 => '0') then
+        ret := (others => '1');
+    end if;
 
     return ret;
   end function;
@@ -234,7 +254,7 @@ package body fixed is
     bs := signed(to_suv(b));
     rs := as * bs;
     rf := sfixed(rs);
-
+    
     return resize(rf, left, right);
   end function;
 
@@ -276,7 +296,7 @@ package body fixed is
     if value <= -2.0**(left-1) then
       ret := (others => '0');
       ret(ret'left) := '0';
-    elsif value >= 2.0**(left-1) then
+    elsif value > 2.0**(left-1) then
       ret := (others => '1');
     else
       ret := sfixed(to_signed(integer(value * 2.0 ** (-right)), left - right + 1));
@@ -303,6 +323,34 @@ package body fixed is
 
     ret(overlap_left-1 downto overlap_right) := value(overlap_left-1 downto overlap_right);
     ret(ret'left downto overlap_left) := (others => value(value'left));
+    ret(overlap_right-1 downto ret'right) := (others => value(value'right));
+
+    return ret;
+  end function;
+
+  function resize_saturate(value : sfixed;
+                           constant left, right : integer) return sfixed
+  is
+    variable ret : sfixed(left downto right);
+    variable vu : unsigned(value'length-1 downto 0);
+    variable lost : unsigned(value'left-left-1 downto 0);
+    variable s : std_ulogic := value(value'left);
+    variable sc : character;
+  begin
+    ret := resize(value, left, right);
+    vu := unsigned(to_slv(value));
+    lost := vu(vu'left-1 downto vu'left-lost'length);
+    if s = '0' then
+      sc := '+';
+    else
+      sc := '-';
+    end if;
+
+    if lost'length > 0
+        and lost /= (lost'range => s) then
+      ret := (others => not s);
+      ret(ret'left) := s;
+    end if;
 
     return ret;
   end function;
@@ -349,27 +397,23 @@ package body fixed is
     return ufixed(ret);
   end function;
 
-  function "-"(a: ufixed) return sfixed
+  function "-"(a: ufixed) return ufixed
   is
-    variable ret : sfixed(a'left+1 downto a'right);
-    variable lsb : sfixed(a'left+1 downto a'right);
+    variable ret, lsb : ufixed(a'range);
   begin
     lsb := (others => '0');
     lsb(a'right) := '1';
-    ret := sfixed(resize(a, ret'left, ret'right));
-    ret := not ret + lsb;
+    ret := (not a) + lsb;
     return ret;
   end function;
 
   function "-"(a: sfixed) return sfixed
   is
-    variable ret : sfixed(a'left+1 downto a'right);
-    variable lsb : sfixed(a'left+1 downto a'right);
+    variable ret, lsb : sfixed(a'range);
   begin
     lsb := (others => '0');
     lsb(a'right) := '1';
-    ret := sfixed(resize(a, ret'left, ret'right));
-    ret := not ret + lsb;
+    ret := (not a) + lsb;
     return ret;
   end function;
 
