@@ -14,6 +14,10 @@ entity pca9555_driver is
     reset_n_i   : in std_ulogic;
     clock_i     : in std_ulogic;
 
+    request_o  : out std_ulogic;
+    grant_i    : in std_ulogic := '1';
+    busy_o     : out std_ulogic;
+
     irq_n_i     : in std_ulogic := '1';
 
     pin_i       : in std_ulogic_vector(15 downto 0);
@@ -31,6 +35,8 @@ architecture beh of pca9555_driver is
   type cmd_state_t is (
     CMD_RESET,
     CMD_IDLE,
+
+    CMD_REQUEST,
 
     -- Common
     CMD_PUT_DIV,
@@ -104,7 +110,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i) is
+  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, grant_i) is
   begin
     rin <= r;
 
@@ -121,16 +127,23 @@ begin
         rin.cmd_state <= CMD_IDLE;
 
       when CMD_IDLE =>
-        if r.out_dirty then
-          rin.io_out <= pin_i;
-          rin.out_dirty <= false;
-          rin.txn_is_read <= false;
-          rin.cmd_state <= CMD_PUT_DIV;
+        if r.out_dirty or r.in_dirty then
+          rin.cmd_state <= CMD_REQUEST;
         end if;
 
-        if r.in_dirty then
-          rin.txn_is_read <= true;
-          rin.cmd_state <= CMD_PUT_DIV;
+      when CMD_REQUEST =>
+        if grant_i = '1' then
+          if r.out_dirty then
+            rin.io_out <= pin_i;
+            rin.out_dirty <= false;
+            rin.txn_is_read <= false;
+            rin.cmd_state <= CMD_PUT_DIV;
+          end if;
+
+          if r.in_dirty then
+            rin.txn_is_read <= true;
+            rin.cmd_state <= CMD_PUT_DIV;
+          end if;
         end if;
 
       when CMD_PUT_DIV =>
@@ -267,7 +280,21 @@ begin
     pin_o <= r.io_in;
 
     case r.cmd_state is
-      when CMD_RESET | CMD_IDLE | CMD_WAIT_DONE =>
+      when CMD_RESET | CMD_IDLE =>
+        request_o <= '0';
+        busy_o <= '0';
+
+      when CMD_REQUEST =>
+        request_o <= '1';
+        busy_o <= '0';
+
+      when others =>
+        request_o <= '0';
+        busy_o <= '1';
+    end case;
+
+    case r.cmd_state is
+      when CMD_RESET | CMD_IDLE | CMD_WAIT_DONE | CMD_REQUEST =>
         cmd_o <= (valid => '0', last => '-', data => (others => '0'));
 
       when CMD_PUT_DIV =>

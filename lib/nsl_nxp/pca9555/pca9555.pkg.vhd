@@ -19,6 +19,19 @@ package pca9555 is
       reset_n_i   : in std_ulogic;
       clock_i     : in std_ulogic;
 
+      -- Optional contention management, if unused, leave open.
+      -- ((request and grant) or busy) tells whether reservation
+      -- should be exclusive.
+      --
+      -- Access to the bus is pending.
+      -- Clears the exact cycle busy_o rises.
+      request_o  : out std_ulogic;
+      -- Access to the bus is possible
+      grant_i    : in std_ulogic := '1';
+      -- Accessing the bus at the moment.
+      -- Can only rise if grant_i is high
+      busy_o     : out std_ulogic;
+      
       irq_n_i     : in std_ulogic := '1';
 
       pin_i       : in std_ulogic_vector(15 downto 0);
