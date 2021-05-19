@@ -58,7 +58,7 @@ package body pcal6524 is
   begin
     reg(1) := reg_addr;
 
-    return nsl_bnoc.routed_transactor.i2c_write(saddr, reg & nsl_data.endian.to_le(unsigned(value)));
+    return nsl_bnoc.framed_transactor.i2c_write(saddr, reg & nsl_data.endian.to_le(unsigned(value)));
   end function;
 
   function pcal6524_init(saddr: unsigned;
