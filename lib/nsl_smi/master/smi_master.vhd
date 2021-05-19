@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_smi, nsl_io;
+library nsl_smi, nsl_io, nsl_math;
 use nsl_smi.master.all;
   
 entity smi_master is
@@ -45,7 +45,7 @@ end entity;
 
 architecture beh of smi_master is
 
-  constant div_init_c : integer := (clock_freq_c + mdc_freq_c) / mdc_freq_c / 2 - 1;
+  constant div_init_c : integer := nsl_math.arith.max((clock_freq_c + mdc_freq_c) / mdc_freq_c / 2 - 1, 1);
   
   type state_t is (
     ST_RESET,
