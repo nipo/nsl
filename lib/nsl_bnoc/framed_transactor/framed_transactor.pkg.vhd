@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data;
 use nsl_bnoc.framed.all;
+use nsl_bnoc.routed.all;
 use nsl_data.bytestream.all;
 
 package framed_transactor is
