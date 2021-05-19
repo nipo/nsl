@@ -17,7 +17,7 @@ begin
 
   st: process
     variable angle_r, turns_r : real;
-    variable turns_f : ufixed(-1 downto -8);
+    variable turns_f : ufixed(-1 downto -12);
     variable x_f, y_f : sfixed(0 downto -12);
     variable x_r, y_r : real;
   begin
@@ -27,7 +27,7 @@ begin
       turns_r := angle_r / 360.0;
       turns_f := to_ufixed(turns_r, turns_f'left, turns_f'right);
 
-      sincos(turns_f, x_f, y_f, x_f'length*2);
+      sincos(turns_f, x_f, y_f);
 
       x_r := to_real(x_f);
       y_r := to_real(y_f);

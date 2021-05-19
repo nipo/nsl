@@ -27,7 +27,6 @@ package cordic is
   -- results in simulation.
   procedure sincos(angle_i : in ufixed;
                    x_o, y_o : out sfixed;
-                   step_count : integer;
                    scale : real := 1.0);
   
 end package cordic;
@@ -111,28 +110,30 @@ package body cordic is
 
   procedure sincos(angle_i : in ufixed;
                    x_o, y_o : out sfixed;
-                   step_count : integer;
                    scale : real := 1.0)
   is
+    constant step_count : integer := 2 * nsl_math.arith.max(x_o'length, y_o'length);
     variable angle : ufixed(-1 downto angle_i'right)
       := resize(angle_i, -1, angle_i'right);
     constant init_scale : real := sincos_scale(step_count);
     -- Only handle saturation once at the end, use one more bit for
     -- intermediate calculation
-    variable x : sfixed(x_o'left+1 downto x_o'right-step_count/2);
-    variable y : sfixed(y_o'left+1 downto y_o'right-step_count/2);
+    variable x : sfixed(x_o'left+1 downto -step_count/2);
+    variable y : sfixed(y_o'left+1 downto -step_count/2);
   begin
     -- Rather than multiplying by scaling factor, just insert it ahead of time.
     x := to_sfixed(init_scale * scale, x'left, x'right);
     y := to_sfixed(0.0, y'left, y'right);
 
+    angle := -angle;
+    
     for i in -2 to step_count-1
     loop
       sincos_step(angle, x, y, i);
     end loop;
 
     x_o := resize_saturate(x, x_o'left, x_o'right);
-    y_o := resize_saturate(-y, y_o'left, y_o'right);
+    y_o := resize_saturate(y, y_o'left, y_o'right);
   end procedure;
 
 end package body cordic;
