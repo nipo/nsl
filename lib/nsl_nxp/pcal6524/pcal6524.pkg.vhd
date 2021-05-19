@@ -35,6 +35,7 @@ package pcal6524 is
   record
     drive_strength: integer range 0 to 1;
     output : boolean;
+    value : std_ulogic;
     inverted : boolean;
     irq : boolean;
     pull_enable: boolean;
@@ -64,11 +65,12 @@ package body pcal6524 is
   function pcal6524_init(saddr: unsigned;
                          config: pcal6524_pin_config_vector) return byte_string
   is
-    variable inverted, hiz, pull_en, pull_val, irq_en : std_ulogic_vector(23 downto 0);
+    variable value, inverted, hiz, pull_en, pull_val, irq_en : std_ulogic_vector(23 downto 0);
     variable strength : std_ulogic_vector(47 downto 0);
   begin
     for i in 0 to 23
     loop
+      value(i) := config(i).value;
       hiz(i) := to_logic(not config(i).output);
       inverted(i) := to_logic(config(i).inverted);
       pull_en(i) := to_logic(config(i).pull_enable);
@@ -81,6 +83,7 @@ package body pcal6524 is
       & pcal6524_write_multiple(saddr, x"4c", pull_en)
       & pcal6524_write_multiple(saddr, x"40", strength)
       & pcal6524_write_multiple(saddr, x"08", inverted)
+      & pcal6524_write_multiple(saddr, x"04", value)
       & pcal6524_write_multiple(saddr, x"0c", hiz)
       & pcal6524_write_multiple(saddr, x"54", irq_en)
       ;    
