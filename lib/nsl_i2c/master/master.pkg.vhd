@@ -28,6 +28,7 @@ package master is
       cmd_i : in i2c_bus_cmd_t;
 
       abort_i : in std_ulogic;
+      failed_o : out std_ulogic;
       owned_o : out std_ulogic
       );
   end component;

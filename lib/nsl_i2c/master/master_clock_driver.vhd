@@ -20,6 +20,7 @@ entity master_clock_driver is
     cmd_i : in i2c_bus_cmd_t;
 
     abort_i : in std_ulogic;
+    failed_o : out std_ulogic;
     owned_o : out std_ulogic
     );
 end entity;
@@ -29,6 +30,7 @@ architecture beh of master_clock_driver is
   type state_t is (
     ST_RESET,
 
+    ST_FAILED,
     ST_READY,
     ST_EXEC,
 
@@ -65,6 +67,7 @@ architecture beh of master_clock_driver is
     );
   
   signal idle_timeout_clock_count_i : unsigned(half_cycle_clock_count_i'length + 3 downto 0);
+  signal stuck_timeout_clock_count_i : unsigned(half_cycle_clock_count_i'length + 2 downto 0);
   
   type regs_t is record
     state     : state_t;
@@ -73,6 +76,7 @@ architecture beh of master_clock_driver is
     bit_count : natural range 0 to 8;
     idle_timeout : unsigned(idle_timeout_clock_count_i'range);
     half_cycle : unsigned(half_cycle_clock_count_i'range);
+    stuck_timeout : unsigned(stuck_timeout_clock_count_i'range);
   end record;
 
   signal r, rin : regs_t;
@@ -80,6 +84,7 @@ architecture beh of master_clock_driver is
 begin
 
   idle_timeout_clock_count_i <= half_cycle_clock_count_i & "0000";
+  stuck_timeout_clock_count_i <= half_cycle_clock_count_i & "000";
   
   ck : process (clock_i, reset_n_i)
   begin
@@ -124,6 +129,10 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_READY;
+
+      when ST_FAILED =>
+        rin.state <= ST_READY;
+        rin.bus_state <= BUS_BUSY;
 
       when ST_READY =>
         if valid_i = '1' then
@@ -172,6 +181,7 @@ begin
       when ST_START_PRE =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_START_SDA_FALL;
         end if;
 
@@ -179,11 +189,16 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.sda = '0' then
           rin.state <= ST_START_SDA_LOW;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
         
       when ST_START_SDA_LOW =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_START_SCL_FALL;
         end if;
 
@@ -191,6 +206,10 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.scl = '0' then
           rin.state <= ST_START_SCL_LOW;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
         
       when ST_START_SCL_LOW =>
@@ -204,6 +223,7 @@ begin
         rin.half_cycle <= r.half_cycle - 1;
         rin.bit_count <= 8;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_BIT_SCL_RISE;
         end if;
 
@@ -211,11 +231,16 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.scl = '1' then
           rin.state <= ST_BIT_SCL_HIGH;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_BIT_SCL_HIGH =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_BIT_SCL_FALL;
         end if;
 
@@ -223,6 +248,10 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.scl = '0' then
           rin.state <= ST_BIT_SCL_LOW;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_BIT_SCL_LOW =>
@@ -240,6 +269,7 @@ begin
       when ST_STOP_PRE =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_STOP_SCL_RISE;
         end if;
 
@@ -247,11 +277,16 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.scl = '1' then
           rin.state <= ST_STOP_SCL_HIGH;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_STOP_SCL_HIGH =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_STOP_SDA_RISE;
         end if;
 
@@ -259,6 +294,10 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.sda = '1' then
           rin.state <= ST_STOP_SDA_HIGH;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_STOP_SDA_HIGH =>
@@ -272,6 +311,7 @@ begin
       when ST_RESTART_PRE =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_RESTART_SDA_RISE;
         end if;
 
@@ -279,11 +319,16 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.sda = '1' then
           rin.state <= ST_RESTART_SDA_HIGH;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_RESTART_SDA_HIGH =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_RESTART_SCL_RISE;
         end if;
 
@@ -291,11 +336,16 @@ begin
         rin.half_cycle <= half_cycle_clock_count_i;
         if i2c_i.scl = '1' then
           rin.state <= ST_RESTART_SCL_HIGH;
+        elsif r.stuck_timeout /= 0 then
+          rin.stuck_timeout <= r.stuck_timeout - 1;
+        else
+          rin.state <= ST_FAILED;
         end if;
 
       when ST_RESTART_SCL_HIGH =>
         rin.half_cycle <= r.half_cycle - 1;
         if r.half_cycle = 0 then
+          rin.stuck_timeout <= stuck_timeout_clock_count_i;
           rin.state <= ST_START_SDA_FALL;
         end if;
     end case;
@@ -310,6 +360,7 @@ begin
   moore : process (r)
   begin
     ready_o <= '0';
+    failed_o <= '0';
     i2c_o.scl.drain_n <= '1';
     i2c_o.sda.drain_n <= '1';
 
@@ -328,6 +379,9 @@ begin
         
       when ST_READY =>
         ready_o <= '1';
+        
+      when ST_FAILED =>
+        failed_o <= '1';
         
       when ST_EXEC =>
         null;

@@ -48,7 +48,8 @@ architecture rtl of transactor_framed_controller is
     ST_IO_FLUSH_GET,
     ST_IO_FLUSH_PUT,
 
-    ST_RSP_PUT
+    ST_RSP_PUT,
+    ST_RSP_PUT_FAILED
     );  
   
   type regs_t is record
@@ -65,7 +66,7 @@ architecture rtl of transactor_framed_controller is
   signal i2c_filt_i : nsl_i2c.i2c.i2c_i;
   signal i2c_clocker_o, i2c_shifter_o : nsl_i2c.i2c.i2c_o;
   signal start_i, stop_i : std_ulogic;
-  signal clocker_owned_i, clocker_abort_o, clocker_ready_i, clocker_valid_o : std_ulogic;
+  signal clocker_owned_i, clocker_abort_o, clocker_failed_i, clocker_ready_i, clocker_valid_o : std_ulogic;
   signal clocker_cmd_o : i2c_bus_cmd_t;
   signal shift_enable_o, shift_send_data_o, shift_arb_ok_i : std_ulogic;
   signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
@@ -101,6 +102,7 @@ begin
       cmd_i => clocker_cmd_o,
 
       abort_i => clocker_abort_o,
+      failed_o => clocker_failed_i,
       owned_o => clocker_owned_i
       );
   
@@ -188,13 +190,15 @@ begin
             if clocker_owned_i = '1' then
               rin.state <= ST_STOP_RUN;
             else
-              rin.state <= ST_RSP_PUT;
+              rin.state <= ST_RSP_PUT_FAILED;
             end if;
           end if;
         end if;
 
       when ST_START_RUN | ST_RESTART_RUN | ST_STOP_RUN =>
-        if clocker_ready_i = '1' then
+        if clocker_failed_i = '1' then
+          rin.state <= ST_RSP_PUT_FAILED;
+        elsif clocker_ready_i = '1' then
           rin.state <= ST_RSP_PUT;
         end if;
       
@@ -273,7 +277,7 @@ begin
           end if;
         end if;
         
-      when ST_RSP_PUT =>
+      when ST_RSP_PUT | ST_RSP_PUT_FAILED =>
         if rsp_i.ready = '1' then
           rin.state <= ST_CMD_GET;
         end if;
@@ -347,6 +351,11 @@ begin
       when ST_RSP_PUT =>
         rsp_o.valid <= '1';
         rsp_o.data <= (others => '0');
+        rsp_o.last <= r.last;
+
+      when ST_RSP_PUT_FAILED =>
+        rsp_o.valid <= '1';
+        rsp_o.data <= (others => '1');
         rsp_o.last <= r.last;
       
     end case;
