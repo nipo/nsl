@@ -56,7 +56,7 @@ package body framed_transactor is
   is
     variable header : byte_string(1 to 1);
   begin
-    header(1) := to_byte(command'length);
+    header(1) := to_byte(command'length-1);
 
     return header & command;
   end function;
