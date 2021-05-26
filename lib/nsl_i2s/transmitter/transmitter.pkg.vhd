@@ -47,8 +47,8 @@ package transmitter is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      sck_o : out std_ulogic;
-      ws_o  : out std_ulogic;
+      sck_i : in std_ulogic;
+      ws_i  : in std_ulogic;
       sd_o  : out std_ulogic;
 
       ready_o : out std_ulogic;
