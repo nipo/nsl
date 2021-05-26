@@ -19,19 +19,11 @@ package pca9555 is
       reset_n_i   : in std_ulogic;
       clock_i     : in std_ulogic;
 
-      -- Optional contention management, if unused, leave open.
-      -- ((request and grant) or busy) tells whether reservation
-      -- should be exclusive.
-      --
-      -- Access to the bus is pending.
-      -- Clears the exact cycle busy_o rises.
-      request_o  : out std_ulogic;
-      -- Access to the bus is possible
-      grant_i    : in std_ulogic := '1';
-      -- Accessing the bus at the moment.
-      -- Can only rise if grant_i is high
-      busy_o     : out std_ulogic;
-      
+      -- Forces refresh
+      force_i : in std_ulogic := '0';
+
+      busy_o  : out std_ulogic;
+
       irq_n_i     : in std_ulogic := '1';
 
       pin_i       : in std_ulogic_vector(15 downto 0);
@@ -47,9 +39,14 @@ package pca9555 is
   type pca9555_pin_config is
   record
     output : boolean;
-    inverted : boolean;
+    in_inverted : boolean;
     value : std_ulogic;
   end record;
+
+  constant pca9555_out_0 : pca9555_pin_config := (output => true, in_inverted => false, value => '0');
+  constant pca9555_out_1 : pca9555_pin_config := (output => true, in_inverted => false, value => '1');
+  constant pca9555_in : pca9555_pin_config := (output => false, in_inverted => false, value => '0');
+  constant pca9555_in_inv : pca9555_pin_config := (output => false, in_inverted => true, value => '0');
 
   type pca9555_pin_config_vector is array(integer range 0 to 15) of pca9555_pin_config;
   
@@ -74,16 +71,16 @@ package body pca9555 is
   function pca9555_init(saddr: unsigned;
                          config: pca9555_pin_config_vector) return byte_string
   is
-    variable value, inverted, hiz : std_ulogic_vector(15 downto 0);
+    variable value, in_inverted, hiz : std_ulogic_vector(15 downto 0);
   begin
     for i in 0 to 15
     loop
       hiz(i) := to_logic(not config(i).output);
       value(i) := config(i).value;
-      inverted(i) := to_logic(config(i).inverted);
+      in_inverted(i) := to_logic(config(i).in_inverted);
     end loop;
 
-    return pca9555_write_multiple(saddr, x"04", inverted)
+    return pca9555_write_multiple(saddr, x"04", in_inverted)
       & pca9555_write_multiple(saddr, x"02", value)
       & pca9555_write_multiple(saddr, x"06", hiz)
       ;    

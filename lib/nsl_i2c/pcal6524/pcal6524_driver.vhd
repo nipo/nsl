@@ -14,9 +14,9 @@ entity pcal6524_driver is
     reset_n_i   : in std_ulogic;
     clock_i     : in std_ulogic;
 
-    request_o  : out std_ulogic;
-    grant_i    : in std_ulogic := '1';
-    busy_o     : out std_ulogic;
+    force_i    : in std_ulogic := '0';
+
+    busy_o  : out std_ulogic;
 
     irq_n_i     : in std_ulogic := '1';
 
@@ -35,8 +35,6 @@ architecture beh of pcal6524_driver is
   type cmd_state_t is (
     CMD_RESET,
     CMD_IDLE,
-
-    CMD_REQUEST,
 
     -- Common
     CMD_PUT_DIV,
@@ -112,15 +110,15 @@ begin
     end if;
   end process;
 
-  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, grant_i) is
+  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, force_i) is
   begin
     rin <= r;
 
-    if in_supported_c and irq_n_i = '0' then
+    if in_supported_c and (irq_n_i = '0' or force_i = '1') then
       rin.in_dirty <= true;
     end if;
 
-    if not r.out_dirty and pin_i /= r.io_out then
+    if pin_i /= r.io_out or force_i = '1' then
       rin.out_dirty <= true;
     end if;
     
@@ -129,23 +127,16 @@ begin
         rin.cmd_state <= CMD_IDLE;
 
       when CMD_IDLE =>
-        if r.out_dirty or r.in_dirty then
-          rin.cmd_state <= CMD_REQUEST;
+        if r.out_dirty then
+          rin.io_out <= pin_i;
+          rin.out_dirty <= false;
+          rin.txn_is_read <= false;
+          rin.cmd_state <= CMD_PUT_DIV;
         end if;
 
-      when CMD_REQUEST =>
-        if grant_i = '1' then
-          if r.out_dirty then
-            rin.io_out <= pin_i;
-            rin.out_dirty <= false;
-            rin.txn_is_read <= false;
-            rin.cmd_state <= CMD_PUT_DIV;
-          end if;
-
-          if r.in_dirty then
-            rin.txn_is_read <= true;
-            rin.cmd_state <= CMD_PUT_DIV;
-          end if;
+        if r.in_dirty then
+          rin.txn_is_read <= true;
+          rin.cmd_state <= CMD_PUT_DIV;
         end if;
 
       when CMD_PUT_DIV =>
@@ -293,21 +284,7 @@ begin
     pin_o <= r.io_in;
 
     case r.cmd_state is
-      when CMD_RESET | CMD_IDLE =>
-        request_o <= '0';
-        busy_o <= '0';
-
-      when CMD_REQUEST =>
-        request_o <= '1';
-        busy_o <= '0';
-
-      when others =>
-        request_o <= '0';
-        busy_o <= '1';
-    end case;
-
-    case r.cmd_state is
-      when CMD_RESET | CMD_IDLE | CMD_WAIT_DONE | CMD_REQUEST =>
+      when CMD_RESET | CMD_IDLE | CMD_WAIT_DONE =>
         cmd_o <= (valid => '0', last => '-', data => (others => '0'));
 
       when CMD_PUT_DIV =>
@@ -363,9 +340,15 @@ begin
     case r.rsp_state is
       when RSP_RESET | RSP_IDLE =>
         rsp_o.ready <= '0';
+        if r.out_dirty or r.in_dirty then
+          busy_o <= '1';
+        else
+          busy_o <= '0';
+        end if;
 
       when others =>
         rsp_o.ready <= '1';
+        busy_o <= '1';
     end case;
   end process;
 
