@@ -44,6 +44,46 @@ package framed is
       );
   end component;
 
+  component framed_granted_gate is
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      request_o   : out std_ulogic;
+      grant_i     : in  std_ulogic;
+      busy_o      : out std_ulogic;
+
+      in_cmd_i   : in  framed_req;
+      in_cmd_o   : out framed_ack;
+      in_rsp_o   : out framed_req;
+      in_rsp_i   : in  framed_ack;
+
+      out_cmd_o  : out framed_req;
+      out_cmd_i  : in  framed_ack;
+      out_rsp_i  : in  framed_req;
+      out_rsp_o  : out framed_ack
+      );
+  end component;
+
+  component framed_gate_arbitrer is
+    generic(
+      gate_count_c : integer
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      request_i   : in  std_ulogic_vector(0 to gate_count_c-1);
+      grant_o     : out std_ulogic_vector(0 to gate_count_c-1);
+      busy_i      : in  std_ulogic_vector(0 to gate_count_c-1);
+
+      selected_o  : out unsigned;
+      request_o   : out std_ulogic;
+      grant_i     : in  std_ulogic;
+      busy_o      : out std_ulogic
+      );
+  end component;
+
   component framed_fifo_slice is
     port(
       reset_n_i  : in  std_ulogic;
