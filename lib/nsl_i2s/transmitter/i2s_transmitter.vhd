@@ -23,7 +23,7 @@ architecture beh of i2s_transmitter is
 
   type regs_t is
   record
-    sck, ws, sd : std_ulogic;
+    sck, ws, sd, consume : std_ulogic;
     shreg : unsigned(data_i'range);
   end record;
 
@@ -39,6 +39,7 @@ begin
 
     if reset_n_i = '0' then
       r.shreg <= (others => '0');
+      r.consume <= '0';
     end if;
   end process;
 
@@ -47,33 +48,33 @@ begin
     rin <= r;
 
     rin.sck <= sck_i;
+    rin.consume <= '0';
 
     if r.sck = '1' and sck_i = '0' then
       rin.sd <= r.shreg(r.shreg'left);
     end if;
 
-    if r.sck = '0' and sck_i = '1' then
+    if r.consume = '1' then
+      rin.shreg <= data_i;
       rin.ws <= ws_i;
-    
+    end if;
+
+    if r.sck = '0' and sck_i = '1' then
+      -- Cannot happen with r.consume already '1' because of
+      -- oversampling.
       if r.ws /= ws_i then
-        rin.shreg <= data_i;
-      else
-        rin.shreg <= r.shreg(r.shreg'left-1 downto r.shreg'right) & "0";
+        rin.consume <= '1';
       end if;
+
+      -- Dont care about broken result on rising edge of ws edge.
+      -- We'll overwrite shreg on next cycle. It will have no time to
+      -- get on output port.
+      rin.shreg <= r.shreg(r.shreg'left-1 downto r.shreg'right) & "0";
     end if;
   end process;
 
-  mealy: process(r, ws_i, sck_i) is
-  begin
-    ready_o <= '0';
-    channel_o <= '-';
-
-    if r.ws /= ws_i and r.sck = '0' and sck_i = '1' then
-      ready_o <= '1';
-      channel_o <= not r.ws;
-    end if;
-  end process;
-
+  channel_o <= not r.ws;
+  ready_o <= r.consume;
   sd_o <= r.sd;
   
 end architecture;
