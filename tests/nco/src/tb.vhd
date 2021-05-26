@@ -23,7 +23,8 @@ begin
 
   nco: nsl_signal_generator.nco.nco_sinus
     generic map(
-      trim_bits_c => 10
+      trim_bits_c => 10,
+      implementation_c => "table"
       )
     port map(
       clock_i => s_clock,
