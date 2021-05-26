@@ -97,6 +97,20 @@ package framed is
       );
   end component;
 
+  component framed_gate is
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      enable_i   : in std_ulogic;
+
+      in_i   : in framed_req;
+      in_o   : out framed_ack;
+      out_o   : out framed_req;
+      out_i   : in framed_ack
+      );
+  end component;
+
   -- This component creates a framed context from a fifo + flush
   -- operation.
   --
