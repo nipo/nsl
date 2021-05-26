@@ -25,6 +25,7 @@ package body pll_config_series67 is
       assert false
         report "DCM unsupported on this part"
         severity failure;
+      return constraints'(0, 0, 0, 0, "DCM");
     end if;
   end function;
 

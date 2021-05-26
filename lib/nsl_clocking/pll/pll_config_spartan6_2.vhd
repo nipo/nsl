@@ -23,6 +23,7 @@ package body pll_config_series67 is
       assert false
         report "MMCM unsupported on this part"
         severity failure;
+      return constraints'(0, 0, 0, 0, "MMCM");
     else
       return constraints'(500000, 333000000, 32, 32, "DCM");
     end if;
