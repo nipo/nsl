@@ -10,7 +10,8 @@ package nco is
   component nco_sinus is
     generic (
       scale_c : real := 1.0;
-      trim_bits_c : natural := 0
+      trim_bits_c : natural := 0;
+      implementation_c : string := "table"
       );
     port (
       clock_i: in std_ulogic;

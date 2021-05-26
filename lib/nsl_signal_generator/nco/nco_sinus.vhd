@@ -8,7 +8,8 @@ use nsl_math.fixed.all;
 entity nco_sinus is
   generic (
     scale_c : real := 1.0;
-    trim_bits_c : natural := 0
+    trim_bits_c : natural := 0;
+    implementation_c : string := "table"
     );
   port (
     clock_i: in std_ulogic;
@@ -55,7 +56,8 @@ begin
 
   sinus: nsl_signal_generator.sinus.sinus_stream
     generic map(
-      scale_c => scale_c
+      scale_c => scale_c,
+      implementation_c => implementation_c
       )
     port map(
       clock_i => clock_i,
