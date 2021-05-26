@@ -15,18 +15,32 @@ package cordic is
   -- algorithm.
   function sincos_angle_delta(step : integer) return real;
 
+  -- Pre-step to collapse angle in [-pi/2 .. pi/2]
+  -- Involves no scaling
+  procedure sincos_half_collapse(a_o: out ufixed; x_o, y_o : out sfixed;
+                                 a_i: in ufixed; x_i, y_i : in sfixed);
+
+  -- Pre-step to collapse angle in [-pi/4 .. pi/4]
+  -- Involves no scaling
+  procedure sincos_fourth_collapse(a_o: out ufixed; x_o, y_o : out sfixed;
+                                   a_i: in ufixed; x_i, y_i : in sfixed);
+
+  -- General step of cordic, where angle error is corrected by steps.
+  procedure sincos_astep(step : in integer; rot : in ufixed;
+                         a_o: out ufixed; x_o, y_o : out sfixed;
+                         a_i: in ufixed; x_i, y_i : in sfixed);
+
   -- One step of cordic algorithm for sincos, at a given step.
   -- Angle is in full turns (radians / (2 * pi)).
   -- angle'left should be -1.
-  procedure sincos_step(angle: inout ufixed;
-                        x, y : inout sfixed;
-                        step : in integer);
+  procedure sincos_step(step : in integer;
+                        a_o: out ufixed; x_o, y_o : out sfixed;
+                        a_i: in ufixed; x_i, y_i : in sfixed);
 
   -- Probably not useful as-is for synthesis. It is more a reference
   -- algorithm for usage of the above functions, and allows to check
   -- results in simulation.
-  procedure sincos(angle_i : in ufixed;
-                   x_o, y_o : out sfixed;
+  procedure sincos(a_i : in ufixed; x_o, y_o : out sfixed;
                    scale : real := 1.0);
   
 end package cordic;
@@ -51,87 +65,117 @@ package body cordic is
     return arctan(2.0 ** real(-step)) / MATH_2_PI;
   end function;
 
-  procedure sincos_astep(angle: inout ufixed;
-                         x, y : inout sfixed;
-                         step : in integer)
+  procedure sincos_half_collapse(a_o: out ufixed;
+                                 x_o, y_o : out sfixed;
+                                 a_i: in ufixed;
+                                 x_i, y_i : in sfixed)
   is
-    constant rot : ufixed(angle'range)
-      := to_ufixed(sincos_angle_delta(step), angle'left, angle'right);
-    constant dy : sfixed(x'range) := shr(y, step);
-    constant dx : sfixed(y'range) := shr(x, step);
+    constant half: ufixed(a_i'range) := to_ufixed(0.5, a_i'left, a_i'right);
+    variable am : std_ulogic_vector(1 downto 0) := to_suv(a_i(-1 downto -2));
   begin
-    if angle(angle'left) = '1' then
-      angle := angle + rot;
-      x := x - dy;
-      y := y + dx;
-    else
-      angle := angle - rot;
-      x := x + dy;
-      y := y - dx;
-    end if;
-  end procedure;
-
-  procedure sincos_step(angle: inout ufixed;
-                        x, y : inout sfixed;
-                        step : in integer)
-  is
-    constant x_i: sfixed(x'range) := x;
-    constant y_i: sfixed(y'range) := y;
-  begin
-    case step is
-      when -2 =>
-        -- Pre-step to collapse angle in [-pi/2 .. pi/2]
-        -- Involves no scaling
-        if angle(-1) /= angle(-2) then
-          angle := angle + to_ufixed(0.5, angle'left, angle'right);
-          x := - x_i;
-          y := - y_i;
-        end if;
-
-      when -1 =>
-        -- Pre-step to collapse angle in [-pi/4 .. pi/4]
-        -- Involves no scaling
-        if angle(-1) /= angle(-2) or angle(-2) /= angle(-3) then
-          if angle(-1) = '1' then
-            angle := angle + to_ufixed(0.25, angle'left, angle'right);
-            x := - y_i;
-            y := x_i;
-          else
-            angle := angle - to_ufixed(0.25, angle'left, angle'right);
-            x := y_i;
-            y := - x_i;
-          end if;
-        end if;
-
+    case am is
+      when "01" | "10" =>
+        a_o := a_i + half;
+        x_o := - x_i;
+        y_o := - y_i;
       when others =>
-        sincos_astep(angle, x, y, step);
+        a_o := a_i;
+        x_o := x_i;
+        y_o := y_i;
     end case;
   end procedure;
 
-  procedure sincos(angle_i : in ufixed;
+  procedure sincos_fourth_collapse(a_o: out ufixed;
+                                   x_o, y_o : out sfixed;
+                                   a_i: in ufixed;
+                                   x_i, y_i : in sfixed)
+  is
+    constant fourth: ufixed(a_i'range) := to_ufixed(0.25, a_i'left, a_i'right);
+    variable am : std_ulogic_vector(2 downto 0) := to_suv(a_i(-1 downto -3));
+  begin
+    case am  is
+      when "001" | "010" =>
+        a_o := a_i - fourth;
+        x_o := y_i;
+        y_o := - x_i;
+      when "110" | "101" =>
+        a_o := a_i + fourth;
+        x_o := - y_i;
+        y_o := x_i;
+      when others =>
+        a_o := a_i;
+        x_o := x_i;
+        y_o := y_i;
+    end case;
+  end procedure;
+
+  procedure sincos_astep(step : in integer;
+                         rot : in ufixed;
+                         a_o: out ufixed;
+                         x_o, y_o : out sfixed;
+                         a_i: in ufixed;
+                         x_i, y_i : in sfixed)
+  is
+    constant dy : sfixed(x_i'range) := shr(y_i, step);
+    constant dx : sfixed(y_i'range) := shr(x_i, step);
+  begin
+    if a_i(a_i'left) = '1' then
+      a_o := a_i + rot;
+      x_o := x_i - dy;
+      y_o := y_i + dx;
+    else
+      a_o := a_i - rot;
+      x_o := x_i + dy;
+      y_o := y_i - dx;
+    end if;
+  end procedure;
+
+  -- Generalization of sincos_steps with internal constant lookup
+  procedure sincos_step(step : in integer;
+                        a_o: out ufixed; x_o, y_o : out sfixed;
+                        a_i: in ufixed; x_i, y_i : in sfixed)
+  is
+  begin
+    case step is
+      when -2 =>
+        sincos_half_collapse(a_o, x_o, y_o, a_i, x_i, y_i);
+
+      when -1 =>
+        sincos_fourth_collapse(a_o, x_o, y_o, a_i, x_i, y_i);
+
+      when others =>
+        sincos_astep(step,
+                     to_ufixed(sincos_angle_delta(step), a_i'left, a_i'right),
+                     a_o, x_o, y_o, a_i, x_i, y_i);
+    end case;
+  end procedure;
+
+  procedure sincos(a_i : in ufixed;
                    x_o, y_o : out sfixed;
                    scale : real := 1.0)
   is
-    constant step_count : integer := 2 * nsl_math.arith.max(x_o'length, y_o'length);
-    variable angle : ufixed(-1 downto angle_i'right)
-      := resize(angle_i, -1, angle_i'right);
+    constant step_count : integer := 2 * nsl_math.arith.max(-x_o'right, -y_o'right);
     constant init_scale : real := sincos_scale(step_count);
+
     -- Only handle saturation once at the end, use one more bit for
     -- intermediate calculation
-    variable x : sfixed(x_o'left+1 downto -step_count/2);
-    variable y : sfixed(y_o'left+1 downto -step_count/2);
+    variable a, a_n : ufixed(-1 downto a_i'right);
+    variable x, x_n : sfixed(x_o'left+1 downto -step_count/2);
+    variable y, y_n : sfixed(y_o'left+1 downto -step_count/2);
   begin
+    a := -resize(a_i, a'left, a'right);
     -- Rather than multiplying by scaling factor, just insert it ahead of time.
     x := to_sfixed(init_scale * scale, x'left, x'right);
     y := to_sfixed(0.0, y'left, y'right);
-
-    angle := -angle;
     
     for i in -2 to step_count-1
     loop
-      sincos_step(angle, x, y, i);
+      sincos_step(i, a_n, x_n, y_n, a, x, y);
+      a := a_n;
+      x := x_n;
+      y := y_n;
     end loop;
-
+    
     x_o := resize_saturate(x, x_o'left, x_o'right);
     y_o := resize_saturate(y, y_o'left, y_o'right);
   end procedure;
