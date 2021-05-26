@@ -98,16 +98,26 @@ package body fixed is
 
   function to_suv(value : ufixed) return std_ulogic_vector
   is
-    constant v : ufixed(value'length-1 downto 0) := value;
+    alias v : ufixed(value'length-1 downto 0) is value;
+    variable ret : std_ulogic_vector(value'length-1 downto 0);
   begin
-    return std_ulogic_vector(v);
+    if value'length <= 0 then
+      return "";
+    end if;
+    ret := std_ulogic_vector(v);
+    return ret;
   end function;
 
   function to_slv(value : ufixed) return std_logic_vector
   is
-    constant v : ufixed(value'length-1 downto 0) := value;
+    alias v : ufixed(value'length-1 downto 0) is value;
+    variable ret : std_logic_vector(value'length-1 downto 0);
   begin
-    return std_logic_vector(v);
+    if value'length <= 0 then
+      return "";
+    end if;
+    ret := std_logic_vector(v);
+    return ret;
   end function;
 
   function to_ufixed(value : real;
