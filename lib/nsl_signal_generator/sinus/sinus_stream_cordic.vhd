@@ -47,7 +47,7 @@ begin
     variable x_n, y_n : xy_t;
   begin
     if rising_edge(clock_i) then
-      a(-2) <= -resize(angle_i, a(-2)'left, a(-2)'right);
+      a(-2) <= resize(angle_i, a(-2)'left, a(-2)'right);
       x(-2) <= to_sfixed(init_scale * scale_c, x(-2)'left, x(-2)'right);
       y(-2) <= to_sfixed(0.0, y(-2)'left, y(-2)'right);
 

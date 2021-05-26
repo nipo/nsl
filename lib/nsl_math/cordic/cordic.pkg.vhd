@@ -96,12 +96,12 @@ package body cordic is
     case am  is
       when "001" | "010" =>
         a_o := a_i - fourth;
-        x_o := y_i;
-        y_o := - x_i;
-      when "110" | "101" =>
-        a_o := a_i + fourth;
         x_o := - y_i;
         y_o := x_i;
+      when "110" | "101" =>
+        a_o := a_i + fourth;
+        x_o := y_i;
+        y_o := - x_i;
       when others =>
         a_o := a_i;
         x_o := x_i;
@@ -121,12 +121,12 @@ package body cordic is
   begin
     if a_i(a_i'left) = '1' then
       a_o := a_i + rot;
-      x_o := x_i - dy;
-      y_o := y_i + dx;
-    else
-      a_o := a_i - rot;
       x_o := x_i + dy;
       y_o := y_i - dx;
+    else
+      a_o := a_i - rot;
+      x_o := x_i - dy;
+      y_o := y_i + dx;
     end if;
   end procedure;
 
@@ -163,7 +163,7 @@ package body cordic is
     variable x, x_n : sfixed(x_o'left+1 downto -step_count/2);
     variable y, y_n : sfixed(y_o'left+1 downto -step_count/2);
   begin
-    a := -resize(a_i, a'left, a'right);
+    a := resize(a_i, a'left, a'right);
     -- Rather than multiplying by scaling factor, just insert it ahead of time.
     x := to_sfixed(init_scale * scale, x'left, x'right);
     y := to_sfixed(0.0, y'left, y'right);
