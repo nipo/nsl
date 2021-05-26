@@ -18,6 +18,10 @@ package framed_transactor is
       clock_i     : in  std_ulogic;
       done_o      : out std_ulogic;
 
+      -- After done_o rises, a 0 to 1 transition restarts the process.
+      -- If done, setting enable_o to 0 clears done.
+      enable_i   : in std_ulogic := '1';
+
       cmd_o  : out framed_req;
       cmd_i  : in framed_ack;
       rsp_i  : in framed_req;

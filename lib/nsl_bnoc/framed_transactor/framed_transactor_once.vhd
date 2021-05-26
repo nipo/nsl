@@ -14,6 +14,7 @@ entity framed_transactor_once is
     reset_n_i   : in  std_ulogic;
     clock_i     : in  std_ulogic;
     done_o      : out std_ulogic;
+    enable_i    : in std_ulogic := '1';
 
     cmd_o  : out framed_req;
     cmd_i  : in framed_ack;
@@ -43,6 +44,7 @@ architecture beh of framed_transactor_once is
 
   type state_t is (
     ST_RESET,
+    ST_WAIT_START,
     ST_START,
     ST_SIZE_GET,
     ST_CMD_PUT,
@@ -72,14 +74,19 @@ begin
     end if;
   end process;
 
-  transition: process(r, cmd_i, rsp_i, s_rdata) is
+  transition: process(r, cmd_i, rsp_i, s_rdata, enable_i) is
   begin
     rin <= r;
 
     case r.state is
       when ST_RESET =>
-        rin.state <= ST_START;
+        rin.state <= ST_WAIT_START;
+        
+      when ST_WAIT_START =>
         rin.addr <= (others => '0');
+        if enable_i = '1' then
+          rin.state <= ST_START;
+        end if;
 
       when ST_START =>
         rin.state <= ST_SIZE_GET;
@@ -111,7 +118,10 @@ begin
         end if;
 
       when ST_DONE =>
-        null;
+        if enable_i = '0' then
+          rin.state <= ST_WAIT_START;
+        end if;
+
     end case;
   end process;
 
@@ -143,7 +153,7 @@ begin
     rsp_o.ready <= '0';
 
     case r.state is
-      when ST_RESET | ST_START | ST_SIZE_GET | ST_DONE =>
+      when ST_RESET | ST_START | ST_SIZE_GET | ST_DONE | ST_WAIT_START =>
         null;
         
       when ST_CMD_PUT =>
