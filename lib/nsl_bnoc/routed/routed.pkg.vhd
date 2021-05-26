@@ -78,6 +78,39 @@ package routed is
       );
   end component;
 
+  -- This is the entry node for a one-way message. It only inserts a routing
+  -- information header.
+  component routed_entry is
+    generic(
+      source_id_c : component_id
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      target_id_i : in component_id;
+
+      framed_i   : in nsl_bnoc.framed.framed_req;
+      framed_o   : out nsl_bnoc.framed.framed_ack;
+      routed_o  : out routed_req;
+      routed_i  : in routed_ack
+      );
+  end component;
+
+  -- This is the exit node for a one-way message. It strips routing
+  -- information header.
+  component routed_exit is
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      routed_i  : in routed_req;
+      routed_o  : out routed_ack;
+      framed_o : out nsl_bnoc.framed.framed_req;
+      framed_i : in nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
   -- This components strips routing information from routed network, pipes the
   -- frame in a framed network, and waits for exactly one response frame back,
   -- where it inserts back reverse routing information and tag.
