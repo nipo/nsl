@@ -140,7 +140,7 @@ begin
   end process;
 
   transition : process (clocker_owned_i, clocker_ready_i,
-                        cmd_i, r, rsp_i,
+                        cmd_i, r, rsp_i, clocker_failed_i,
                         shift_r_data_i, shift_r_valid_i, shift_w_ready_i)
   begin
     rin <= r;
