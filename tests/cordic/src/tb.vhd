@@ -17,9 +17,10 @@ begin
 
   st: process
     variable angle_r, turns_r : real;
-    variable turns_f : ufixed(-1 downto -12);
-    variable x_f, y_f : sfixed(0 downto -12);
+    variable turns_f : ufixed(-1 downto -20);
+    variable x_f, y_f : sfixed(0 downto -20);
     variable x_r, y_r : real;
+    variable max_error : real;
   begin
     for deg in 0 to 359
     loop
@@ -32,14 +33,16 @@ begin
       x_r := to_real(x_f);
       y_r := to_real(y_f);
 
-      log_info(to_string(angle_r)
+      log_info(to_string(to_real(turns_f) * 360.0)
                & ";" & to_string(x_r)
                & ";" & to_string(y_r));
-      -- log_info("Delta " & to_string(angle_r)
-      --          & " cos: " & to_string(abs(x_r - cos(turns_r * math_2_pi)))
-      --          & " sin: " & to_string(abs(y_r - sin(turns_r * math_2_pi)))
-      --          );
+
+      max_error := realmax(abs(x_r - cos(turns_r * math_2_pi)), max_error);
+      max_error := realmax(abs(y_r - sin(turns_r * math_2_pi)), max_error);
     end loop;
+
+    log_info("Max error: " & to_string(max_error));
+    log_info("Significant fractional bits: " & to_string(integer(floor(-log2(max_error)))));
     
     wait;
   end process;
