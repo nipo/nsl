@@ -44,6 +44,19 @@ package framed is
       );
   end component;
 
+  component framed_fifo_slice is
+    port(
+      reset_n_i  : in  std_ulogic;
+      clock_i    : in  std_ulogic;
+
+      in_i   : in framed_req;
+      in_o   : out framed_ack;
+
+      out_o   : out framed_req;
+      out_i   : in framed_ack
+      );
+  end component;
+
   component framed_fifo_atomic is
     generic(
       depth : natural;
