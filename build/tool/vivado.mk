@@ -70,7 +70,7 @@ $(build-dir)/$(target)-xpr-gen.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) 
 	$(call file-clear,$@)
 	$(call project_init,$@)
 	$(call file-append,$@,source sources.tcl)
-	$(call file-append,$@,save_project_as -force $(target) ../$(dir $@))
+	$(call file-append,$@,save_project_as -force $(target) ../project)
 
 project/$(target).xpr: $(build-dir)/$(target)-xpr-gen.tcl
 	$(call vivado-tcl-run,$<)
@@ -213,6 +213,7 @@ $(build-dir)/$(target)-fast.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) $(M
 	$(call file-append,$@,report_route_status -file route_status.rpt)
 	$(call file-append,$@,report_timing_summary -file timing_summary.rpt)
 	$(call file-append,$@,report_power -file power.rpt)
+	$(call file-append,$@,write_edif -force $(top-entity).edif)
 	$(call file-append,$@,report_drc -file drc.rpt)
 	$(call file-append,$@,write_bitstream -force ../$(notdir $(@:.tcl=.bit)))
 
