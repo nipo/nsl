@@ -226,8 +226,7 @@ package body fixed is
     variable ret : ufixed(a'range);
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, returning null vector"
+      report "Both ufixed arguments are not the same range, returning null vector"
         severity warning;
       return nauf;
     end if;
@@ -273,8 +272,7 @@ package body fixed is
     variable ret : ufixed(a'range);
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, returning null vector"
+      report "Both ufixed arguments are not the same range, returning null vector"
         severity warning;
       return nauf;
     end if;
@@ -370,8 +368,7 @@ package body fixed is
     variable ret : sfixed(a'range);
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, returning null vector"
+      report "Both ufixed arguments are not the same range, returning null vector"
         severity warning;
       return nasf;
     end if;
@@ -385,8 +382,7 @@ package body fixed is
     variable ret : sfixed(a'range);
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, returning null vector"
+      report "Both ufixed arguments are not the same range, returning null vector"
         severity warning;
       return nasf;
     end if;
@@ -454,8 +450,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -467,8 +462,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -480,8 +474,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -493,8 +486,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -506,8 +498,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -519,8 +510,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both ufixed arguments are not the same range, cannot compare"
+      report "Both ufixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -533,8 +523,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -546,8 +535,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -559,8 +547,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -572,8 +559,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -585,8 +571,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
@@ -598,8 +583,7 @@ package body fixed is
   is
   begin
     if a'left /= b'left or a'right /= b'right then
-      assert false
-        report "Both sfixed arguments are not the same range, cannot compare"
+      report "Both sfixed arguments are not the same range, cannot compare"
         severity warning;
       return false;
     end if;
