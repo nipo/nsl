@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_math;
+
 package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
@@ -68,6 +70,8 @@ package framed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
+      p_selected : out unsigned(nsl_math.arith.log2(source_count)-1 downto 0);
+      
       p_cmd_val   : in framed_req_array(0 to source_count - 1);
       p_cmd_ack   : out framed_ack_array(0 to source_count - 1);
       p_rsp_val   : out framed_req_array(0 to source_count - 1);

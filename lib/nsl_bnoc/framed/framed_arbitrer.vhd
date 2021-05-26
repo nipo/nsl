@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_math;
 
 entity framed_arbitrer is
   generic(
@@ -11,6 +11,8 @@ entity framed_arbitrer is
   port(
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
+
+    p_selected : out unsigned(nsl_math.arith.log2(source_count)-1 downto 0);
 
     p_cmd_val   : in nsl_bnoc.framed.framed_req_array(0 to source_count - 1);
     p_cmd_ack   : out nsl_bnoc.framed.framed_ack_array(0 to source_count - 1);
@@ -28,6 +30,7 @@ architecture rtl of framed_arbitrer is
 
   type state_t is (
     STATE_RESET,
+    STATE_ELECT_FAIR,
     STATE_ELECT,
     STATE_FORWARD,
     STATE_FLUSH
@@ -36,6 +39,7 @@ architecture rtl of framed_arbitrer is
   type regs_t is record
     state : state_t;
     elected : natural range 0 to source_count - 1;
+    last : natural range 0 to source_count - 1;
   end record;
 
   signal r, rin: regs_t;
@@ -60,8 +64,17 @@ begin
       when STATE_RESET =>
         rin.state <= STATE_ELECT;
 
+      when STATE_ELECT_FAIR =>
+        rin.state <= STATE_ELECT;
+        for i in source_count-1 downto 0 loop
+          if p_cmd_val(i).valid = '1' and i /= r.elected then
+            rin.elected <= i;
+            rin.state <= STATE_FORWARD;
+          end if;
+        end loop;
+
       when STATE_ELECT =>
-        ports: for i in source_count-1 downto 0 loop
+        for i in source_count-1 downto 0 loop
           if p_cmd_val(i).valid = '1' then
             rin.elected <= i;
             rin.state <= STATE_FORWARD;
@@ -75,7 +88,7 @@ begin
 
       when STATE_FLUSH =>
         if p_target_rsp_val.valid = '1' and p_rsp_ack(r.elected).ready = '1' and p_target_rsp_val.last = '1' then
-          rin.state <= STATE_ELECT;
+          rin.state <= STATE_ELECT_FAIR;
         end if;
         
     end case;
@@ -109,5 +122,7 @@ begin
         null;
     end case;
   end process;
-    
+
+  p_selected <= to_unsigned(r.elected, p_selected'length);
+  
 end architecture;
