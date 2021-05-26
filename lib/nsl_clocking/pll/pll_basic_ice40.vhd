@@ -160,8 +160,7 @@ architecture ice40 of pll_basic is
       best_params.filter_range := 6;
     end if;
 
-    assert false
-      report "Synthesizing iCE40 PLL, "
+    report "Synthesizing iCE40 PLL, "
       & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
       & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
       severity note;
@@ -170,8 +169,7 @@ architecture ice40 of pll_basic is
       report "Cannot find a matching configuration"
       severity failure;
 
-    assert false
-      report "Best option: divr=" & to_string(best_params.divr+1) & ", "
+    report "Best option: divr=" & to_string(best_params.divr+1) & ", "
       & "divf=" & to_string(best_params.divf+1) & ", "
       & "divq=" & to_string(2**best_params.divq) & ", "
       & "filter_range=" & to_string(best_params.filter_range) & ", "

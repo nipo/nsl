@@ -22,8 +22,7 @@ package body pll_config_series67 is
     elsif mode = "MMCM" then
       return constraints'(600000000, 1600000000, 64, 128, "MCM");
     else
-      assert false
-        report "DCM unsupported on this part"
+      report "DCM unsupported on this part"
         severity failure;
       return constraints'(0, 0, 0, 0, "DCM");
     end if;

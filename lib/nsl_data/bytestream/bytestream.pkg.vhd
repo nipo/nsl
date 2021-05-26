@@ -92,8 +92,7 @@ package body bytestream is
     variable result : boolean;
   begin
     t: if l'length /= r'length THEN
-      assert false
-        report "Vectors of differing sizes passed"
+      report "Vectors of differing sizes passed"
         severity warning;
       result := false;
     else

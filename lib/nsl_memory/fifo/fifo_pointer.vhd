@@ -188,8 +188,7 @@ begin
       used_count_o <= used;
     else
       used_count_o <= (others => '-');
-      --assert false
-      --  report "Used pointer difference above wrap count: " & integer'image(to_integer(used))
+      --report "Used pointer difference above wrap count: " & integer'image(to_integer(used))
       --  severity warning;
     end if;
 
@@ -197,8 +196,7 @@ begin
       free_count_o <= free;
     else
       free_count_o <= (others => '-');
-      --assert false
-      --  report "Free pointer difference above wrap count: " & integer'image(to_integer(free))
+      --report "Free pointer difference above wrap count: " & integer'image(to_integer(free))
       --  severity warning;
     end if;
   end process;

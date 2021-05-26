@@ -83,14 +83,12 @@ architecture mxo2 of pll_basic is
     ret.clkop_div := vco_freq / fout;
     ret.clki_div := 1;
 
-    assert false
-      report "Synthesizing MXO2 PLL, " 
+    report "Synthesizing MXO2 PLL, " 
       & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
       & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
       severity note;
 
-    assert false
-      report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
+    report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
       & "vco_freq=" & to_string(real(vco_freq) / 1.0e6) & "MHz "
       & "(min=" & to_string(real(constraints.fmin) / 1.0e6) & "MHz, "
       & "max=" & to_string(real(constraints.fmax) / 1.0e6) & "MHz), "

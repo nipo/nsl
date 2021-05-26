@@ -62,8 +62,7 @@ architecture beh of xadc_continuous is
     ret.dclk_divide := nsl_math.arith.max(divisor_min,
                                           nsl_math.arith.min(divisor_max, divisor));
 
-    assert false
-      report "Using DRP clock of " & to_string(dclk_hz / 1000000) & "MHz divided by "
+    report "Using DRP clock of " & to_string(dclk_hz / 1000000) & "MHz divided by "
         & to_string(ret.dclk_divide) & ", ADCCLK is " & to_string(dclk_hz / ret.dclk_divide)
         & "Hz; " & to_string(dclk_hz / ret.dclk_divide / cycles_per_iteration) & " refreshes/sec"
       severity note;

@@ -254,8 +254,7 @@ package body rgb is
     variable ret: rgb24 := rgb24_black;
   begin
     if color'length /= 24 then
-      assert false
-        report "RGB24 from suv only works for vector of length 24, returning black"
+      report "RGB24 from suv only works for vector of length 24, returning black"
         severity warning;
       return ret;
     end if;
@@ -297,8 +296,7 @@ package body rgb is
     variable result : boolean;
   begin
     t: if l'length /= r'length THEN
-      assert false
-        report "Vectors of differing sizes passed"
+      report "Vectors of differing sizes passed"
         severity failure;
       result := false;
     else
@@ -332,8 +330,7 @@ package body rgb is
     variable result : boolean;
   begin
     t: if l'length /= r'length THEN
-      assert false
-        report "Vectors of differing sizes passed"
+      report "Vectors of differing sizes passed"
         severity failure;
       result := false;
     else

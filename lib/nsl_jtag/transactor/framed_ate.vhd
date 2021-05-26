@@ -172,8 +172,7 @@ begin
           rin.cmd_st <= ST_CMD_IDLE;
           rin.srst_drive <= r.cmd_data(0);
         else
-          assert false
-            report "Unhandled Framed JTAG ATE command"
+          report "Unhandled Framed JTAG ATE command"
             severity warning;
 
           rin.cmd_st <= ST_CMD_IDLE;

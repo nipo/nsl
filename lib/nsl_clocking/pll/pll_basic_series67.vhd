@@ -49,13 +49,11 @@ architecture s6 of pll_basic is
     ret.fin_factor := ret.vco_freq / fin;
     ret.fout_factor := ret.vco_freq / fout;
 
-    assert false
-      report "Synthesizing " & bounds.mode & ", " 
+    report "Synthesizing " & bounds.mode & ", " 
       & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
       & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
       severity note;
-    assert false
-      report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
+    report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
       & "vco_freq=" & to_string(real(ret.vco_freq) / 1.0e6) & "MHz "
       & "(min=" & to_string(real(bounds.fmin) / 1.0e6) & "MHz, "
       & "max=" & to_string(real(bounds.fmax) / 1.0e6) & "MHz), "

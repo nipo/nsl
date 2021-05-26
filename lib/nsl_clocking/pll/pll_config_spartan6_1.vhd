@@ -20,8 +20,7 @@ package body pll_config_series67 is
     if mode = "PLL" then
       return constraints'(400000000, 1000000000, 64, 128, "PLL");
     elsif mode = "MMCM" then
-      assert false
-        report "MMCM unsupported on this part"
+      report "MMCM unsupported on this part"
         severity failure;
       return constraints'(0, 0, 0, 0, "MMCM");
     else

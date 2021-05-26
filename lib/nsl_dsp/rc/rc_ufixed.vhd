@@ -62,8 +62,7 @@ begin
     report "Useless filter"
     severity failure;
 
-  assert false
-    report "Tau " & integer'image(tau_c)
+  report "Tau " & integer'image(tau_c)
     & ", tau_w " & integer'image(tau_w)
     & ", can_shift " & boolean'image(can_shift)
     severity note;
