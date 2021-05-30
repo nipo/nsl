@@ -49,6 +49,8 @@ package fixed is
   function "+"(a, b: ufixed) return ufixed;
   function mul(a, b: ufixed;
                constant left, right : integer) return ufixed;
+  function mul(a: sfixed; b: ufixed;
+               constant left, right : integer) return sfixed;
   function mul(a, b: sfixed;
                constant left, right : integer) return sfixed;
   function "-"(a, b: ufixed) return ufixed;
@@ -269,6 +271,14 @@ package body fixed is
     rf := ufixed(ru);
 
     return resize(rf, left, right);
+  end function;
+
+  function mul(a: sfixed; b: ufixed;
+               constant left, right : integer) return sfixed
+  is
+    constant bs : sfixed(b'left+1 downto b'right) := sfixed("0" & b);
+  begin
+    return mul(a, bs, left, right);
   end function;
 
   function mul(a, b: sfixed;
