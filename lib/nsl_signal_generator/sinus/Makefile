@@ -1,6 +1,7 @@
 vhdl-sources += sinus.pkg.vhd
 vhdl-sources += sinus_stream.vhd
 vhdl-sources += sinus_stream_table.vhd
+vhdl-sources += sinus_stream_table_interpolated.vhd
 vhdl-sources += sinus_stream_cordic.vhd
 
 deps += nsl_memory.rom_fixed

@@ -51,6 +51,21 @@ package sinus is
       );
   end component;    
 
+  component sinus_stream_table_interpolated is
+    generic (
+      lookup_bits_c : integer := 9;
+      table_bits_c : integer := 9;
+      scale_c : real := 1.0
+      );
+    port (
+      clock_i: in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      angle_i : in ufixed;
+      value_o : out sfixed
+      );
+  end component;
+
   component sinus_stream is
     generic (
       scale_c : real := 1.0;

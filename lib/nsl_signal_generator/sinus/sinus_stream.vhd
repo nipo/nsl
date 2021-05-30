@@ -21,13 +21,27 @@ end sinus_stream;
 architecture beh of sinus_stream is
 begin
 
-  assert implementation_c = "table" or implementation_c = "cordic"
+  assert implementation_c = "table" or implementation_c = "cordic" or implementation_c = "table_interpolated"
     report "Unsupported implementation: " & implementation_c
     severity failure;
 
   use_table: if implementation_c = "table"
   generate
     impl: nsl_signal_generator.sinus.sinus_stream_table
+      generic map(
+        scale_c => scale_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+        angle_i => angle_i,
+        value_o => value_o
+        );
+  end generate;
+
+  use_table_interpolated: if implementation_c = "table_interpolated"
+  generate
+    impl: nsl_signal_generator.sinus.sinus_stream_table_interpolated
       generic map(
         scale_c => scale_c
         )
