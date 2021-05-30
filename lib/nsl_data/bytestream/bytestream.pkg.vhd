@@ -13,6 +13,8 @@ package bytestream is
   function from_hex(blob: string) return byte_string;
   function to_byte(c : character) return byte;
   function to_byte(i : integer) return byte;
+  function to_integer(b: byte) return integer;
+  function to_character(b: byte) return character;
   function to_byte_string(s : string) return byte_string;
 
   function "="(l, r : byte_string) return boolean;
@@ -118,6 +120,16 @@ package body bytestream is
   function to_byte(c : character) return byte is
   begin
     return byte(to_unsigned(character'pos(c), 8));
+  end function;
+
+  function to_integer(b: byte) return integer is
+  begin
+    return to_integer(unsigned(b));
+  end function;
+
+  function to_character(b: byte) return character is
+  begin
+    return character'val(to_integer(b));
   end function;
 
   function to_byte_string(s : string) return byte_string is
