@@ -61,8 +61,9 @@ begin
   assert tau_c >= 2
     report "Useless filter"
     severity failure;
-
-  report "Tau " & integer'image(tau_c)
+  
+  assert false
+    report "Tau " & integer'image(tau_c)
     & ", tau_w " & integer'image(tau_w)
     & ", can_shift " & boolean'image(can_shift)
     severity note;
