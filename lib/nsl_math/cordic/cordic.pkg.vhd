@@ -7,6 +7,11 @@ use nsl_math.fixed.all;
 
 package cordic is
 
+  -- When computing rect from angle, angle error is reduced to 0 at
+  -- each step. This is the precision we should have on angle error
+  -- accumulator to be able to go to a given step.
+  function needed_angle_lsb(step_count : integer) return integer;
+
   -- Scale of sin/cos couple after given number of steps.
   function sincos_scale(step_count : integer) return real;
 
@@ -15,24 +20,27 @@ package cordic is
   -- algorithm.
   function sincos_angle_delta(step : integer) return real;
 
-  -- Pre-step to collapse angle in [-pi/2 .. pi/2]
+  -- Pre-step to collapse angle in [-π/2 .. π/2]
   -- Involves no scaling
   procedure sincos_half_collapse(a_o: out ufixed; x_o, y_o : out sfixed;
                                  a_i: in ufixed; x_i, y_i : in sfixed);
 
-  -- Pre-step to collapse angle in [-pi/4 .. pi/4]
+  -- Pre-step to collapse angle in [-π/4 .. π/4]
   -- Involves no scaling
   procedure sincos_fourth_collapse(a_o: out ufixed; x_o, y_o : out sfixed;
                                    a_i: in ufixed; x_i, y_i : in sfixed);
 
   -- General step of cordic, where angle error is corrected by steps.
+  -- rot is exposed in order to be able to call this procedure
+  -- from a table-based version in an iterative implementation
   procedure sincos_astep(step : in integer; rot : in ufixed;
                          a_o: out ufixed; x_o, y_o : out sfixed;
                          a_i: in ufixed; x_i, y_i : in sfixed);
 
   -- One step of cordic algorithm for sincos, at a given step.
-  -- Angle is in full turns (radians / (2 * pi)).
+  -- Angle is in full turns (radians / (2 * π)).
   -- angle'left should be -1.
+  -- step starts at -2 down to an arbitrary value.
   procedure sincos_step(step : in integer;
                         a_o: out ufixed; x_o, y_o : out sfixed;
                         a_i: in ufixed; x_i, y_i : in sfixed);
@@ -46,6 +54,12 @@ package cordic is
 end package cordic;
 
 package body cordic is
+
+  function needed_angle_lsb(step_count : integer) return integer
+  is
+  begin
+    return nsl_math.arith.max(integer(log2(sincos_angle_delta(step_count))), -20);
+  end function;
 
   function sincos_scale(step_count : integer) return real
   is
@@ -154,14 +168,15 @@ package body cordic is
                    x_o, y_o : out sfixed;
                    scale : real := 1.0)
   is
-    constant step_count : integer := 2 * nsl_math.arith.max(-x_o'right, -y_o'right);
+    constant step_count : integer := nsl_math.arith.max(-x_o'right, -y_o'right);
+    constant prec_addend : integer := nsl_math.arith.log2(step_count+1);
     constant init_scale : real := sincos_scale(step_count);
 
     -- Only handle saturation once at the end, use one more bit for
     -- intermediate calculation
-    variable a, a_n : ufixed(-1 downto a_i'right);
-    variable x, x_n : sfixed(x_o'left+1 downto -step_count/2);
-    variable y, y_n : sfixed(y_o'left+1 downto -step_count/2);
+    variable a, a_n : ufixed(-1 downto needed_angle_lsb(step_count));
+    variable x, x_n : sfixed(x_o'left+1 downto x_o'right-prec_addend);
+    variable y, y_n : sfixed(y_o'left+1 downto y_o'right-prec_addend);
   begin
     a := resize(a_i, a'left, a'right);
     -- Rather than multiplying by scaling factor, just insert it ahead of time.

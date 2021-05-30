@@ -22,10 +22,10 @@ begin
     variable x_r, y_r : real;
     variable max_error : real;
   begin
-    for deg in 0 to 359
+    for i in 0 to 255
     loop
-      angle_r := real(deg);
-      turns_r := angle_r / 360.0;
+      turns_r := real(i) / 256.0;
+      angle_r := turns_r * MATH_2_PI;
       turns_f := to_ufixed(turns_r, turns_f'left, turns_f'right);
 
       sincos(turns_f, x_f, y_f);
