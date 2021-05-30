@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
+library nsl_data;
 
 library nsl_math;
 
@@ -32,6 +33,8 @@ package fixed is
 
   function to_suv(value : ufixed) return std_ulogic_vector;
   function to_slv(value : ufixed) return std_logic_vector;
+  function to_unsigned(value : ufixed) return unsigned;
+  function to_unsigned(value : sfixed) return unsigned;
 
   function to_ufixed(value : real;
                      constant left, right : integer) return ufixed;
@@ -89,10 +92,15 @@ package fixed is
   function ">="(a, b: sfixed) return boolean;
   function "<="(a, b: sfixed) return boolean;
 
+  function to_string(value: sfixed) return string;
+  function to_string(value: ufixed) return string;
+  
 end package;
 
 package body fixed is
 
+  use nsl_data.text.all;
+  
   constant nauf: ufixed(0 downto 1) := (others => '0');
   constant nasf: sfixed(0 downto 1) := (others => '0');
 
@@ -118,6 +126,18 @@ package body fixed is
     end if;
     ret := std_logic_vector(v);
     return ret;
+  end function;
+
+  function to_unsigned(value : ufixed) return unsigned
+  is
+  begin
+    return unsigned(to_suv(value));
+  end function;
+
+  function to_unsigned(value : sfixed) return unsigned
+  is
+  begin
+    return unsigned(to_suv(value));
   end function;
 
   function to_ufixed(value : real;
@@ -589,6 +609,22 @@ package body fixed is
     end if;
 
     return signed(to_suv(a)) <= signed(to_suv(b));
+  end function;
+
+  function to_string(value: ufixed) return string
+  is
+    constant int : string := to_string(to_suv(value(value'left downto 0)));
+    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
+  begin
+    return int & "." & frac;
+  end function;
+
+  function to_string(value: sfixed) return string
+  is
+    constant int : string := to_string(to_suv(value(value'left downto 0)));
+    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
+  begin
+    return int & "." & frac;
   end function;
 
 end package body;
