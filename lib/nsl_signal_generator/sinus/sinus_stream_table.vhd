@@ -26,8 +26,8 @@ architecture beh of sinus_stream_table is
   constant dt_byte_count : integer := (dt_bit_count + 7) / 8;
   subtype dt_word_type is std_ulogic_vector(dt_byte_count * 8 - 1 downto 0);
 
-  -- Only store sinus for input values in [0 .. 0.25] angle range (0
-  -- to pi/2), rest of it will be computed.
+  -- Only store sinus for input values in (0 .. 0.25) angle range (0
+  -- to pi/2), offset by 0.5 angle LSB. Rest of it will be computed.
   function table_precalc(aw: integer)
     return real_vector
   is
@@ -35,7 +35,7 @@ architecture beh of sinus_stream_table is
   begin
     each_angle: for i in ret'range
     loop
-      ret(i) := sin(real(i) / real(2 ** aw) * MATH_PI_OVER_2) * scale_c;
+      ret(i) := sin((real(i) + 0.5) / real(2 ** aw) * MATH_PI_OVER_2) * scale_c;
     end loop;
 
     return ret;
@@ -51,13 +51,13 @@ architecture beh of sinus_stream_table is
   type regs_t is
   record
     s0_index : unsigned(angle_i'length - 3 downto 0);
-    s0_value_invert : std_ulogic;
-    s0_index_invert : std_ulogic;
+    s0_value_invert : boolean;
+    s0_index_invert : boolean;
     
     s1_index : unsigned(angle_i'length - 3 downto 0);
-    s1_value_invert : std_ulogic;
+    s1_value_invert : boolean;
     
-    s2_value_invert : std_ulogic;
+    s2_value_invert : boolean;
 
     s3_value : sfixed(value_o'left downto value_o'right);
   end record;
@@ -83,24 +83,28 @@ begin
   begin
     rin <= r;
 
-    rin.s0_value_invert <= angle_i(angle_i'left);
-    rin.s0_index_invert <= angle_i(angle_i'left-1);
+    -- Stage 0, store inputs without computation
+    rin.s0_value_invert <= angle_i(angle_i'left) = '1';
+    rin.s0_index_invert <= angle_i(angle_i'left-1) = '1';
     rin.s0_index <= unsigned(to_suv(angle_i(angle_i'left-2 downto angle_i'right)));
 
-    if r.s0_index_invert = '1' then
-      rin.s1_index <= not r.s0_index;
-    else
+    -- Stage 1, compute actual ROM address
+    if not r.s0_index_invert then
       rin.s1_index <= r.s0_index;
+    else
+      rin.s1_index <= not r.s0_index;
     end if;
     rin.s1_value_invert <= r.s0_value_invert;
 
+    -- Stage 2, do ROM lookup
     rin.s2_value_invert <= r.s1_value_invert;
     -- rin.s2_rom_value <= rom_lookup(r.s1_index)
 
-    if r.s2_value_invert = '1' then
+    -- Stage 3, invert output if needed
+    if r.s2_value_invert then
       rin.s3_value <= - sfixed("0" & s2_value);
     else
-      rin.s3_value <= "0" & sfixed(s2_value);
+      rin.s3_value <= sfixed("0" & s2_value);
     end if;
   end process;
 
