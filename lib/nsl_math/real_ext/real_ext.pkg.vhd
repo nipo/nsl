@@ -8,6 +8,8 @@ package real_ext is
   -- Error function
   function erf(x : real) return real;
 
+  function frac(x : real) return real;
+
 end package real_ext;
 
 package body real_ext is
@@ -26,4 +28,10 @@ package body real_ext is
          - 341.0 / 8000.0 * exp(-2.0 * (x ** 2.0)));
   end erf;
   
+  function frac(x : real) return real
+  is
+  begin
+    return x - floor(x);
+  end function;
+
 end package body real_ext;
