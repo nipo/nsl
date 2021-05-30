@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_uart, nsl_math;
+library nsl_uart, nsl_logic;
 use nsl_uart.serdes.all;
 
 entity uart_tx is
@@ -86,11 +86,11 @@ begin
 
           when PARITY_EVEN =>
             rin.bit_ctr <= bit_count_c + stop_count_c + 1;
-            rin.shreg(parity_bit) <= nsl_math.logic.xor_reduce(r.shreg(parity_bit-1 downto 1));
+            rin.shreg(parity_bit) <= nsl_logic.logic.xor_reduce(r.shreg(parity_bit-1 downto 1));
 
           when PARITY_ODD =>
             rin.bit_ctr <= bit_count_c + stop_count_c + 1;
-            rin.shreg(parity_bit) <= not nsl_math.logic.xor_reduce(r.shreg(parity_bit-1 downto 1));
+            rin.shreg(parity_bit) <= not nsl_logic.logic.xor_reduce(r.shreg(parity_bit-1 downto 1));
         end case;
         rin.state <= ST_SHIFT;
         

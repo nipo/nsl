@@ -1,4 +1,4 @@
 vhdl-sources += prbs.pkg.vhd
 deps += nsl_data.bytestream
-deps += nsl_math.logic
+deps += nsl_logic.logic
 

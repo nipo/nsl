@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_uart, nsl_math;
+library nsl_uart;
 use nsl_uart.serdes.all;
 
 entity uart_rx is
