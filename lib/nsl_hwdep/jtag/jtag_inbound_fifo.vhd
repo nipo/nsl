@@ -22,7 +22,7 @@ end entity;
 
 architecture beh of jtag_inbound_fifo is
 
-  signal jtag_din, jtag_dout : std_ulogic_vector(data_o'length downto 0);
+  signal jtag_din, jtag_dout, jtag_resynced : std_ulogic_vector(data_o'length downto 0);
   signal jtag_update : std_ulogic;
   signal jtag_reset_n, reset_n, jtag_clock : std_ulogic;
   
@@ -48,6 +48,9 @@ begin
       capture_o => open
       );
 
+  data_o <= jtag_resynced(data_o'length-1 downto 0);
+  last_o <= jtag_resynced(data_o'length);
+
   resync: nsl_clocking.interdomain.interdomain_fifo_slice
     generic map(
       data_width_c => jtag_din'length
@@ -57,8 +60,7 @@ begin
       clock_i(0) => jtag_clock,
       clock_i(1) => clock_i,
 
-      out_data_o(data_o'range) => data_o,
-      out_data_o(data_o'length) => last_o,
+      out_data_o => jtag_resynced,
       out_ready_i => ready_i,
       out_valid_o => valid_o,
 
