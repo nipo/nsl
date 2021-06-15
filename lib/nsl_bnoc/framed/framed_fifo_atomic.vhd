@@ -34,7 +34,7 @@ begin
   frame_fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
       word_count_c => txn_depth,
-      data_width_c => 0,
+      data_width_c => 1,
       clock_count_c => clk_count
       )
     port map(
@@ -43,7 +43,7 @@ begin
       out_data_o => open,
       out_ready_i => out_end_detected,
       out_valid_o => out_allow,
-      in_data_i => (others => '-'),
+      in_data_i => "-",
       in_valid_i => in_end_detected,
       in_ready_o => in_allow
       );
