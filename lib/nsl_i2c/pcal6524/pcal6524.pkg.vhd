@@ -38,7 +38,7 @@ package pcal6524 is
 
   type pcal6524_pin_config is
   record
-    drive_strength: integer range 0 to 1;
+    drive_strength: integer range 0 to 3;
     output : boolean;
     value : std_ulogic;
     in_inverted : boolean;
