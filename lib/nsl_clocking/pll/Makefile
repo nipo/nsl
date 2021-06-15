@@ -24,8 +24,8 @@ ifneq ($(filter xc6s%,$(target_part)),)
 vhdl-sources += pll_config_spartan6_$(subst -,,$(target_speed)).vhd
 else ifneq ($(filter xc7a%,$(target_part)),)
 vhdl-sources += pll_config_artix7_$(subst -,,$(target_speed)).vhd
-#else ifneq ($(filter xc7s%,$(target_part)),)
-#vhdl-sources += pll_config_spartan7_$(subst -,,$(target_speed)).vhd
+else ifneq ($(filter xc7s%,$(target_part)),)
+vhdl-sources += pll_config_spartan7_$(subst -,,$(target_speed)).vhd
 endif
 
 vhdl-sources += pll_basic_series67.vhd

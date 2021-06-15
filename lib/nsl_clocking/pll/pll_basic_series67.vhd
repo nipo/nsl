@@ -40,7 +40,11 @@ architecture s6 of pll_basic is
     variable ret : params;
   begin
     freq_lcm := nsl_math.arith.lcm(fin, fout);
-    vco_mult := integer(trunc(real(bounds.fmax) / real(freq_lcm)));
+
+    vco_mult := integer(trunc(realmin(
+      real(bounds.fmax) / real(freq_lcm),
+      real(bounds.in_factor_max) * real(fin) / real(freq_lcm)
+      )));
     if vco_mult = 0 then
       vco_mult := 1;
     end if;
