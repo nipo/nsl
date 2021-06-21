@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_clocking;
 use nsl_bnoc.control_status.all;
 
 entity framed_control_status is
@@ -57,6 +57,8 @@ architecture rtl of framed_control_status is
     config          : control_status_reg_array(0 to config_count_c-1);
   end record;
 
+  signal status : control_status_reg_array(0 to status_count_c-1);
+  
   signal r, rin : regs_t;
 
 begin
@@ -72,7 +74,7 @@ begin
     end if;
   end process;
 
-  transition: process (r, cmd_i, rsp_i, status_i)
+  transition: process (r, cmd_i, rsp_i, status)
     variable cno : integer range 0 to 127;
   begin
     rin <= r;
@@ -120,7 +122,7 @@ begin
 
       when STATE_READ =>
         if cno < status_count_c then
-          rin.data <= status_i(cno);
+          rin.data <= status(cno);
         else
           rin.data <= (others => '-');
         end if;
@@ -170,7 +172,6 @@ begin
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
     rsp_o.data <= (others => '-');
-    config_o <= r.config;
 
     case r.state is
       when STATE_RESET | STATE_READ | STATE_WRITE =>
@@ -210,5 +211,32 @@ begin
         rsp_o.data <= r.data(31 downto 24);
     end case;
   end process;
+
+  status_gen: for i in 0 to status_count_c-1
+  generate
+    sampler: nsl_clocking.async.async_sampler
+      generic map(
+        cycle_count_c => 2,
+        data_width_c => control_status_reg'length
+        )
+      port map(
+        clock_i => clock_i,
+        data_i => status_i(i),
+        data_o => status(i)
+        );
+  end generate;
+
+  config_gen: for i in 0 to config_count_c-1
+  generate
+    sr: nsl_clocking.interdomain.interdomain_static_reg
+      generic map(
+        data_width_c => control_status_reg'length
+        )
+      port map(
+        input_clock_i => clock_i,
+        data_i => r.config(i),
+        data_o => config_o(i)
+        );
+  end generate;
 
 end architecture;
