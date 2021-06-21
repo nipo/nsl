@@ -51,7 +51,6 @@ architecture rtl of spi_framed_transactor is
     last       : std_ulogic;
     div        : unsigned(4 downto 0);
     cnt        : unsigned(4 downto 0);
-    sck        : std_ulogic;
     mosi       : std_ulogic;
     cpol       : std_ulogic;
     cpha       : std_ulogic;
@@ -120,7 +119,6 @@ begin
               rin.cpha <= r.cmd(3);
             end if;
             rin.state <= ST_SELECTED_PRE;
-            rin.sck <= r.cmd(4);
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_GET;
@@ -128,8 +126,9 @@ begin
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
             rin.state <= ST_SHIFT_FIRST_HALF;
-            rin.sck <= r.cpol xor r.cpha;
             rin.shreg <= (others => '1');
+            rin.mosi <= '1';
+            rin.cnt <= r.div;
             rin.bit_count <= 7;
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
           end if;
@@ -147,7 +146,6 @@ begin
           rin.cnt <= r.div;
           rin.last <= cmd_i.last;
           rin.state <= ST_SHIFT_FIRST_HALF;
-          rin.sck <= r.cpol xor r.cpha;
           rin.bit_count <= 7;
         end if;
         
@@ -156,7 +154,6 @@ begin
           rin.cnt <= r.div;
           rin.state <= ST_SELECTED_POST;
           rin.selected <= to_integer(unsigned(r.cmd(2 downto 0)));
-          rin.sck <= r.cpol xor r.cpha;
           rin.mosi <= '0';
         end if;
         
@@ -167,12 +164,9 @@ begin
         end if;
         
       when ST_SHIFT_FIRST_HALF =>
-        rin.mosi <= r.shreg(7);
-
         if ready then
           rin.cnt <= r.div;
           rin.state <= ST_SHIFT_SECOND_HALF;
-          rin.sck <= r.cpol xnor r.cpha;
           rin.shreg <= r.shreg(6 downto 0) & miso_i;
         end if;
 
@@ -182,8 +176,8 @@ begin
 
           rin.bit_count <= (r.bit_count - 1) mod 8;
           if r.bit_count /= 0 then
+            rin.mosi <= r.shreg(7);
             rin.state <= ST_SHIFT_FIRST_HALF;
-            rin.sck <= r.cpol xor r.cpha;
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN)
             or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_PUT;
@@ -207,7 +201,6 @@ begin
             rin.shreg <= (others => '1');
             rin.bit_count <= 7;
             rin.state <= ST_SHIFT_FIRST_HALF;
-            rin.sck <= r.cpol xor r.cpha;
           else -- SPI_CMD_SHIFT_IO
             rin.word_count <= r.word_count - 1;
             rin.state <= ST_DATA_GET;
@@ -217,11 +210,8 @@ begin
     end case;
   end process;
 
-  mosi_o <= r.mosi;
-
   moore: process(r)
   begin
-    sck_o <= r.sck;
     cs_n_o <= (others => (drain_n => '1'));
     cmd_o.ready <= '0';
     rsp_o.valid <= '0';
@@ -231,9 +221,18 @@ begin
       cs_n_o(r.selected).drain_n <= '0';
     end if;
     
+    mosi_o <= r.mosi;
+    sck_o <= r.cpol;
+
     case r.state is
-      when ST_RESET | ST_SELECTED_PRE | ST_SELECTED_POST | ST_SHIFT_FIRST_HALF | ST_ROUTE | ST_SHIFT_SECOND_HALF =>
+      when ST_RESET | ST_SELECTED_PRE | ST_SELECTED_POST | ST_ROUTE =>
         null;
+
+      when ST_SHIFT_FIRST_HALF =>
+        sck_o <= r.cpol xor r.cpha;
+
+      when ST_SHIFT_SECOND_HALF =>
+        sck_o <= r.cpol xnor r.cpha;
 
       when ST_IDLE | ST_DATA_GET =>
         cmd_o.ready <= '1';
