@@ -213,6 +213,7 @@ $(build-dir)/$(target)-fast.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) $(M
 	$(call file-append,$@,report_route_status -file route_status.rpt)
 	$(call file-append,$@,report_timing_summary -file timing_summary.rpt)
 	$(call file-append,$@,report_power -file power.rpt)
+	$(call file-append,$@,report_utilization -file utilization.rpt)
 	$(call file-append,$@,write_edif -force $(top-entity).edif)
 	$(call file-append,$@,report_drc -file drc.rpt)
 	$(call file-append,$@,write_bitstream -force ../$(notdir $(@:.tcl=.bit)))
