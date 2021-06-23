@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, nsl_inet;
-use nsl_bnoc.framed.all;
+use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_inet.ethernet.all;
@@ -19,11 +19,11 @@ entity ethernet_transmitter is
     local_address_i : in mac48_t;
 
     l3_type_i : in ethertype_t;
-    l3_i : in nsl_bnoc.framed.framed_req;
-    l3_o : out nsl_bnoc.framed.framed_ack;
+    l3_i : in nsl_bnoc.committed.committed_req;
+    l3_o : out nsl_bnoc.committed.committed_ack;
 
-    l1_o : out nsl_bnoc.framed.framed_req;
-    l1_i : in nsl_bnoc.framed.framed_ack
+    l1_o : out nsl_bnoc.committed.committed_req;
+    l1_i : in nsl_bnoc.committed.committed_ack
     );
 end entity;
 

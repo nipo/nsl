@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, nsl_inet, nsl_math;
-use nsl_bnoc.framed.all;
+use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_inet.ethernet.all;
@@ -20,15 +20,15 @@ entity ethernet_layer is
 
     local_address_i : in mac48_t;
 
-    to_l3_o : out nsl_bnoc.framed.framed_req_array(0 to ethertype_c'length-1);
-    to_l3_i : in nsl_bnoc.framed.framed_ack_array(0 to ethertype_c'length-1);
-    from_l3_i : in nsl_bnoc.framed.framed_req_array(0 to ethertype_c'length-1);
-    from_l3_o : out nsl_bnoc.framed.framed_ack_array(0 to ethertype_c'length-1);
+    to_l3_o : out nsl_bnoc.committed.committed_req_array(0 to ethertype_c'length-1);
+    to_l3_i : in nsl_bnoc.committed.committed_ack_array(0 to ethertype_c'length-1);
+    from_l3_i : in nsl_bnoc.committed.committed_req_array(0 to ethertype_c'length-1);
+    from_l3_o : out nsl_bnoc.committed.committed_ack_array(0 to ethertype_c'length-1);
 
-    to_l1_o : out nsl_bnoc.framed.framed_req;
-    to_l1_i : in nsl_bnoc.framed.framed_ack;
-    from_l1_i : in nsl_bnoc.framed.framed_req;
-    from_l1_o : out nsl_bnoc.framed.framed_ack
+    to_l1_o : out nsl_bnoc.committed.committed_req;
+    to_l1_i : in nsl_bnoc.committed.committed_ack;
+    from_l1_i : in nsl_bnoc.committed.committed_req;
+    from_l1_o : out nsl_bnoc.committed.committed_ack
     );
 end entity;
 
@@ -38,7 +38,7 @@ architecture beh of ethernet_layer is
 
   signal s_to_l3_index, s_from_l3_index: integer range 0 to ethertype_l_c'length - 1;
   signal s_from_l3_type : ethertype_t;
-  signal s_from_l1, s_to_l3, s_from_l3: nsl_bnoc.framed.framed_bus;
+  signal s_from_l1, s_to_l3, s_from_l3: nsl_bnoc.committed.committed_bus;
   
 begin
 

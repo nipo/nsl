@@ -6,5 +6,6 @@ vhdl-sources += ethernet_layer.vhd
 deps += nsl_data.bytestream
 deps += nsl_data.endian
 deps += nsl_bnoc.framed
+deps += nsl_bnoc.committed
 deps += nsl_math.arith
 
