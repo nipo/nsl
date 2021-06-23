@@ -44,7 +44,7 @@ package rgmii is
       );
   end component;
 
-  component rgmii_from_framed is
+  component rgmii_from_committed is
     generic(
       ipg_c : natural := 96/8
       );
@@ -52,20 +52,20 @@ package rgmii is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      framed_i : in nsl_bnoc.framed.framed_req;
-      framed_o : out nsl_bnoc.framed.framed_ack;
+      committed_i : in nsl_bnoc.committed.committed_req;
+      committed_o : out nsl_bnoc.committed.committed_ack;
 
       rgmii_o : out rgmii_pipe
       );
   end component;
 
-  component rgmii_to_framed is
+  component rgmii_to_committed is
     port(
       clock_o : out std_ulogic;
       reset_n_i : in std_ulogic;
 
-      framed_o : out nsl_bnoc.framed.framed_req;
-      framed_i : in nsl_bnoc.framed.framed_ack;
+      committed_o : out nsl_bnoc.committed.committed_req;
+      committed_i : in nsl_bnoc.committed.committed_ack;
 
       rgmii_i : in rgmii_pipe
       );
