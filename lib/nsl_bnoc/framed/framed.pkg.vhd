@@ -137,6 +137,44 @@ package framed is
       );
   end component;
 
+  component framed_funnel is
+    generic(
+      source_count_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      selected_o  : out natural range 0 to source_count_c - 1;
+      
+      in_i   : in framed_req_array(0 to source_count_c - 1);
+      in_o   : out framed_ack_array(0 to source_count_c - 1);
+
+      out_o   : out framed_req;
+      out_i   : in framed_ack
+      );
+  end component;
+
+  component framed_dispatch is
+    generic(
+      destination_count_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      destination_i  : in natural range 0 to destination_count_c - 1;
+      
+      in_i   : in framed_req;
+      in_o   : out framed_ack;
+
+      out_o   : out framed_req_array(0 to destination_count_c - 1);
+      out_i   : in framed_ack_array(0 to destination_count_c - 1)
+      );
+  end component;
+
   component framed_gate is
     port(
       reset_n_i   : in  std_ulogic;

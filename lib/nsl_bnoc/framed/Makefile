@@ -6,6 +6,8 @@ vhdl-sources += framed_fifo_slice.vhd
 vhdl-sources += framed_gate.vhd
 vhdl-sources += framed_granted_gate.vhd
 vhdl-sources += framed_gate_arbitrer.vhd
+vhdl-sources += framed_funnel.vhd
+vhdl-sources += framed_dispatch.vhd
 vhdl-sources += framed_committer.vhd
 
 deps += nsl_memory.fifo
