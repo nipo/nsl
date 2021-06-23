@@ -28,8 +28,7 @@ architecture beh of rgmii_from_framed is
     ST_PRE,
     ST_FORWARD,
     ST_PAD,
-    ST_FCS,
-    ST_FLUSH
+    ST_FCS
     );
 
   constant min_size : natural := 64;
@@ -42,6 +41,8 @@ architecture beh of rgmii_from_framed is
   type regs_t is
   record
     state : state_t;
+    tx_error : std_ulogic;
+    tx_buf : std_ulogic_vector(7 downto 0);
     ctr : natural range 0 to ctr_max;
     fcs : nsl_data.crc.crc32;
   end record;
@@ -80,6 +81,8 @@ begin
         if framed_i.valid = '1' then
           rin.state <= ST_PRE;
           rin.ctr <= 7;
+          rin.tx_buf <= framed_i.data;
+          rin.tx_error <= '0';
         end if;
 
       when ST_PRE =>
@@ -92,26 +95,37 @@ begin
         end if;
 
       when ST_FORWARD =>
-        rin.fcs <= nsl_data.crc.crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(framed_i.data));
+        rin.fcs <= nsl_data.crc.crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(r.tx_buf));
 
         if r.ctr /= 0 then
           rin.ctr <= r.ctr - 1;
         end if;
 
         if framed_i.valid = '0' then
-          rin.ctr <= ipg_c - 1;
-          rin.state <= ST_FLUSH;
-        elsif framed_i.valid = '1' and framed_i.last = '1' then
-          if r.ctr /= 0 then
-            rin.state <= ST_PAD;
-          else
-            rin.state <= ST_FCS;
-            rin.ctr <= 3;
+          rin.tx_error <= '1';
+          rin.tx_buf <= pad_byte;
+        else
+          rin.tx_buf <= framed_i.data;
+
+          if framed_i.last = '1' then
+            rin.tx_buf <= pad_byte;
+
+            if framed_i.data(0) /= '1' then
+              rin.tx_error <= '1';
+            end if;
+
+            if r.ctr /= 0 then
+              rin.state <= ST_PAD;
+            else
+              rin.ctr <= 3;
+              rin.state <= ST_FCS;
+            end if;
           end if;
         end if;
 
       when ST_PAD =>
-        rin.fcs <= nsl_data.crc.crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(pad_byte));
+        rin.fcs <= nsl_data.crc.crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(r.tx_buf));
+        rin.tx_buf <= pad_byte;
 
         if r.ctr /= 0 then
           rin.ctr <= r.ctr - 1;
@@ -128,21 +142,12 @@ begin
           rin.state <= ST_IPG;
           rin.ctr <= ipg_c - 1;
         end if;
-
-      when ST_FLUSH =>
-        if r.ctr /= 0 then
-          rin.ctr <= r.ctr - 1;
-        end if;
-
-        if framed_i.valid = '1' and framed_i.last = '1' then
-          rin.state <= ST_IPG;
-        end if;
     end case;
   end process;
 
   rgmii_o.clock <= clock_i;
   
-  mealy: process(r, framed_i)
+  mealy: process(r)
   begin
     rgmii_o.valid <= '0';
     rgmii_o.error <= '0';
@@ -150,8 +155,11 @@ begin
     framed_o.ready <= '0';
 
     case r.state is
-      when ST_RESET | ST_IPG | ST_IDLE =>
+      when ST_RESET | ST_IPG =>
         null;
+
+      when ST_IDLE =>
+        framed_o.ready <= '1';
 
       when ST_PRE =>
         rgmii_o.error <= '0';
@@ -163,23 +171,20 @@ begin
         end if;
 
       when ST_FORWARD =>
-        rgmii_o.error <= not framed_i.valid;
+        rgmii_o.error <= r.tx_error;
         rgmii_o.valid <= '1';
-        rgmii_o.data <= framed_i.data;
+        rgmii_o.data <= r.tx_buf;
         framed_o.ready <= '1';
 
       when ST_PAD =>
-        rgmii_o.error <= '0';
+        rgmii_o.error <= r.tx_error;
         rgmii_o.valid <= '1';
-        rgmii_o.data <= pad_byte;
+        rgmii_o.data <= r.tx_buf;
 
       when ST_FCS =>
-        rgmii_o.error <= '0';
+        rgmii_o.error <= r.tx_error;
         rgmii_o.valid <= '1';
         rgmii_o.data <= std_ulogic_vector(r.fcs(7 downto 0));
-
-      when ST_FLUSH =>
-        framed_o.ready <= '1';
     end case;
   end process;
 

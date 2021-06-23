@@ -10,7 +10,6 @@ entity rgmii_to_framed is
     clock_o : out std_ulogic;
     reset_n_i : in std_ulogic;
 
-    valid_o : out std_ulogic;
     framed_o : out nsl_bnoc.framed.framed_req;
     framed_i : in nsl_bnoc.framed.framed_ack;
 
@@ -31,14 +30,14 @@ architecture beh of rgmii_to_framed is
     ST_FILL,
     ST_FORWARD,
     ST_VALID,
-    ST_INVALID,
     ST_IGNORE
     );
 
   type regs_t is
   record
     state : state_t;
-    buf : nsl_data.bytestream.byte_string(0 to 5);
+    rx_valid : std_ulogic;
+    buf : nsl_data.bytestream.byte_string(0 to 4);
     fcs : crc32;
     ctr : natural range 0 to 7;
   end record;
@@ -70,6 +69,7 @@ begin
           rin.state <= ST_WAIT_PRE;
           -- Allow first PRE byte to come within 8 next bytes
           rin.ctr <= 7;
+          rin.rx_valid <= '1';
         end if;
 
       when ST_WAIT_PRE =>
@@ -109,8 +109,8 @@ begin
           rin.state <= ST_IDLE;
         else
           rin.fcs <= crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(rgmii_i.data));
-          rin.buf(5 to 5) <= nsl_data.bytestream.from_suv(rgmii_i.data);
-          rin.buf(0 to 4) <= r.buf(1 to 5);
+          rin.buf(4 to 4) <= nsl_data.bytestream.from_suv(rgmii_i.data);
+          rin.buf(0 to 3) <= r.buf(1 to 4);
           if r.ctr /= 0 then
             rin.ctr <= r.ctr - 1;
           else
@@ -119,23 +119,28 @@ begin
         end if;
 
       when ST_FORWARD =>
-        if rgmii_i.valid = '1' then
-          rin.fcs <= crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(rgmii_i.data));
-          rin.buf(5 to 5) <= nsl_data.bytestream.from_suv(rgmii_i.data);
-          rin.buf(0 to 4) <= r.buf(1 to 5);
-        else
-          if r.fcs = crc_ieee_802_3_check then
-            rin.state <= ST_VALID;
-          else
-            rin.state <= ST_INVALID;
+        -- Overrun condition
+        if framed_i.ready = '0' then
+          rin.rx_valid <= '0';
+        end if;
+
+        rin.fcs <= crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(rgmii_i.data));
+        rin.buf(4 to 4) <= nsl_data.bytestream.from_suv(rgmii_i.data);
+        rin.buf(0 to 3) <= r.buf(1 to 4);
+
+        if rgmii_i.valid = '0' then
+          if r.fcs /= crc_ieee_802_3_check then
+            rin.rx_valid <= '0';
           end if;
+
+          rin.state <= ST_VALID;
         end if;
 
       when ST_VALID =>
-        rin.state <= ST_IDLE;
-
-      when ST_INVALID =>
-        rin.state <= ST_IDLE;
+        -- At least wait intake of last=1
+        if framed_i.ready = '1' then
+          rin.state <= ST_IDLE;
+        end if;
         
       when ST_IGNORE =>
         if rgmii_i.valid = '0' then
@@ -151,7 +156,6 @@ begin
     framed_o.valid <= '0';
     framed_o.last <= '-';
     framed_o.data <= (others => '-');
-    valid_o <= '-';
 
     case r.state is
       when ST_FORWARD =>
@@ -160,16 +164,9 @@ begin
         framed_o.data <= r.buf(0);
 
       when ST_VALID =>
-        valid_o <= '1';
         framed_o.last <= '1';
         framed_o.valid <= '1';
-        framed_o.data <= r.buf(0);
-
-      when ST_INVALID =>
-        valid_o <= '0';
-        framed_o.last <= '1';
-        framed_o.valid <= '1';
-        framed_o.data <= r.buf(0);
+        framed_o.data <= "0000000" & r.rx_valid;
 
       when others =>
     end case;

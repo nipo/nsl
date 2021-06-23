@@ -5,6 +5,21 @@ library nsl_bnoc;
 
 package rgmii is
 
+  -- RGMII is a transport for Layer 1.  Frames in and out of RGMII
+  -- transceiver contain the whole ethernet frame, not including FCS,
+  -- but with a status byte instead.  Payload may be padded. Padding
+  -- is carried over.  There is no minimal size for frame TX, it is up
+  -- to transmitter to abide minimal size constraints.
+  --
+  -- Layer 1 <-> layer 2 frame components:
+  -- * Destination MAC [6]
+  -- * Source MAC [6]
+  -- * Ethertype [2]
+  -- * Payload [*]
+  -- * Status
+  --   [0]   CRC valid / Frame complete
+  --   [7:1] Reserved
+
   type rgmii_signal is
   record
     d   : std_ulogic_vector(3 downto 0);
@@ -49,7 +64,6 @@ package rgmii is
       clock_o : out std_ulogic;
       reset_n_i : in std_ulogic;
 
-      valid_o : out std_ulogic;
       framed_o : out nsl_bnoc.framed.framed_req;
       framed_i : in nsl_bnoc.framed.framed_ack;
 
