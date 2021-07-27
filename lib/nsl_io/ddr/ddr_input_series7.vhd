@@ -17,14 +17,14 @@ begin
 
   pad: unisim.vcomponents.iddr
     generic map(
-      ddr_clk_edge => "SAME_EDGE_PIPELINED"
+      ddr_clk_edge => "SAME_EDGE"
       )
    port map (
       d => dd_i,
       c => clock_i.p,
       ce => '1',
-      q1 => d_o(0),
-      q2 => d_o(1),
+      q1 => d_o(1),
+      q2 => d_o(0),
       r => '0',
       s => '0'
    );
