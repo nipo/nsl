@@ -75,7 +75,7 @@ package body crc is
 
   function "/="(x, y:crc_state) return boolean is
   begin
-    return std_ulogic_vector(x) = std_ulogic_vector(y);
+    return std_ulogic_vector(x) /= std_ulogic_vector(y);
   end function;
 
   function bitswap(x:crc_state) return crc_state is
