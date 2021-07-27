@@ -15,5 +15,7 @@ def put(payload):
             print("0"+b, 10)
 
 
-put(prig[:-4])
-put(b'lol')
+put(prig[:-4] + b'\x01')
+put(b'good' + b'\x01')
+put(b'bad' + b'\x00')
+put(b'ugly' + b'\x01')

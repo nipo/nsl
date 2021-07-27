@@ -1,7 +1,7 @@
 top = work.tb
 work-srcdir = $(SRC_DIR)/src
 tool = ghdl
-target_part=xc6lol
+target_part=xc7a15t
 hwdep = xilinx
 
 include ../../build/build.mk

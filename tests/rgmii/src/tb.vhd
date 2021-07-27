@@ -64,13 +64,13 @@ begin
       p_out_ack => n_ack(1)
       );
 
-  to_mii: nsl_mii.rgmii.rgmii_from_framed
+  to_mii: nsl_mii.rgmii.rgmii_from_committed
     port map(
       reset_n_i => s_resetn_clk(1),
       clock_i => s_clk(1),
 
-      framed_i => n_val(1),
-      framed_o => n_ack(1),
+      committed_i => n_val(1),
+      committed_o => n_ack(1),
 
       rgmii_o => phy_data
       );
@@ -89,17 +89,19 @@ begin
       mac_o => phy_data_rx
       );
   
-  from_mii: nsl_mii.rgmii.rgmii_to_framed
+  from_mii: nsl_mii.rgmii.rgmii_to_committed
     port map(
       reset_n_i => s_resetn_clk(1),
       clock_o => rx_clock,
 
-      framed_o => n_val(2),
-      framed_i => n_ack(2),
+      committed_o => n_val(2),
+      committed_i => n_ack(2),
 
       rgmii_i => phy_data_rx
       );
 
+  n_ack(2).ready <= '1';
+  
   wait_end: process
   begin
     s_done(1) <= '0';
