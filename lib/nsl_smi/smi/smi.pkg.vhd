@@ -30,7 +30,8 @@ package smi is
   
   component smi_master_line_driver is
     port(
-      smi_io : inout smi_bus;
+      mdc_o : out std_ulogic;
+      mdio_io : inout std_logic;
       master_o  : out smi_master_i;
       master_i  : in smi_master_o
       );

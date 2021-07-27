@@ -6,7 +6,8 @@ use nsl_smi.smi.all;
 
 entity smi_master_line_driver is
   port(
-      smi_io : inout smi_bus;
+      mdc_o : out std_ulogic;
+      mdio_io : inout std_logic;
       master_o  : out smi_master_i;
       master_i  : in smi_master_o
     );
@@ -19,9 +20,9 @@ begin
     port map(
       v_i => master_i.mdio,
       v_o => master_o.mdio,
-      io_io => smi_io.mdio
+      io_io => mdio_io
       );
 
-  smi_io.mdc <= master_i.mdc;
+  mdc_o <= master_i.mdc;
 
 end architecture;
