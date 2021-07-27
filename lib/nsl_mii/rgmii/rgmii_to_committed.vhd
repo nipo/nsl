@@ -4,6 +4,7 @@ use ieee.std_logic_1164.all;
 library nsl_bnoc, nsl_mii, nsl_data, nsl_math;
 use nsl_mii.rgmii.all;
 use nsl_data.crc.all;
+use nsl_data.bytestream.all;
 
 entity rgmii_to_committed is
   port(
@@ -29,7 +30,7 @@ architecture beh of rgmii_to_committed is
     ST_WAIT_SFD,
     ST_FILL,
     ST_FORWARD,
-    ST_VALID,
+    ST_DONE,
     ST_IGNORE
     );
 
@@ -56,7 +57,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, rgmii_i)
+  transition: process(r, rgmii_i, committed_i)
   begin
     rin <= r;
 
@@ -69,7 +70,6 @@ begin
           rin.state <= ST_WAIT_PRE;
           -- Allow first PRE byte to come within 8 next bytes
           rin.ctr <= 7;
-          rin.rx_valid <= '1';
         end if;
 
       when ST_WAIT_PRE =>
@@ -90,9 +90,10 @@ begin
           rin.state <= ST_IDLE;
         elsif rgmii_i.data = sfd_byte then
           if r.ctr = 0 then
+            rin.rx_valid <= '1';
             rin.fcs <= crc_ieee_802_3_init;
             rin.state <= ST_FILL;
-            rin.ctr <= 5;
+            rin.ctr <= 4;
           else
             rin.state <= ST_IGNORE;
           end if;
@@ -108,7 +109,7 @@ begin
         if rgmii_i.valid = '0' then
           rin.state <= ST_IDLE;
         else
-          rin.fcs <= crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(rgmii_i.data));
+          rin.fcs <= crc_ieee_802_3_update(r.fcs, from_suv(rgmii_i.data));
           rin.buf(4 to 4) <= nsl_data.bytestream.from_suv(rgmii_i.data);
           rin.buf(0 to 3) <= r.buf(1 to 4);
           if r.ctr /= 0 then
@@ -123,20 +124,21 @@ begin
         if committed_i.ready = '0' then
           rin.rx_valid <= '0';
         end if;
-
-        rin.fcs <= crc_ieee_802_3_update(r.fcs, nsl_data.bytestream.from_suv(rgmii_i.data));
+        rin.fcs <= crc_ieee_802_3_update(r.fcs, from_suv(rgmii_i.data));
         rin.buf(4 to 4) <= nsl_data.bytestream.from_suv(rgmii_i.data);
         rin.buf(0 to 3) <= r.buf(1 to 4);
 
         if rgmii_i.valid = '0' then
+          rin.state <= ST_DONE;
+
           if r.fcs /= crc_ieee_802_3_check then
             rin.rx_valid <= '0';
           end if;
-
-          rin.state <= ST_VALID;
+        elsif rgmii_i.error = '1' then
+          rin.rx_valid <= '0';
         end if;
 
-      when ST_VALID =>
+      when ST_DONE =>
         -- At least wait intake of last=1
         if committed_i.ready = '1' then
           rin.state <= ST_IDLE;
@@ -163,7 +165,7 @@ begin
         committed_o.valid <= '1';
         committed_o.data <= r.buf(0);
 
-      when ST_VALID =>
+      when ST_DONE =>
         committed_o.last <= '1';
         committed_o.valid <= '1';
         committed_o.data <= "0000000" & r.rx_valid;
