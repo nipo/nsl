@@ -16,7 +16,15 @@ end entity;
 architecture beh of tristated_io_driver is
 begin
 
-  io_io <= v_i.v when v_i.en = '1' else 'Z';
+  io: process(v_i) is
+  begin
+    io_io <= 'Z';
+
+    if v_i.en = '1' then
+      io_io <= std_logic(v_i.v);
+    end if;
+  end process;
+
   v_o <= to_x01(io_io);
   
 end architecture;
