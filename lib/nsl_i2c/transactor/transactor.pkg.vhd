@@ -6,12 +6,22 @@ library nsl_i2c, nsl_bnoc, nsl_data;
 
 package transactor is
 
+  -- CMD: [READ | n-1]
+  -- RSP: [Data * n]
   constant I2C_CMD_READ      : nsl_bnoc.framed.framed_data_t := "1-------";
   constant I2C_CMD_READ_ACK  : nsl_bnoc.framed.framed_data_t := "11------";
   constant I2C_CMD_READ_NACK : nsl_bnoc.framed.framed_data_t := "10------";
+  -- CMD: [WRITE | n-1, Data * n]
+  -- RSP: [Ack * n]
   constant I2C_CMD_WRITE     : nsl_bnoc.framed.framed_data_t := "01------";
+  -- CMD: [DIV | n-1]
+  -- RSP: [00]
   constant I2C_CMD_DIV       : nsl_bnoc.framed.framed_data_t := "000-----";
+  -- CMD: [START]
+  -- RSP: [00 or ff]
   constant I2C_CMD_START     : nsl_bnoc.framed.framed_data_t := "00100000";
+  -- CMD: [STOP]
+  -- RSP: [00 or ff]
   constant I2C_CMD_STOP      : nsl_bnoc.framed.framed_data_t := "00100001";
 
   component transactor_framed_controller
