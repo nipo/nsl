@@ -35,6 +35,8 @@ architecture rtl of spi_muxed_transactor is
     CMD_PUT,
     CMD_DATA_GET,
     CMD_DATA_PUT,
+    CMD_UNSELECT,
+    CMD_UNSELECT_PAUSE,
     CMD_SELECT_SELECT,
     CMD_SELECT_SHIFT,
     CMD_SELECT_DATA,
@@ -49,6 +51,7 @@ architecture rtl of spi_muxed_transactor is
     RSP_PUT,
     RSP_DATA_GET,
     RSP_DATA_PUT,
+    RSP_UNSELECT,
     RSP_SELECT_SELECT,
     RSP_SELECT_SHIFT,
     RSP_SELECT_SELECT2,
@@ -97,7 +100,11 @@ begin
 
       when CMD_ROUTE =>
         if std_match(r.cmd, SPI_CMD_SELECT) then
-          rin.cmd_state <= CMD_SELECT_SELECT;
+          if r.cmd(2 downto 0) = "111" then
+            rin.cmd_state <= CMD_UNSELECT;
+          else
+            rin.cmd_state <= CMD_SELECT_SELECT;
+          end if;
         else
           rin.cmd_state <= CMD_PUT;
         end if;
@@ -140,6 +147,19 @@ begin
           rin.cmd_state <= CMD_SELECT_SHIFT;
         end if;
 
+      when CMD_UNSELECT =>
+        if master_cmd_i.ready = '1' then
+          rin.cmd_state <= CMD_UNSELECT_PAUSE;
+          rin.cmd_word_left <= 2**6 - 1;
+        end if;
+
+      when CMD_UNSELECT_PAUSE =>
+        if r.cmd_word_left = 0 then
+          rin.cmd_state <= CMD_RSP_WAIT;
+        else
+          rin.cmd_word_left <= r.cmd_word_left - 1;
+        end if;
+
       when CMD_SELECT_SHIFT =>
         if master_cmd_i.ready = '1' then
           rin.cmd_state <= CMD_SELECT_DATA;
@@ -163,7 +183,11 @@ begin
       when RSP_IDLE =>
         if r.cmd_state = CMD_ROUTE then
           if std_match(r.cmd, SPI_CMD_SELECT) then
-            rin.rsp_state <= RSP_SELECT_SELECT;
+            if r.cmd(2 downto 0) = "111" then
+              rin.rsp_state <= RSP_UNSELECT;
+            else
+              rin.rsp_state <= RSP_SELECT_SELECT;
+            end if;
           else
             rin.rsp_state <= RSP_GET;
           end if;
@@ -219,6 +243,11 @@ begin
           rin.rsp_state <= RSP_SELECT_RSP;
         end if;
 
+      when RSP_UNSELECT =>
+        if master_rsp_i.valid = '1' then
+          rin.rsp_state <= RSP_SELECT_RSP;
+        end if;
+
       when RSP_SELECT_RSP =>
         if slave_rsp_i.ready = '1' then
           rin.rsp_state <= RSP_IDLE;
@@ -238,7 +267,7 @@ begin
     slave_rsp_o.data <= (others => '-');
     
     case r.cmd_state is
-      when CMD_RESET | CMD_ROUTE | CMD_RSP_WAIT =>
+      when CMD_RESET | CMD_ROUTE | CMD_RSP_WAIT | CMD_UNSELECT_PAUSE =>
         null;
 
       when CMD_IDLE | CMD_DATA_GET =>
@@ -271,6 +300,11 @@ begin
         master_cmd_o.last <= '0';
         master_cmd_o.data <= SPI_CMD_SELECT(7 downto 5) & "00"
                              & std_ulogic_vector(to_unsigned(muxed_slave_no_c, 3));
+
+      when CMD_UNSELECT =>
+        master_cmd_o.valid <= '1';
+        master_cmd_o.last <= '0';
+        master_cmd_o.data <= SPI_CMD_SELECT(7 downto 5) & "00111";
     end case;
 
     case r.rsp_state is
@@ -278,7 +312,7 @@ begin
         null;
 
       when RSP_GET | RSP_DATA_GET | RSP_SELECT_SELECT
-        | RSP_SELECT_SHIFT | RSP_SELECT_SELECT2 =>
+        | RSP_SELECT_SHIFT | RSP_SELECT_SELECT2 | RSP_UNSELECT =>
         master_rsp_o.ready <= '1';
 
       when RSP_PUT | RSP_DATA_PUT =>
