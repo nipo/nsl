@@ -5,6 +5,9 @@ use ieee.numeric_std.all;
 library nsl_bnoc;
 
 entity committed_frame_gateway is
+  generic(
+    timeout_c : natural := 125000000
+    );
   port(
     clock_i   : in std_ulogic;
     reset_n_i : in std_ulogic;
@@ -21,7 +24,7 @@ entity committed_frame_gateway is
     );
 end entity;
 
-architecture beh of framed_frame_capturer is
+architecture beh of committed_frame_gateway is
 
   type state_t is (
     ST_RESET,
@@ -30,13 +33,12 @@ architecture beh of framed_frame_capturer is
     ST_CAPTURE_FORWARD,
     ST_CAPTURE_FAIL,
     ST_TRANSMIT_RSP,
-    ST_TRANSMIT_FORWARD,
-    ST_TRANSMIT_COMMIT
+    ST_TRANSMIT_FORWARD
     );
   
   type regs_t is record
     state      : state_t;
-    timeout    : natural range 0 to 125000000;
+    timeout    : natural range 0 to timeout_c-1;
     in_txn     : boolean;
   end record;
 
@@ -72,10 +74,10 @@ begin
             and cmd_i.last = '1' then
             if not r.in_txn and rx_i.valid = '0' then
               rin.state <= ST_CAPTURE_FORWARD;
-              rin.timeout <= 125000000 / 4;
+              rin.timeout <= timeout_c / 4 - 1;
             else
               rin.state <= ST_CAPTURE_SYNC;
-              rin.timeout <= 125000000;
+              rin.timeout <= timeout_c - 1;
             end if;
           elsif cmd_i.last = '0' then
             rin.state <= ST_TRANSMIT_FORWARD;
@@ -91,13 +93,13 @@ begin
 
         if rx_i.valid = '1' and rx_i.last = '1' then
           rin.state <= ST_CAPTURE_FORWARD;
-          rin.timeout <= 125000000 / 4;
+          rin.timeout <= timeout_c / 4 - 1;
         end if;
 
       when ST_CAPTURE_FORWARD =>
         if rx_i.valid = '1' then
-          rin.timeout <= 125000000;
-          if rx_i.last and rsp_i.ready = '1' then
+          rin.timeout <= timeout_c - 1;
+          if rx_i.last = '1' and rsp_i.ready = '1' then
             rin.state <= ST_IDLE;
           end if;
         elsif r.timeout /= 0 then

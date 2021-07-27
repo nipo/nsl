@@ -28,7 +28,10 @@ package frame_capturer is
       );
   end component;
 
-  component committed_frame_capturer
+  component committed_frame_gateway
+    generic(
+      timeout_c : natural := 125000000
+      );
     port(
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
