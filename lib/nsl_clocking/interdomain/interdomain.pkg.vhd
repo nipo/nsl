@@ -107,4 +107,17 @@ package interdomain is
       );
   end component;
 
+  -- Takes a tick in an input domain, and translate it to a tick in
+  -- output domain.  Can reach at most lowest of half input clock
+  -- frequency and half of output clock frequency.
+  component interdomain_tick is
+    port(
+      input_clock_i : in  std_ulogic;
+      output_clock_i : in  std_ulogic;
+      input_reset_n_i : in std_ulogic;
+      tick_i : in  std_ulogic;
+      tick_o : out std_ulogic
+      );
+  end component;
+
 end package interdomain;
