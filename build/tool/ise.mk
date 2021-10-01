@@ -1,4 +1,4 @@
-INTF_STYLE = -intstyle silent
+INTF_STYLE = $(if $V,,-intstyle silent)
 
 MAP_PLACE_ROUTE_OPTS = -ol high -xe c
 
