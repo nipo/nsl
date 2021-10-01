@@ -36,6 +36,7 @@ entity rc_ufixed is
     clock_i: in std_ulogic;
     reset_n_i : in std_ulogic;
 
+    valid_i : in std_ulogic := '1';
     in_i : in ufixed;
     out_o : out ufixed
     );
@@ -45,15 +46,17 @@ architecture beh of rc_ufixed is
 
   constant tau_w : integer := nsl_math.arith.log2(tau_c);
   constant can_shift : boolean := tau_c = ((2 ** tau_w) - 1);
-  subtype uacc_t is ufixed(in_i'left downto in_i'right - tau_w);
-  subtype sacc_t is sfixed(in_i'left+1 downto in_i'right - tau_w);
-  constant a : sacc_t := to_sfixed(1.0 / real(tau_c + 1), sacc_t'left, sacc_t'right);
+  constant wl: integer := nsl_math.arith.max(in_i'left, out_o'left);
+  constant wr: integer := nsl_math.arith.min(in_i'right, out_o'right);
+  subtype uacc_t is ufixed(wl downto wr - tau_w);
+  subtype diff_t is ufixed(wl downto wr);
 
   type regs_t is
   record
     acc : uacc_t;
   end record;
 
+  signal s_diff: diff_t;
   signal r, rin : regs_t;
   
 begin
@@ -79,30 +82,43 @@ begin
     end if;
   end process;
 
-  transition: process(r, in_i) is
-    variable sin: sfixed(in_i'left+1 downto in_i'right);
-    variable sacc, sin_ext, sdiff, sinc : sacc_t;
+  with_shift: if can_shift
+  generate
+    s_diff <= resize(in_i, s_diff'left, s_diff'right)
+            - resize(r.acc, s_diff'left, s_diff'right);
+
+  end generate;
+
+  without_shift: if not can_shift
+  generate
+    diff_calc: process(r, in_i) is
+      subtype sacc_t is sfixed(wl+1 downto wr - tau_w);
+      constant a : sacc_t := to_sfixed(1.0 / real(tau_c + 1), sacc_t'left, sacc_t'right);
+      variable sin: sfixed(in_i'left+1 downto in_i'right);
+      variable sacc, sin_ext, sdiff, sinc : sacc_t;
+    begin
+      rin <= r;
+
+      sin := sfixed("0" & in_i);
+      sacc := sfixed("0" & r.acc);
+
+      sin_ext := resize(sin, sacc_t'left, sacc_t'right);
+      sdiff := sin_ext - sacc;
+      s_diff <= ufixed(mul(sdiff, a, s_diff'left, s_diff'right));
+    end process;
+  end generate;
+
+  transition: process(r, s_diff, valid_i) is
+    variable sdiff : ufixed(uacc_t'range);
+    variable sext : ufixed(tau_w-1 downto 0);
   begin
     rin <= r;
 
-    sin := sfixed("0" & in_i);
-    sin_ext := resize(sin, sacc_t'left, sacc_t'right);
-    sacc := sfixed("0" & r.acc);
-    sdiff := sin_ext - sacc;
-
-    if can_shift then
-      sinc := shr(sdiff, tau_w);
-    else
-      sinc := mul(sdiff, a, sacc_t'left, sacc_t'right);
+    sext := (others => s_diff(s_diff'left));
+    sdiff := sext & s_diff;
+    if valid_i = '1' then
+      rin.acc <= r.acc + sdiff;
     end if;
-    
-    sacc := sinc + sacc;
-
-    assert sacc(sacc'left) = '0'
-      report "Accumulator should not be less than zero"
-      severity error;
-
-    rin.acc <= ufixed(sacc(uacc_t'range));
   end process;
 
   out_o <= resize(r.acc, out_o'left, out_o'right);

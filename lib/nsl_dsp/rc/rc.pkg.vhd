@@ -24,6 +24,7 @@ package rc is
       clock_i: in std_ulogic;
       reset_n_i : in std_ulogic;
 
+      valid_i : in std_ulogic := '1';
       in_i : in ufixed;
       out_o : out ufixed
       );
