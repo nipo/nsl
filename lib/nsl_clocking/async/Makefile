@@ -5,6 +5,4 @@ vhdl-sources += async_edge.vhd
 vhdl-sources += async_multi_reset.vhd
 vhdl-sources += async_sampler.vhd
 vhdl-sources += async_stabilizer.vhd
-vhdl-sources += async_recovery.vhd
 deps += nsl_math.arith
-deps += nsl_math.fixed

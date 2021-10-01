@@ -5,7 +5,7 @@ use ieee.math_real.all;
 library nsl_math;
 use nsl_math.fixed.all;
 
-entity async_recovery is
+entity tick_recoverer is
   generic(
     clock_i_hz_c : natural;
     tick_skip_max_c : natural := 2;
@@ -18,7 +18,9 @@ entity async_recovery is
     reset_n_i : in std_ulogic;
     tick_valid_i : in std_ulogic := '1';
     tick_i : in std_ulogic;
-    tick_o : out std_ulogic
+    tick_o : out std_ulogic;
+
+    tick_i_period_o : out ufixed
     );
 
 begin
@@ -31,9 +33,9 @@ begin
     report "Block clock must be above Nyquist limit for generating output tick"
     severity failure;
   
-end async_recovery;
+end tick_recoverer;
 
-architecture rtl of async_recovery is
+architecture rtl of tick_recoverer is
 
   constant clock_i_hz : real := real(clock_i_hz_c);
   constant tick_i_hz : real := real(tick_i_hz_c);
@@ -84,13 +86,12 @@ architecture rtl of async_recovery is
     tick_i_valid : boolean;
 
     tick_i_period_measured : io_ctr_t;
+    tick_i_period_reported : ufixed(tick_i_period_o'range);
     tick_io_acc : io_ctr_t;
     tick_o : boolean;
   end record;
 
   signal r, rin : regs_t;
-
-  signal tick_i_acc, tick_i_acc_lp, tick_i_period_measured, tick_io_acc : real;
 
 begin
 
@@ -157,12 +158,12 @@ begin
     rin.tick_i_period_measured <= resize(value => r.tick_i_acc_lp,
                                          left => r.tick_i_period_measured'left,
                                          right => r.tick_i_period_measured'right);
+    rin.tick_i_period_reported <= resize(value => r.tick_i_acc_lp,
+                                         left => r.tick_i_period_reported'left,
+                                         right => r.tick_i_period_reported'right);
   end process;
 
   tick_o <= '1' when r.tick_o else '0';
-  tick_i_acc <= to_real(r.tick_i_acc);
-  tick_i_acc_lp <= to_real(r.tick_i_acc_lp);
-  tick_i_period_measured <= to_real(r.tick_i_period_measured);
-  tick_io_acc <= to_real(r.tick_io_acc);
+  tick_i_period_o <= r.tick_i_period_reported;
   
 end rtl;
