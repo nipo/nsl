@@ -8,7 +8,7 @@ $(call exclude-libs,unisim)
 tmp-dir := planahead-tmp
 
 define hdl_add
-	echo 'add_files -norecurse $1' >> $@
+	echo 'add_files -fileset sources_1 -norecurse $1' >> $@
 	$(SILENT)echo 'set_property library "$($1-library)" [get_files $1]' >> $@
 	$(SILENT)
 endef
@@ -18,7 +18,7 @@ define constraint_add
 	$(SILENT)
 endef
 
-source_add=$(if $(filter constraint,$($1-language)),$(call hdl_add,$1),$(call constraint_add,$1))
+source_add=$(if $(filter constraint,$($1-language)),$(call constraint_add,$1),$(call hdl_add,$1))
 
 all: $(target)/$(target).ppr
 
@@ -30,7 +30,6 @@ $(tmp-dir)/ingress/create.tcl: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)echo 'set_property source_mgmt_mode DisplayOnly [current_project]' >> $@
 	$(SILENT)$(foreach s,$(sources),$(call source_add,$s))
 	$(SILENT)echo 'set_property top $(top-entity) [get_filesets sources_1]' >> $@
-	$(SILENT)echo 'update_compile_order -fileset sources_1' >> $@
 	$(SILENT)echo 'save_project_as -force $(target) ../../$(target)' >> $@
 
 $(target)/$(target).ppr: $(tmp-dir)/ingress/create.tcl
