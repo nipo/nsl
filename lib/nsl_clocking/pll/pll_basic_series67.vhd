@@ -89,7 +89,13 @@ begin
 
   s_reset <= not reset_n_i;
 
-  use_s6pll: if variant = S6_PLL
+  passthrough: if input_hz_c = output_hz_c
+  generate
+    clock_o <= clock_i;
+    locked_o <= reset_n_i;
+  end generate;
+
+  use_s6pll: if variant = S6_PLL and input_hz_c /= output_hz_c
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
@@ -119,7 +125,7 @@ begin
         );
   end generate;
 
-  use_s7pll: if variant = S7_PLL
+  use_s7pll: if variant = S7_PLL and input_hz_c /= output_hz_c
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
@@ -158,7 +164,7 @@ begin
         );
   end generate;
 
-  use_s7mmcm: if variant = S7_MMCM
+  use_s7mmcm: if variant = S7_MMCM and input_hz_c /= output_hz_c
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
@@ -188,7 +194,7 @@ begin
         );
   end generate;
 
-  use_s6dcm: if variant = S6_DCM
+  use_s6dcm: if variant = S6_DCM and input_hz_c /= output_hz_c
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
