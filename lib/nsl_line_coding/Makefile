@@ -1,1 +1,2 @@
 packages += nrzi
+packages += tmds
