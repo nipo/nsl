@@ -40,4 +40,24 @@ package pad is
       );
   end component;
 
+  component pad_tmds_output
+    generic(
+      invert_c : boolean := false
+      );
+    port(
+      data_i : in std_ulogic;
+      pad_o : out diff_pair
+      );
+  end component;
+
+  component pad_tmds_input
+    generic(
+      invert_c : boolean := false
+      );
+    port(
+      data_o : out std_ulogic;
+      pad_i : in diff_pair
+      );
+  end component;
+
 end package pad;
