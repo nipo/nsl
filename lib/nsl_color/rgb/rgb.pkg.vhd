@@ -195,7 +195,15 @@ package rgb is
                           lsb_right: boolean := true;
                           color_order: string := "RGB") return rgb24;
 
+  function rgb3_to_suv(color: rgb3;
+                       color_order: string := "RGB") return std_ulogic_vector;
+
+  function rgb3_from_suv(color: std_ulogic_vector;
+                         color_order: string := "RGB") return rgb3;
+
   function to_rgb24(r, g, b : real) return rgb24;
+
+  function to_rgb24(rgb: rgb3) return rgb24;
 
   -- h : angle (radians)
   -- s : [0..1]
@@ -469,6 +477,60 @@ package body rgb is
     ret.g := c.g srl att_l2;
     ret.b := c.b srl att_l2;
     return ret;
+  end function;
+
+  function rgb3_to_suv(color: rgb3;
+                       color_order: string := "RGB") return std_ulogic_vector
+  is
+    alias order: string(1 to 3) is color_order;
+    variable ret: std_ulogic_vector(1 to 3) := "000";
+  begin
+    for i in 1 to 3
+    loop
+      if order(i) = 'R' then ret(i) := color.r; end if;
+      if order(i) = 'G' then ret(i) := color.g; end if;
+      if order(i) = 'B' then ret(i) := color.b; end if;
+    end loop;
+    return ret;
+  end function;
+
+  function rgb3_from_suv(color: std_ulogic_vector;
+                         color_order: string := "RGB") return rgb3
+  is
+    alias order: string(1 to 3) is color_order;
+    alias xcolor: std_ulogic_vector(1 to 3) is color;
+    variable ret: rgb3 := ('0', '0', '0');
+  begin
+    for i in 1 to 3
+    loop
+      if order(i) = 'R' then ret.r := xcolor(i); end if;
+      if order(i) = 'G' then ret.g := xcolor(i); end if;
+      if order(i) = 'B' then ret.b := xcolor(i); end if;
+    end loop;
+    return ret;
+  end function;
+
+
+  function to_rgb24(rgb: rgb3) return rgb24
+  is
+  begin
+    if rgb = rgb3_black then
+      return rgb24_black;
+    elsif rgb = rgb3_blue then
+      return rgb24_blue;
+    elsif rgb = rgb3_green then
+      return rgb24_green;
+    elsif rgb = rgb3_cyan then
+      return rgb24_cyan;
+    elsif rgb = rgb3_red then
+      return rgb24_red;
+    elsif rgb = rgb3_magenta then
+      return rgb24_magenta;
+    elsif rgb = rgb3_yellow then
+      return rgb24_yellow;
+    else
+      return rgb24_white;
+    end if;
   end function;
 
 end package body rgb;
