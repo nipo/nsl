@@ -23,12 +23,14 @@ entity spdif_rx_recovery is
 
     -- Guards block data
     block_valid_o : out std_ulogic;
+    block_ready_i : in std_ulogic := '1';
     block_user_o : out std_ulogic_vector(0 to 191);
     block_channel_status_o : out std_ulogic_vector(0 to 191);
     block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
     -- Guards audio/aux/valid data
     valid_o : out std_ulogic;
+    ready_i : in std_ulogic := '1';
     a_o, b_o: out channel_data_t
     );
 end entity;
@@ -98,11 +100,13 @@ begin
       synced_o => synced_o,
       
       block_valid_o => block_valid_o,
+      block_ready_i => block_ready_i,
       block_user_o => block_user_o,
       block_channel_status_o => block_channel_status_o,
       block_channel_status_aesebu_crc_ok_o => block_channel_status_aesebu_crc_ok_o,
 
       valid_o => valid_o,
+      ready_i => ready_i,
       a_o => a_o,
       b_o => b_o
       );

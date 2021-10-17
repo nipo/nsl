@@ -13,16 +13,19 @@ entity block_tx is
     reset_n_i : in std_ulogic;
 
     block_ready_o : out std_ulogic;
+    block_valid_i : in std_ulogic := '1';
     block_user_i : in std_ulogic_vector(0 to 191);
     block_channel_status_i : in std_ulogic_vector(0 to 191);
     block_channel_status_aesebu_auto_crc_i : in std_ulogic := '0';
 
     ready_o : out std_ulogic;
+    valid_i : in std_ulogic := '1';
     a_i, b_i: in channel_data_t;
 
     block_start_o : out std_ulogic;
     channel_o : out std_ulogic;
     frame_o : out frame_t;
+    valid_o : out std_ulogic;
     ready_i : in std_ulogic
     );
 end entity;
@@ -66,6 +69,7 @@ begin
 
   transition: process(r, block_user_i, block_channel_status_i,
                       block_channel_status_aesebu_auto_crc_i,
+                      valid_i, block_valid_i,
                       a_i, b_i,
                       ready_i) is
   begin
@@ -76,21 +80,25 @@ begin
         rin.state <= ST_GET_BLOCK;
 
       when ST_GET_BLOCK =>
-        rin.state <= ST_GET_FRAME;
-        rin.frame_to_go <= 191;
-        rin.channel_status <= block_channel_status_i;
-        rin.do_crc <= block_channel_status_aesebu_auto_crc_i = '1';
-        rin.channel_status_crc <= aesebu_crc_init;
-        rin.user <= block_user_i;
+        if block_valid_i = '1' then
+          rin.state <= ST_GET_FRAME;
+          rin.frame_to_go <= 191;
+          rin.channel_status <= block_channel_status_i;
+          rin.do_crc <= block_channel_status_aesebu_auto_crc_i = '1';
+          rin.channel_status_crc <= aesebu_crc_init;
+          rin.user <= block_user_i;
+        end if;
 
       when ST_GET_FRAME =>
-        rin.a <= a_i;
-        rin.b <= b_i;
-        rin.state <= ST_PUT_A;
-        rin.channel_status_crc <= aesebu_crc_update(r.channel_status_crc,
-                                                    r.channel_status(0));
-        if r.frame_to_go = 7 and r.do_crc then
-          rin.channel_status(0 to 7) <= nsl_data.endian.bitswap(std_ulogic_vector(r.channel_status_crc));
+        if valid_i = '1' then
+          rin.a <= a_i;
+          rin.b <= b_i;
+          rin.state <= ST_PUT_A;
+          rin.channel_status_crc <= aesebu_crc_update(r.channel_status_crc,
+                                                      r.channel_status(0));
+          if r.frame_to_go = 7 and r.do_crc then
+            rin.channel_status(0 to 7) <= nsl_data.endian.bitswap(std_ulogic_vector(r.channel_status_crc));
+          end if;
         end if;
 
       when ST_PUT_A =>
@@ -118,6 +126,13 @@ begin
     block_start_o <= '0';
     ready_o <= '0';
     block_ready_o <= '0';
+    valid_o <= '0';
+    frame_o.audio <= (others => '-');
+    frame_o.aux <= (others => '-');
+    frame_o.invalid <= '1';
+    frame_o.user <= '-';
+    frame_o.channel_status <= '-';
+    channel_o <= '-';
 
     case r.state is
       when ST_RESET =>
@@ -137,12 +152,14 @@ begin
         frame_o.audio <= r.a.audio;
         frame_o.aux <= r.a.aux;
         frame_o.invalid <= not r.a.valid;
+        valid_o <= '1';
 
       when ST_PUT_B =>
         channel_o <= '1';
         frame_o.audio <= r.b.audio;
         frame_o.aux <= r.b.aux;
         frame_o.invalid <= not r.b.valid;
+        valid_o <= '1';
     end case;
 
     frame_o.user <= r.user(0);

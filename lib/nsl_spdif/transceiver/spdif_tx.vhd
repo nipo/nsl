@@ -15,12 +15,14 @@ entity spdif_tx is
 
     -- Guards consumption of block data
     block_ready_o : out std_ulogic;
+    block_valid_i : in std_ulogic := '1';
     block_user_i : in std_ulogic_vector(0 to 191);
     block_channel_status_i : in std_ulogic_vector(0 to 191);
     block_channel_status_aesebu_auto_crc_i : in std_ulogic := '0';
 
     -- Guards consumption of audio/aux/valid data
     ready_o : out std_ulogic;
+    valid_i : in std_ulogic := '1';
     a_i, b_i: in channel_data_t;
 
     -- Encoded signal
@@ -46,11 +48,13 @@ begin
       reset_n_i => reset_n_i,
 
       block_ready_o => block_ready_o,
+      block_valid_i => block_valid_i,
       block_user_i => block_user_i,
       block_channel_status_i => block_channel_status_i,
       block_channel_status_aesebu_auto_crc_i => block_channel_status_aesebu_auto_crc_i,
 
       ready_o => ready_o,
+      valid_i => valid_i,
       a_i => a_i,
       b_i => b_i,
 

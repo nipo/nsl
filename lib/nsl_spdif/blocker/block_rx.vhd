@@ -19,15 +19,18 @@ entity block_rx is
     frame_i : in frame_t;
     parity_ok_i : in std_ulogic;
     valid_i : in std_ulogic;
+    ready_o : out std_ulogic;
 
     synced_o : out std_ulogic;
 
     block_valid_o : out std_ulogic;
+    block_ready_i : in std_ulogic := '1';
     block_user_o : out std_ulogic_vector(0 to 191);
     block_channel_status_o : out std_ulogic_vector(0 to 191);
     block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
     valid_o : out std_ulogic;
+    ready_i : in std_ulogic := '1';
     a_o, b_o: out channel_data_t
     );
 end entity;
@@ -70,7 +73,9 @@ begin
     end if;
   end process;
 
-  transition: process(r, synced_i, block_start_i, channel_i, frame_i, parity_ok_i, valid_i) is
+  transition: process(r, synced_i, block_start_i, channel_i,
+                      frame_i, parity_ok_i, valid_i,
+                      ready_i, block_ready_i) is
   begin
     rin <= r;
 
@@ -116,15 +121,19 @@ begin
         end if;
 
       when ST_PUT_FRAME =>
-        if r.frame_to_go = 0 then
-          rin.state <= ST_PUT_BLOCK;
-        else
-          rin.frame_to_go <= r.frame_to_go - 1;
-          rin.state <= ST_WAIT_A;
+        if ready_i = '1' then
+          if r.frame_to_go = 0 then
+            rin.state <= ST_PUT_BLOCK;
+          else
+            rin.frame_to_go <= r.frame_to_go - 1;
+            rin.state <= ST_WAIT_A;
+          end if;
         end if;
 
       when ST_PUT_BLOCK =>
-        rin.state <= ST_WAIT_NEXT_SOB;
+        if block_ready_i = '1' then
+          rin.state <= ST_WAIT_NEXT_SOB;
+        end if;
     end case;
 
     if valid_i = '1' and block_start_i = '1' and channel_i = '0' then
@@ -144,10 +153,13 @@ begin
     block_valid_o <= '0';
     valid_o <= '0';
     synced_o <= '0';
+    ready_o <= '0';
 
     case r.state is
-      when ST_RESET | ST_WAIT_SOB =>
-        null;
+      when ST_RESET =>
+
+      when ST_WAIT_SOB =>
+        ready_o <= '1';
 
       when ST_PUT_FRAME =>
         valid_o <= '1';
@@ -158,6 +170,7 @@ begin
         synced_o <= '1';
 
       when ST_WAIT_A | ST_WAIT_B | ST_WAIT_NEXT_SOB =>
+        ready_o <= '1';
         synced_o <= '1';
     end case;
 

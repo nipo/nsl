@@ -31,6 +31,7 @@ package blocker is
 
       -- Guards consumption of block data
       block_ready_o : out std_ulogic;
+      block_valid_i : in std_ulogic := '1';
       block_user_i : in std_ulogic_vector(0 to 191);
       block_channel_status_i : in std_ulogic_vector(0 to 191);
       -- Automatically override the 8 last bits of block
@@ -39,12 +40,14 @@ package blocker is
 
       -- Guards consumption of audio/aux/valid data
       ready_o : out std_ulogic;
+      valid_i : in std_ulogic := '1';
       a_i, b_i: in channel_data_t;
 
       -- To framer
       block_start_o : out std_ulogic;
       channel_o : out std_ulogic;
       frame_o : out frame_t;
+      valid_o : out std_ulogic;
       ready_i : in std_ulogic
       );
   end component;
@@ -61,17 +64,20 @@ package blocker is
       frame_i : in frame_t;
       parity_ok_i : in std_ulogic;
       valid_i : in std_ulogic;
+      ready_o : out std_ulogic;
 
       synced_o : out std_ulogic;
 
       -- Guards block data
       block_valid_o : out std_ulogic;
+      block_ready_i : in std_ulogic := '1';
       block_user_o : out std_ulogic_vector(0 to 191);
       block_channel_status_o : out std_ulogic_vector(0 to 191);
       block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
       -- Guards audio/aux/valid data
       valid_o : out std_ulogic;
+      ready_i : in std_ulogic := '1';
       a_o, b_o: out channel_data_t
       );
   end component;

@@ -17,12 +17,14 @@ package transceiver is
 
       -- Guards consumption of block data
       block_ready_o : out std_ulogic;
+      block_valid_i : in std_ulogic := '1';
       block_user_i : in std_ulogic_vector(0 to 191);
       block_channel_status_i : in std_ulogic_vector(0 to 191);
       block_channel_status_aesebu_auto_crc_i : in std_ulogic := '0';
 
       -- Guards consumption of audio/aux/valid data
       ready_o : out std_ulogic;
+      valid_i : in std_ulogic := '1';
       a_i, b_i: in channel_data_t;
 
       -- Encoded signal
@@ -48,12 +50,14 @@ package transceiver is
 
       -- Guards block data
       block_valid_o : out std_ulogic;
+      block_ready_i : in std_ulogic := '1';
       block_user_o : out std_ulogic_vector(0 to 191);
       block_channel_status_o : out std_ulogic_vector(0 to 191);
       block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
       -- Guards audio/aux/valid data
       valid_o : out std_ulogic;
+      ready_i : in std_ulogic := '1';
       a_o, b_o: out channel_data_t
       );
   end component;
