@@ -1,0 +1,25 @@
+vhdl-sources += top.pkg.vhd
+vhdl-sources += boundary.vhd
+vhdl-sources += main.vhd
+implementation_constraint-sources += pins.xdc
+
+deps += nsl_clocking.async
+deps += nsl_clocking.distribution
+deps += nsl_clocking.generator
+deps += nsl_clocking.pll
+deps += nsl_dvi.driver
+deps += nsl_dvi.transceiver
+deps += nsl_dvi.pattern
+deps += nsl_hdmi.audio
+deps += nsl_hdmi.encoder
+deps += nsl_hdmi.pattern
+deps += nsl_hwdep.clock
+deps += nsl_hwdep.reset
+deps += nsl_i2c.i2c
+deps += nsl_io.io
+deps += nsl_io.clock
+deps += nsl_io.diff
+deps += nsl_logic.bool
+deps += nsl_math.fixed
+deps += nsl_signal_generator.trigonometry
+deps += unisim
