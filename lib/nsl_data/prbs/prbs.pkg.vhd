@@ -1,4 +1,4 @@
-library ieee, nsl_data, nsl_math, nsl_logic;
+library ieee, nsl_data, nsl_logic;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use nsl_data.bytestream.all;
