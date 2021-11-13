@@ -17,6 +17,11 @@ ISE_PRE = source $(ISE)/settings64.sh > /dev/null ;
 target ?= $(top)
 user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32)))')
 
+generic-string = $1=\"$2\"
+generic-integer = $1=$2
+generic-vector = $1=\"$3\"
+generic-bool = $(info $1,$2)$1=$2
+
 export I
 
 $(call exclude-libs,unisim)
@@ -169,6 +174,7 @@ $(build-dir)/$(target).ngc: $(build-dir)/$(target).prj $(OPS)
 	$(SILENT)echo "run" >> $@.xst
 	$(SILENT)echo "-p $(target_part)$(target_package)$(target_speed)" >> $@.xst
 	$(SILENT)echo "-top $(top-entity)" >> $@.xst
+	$(SILENT)echo "-generics {$(topcell-generics)}" >> $@.xst
 	$(SILENT)echo "-ifn $<" >> $@.xst
 	$(SILENT)echo "-ofn $@" >> $@.xst
 	$(SILENT)echo "-max_fanout 15" >> $@.xst

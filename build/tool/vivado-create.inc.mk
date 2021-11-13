@@ -21,6 +21,13 @@ endef
 _VIVADO_VHDL_VERSION_08 := VHDL 2008
 _VIVADO_VHDL_VERSION_93 := VHDL
 
+generic-string = $1={\"$2\"}
+generic-integer = $1=$2
+generic-vector = $1=$2\'b$3
+generic-bool-true = $1=1\'b1
+generic-bool-false = $1=1\'b0
+generic-bool = $(call generic-bool-$2,$1)
+
 define _vivado-add-vhdl
 	$(call file-append,$1,set f [add_files -norecurse -fileset $$_sources_fileset_name [file normalize {$2}]])
 	$(call file-append,$1,set_property -dict {"file_type" "$(_VIVADO_VHDL_VERSION_$($($2-library)-vhdl-version))" "library" "$($2-library)"} $$f)
@@ -70,6 +77,7 @@ define vivado-tcl-sources-append
 	$(call _vivado-add-implementation_constraint,$1,$(BUILD_ROOT)/support/vivado-userid.tcl)
 	$(call _vivado-add-implementation_constraint,$1,$(BUILD_ROOT)/support/vivado-drc.tcl)
 	$(call file-append,$1,set_property "top" "$(top-entity)" $$_sources_fileset)
+	$(call file-append,$1,set_property "generic" "$(topcell-generics)" $$_sources_fileset)
 
 endef
 
