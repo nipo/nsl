@@ -22,6 +22,7 @@ entity uart_rx is
 
     data_o      : out std_ulogic_vector(bit_count_c-1 downto 0);
     valid_o     : out std_ulogic;
+    ready_i     : in std_ulogic := '1';
     parity_ok_o : out std_ulogic;
     break_o     : out std_ulogic
     );
@@ -36,18 +37,20 @@ architecture beh of uart_rx is
     ST_SHIFT,
     ST_PARITY,
     ST_STOP,
-    ST_OUT
+    ST_BREAK_WAIT
     );
 
   type regs_t is record
     shreg: std_ulogic_vector(bit_count_c-1 downto 0);
     parity: std_ulogic;
-    parity_ok: std_ulogic;
-    break: std_ulogic;
+    all_zero: boolean;
     state: state_t;
     bit_ctr: integer range 0 to bit_count_c-1;
-    divisor: unsigned(divisor_i'range);
-    high_count: unsigned(divisor_i'range);
+    div_ctr, divisor: unsigned(divisor_i'range);
+
+    valid: std_ulogic;
+    data: std_ulogic_vector(bit_count_c-1 downto 0);
+    parity_ok: std_ulogic;
   end record;
   
   signal r, rin: regs_t;
@@ -64,29 +67,16 @@ begin
     end if;
   end process;
 
-  transition: process(r, uart_i)
-    variable bit_value : std_ulogic;
-    variable new_bit, bit_done : boolean;
+  transition: process(r, uart_i, divisor_i, ready_i)
   begin
     rin <= r;
 
+    if ready_i = '1' then
+      rin.valid <= '0';
+    end if;
+
     if uart_i = '1' then
-      rin.high_count <= r.high_count + 1;
-    end if;
-
-    new_bit := false;
-    if r.high_count > shift_right(divisor_i, 1) then
-      bit_value := '1';
-    else
-      bit_value := '0';
-    end if;
-
-    if r.divisor /= 0 then
-      rin.divisor <= r.divisor - 1;
-      bit_done := false;
-    else
-      bit_done := true;
-      rin.divisor <= divisor_i;
+      rin.all_zero <= false;
     end if;
 
     case r.state is
@@ -94,105 +84,82 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
+        rin.divisor <= divisor_i;
         if uart_i = '0' then
-          new_bit := true;
           rin.state <= ST_START;
+          rin.div_ctr <= shift_right(r.divisor, 1);
         end if;
 
       when ST_START =>
-        if bit_done then
-          if bit_value = '1' then
-            rin.state <= ST_IDLE;
-          else
-            rin.state <= ST_SHIFT;
-            new_bit := true;
-            rin.bit_ctr <= bit_count_c-1;
-            rin.shreg <= (others => '-');
-            case parity_c is
-              when PARITY_NONE =>
-                null;
+        if r.div_ctr /= 0 then
+          rin.div_ctr <= r.div_ctr - 1;
+        else
+          rin.state <= ST_SHIFT;
+          rin.div_ctr <= r.divisor;
+          rin.bit_ctr <= bit_count_c-1;
+          rin.shreg <= (others => '-');
+          rin.all_zero <= true;
+          case parity_c is
+            when PARITY_ODD =>
+              rin.parity <= '0';
 
-              when PARITY_ODD =>
-                rin.parity <= '1';
-
-              when PARITY_EVEN =>
-                rin.parity <= '0';
-            end case;
-          end if;
+            when others =>
+              rin.parity <= '1';
+          end case;
         end if;
         
       when ST_SHIFT =>
-        if bit_done then
-          rin.shreg <= bit_value & r.shreg(r.shreg'left downto 1);
-          rin.parity <= bit_value xor r.parity;
-          new_bit := true;
+        if r.div_ctr /= 0 then
+          rin.div_ctr <= r.div_ctr - 1;
+        else
+          rin.div_ctr <= r.divisor;
+          rin.parity <= uart_i xor r.parity;
+          rin.shreg <= uart_i & r.shreg(r.shreg'left downto 1);
+          
           if r.bit_ctr /= 0 then
             rin.bit_ctr <= r.bit_ctr - 1;
-          elsif parity_c = PARITY_NONE then
-            rin.state <= ST_STOP;
-            rin.break <= '0';
-            rin.bit_ctr <= stop_count_c - 1;
-          else
+          elsif parity_c /= PARITY_NONE then
             rin.state <= ST_PARITY;
-            rin.break <= '0';
-            rin.bit_ctr <= stop_count_c - 1;
+            rin.data <= uart_i & r.shreg(r.shreg'left downto 1);
+          else
+            rin.state <= ST_STOP;
+            rin.parity_ok <= '1';
+            rin.valid <= '1';
+            rin.data <= uart_i & r.shreg(r.shreg'left downto 1);
           end if;
         end if;
 
       when ST_PARITY =>
-        if bit_done then
-          rin.parity_ok <= bit_value xnor r.parity;
-          new_bit := true;
+        if r.div_ctr /= 0 then
+          rin.div_ctr <= r.div_ctr - 1;
+        else
           rin.state <= ST_STOP;
+          rin.div_ctr <= r.divisor;
+          rin.parity_ok <= uart_i xor r.parity;
+          rin.valid <= '1';
+          rin.data <= r.shreg;
         end if;
 
       when ST_STOP =>
-        if r.bit_ctr = 0 and bit_value = '1' then
-          rin.state <= ST_OUT;
-        end if;
-        
-        if bit_done then
-          rin.break <= r.break or not bit_value;
-          if r.bit_ctr /= 0 then
-            new_bit := true;
-            rin.bit_ctr <= r.bit_ctr - 1;
-          else
-            rin.state <= ST_OUT;
-          end if;
+        if r.div_ctr /= 0 then
+          rin.div_ctr <= r.div_ctr - 1;
+        elsif r.all_zero then
+          rin.state <= ST_BREAK_WAIT;
+        else
+          rin.state <= ST_IDLE;
         end if;
 
-      when ST_OUT =>
-        rin.state <= ST_IDLE;
+      when ST_BREAK_WAIT =>
+        if uart_i = '1' then
+          rin.state <= ST_IDLE;
+        end if;
 
     end case;
-
-    if new_bit then
-      rin.high_count <= (others => '0');
-      rin.divisor <= divisor_i;
-    end if;
   end process;
 
-  moore: process(r)
-  begin
-    valid_o <= '0';
-    data_o <= (others => '-');
-    break_o <= '-';
+  valid_o <= r.valid;
+  data_o <= r.data;
+  break_o <= '1' when r.state = ST_BREAK_WAIT else '0';
+  parity_ok_o <= '1' when parity_c = PARITY_NONE else r.parity_ok;
 
-    if parity_c = PARITY_NONE then
-      parity_ok_o <= '1';
-    else
-      parity_ok_o <= r.parity_ok;
-    end if;
-
-    case r.state is
-      when ST_OUT =>
-        valid_o <= '1';
-        data_o <= r.shreg;
-        break_o <= r.break;
-
-      when others =>
-        null;
-    end case;
-  end process;
-  
 end architecture;

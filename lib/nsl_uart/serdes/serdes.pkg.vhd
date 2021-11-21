@@ -48,6 +48,7 @@ package serdes is
 
       data_o      : out std_ulogic_vector(bit_count_c-1 downto 0);
       valid_o     : out std_ulogic;
+      ready_i     : in std_ulogic := '1';
       parity_ok_o : out std_ulogic;
       break_o     : out std_ulogic
       );
