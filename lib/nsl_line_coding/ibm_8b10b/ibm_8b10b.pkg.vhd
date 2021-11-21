@@ -36,6 +36,12 @@ package ibm_8b10b is
   -- jhgfiedcba, transmit LSB first (from index 0)
   subtype code_word is std_ulogic_vector(9 downto 0);
 
+  -- Data word expressed as pair of integers. Suitable for matching
+  -- D/Kx.y notation.
+  function xy(x : integer range 0 to 31;
+              y : integer range 0 to 7)
+    return data_word;
+
   -- Control word expressed as pair of integers. Suitable for matching
   -- Kx.y notation.
   function control(x : integer range 0 to 31;
@@ -49,24 +55,30 @@ package ibm_8b10b is
 
   -- Named constants for existing control codes.
   -- idle
-  constant K23_7 : data_word := control(23, 7);
+  constant K23_7 : data_word := xy(23, 7);
   -- idle
-  constant K27_7 : data_word := control(27, 7);
-  constant K28_0 : data_word := control(28, 0);
+  constant K27_7 : data_word := xy(27, 7);
+  constant K28_0 : data_word := xy(28, 0);
   -- is comma
-  constant K28_1 : data_word := control(28, 1);
-  constant K28_2 : data_word := control(28, 2);
-  constant K28_3 : data_word := control(28, 3);
-  constant K28_4 : data_word := control(28, 4);
+  constant K28_1 : data_word := xy(28, 1);
+  constant K28_2 : data_word := xy(28, 2);
+  constant K28_3 : data_word := xy(28, 3);
+  constant K28_4 : data_word := xy(28, 4);
   -- is comma, 50% transition
-  constant K28_5 : data_word := control(28, 5);
-  constant K28_6 : data_word := control(28, 6);
+  constant K28_5 : data_word := xy(28, 5);
+  constant K28_6 : data_word := xy(28, 6);
   -- is comma, repetition yields alternative RL5, forbidden
-  constant K28_7 : data_word := control(28, 7);
+  constant K28_7 : data_word := xy(28, 7);
   -- idle
-  constant K29_7 : data_word := control(29, 7);
-  constant K30_7 : data_word := control(30, 7);
+  constant K29_7 : data_word := xy(29, 7);
+  constant K30_7 : data_word := xy(30, 7);
 
+  -- Notable data words
+  -- Triggers 0101010101 (transmit right to left)
+  constant D21_5 : data_word := xy(21, 5);
+  -- Triggers 1010101010 (transmit right to left)
+  constant D10_2 : data_word := xy(21, 5);
+  
   -- 8B/10B streaming encoder. Disparity is internal, it is reset on
   -- block reset. Input to output latency is implementation specific.
   --
@@ -149,12 +161,20 @@ end package;
 
 package body ibm_8b10b is
 
+  function xy(x : integer range 0 to 31;
+              y : integer range 0 to 7)
+    return data_word
+  is
+  begin
+    return data_word(std_ulogic_vector(to_unsigned(y, 3) & to_unsigned(x, 5)));
+  end function;
+
   function control(x : integer range 0 to 31;
                    y : integer range 0 to 7)
     return data_word
   is
   begin
-    return data_word(std_ulogic_vector(to_unsigned(y, 3) & to_unsigned(x, 5)));
+    return xy(x, y);
   end function;
 
   function control_exists(x : integer range 0 to 31;
