@@ -39,4 +39,59 @@ package committed is
       );
   end component;
 
+  component committed_dispatch is
+    generic(
+      destination_count_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      destination_i  : in natural range 0 to destination_count_c - 1;
+      
+      in_i   : in committed_req;
+      in_o   : out committed_ack;
+
+      out_o   : out committed_req_array(0 to destination_count_c - 1);
+      out_i   : in committed_ack_array(0 to destination_count_c - 1)
+      );
+  end component;
+
+  component committed_funnel is
+    generic(
+      source_count_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      selected_o  : out natural range 0 to source_count_c - 1;
+      
+      in_i   : in committed_req_array(0 to source_count_c - 1);
+      in_o   : out committed_ack_array(0 to source_count_c - 1);
+
+      out_o   : out committed_req;
+      out_i   : in committed_ack
+      );
+  end component;
+
+  component committed_fifo is
+    generic(
+      clock_count_c : natural range 1 to 2 := 1;
+      depth_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
+      
+      in_i   : in committed_req;
+      in_o   : out committed_ack;
+
+      out_o   : out committed_req;
+      out_i   : in committed_ack
+      );
+  end component;
+
 end package committed;
