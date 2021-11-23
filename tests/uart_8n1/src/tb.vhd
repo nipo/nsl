@@ -10,7 +10,7 @@ end tb;
 architecture arch of tb is
 
   constant parity : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_EVEN;
-  constant width : natural := 7;
+  constant width : natural := 8;
 
   signal s_clk : std_ulogic_vector(0 to 1);
   signal s_resetn_clk : std_ulogic_vector(0 to 1);
@@ -19,8 +19,8 @@ architecture arch of tb is
   signal s_done : std_ulogic_vector(0 downto 0) := (others => '0');
 
   signal s_uart : std_ulogic;
-  signal s_accept : std_ulogic;
   signal s_data_valid : std_ulogic_vector(1 downto 0);
+  signal s_data_ready : std_ulogic_vector(1 downto 0);
   subtype word_t is std_ulogic_vector(width - 1 downto 0);
   type word_array is array (natural range <>) of word_t;
   signal s_data : word_array(0 to 1);
@@ -43,7 +43,7 @@ begin
 
   u_in: nsl_uart.serdes.uart_tx
     generic map(
-      divisor_width => 5,
+      divisor_width => 6,
       bit_count_c => width,
       stop_count_c => 1,
       parity_c => parity
@@ -52,18 +52,18 @@ begin
       reset_n_i => s_resetn_clk(0),
       clock_i => s_clk(0),
 
-      divisor_i => "10000",
+      divisor_i => "100000",
     
       data_i => s_data(0),
       valid_i => s_data_valid(0),
-      ready_o => s_accept,
+      ready_o => s_data_ready(0),
 
       uart_o => s_uart
       );
 
   u_out: nsl_uart.serdes.uart_rx
     generic map(
-      divisor_width => 5,
+      divisor_width => 6,
       bit_count_c => width,
       stop_count_c => 1,
       parity_c => parity
@@ -72,10 +72,11 @@ begin
       reset_n_i => s_resetn_clk(1),
       clock_i => s_clk(1),
 
-      divisor_i => "01011",
+      divisor_i => "010111",
 
       data_o => s_data(1),
       valid_o => s_data_valid(1),
+      ready_i => s_data_ready(1),
 
       uart_i => s_uart
       );
@@ -88,7 +89,7 @@ begin
       reset_n_i => s_resetn_clk(0),
       clock_i => s_clk(0),
       valid_o => s_data_valid(0),
-      ready_i => s_accept,
+      ready_i => s_data_ready(0),
       data_o => s_data(0)
       );
 
@@ -99,7 +100,7 @@ begin
     port map(
       reset_n_i => s_resetn_clk(1),
       clock_i => s_clk(1),
-      ready_o => open,
+      ready_o => s_data_ready(1),
       valid_i => s_data_valid(1),
       data_i => s_data(1)
       );
