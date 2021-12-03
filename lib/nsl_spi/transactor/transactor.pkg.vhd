@@ -43,6 +43,7 @@ package transactor is
 
   component spi_muxed_transactor
     generic(
+      unselected_mask_c : std_ulogic_vector(7 downto 0) := x"ff";
       extender_slave_no_c: integer;
       muxed_slave_no_c: integer
       );

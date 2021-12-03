@@ -7,6 +7,7 @@ use nsl_spi.transactor.all;
 
 entity spi_muxed_transactor is
   generic(
+    unselected_mask_c : std_ulogic_vector(7 downto 0) := x"ff";
     extender_slave_no_c: integer;
     muxed_slave_no_c: integer
     );
@@ -63,6 +64,7 @@ architecture rtl of spi_muxed_transactor is
     rsp_state  : rsp_state_t;
     cmd, rsp : nsl_bnoc.framed.framed_data_t;
     cmd_word_left, rsp_word_left  : integer range 0 to 2**6-1;
+    target   : unsigned(2 downto 0);
     last       : std_ulogic;
     rsp_last : std_ulogic;
   end record;
@@ -102,8 +104,11 @@ begin
         if std_match(r.cmd, SPI_CMD_SELECT) then
           if r.cmd(2 downto 0) = "111" then
             rin.cmd_state <= CMD_UNSELECT;
-          else
+          elsif r.cmd(2 downto 0) /= std_ulogic_vector(r.target) then
             rin.cmd_state <= CMD_SELECT_SELECT;
+            rin.target <= unsigned(r.cmd(2 downto 0));
+          else
+            rin.cmd_state <= CMD_SELECT_SELECT2;
           end if;
         else
           rin.cmd_state <= CMD_PUT;
@@ -123,6 +128,9 @@ begin
       when CMD_RSP_WAIT =>
         if r.rsp_state = RSP_IDLE then
           rin.cmd_state <= CMD_IDLE;
+          if r.last = '1' then
+            rin.target <= (others => '1');
+          end if;
         end if;
 
       when CMD_DATA_GET =>
@@ -185,8 +193,10 @@ begin
           if std_match(r.cmd, SPI_CMD_SELECT) then
             if r.cmd(2 downto 0) = "111" then
               rin.rsp_state <= RSP_UNSELECT;
-            else
+            elsif r.cmd(2 downto 0) /= std_ulogic_vector(r.target) then
               rin.rsp_state <= RSP_SELECT_SELECT;
+            else
+              rin.rsp_state <= RSP_SELECT_SELECT2;
             end if;
           else
             rin.rsp_state <= RSP_GET;
@@ -256,6 +266,7 @@ begin
   end process;
 
   moore: process(r)
+    variable selected: std_ulogic_vector(7 downto 0);
   begin
     master_rsp_o.ready <= '0';
     slave_cmd_o.ready <= '0';
@@ -290,10 +301,12 @@ begin
         master_cmd_o.data <= SPI_CMD_SHIFT_OUT(7 downto 6) & "000000";
 
       when CMD_SELECT_DATA =>
+        selected := (others => '0');
+        selected(to_integer(r.target)) := '1';
+
         master_cmd_o.valid <= '1';
         master_cmd_o.last <= '0';
-        master_cmd_o.data <= (others => '1');
-        master_cmd_o.data(to_integer(unsigned(r.cmd(2 downto 0)))) <= '0';
+        master_cmd_o.data <= selected xor unselected_mask_c;
 
       when CMD_SELECT_SELECT2 =>
         master_cmd_o.valid <= '1';
