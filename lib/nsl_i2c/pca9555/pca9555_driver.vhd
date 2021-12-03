@@ -84,7 +84,7 @@ architecture beh of pca9555_driver is
     rsp_state: rsp_state_t;
     io_out, io_in : std_ulogic_vector(15 downto 0);
     txn_is_read: boolean;
-    out_dirty, in_dirty: boolean;
+    out_dirty, in_dirty, txn_success: boolean;
   end record;
 
   signal r, rin : regs_t;
@@ -118,6 +118,7 @@ begin
 
     if pin_i /= r.io_out or force_i = '1' then
       rin.out_dirty <= true;
+      rin.io_out <= pin_i;
     end if;
     
     case r.cmd_state is
@@ -126,7 +127,6 @@ begin
 
       when CMD_IDLE =>
         if r.out_dirty then
-          rin.io_out <= pin_i;
           rin.out_dirty <= false;
           rin.txn_is_read <= false;
           rin.cmd_state <= CMD_PUT_DIV;
@@ -139,6 +139,7 @@ begin
 
       when CMD_PUT_DIV =>
         if cmd_i.ready = '1' then
+          rin.txn_success <= true;
           rin.cmd_state <= CMD_PUT_START;
         end if;
 
@@ -198,7 +199,11 @@ begin
 
       when CMD_WAIT_DONE =>
         if r.rsp_state = RSP_IDLE then
-          rin.cmd_state <= CMD_IDLE;
+          if r.txn_success then
+            rin.cmd_state <= CMD_IDLE;
+          else
+            rin.cmd_state <= CMD_PUT_DIV;
+          end if;
         end if;
     end case;
 
@@ -208,11 +213,7 @@ begin
 
       when RSP_IDLE =>
         if r.cmd_state = CMD_PUT_DIV then
-          if r.txn_is_read then
-            rin.rsp_state <= RSP_GET_DIV;
-          else
-            rin.rsp_state <= RSP_WAIT_DONE;
-          end if;
+          rin.rsp_state <= RSP_GET_DIV;
         end if;
 
       when RSP_GET_DIV =>
@@ -228,11 +229,18 @@ begin
       when RSP_GET_SADDR_W =>
         if rsp_i.valid = '1' then
           rin.rsp_state <= RSP_GET_REGADDR_W;
+          if rsp_i.data(0) /= '1' then
+            rin.txn_success <= false;
+          end if;
         end if;
 
       when RSP_GET_REGADDR_W =>
         if rsp_i.valid = '1' then
-          rin.rsp_state <= RSP_GET_RESTART;
+          if r.txn_is_read then
+            rin.rsp_state <= RSP_GET_RESTART;
+          else
+            rin.rsp_state <= RSP_WAIT_DONE;
+          end if;
         end if;
 
       when RSP_GET_RESTART =>
@@ -243,6 +251,10 @@ begin
       when RSP_GET_SADDR_R =>
         if rsp_i.valid = '1' then
           rin.rsp_state <= RSP_GET_RSP0;
+          if rsp_i.data(0) /= '1' then
+            rin.txn_success <= false;
+            rin.rsp_state <= RSP_WAIT_DONE;
+          end if;
         end if;
 
       when RSP_GET_RSP0 =>
