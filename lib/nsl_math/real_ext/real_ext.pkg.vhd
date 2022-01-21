@@ -10,6 +10,11 @@ package real_ext is
 
   function frac(x : real) return real;
 
+  function max(v : real_vector;
+               default : real := -1.0e100) return real;
+  function min(v : real_vector;
+               default : real := 1.0e100) return real;
+
 end package real_ext;
 
 package body real_ext is
@@ -32,6 +37,28 @@ package body real_ext is
   is
   begin
     return x - floor(x);
+  end function;
+
+  function max(v : real_vector;
+               default : real := -1.0e100) return real is
+    variable ret : real := default;
+  begin
+    for i in v'range
+    loop
+      ret := realmax(v(i), ret);
+    end loop;
+    return ret;
+  end function;
+  
+  function min(v : real_vector;
+               default : real := 1.0e100) return real is
+    variable ret : real := default;
+  begin
+    for i in v'range
+    loop
+      ret := realmin(v(i), ret);
+    end loop;
+    return ret;
   end function;
 
 end package body real_ext;
