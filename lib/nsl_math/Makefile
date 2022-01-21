@@ -1,4 +1,5 @@
 packages += gray
+packages += int_ext
 packages += real_ext
 packages += gf2
 packages += arith
