@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_math;
+
 package interdomain is
 
   -- Enforces max skew for the whole bus will not be above the fastest
@@ -120,4 +122,19 @@ package interdomain is
       );
   end component;
 
+  -- Estimates a clock rate and discriminates among multiple passed
+  -- clock rates.
+  component clock_rate_estimator is
+    generic(
+      clock_hz_c : real;
+      rate_choice_c : nsl_math.real_ext.real_vector
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+      measured_clock_i: in std_ulogic;
+      rate_index_o: out unsigned
+      );
+  end component;
+  
 end package interdomain;
