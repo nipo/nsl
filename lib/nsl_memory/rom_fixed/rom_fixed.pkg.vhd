@@ -132,7 +132,7 @@ package body rom_fixed is
     variable ret : nsl_data.bytestream.byte_string(0 to ((2 ** address_width) * dt_byte_count)-1);
     variable entry : dt_word_type;
   begin
-    ret := (others => (others => '-'));
+    ret := (others => (others => '0'));
 
     assert value'length <= 2 ** address_width;
     
