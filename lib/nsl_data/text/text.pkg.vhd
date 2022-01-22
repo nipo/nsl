@@ -23,6 +23,8 @@ package text is
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
 
+  function if_else(v: boolean; a,b: string) return string;
+  
   -- For a string composed of a space-separated collection of "token(params)"
   -- groups, return /params/ for a given token key.
   -- No spaces are allowed in params
@@ -38,7 +40,7 @@ package text is
                   start_index : integer := 0) return integer;
 
 
--- Search for needle, either at begin/end of string, or separated by
+  -- Search for needle, either at begin/end of string, or separated by
   -- separator.
   function strfind(haystack, needle : string;
                    separator : character) return boolean;
@@ -257,6 +259,15 @@ package body text is
     end if;
 
     return tmp(start + key'length + 2 to stop - 1);
+  end function;
+
+  function if_else(v: boolean; a,b: string) return string is
+  begin
+    if v then
+      return a;
+    else
+      return b;
+    end if;
   end function;
 
 end package body;
