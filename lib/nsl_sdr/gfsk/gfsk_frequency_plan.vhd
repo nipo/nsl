@@ -8,11 +8,10 @@ use nsl_math.fixed.all;
 entity gfsk_frequency_plan is
   generic (
     fs_c : real;
+    clock_i_hz_c : integer;
     channel_0_center_hz_c : real;
     channel_separation_hz_c : real;
     channel_count_c : integer;
-    fd_0_hz_c : real;
-    fd_separation_hz_c : real;
     symbol_rate_c : real;
     bt_c : real;
     gfsk_method_c : string := "box"
@@ -40,8 +39,8 @@ begin
       channel_0_center_hz_c => channel_0_center_hz_c,
       channel_separation_hz_c => channel_separation_hz_c,
       channel_count_c => channel_count_c,
-      fd_0_hz_c => fd_0_hz_c,
-      fd_separation_hz_c => fd_separation_hz_c
+      fd_0_hz_c => - symbol_rate_c * bt_c / 2.0,
+      fd_separation_hz_c => symbol_rate_c * bt_c
       )
     port map(
       clock_i => clock_i,
@@ -53,7 +52,7 @@ begin
 
   gaussian: nsl_dsp.gaussian.gaussian_ufixed
     generic map(
-      symbol_sample_count_c => integer(fs_c / symbol_rate_c),
+      symbol_sample_count_c => integer(real(clock_i_hz_c) / symbol_rate_c),
       bt_c => bt_c,
       approximation_method_c => gfsk_method_c
       )

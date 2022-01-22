@@ -11,14 +11,12 @@ package gfsk is
     generic (
       -- Sampling frequency
       fs_c : real;
+      -- Block clock frequency
+      clock_i_hz_c : integer;
       -- Channel 0 center frequency
       channel_0_center_hz_c : real;
       -- Channel separation
       channel_separation_hz_c : real;
-      -- Fd for 0
-      fd_0_hz_c : real;
-      -- Fd increment for each symbol increment
-      fd_separation_hz_c : real;
       -- Number of channels
       channel_count_c : integer;
 
