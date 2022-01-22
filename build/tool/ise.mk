@@ -20,7 +20,7 @@ user_id := $(shell python3 -c 'import random ; print(hex(random.randint(0, 1<<32
 generic-string = $1=\"$2\"
 generic-integer = $1=$2
 generic-vector = $1=\"$3\"
-generic-bool = $(info $1,$2)$1=$2
+generic-bool = $1=$2
 
 export I
 
