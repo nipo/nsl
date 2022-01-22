@@ -20,6 +20,6 @@ package pll_config_series67 is
     );
 
   function variant_get(hw_variant : string) return pll_variant;
-  function constraints_get(mode: string) return constraints;
+  function constraints_get(mode: pll_variant) return constraints;
 
 end package;

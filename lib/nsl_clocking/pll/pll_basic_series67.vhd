@@ -33,7 +33,7 @@ architecture s6 of pll_basic is
   end record;
   
   function pll_params_calc(fin, fout : integer;
-                           mode: string) return params
+                           mode: pll_variant) return params
   is
     constant bounds : constraints := constraints_get(mode);
     variable freq_lcm, vco_mult : integer;
@@ -99,8 +99,7 @@ begin
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
-    constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, "PLL");
+    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
     signal s_feedback : std_ulogic;
   begin
     
@@ -129,8 +128,7 @@ begin
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
-    constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, "PLL");
+    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
     signal s_feedback : std_ulogic;
   begin
     
@@ -168,8 +166,7 @@ begin
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
-    constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, "MMCM");
+    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
     signal s_feedback : std_ulogic;
   begin
     
@@ -198,8 +195,7 @@ begin
   generate
     constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
 
-    constant p : params := pll_params_calc(
-      input_hz_c, output_hz_c, "DCM");
+    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
     signal s_feedback : std_ulogic;
     constant is_d2 : boolean := p.fin_factor = 1;
   begin
