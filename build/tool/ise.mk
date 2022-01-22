@@ -39,23 +39,18 @@ clean-files += $(target)_bitgen.xwbt
 clean-files += $(top)_map.xrpt
 clean-files += $(top)_par.xrpt
 clean-files += $(top).lso
-
-flash: $(target).bit
-	openocd -f interface/jlink.cfg -f cpld/xilinx-xc6s.cfg -c "adapter_khz 1000; init; xc6s_program xc6s.tap; pld load 0 $<; exit"
-
-spi-flash: $(target)-2.mcs
-	$(SILENT)CABLEDB=$(HOME)/projects/proby/support/xc3sprog/cablelist.txt \
-	xc3sprog -v -p 2 -c proby -I$(NOPROB_ROOT)/fpga/bscan_spi.bit $(<):W:0:MCS
-
-%.mcs: %.bit
-	$(ISE_PRE) promgen -spi -w -p mcs -o $@ -u 0 $<
-
 clean-files += $(target).mcs
 clean-files += $(target)-2.mcs
 clean-files += $(target)-2.cfi
 clean-files += $(target)-2.prm
+clean-files += $(target).bit
+clean-files += $(target)-compressed.bit
+clean-files += $(build-dir)/$(target).prj
+clean-files += $(build-dir)/$(target).ngc
+clean-files += $(build-dir)/$(target).twr
+clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
 
-%.bit: $(build-dir)/%-par.ncd
+$(target).bit: $(build-dir)/$(target)-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
@@ -64,9 +59,7 @@ clean-files += $(target)-2.prm
 	    -w $< \
 	    $@
 
-clean-files += $(target).bit
-
-%-compressed.bit: $(build-dir)/%-par.ncd
+$(target)-compressed.bit: $(build-dir)/$(target)-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g DriveDone:yes \
 	    -g unusedpin:pullnone \
@@ -76,9 +69,7 @@ clean-files += $(target).bit
 	    -w $< \
 	    $@
 
-clean-files += $(target)-compressed.bit
-
-$(build-dir)/%-2.bit: $(build-dir)/%-par.ncd
+$(build-dir)/$(target)-2.bit: $(build-dir)/$(target)-par.ncd
 	$(SILENT)$(ISE_PRE) bitgen $(INTF_STYLE) \
 	    -g spi_buswidth:2 \
 	    -g unusedpin:pullnone \
@@ -89,9 +80,11 @@ $(build-dir)/%-2.bit: $(build-dir)/%-par.ncd
 	    -w $< \
 	    $@
 
-clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
+spi-flash: $(target)-2.mcs
+	$(SILENT)CABLEDB=$(HOME)/projects/proby/support/xc3sprog/cablelist.txt \
+	xc3sprog -v -p 2 -c proby -I$(NOPROB_ROOT)/fpga/bscan_spi.bit $(<):W:0:MCS
 
-%.mcs: %.bit
+$(target).mcs: $(target).bit
 	$(SILENT)$(ISE_PRE) promgen $(INTF_STYLE) -w -p mcs -spi -c FF -o $@ -u 0 $<
 
 $(build-dir)/$(target)-first-map.ncd $(build-dir)/$(target)-map.ncd:
@@ -106,6 +99,7 @@ $(build-dir)/$(target)-first-par.ncd $(build-dir)/$(target)-par.ncd:
 		$(foreach g,$(filter %-par.ncd,$^),-smartguide "$g") \
 		-w "$(filter %-map.ncd,$^)" "$@"
 	$(SILENT)test 0 -eq `grep -c UNLOC $(@:.ncd=_pad.csv)` || (echo "There are unconstrained IOs"; exit 1)
+	$(SILENT)$(ISE_PRE) trce -v 10 $@ $(subst -par.ncd,-map.pcf,$@) -o $(subst -par.ncd,.twr,$@)
 
 $(build-dir)/$(target)-first-map.ncd: $(build-dir)/$(target).ngd
 $(build-dir)/$(target)-first-par.ncd: $(build-dir)/$(target)-first-map.ncd
@@ -138,10 +132,10 @@ $(build-dir)/$(target).ngd: $(build-dir)/$(target).ngc $(filter %.ucf,$(all-cons
 	    -bm $(@:.ngd=.bmm) \
 	    $@
 
-%-map.pcf: %-map.ncd
+$(build-dir)/$(target)-map.pcf: $(build-dir)/$(target)-map.ncd
 	@
 
-.PRECIOUS: %-map.pcf
+.PRECIOUS: $(build-dir)/$(target)-map.pcf
 
 define ise_source_vhdl_do
 	$(SILENT)echo 'vhdl $($2-library) $2' >> $1
@@ -157,10 +151,6 @@ define file_append
 	$(SILENT)cat $1 >> $2
 
 endef
-
-clean-files += $(build-dir)/$(target).prj
-clean-files += $(build-dir)/$(target).ngc
-clean-files += $(build-dir)/$(target).twr
 
 $(build-dir)/$(target).prj: $(sources) $(MAKEFILE_LIST)
 	$(SILENT)mkdir -p $(dir $@)
@@ -186,8 +176,8 @@ $(build-dir)/$(target).ngc: $(build-dir)/$(target).prj $(OPS)
 	$(SILENT)$(foreach f,$(OPS),$(call file_append,$f,$@.xst))
 	$(SILENT)$(ISE_PRE) xst $(INTF_STYLE) -ifn $@.xst -ofn $@.log
 
-$(build-dir)/%.twr: $(build-dir)/%-par.ncd $(build-dir)/%-map.pcf
+$(build-dir)/$(target).twr: $(build-dir)/$(target)-par.ncd $(build-dir)/$(target)-map.pcf
 	$(SILENT)$(ISE_PRE) trce -v 10 $(filter %.ncd,$^) $(filter %.pcf,$^) -o $@
 
-$(build-dir)/%.vhd: $(build-dir)/%.ncd
+$(build-dir)/$(target).vhd: $(build-dir)/$(target).ncd
 	$(SILENT)$(ISE_PRE) netgen -sim -ofmt vhdl -w $< $@
