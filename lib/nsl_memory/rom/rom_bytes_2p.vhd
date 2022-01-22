@@ -36,7 +36,7 @@ architecture beh of rom_bytes_2p is
 
   subtype word_t is unsigned(word_byte_count_c * 8 - 1 downto 0);
   type mem_t is array(natural range 0 to 2**word_addr_size_c-1) of word_t;
-
+  
   function ram_init(blob : nsl_data.bytestream.byte_string) return mem_t is
     variable ret : mem_t;
     variable tmp : nsl_data.bytestream.byte_string(0 to word_byte_count_c-1);
@@ -55,6 +55,9 @@ architecture beh of rom_bytes_2p is
   end function;
 
   constant memory : mem_t := ram_init(contents_c);
+
+  attribute rom_style : string;
+  attribute rom_style of memory : constant is "block";
 
 begin
 
