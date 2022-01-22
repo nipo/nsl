@@ -58,7 +58,7 @@ package body cordic is
   function needed_angle_lsb(step_count : integer) return integer
   is
   begin
-    return nsl_math.arith.max(integer(log2(sincos_angle_delta(step_count))), -20);
+    return integer(log2(sincos_angle_delta(step_count)))-nsl_math.arith.log2(step_count);
   end function;
 
   function sincos_scale(step_count : integer) return real
