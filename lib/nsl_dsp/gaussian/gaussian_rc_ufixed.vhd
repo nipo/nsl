@@ -27,7 +27,7 @@ end entity;
 architecture beh of gaussian_rc_ufixed is
 
   constant tau: natural := nsl_dsp.rc.tau_from_frequency(
-    cutoff_frequency => bt_c * 4.0,
+    cutoff_frequency => bt_c * 8.0,
     run_frequency => real(symbol_sample_count_c),
     use_next_pow2m1 => true
     );
