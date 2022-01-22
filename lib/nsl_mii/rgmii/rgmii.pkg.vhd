@@ -36,6 +36,10 @@ package rgmii is
   end record;
 
   component rgmii_signal_driver is
+    generic(
+      add_rx_delay_c: boolean := false;
+      add_tx_delay_c: boolean := false
+      );
     port(
       phy_o : out rgmii_signal;
       phy_i : in  rgmii_signal;
