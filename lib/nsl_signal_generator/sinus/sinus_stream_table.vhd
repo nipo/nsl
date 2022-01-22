@@ -59,7 +59,14 @@ architecture beh of sinus_stream_table is
     
     s2_value_invert : boolean;
 
-    s3_value : sfixed(value_o'left downto value_o'right);
+    s3_value_invert : boolean;
+    s3_value: ufixed(value_o'left-1 downto value_o'right);
+
+    s4_value_invert : boolean;
+    s4_value : sfixed(value_o'left downto value_o'right);
+    s4_value_inverted : sfixed(value_o'left downto value_o'right);
+
+    s5_value : sfixed(value_o'left downto value_o'right);
   end record;
 
   signal s2_value: ufixed(value_o'left-1 downto value_o'right);
@@ -98,13 +105,21 @@ begin
 
     -- Stage 2, do ROM lookup
     rin.s2_value_invert <= r.s1_value_invert;
-    -- rin.s2_rom_value <= rom_lookup(r.s1_index)
 
-    -- Stage 3, invert output if needed
-    if r.s2_value_invert then
-      rin.s3_value <= - sfixed("0" & s2_value);
+    -- Stage 3, get ROM data
+    rin.s3_value <= s2_value;
+    rin.s3_value_invert <= r.s2_value_invert;
+
+    -- Stage 4, invert output
+    rin.s4_value_invert <= r.s3_value_invert;
+    rin.s4_value_inverted <= - sfixed("0" & r.s3_value);
+    rin.s4_value <= sfixed("0" & r.s3_value);
+
+    -- Stage 5, take the right one
+    if r.s4_value_invert then
+      rin.s5_value <= r.s4_value_inverted;
     else
-      rin.s3_value <= sfixed("0" & s2_value);
+      rin.s5_value <= r.s4_value;
     end if;
   end process;
 
@@ -120,6 +135,6 @@ begin
       value_o => s2_value
       );
 
-  value_o <= r.s3_value;
+  value_o <= r.s5_value;
 
 end architecture;
