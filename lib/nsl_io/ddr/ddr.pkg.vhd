@@ -48,6 +48,9 @@ package ddr is
   --  d(0)                  XXXXXX D0 XXXXXX D2 XXXXXX D4 XXXXX
   --  d(1)                  XXXXXX D1 XXXXXX D3 XXXXXX D5 XXXXX
   component ddr_input
+    generic(
+      invert_clock_polarity_c : boolean := false
+      );
     port(
       clock_i : in nsl_io.diff.diff_pair;
       dd_i  : in std_ulogic;
@@ -74,6 +77,7 @@ package ddr is
   -- Clock propagation scheme is not handled here
   component ddr_bus_input
     generic(
+      invert_clock_polarity_c : boolean := false;
       ddr_width : natural
       );
     port(

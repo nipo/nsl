@@ -4,6 +4,9 @@ use ieee.std_logic_1164.all;
 library nsl_io, machxo2;
 
 entity ddr_input is
+  generic(
+    invert_clock_polarity_c : boolean := false
+    );
   port(
     clock_i : in nsl_io.diff.diff_pair;
     dd_i  : in std_ulogic;
@@ -60,13 +63,28 @@ begin
   --  d(0)                  xxxxXx D0 xxxxXx D2 xxxxXx D4 xxxXx   x == not actually
   --  d(1)                  xxxxXx D1 xxxxXx D3 xxxxXx D5 xxxXx   unstable.
 
-  pad: machxo2.components.iddrxe
-    port map (
-      d => dd_i,
-      rst => '0',
-      sclk => clock_i.n,
-      q0 => d_o(0),
-      q1 => d_o(1)
-      );
+  no_inv: if not invert_clock_polarity_c
+  generate
+    pad: machxo2.components.iddrxe
+      port map (
+        d => dd_i,
+        rst => '0',
+        sclk => clock_i.n,
+        q0 => d_o(0),
+        q1 => d_o(1)
+        );
+  end generate;
 
+  inv: if invert_clock_polarity_c
+  generate
+    pad: machxo2.components.iddrxe
+      port map (
+        d => dd_i,
+        rst => '0',
+        sclk => clock_i.p,
+        q0 => d_o(0),
+        q1 => d_o(1)
+        );
+  end generate;
+  
 end architecture;

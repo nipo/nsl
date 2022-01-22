@@ -5,6 +5,7 @@ library nsl_io;
 
 entity ddr_bus_input is
   generic(
+    invert_clock_polarity_c : boolean := false;
     ddr_width : natural
     );
   port(
@@ -20,6 +21,9 @@ begin
   bus_loop: for i in dd_i'range
   generate
     o: nsl_io.ddr.ddr_input
+      generic map(
+        invert_clock_polarity_c => invert_clock_polarity_c
+        )
       port map(
         clock_i => clock_i,
         d_o(0) => d_o(i),
