@@ -4,3 +4,4 @@ packages += diff
 packages += clock
 packages += ddr
 packages += serdes
+packages += delay
