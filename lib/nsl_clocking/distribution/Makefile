@@ -14,3 +14,7 @@ ifneq ($(filter lattice-ice40,$(hwdep)),)
 vhdl-sources += clock_buffer_ice40.vhd
 deps += sb_ice
 endif
+
+ifneq ($(filter gowin,$(hwdep)),)
+vhdl-sources += clock_buffer_gowin.vhd
+endif
