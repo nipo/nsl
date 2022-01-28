@@ -7,3 +7,8 @@ vhdl-sources += serdes_ddr10_input_series7.vhd
 endif
 deps += unisim.vcomponents
 endif
+
+ifneq ($(filter gowin,$(hwdep)),)
+vhdl-sources += serdes_ddr10_output_gowin.vhd
+vhdl-sources += serdes_ddr10_input_gowin.vhd
+endif
