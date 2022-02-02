@@ -1,0 +1,8 @@
+IO_LOC "chip_tck_i" A7;
+IO_PORT "chip_tck_i" IO_TYPE=LVCMOS33;
+IO_LOC "chip_tms_i" B8;
+IO_PORT "chip_tms_i" IO_TYPE=LVCMOS33;
+IO_LOC "chip_tdi_i" A6;
+IO_PORT "chip_tdi_i" IO_TYPE=LVCMOS33;
+IO_LOC "chip_tdo_o" C6;
+IO_PORT "chip_tdo_o" IO_TYPE=LVCMOS33;
