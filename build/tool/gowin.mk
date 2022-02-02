@@ -1,58 +1,60 @@
-GOWIN = /opt/Gowin/1.9.7.01Beta
+GOWIN = /opt/Gowin/V1.9.8.02
 GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
+DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
+c:=,
+user_id := $(shell python3 -c 'import random ; print(f"{random.randint(0, 1<<32):x}")')
 
 target ?= $(top)
 
 SHELL=/bin/bash
 
-define syn-add-vhdl
-	$(SILENT)echo 'add_file -type vhdl "$1"' >> $@
-	$(SILENT)echo 'set_file_prop -lib $($1-library) "$1"' >> $@
+define file-clear
+	$(SILENT)mkdir -p $(dir $1)
+	$(SILENT)> $1
 
 endef
 
-define syn-add-verilog
-	$(SILENT)echo 'add_file -type verilog "$1"' >> $@
-	$(SILENT)echo 'set_file_prop -lib $($1-library) "$1"' >> $@
+define file-append
+	$(SILENT)echo '$2' >> $1
 
 endef
 
-define syn-add-xdc
-	$(SILENT)echo 'add_file -type xdc "$1"' >> $@
+define _gowin-project-add-vhdl
+	$(call file-append,$1,add_file -type vhdl {$2})
+	$(call file-append,$1,set_file_prop -lib {$($2-library)} {$2})
 
 endef
 
-define syn-add-cst
-	$(SILENT)echo 'add_file -type cst "$1"' >> $@
+define _gowin-project-add-verilog
+	$(call file-append,$1,add_file -type verilog {$2})
+	$(call file-append,$1,set_file_prop -lib {$($2-library)} {$2})
+
+endef
+
+define _gowin-project-add-constraint
+	$(call file-append,$1,add_file -type cst {$2})
 
 endef
 
 # Generate batch build command
-$(build-dir)/main.tcl: $(sources) $(MAKEFILE_LIST)
-	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)> $@
-	$(foreach s,$(sources),$(call syn-add-$($s-language),$s))
-	$(SILENT)echo "set_option -output_base_name $(target)" >> $@
-	$(SILENT)echo "set_option -top_module $(top-entity)" >> $@
-	$(SILENT)echo "set_device $(target_part)$(target_package)$(target_speed)" >> $@
-	$(SILENT)echo "set_option -retiming 1" >> $@
-	$(SILENT)echo "set_option -bit_compress 1" >> $@
-	$(SILENT)echo "run all" >> $@
+$(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
+	$(call file-clear,$@)
+	$(call file-append,$@,set_device -name $(target_part_name) $(target_part))
+	$(foreach s,$(sources),$(call _gowin-project-add-$($s-language),$@,$s))
+	$(call file-append,$@,set_option -top_module $(top-entity))
+	$(call file-append,$@,set_option -output_base_name $(target))
+	$(call file-append,$@,set_option -print_all_synthesis_warning 1)
+	$(call file-append,$@,set_option -gen_text_timing_rpt 1)
+	$(call file-append,$@,set_option -rpt_auto_place_io_info 1)
+	$(call file-append,$@,set_option -bit_compress 1)
+	$(call file-append,$@,set_option -user_code {$(user_id)})
+	$(call file-append,$@,run all)
 
-$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/main.tcl
-	$(SILENT)mkdir -p $(dir $@)
-	$(SILENT)cat $< | (cd $(build-dir) ; $(GOWIN_BIN)/gw_sh) | tee $(build-dir)/build.log
-	$(SILENT)test -z "$$(grep -l ERROR $(build-dir)/build.log)"
+$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl
+	$(SILENT)cd $(build-dir) && $(GOWIN_BIN)/gw_sh $<
 
-$(target).%: $(build-dir)/impl/pnr/$(target).%
-	cp $< $@ && chmod +w $@
-
-programmer-GW1N-LV1 = GW1N-1
-
-program: $(build-dir)/impl/pnr/$(target).fs
-	$(PROGRAMMER_BIN)/programmer_cli \
-		-d $(programmer-$(target_part)) \
-		--cable "Gowin USB Cable(FT2CH)" \
-		--channel 0 \
-		-r 4 -f $${PWD}/$<
+$(target).fs: $(build-dir)/impl/pnr/$(target).fs
+	$(SILENT)rm -f $@
+	$(SILENT)cp $< $@
+	$(SILENT)chmod 644 $@
