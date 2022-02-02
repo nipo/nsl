@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;
 
 package rgb is
 
@@ -437,13 +436,14 @@ package body rgb is
     return ret;
   end function;
 
-  -- returns (v / math_pi) mod 2.0;
+  constant pi: real := 3.1415926535;
+
   function over_2pi(v: real) return real
   is
     variable complete, ret : real;
   begin
-    ret := v / math_pi / 2.0;
-    ret := ret - floor(ret);
+    ret := v / pi / 2.0;
+    ret := ret - real(integer(ret));
     return ret * 2.0;    
   end function;
   
@@ -452,9 +452,9 @@ package body rgb is
     variable ar, ag, ab, hr, hg, hb : real;
     variable sr, vr : real;
   begin
-    ar := over_2pi(h / math_pi) - 1.0;
-    ag := over_2pi(h + math_pi * 4.0 / 3.0) - 1.0;
-    ab := over_2pi(h + math_pi * 2.0 / 3.0) - 1.0;
+    ar := over_2pi(h / pi) - 1.0;
+    ag := over_2pi(h + pi * 4.0 / 3.0) - 1.0;
+    ab := over_2pi(h + pi * 2.0 / 3.0) - 1.0;
     hr := clamp(0.0, -1.0 + abs(ar) * 3.0, 1.0);
     hg := clamp(0.0, -1.0 + abs(ag) * 3.0, 1.0);
     hb := clamp(0.0, -1.0 + abs(ab) * 3.0, 1.0);
