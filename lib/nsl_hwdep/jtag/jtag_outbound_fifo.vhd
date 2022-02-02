@@ -24,11 +24,12 @@ architecture beh of jtag_outbound_fifo is
 
   signal jtag_data : std_ulogic_vector(data_i'length + 1 downto 0);
   signal jtag_resynced : std_ulogic_vector(data_i'length downto 0);
-  signal jtag_capture : std_ulogic;
+  signal tlr, jtag_capture : std_ulogic;
   signal jtag_reset_n, reset_n, jtag_clock : std_ulogic;
   
 begin
 
+  jtag_reset_n <= not tlr;
   reset_n <= jtag_reset_n and reset_n_i;
   jtag_reset_n_o <= jtag_reset_n;
 
@@ -39,7 +40,7 @@ begin
       )
     port map(
       clock_o => jtag_clock,
-      reset_n_o => jtag_reset_n,
+      tlr_o => tlr,
 
       data_i => jtag_data,
       capture_o => jtag_capture

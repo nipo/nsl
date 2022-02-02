@@ -1,6 +1,5 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
 
 package jtag is
 
@@ -32,11 +31,12 @@ package jtag is
       );
     port(
       tck_o     : out std_ulogic;
-      reset_n_o : out std_ulogic;
+      tlr_o : out std_ulogic;
       selected_o: out std_ulogic;
       capture_o : out std_ulogic;
       shift_o   : out std_ulogic;
       update_o  : out std_ulogic;
+      run_o  : out std_ulogic;
       tdi_o     : out std_ulogic;
       tdo_i     : in  std_ulogic
       );
@@ -49,7 +49,8 @@ package jtag is
       );
     port(
       clock_o    : out std_ulogic;
-      reset_n_o  : out std_ulogic;
+      tlr_o  : out std_ulogic;
+      run_o  : out std_ulogic;
       
       data_o     : out std_ulogic_vector(width_c-1 downto 0);
       update_o   : out std_ulogic;

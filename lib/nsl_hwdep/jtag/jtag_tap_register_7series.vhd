@@ -11,11 +11,12 @@ entity jtag_tap_register is
     );
   port(
     tck_o     : out std_ulogic;
-    reset_n_o : out std_ulogic;
+    tlr_o : out std_ulogic;
     selected_o: out std_ulogic;
     capture_o : out std_ulogic;
     shift_o   : out std_ulogic;
     update_o  : out std_ulogic;
+    run_o  : out std_ulogic;
     tdi_o     : out std_ulogic;
     tdo_i     : in  std_ulogic
     );
@@ -23,15 +24,16 @@ end entity;
 
 architecture seven_series of jtag_tap_register is
 
-  signal tck, tdo, reset, capture, selected, update, shift : std_ulogic;
+  signal run, tck, tdo, reset, capture, selected, update, shift : std_ulogic;
   
 begin
 
-  capture_o <= capture and selected;
-  update_o <= update and selected;
-  shift_o <= shift and selected;
+  capture_o <= capture;
+  update_o <= update;
+  shift_o <= shift;
   selected_o <= selected;
-  reset_n_o <= not reset;
+  tlr_o <= reset;
+  run_o <= run;
 
   inst: bscane2
     generic map(
@@ -43,6 +45,7 @@ begin
       tck     => tck,
       sel     => selected,
       shift   => shift,
+      runtest => run,
       tdi     => tdi_o,
       update  => update,
       tdo     => tdo

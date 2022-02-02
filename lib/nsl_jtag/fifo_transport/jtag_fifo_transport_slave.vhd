@@ -54,13 +54,13 @@ architecture beh of jtag_fifo_transport_slave is
   signal tx_data, rx_data : std_ulogic_vector(width_c-1 downto 0);
   signal tx_ready, tx_valid, rx_valid, rx_ready : std_ulogic;
 
-  signal jtag_clock, jtag_reset_n, reset_n, merged_reset_n : std_ulogic;
+  signal jtag_clock, tlr, reset_n, merged_reset_n : std_ulogic;
   signal in_free : integer range 0 to rx_fifo_depth_c;
   signal out_available : integer range 0 to tx_fifo_depth_c;
   
 begin
 
-  merged_reset_n <= jtag_reset_n and reset_n_i;
+  merged_reset_n <= (not tlr) and reset_n_i;
   reset_sync: nsl_clocking.async.async_edge
     port map(
       clock_i => jtag_clock,
@@ -82,7 +82,7 @@ begin
       )
     port map(
       clock_o => jtag_clock,
-      reset_n_o => jtag_reset_n,
+      tlr_o => tlr,
 
       data_i => jtag_word_out,
       capture_o => jtag_word_out_ready,
@@ -219,7 +219,7 @@ begin
 
   transition: process(r, jtag_word_out_ready,
                       jtag_word_in, jtag_word_in_valid,
-                      tx_data, tx_valid, rx_ready, jtag_reset_n)
+                      tx_data, tx_valid, rx_ready, tlr)
   begin
     rin <= r;
 
@@ -258,7 +258,7 @@ begin
       rin.txd <= tx_data;
     end if;
 
-    if jtag_reset_n = '0' then
+    if tlr = '1' then
       rin.peer_data <= (others => '-');
       rin.txd <= (others => '-');
       rin.rxd <= (others => '-');

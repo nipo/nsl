@@ -23,11 +23,12 @@ end entity;
 architecture beh of jtag_inbound_fifo is
 
   signal jtag_din, jtag_dout, jtag_resynced : std_ulogic_vector(data_o'length downto 0);
-  signal jtag_update : std_ulogic;
+  signal tlr, jtag_update : std_ulogic;
   signal jtag_reset_n, reset_n, jtag_clock : std_ulogic;
   
 begin
 
+  jtag_reset_n <= not tlr;
   reset_n <= jtag_reset_n and reset_n_i;
   jtag_reset_n_o <= jtag_reset_n;
   jtag_dout(jtag_dout'left downto 1) <= (others => '0');
@@ -39,7 +40,7 @@ begin
       )
     port map(
       clock_o => jtag_clock,
-      reset_n_o => jtag_reset_n,
+      tlr_o => tlr,
 
       data_o => jtag_din,
       update_o => jtag_update,
