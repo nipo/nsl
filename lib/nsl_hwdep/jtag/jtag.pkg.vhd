@@ -3,6 +3,29 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package jtag is
+
+  component jtag_user_tap
+    generic(
+      user_port_count_c : integer := 1
+      );
+    port(
+      chip_tck_i : in std_ulogic := '0';
+      chip_tms_i : in std_ulogic := '0';
+      chip_tdi_i : in std_ulogic := '0';
+      chip_tdo_o : out std_ulogic;
+
+      tdo_i : in std_ulogic_vector(0 to user_port_count_c-1);
+      selected_o : out std_ulogic_vector(0 to user_port_count_c-1);
+      run_o : out std_ulogic;
+      tck_o : out std_ulogic;
+      tdi_o : out std_ulogic;
+      tlr_o : out std_ulogic;
+      shift_o : out std_ulogic;
+      capture_o : out std_ulogic;
+      update_o : out std_ulogic
+      );
+  end component;
+
   component jtag_tap_register
     generic(
       id_c    : natural range 1 to 4

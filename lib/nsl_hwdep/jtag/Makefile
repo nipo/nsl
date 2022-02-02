@@ -14,4 +14,8 @@ deps += unisim.vcomponents
 endif
 endif
 
+ifneq ($(filter gowin,$(hwdep)),)
+vhdl-sources += jtag_user_tap_gowin.vhd
+endif
+
 deps += nsl_clocking.interdomain
