@@ -1,0 +1,2 @@
+IO_LOC	"led"		H6;
+IO_PORT "led" IO_TYPE=LVCMOS33;
