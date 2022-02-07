@@ -98,14 +98,20 @@ begin
     swclk_falling := false;
     swclk_rising := false;
 
-    rin.counter <= r.counter - 1;
+    case r.state is
+      when ST_RESET | ST_CMD_GET | ST_RSP_PUT =>
+        null;
 
-    if r.counter = (r.counter'range => '0') then
-      rin.counter <= r.divisor;
-      rin.swd.clk <= not r.swd.clk;
-      swclk_falling := r.swd.clk = '1';
-      swclk_rising := r.swd.clk = '0';
-    end if;
+      when others =>
+        rin.counter <= r.counter - 1;
+
+        if r.counter = (r.counter'range => '0') then
+          rin.counter <= r.divisor;
+          rin.swd.clk <= not r.swd.clk;
+          swclk_falling := r.swd.clk = '1';
+          swclk_rising := r.swd.clk = '0';
+        end if;
+    end case;
 
     case r.state is
       when ST_RESET =>
@@ -124,52 +130,50 @@ begin
         end if;
 
       when ST_CMD_ROUTE =>
-        if swclk_rising then
-          if std_match(r.op, DP_CMD_TURNAROUND) then
-            rin.turnaround <= to_integer(unsigned(r.op(1 downto 0)));
-            rin.state <= ST_RSP_PUT;
+        if std_match(r.op, DP_CMD_TURNAROUND) then
+          rin.turnaround <= to_integer(unsigned(r.op(1 downto 0)));
+          rin.state <= ST_RSP_PUT;
 
-          elsif std_match(r.op, DP_CMD_RUN) then
-            rin.cycle_count <= to_integer(unsigned(r.op(5 downto 0)));
-            rin.state <= ST_RUN;
-            rin.run_val <= r.op(6);
+        elsif std_match(r.op, DP_CMD_RUN) then
+          rin.cycle_count <= to_integer(unsigned(r.op(5 downto 0)));
+          rin.state <= ST_RUN;
+          rin.run_val <= r.op(6);
 
-          elsif std_match(r.op, DP_CMD_DIVISOR) then
-            rin.divisor <= unsigned(r.data(31 downto 16));
-            rin.state <= ST_RSP_PUT;
+        elsif std_match(r.op, DP_CMD_DIVISOR) then
+          rin.divisor <= unsigned(r.data(31 downto 16));
+          rin.state <= ST_RSP_PUT;
 
-          elsif std_match(r.op, DP_CMD_BITBANG) then
-            rin.cycle_count <= to_integer(unsigned(r.op(4 downto 0)));
-            rin.state <= ST_BITBANG;
+        elsif std_match(r.op, DP_CMD_BITBANG) then
+          rin.cycle_count <= to_integer(unsigned(r.op(4 downto 0)));
+          rin.state <= ST_BITBANG;
 
-          elsif std_match(r.op, DP_CMD_ABORT) then
-            rin.cmd <= x"81"; -- Write to DP 0
-            rin.par_in <= '0';
-            rin.par_out <= '0';
-            rin.cycle_count <= 7;
-            rin.state <= ST_CMD_SHIFT;
-            rin.data <= x"0000001f";
-            rin.is_read <= false;
-            rin.run_val <= '0';
+        elsif std_match(r.op, DP_CMD_ABORT) then
+          rin.cmd <= x"81"; -- Write to DP 0
+          rin.par_in <= '0';
+          rin.par_out <= '0';
+          rin.cycle_count <= 7;
+          rin.state <= ST_CMD_SHIFT;
+          rin.data <= x"0000001f";
+          rin.is_read <= false;
+          rin.run_val <= '0';
 
-          elsif std_match(r.op, DP_CMD_RW) then
-            rin.cmd(7 downto 6) <= "10";
-            rin.cmd(5) <= r.op(0) xor r.op(1) xor r.op(4) xor r.op(5);
-            rin.cmd(4 downto 3) <= std_ulogic_vector(r.op(1 downto 0));
-            rin.cmd(2) <= r.op(4); -- Rnw
-            rin.cmd(1) <= r.op(5); -- Apndp
-            rin.cmd(0) <= '1';
-            rin.is_read <= r.op(4) = '1'; -- Rnw
-            rin.par_in <= '0';
-            rin.par_out <= '0';
-            rin.cycle_count <= 7;
-            rin.state <= ST_CMD_SHIFT;
-            rin.run_val <= '0';
+        elsif std_match(r.op, DP_CMD_RW) then
+          rin.cmd(7 downto 6) <= "10";
+          rin.cmd(5) <= r.op(0) xor r.op(1) xor r.op(4) xor r.op(5);
+          rin.cmd(4 downto 3) <= std_ulogic_vector(r.op(1 downto 0));
+          rin.cmd(2) <= r.op(4); -- Rnw
+          rin.cmd(1) <= r.op(5); -- Apndp
+          rin.cmd(0) <= '1';
+          rin.is_read <= r.op(4) = '1'; -- Rnw
+          rin.par_in <= '0';
+          rin.par_out <= '0';
+          rin.cycle_count <= 7;
+          rin.state <= ST_CMD_SHIFT;
+          rin.run_val <= '0';
 
-          else
-            rin.cmd <= x"ff";
-            rin.state <= ST_RSP_PUT;
-          end if;
+        else
+          rin.cmd <= x"ff";
+          rin.state <= ST_RSP_PUT;
         end if;
 
       when ST_CMD_SHIFT =>
@@ -318,11 +322,6 @@ begin
         end if;
 
       when ST_RSP_PUT =>
-        if swclk_falling then
-          rin.swd.dio.output <= '1';
-          rin.swd.dio.v <= r.run_val;
-        end if;
-
         if rsp_ready_i = '1' then
           rin.state <= ST_CMD_GET;
         end if;
