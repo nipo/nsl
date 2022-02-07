@@ -26,7 +26,7 @@ deps += machxo2.components
 endif
 
 ifneq ($(filter gowin,$(hwdep)),)
-ifneq ($(filter GW1N%,$(target_part)),)
+ifneq ($(filter GW1N-1,$(target_part_name)),)
 vhdl-sources += clock_internal_gw1n.vhd
 else
 vhdl-sources += clock_internal_gw2a.vhd
