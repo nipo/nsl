@@ -1,5 +1,5 @@
 ifneq ($(filter xc7%,$(target_part)),)
-vhdl-sources += xc7_config.vhd
+vhdl-sources += xc7_config.pkg.vhd
 
 ifneq ($(filter xc7a%,$(target_part)),)
 vhdl-sources += xc7_config_artix7_$(subst -,,$(target_speed)).vhd

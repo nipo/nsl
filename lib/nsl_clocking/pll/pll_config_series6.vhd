@@ -10,7 +10,7 @@ package body pll_config_series67 is
   function variant_get(hw_variant : string) return pll_variant
   is
   begin
-    if nsl_hwdep.xc6_config.pll_variant_get(hw_variant) == nsl_hwdep.xc6_config.PLL then
+    if nsl_hwdep.xc6_config.pll_variant_get(hw_variant) = nsl_hwdep.xc6_config.PLL then
       return S6_PLL;
     else
       return S6_DCM;
@@ -21,9 +21,9 @@ package body pll_config_series67 is
   is
     variable ret: nsl_hwdep.xc6_config.pll_constraints;
   begin
-    if pll_variant == S6_DCM then
+    if mode = S6_DCM then
       ret := nsl_hwdep.xc6_config.pll_constraints_get(nsl_hwdep.xc6_config.DCM);
-    elsif pll_variant == S6_PLL then
+    elsif mode = S6_PLL then
       ret := nsl_hwdep.xc6_config.pll_constraints_get(nsl_hwdep.xc6_config.PLL);
     else
       report "Unsupported mode" severity failure;
@@ -38,4 +38,4 @@ package body pll_config_series67 is
       );
   end function;
 
-end package;
+end package body;
