@@ -23,7 +23,7 @@ vhdl-sources += pll_config_series67.vhd
 ifneq ($(filter xc6%,$(target_part)),)
 vhdl-sources += pll_config_series6.vhd
 deps += nsl_hwdep.xc6_config
-else ifneq ($(filter xc7a%,$(target_part)),)
+else ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += pll_config_series7.vhd
 deps += nsl_hwdep.xc7_config
 endif
