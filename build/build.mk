@@ -49,7 +49,10 @@ user-package-name = $(subst ._bare,,$1)
 # <filename> <language> <library> <package>
 # Export source file with its attributes
 define declare-source
-#$ (info declare-source lang $2 pkg $3.$4 src $1)
+ifneq ($(nsl-build-debug),)
+$$(info declare-source lang $2 pkg $3.$4 src $1)
+endif
+
 $1-language := $2
 $1-library := $3
 $1-package := $3.$4
@@ -67,7 +70,9 @@ endef
 # <library> <package> <path> <indent>
 # Ingress directory $1.$2 from directory $3 ($2 may be "_bare")
 define directory-ingress
-#$ (info $4 Parsing $1.$2 from $3/Makefile)
+ifneq ($(nsl-build-debug),)
+$$(info $4 Parsing $1.$2 from $3/Makefile)
+endif
 
 $(foreach l,$(source-types),$(call source-list-cleanup,$l))
 deps :=
@@ -94,7 +99,9 @@ endef
 # <library> <package> <srcdir> <indent>
 # Ingress package $1.$2 from directory $3
 define package-ingress
-#$ (info $4 Scanning package $1.$2)
+ifneq ($(nsl-build-debug),)
+$$(info $4 Scanning package $1.$2)
+endif
 
 $(call directory-ingress,$1,$2,$3,$4)
 $$(if $$($1.$2-vhdl-version),$$(warning Package $1.$2 tries to set VHDL version, ignored))
@@ -106,12 +113,18 @@ endef
 # Ingress library $1 if not already in $(all-libraries)
 library-parse = $(if $(filter $1,$(all-libraries)),,$(call _library-parse,$1,$2))
 define _library-parse
-#$ (info Adding library $1 in $(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1))
+ifneq ($(nsl-build-debug),)
+$$(info Adding library $1 in $(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1))
+endif
+
 all-libraries += $1
 
 $(call directory-ingress,$1,_bare,$(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1),$2)
 
-#$ (info $1 **** packages: $$($1._bare-sub-packages))
+ifneq ($(nsl-build-debug),)
+$$(info $1 **** packages: $$($1._bare-sub-packages))
+endif
+
 $1-vhdl-version := $$(if $$($1._bare-vhdl-version),$$($1._bare-vhdl-version),93)
 $1._bare-vhdl-version :=
 $$(eval $$(foreach p,$$($1._bare-sub-packages),$$(call package-ingress,$1,$$p,$$(if $$($1-srcdir),$$($1-srcdir),$(LIB_ROOT)/$1)/$$p,$2)))
@@ -123,7 +136,10 @@ endef
 # Ingress packages from $1 if they dont already appear in $(package-deps-parsed-list)
 ensure-package-deps-parsed = $(if $(filter $1,$(package-deps-parsed-list)),,$(call _ensure-package-deps-parsed,$1,$2))
 define _ensure-package-deps-parsed
-#$ (info $2 Ensuring deps of $1 are parsed, done=$(package-deps-parsed-list))
+ifneq ($(nsl-build-debug),)
+$$(info $2 Ensuring deps of $1 are parsed, done=$(package-deps-parsed-list))
+endif
+
 package-deps-parsed-list += $1
 $$(eval $$(foreach l,$$(sort $$(foreach ll,$$($1-deps-unsorted),$$(call library_name,$$(ll)))),$$(call library-parse,$$l,$2)))
 
@@ -149,8 +165,22 @@ lib-donedeps-first = $(if $1,$(call not-empty-or-circular-dep,$(strip $(call onl
 #  all packages deps,
 #  intra-library package deps.
 define package_deep_deps_calc
+
+ifneq ($(nsl-build-debug),)
+$$(info Calculating deps for: $1)
+endif
+
 $1-deepdeps-unsorted := $(filter-out $1,$(sort $(call deep_deps,$1)))
+
+ifneq ($(nsl-build-debug),)
+$$(info Deepdeps for $1 done)
+endif
+
 $1-intradeps-unsorted := $(sort $(filter $($1-library).%,$($1-deps-unsorted)))
+
+ifneq ($(nsl-build-debug),)
+$$(info Intradeps for $1 done)
+endif
 
 endef
 
@@ -177,7 +207,9 @@ endef
 # For a library, calculates
 #  ordered source set
 define lib_build_calc
-#$ (info $1 sources: $(foreach p,$($1-packages),$($p-sources)))
+ifneq ($(nsl-build-debug),)
+$$(info $1 sources: $(foreach p,$($1-packages),$($p-sources)))
+endif
 $1-sources := $(call uniq,$(foreach p,$($1-packages),$($p-sources)))
 
 endef
@@ -264,15 +296,31 @@ all-libraries :=
 package-deps-parsed-list :=
 
 ## Start reading top library, it will recurse down
-#$ (info Starting from top library)
+ifneq ($(nsl-build-debug),)
+$(info Starting from top library)
+endif
+
 $(eval $(call library-parse,$(top-lib),$(top-lib)))
+
+ifneq ($(nsl-build-debug),)
+$(info Done parsing libraries, calculating dependencies)
+endif
 
 ## Calculate all packages deps
 all-packages := $(foreach l,$(all-libraries),$($l-all-packages))
+
+ifneq ($(nsl-build-debug),)
+$(info all-packages: $(all-packages))
+endif
+
 $(eval $(foreach p,$(all-packages),$(call package_deep_deps_calc,$p)))
 
 ## This is the set of packages we'll build
 enabled-packages := $(top-package) $($(top-package)-deepdeps-unsorted)
+
+ifneq ($(nsl-build-debug),)
+$(info Enabled: $(enabled-packages))
+endif
 
 ## Dependency-dependent reordering
 $(eval $(foreach l,$(all-libraries),$(call lib_enable_calc,$l)))
@@ -280,8 +328,23 @@ $(eval $(foreach l,$(all-libraries),$(call lib_deps_calc,$l)))
 
 ## Enabled libraries and sources
 $(eval $(foreach l,$(all-libraries),$(call lib_build_calc,$l)))
+
+ifneq ($(nsl-build-debug),)
+$(info Done calculating build order)
+endif
+
 $(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
-libraries := $(call uniq,$(call lib-donedeps-first,$(all-libraries),))
+
+ifneq ($(nsl-build-debug),)
+$(info Calculating lib order)
+endif
+
+libraries := $(call uniq,$(call lib-donedeps-first,$(call uniq,$(all-libraries)),))
+
+ifneq ($(nsl-build-debug),)
+$(info Libraries in order: $(libraries))
+endif
+
 sources := $(foreach l,$(libraries),$($l-sources))
 
 include $(TOOL_ROOT)/$(tool).mk
