@@ -35,6 +35,9 @@ architecture s6 of jtag_user_tap is
 
   signal run_s, tck_unb_s, reset_s, selected_s, capture_s, shift_s, update_s, tdi_s, tdo_s: std_ulogic_vector(0 to user_port_count_c-1);
   signal tck_s : std_ulogic;
+
+  attribute period: string;
+  attribute period of tck_s : signal is "20 ns";
   
 begin
 
