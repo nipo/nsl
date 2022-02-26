@@ -66,3 +66,9 @@ foreach {source_clock} [get_clocks -quiet -of_objects $dpram_cells] {
         set_bus_skew  -from $source_clock -to $dest_clock -through $dpram_output_pins [expr min ($source_clock_period, $dest_clock_period)]
     }
 }
+
+foreach {bscan} [get_cells -hier {*jtag_bscane2_inst*}] {
+    common::send_msg_id "NSL-1-02" "INFO" "Adding TCK clock for $bscan"
+    create_clock -period 20.000 [get_pins -filter {REF_PIN_NAME=~TCK} -of $bscan]
+}
+

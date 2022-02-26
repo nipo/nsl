@@ -40,7 +40,7 @@ begin
 
   insts: for i in 0 to user_port_count_c-1
   generate
-    inst: unisim.vcomponents.bscane2
+    jtag_bscane2_inst: unisim.vcomponents.bscane2
     generic map(
       jtag_chain => i+1
       )
