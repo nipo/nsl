@@ -50,4 +50,29 @@ package shift_register is
       );
   end component;
 
+  component slave_shift_register_oversampled is
+    generic(
+      width_c : natural;
+      msb_first_c : boolean := true;
+      cs_n_active_c : std_ulogic := '0'
+      );
+    port(
+      clock_i     : in std_ulogic;
+
+      cpol_i : in std_ulogic := '0';
+      cpha_i : in std_ulogic := '0';
+
+      spi_i       : in nsl_spi.spi.spi_slave_i;
+      spi_o       : out nsl_spi.spi.spi_slave_o;
+
+      active_o    : out std_ulogic;
+
+      tx_data_i   : in  std_ulogic_vector(width_c - 1 downto 0);
+      tx_ready_o  : out std_ulogic;
+
+      rx_data_o   : out std_ulogic_vector(width_c - 1 downto 0);
+      rx_valid_o  : out std_ulogic
+      );
+  end component;
+
 end package shift_register;
