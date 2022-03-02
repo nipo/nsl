@@ -1,21 +1,13 @@
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
 
 library nsl_bnoc;
 
 package sized is
 
-  subtype sized_data is nsl_bnoc.framed.framed_data_t;
-
-  type sized_req is record
-    data : sized_data;
-    valid  : std_ulogic;
-  end record;
-
-  type sized_ack is record
-    ready : std_ulogic;
-  end record;
+  alias sized_data is nsl_bnoc.pipe.pipe_data_t;
+  alias sized_req is nsl_bnoc.pipe.pipe_req_t;
+  alias sized_ack is nsl_bnoc.pipe.pipe_ack_t;
 
   type sized_bus is record
     req: sized_req;

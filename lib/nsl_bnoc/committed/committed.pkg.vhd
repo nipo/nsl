@@ -5,7 +5,8 @@ use ieee.numeric_std.all;
 library nsl_bnoc;
 
 -- Committed network is a subset of framed network where a frame always ends
--- with a status word. LSB of status word tells whether frame is valid.
+-- with a status word. LSB of status word tells whether frame is valid (active
+-- high).
   
 package committed is
 
