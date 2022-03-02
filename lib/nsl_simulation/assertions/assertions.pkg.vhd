@@ -15,6 +15,11 @@ package assertions is
                          sev : in severity_level);
 
   procedure assert_equal(what: in string;
+                         a : in integer;
+                         b : in integer;
+                         sev : in severity_level);
+
+  procedure assert_equal(what: in string;
                          a : in std_ulogic;
                          b : in std_ulogic;
                          sev : in severity_level);
@@ -48,6 +53,12 @@ package assertions is
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
+                         sev : in severity_level);
+
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in integer;
+                         b : in integer;
                          sev : in severity_level);
 
   procedure assert_equal(context: in log_context;
@@ -111,6 +122,19 @@ package body assertions is
       assert_equal_failure("UNK", what,
                            """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
                            """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
+                           sev);
+    end if;
+  end procedure;
+
+  procedure assert_equal(what: in string;
+                         a : in integer;
+                         b : in integer;
+                         sev : in severity_level) is
+  begin
+    if a /= b then
+      assert_equal_failure("UNK", what,
+                           """" & to_string(a) & """",
+                           """" & to_string(b) & """",
                            sev);
     end if;
   end procedure;
@@ -185,6 +209,20 @@ package body assertions is
                            sev);
     end if;
   end procedure;
+
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in integer;
+                         b : in integer;
+                         sev : in severity_level) is
+ begin
+    if a /= b then
+      assert_equal_failure(context, what,
+                           """" & to_string(a) & """",
+                           """" & to_string(b) & """",
+                           sev);
+    end if;
+ end;
 
   procedure assert_equal(context: in log_context;
                          what: in string;
