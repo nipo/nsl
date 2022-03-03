@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+
+import crcmod.predefined
+from nsl.framed import Framed
+from nsl.fifo import FifoFile
+from nsl.committed import Committed
+import sys
+
+def hdlc_crc(data, init = 0):
+    import crcmod
+    c = crcmod.Crc(0x11021, initCrc = init ^ 0xffff)
+    c.update(data)
+    return 0xffff ^ int.from_bytes(c.digest(), "big")
+
+class Crc:
+    def __init__(self, state = 0):
+        self.state = state
+
+    def update(self, data):
+        self.state = hdlc_crc(data, self.state)
+
+    def digest(self):
+        return self.state.to_bytes(2, "little")
+
+class Stream:
+    def __init__(self, fifo):
+        self.fifo = fifo
+
+    @classmethod
+    def escape(self, data):
+        r = []
+        for i in data:
+            if i in [0x7d, 0x7e, 0x11, 0x13, 0x91, 0x93, 0x03]:
+                r.append(0x7d)
+                r.append(i ^ 0x20)
+            else:
+                r.append(i)
+        return bytes(r)
+
+    def put(self, data, commit = True):
+        c = Crc()
+        c.update(data)
+        data += c.digest()
+        data = self.escape(data)
+        if not commit:
+            data += b'\x55'
+        print(data.hex())
+        self.fifo.put(0x7e)
+        for b in data:
+            self.fifo.put(b)
+        self.fifo.put(0x7e)
+            
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    if "hdlc" in n:
+        s = Stream(FifoFile(n, 8))
+    else:
+        s = Committed(n)
+
+    s.put(b"\x80")
+    s.put(b"\xff\x03\xc0\x21")
+    s.put(b"\xff\x7d\x23\xc0\x21")
+    s.put(b"\x7d\xdf\x7d\x23\xc0\x21")
+    s.put(b"\x01hello, world")
+#    s.put(b"\x01escape \x93\x7d\x7e\x11\x13\x91\x03")
+#    s.put(b"")
+#    s.put(b"\x03known bad", commit = False)
+#    s.put(b"\x00")
