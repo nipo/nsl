@@ -7,3 +7,4 @@ packages += frame_capturer
 packages += framed_transactor
 packages += committed
 packages += pipe
+packages += crc

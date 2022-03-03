@@ -1,0 +1,7 @@
+vhdl-sources += tb.vhd
+
+deps += nsl_bnoc.committed
+deps += nsl_bnoc.testing
+deps += nsl_bnoc.crc
+deps += nsl_data.text
+deps += nsl_simulation.driver
