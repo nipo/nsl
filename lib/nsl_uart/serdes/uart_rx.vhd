@@ -7,23 +7,24 @@ use nsl_uart.serdes.all;
 
 entity uart_rx is
   generic(
-    divisor_width : natural range 1 to 20;
     bit_count_c : natural;
     stop_count_c : natural range 1 to 2;
-    parity_c : parity_t
+    parity_c : parity_t;
+    rts_active_c : std_ulogic := '0'
     );
   port(
     clock_i     : in std_ulogic;
     reset_n_i   : in std_ulogic;
 
-    divisor_i   : in unsigned(divisor_width-1 downto 0);
+    divisor_i   : in unsigned;
     
     uart_i      : in std_ulogic;
+    rts_o       : out std_ulogic;
 
     data_o      : out std_ulogic_vector(bit_count_c-1 downto 0);
     valid_o     : out std_ulogic;
     ready_i     : in std_ulogic := '1';
-    parity_ok_o : out std_ulogic;
+    parity_error_o : out std_ulogic;
     break_o     : out std_ulogic
     );
 end entity;
@@ -46,8 +47,9 @@ architecture beh of uart_rx is
     all_zero: boolean;
     state: state_t;
     bit_ctr: integer range 0 to bit_count_c-1;
-    div_ctr, divisor: unsigned(divisor_i'range);
+    div_ctr, divisor: unsigned(divisor_i'length-1 downto 0);
 
+    ready: std_ulogic;
     valid: std_ulogic;
     data: std_ulogic_vector(bit_count_c-1 downto 0);
     parity_ok: std_ulogic;
@@ -71,6 +73,7 @@ begin
   begin
     rin <= r;
 
+    rin.ready <= ready_i;
     if ready_i = '1' then
       rin.valid <= '0';
     end if;
@@ -160,6 +163,7 @@ begin
   valid_o <= r.valid;
   data_o <= r.data;
   break_o <= '1' when r.state = ST_BREAK_WAIT else '0';
-  parity_ok_o <= '1' when parity_c = PARITY_NONE else r.parity_ok;
+  parity_error_o <= '0' when parity_c = PARITY_NONE else not r.parity_ok;
+  rts_o <= rts_active_c when (r.ready = '1' or r.valid = '0') else not rts_active_c;
 
 end architecture;

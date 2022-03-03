@@ -7,18 +7,19 @@ use nsl_uart.serdes.all;
 
 entity uart_tx is
   generic(
-    divisor_width : natural range 1 to 20;
     bit_count_c : natural;
     stop_count_c : natural;
-    parity_c : parity_t
+    parity_c : parity_t;
+    rtr_active_c : std_ulogic := '0'
     );
   port(
     clock_i     : in std_ulogic;
     reset_n_i   : in std_ulogic;
 
-    divisor_i   : in unsigned(divisor_width-1 downto 0);
+    divisor_i   : in unsigned;
     
     uart_o      : out std_ulogic;
+    rtr_i       : in std_ulogic := rtr_active_c;
 
     data_i      : in std_ulogic_vector(bit_count_c-1 downto 0);
     ready_o     : out std_ulogic;
@@ -30,6 +31,7 @@ architecture beh of uart_tx is
 
   type state_t is (
     ST_RESET,
+    ST_WAIT,
     ST_IDLE,
     ST_PREPARE,
     ST_SHIFT
@@ -43,7 +45,7 @@ architecture beh of uart_tx is
   type regs_t is record
     shreg: std_ulogic_vector(shreg_width-1 downto 0);
     bit_ctr: natural range 0 to shreg_width-1;
-    divisor: unsigned(divisor_i'range);
+    divisor: unsigned(divisor_i'length - 1 downto 0);
     state: state_t;
   end record;
   
@@ -64,7 +66,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, data_i, valid_i, divisor_i)
+  transition: process(r, data_i, valid_i, divisor_i, rtr_i)
   begin
     rin <= r;
 
@@ -76,6 +78,13 @@ begin
         if valid_i = '1' then
           rin.state <= ST_PREPARE;
           rin.shreg <= stop_par & data_i & start;
+        elsif rtr_i /= rtr_active_c then
+          rin.state <= ST_WAIT;
+        end if;
+
+      when ST_WAIT =>
+        if rtr_i = rtr_active_c then
+          rin.state <= ST_IDLE;
         end if;
 
       when ST_PREPARE =>
@@ -115,7 +124,7 @@ begin
     ready_o <= '0';
 
     case r.state is
-      when ST_PREPARE | ST_RESET =>
+      when ST_PREPARE | ST_RESET | ST_WAIT =>
         null;
 
       when ST_IDLE =>
