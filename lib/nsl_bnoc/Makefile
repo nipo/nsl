@@ -8,3 +8,4 @@ packages += framed_transactor
 packages += committed
 packages += pipe
 packages += crc
+packages += packetizer
