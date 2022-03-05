@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math;
+library nsl_math, nsl_bnoc;
 
 package framed is
 
@@ -219,6 +219,35 @@ package framed is
 
       req_o : out framed_req;
       ack_i : in framed_ack
+      );
+  end component;
+
+  component framed_framer is
+    generic(
+      timeout_c : natural
+      );
+    port(
+      reset_n_i : in  std_ulogic;
+      clock_i   : in  std_ulogic;
+
+      pipe_i   : in  nsl_bnoc.pipe.pipe_req_t;
+      pipe_o   : out nsl_bnoc.pipe.pipe_ack_t;
+
+      frame_o  : out framed_req;
+      frame_i  : in framed_ack
+      );
+  end component;
+
+  component framed_unframer is
+    port(
+      reset_n_i : in  std_ulogic;
+      clock_i   : in  std_ulogic;
+
+      frame_i  : in framed_req;
+      frame_o  : out framed_ack;
+
+      pipe_o   : out nsl_bnoc.pipe.pipe_req_t;
+      pipe_i   : in nsl_bnoc.pipe.pipe_ack_t
       );
   end component;
 

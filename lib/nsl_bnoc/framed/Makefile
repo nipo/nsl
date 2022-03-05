@@ -9,6 +9,10 @@ vhdl-sources += framed_gate_arbitrer.vhd
 vhdl-sources += framed_funnel.vhd
 vhdl-sources += framed_dispatch.vhd
 vhdl-sources += framed_committer.vhd
+vhdl-sources += framed_framer.vhd
+vhdl-sources += framed_unframer.vhd
 
 deps += nsl_memory.fifo
+deps += nsl_bnoc.pipe
 deps += nsl_math.arith
+deps += nsl_logic.bool
