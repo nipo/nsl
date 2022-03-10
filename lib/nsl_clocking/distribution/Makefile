@@ -1,6 +1,10 @@
 vhdl-sources += distribution.pkg.vhd
 
-ifneq ($(filter xc%,$(target_part)),)
+ifeq ($(target-usage),simulation)
+vhdl-sources += clock_buffer_simulation.vhd
+else
+
+ifneq ($(filter xilinx,$(hwdep)),)
 vhdl-sources += clock_buffer_xilinx.vhd
 deps += unisim.vcomponents
 endif
@@ -18,4 +22,6 @@ endif
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += clock_buffer_gowin.vhd
 deps += gowin.components
+endif
+
 endif
