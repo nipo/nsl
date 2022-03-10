@@ -30,19 +30,17 @@ architecture beh of committed_unpacketizer is
 
   type in_state_t is (
     IN_RESET,
-    IN_IDLE,
     IN_HEADER,
     IN_DATA,
     IN_COMMIT
     );
 
   type out_state_t is (
-    OUT_RESET,
     OUT_DATA,
     OUT_COMMIT
     );
 
-  constant fifo_depth_c : integer := 2;
+  constant fifo_depth_c : integer := 3;
 
   type regs_t is
   record
@@ -68,8 +66,9 @@ begin
     end if;
 
     if reset_n_i = '0' then
+      r.fifo_fillness <= 0;
       r.in_state <= IN_RESET;
-      r.out_state <= OUT_RESET;
+      r.out_state <= OUT_DATA;
     end if;
   end process;
 
@@ -83,18 +82,12 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_state <= IN_IDLE;
-
-      when IN_IDLE =>
-        rin.fifo_fillness <= 0;
         rin.in_valid <= true;
-        if packet_i.valid = '1' then
-          if header_length_c /= 0 then
-            rin.in_state <= IN_HEADER;
-            rin.in_ctr <= 0;
-          else
-            rin.in_state <= IN_DATA;
-          end if;
+        if header_length_c /= 0 then
+          rin.in_state <= IN_HEADER;
+          rin.in_ctr <= 0;
+        else
+          rin.in_state <= IN_DATA;
         end if;
 
       when IN_HEADER =>
@@ -107,7 +100,7 @@ begin
           end if;
 
           if packet_i.last = '1' then
-            rin.in_state <= IN_IDLE;
+            rin.in_state <= IN_RESET;
           end if;
         end if;
 
@@ -122,28 +115,28 @@ begin
         end if;
 
       when IN_COMMIT =>
-        if r.out_state = OUT_COMMIT then
-          rin.in_state <= IN_IDLE;
+        if r.out_state = OUT_COMMIT and frame_i.ready = '1' then
+          rin.in_state <= IN_RESET;
         end if;
     end case;
 
     case r.out_state is
-      when OUT_RESET =>
-        rin.out_state <= OUT_DATA;
-
       when OUT_DATA =>
-        if r.fifo_fillness > 0 and frame_i.ready = '1' then
+        if r.fifo_fillness > 1 and frame_i.ready = '1' then
           fifo_pop := true;
         end if;
 
         if r.in_state = IN_COMMIT
-          and (r.fifo_fillness = 0
-               or (r.fifo_fillness = 1 and frame_i.ready = '1')) then
+          and (r.fifo_fillness = 1
+               or (r.fifo_fillness = 2 and frame_i.ready = '1')) then
           rin.out_state <= OUT_COMMIT;
         end if;
 
       when OUT_COMMIT =>
-        rin.out_state <= OUT_DATA;
+        if frame_i.ready = '1' then
+          fifo_pop := true;
+          rin.out_state <= OUT_DATA;
+        end if;
     end case;
 
     if fifo_push and fifo_pop then
@@ -160,22 +153,20 @@ begin
 
   moore: process(r) is
   begin
-    frame_o.data <= "--------";
-    frame_o.valid <= '0';
-    frame_o.last <= '-';
-
     case r.out_state is
-      when OUT_RESET | OUT_COMMIT =>
-        null;
-
       when OUT_DATA =>
         frame_o.data <= r.fifo(0);
+        frame_o.valid <= to_logic(r.fifo_fillness > 1);
+        frame_o.last <= '0';
+
+      when OUT_COMMIT =>
+        frame_o.data <= r.fifo(0);
         frame_o.valid <= to_logic(r.fifo_fillness > 0);
-        frame_o.last <= to_logic(r.fifo_fillness = 1 and r.in_state = IN_COMMIT);
+        frame_o.last <= '1';
     end case;
 
     case r.in_state is
-      when IN_RESET | IN_IDLE | IN_COMMIT =>
+      when IN_RESET | IN_COMMIT =>
         packet_o.ready <= '0';
 
       when IN_HEADER =>
