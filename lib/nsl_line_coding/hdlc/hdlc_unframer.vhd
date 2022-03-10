@@ -187,12 +187,7 @@ begin
   fcs: nsl_bnoc.crc.crc_committed_checker
     generic map(
       header_length_c => 0,
-      crc_init_c => nsl_line_coding.hdlc.fcs_init_c,
-      crc_poly_c =>  nsl_line_coding.hdlc.fcs_poly_c,
-      crc_check_c => nsl_line_coding.hdlc.fcs_check_c,
-      insert_msb_c => nsl_line_coding.hdlc.fcs_insert_msb_c,
-      pop_lsb_c => nsl_line_coding.hdlc.fcs_pop_lsb_c,
-      complement_c => nsl_line_coding.hdlc.fcs_complement_c
+      params_c => nsl_line_coding.hdlc.fcs_params_c
       )
     port map(
       reset_n_i => reset_n_i,

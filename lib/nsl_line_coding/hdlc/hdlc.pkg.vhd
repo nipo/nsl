@@ -27,14 +27,17 @@ package hdlc is
   constant escape_mangle_c : byte := x"20";
 
   subtype fcs_t is crc_state(15 downto 0);
-  constant fcs_init_c : fcs_t := x"0000";
-  constant fcs_poly_c : fcs_t := x"8408";
-  constant fcs_check_c : fcs_t := x"0f47";
-  constant fcs_insert_msb_c : boolean := true;
-  constant fcs_pop_lsb_c : boolean := true;
-  constant fcs_complement_c : boolean := true;
-  constant fcs_lsb_first_c : boolean := true;
-  constant fcs_bit_reverse_c : boolean := false;
+  constant fcs_params_c : crc_params_t := (
+    length           => 16,
+    init             => 16#0000#,
+    poly             => 16#8408#,
+    complement_input => false,
+    insert_msb       => true,
+    pop_lsb          => true,
+    complement_state => true,
+    spill_bitswap    => false,
+    spill_lsb_first  => true
+    );
 
   subtype sequence_t is integer range 0 to 7;
   
@@ -241,8 +244,9 @@ package body hdlc is
     start_flag, end_flag: boolean := true) return byte_string
   is
     constant header: byte_string(0 to 1) := (0 => to_byte(address), 1 => cmd);
-    constant fcs_v: fcs_t := not crc_update(not fcs_init_c, fcs_poly_c, fcs_insert_msb_c, fcs_pop_lsb_c, header&data);
-    constant fcs: byte_string(0 to 1) := to_le(unsigned(fcs_v));
+    constant fcs_v: fcs_t := not crc_update(fcs_params_c, crc_init(fcs_params_c),
+                                            header&data);
+    constant fcs: byte_string(0 to 1) := crc_spill(fcs_params_c, fcs_v);
     constant escaped: byte_string := escape(header & data & fcs);
   begin
     if start_flag and end_flag then
