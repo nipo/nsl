@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library gowin;
+
 entity jtag_user_tap is
   generic(
     user_port_count_c : integer := 1
@@ -29,35 +31,7 @@ begin
 
 end entity;
 
-architecture gowin of jtag_user_tap is
-
-  component GW_JTAG is
-    port(
-      tck_pad_i : in std_logic;
-      tms_pad_i : in std_logic;
-      tdi_pad_i : in std_logic;
-      tdo_pad_o : out std_logic;
-      tdo_er1_i : in std_logic;
-      tdo_er2_i : in std_logic;
-      tck_o : out std_logic;
-      tdi_o : out std_logic;
-      test_logic_reset_o : out std_logic;
-      run_test_idle_er1_o : out std_logic;
-      run_test_idle_er2_o : out std_logic;
-      shift_dr_capture_dr_o : out std_logic;
-      pause_dr_o : out std_logic;
-      update_dr_o : out std_logic;
-      enable_er1_o : out std_logic;
-      enable_er2_o : out std_logic 
-      );
-  end component;
-
-  component BUFG
-    port(
-      O: out std_logic;
-      I: in std_logic
-      );
-  end component;
+architecture gw1n of jtag_user_tap is
 
   signal tck_unbuf_s, tck_s, tlr_n_s, shift_dr_capture_dr_s, pause_s, update_s : std_ulogic;
   signal last_enable_s, capture_s, tdo_s, rti_s, enable_s : std_ulogic_vector(0 to 1);
@@ -103,7 +77,7 @@ begin
   capture_o <= capture_s(0) or capture_s(1);
   update_o <= update_s;
 
-  inst: GW_JTAG
+  inst: gowin.components.GW_JTAG
     port map(
       tck_pad_i => chip_tck_i,
       tdi_pad_i => chip_tdi_i,
@@ -124,7 +98,7 @@ begin
       enable_er2_o => enable_s(1)
       );
 
-  tck_buf: bufg
+  tck_buf: gowin.components.bufg
     port map(
       i => tck_unbuf_s,
       o => tck_s

@@ -17,4 +17,5 @@ endif
 
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += clock_buffer_gowin.vhd
+deps += gowin.components
 endif

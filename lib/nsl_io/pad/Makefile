@@ -15,12 +15,13 @@ vhdl-sources += pad_diff_input_xc7.vhd
 vhdl-sources += pad_diff_clock_input_xc7.vhd
 endif
 
+deps += unisim.vcomponents
+endif
+
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += pad_diff_input_gowin.vhd
 vhdl-sources += pad_diff_output_gowin.vhd
-endif
-
-deps += unisim.vcomponents
+deps += gowin.components
 endif
 
 deps += nsl_io.diff

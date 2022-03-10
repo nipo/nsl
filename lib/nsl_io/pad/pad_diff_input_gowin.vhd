@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io;
+library nsl_io, gowin;
 use nsl_io.diff.all;
 
 entity pad_diff_input is
@@ -16,38 +16,15 @@ entity pad_diff_input is
     );
 end entity;
 
-architecture gowin of pad_diff_input is
+architecture gw1n of pad_diff_input is
 
   signal unbuffered_s, inverted_s : std_ulogic;
-
-  COMPONENT BUFG
-    PORT(
-      O:OUT std_logic;
-      I:IN std_logic
-      );
-  END COMPONENT;
-
-  COMPONENT TLVDS_IBUF
-    PORT (
-      O:OUT std_logic;
-      I:IN std_logic;
-      IB:IN std_logic
-      );
-  END COMPONENT;
-
-  COMPONENT ELVDS_IBUF
-    PORT (
-      O:OUT std_logic;
-      I:IN std_logic;
-      IB:IN std_logic
-      );
-  END COMPONENT;
 
 begin
 
   if_diff_term: if diff_term
   generate
-    iobuf_inst: TLVDS_IBUF
+    iobuf_inst: gowin.components.tlvds_ibuf
       port map(
         i => p_diff.p,
         ib => p_diff.n,
@@ -57,7 +34,7 @@ begin
   
   if_no_diff_term: if not diff_term
   generate
-    iobuf_inst: ELVDS_IBUF
+    iobuf_inst: gowin.components.elvds_ibuf
       port map(
         i => p_diff.p,
         ib => p_diff.n,
@@ -69,7 +46,7 @@ begin
 
   if_clk: if is_clock
   generate
-    ck_buf: bufg
+    ck_buf: gowin.components.bufg
       port map(
         i => inverted_s,
         o => p_se
@@ -79,6 +56,6 @@ begin
   if_data: if not is_clock
   generate
     p_se <= inverted_s;
-  generate
-  
+  end generate;
+
 end architecture;

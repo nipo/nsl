@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io;
+library nsl_io, gowin;
 
 entity ddr_input is
   generic(
@@ -14,22 +14,9 @@ entity ddr_input is
     );
 end entity;
 
-architecture gowin of ddr_input is
+architecture gw1n of ddr_input is
 
   signal clock_s: std_ulogic;
-
-  component IDDR is
-    GENERIC (
-      Q0_INIT : bit := '0';
-      Q1_INIT : bit := '0'
-      );	
-    PORT (
-      Q0 : OUT std_logic;
-      Q1 : OUT std_logic;	
-      D : IN std_logic;
-      CLK: IN std_logic
-      );	
-  end component;
 
 begin
 
@@ -55,7 +42,7 @@ begin
     clock_s <= clock_i.n;
   end generate;
   
-  inst: iddr
+  inst: gowin.components.iddr
     port map (
       d => dd_i,
       clk => clock_s,

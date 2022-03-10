@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io;
+library nsl_io, gowin;
 use nsl_io.diff.all;
 
 entity pad_diff_output is
@@ -14,19 +14,11 @@ entity pad_diff_output is
     );
 end entity;
 
-architecture gowin of pad_diff_output is
-
-  COMPONENT TLVDS_OBUF
-    PORT (
-      O:OUT std_logic;
-      OB:OUT std_logic;
-      I:IN std_logic
-      );
-  END COMPONENT;
+architecture gw1n of pad_diff_output is
 
 begin
 
-  se2diff: TLVDS_OBUF
+  se2diff: gowin.components.tlvds_obuf
     port map(
       o => p_diff.p,
       ob => p_diff.n,

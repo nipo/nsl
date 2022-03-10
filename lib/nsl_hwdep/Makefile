@@ -7,4 +7,5 @@ packages += config
 packages += xadc
 packages += xc6_config
 packages += xc7_config
+packages += gowin_config
 

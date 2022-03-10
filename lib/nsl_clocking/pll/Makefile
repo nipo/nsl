@@ -16,6 +16,13 @@ deps += nsl_data.text
 deps += machxo2
 endif
 
+ifneq ($(filter gowin,$(hwdep)),)
+vhdl-sources += pll_basic_gowin.vhd
+deps += nsl_data.text
+deps += nsl_hwdep.gowin_config
+deps += gowin.components
+endif
+
 ifneq ($(filter xc6slx%,$(target_part))$(filter xc7%,$(target_part)),)
 vhdl-sources := $(filter-out pll_basic_simulation.vhd,$(vhdl-sources))
 

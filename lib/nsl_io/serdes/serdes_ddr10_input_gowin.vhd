@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim;
+library gowin;
 
 entity serdes_ddr10_input is
   generic(
@@ -20,34 +20,10 @@ entity serdes_ddr10_input is
     );
 end entity;
 
-architecture gowin of serdes_ddr10_input is
+architecture gw1n of serdes_ddr10_input is
 
   signal reset_s, bit_clock_n_s : std_ulogic;
   signal d_s: std_ulogic_vector(0 to 9);
-
-  COMPONENT IDES10
-    GENERIC (
-      GSREN:string:="false";
-      LSREN:string:="true"
-      );
-    PORT(
-      Q0:OUT std_logic;
-      Q1:OUT std_logic;
-      Q2:OUT std_logic;
-      Q3:OUT std_logic;
-      Q4:OUT std_logic;
-      Q5:OUT std_logic;
-      Q6:OUT std_logic;
-      Q7:OUT std_logic;
-      Q8:OUT std_logic;
-      Q9:OUT std_logic;
-      D:IN std_logic;
-      FCLK:IN std_logic;
-      PCLK:IN std_logic;
-      CALIB:IN std_logic;
-      RESET:IN std_logic
-      );
-  END COMPONENT;
 
 begin
 
@@ -68,7 +44,7 @@ begin
 
   bit_clock_n_s <= not bit_clock_i;
 
-  inst: IDES10
+  inst: gowin.components.ides10
     port map (
       q0 => d_s(0),
       q1 => d_s(1),

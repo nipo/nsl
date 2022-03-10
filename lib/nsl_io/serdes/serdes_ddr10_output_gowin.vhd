@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library gowin;
+
 entity serdes_ddr10_output is
   generic(
     left_to_right_c : boolean := false
@@ -14,33 +16,10 @@ entity serdes_ddr10_output is
     );
 end entity;
 
-architecture gowin of serdes_ddr10_output is
+architecture gw1n of serdes_ddr10_output is
 
   signal d_s: std_ulogic_vector(0 to 9);
   signal reset_s: std_ulogic;
-
-  COMPONENT OSER10
-    GENERIC (
-      GSREN:string:="false";
-      LSREN:string:="true"
-      );
-    PORT(
-      Q:OUT std_logic;
-      D0:IN std_logic;
-      D1:IN std_logic;
-      D2:IN std_logic;
-      D3:IN std_logic;
-      D4:IN std_logic;
-      D5:IN std_logic;
-      D6:IN std_logic;
-      D7:IN std_logic;
-      D8:IN std_logic;
-      D9:IN std_logic;
-      FCLK:IN std_logic;
-      PCLK:IN std_logic;
-      RESET:IN std_logic
-      );
-  END COMPONENT;
   
 begin
 
@@ -59,7 +38,7 @@ begin
     end generate;
   end generate;
 
-  inst: OSER10
+  inst: gowin.components.oser10
     port map(
       q => serial_o,
       d0 => d_s(0),

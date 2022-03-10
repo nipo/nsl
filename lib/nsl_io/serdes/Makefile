@@ -11,4 +11,5 @@ endif
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += serdes_ddr10_output_gowin.vhd
 vhdl-sources += serdes_ddr10_input_gowin.vhd
+deps += gowin.components
 endif

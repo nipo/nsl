@@ -1,8 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-use unisim.vcomponents.all;
+library gowin;
+use gowin.components.all;
 
 entity clock_buffer is
   generic(
@@ -14,14 +14,7 @@ entity clock_buffer is
     );
 end entity;
 
-architecture gowin of clock_buffer is
-
-  COMPONENT BUFG
-    PORT(
-      O:OUT std_logic;
-      I:IN std_logic
-      );
-  END COMPONENT;
+architecture gw1n of clock_buffer is
   
 begin
 
@@ -32,7 +25,7 @@ begin
 
   is_bufg: if mode_c /= "none"
   generate
-    buf: bufg
+    buf: gowin.components.bufg
       port map(
         i => clock_i,
         o => clock_o

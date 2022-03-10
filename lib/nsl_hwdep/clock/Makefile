@@ -26,11 +26,8 @@ deps += machxo2.components
 endif
 
 ifneq ($(filter gowin,$(hwdep)),)
-ifneq ($(filter GW1N-1,$(target_part_name)),)
-vhdl-sources += clock_internal_gw1n.vhd
-else
-vhdl-sources += clock_internal_gw2a.vhd
-endif
+vhdl-sources += clock_internal_gowin.vhd
+deps += nsl_hwdep.gowin_config
 endif
 
 ifneq ($(filter lattice-ice40,$(hwdep)),)
