@@ -1,4 +1,4 @@
-GOWIN = /opt/Gowin/V1.9.8.02
+GOWIN = /opt/Gowin/V1.9.8.03
 GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
@@ -34,6 +34,11 @@ endef
 
 define _gowin-project-add-constraint
 	$(call file-append,$1,add_file -type cst {$2})
+
+endef
+
+define _gowin-project-add-sdc
+	$(call file-append,$1,add_file -type sdc {$2})
 
 endef
 
