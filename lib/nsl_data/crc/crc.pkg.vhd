@@ -2,6 +2,7 @@ library ieee, nsl_data;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
 package crc is
 
@@ -37,23 +38,68 @@ package crc is
                       insert_msb, pop_lsb : boolean;
                       data : byte_string) return crc_state;
 
-  -- Specialization of above functions for ISO-14443-3 (NFC-A)
-  constant crc_iso_14443_3_a_init : crc16 := x"6363";
-  constant crc_iso_14443_3_a_poly : crc16 := x"8408";
-  constant crc_iso_14443_3_a_insert_msb : boolean := true;
-  constant crc_iso_14443_3_a_pop_lsb : boolean := true;
-  function crc_iso_14443_3_a_update(init : crc16;
-                                    data : byte_string) return crc16;
+  -- All parameters for a CRC algorithm.
+  -- State is a vector if bits. By convention for this helper, state is
+  -- a descending vector. MSB is on the left, LSB is on the right.
+  -- Likewise, with byte stream data, MSB is on the left of vector.
+  type crc_params_t is
+  record
+    -- Length of state
+    length : integer;
+    -- Initial value, also output value for an empty vector.
+    init : integer;
+    -- Polynomial
+    poly : integer;
+    -- For every bit inserted in the CRC, whether polynomial rotation
+    -- and bit insertion happens from MSB (left) or LSB (right).
+    insert_msb : boolean;
+    -- Whether input is complemented
+    complement_input : boolean;
+    -- For byte/logic_vector, whether we take bits one by one from MSB
+    -- or LSB.
+    pop_lsb : boolean;
+    -- Whether saved state is complemented at output. For update() to
+    -- be composable, this imples complementing state at input.
+    --
+    -- For some parameters that are documented with an initial value,
+    -- no complement before iteration and complementing before
+    -- spilling the CRC after the message, you should complement
+    -- initial value constant above.
+    complement_state : boolean;
+    -- Whether to bitswap the CRC state before spilling it.
+    spill_bitswap : boolean;
+    -- Thether to spill multi-byte CRC state with LSB or MSB
+    -- first. Note that bitswapping happens before endian selection.
+    spill_lsb_first : boolean;
+  end record;
 
-  -- Specialization of above functions for IEEE-802.3 (Ethernet)
-  constant crc_ieee_802_3_init : crc32 := x"00000000";
-  constant crc_ieee_802_3_poly : crc32 := x"edb88320";
-  constant crc_ieee_802_3_check : crc32 := x"2144df1c";
-  constant crc_ieee_802_3_insert_msb : boolean := true;
-  constant crc_ieee_802_3_pop_lsb : boolean := true;
-  function crc_ieee_802_3_update(init : crc32;
-                                 data : byte_string) return crc32;
+  -- Initial value, as crc_state, for given parameters
+  function crc_init(params : crc_params_t) return crc_state;
+  -- Polynomial, as crc_state, for given parameters
+  function crc_poly(params : crc_params_t) return crc_state;
+  -- Check value, as crc_state, for given parameters.  This is the
+  -- value you'll get for a message with its valid CRC appended to it.
+  function crc_check(params : crc_params_t) return crc_state;
 
+  -- Update function for a bit
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      v : std_ulogic) return crc_state;
+
+  -- Update function for a bit string
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      word : std_ulogic_vector) return crc_state;
+
+  -- Update function for a byte string
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      data : byte_string) return crc_state;
+
+  -- Serialize current state as a byte string
+  function crc_spill(params : crc_params_t;
+                     state : crc_state) return byte_string;
+  
 end package crc;
 
 package body crc is
@@ -171,24 +217,139 @@ package body crc is
     return state;
   end function;
 
-  function crc_iso_14443_3_a_update(init : crc16;
-                                    data : byte_string) return crc16 is
+  function to_crc_state(value: integer; length: natural) return crc_state
+  is
+    variable ret : crc_state(length-1 downto 0);
   begin
-    return crc_update(init,
-                      crc_iso_14443_3_a_poly,
-                      crc_iso_14443_3_a_insert_msb,
-                      crc_iso_14443_3_a_pop_lsb,
-                      data);
+    if length = 32 then
+      ret := crc_state(to_signed(value, length));
+    else
+      ret := crc_state(to_unsigned(value, length));
+    end if;
+    return ret;
+  end function;
+  
+  function crc_init(params : crc_params_t) return crc_state
+  is
+  begin
+    return to_crc_state(params.init, params.length);
+  end function;
+  
+  function crc_poly(params : crc_params_t) return crc_state
+  is
+  begin
+    return to_crc_state(params.poly, params.length);
+  end function;
+  
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      v : std_ulogic) return crc_state
+  is
+    variable s: crc_state(state'length-1 downto 0) := state;
+    variable x: std_ulogic := v;
+  begin
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    if params.complement_input then
+      x := not x;
+    end if;
+
+    s := crc_update(init => s,
+                    poly => crc_poly(params),
+                    insert_msb => params.insert_msb,
+                    v => x);
+
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    return s;
   end function;
 
-  function crc_ieee_802_3_update(init : crc32;
-                                 data : byte_string) return crc32 is
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      word : std_ulogic_vector) return crc_state
+  is
+    variable s: crc_state(state'length-1 downto 0) := state;
+    variable x: std_ulogic_vector(word'range) := word;
   begin
-    return not crc_update(not init,
-                          crc_ieee_802_3_poly,
-                          crc_ieee_802_3_insert_msb,
-                          crc_ieee_802_3_pop_lsb,
-                          data);
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    if params.complement_input then
+      x := not x;
+    end if;
+
+    s := crc_update(init => s,
+                    poly => crc_poly(params),
+                    insert_msb => params.insert_msb,
+                    pop_lsb => params.pop_lsb,
+                    word => x);
+
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    return s;
+  end function;
+
+  function crc_update(params : crc_params_t;
+                      state : crc_state;
+                      data : byte_string) return crc_state
+  is
+    variable s: crc_state(state'length-1 downto 0) := state;
+    variable item: byte;
+  begin
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    for i in data'range
+    loop
+      item := data(i);
+
+      if params.complement_input then
+        item := not item;
+      end if;
+
+      s := crc_update(init => s,
+                      poly => crc_poly(params),
+                      insert_msb => params.insert_msb,
+                      pop_lsb => params.pop_lsb,
+                      word => item);
+    end loop;
+
+    if params.complement_state then
+      s := not s;
+    end if;
+
+    return s;
+  end function;
+
+  function crc_check(params : crc_params_t) return crc_state
+  is
+  begin
+    return crc_update(params, crc_init(params), crc_spill(params, crc_init(params)));
+  end function;
+
+  function crc_spill(params : crc_params_t;
+                     state : crc_state) return byte_string
+  is
+    variable ret : crc_state(state'length-1 downto 0);
+  begin
+    ret := state;
+    if params.spill_bitswap then
+      ret := bitswap(ret);
+    end if;
+
+    if params.spill_lsb_first then
+      return to_le(unsigned(state));
+    else
+      return to_be(unsigned(state));
+    end if;
   end function;
 
 end package body crc;
