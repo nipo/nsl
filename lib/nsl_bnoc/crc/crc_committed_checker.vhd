@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, nsl_math, nsl_logic;
 use nsl_logic.bool.all;
@@ -11,12 +12,7 @@ entity crc_committed_checker is
   generic(
     header_length_c : natural := 0;
 
-    crc_init_c : crc_state;
-    crc_poly_c : crc_state;
-    crc_check_c : crc_state;
-    insert_msb_c : boolean;
-    pop_lsb_c : boolean;
-    complement_c : boolean
+    params_c : crc_params_t
     );
   port(
     reset_n_i   : in  std_ulogic;
@@ -49,9 +45,9 @@ architecture beh of crc_committed_checker is
     OUT_CANCEL
     );
 
-  constant crc_byte_count_c : integer := (crc_init_c'length + 7) / 8;
+  constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
   constant max_step_c : integer := nsl_math.arith.max(crc_byte_count_c, header_length_c);
-  subtype crc_t is crc_state(crc_init_c'length-1 downto 0);
+  subtype crc_t is crc_state(params_c.length-1 downto 0);
   constant fifo_depth_c : integer := crc_byte_count_c+2;
   
   type regs_t is
@@ -68,28 +64,6 @@ architecture beh of crc_committed_checker is
   end record;
 
   signal r, rin: regs_t;
-
-  function crc_update(state: crc_t;
-                      data: byte) return crc_t
-  is
-    variable st : crc_t := state;
-  begin
-    if complement_c then
-      st := not st;
-    end if;
-
-    st := crc_update(init => st,
-                     poly => crc_poly_c,
-                     insert_msb => insert_msb_c,
-                     pop_lsb => pop_lsb_c,
-                     word => data);
-    
-    if complement_c then
-      st := not st;
-    end if;
-
-    return st;
-  end function;
   
 begin
 
@@ -115,7 +89,7 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.crc <= crc_init_c;
+        rin.crc <= crc_init(params_c);
         rin.fifo_fillness <= 0;
         if header_length_c = 0 then
           rin.in_state <= IN_DATA;
@@ -146,13 +120,13 @@ begin
               rin.in_state <= IN_CANCEL;
             end if;
           else
-            rin.crc <= crc_update(r.crc, in_i.data);
+            rin.crc <= crc_update(params_c, r.crc, in_i.data);
             fifo_push := true;
           end if;
         end if;
 
       when IN_CRC =>
-        if r.crc = crc_check_c then
+        if r.crc = crc_check(params_c) then
           rin.in_state <= IN_COMMIT;
         else
           rin.in_state <= IN_CANCEL;

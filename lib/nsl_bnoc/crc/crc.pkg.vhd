@@ -11,15 +11,8 @@ package crc is
     generic(
       -- length not part of CRC
       header_length_c : natural := 0;
-      -- CRC parameters, see nsl_data.crc
-      crc_init_c : crc_state;
-      crc_poly_c : crc_state;
-      insert_msb_c : boolean;
-      pop_lsb_c : boolean;
-      complement_c : boolean;
-      -- Output method
-      stream_lsb_first_c : boolean;
-      bit_reverse_c : boolean
+
+      params_c : crc_params_t
       );
     port(
       reset_n_i   : in  std_ulogic;
@@ -37,13 +30,8 @@ package crc is
     generic(
       -- length not part of CRC
       header_length_c : natural := 0;
-      -- CRC parameters, see nsl_data.crc
-      crc_init_c : crc_state;
-      crc_poly_c : crc_state;
-      crc_check_c : crc_state;
-      insert_msb_c : boolean;
-      pop_lsb_c : boolean;
-      complement_c : boolean
+
+      params_c : crc_params_t
       );
     port(
       reset_n_i   : in  std_ulogic;

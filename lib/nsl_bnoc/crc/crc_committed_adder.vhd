@@ -11,14 +11,7 @@ entity crc_committed_adder is
   generic(
     header_length_c : natural := 0;
 
-    crc_init_c : crc_state;
-    crc_poly_c : crc_state;
-    insert_msb_c : boolean;
-    pop_lsb_c : boolean;
-    complement_c : boolean;
-
-    stream_lsb_first_c : boolean;
-    bit_reverse_c : boolean
+    params_c : crc_params_t
     );
   port(
     reset_n_i   : in  std_ulogic;
@@ -51,9 +44,9 @@ architecture beh of crc_committed_adder is
     OUT_CANCEL
     );
 
-  constant crc_byte_count_c : integer := (crc_init_c'length + 7) / 8;
+  constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
   constant max_step_c : integer := nsl_math.arith.max(crc_byte_count_c, header_length_c);
-  subtype crc_t is crc_state(crc_init_c'length-1 downto 0);
+  subtype crc_t is crc_state(params_c.length-1 downto 0);
   constant fifo_depth_c : integer := 2;
   
   type regs_t is
@@ -73,54 +66,22 @@ architecture beh of crc_committed_adder is
 
   function crc_out_byte(crc: crc_t) return byte
   is
-    variable ret : crc_state(7 downto 0);
+    variable tmp : byte_string(0 to (params_c.length-1)/8) := crc_spill(params_c, crc);
   begin
-    if stream_lsb_first_c then
-      ret := crc(7 downto 0);
-    else
-      ret := crc(crc'left downto crc'left - 7);
-    end if;
-
-    if bit_reverse_c then
-      ret := bitswap(ret);
-    end if;
-
-    return byte(ret);
+    return tmp(0);
   end function;
 
   function crc_shift(crc: crc_t) return crc_t
   is
     variable ret : crc_t := (others => '-');
   begin
-    if stream_lsb_first_c then
+    if params_c.spill_lsb_first then
       ret(ret'left-8 downto 0) := crc(crc'left downto 8);
     else
       ret(ret'left downto 8) := crc(crc'left-8 downto 0);
     end if;
 
     return ret;
-  end function;
-
-  function crc_update(state: crc_t;
-                      data: byte) return crc_t
-  is
-    variable st : crc_t := state;
-  begin
-    if complement_c then
-      st := not st;
-    end if;
-
-    st := crc_update(init => st,
-                     poly => crc_poly_c,
-                     insert_msb => insert_msb_c,
-                     pop_lsb => pop_lsb_c,
-                     word => data);
-    
-    if complement_c then
-      st := not st;
-    end if;
-
-    return st;
   end function;
   
 begin
@@ -196,7 +157,7 @@ begin
       when OUT_RESET =>
         rin.out_state <= OUT_DATA;
         if header_length_c = 0 then
-          rin.crc <= crc_init_c;
+          rin.crc <= crc_init(params_c);
         else
           rin.out_state <= OUT_HEADER;
           rin.out_left <= header_length_c-1;
@@ -215,7 +176,7 @@ begin
       when OUT_DATA =>
         if r.fifo_fillness > 0 and out_i.ready = '1' then
           fifo_pop := true;
-          rin.crc <= crc_update(r.crc, r.fifo(0));
+          rin.crc <= nsl_data.crc.crc_update(params_c, r.crc, r.fifo(0));
         end if;
 
         if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL)
@@ -239,7 +200,7 @@ begin
 
       when OUT_COMMIT | OUT_CANCEL =>
         if out_i.ready = '1' then
-          rin.crc <= crc_init_c;
+          rin.crc <= crc_init(params_c);
           rin.out_state <= OUT_DATA;
           if header_length_c /= 0 then
             rin.out_state <= OUT_HEADER;
