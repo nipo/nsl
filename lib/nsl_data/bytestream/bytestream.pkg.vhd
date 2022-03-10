@@ -21,6 +21,11 @@ package bytestream is
   function "/="(l, r : byte_string) return boolean;
 
   constant null_byte_string : byte_string(1 to 0) := (others => x"00");
+
+  type byte_stream is access byte_string;
+  procedure write(s: inout byte_stream; constant d: byte);
+  procedure write(s: inout byte_stream; constant d: byte_string);
+  procedure write(s: inout byte_stream; d: inout byte_stream);
   
 end package bytestream;
 
@@ -142,5 +147,31 @@ package body bytestream is
     end loop;
     return ret;
   end function;
+
+  procedure write(s: inout byte_stream; constant d: byte)
+  is
+    variable n: byte_stream;
+  begin
+    n := new byte_string(0 to s.all'length);
+    n.all := s.all & d;
+    deallocate(s);
+    s := n;
+  end procedure;
+
+  procedure write(s: inout byte_stream; constant d: byte_string)
+  is
+    variable n: byte_stream;
+  begin
+    n := new byte_string(0 to s.all'length + d'length - 1);
+    n.all := s.all & d;
+    deallocate(s);
+    s := n;
+  end procedure;
+
+  procedure write(s: inout byte_stream; d: inout byte_stream)
+  is
+  begin
+    write(s, d.all);
+  end procedure;
 
 end package body bytestream;
