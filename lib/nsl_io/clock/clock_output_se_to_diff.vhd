@@ -16,8 +16,7 @@ architecture gen of clock_output_se_to_diff is
   
 begin
 
-  clock.p <= clock_i;
-  clock.n <= not clock_i;
+  clock <= nsl_io.diff.to_diff(clock_i);
   
   iop: nsl_io.ddr.ddr_output
     port map(
