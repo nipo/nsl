@@ -224,7 +224,8 @@ package framed is
 
   component framed_framer is
     generic(
-      timeout_c : natural
+      timeout_c : natural;
+      max_length_c : natural := 1024
       );
     port(
       reset_n_i : in  std_ulogic;

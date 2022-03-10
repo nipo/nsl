@@ -9,7 +9,8 @@ use nsl_logic.bool.all;
 
 entity framed_framer is
   generic(
-    timeout_c : natural
+    timeout_c : natural;
+    max_length_c : natural := 1024
     );
   port(
     reset_n_i : in  std_ulogic;
@@ -44,6 +45,7 @@ architecture rtl of framed_framer is
   record
     in_state : in_state_t;
     in_timeout : integer range 0 to timeout_c-1;
+    in_left : integer range 0 to max_length_c-1;
 
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -81,8 +83,9 @@ begin
         rin.fifo_fillness <= 0;
 
       when IN_IDLE =>
-        if r.fifo_fillness < fifo_depth_c and pipe_i.valid = '1' then
+        if pipe_i.valid = '1' then
           fifo_push := true;
+          rin.in_left <= max_length_c-1;
           rin.in_timeout <= timeout_c - 1;
           rin.in_state <= IN_DATA;
         end if;
@@ -91,6 +94,11 @@ begin
         if r.fifo_fillness < fifo_depth_c and pipe_i.valid = '1' then
           fifo_push := true;
           rin.in_timeout <= timeout_c - 1;
+          if r.in_left = 0 then
+            rin.in_state <= IN_COMMIT;
+          else
+            rin.in_left <= r.in_left - 1;
+          end if;
         elsif r.in_timeout /= 0 then
           rin.in_timeout <= r.in_timeout - 1;
         else
@@ -98,8 +106,8 @@ begin
         end if;
 
       when IN_COMMIT =>
-        if r.out_state = OUT_COMMIT and frame_i.ready = '1' then
-          rin.in_state <= IN_IDLE;
+        if r.out_state = OUT_RESET then
+          rin.in_state <= IN_RESET;
         end if;
     end case;
 
@@ -121,8 +129,9 @@ begin
           fifo_pop := true;
         end if;
 
-        if r.fifo_fillness <= 1 and frame_i.ready = '1' then
-          rin.out_state <= OUT_DATA;
+        if r.fifo_fillness = 0 or
+          (r.fifo_fillness = 1 and frame_i.ready = '1') then
+          rin.out_state <= OUT_RESET;
         end if;
     end case;
 
@@ -153,7 +162,7 @@ begin
 
       when OUT_COMMIT =>
         frame_o.data <= r.fifo(0);
-        frame_o.valid <= to_logic(r.fifo_fillness > 0);
+        frame_o.valid <= to_logic(r.fifo_fillness /= 0);
         frame_o.last <= to_logic(r.fifo_fillness = 1);
     end case;
 
