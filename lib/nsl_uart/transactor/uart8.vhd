@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_uart;
+library nsl_bnoc, nsl_uart, nsl_clocking;
 
 entity uart8 is
   generic(
@@ -33,8 +33,23 @@ end entity;
 
 architecture hier of uart8 is
 
+  signal rx_s, cts_s: std_ulogic;
+  
 begin
 
+  rx_resync: nsl_clocking.async.async_sampler
+    generic map(
+      cycle_count_c => 2,
+      data_width_c => 2
+      )
+    port map(
+      clock_i => clock_i,
+      data_i(0) => rx_i,
+      data_i(1) => cts_i,
+      data_o(0) => rx_s,
+      data_o(1) => cts_s
+      );
+  
   tx: nsl_uart.serdes.uart_tx
     generic map(
       bit_count_c => nsl_bnoc.pipe.pipe_data_t'length,
@@ -49,7 +64,7 @@ begin
       divisor_i => divisor_i,
 
       uart_o => tx_o,
-      rtr_i => cts_i,
+      rtr_i => cts_s,
 
       data_i => tx_data_i.data,
       ready_o => tx_data_o.ready,
@@ -69,7 +84,7 @@ begin
 
       divisor_i => divisor_i,
 
-      uart_i => rx_i,
+      uart_i => rx_s,
       rts_o => rts_o,
 
       data_o => rx_data_o.data,
