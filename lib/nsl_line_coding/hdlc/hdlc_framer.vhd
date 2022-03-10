@@ -50,6 +50,7 @@ architecture beh of hdlc_framer is
     in_state : in_state_t;
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
+    out_stuffed: boolean;
     out_state : out_state_t;
   end record;
 
@@ -104,12 +105,21 @@ begin
     case r.out_state is
       when OUT_RESET =>
         rin.out_state <= OUT_FLAG_STUFF;
+        rin.out_stuffed <= false;
 
       when OUT_FLAG_STUFF =>
         if r.fifo_fillness > 0 then
-          rin.out_state <= OUT_FLAG_START;
+          if r.out_stuffed then
+            rin.out_state <= OUT_FLAG_START;
+          else
+            rin.out_state <= OUT_DATA;
+          end if;
         end if;
 
+        if hdlc_i.ready = '1' then
+          rin.out_stuffed <= true;
+        end if;
+        
       when OUT_FLAG_START =>
         if hdlc_i.ready = '1' then
           rin.out_state <= OUT_DATA;
@@ -126,7 +136,7 @@ begin
 
         if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL)
           and (r.fifo_fillness = 0
-               or (r.fifo_fillness = 1 and hdlc_i.ready = '1')) then
+               or (r.fifo_fillness = 1 and fifo_pop)) then
           if r.in_state = IN_COMMIT then
             rin.out_state <= OUT_FLAG_END;
           else
@@ -148,6 +158,7 @@ begin
       when OUT_FLAG_END =>
         if hdlc_i.ready = '1' then
           rin.out_state <= OUT_FLAG_STUFF;
+          rin.out_stuffed <= false;
         end if;
     end case;
 
