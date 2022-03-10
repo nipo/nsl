@@ -24,29 +24,37 @@ architecture beh of input_delay_fixed is
 
 begin
 
-  inst: unisim.vcomponents.iodelay2
-    generic map(
-      data_rate => data_rate,
-      delay_src => "IDATAIN",
-      idelay_type => "FIXED",
-      idelay_value => tap_count_i,
-      idelay2_value => tap_count_i,
-      odelay_value => tap_count_i,
-      serdes_mode => "NONE",
-      sim_tapdelay_value => tap_delay_ps_c
-      )
-    port map(
-      cal => '0',
-      ce => '0',
-      clk => '0',
-      odatain => '0',
-      idatain => data_i,
-      inc => '0',
-      ioclk0 => '0',
-      ioclk1 => '0',
-      dataout => data_o,
-      rst => '0',
-      t => '1'
-      );
+  has_delay: if delay_ps_c /= 0
+  generate
+    inst: unisim.vcomponents.iodelay2
+      generic map(
+        data_rate => data_rate,
+        delay_src => "IDATAIN",
+        idelay_type => "FIXED",
+        idelay_value => tap_count_i,
+        idelay2_value => tap_count_i,
+        odelay_value => tap_count_i,
+        serdes_mode => "NONE",
+        sim_tapdelay_value => tap_delay_ps_c
+        )
+      port map(
+        cal => '0',
+        ce => '0',
+        clk => '0',
+        odatain => '0',
+        idatain => data_i,
+        inc => '0',
+        ioclk0 => '0',
+        ioclk1 => '0',
+        dataout => data_o,
+        rst => '0',
+        t => '1'
+        );
+  end generate;
+
+  no_delay: if delay_ps_c = 0
+  generate
+    data_o <= data_i;
+  end generate;
   
 end architecture;

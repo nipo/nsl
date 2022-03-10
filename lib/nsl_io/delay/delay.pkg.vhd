@@ -27,4 +27,28 @@ package delay is
       );
   end component;
 
+  component output_bus_delay_fixed is
+    generic(
+      width_c : natural;
+      delay_ps_c: integer;
+      is_ddr_c: boolean := true
+      );
+    port(
+      data_i : in std_ulogic_vector(0 to width_c);
+      data_o : out std_ulogic_vector(0 to width_c)
+      );
+  end component;
+
+  component input_bus_delay_fixed is
+    generic(
+      width_c : natural;
+      delay_ps_c: integer;
+      is_ddr_c: boolean := true
+      );
+    port(
+      data_i : in std_ulogic_vector(0 to width_c);
+      data_o : out std_ulogic_vector(0 to width_c)
+      );
+  end component;
+
 end package delay;
