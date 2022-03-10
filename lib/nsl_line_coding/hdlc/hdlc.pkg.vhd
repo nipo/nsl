@@ -6,6 +6,7 @@ library nsl_data, nsl_logic, nsl_bnoc;
 use nsl_data.crc.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
+use nsl_data.endian.all;
 
 package hdlc is
 
@@ -74,6 +75,14 @@ package hdlc is
   function control_s_t_get(v: byte) return std_ulogic_vector;
   function control_u_t_get(v: byte) return std_ulogic_vector;
 
+  function frame_build(
+    address: integer;
+    cmd: byte;
+    data: byte_string;
+    start_flag, end_flag: boolean := true) return byte_string;
+
+  function escape(data: byte_string) return byte_string;
+  
   -- On the frame side, committed frame will contain:
   -- - Address,
   -- - Control,
@@ -132,8 +141,10 @@ package body hdlc is
 
   function escape(v: byte) return byte
   is
+    variable b: byte;
   begin
-    return v xor escape_mangle_c;
+    b := v xor escape_mangle_c;
+    return b;
   end function;
 
   function control_i(pf: boolean;
@@ -221,6 +232,48 @@ package body hdlc is
   is
   begin
     return v(7 downto 5) & v(3 downto 2);
+  end function;
+
+  function frame_build(
+    address: integer;
+    cmd: byte;
+    data: byte_string;
+    start_flag, end_flag: boolean := true) return byte_string
+  is
+    constant header: byte_string(0 to 1) := (0 => to_byte(address), 1 => cmd);
+    constant fcs_v: fcs_t := not crc_update(not fcs_init_c, fcs_poly_c, fcs_insert_msb_c, fcs_pop_lsb_c, header&data);
+    constant fcs: byte_string(0 to 1) := to_le(unsigned(fcs_v));
+    constant escaped: byte_string := escape(header & data & fcs);
+  begin
+    if start_flag and end_flag then
+      return flag_c & escaped & flag_c;
+    elsif start_flag then
+      return flag_c & escaped;
+    elsif end_flag then
+      return escaped & flag_c;
+    else
+      return escaped;
+    end if;
+  end function;
+
+  function escape(data: byte_string) return byte_string
+  is
+    variable ret: byte_string(0 to data'length*2-1) := (others => x"00");
+    variable point: integer := 0;
+  begin
+    for i in data'range
+    loop
+      if is_escaped(data(i)) then
+        ret(point) := escape_byte_c;
+        ret(point+1) := escape(data(i));
+        point := point + 2;
+      else
+        ret(point) := data(i);
+        point := point + 1;
+      end if;
+    end loop;
+
+    return ret(0 to point-1);
   end function;
 
 end package body;
