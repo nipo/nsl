@@ -6,3 +6,5 @@ vhdl-sources += sized_file_checker.vhd
 deps += nsl_simulation.fifo
 deps += nsl_bnoc.framed
 deps += nsl_bnoc.sized
+deps += nsl_logic.bool
+deps += nsl_data.bytestream
