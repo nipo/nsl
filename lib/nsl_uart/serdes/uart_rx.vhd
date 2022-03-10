@@ -66,6 +66,7 @@ begin
     end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
+      r.divisor <= (others => '0');
     end if;
   end process;
 
@@ -144,7 +145,7 @@ begin
         end if;
 
       when ST_STOP =>
-        if r.div_ctr /= 0 then
+        if r.div_ctr /= 0 and uart_i /= '1' then
           rin.div_ctr <= r.div_ctr - 1;
         elsif r.all_zero then
           rin.state <= ST_BREAK_WAIT;
