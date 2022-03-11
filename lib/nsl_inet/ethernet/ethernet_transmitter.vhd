@@ -46,6 +46,8 @@ architecture beh of ethernet_transmitter is
     txbuf : byte_string(0 to 5);
   end record;
 
+  signal to_fcs_s : nsl_bnoc.committed.committed_bus;
+
   signal r, rin: regs_t;
   
 begin
@@ -61,7 +63,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, l1_i, l3_i, local_address_i, l3_type_i) is
+  transition: process(r, to_fcs_s.ack, l3_i, local_address_i, l3_type_i) is
   begin
     rin <= r;
 
@@ -77,7 +79,7 @@ begin
         end if;
         
       when ST_FW_HEADER_DADDR =>
-        if l3_i.valid = '1' and l1_i.ready = '1' then
+        if l3_i.valid = '1' and to_fcs_s.ack.ready = '1' then
           rin.txbuf(0) <= byte(l3_i.data);
 
           if l3_i.last = '1' then
@@ -96,19 +98,19 @@ begin
         end if;
 
       when ST_TX_SADDR =>
-        if l1_i.ready = '1' then
+        if to_fcs_s.ack.ready = '1' then
           if r.left /= 0 then
             rin.left <= r.left - 1;
             rin.txbuf(0 to rin.txbuf'right-1) <= r.txbuf(1 to r.txbuf'right);
           else
             rin.state <= ST_TX_TYPE;
-            rin.txbuf(0 to 1) <= to_le(to_unsigned(l3_type_i, 16));
+            rin.txbuf(0 to 1) <= to_be(to_unsigned(l3_type_i, 16));
             rin.left <= 1;
           end if;
         end if;
 
       when ST_TX_TYPE =>
-        if l1_i.ready = '1' then
+        if to_fcs_s.ack.ready = '1' then
           if r.left /= 0 then
             rin.left <= r.left - 1;
             rin.txbuf(0 to rin.txbuf'right-1) <= r.txbuf(1 to r.txbuf'right);
@@ -118,22 +120,22 @@ begin
         end if;
 
       when ST_FW_DATA =>
-        if l3_i.valid = '1' and l1_i.ready = '1' and l3_i.last = '1' then
+        if l3_i.valid = '1' and to_fcs_s.ack.ready = '1' and l3_i.last = '1' then
           rin.state <= ST_RESET;
         end if;
 
       when ST_TX_FAILED =>
-        if l1_i.ready = '1' then
+        if to_fcs_s.ack.ready = '1' then
           rin.state <= ST_RESET;
         end if;
     end case;
   end process;
 
-  mealy: process(r, l1_i, l3_i) is
+  mealy: process(r, to_fcs_s.ack, l3_i) is
   begin
-    l1_o.valid <= '0';
-    l1_o.last <= '-';
-    l1_o.data <= (others => '-');
+    to_fcs_s.req.valid <= '0';
+    to_fcs_s.req.last <= '-';
+    to_fcs_s.req.data <= (others => '-');
     l3_o.ready <= '0';
 
     case r.state is
@@ -144,25 +146,41 @@ begin
         l3_o.ready <= '1';
 
       when ST_FW_HEADER_DADDR =>
-        l3_o <= l1_i;
-        l1_o <= l3_i;
-        l1_o.data <= r.txbuf(0);
-        l1_o.last <= '0';
+        l3_o <= to_fcs_s.ack;
+        to_fcs_s.req <= l3_i;
+        to_fcs_s.req.data <= r.txbuf(0);
+        to_fcs_s.req.last <= '0';
 
       when ST_TX_SADDR | ST_TX_TYPE =>
-        l1_o.valid <= '1';
-        l1_o.last <= '0';
-        l1_o.data <= r.txbuf(0);
+        to_fcs_s.req.valid <= '1';
+        to_fcs_s.req.last <= '0';
+        to_fcs_s.req.data <= r.txbuf(0);
 
       when ST_FW_DATA =>
-        l3_o <= l1_i;
-        l1_o <= l3_i;
+        l3_o <= to_fcs_s.ack;
+        to_fcs_s.req <= l3_i;
 
       when ST_TX_FAILED =>
-        l1_o.valid <= '1';
-        l1_o.last <= '1';
-        l1_o.data <= x"00";
+        to_fcs_s.req.valid <= '1';
+        to_fcs_s.req.last <= '1';
+        to_fcs_s.req.data <= x"00";
     end case;
   end process;
+
+  fcs: nsl_bnoc.crc.crc_committed_adder
+    generic map(
+      header_length_c => l1_header_length_c,
+      params_c => fcs_params_c
+      )
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
+
+      in_i => to_fcs_s.req,
+      in_o => to_fcs_s.ack,
+
+      out_i => l1_i,
+      out_o => l1_o
+      );
 
 end architecture;

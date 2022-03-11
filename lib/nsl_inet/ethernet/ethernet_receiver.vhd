@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math;
+library nsl_bnoc, nsl_data, nsl_inet, nsl_math, nsl_logic;
+use nsl_logic.bool.all;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
@@ -30,37 +31,56 @@ entity ethernet_receiver is
 end entity;
 
 architecture beh of ethernet_receiver is
-
-  type state_t is (
-    ST_RESET,
-    ST_RX_HEADER,
-    ST_RX_DADDR,
-    ST_RX_SADDR,
-    ST_RX_TYPE,
-    ST_DECIDE,
-    ST_TX_HEADER,
-    ST_TX_SADDR,
-    ST_TX_CONTEXT,
-    ST_FW_DATA,
-    ST_TX_STATUS,
-    ST_DROP
+  
+  type in_state_t is (
+    IN_RESET,
+    IN_HEADER,
+    IN_DADDR,
+    IN_SADDR,
+    IN_TYPE,
+    IN_DECIDE,
+    IN_DATA,
+    IN_DROP,
+    IN_COMMIT,
+    IN_CANCEL
+    );
+  
+  type out_state_t is (
+    OUT_RESET,
+    OUT_IDLE,
+    OUT_HEADER,
+    OUT_SADDR,
+    OUT_CONTEXT,
+    OUT_DATA,
+    OUT_COMMIT,
+    OUT_CANCEL
     );
 
+  constant fifo_depth_c : integer := 2;
   constant left_max: integer := nsl_math.arith.max(6, l1_header_length_c)-1;
   
   type regs_t is
   record
-    state : state_t;
-    local_addr, addr : mac48_t;
-    left : integer range 0 to left_max;
-    ethertype : integer range 0 to ethertype_c'length-1;
+    in_state : in_state_t;
+    in_ctr : integer range 0 to left_max;
+    local_addr, saddr : mac48_t;
+
     type_len : byte_string(0 to 1);
-    header : byte_string(0 to l1_header_length_c-1);
+    header : byte_string(0 to nsl_math.arith.max(l1_header_length_c-1, 1));
     addr_context : byte;
-    rx_ok : std_ulogic;
+    l3_type_index : integer range 0 to ethertype_c'length - 1;
+
+    fifo: byte_string(0 to fifo_depth_c-1);
+    fifo_fillness: integer range 0 to fifo_depth_c;
+
+    out_ctr : integer range 0 to left_max;
+    out_state : out_state_t;
   end record;
 
   signal r, rin: regs_t;
+
+  signal crced_i : nsl_bnoc.committed.committed_req;
+  signal crced_o : nsl_bnoc.committed.committed_ack;
   
 begin
 
@@ -71,189 +91,269 @@ begin
     end if;
 
     if reset_n_i = '0' then
-      r.state <= ST_RESET;
+      r.in_state <= IN_RESET;
+      r.out_state <= OUT_RESET;
     end if;
   end process;
 
-  transition: process(r, l1_i, l3_i, local_address_i) is
+  transition: process(r, crced_i, l3_i, local_address_i) is
+    variable fifo_pop, fifo_push: boolean;
   begin
     rin <= r;
 
+    fifo_pop := false;
+    fifo_push := false;
     rin.local_addr <= local_address_i;
 
-    case r.state is
-      when ST_RESET =>
+    case r.in_state is
+      when IN_RESET =>
         if l1_header_length_c /= 0 then
-          rin.state <= ST_RX_HEADER;
-          rin.left <= l1_header_length_c-1;
+          rin.in_state <= IN_HEADER;
+          rin.in_ctr <= l1_header_length_c-1;
         else
-          rin.state <= ST_RX_DADDR;
-          rin.left <= 5;
-        end if;
-        rin.rx_ok <= '1';
-
-      when ST_RX_HEADER =>
-        if l1_i.valid = '1' then
-          rin.header <= r.header(1 to l1_header_length_c-1) & byte(l1_i.data);
-          if l1_i.last = '1' then
-            rin.state <= ST_RESET;
-          elsif r.left = 0 then
-            rin.state <= ST_RX_DADDR;
-            rin.left <= 5;
-          else
-            rin.left <= r.left - 1;
-          end if;
+          rin.in_state <= IN_DADDR;
+          rin.in_ctr <= 5;
         end if;
 
-      when ST_RX_DADDR =>
-        if l1_i.valid = '1' then
-          rin.addr <= r.addr(1 to 5) & byte(l1_i.data);
-          if l1_i.last = '1' then
-            rin.state <= ST_RESET;
-          elsif r.left /= 0 then
-            rin.left <= r.left - 1;
+      when IN_HEADER =>
+        if crced_i.valid = '1' then
+          rin.header <= r.header(1 to r.header'right) & byte(crced_i.data);
+          if crced_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          elsif r.in_ctr = 0 then
+            rin.in_state <= IN_DADDR;
+            rin.in_ctr <= 5;
           else
-            rin.left <= 5;
-            rin.state <= ST_RX_SADDR;
+            rin.in_ctr <= r.in_ctr - 1;
           end if;
         end if;
         
-      when ST_RX_SADDR =>
-        if l1_i.valid = '1' then
-          if r.left = 5 then
-            -- First cycle of SADDR, r.addr contains full DADDR
-            if r.addr = ethernet_broadcast_addr_c then
+      when IN_DADDR =>
+        if crced_i.valid = '1' then
+          rin.saddr <= r.saddr(1 to 5) & byte(crced_i.data);
+          if crced_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          elsif r.in_ctr /= 0 then
+            rin.in_ctr <= r.in_ctr - 1;
+          else
+            rin.in_ctr <= 5;
+            rin.in_state <= IN_SADDR;
+          end if;
+        end if;
+        
+      when IN_SADDR =>
+        if crced_i.valid = '1' then
+          if r.in_ctr = 5 then
+            -- First cycle of SADDR, r.saddr contains full DADDR
+            if r.saddr = ethernet_broadcast_addr_c then
               rin.addr_context <= x"01";
-            elsif r.addr = r.local_addr then
+            elsif r.saddr = r.local_addr then
               rin.addr_context <= x"00";
             else
-              rin.state <= ST_DROP;
+              rin.in_state <= IN_DROP;
             end if;
           end if;
 
-          rin.addr <= r.addr(1 to 5) & byte(l1_i.data);
-          if l1_i.last = '1' then
-            rin.state <= ST_RESET;
-          elsif r.left /= 0 then
-            rin.left <= r.left - 1;
+          rin.saddr <= r.saddr(1 to 5) & byte(crced_i.data);
+          if crced_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          elsif r.in_ctr /= 0 then
+            rin.in_ctr <= r.in_ctr - 1;
           else
-            rin.left <= 1;
-            rin.state <= ST_RX_TYPE;
+            rin.in_ctr <= 1;
+            rin.in_state <= IN_TYPE;
           end if;
         end if;
 
-      when ST_RX_TYPE =>
-        if l1_i.valid = '1' then
-          rin.type_len <= r.type_len(1 to 1) & byte(l1_i.data);
-          if l1_i.last = '1' then
-            rin.state <= ST_RESET;
-          elsif r.left /= 0 then
-            rin.left <= r.left - 1;
+      when IN_TYPE =>
+        if crced_i.valid = '1' then
+          rin.type_len <= r.type_len(1 to 1) & byte(crced_i.data);
+          if crced_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          elsif r.in_ctr /= 0 then
+            rin.in_ctr <= r.in_ctr - 1;
           else
-            rin.state <= ST_DECIDE;
+            rin.in_state <= IN_DECIDE;
           end if;
         end if;
 
-      when ST_DECIDE =>
+      when IN_DECIDE =>
         -- Default
-        rin.state <= ST_DROP;
+        rin.in_state <= IN_DROP;
 
         for i in ethertype_c'range
         loop
-          if to_unsigned(ethertype_c(i), 16) = from_le(r.type_len) then
-            if l1_header_length_c /= 0 then
-              rin.state <= ST_TX_HEADER;
-            else
-              rin.state <= ST_TX_SADDR;
-              rin.left <= 5;
-            end if;
-            rin.ethertype <= i;
+          if to_unsigned(ethertype_c(i), 16) = from_be(r.type_len) then
+            rin.in_state <= IN_DATA;
           end if;
         end loop;
 
-      when ST_TX_HEADER =>
-        if l3_i.ready = '1' then
-          if r.left = 0 then
-            rin.left <= 5;
-            rin.state <= ST_TX_SADDR;
+      when IN_DATA =>
+        if r.fifo_fillness < fifo_depth_c and crced_i.valid = '1' then
+          if crced_i.last = '0' then
+            fifo_push := true;
+          elsif crced_i.data(0) = '1' then
+            rin.in_state <= IN_COMMIT;
           else
-            rin.left <= r.left - 1;
-            rin.header <= r.header(1 to l1_header_length_c-1) & byte'("--------");
+            rin.in_state <= IN_CANCEL;
           end if;
         end if;
 
-      when ST_TX_SADDR =>
+      when IN_COMMIT | IN_CANCEL =>
+        if r.out_state = OUT_IDLE then
+          rin.in_state <= IN_RESET;
+        end if;
+
+      when IN_DROP =>
+        if crced_i.valid = '1' and crced_i.last = '1' then
+          rin.in_state <= IN_RESET;
+        end if;
+    end case;
+
+    case r.out_state is
+      when OUT_RESET =>
+        rin.out_state <= OUT_IDLE;
+
+      when OUT_IDLE =>
+        if r.in_state = IN_DECIDE then
+          for i in ethertype_c'range
+          loop
+            if to_unsigned(ethertype_c(i), 16) = from_be(r.type_len) then
+              rin.l3_type_index <= i;
+              if l1_header_length_c /= 0 then
+                rin.out_state <= OUT_HEADER;
+                rin.out_ctr <= l1_header_length_c - 1;
+              else
+                rin.out_state <= OUT_SADDR;
+                rin.out_ctr <= 5;
+              end if;
+            end if;
+          end loop;
+        end if;
+
+      when OUT_HEADER =>
         if l3_i.ready = '1' then
-          if r.left = 0 then
-            rin.state <= ST_TX_CONTEXT;
+          if r.out_ctr = 0 then
+            rin.out_ctr <= 5;
+            rin.out_state <= OUT_SADDR;
           else
-            rin.left <= r.left - 1;
-            rin.addr <= r.addr(1 to 5) & byte'("--------");
+            rin.out_ctr <= r.out_ctr - 1;
+            rin.header <= r.header(1 to r.header'right) & byte'("--------");
+          end if;
+        end if;
+
+      when OUT_SADDR =>
+        if l3_i.ready = '1' then
+          if r.out_ctr = 0 then
+            rin.out_state <= OUT_CONTEXT;
+          else
+            rin.out_ctr <= r.out_ctr - 1;
+            rin.saddr <= r.saddr(1 to 5) & byte'("--------");
           end if;
         end if;
         
-      when ST_TX_CONTEXT =>
+      when OUT_CONTEXT =>
         if l3_i.ready = '1' then
-          rin.state <= ST_FW_DATA;
-          rin.left <= 5;
+          rin.out_state <= OUT_DATA;
+        end if;
+        
+      when OUT_DATA =>
+        if l3_i.ready = '1' and r.fifo_fillness > 0 then
+          fifo_pop := true;
         end if;
 
-      when ST_FW_DATA =>
-        if l3_i.ready = '1' and l1_i.valid = '1' and l1_i.last = '1' then
-          rin.state <= ST_TX_STATUS;
+        if (r.fifo_fillness = 1 and l3_i.ready = '1')
+          or r.fifo_fillness = 0 then
+          if r.in_state = IN_CANCEL then
+            rin.out_state <= OUT_CANCEL;
+          elsif r.in_state = IN_COMMIT then
+            rin.out_state <= OUT_COMMIT;
+          end if;
         end if;
 
-      when ST_TX_STATUS =>
+      when OUT_COMMIT | OUT_CANCEL =>
         if l3_i.ready = '1' then
-          rin.state <= ST_RESET;
-        end if;
-
-      when ST_DROP =>
-        if l1_i.valid = '1' and l1_i.last = '1' then
-          rin.state <= ST_RESET;
+          rin.out_state <= OUT_IDLE;
         end if;
     end case;
+
+    if fifo_push and fifo_pop then
+      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & byte'("--------");
+      rin.fifo(r.fifo_fillness-1) <= crced_i.data;
+    elsif fifo_pop then
+      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & byte'("--------");
+      rin.fifo_fillness <= r.fifo_fillness - 1;
+    elsif fifo_push then
+      rin.fifo(r.fifo_fillness) <= crced_i.data;
+      rin.fifo_fillness <= r.fifo_fillness + 1;
+    end if;
   end process;
 
-  mealy: process(r, l1_i, l3_i) is
+  moore: process(r) is
   begin
-    l3_o.valid <= '0';
-    l3_o.last <= '-';
-    l3_o.data <= (others => '-');
-    l1_o.ready <= '0';
-    l3_type_index_o <= r.ethertype;
+    l3_type_index_o <= r.l3_type_index;
 
-    case r.state is
-      when ST_RESET | ST_DECIDE =>
-        null;
+    case r.in_state is
+      when IN_RESET | IN_DECIDE | IN_COMMIT | IN_CANCEL =>
+        crced_o.ready <= '0';
 
-      when ST_RX_HEADER | ST_RX_DADDR | ST_RX_SADDR | ST_RX_TYPE | ST_DROP =>
-        l1_o.ready <= '1';
+      when IN_HEADER | IN_DADDR | IN_SADDR | IN_TYPE | IN_DROP =>
+        crced_o.ready <= '1';
 
-      when ST_TX_HEADER =>
+      when IN_DATA =>
+        crced_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
+    end case;
+
+    case r.out_state is
+      when OUT_RESET | OUT_IDLE =>
+        l3_o.valid <= '0';
+        l3_o.last <= '-';
+        l3_o.data <= (others => '-');
+        
+      when OUT_HEADER =>
         l3_o.valid <= '1';
         l3_o.last <= '0';
         l3_o.data <= r.header(0);
 
-      when ST_TX_SADDR =>
+      when OUT_SADDR =>
         l3_o.valid <= '1';
         l3_o.last <= '0';
-        l3_o.data <= r.addr(0);
+        l3_o.data <= r.saddr(0);
 
-      when ST_TX_CONTEXT =>
+      when OUT_CONTEXT =>
         l3_o.valid <= '1';
         l3_o.last <= '0';
         l3_o.data <= r.addr_context;
 
-      when ST_FW_DATA =>
-        l3_o <= l1_i;
-        l1_o <= l3_i;
+      when OUT_DATA =>
+        l3_o.valid <= to_logic(r.fifo_fillness > 0);
+        l3_o.last <= '0';
+        l3_o.data <= r.fifo(0);
 
-      when ST_TX_STATUS =>
+      when OUT_COMMIT =>
         l3_o.valid <= '1';
         l3_o.last <= '1';
-        l3_o.data <= "0000000" & r.rx_ok;
+        l3_o.data <= x"01";
+
+      when OUT_CANCEL =>
+        l3_o.valid <= '1';
+        l3_o.last <= '1';
+        l3_o.data <= x"00";
     end case;
   end process;
 
+  crc: nsl_bnoc.crc.crc_committed_checker
+    generic map(
+      header_length_c => l1_header_length_c,
+      params_c => nsl_inet.ethernet.fcs_params_c
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      in_i => l1_i,
+      in_o => l1_o,
+      out_o => crced_i,
+      out_i => crced_o
+      );
+  
 end architecture;

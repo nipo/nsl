@@ -3,7 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data;
-use nsl_bnoc.framed.all;
+use nsl_bnoc.committed.all;
+use nsl_data.crc.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 
@@ -32,7 +33,7 @@ package ethernet is
   constant ethertype_ipv6 : ethertype_t := 16#86dd#;
   constant ethertype_ptp  : ethertype_t := 16#88f7#;
 
-  -- Frames are carried through bnoc framed infrastructure.
+  -- Frames are carried through bnoc committed infrastructure.
   -- Frame components are the same for receive and transmit frames.
 
   -- Frame structure form/to layer 1:
@@ -41,8 +42,9 @@ package ethernet is
   -- * Source MAC [6]
   -- * Ethertype [2]
   -- * Payload [*]
+  -- * FCS
   -- * Status
-  --   [0]   CRC valid / Frame complete
+  --   [0]   Frame complete
   --   [7:1] Reserved
   -- Payload may be padded. Padding is carried over.
   -- There is no minimal size for frame TX.
@@ -59,6 +61,9 @@ package ethernet is
   --   [0]   Whether frame is valid. On RX, this is cleared if there is a
   --         CRC error, for instance. Invalid frames should be ignored.
   --   [7:1] Reserved
+
+  -- Header length before L3 data
+  constant ethernet_layer_header_length_c : integer := 7;
 
   -- This component can detect its own local address or broadcast
   -- address. Multicast is not supported.
@@ -77,13 +82,13 @@ package ethernet is
 
       local_address_i : in mac48_t;
 
-      l1_i : in nsl_bnoc.framed.framed_req;
-      l1_o : out nsl_bnoc.framed.framed_ack;
+      l1_i : in nsl_bnoc.committed.committed_req;
+      l1_o : out nsl_bnoc.committed.committed_ack;
 
       -- Valid at least on first word of frame on l3_o.
       l3_type_index_o : out integer range 0 to ethertype_c'length - 1;
-      l3_o : out nsl_bnoc.framed.framed_req;
-      l3_i : in nsl_bnoc.framed.framed_ack
+      l3_o : out nsl_bnoc.committed.committed_req;
+      l3_i : in nsl_bnoc.committed.committed_ack
       );
   end component;
 
@@ -102,11 +107,11 @@ package ethernet is
 
       -- Frame type is snapshotted on first word of l3_i.
       l3_type_i : in ethertype_t;
-      l3_i : in nsl_bnoc.framed.framed_req;
-      l3_o : out nsl_bnoc.framed.framed_ack;
+      l3_i : in nsl_bnoc.committed.committed_req;
+      l3_o : out nsl_bnoc.committed.committed_ack;
 
-      l1_o : out nsl_bnoc.framed.framed_req;
-      l1_i : in nsl_bnoc.framed.framed_ack
+      l1_o : out nsl_bnoc.committed.committed_req;
+      l1_i : in nsl_bnoc.committed.committed_ack
       );
   end component;
 
@@ -125,18 +130,42 @@ package ethernet is
 
       local_address_i : in mac48_t;
 
-      to_l3_o : out nsl_bnoc.framed.framed_req_array(0 to ethertype_c'length-1);
-      to_l3_i : in nsl_bnoc.framed.framed_ack_array(0 to ethertype_c'length-1);
-      from_l3_i : in nsl_bnoc.framed.framed_req_array(0 to ethertype_c'length-1);
-      from_l3_o : out nsl_bnoc.framed.framed_ack_array(0 to ethertype_c'length-1);
+      to_l3_o : out nsl_bnoc.committed.committed_req_array(0 to ethertype_c'length-1);
+      to_l3_i : in nsl_bnoc.committed.committed_ack_array(0 to ethertype_c'length-1);
+      from_l3_i : in nsl_bnoc.committed.committed_req_array(0 to ethertype_c'length-1);
+      from_l3_o : out nsl_bnoc.committed.committed_ack_array(0 to ethertype_c'length-1);
 
-      to_l1_o : out nsl_bnoc.framed.framed_req;
-      to_l1_i : in nsl_bnoc.framed.framed_ack;
-      from_l1_i : in nsl_bnoc.framed.framed_req;
-      from_l1_o : out nsl_bnoc.framed.framed_ack
+      to_l1_o : out nsl_bnoc.committed.committed_req;
+      to_l1_i : in nsl_bnoc.committed.committed_ack;
+      from_l1_i : in nsl_bnoc.committed.committed_req;
+      from_l1_o : out nsl_bnoc.committed.committed_ack
       );
   end component;
 
+  function frame_pack(dest, src : mac48_t;
+                      ethertype : ethertype_t;
+                      payload : byte_string) return byte_string;
+
+  function frame_is_fcs_valid(frame : byte_string) return boolean;
+  function frame_daddr_get(frame : byte_string) return mac48_t;
+  function frame_saddr_get(frame : byte_string) return mac48_t;
+  function frame_ethertype_get(frame : byte_string) return ethertype_t;
+  function frame_payload_get(frame : byte_string) return byte_string;
+
+  -- CRC parameters
+  subtype fcs_t is nsl_data.crc.crc_state(31 downto 0);
+  constant fcs_params_c : crc_params_t := (
+    length           => 32,
+    init             => 16#00000000#,
+    poly             => 16#edb88320#,
+    complement_input => false,
+    insert_msb       => true,
+    pop_lsb          => true,
+    complement_state => true,
+    spill_bitswap    => false,
+    spill_lsb_first  => true
+    );
+  
 end package;
 
 package body ethernet is
@@ -145,6 +174,68 @@ package body ethernet is
   is
   begin
     return mac = ethernet_broadcast_addr_c;
+  end function;
+
+  function frame_pack(dest, src : mac48_t;
+                      ethertype : ethertype_t;
+                      payload : byte_string) return byte_string
+  is
+    variable hdr : byte_string(1 to 6+6+2);
+    variable fcs : fcs_t := crc_init(fcs_params_c);
+  begin
+    hdr(1 to 6) := dest;
+    hdr(7 to 12) := src;
+    hdr(13 to 14) := to_be(to_unsigned(ethertype, 16));
+
+    fcs := crc_update(fcs_params_c, fcs, hdr);
+    fcs := crc_update(fcs_params_c, fcs, payload);
+
+    return hdr & payload & crc_spill(fcs_params_c, fcs);
+  end function;
+
+  function frame_is_fcs_valid(frame : byte_string) return boolean
+  is
+    alias xframe : byte_string(0 to frame'length-1) is frame;
+    variable fcs : fcs_t;
+  begin
+    if xframe'length < 6 + 6 + 2 + 4 then
+      return false;
+    end if;
+
+    fcs := crc_update(fcs_params_c, crc_init(fcs_params_c), xframe(0 to xframe'right-4));
+    return to_le(unsigned(fcs)) = xframe(xframe'right-3 to xframe'right);
+  end function;
+  
+  function frame_daddr_get(frame : byte_string) return mac48_t
+  is
+    alias xframe : byte_string(0 to frame'length-1) is frame;
+    constant r: mac48_t := xframe(0 to 5);
+  begin
+    return r;
+  end function;
+
+  function frame_saddr_get(frame : byte_string) return mac48_t
+  is
+    alias xframe : byte_string(0 to frame'length-1) is frame;
+    constant r: mac48_t := xframe(6 to 11);
+  begin
+    return r;
+  end function;
+
+  function frame_ethertype_get(frame : byte_string) return ethertype_t
+  is
+    alias xframe : byte_string(0 to frame'length-1) is frame;
+    constant f: byte_string := xframe(12 to 13);
+  begin
+    return ethertype_t(to_integer(from_be(f)));
+  end function;
+
+  function frame_payload_get(frame : byte_string) return byte_string
+  is
+    alias xframe : byte_string(0 to frame'length-1) is frame;
+    constant r: byte_string(0 to xframe'length-1-6-6-2-4) := xframe(14 to xframe'right-4);
+  begin
+    return r;
   end function;
 
 end package body;

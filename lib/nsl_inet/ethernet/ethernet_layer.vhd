@@ -75,7 +75,7 @@ begin
       l3_i => s_to_l3.ack
       );
 
-  l3_dispatch: nsl_bnoc.framed.framed_dispatch
+  l3_dispatch: nsl_bnoc.committed.committed_dispatch
     generic map(
       destination_count_c => ethertype_c'length
       )
@@ -92,7 +92,7 @@ begin
       out_i => to_l3_i
       );
 
-  l3_funnel: nsl_bnoc.framed.framed_funnel
+  l3_funnel: nsl_bnoc.committed.committed_funnel
     generic map(
       source_count_c => ethertype_c'length
       )
