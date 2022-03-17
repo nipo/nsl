@@ -16,7 +16,7 @@ entity output_delay_fixed is
     );
 end entity;
 
-architecture beh of output_delay_fixed is
+architecture xc6 of output_delay_fixed is
 
   constant tap_delay_ps_c : integer := nsl_hwdep.xc6_config.iodelay2_tap_ps;
   constant tap_count_i : integer := delay_ps_c / tap_delay_ps_c;
