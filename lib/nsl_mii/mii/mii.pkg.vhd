@@ -82,6 +82,43 @@ package mii is
     m2p: mii_m2p;
   end record;
   
+  -- RMII Base signaling, reference clock is external
+  -- RMII from Phy to Mac
+  type rmii_p2m is record
+    rx_d   : std_ulogic_vector(1 downto 0);
+    rx_er  : std_ulogic;
+    crs_dv : std_ulogic;
+  end record;
+
+  -- RMII from Mac to Phy
+  type rmii_m2p is record
+    tx_d   : std_ulogic_vector(1 downto 0);
+    tx_en  : std_ulogic;
+  end record;
+
+  -- RMII signal group
+  type rmii_io is
+  record
+    ref_clk : std_ulogic;
+    p2m : rmii_p2m;
+    m2p : rmii_m2p;
+  end record;
+  
+  -- RGMII Base signaling, reference clock is external
+  -- RGMII from Phy to Mac
+  type rgmii_io_group_t is record
+    d   : std_ulogic_vector(3 downto 0);
+    c   : std_ulogic;
+    ctl : std_ulogic;
+  end record;
+
+  -- RGMII signal group
+  type rgmii_io is
+  record
+    p2m : rgmii_io_group_t;
+    m2p : rgmii_io_group_t;
+  end record;
+  
   component mii_flit_from_committed is
     generic(
       ipg_c : natural := 96 -- bits

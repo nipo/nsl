@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 library nsl_mii, nsl_data, nsl_simulation, nsl_math, nsl_logic;
+use nsl_mii.rgmii.all;
 use nsl_mii.mii.all;
 use nsl_data.crc.all;
 use nsl_simulation.logging.all;
@@ -14,6 +15,31 @@ use nsl_data.crc.all;
 use nsl_data.endian.all;
 
 package testing is
+
+  procedure rgmii_put_init(signal rgmii: out rgmii_io_group_t);
+  procedure rgmii_interframe_put(signal rgmii: out rgmii_io_group_t;
+                                 constant ipg_time: natural := 96/8;
+                                 constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                                 constant link_up: boolean := true;
+                                 constant full_duplex: boolean := true);
+  procedure rgmii_frame_put(signal rgmii: out rgmii_io_group_t;
+                            constant data : byte_string;
+                            constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                            constant pre_count : natural := 8;
+                            constant error_at_bit : integer := -1);
+
+  procedure rgmii_frame_get(signal rgmii: in rgmii_io_group_t;
+                            data : inout byte_stream;
+                            valid : out boolean;
+                            constant mode: rgmii_mode_t := RGMII_MODE_1000);
+
+  procedure rgmii_frame_check(
+    log_context: string;
+    signal rgmii: in rgmii_io_group_t;
+    data : in byte_string;
+    valid : in boolean;
+    constant mode: rgmii_mode_t := RGMII_MODE_1000;
+    level : log_level_t := LOG_LEVEL_WARNING);
 
   procedure mii_status_init(signal mii: out mii_status_p2m);
   procedure mii_tx_init(signal mii: out mii_tx_p2m);
@@ -45,6 +71,286 @@ package testing is
 end testing;
 
 package body testing is
+
+  procedure rgmii_put_byte(signal rgmii: out rgmii_io_group_t;
+                          constant rxd : byte;
+                          constant dv, err : boolean;
+                          constant mode: rgmii_mode_t := RGMII_MODE_1000)
+  is
+  begin
+    case mode is
+      when RGMII_MODE_10 =>
+        rgmii.d <= rxd(3 downto 0);
+        rgmii.ctl <= to_logic(dv);
+        wait for 2 ns;
+        rgmii.c <= '1';
+        wait for 200 ns;
+        rgmii.c <= '0';
+        wait for 198 ns;
+
+        rgmii.d <= rxd(7 downto 4);
+        rgmii.ctl <= to_logic(err /= dv);
+        wait for 2 ns;
+        rgmii.c <= '1';
+        wait for 200 ns;
+        rgmii.c <= '0';
+        wait for 198 ns;
+
+      when RGMII_MODE_100 =>
+        rgmii.d <= rxd(3 downto 0);
+        rgmii.ctl <= to_logic(dv);
+        wait for 2 ns;
+        rgmii.c <= '1';
+        wait for 20 ns;
+        rgmii.c <= '0';
+        wait for 18 ns;
+
+        rgmii.d <= rxd(7 downto 4);
+        rgmii.ctl <= to_logic(err /= dv);
+        wait for 2 ns;
+        rgmii.c <= '1';
+        wait for 20 ns;
+        rgmii.c <= '0';
+        wait for 18 ns;
+
+      when RGMII_MODE_1000 =>
+        rgmii.d <= rxd(3 downto 0);
+        rgmii.ctl <= to_logic(dv);
+        wait for 2 ns;
+        rgmii.c <= '1';
+        wait for 2 ns;
+
+        rgmii.d <= rxd(7 downto 4);
+        rgmii.ctl <= to_logic(err /= dv);
+        wait for 2 ns;
+        rgmii.c <= '0';
+        wait for 2 ns;
+    end case;
+  end procedure;
+  
+  procedure rgmii_put_init(signal rgmii: out rgmii_io_group_t)
+  is
+  begin
+    log_debug("* Init");
+    rgmii.d <= (others => '0');
+    rgmii.c <= '0';
+    rgmii.ctl <= '0';
+    wait for 2 ns;
+  end procedure;
+
+  procedure rgmii_interframe_put(signal rgmii: out rgmii_io_group_t;
+                                 constant ipg_time : natural := 96/8;
+                                 constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                                 constant link_up: boolean := true;
+                                 constant full_duplex: boolean := true)
+  is
+    variable inband_status: byte;
+  begin
+    log_debug("* RGMII < wait " & to_string(ipg_time) & " bit time");
+
+    inband_status(0) := to_logic(link_up);
+    inband_status(2 downto 1) := to_logic(mode);
+    inband_status(3) := to_logic(full_duplex);
+    inband_status(7 downto 4) := inband_status(3 downto 0);
+    
+    for i in 0 to ipg_time/8 - 1
+    loop
+      rgmii_put_byte(rgmii, inband_status, false, false, mode);
+    end loop;
+  end procedure;
+
+  procedure rgmii_frame_put(signal rgmii: out rgmii_io_group_t;
+                            constant data : byte_string;
+                            constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                            constant pre_count : natural := 8;
+                            constant error_at_bit : integer := -1)
+  is
+    variable error_at_byte : integer;
+  begin
+    log_debug("* RGMII < " & to_string(data) & ", mode: " & to_string(mode));
+
+    error_at_byte := -1;
+    if error_at_bit >= 0 then
+      error_at_byte := error_at_bit / 8;
+    end if;
+                     
+    if pre_count > 0
+    then
+      for i in 0 to pre_count-2
+      loop
+        rgmii_put_byte(rgmii, x"55", true, false, mode);
+      end loop;
+
+      rgmii_put_byte(rgmii, x"d5", true, false, mode);
+    end if;
+
+    for i in data'range
+    loop
+      rgmii_put_byte(rgmii, data(i), error_at_byte /= i, error_at_byte = i, mode);
+    end loop;
+  end procedure;
+
+  procedure rgmii_cycle_get(signal rgmii: in rgmii_io_group_t;
+                            data : out byte;
+                            ctlh, ctll : out boolean;
+                            constant mode: rgmii_mode_t := RGMII_MODE_100)
+  is
+    variable v: boolean;
+    variable d: byte;
+  begin
+    wait until rising_edge(rgmii.c);
+    data(3 downto 0) := rgmii.d;
+    ctlh := rgmii.ctl = '1';
+    wait until falling_edge(rgmii.c);
+    data(7 downto 4) := rgmii.d;
+    ctll := rgmii.ctl = '1';
+  end procedure;
+
+  procedure rgmii_byte_get(signal rgmii: in rgmii_io_group_t;
+                           data : out byte;
+                           valid : out boolean;
+                           error: out boolean;
+                           constant mode: rgmii_mode_t := RGMII_MODE_1000)
+  is
+    variable c0, c1, drop: boolean;
+    variable d0, d1: byte;
+  begin
+    case mode is
+      when RGMII_MODE_10 | RGMII_MODE_100 =>
+        rgmii_cycle_get(rgmii, d0, c0, drop, mode);
+        rgmii_cycle_get(rgmii, d1, c1, drop, mode);
+
+        data := d1(3 downto 0) & d0(3 downto 0);
+        valid := c0;
+        error := c0 /= c1;
+
+      when RGMII_MODE_1000 =>
+        rgmii_cycle_get(rgmii, d0, c0, c1, mode);
+
+        data := d0;
+        valid := c0;
+        error := c0 /= c1;
+    end case;
+  end procedure;
+
+  procedure rgmii_frame_get(signal rgmii: in rgmii_io_group_t;
+                            data : inout byte_stream;
+                            valid : out boolean;
+                            constant mode: rgmii_mode_t := RGMII_MODE_1000)
+  is
+    variable ret: byte_stream;
+    variable v, e, c0, c1, frame_valid: boolean;
+    variable tmp, b: byte;
+  begin
+    deallocate(data);
+    ret := new byte_string(1 to 0);
+    v := false;
+    frame_valid := true;
+
+    while not v
+    loop
+      rgmii_byte_get(rgmii, b, v, e, mode);
+    end loop;
+
+    rgmii_byte_get(rgmii, b, v, e, mode);
+
+    while b = x"55" and v
+    loop
+      rgmii_byte_get(rgmii, b, v, e, mode);
+    end loop;
+
+    if not v then
+      return;
+    end if;
+
+    if b(3 downto 0) = x"d" and (mode = RGMII_MODE_100 or mode = RGMII_MODE_10) then
+      -- realignment hack for 10/100
+      rgmii_cycle_get(rgmii, tmp, c0, c1, mode);
+      b := tmp(3 downto 0) & b(7 downto 4);
+      v := v xor e;
+      e := v xor c0;
+      
+      write(ret, b);
+
+      -- continue with next loop
+      b := x"d5";
+    end if;
+
+    if b = x"d5" then
+      while v
+      loop
+        rgmii_byte_get(rgmii, b, v, e, mode);
+        if v then
+          frame_valid := frame_valid and not e;
+          write(ret, b);
+        end if;
+      end loop;
+    else
+      frame_valid := false;
+      while v
+      loop
+        rgmii_byte_get(rgmii, b, v, e, mode);
+      end loop;
+    end if;
+    
+    valid := frame_valid;
+    data := ret;
+  end procedure;
+
+  procedure rgmii_frame_check(
+    log_context: string;
+    signal rgmii: in rgmii_io_group_t;
+    data : in byte_string;
+    valid : in boolean;
+    constant mode: rgmii_mode_t := RGMII_MODE_1000;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+    variable rx_data: byte_stream;
+    variable rx_valid: boolean;
+  begin
+    rgmii_frame_get(rgmii, rx_data, rx_valid, mode);
+    
+    if valid /= rx_valid then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data.all)
+          & ", valid: " & to_string(rx_valid)
+          & " *** Expected valid = " & to_string(valid));
+      return;
+    end if;
+
+    if not valid then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data.all)
+          & ", not valid, as expected");
+      return;
+    end if;
+
+    if not rx_valid then
+      log_info(log_context & ": " &
+          " > " & to_string(rx_data.all)
+          & ", rx valid: " & to_string(rx_valid)
+          & " OK");
+      return;
+    end if;
+
+    if rx_data.all'length /= data'length
+      or rx_data.all /= data then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data.all)
+          & ", valid: " & to_string(rx_valid)
+          & " *** BAD");
+      log(level, log_context & ": " &
+          " * " & to_string(data)
+          & ", valid: " & to_string(valid)
+          & " *** Expected");
+      return;
+    end if;
+
+    log_info(log_context & ": " &
+             " > " & to_string(rx_data.all)
+             & ", valid: " & to_string(rx_valid)
+             & " OK");
+  end procedure;
 
   procedure mii_put_byte(signal mii: out mii_rx_p2m;
                          constant rxd : byte;

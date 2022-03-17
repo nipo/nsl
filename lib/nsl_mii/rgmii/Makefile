@@ -1,15 +1,17 @@
 vhdl-sources += rgmii.pkg.vhd
-vhdl-sources += rgmii_signal_driver.vhd
-vhdl-sources += rgmii_from_committed.vhd
-vhdl-sources += rgmii_to_committed.vhd
+vhdl-sources += rgmii_driver.vhd
+vhdl-sources += rgmii_rx_driver.vhd
+vhdl-sources += rgmii_tx_driver.vhd
 
+deps += nsl_mii.mii
 deps += nsl_math.arith
+deps += nsl_clocking.distribution
+deps += nsl_clocking.intradomain
+deps += nsl_clocking.async
 deps += nsl_bnoc.committed
-deps += nsl_hwdep.clock
-deps += nsl_data.crc
 deps += nsl_data.bytestream
+deps += nsl_data.crc
 deps += nsl_io.diff
 deps += nsl_io.clock
 deps += nsl_io.ddr
 deps += nsl_io.delay
-deps += nsl_clocking.intradomain
