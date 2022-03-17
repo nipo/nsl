@@ -1,4 +1,5 @@
 use std.textio.all;
+library nsl_simulation;
 
 package logging is
 
@@ -52,6 +53,10 @@ package body logging is
     write(l, string'("] "));
     write(l, message);
     writeline(output, l);
+
+    if level = LOG_LEVEL_FATAL then
+      nsl_simulation.control.terminate(1);
+    end if;
   end procedure;
 
   procedure log_debug(message : string) is
