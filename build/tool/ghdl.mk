@@ -57,7 +57,7 @@ define ghdl-run-rules
 		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity) \
-		 --wave=$@ --ieee-asserts=disable
+		--ieee-asserts=disable $1
 endef
 
 else
@@ -82,7 +82,7 @@ define ghdl-compile-rules
 endef
 
 define ghdl-run-rules
-	./$< --wave=$@
+	./$< $1
 endef
 
 endif
@@ -107,6 +107,9 @@ $(target): $(sources) $(MAKEFILE_LIST)
 	$(call ghdl-compile-rules)
 
 $(target).ghw: $(target)
-	$(call ghdl-run-rules)
+	$(call ghdl-run-rules,--wave=$@)
 
-clean-files += *.o $(top) $(top).ghw $(top).vcd *.cf *.lst $(target)
+$(target).vcd: $(target)
+	$(call ghdl-run-rules,--vcd=$@)
+
+clean-files += *.o $(target) $(target).ghw $(target).vcd $(target).vcd *.cf *.lst $(target)
