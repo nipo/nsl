@@ -167,13 +167,16 @@ begin
           or (r.fifo_fillness = crc_byte_count_c+1 and out_i.ready = '1') then
           if r.in_state = IN_COMMIT then
             rin.out_state <= OUT_COMMIT;
-          elsif r.in_state = IN_CANCEL then
-            rin.out_state <= OUT_CANCEL;
           end if;
+        end if;
+
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
         end if;
 
       when OUT_COMMIT | OUT_CANCEL =>
         if out_i.ready = '1' then
+          rin.fifo_fillness <= 0;
           if header_length_c /= 0 then
             rin.out_state <= OUT_HEADER;
             rin.out_left <= header_length_c - 1;
