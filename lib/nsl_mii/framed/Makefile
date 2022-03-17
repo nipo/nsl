@@ -1,9 +1,0 @@
-vhdl-sources += framed.pkg.vhd
-vhdl-sources += mii_from_framed.vhd
-vhdl-sources += mii_to_framed.vhd
-vhdl-sources += rmii_from_framed.vhd
-vhdl-sources += rmii_to_framed.vhd
-vhdl-sources += rmii_framed.vhd
-deps += nsl_clocking.async
-deps += nsl_bnoc.framed
-deps += nsl_mii.mii
