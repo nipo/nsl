@@ -94,4 +94,36 @@ package committed is
       );
   end component;
 
+  -- Measures the actual byte length of committed frame (validity flit
+  -- not included).
+  --
+  -- If there is a frame bigger than 2**max_size_l2_c, and reader
+  -- waits for size word to appear before starting to pop from out
+  -- port, there will be a lockup. There is no provision for this not
+  -- to happen here.
+  component committed_sizer is
+    generic(
+      clock_count_c : natural range 1 to 2 := 1;
+      -- Reload value of counter. Set to 1 to count validity bit
+      offset_c : integer := 0;
+      txn_count_c : natural;
+      -- Should fit size + offset_c
+      max_size_l2_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
+      
+      in_i   : in committed_req;
+      in_o   : out committed_ack;
+
+      size_o : out unsigned(max_size_l2_c-1 downto 0);
+      size_valid_o : out std_ulogic;
+      size_ready_i : in std_ulogic;
+
+      out_o   : out committed_req;
+      out_i   : in committed_ack
+      );
+  end component;
+
 end package committed;
