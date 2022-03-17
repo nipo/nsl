@@ -271,7 +271,7 @@ package body testing is
     end if;
 
     if not valid then
-      log(level, log_context & ": " &
+      log_info(log_context & ": " &
           " > " & to_string(rx_data.all)
           & ", not valid, as expected");
       return;
