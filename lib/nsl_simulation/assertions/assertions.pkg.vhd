@@ -20,6 +20,11 @@ package assertions is
                          sev : in severity_level);
 
   procedure assert_equal(what: in string;
+                         a : in boolean;
+                         b : in boolean;
+                         sev : in severity_level);
+
+  procedure assert_equal(what: in string;
                          a : in std_ulogic;
                          b : in std_ulogic;
                          sev : in severity_level);
@@ -59,6 +64,12 @@ package assertions is
                          what: in string;
                          a : in integer;
                          b : in integer;
+                         sev : in severity_level);
+
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in boolean;
+                         b : in boolean;
                          sev : in severity_level);
 
   procedure assert_equal(context: in log_context;
@@ -108,9 +119,9 @@ package body assertions is
                                  sev : in severity_level) is
   begin
     log_error(context, "while " & what & ", " & a & " /= " & b);
-    assert false
-      report a & " /= " & b & ", context: " & context & ", what: " & what
-      severity sev;
+    if sev = FAILURE then
+      nsl_simulation.control.terminate(1);
+    end if;
   end procedure;
 
   procedure assert_equal(what: in string;
@@ -129,6 +140,19 @@ package body assertions is
   procedure assert_equal(what: in string;
                          a : in integer;
                          b : in integer;
+                         sev : in severity_level) is
+  begin
+    if a /= b then
+      assert_equal_failure("UNK", what,
+                           """" & to_string(a) & """",
+                           """" & to_string(b) & """",
+                           sev);
+    end if;
+  end procedure;
+
+  procedure assert_equal(what: in string;
+                         a : in boolean;
+                         b : in boolean;
                          sev : in severity_level) is
   begin
     if a /= b then
@@ -214,6 +238,20 @@ package body assertions is
                          what: in string;
                          a : in integer;
                          b : in integer;
+                         sev : in severity_level) is
+ begin
+    if a /= b then
+      assert_equal_failure(context, what,
+                           """" & to_string(a) & """",
+                           """" & to_string(b) & """",
+                           sev);
+    end if;
+ end;
+
+  procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in boolean;
+                         b : in boolean;
                          sev : in severity_level) is
  begin
     if a /= b then
