@@ -21,6 +21,9 @@ entity uart8 is
     rx_i   : in  std_ulogic;
     rts_o  : out std_ulogic;
 
+    cts_o  : out std_ulogic;
+    rx_o   : out std_ulogic;
+    
     tx_data_i  : in  nsl_bnoc.pipe.pipe_req_t;
     tx_data_o  : out nsl_bnoc.pipe.pipe_ack_t;
     rx_data_i  : in  nsl_bnoc.pipe.pipe_ack_t;
@@ -49,6 +52,9 @@ begin
       data_o(0) => rx_s,
       data_o(1) => cts_s
       );
+
+  rx_o <= rx_s;
+  cts_o <= cts_s;
   
   tx: nsl_uart.serdes.uart_tx
     generic map(
