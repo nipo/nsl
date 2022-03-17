@@ -99,6 +99,10 @@ package crc is
   -- Serialize current state as a byte string
   function crc_spill(params : crc_params_t;
                      state : crc_state) return byte_string;
+
+  -- Verify CRC over a data stream
+  function crc_is_valid(params : crc_params_t;
+                        data : byte_string) return boolean;
   
 end package crc;
 
@@ -350,6 +354,13 @@ package body crc is
     else
       return to_be(unsigned(state));
     end if;
+  end function;
+
+  function crc_is_valid(params : crc_params_t;
+                        data : byte_string) return boolean
+  is
+  begin
+    return crc_update(params, crc_init(params), data) = crc_check(params);
   end function;
 
 end package body crc;
