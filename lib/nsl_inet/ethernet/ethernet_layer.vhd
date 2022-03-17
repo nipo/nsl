@@ -12,7 +12,8 @@ entity ethernet_layer is
   generic(
     ethertype_c : ethertype_vector;
     -- Flit count to pass through at the start of a frame
-    l1_header_length_c : integer := 0
+    l1_header_length_c : integer := 0;
+    min_frame_size_c : natural := 64 --bytes
     );
   port(
     clock_i : in std_ulogic;
@@ -113,7 +114,8 @@ begin
   
   transmitter: nsl_inet.ethernet.ethernet_transmitter
     generic map(
-      l1_header_length_c => l1_header_length_c
+      l1_header_length_c => l1_header_length_c,
+      min_frame_size_c => min_frame_size_c
       )
     port map(
       clock_i => clock_i,

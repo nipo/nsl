@@ -97,7 +97,8 @@ package ethernet is
   component ethernet_transmitter is
     generic(
       -- Flit count to pass through at the start of a frame
-      l1_header_length_c : integer := 0
+      l1_header_length_c : integer := 0;
+      min_frame_size_c : natural := 64 --bytes
       );
     port(
       clock_i : in std_ulogic;
@@ -122,7 +123,8 @@ package ethernet is
     generic(
       ethertype_c : ethertype_vector;
       -- Flit count to pass through at the start of a frame
-      l1_header_length_c : integer := 0
+      l1_header_length_c : integer := 0;
+      min_frame_size_c : natural := 64 --bytes
       );
     port(
       clock_i : in std_ulogic;
@@ -144,7 +146,12 @@ package ethernet is
 
   function frame_pack(dest, src : mac48_t;
                       ethertype : ethertype_t;
-                      payload : byte_string) return byte_string;
+                      payload : byte_string;
+                      min_frame_size_c : natural := 0) return byte_string;
+
+  function l3_pack(src : mac48_t;
+                   is_bcast : boolean;
+                   payload : byte_string) return byte_string;
 
   function frame_is_fcs_valid(frame : byte_string) return boolean;
   function frame_daddr_get(frame : byte_string) return mac48_t;
@@ -178,10 +185,12 @@ package body ethernet is
 
   function frame_pack(dest, src : mac48_t;
                       ethertype : ethertype_t;
-                      payload : byte_string) return byte_string
+                      payload : byte_string;
+                      min_frame_size_c : natural := 0) return byte_string
   is
     variable hdr : byte_string(1 to 6+6+2);
     variable fcs : fcs_t := crc_init(fcs_params_c);
+    variable pad : byte_string(payload'length to min_frame_size_c-6-6-2-4-1) := (others => x"00");
   begin
     hdr(1 to 6) := dest;
     hdr(7 to 12) := src;
@@ -189,8 +198,22 @@ package body ethernet is
 
     fcs := crc_update(fcs_params_c, fcs, hdr);
     fcs := crc_update(fcs_params_c, fcs, payload);
+    fcs := crc_update(fcs_params_c, fcs, pad);
 
-    return hdr & payload & crc_spill(fcs_params_c, fcs);
+    return hdr & payload & pad & crc_spill(fcs_params_c, fcs);
+  end function;
+
+  function l3_pack(src : mac48_t;
+                   is_bcast : boolean;
+                   payload : byte_string) return byte_string
+  is
+    variable bcast: byte := x"00";
+  begin
+    if is_bcast then
+      bcast := x"01";
+    end if;
+
+    return src & bcast & payload;
   end function;
 
   function frame_is_fcs_valid(frame : byte_string) return boolean
