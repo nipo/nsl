@@ -164,7 +164,7 @@ package ethernet is
   constant fcs_params_c : crc_params_t := (
     length           => 32,
     init             => 16#00000000#,
-    poly             => 16#edb88320#,
+    poly             => -306674912, -- edb88320,
     complement_input => false,
     insert_msb       => true,
     pop_lsb          => true,
