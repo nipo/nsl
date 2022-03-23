@@ -187,13 +187,13 @@ begin
     end case;
 
     if fifo_push and fifo_pop then
-      rin.fifo <= r.fifo(1 to r.fifo'right) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= in_i.data;
     elsif fifo_push then
       rin.fifo(r.fifo_fillness) <= in_i.data;
       rin.fifo_fillness <= r.fifo_fillness + 1;
     elsif fifo_pop then
-      rin.fifo <= r.fifo(1 to r.fifo'right) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     end if;
   end process;

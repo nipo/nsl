@@ -136,13 +136,13 @@ begin
     end case;
 
     if fifo_push and fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= pipe_i.data;
     elsif fifo_push then
       rin.fifo(r.fifo_fillness) <= pipe_i.data;
       rin.fifo_fillness <= r.fifo_fillness + 1;
     elsif fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     end if;
   end process;

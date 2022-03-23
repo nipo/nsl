@@ -117,7 +117,7 @@ begin
 
       when IN_HEADER =>
         if crced_i.valid = '1' then
-          rin.header <= r.header(1 to r.header'right) & byte(crced_i.data);
+          rin.header <= shift_left(r.header, crced_i.data);
           if crced_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr = 0 then
@@ -130,7 +130,7 @@ begin
         
       when IN_DADDR =>
         if crced_i.valid = '1' then
-          rin.saddr <= r.saddr(1 to 5) & byte(crced_i.data);
+          rin.saddr <= shift_left(r.saddr, crced_i.data);
           if crced_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
@@ -154,7 +154,7 @@ begin
             end if;
           end if;
 
-          rin.saddr <= r.saddr(1 to 5) & byte(crced_i.data);
+          rin.saddr <= shift_left(r.saddr, crced_i.data);
           if crced_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
@@ -167,7 +167,7 @@ begin
 
       when IN_TYPE =>
         if crced_i.valid = '1' then
-          rin.type_len <= r.type_len(1 to 1) & byte(crced_i.data);
+          rin.type_len <= shift_left(r.type_len, crced_i.data);
           if crced_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
@@ -238,7 +238,7 @@ begin
             rin.out_state <= OUT_SADDR;
           else
             rin.out_ctr <= r.out_ctr - 1;
-            rin.header <= r.header(1 to r.header'right) & byte'("--------");
+            rin.header <= shift_left(r.header);
           end if;
         end if;
 
@@ -248,7 +248,7 @@ begin
             rin.out_state <= OUT_CONTEXT;
           else
             rin.out_ctr <= r.out_ctr - 1;
-            rin.saddr <= r.saddr(1 to 5) & byte'("--------");
+            rin.saddr <= shift_left(r.saddr);
           end if;
         end if;
         
@@ -278,10 +278,10 @@ begin
     end case;
 
     if fifo_push and fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & byte'("--------");
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= crced_i.data;
     elsif fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & byte'("--------");
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     elsif fifo_push then
       rin.fifo(r.fifo_fillness) <= crced_i.data;

@@ -173,7 +173,7 @@ begin
             rin.out_frame_left <= r.out_frame_left - 1;
           end if;
 
-          rin.out_saddr_type <= r.out_saddr_type(1 to 7) & byte'("--------");
+          rin.out_saddr_type <= shift_left(r.out_saddr_type);
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
           else
@@ -222,13 +222,13 @@ begin
     end case;
 
     if fifo_push and fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= l3_i.data;
     elsif fifo_push then
       rin.fifo(r.fifo_fillness) <= l3_i.data;
       rin.fifo_fillness <= r.fifo_fillness + 1;
     elsif fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     end if;
   end process;

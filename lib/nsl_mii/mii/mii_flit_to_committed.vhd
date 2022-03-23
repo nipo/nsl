@@ -162,7 +162,7 @@ begin
     end case;
 
     if fifo_push and fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= flit_i.data;
     elsif fifo_push then
       if r.fifo_fillness = fifo_depth_c then
@@ -172,7 +172,7 @@ begin
         rin.fifo_fillness <= r.fifo_fillness + 1;
       end if;
     elsif fifo_pop then
-      rin.fifo <= r.fifo(1 to fifo_depth_c-1) & "--------";
+      rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     end if;
   end process;
