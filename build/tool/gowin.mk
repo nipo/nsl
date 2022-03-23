@@ -1,4 +1,4 @@
-GOWIN = /opt/Gowin/V1.9.8.03
+GOWIN = /opt/Gowin/V1.9.8.05
 GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
@@ -46,6 +46,10 @@ endef
 $(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
 	$(call file-clear,$@)
 	$(call file-append,$@,set_device -name $(target_part_name) $(target_part))
+	$(call file-append,$@,add_file -type vhdl {$(BUILD_ROOT)/support/ieee/math_real.pkg.vhd})
+	$(call file-append,$@,set_file_prop -lib {ieee} {$(BUILD_ROOT)/support/ieee/math_real.pkg.vhd})
+	$(call file-append,$@,add_file -type vhdl {$(BUILD_ROOT)/support/ieee/math_real-body.vhd})
+	$(call file-append,$@,set_file_prop -lib {ieee} {$(BUILD_ROOT)/support/ieee/math_real-body.vhd})
 	$(foreach s,$(sources),$(call _gowin-project-add-$($s-language),$@,$s))
 	$(call file-append,$@,set_option -top_module $(top-entity))
 	$(call file-append,$@,set_option -output_base_name $(target))
