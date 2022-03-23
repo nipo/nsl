@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_bnoc;
+library nsl_math, nsl_bnoc, nsl_data;
+use nsl_data.bytestream.all;
 
 package framed is
 
@@ -249,6 +250,45 @@ package framed is
 
       pipe_o   : out nsl_bnoc.pipe.pipe_req_t;
       pipe_i   : in nsl_bnoc.pipe.pipe_ack_t
+      );
+  end component;
+
+  -- Generic router for framed (and specializations like
+  -- framed/routed/committed) network where frame at input has
+  -- in_header_count_c bytes of header used for routing.
+  --
+  -- Routing decision is external to this module, using route_* ports.
+  -- When forwarded, output frame has input header replaced with
+  -- passed header of out_header_count_c bytes.
+  --
+  -- If intention is to forward header as-is, parent should set
+  -- out_header_count_c = in_header_count_c and connect route_header_o
+  -- to route_header_i.
+  component framed_router is
+    generic(
+      in_count_c : natural;
+      out_count_c : natural;
+      in_header_count_c : natural := 0;
+      out_header_count_c : natural := 0
+      );
+    port(
+      reset_n_i : in  std_ulogic;
+      clock_i   : in  std_ulogic;
+
+      in_i      : in framed_req_array(in_count_c-1 downto 0);
+      in_o      : out framed_ack_array(in_count_c-1 downto 0);
+
+      out_o     : out framed_req_array(out_count_c-1 downto 0);
+      out_i     : in framed_ack_array(out_count_c-1 downto 0);
+
+    route_valid_o       : out std_ulogic;
+    route_header_o      : out byte_string(0 to in_header_count_c-1);
+    route_source_o      : out natural range 0 to in_count_c-1;
+
+    route_ready_i       : in  std_ulogic := '1';
+    route_header_i      : in  byte_string(0 to out_header_count_c-1) := (others => x"00");
+    route_destination_i : in  natural range 0 to out_count_c-1;
+    route_drop_i        : in std_ulogic := '0'
       );
   end component;
 
