@@ -19,9 +19,22 @@ package bytestream is
 
   function "="(l, r : byte_string) return boolean;
   function "/="(l, r : byte_string) return boolean;
+  function "not"(v : byte_string) return byte_string;
+  function "and"(l, r : byte_string) return byte_string;
+  function "or"(l, r : byte_string) return byte_string;
+  function "xor"(l, r : byte_string) return byte_string;
 
   constant null_byte_string : byte_string(1 to 0) := (others => x"00");
+  constant dontcare_byte_c : byte := (others => '-');
 
+  function shift_left(s: byte_string;
+                      b: byte := dontcare_byte_c) return byte_string;
+  function shift_right(s: byte_string;
+                       b: byte := dontcare_byte_c) return byte_string;
+
+  function rot_left(s: byte_string) return byte_string;
+  function rot_right(s: byte_string) return byte_string;
+  
   type byte_stream is access byte_string;
   procedure write(s: inout byte_stream; constant d: byte);
   procedure write(s: inout byte_stream; constant d: byte_string);
@@ -173,5 +186,107 @@ package body bytestream is
   begin
     write(s, d.all);
   end procedure;
+
+  function shift_left(s: byte_string;
+                      b: byte := dontcare_byte_c) return byte_string
+  is
+    alias xs: byte_string(0 to s'length-1) is s;
+  begin
+    if s'length = 0 then
+      return null_byte_string;
+    end if;
+    return xs(1 to xs'right) & b;
+  end function;
+
+  function shift_right(s: byte_string;
+                       b: byte := dontcare_byte_c) return byte_string
+  is
+    alias xs: byte_string(0 to s'length-1) is s;
+  begin
+    if s'length = 0 then
+      return null_byte_string;
+    end if;
+    return b & xs(0 to xs'right-1);
+  end function;
+
+  function rot_left(s: byte_string) return byte_string
+  is
+  begin
+    return shift_left(s, s(s'left));
+  end function;
+  
+  function rot_right(s: byte_string) return byte_string
+  is
+  begin
+    return shift_right(s, s(s'right));
+  end function;
+
+  function "not"(v : byte_string) return byte_string
+  is
+    variable ret: byte_string(v'range);
+  begin
+    for i in v'range
+    loop
+      ret(i) := not v(i);
+    end loop;
+    return ret;
+  end function;
+    
+  function "and"(l, r : byte_string) return byte_string
+  is
+    alias xl: byte_string(0 to l'length-1) is l;
+    alias xr: byte_string(0 to r'length-1) is r;
+    variable ret: byte_string(0 to r'length-1);
+  begin
+    if xl'length /= xr'length then
+      report "Passed vectors should be of the same size"
+        severity failure;
+      return null_byte_string;
+    end if;
+
+    for i in xl'range
+    loop
+      ret(i) := xl(i) and xr(i);
+    end loop;
+    return ret;
+  end function;
+
+  function "or"(l, r : byte_string) return byte_string
+  is
+    alias xl: byte_string(0 to l'length-1) is l;
+    alias xr: byte_string(0 to r'length-1) is r;
+    variable ret: byte_string(0 to r'length-1);
+  begin
+    if xl'length /= xr'length then
+      report "Passed vectors should be of the same size"
+        severity failure;
+      return null_byte_string;
+    end if;
+
+    for i in xl'range
+    loop
+      ret(i) := xl(i) or xr(i);
+    end loop;
+    return ret;
+  end function;
+
+  function "xor"(l, r : byte_string) return byte_string
+  is
+    alias xl: byte_string(0 to l'length-1) is l;
+    alias xr: byte_string(0 to r'length-1) is r;
+    variable ret: byte_string(0 to r'length-1);
+  begin
+    if xl'length /= xr'length then
+      report "Passed vectors should be of the same size"
+        severity failure;
+      return null_byte_string;
+    end if;
+
+    for i in xl'range
+    loop
+      ret(i) := xl(i) xor xr(i);
+    end loop;
+    return ret;
+  end function;
 
 end package body bytestream;
