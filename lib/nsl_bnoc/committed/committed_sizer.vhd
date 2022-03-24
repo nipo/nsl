@@ -31,6 +31,9 @@ end entity;
 
 architecture beh of committed_sizer is
 
+  constant offset_u_c : unsigned(max_size_l2_c-1 downto 0)
+    := to_unsigned(offset_c mod (2**max_size_l2_c), max_size_l2_c);
+  
   type state_t is (
     ST_RESET,
     ST_COUNT,
@@ -68,7 +71,7 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_COUNT;
-        rin.count <= to_unsigned(offset_c, rin.count'length);
+        rin.count <= offset_u_c;
 
       when ST_COUNT =>
         if in_i.valid = '1' and fifo_in_s.ack.ready = '1' then
@@ -82,7 +85,7 @@ begin
       when ST_REPORT =>
         if size_ready_s = '1' then
           rin.state <= ST_COUNT;
-          rin.count <= to_unsigned(offset_c, rin.count'length);
+          rin.count <= offset_u_c;
         end if;
     end case;
   end process;
