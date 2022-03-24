@@ -7,6 +7,7 @@ use nsl_bnoc.committed.all;
 use nsl_data.crc.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use nsl_data.text.all;
 
 -- Ethernet MAC layer (layer-2). Handles ethernet addressing.
 package ethernet is
@@ -24,6 +25,7 @@ package ethernet is
   constant ethernet_broadcast_addr_c : mac48_t := from_hex("ffffffffffff");
 
   function is_broadcast(mac: mac48_t) return boolean;
+  function mac_to_string(mac: mac48_t) return string;
   
   subtype ethertype_t is integer range 0 to 65535;
   type ethertype_vector is array(integer range <>) of ethertype_t;
@@ -259,6 +261,17 @@ package body ethernet is
     constant r: byte_string(0 to xframe'length-1-6-6-2-4) := xframe(14 to xframe'right-4);
   begin
     return r;
+  end function;
+
+  function mac_to_string(mac: mac48_t) return string
+  is
+  begin
+    return to_hex_string(mac(0))
+      & ":" & to_hex_string(mac(1))
+      & ":" & to_hex_string(mac(2))
+      & ":" & to_hex_string(mac(3))
+      & ":" & to_hex_string(mac(4))
+      & ":" & to_hex_string(mac(5));
   end function;
 
 end package body;
