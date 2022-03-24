@@ -47,8 +47,8 @@ package body logging is
     variable l:line;
   begin
     write(l, string'("@"));
-    write(l, integer'image(integer(NOW / 1 ns)));
-    write(l, string'("ns ["));
+    write(l, time'image(now));
+    write(l, string'(" ["));
     write(l, to_string(level));
     write(l, string'("] "));
     write(l, message);
