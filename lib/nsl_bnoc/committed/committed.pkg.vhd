@@ -22,6 +22,17 @@ package committed is
   type committed_ack_array is array(natural range <>) of committed_ack;
   type committed_bus_array is array(natural range <>) of committed_bus;
 
+  constant committed_req_idle_c : committed_req := nsl_bnoc.framed.framed_req_idle_c;
+  constant committed_ack_idle_c : committed_ack := nsl_bnoc.framed.framed_ack_idle_c;
+
+  function committed_flit(data: nsl_bnoc.framed.framed_data_t;
+                          last: boolean := false;
+                          valid: boolean := true) return committed_req;
+
+  function committed_accept(ready: boolean := true) return committed_ack;
+
+  function committed_commit(valid: boolean := true) return committed_req;
+  
   -- Only pass through frames with a valid status byte.
   -- Buffers the frame before letting it through.
   component committed_filter is
@@ -127,3 +138,41 @@ package committed is
   end component;
 
 end package committed;
+
+package body committed is
+
+  function committed_flit(data: nsl_bnoc.framed.framed_data_t;
+                          last: boolean := false;
+                          valid: boolean := true) return committed_req
+  is
+  begin
+    if not valid then
+      return (valid => '0', data => "--------", last => '-');
+    elsif last then
+      return (valid => '1', data => data, last => '1');
+    else
+      return (valid => '1', data => data, last => '0');
+    end if;
+  end function;
+
+  function committed_commit(valid: boolean := true) return committed_req
+  is
+  begin
+    if valid then
+      return committed_flit(data => x"01", last => true, valid => true);
+    else
+      return committed_flit(data => x"00", last => true, valid => true);
+    end if;
+  end function;
+
+  function committed_accept(ready: boolean := true) return committed_ack
+  is
+  begin
+    if ready then
+      return (ready => '1');
+    else
+      return (ready => '0');
+    end if;
+  end function;
+      
+end package body;

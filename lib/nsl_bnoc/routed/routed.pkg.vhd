@@ -13,6 +13,11 @@ package routed is
     req: routed_req;
     ack: routed_ack;
   end record;
+
+  constant routed_req_idle_c : routed_req := nsl_bnoc.framed.framed_req_idle_c;
+  constant routed_ack_idle_c : routed_ack := nsl_bnoc.framed.framed_ack_idle_c;
+  function routed_flit(data: nsl_bnoc.framed.framed_data_t;
+                       last: boolean := false) return routed_req;
   
   type routed_req_array is array(natural range <>) of routed_req;
   type routed_ack_array is array(natural range <>) of routed_ack;
@@ -214,4 +219,15 @@ package body routed is
     return to_integer(unsigned(w(7 downto 4)));
   end;
 
-end package body routed;
+  function routed_flit(data: nsl_bnoc.framed.framed_data_t;
+                       last: boolean := false) return routed_req
+  is
+  begin
+    if last then
+      return (valid => '1', data => data, last => '1');
+    else
+      return (valid => '1', data => data, last => '0');
+    end if;
+  end function;
+
+end package body;

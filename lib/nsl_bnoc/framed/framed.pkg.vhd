@@ -24,6 +24,17 @@ package framed is
     ack: framed_ack;
   end record;
 
+  function framed_flit(data: framed_data_t;
+                       last: boolean := false;
+                       valid: boolean := true) return framed_req;
+
+  function framed_accept(ready: boolean := true) return framed_ack;
+
+  constant framed_req_idle_c : framed_req := (data => "--------",
+                                              last => '-',
+                                              valid => '0');
+  constant framed_ack_idle_c : framed_ack := (ready => '0');
+
   type framed_req_array is array(natural range <>) of framed_req;
   type framed_ack_array is array(natural range <>) of framed_ack;
   type framed_bus_array is array(natural range <>) of framed_bus;
@@ -293,3 +304,31 @@ package framed is
   end component;
 
 end package framed;
+
+package body framed is
+
+  function framed_flit(data: framed_data_t;
+                       last: boolean := false;
+                       valid: boolean := true) return framed_req
+  is
+  begin
+    if not valid then
+      return (valid => '0', data => "--------", last => '-');
+    elsif last then
+      return (valid => '1', data => data, last => '1');
+    else
+      return (valid => '1', data => data, last => '0');
+    end if;
+  end function;
+
+  function framed_accept(ready: boolean := true) return framed_ack
+  is
+  begin
+    if ready then
+      return (ready => '1');
+    else
+      return (ready => '0');
+    end if;
+  end function;
+
+end package body;

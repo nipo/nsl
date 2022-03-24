@@ -23,6 +23,12 @@ package pipe is
     ack : pipe_ack_t;
   end record;
 
+  constant pipe_req_idle_c : pipe_req_t := (data => "--------",
+                                            valid => '0');
+  constant pipe_ack_idle_c : pipe_ack_t := (ready => '0');
+
+  function pipe_flit(data: pipe_data_t) return pipe_req_t;
+  
   type pipe_req_vector is array(integer range <>) of pipe_req_t;
   type pipe_ack_vector is array(integer range <>) of pipe_ack_t;
   type pipe_bus_vector is array(integer range <>) of pipe_bus_t;
@@ -44,3 +50,13 @@ package pipe is
   end component;
 
 end package pipe;
+
+package body pipe is
+
+  function pipe_flit(data: pipe_data_t) return pipe_req_t
+  is
+  begin
+    return (valid => '1', data => data);
+  end function;
+
+end package body;
