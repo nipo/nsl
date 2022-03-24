@@ -105,6 +105,14 @@ package testing is
                        signal clock: in std_ulogic;
                        cycles : in integer);
 
+  procedure framed_check(
+    log_context: string;
+    signal req: in nsl_bnoc.framed.framed_req;
+    signal ack: out nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING);
+
   procedure committed_put(signal req: out nsl_bnoc.committed.committed_req;
                           signal ack: in nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
@@ -116,6 +124,14 @@ package testing is
                        signal clock: in std_ulogic;
                        cycles : in integer);
 
+  procedure committed_assert(
+    log_context: string;
+    rx_data : in byte_string;
+    rx_valid : in boolean;
+    ref_data : in byte_string;
+    ref_valid : in boolean;
+    level : log_level_t := LOG_LEVEL_WARNING);
+
   procedure committed_check(
     log_context: string;
     signal req: in nsl_bnoc.committed.committed_req;
@@ -125,6 +141,53 @@ package testing is
     valid : in boolean;
     level : log_level_t := LOG_LEVEL_WARNING);
   
+  type committed_queue_item;
+
+  type committed_queue is access committed_queue_item;
+
+  type committed_queue_item is
+  record
+    chain : committed_queue;
+    data : byte_stream;
+    valid : boolean;
+  end record;
+
+  type committed_queue_root is access committed_queue;
+
+  procedure committed_queue_init(
+    variable root: inout committed_queue_root);
+
+  procedure committed_queue_master_worker(
+    signal req: out nsl_bnoc.committed.committed_req;
+    signal ack: in nsl_bnoc.committed.committed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout committed_queue_root;
+    constant context: string := "");
+
+  procedure committed_queue_slave_worker(
+    signal req: in nsl_bnoc.committed.committed_req;
+    signal ack: out nsl_bnoc.committed.committed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout committed_queue_root);
+
+  procedure committed_queue_put(
+    variable root: inout committed_queue_root;
+    data : in byte_string;
+    valid : in boolean);
+
+  procedure committed_queue_get(
+    variable root: inout committed_queue_root;
+    data : out byte_stream;
+    valid : out boolean;
+    dt : in time := 10 ns);
+
+  procedure committed_queue_check(
+    log_context: string;
+    variable root: inout committed_queue_root;
+    data : in byte_string;
+    valid : in boolean;
+    level : log_level_t := LOG_LEVEL_WARNING);
+
 end package testing;
 
 package body testing is
@@ -238,6 +301,35 @@ package body testing is
     end loop;
   end procedure;
 
+  procedure framed_check(
+    log_context: string;
+    signal req: in nsl_bnoc.framed.framed_req;
+    signal ack: out nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+    variable rx_data: byte_stream;
+  begin
+    framed_get(req, ack, clock, rx_data);
+
+    if rx_data.all'length /= data'length
+      or rx_data.all /= data then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data.all)
+          & " *** BAD");
+      log(level, log_context & ": " &
+          " * " & to_string(data)
+          & " *** Expected");
+      return;
+    end if;
+
+    log_info(log_context & ": " &
+             " > " & to_string(rx_data.all)
+             & " OK");
+
+  end procedure;
+
   procedure committed_put(signal req: out nsl_bnoc.committed.committed_req;
                           signal ack: in nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
@@ -246,6 +338,57 @@ package body testing is
   is
   begin
     framed_put(req, ack, clock, data & to_byte(if_else(valid, 1, 0)));
+  end procedure;
+
+  procedure committed_assert(
+    log_context: string;
+    rx_data : in byte_string;
+    rx_valid : in boolean;
+    ref_data : in byte_string;
+    ref_valid : in boolean;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+  begin
+    if ref_valid /= rx_valid then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data)
+          & ", valid: " & to_string(rx_valid)
+          & " *** Expected valid = " & to_string(ref_valid));
+      return;
+    end if;
+
+    if not ref_valid then
+      log_info(log_context & ": " &
+          " > " & to_string(rx_data)
+          & ", not valid, as expected");
+      return;
+    end if;
+
+    if not rx_valid then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data)
+          & ", rx valid: " & to_string(rx_valid)
+          & " OK");
+      return;
+    end if;
+
+    if rx_data'length /= ref_data'length
+      or rx_data /= ref_data then
+      log(level, log_context & ": " &
+          " > " & to_string(rx_data)
+          & ", valid: " & to_string(rx_valid)
+          & " *** BAD");
+      log(level, log_context & ": " &
+          " * " & to_string(ref_data)
+          & ", valid: " & to_string(ref_valid)
+          & " *** Expected");
+      return;
+    end if;
+
+    log_info(log_context & ": " &
+             " > " & to_string(rx_data)
+             & ", valid: " & to_string(rx_valid)
+             & " OK");
   end procedure;
 
   procedure committed_check(
@@ -261,48 +404,8 @@ package body testing is
     variable rx_valid: boolean;
   begin
     committed_get(req, ack, clock, rx_data, rx_valid);
-
-    if valid /= rx_valid then
-      log(level, log_context & ": " &
-          " > " & to_string(rx_data.all)
-          & ", valid: " & to_string(rx_valid)
-          & " *** Expected valid = " & to_string(valid));
-      return;
-    end if;
-
-    if not valid then
-      log_info(log_context & ": " &
-          " > " & to_string(rx_data.all)
-          & ", not valid, as expected");
-      return;
-    end if;
-
-    if not rx_valid then
-      log(level, log_context & ": " &
-          " > " & to_string(rx_data.all)
-          & ", rx valid: " & to_string(rx_valid)
-          & " OK");
-      return;
-    end if;
-
-    if rx_data.all'length /= data'length
-      or rx_data.all /= data then
-      log(level, log_context & ": " &
-          " > " & to_string(rx_data.all)
-          & ", valid: " & to_string(rx_valid)
-          & " *** BAD");
-      log(level, log_context & ": " &
-          " * " & to_string(data)
-          & ", valid: " & to_string(valid)
-          & " *** Expected");
-      return;
-    end if;
-
-    log_info(log_context & ": " &
-             " > " & to_string(rx_data.all)
-             & ", valid: " & to_string(rx_valid)
-             & " OK");
-
+    committed_assert(log_context, rx_data.all, rx_valid, data, valid, level);
+    deallocate(rx_data);
   end procedure;
 
   procedure committed_wait(signal req: out nsl_bnoc.committed.committed_req;
@@ -312,6 +415,112 @@ package body testing is
   is
   begin
     framed_wait(req, ack, clock, cycles);
+  end procedure;
+
+  procedure committed_queue_init(
+    variable root: inout committed_queue_root)
+  is
+  begin
+    root := new committed_queue;
+    root.all := null;
+  end procedure;
+
+  procedure committed_queue_master_worker(
+    signal req: out nsl_bnoc.committed.committed_req;
+    signal ack: in nsl_bnoc.committed.committed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout committed_queue_root;
+    constant context: string := "")
+  is
+    variable data: byte_stream;
+    variable valid: boolean;
+  begin
+    while true
+    loop
+      committed_wait(req, ack, clock, 1);
+      committed_queue_get(root, data, valid);
+      committed_put(req, ack, clock, data.all, valid);
+      deallocate(data);
+    end loop;
+  end procedure;
+
+  procedure committed_queue_slave_worker(
+    signal req: in nsl_bnoc.committed.committed_req;
+    signal ack: out nsl_bnoc.committed.committed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout committed_queue_root)
+  is
+    variable data: byte_stream;
+    variable valid: boolean;
+  begin
+    while true
+    loop
+      committed_get(req, ack, clock, data, valid);
+      committed_queue_put(root, data.all, valid);
+      deallocate(data);
+    end loop;
+  end procedure;
+
+  procedure committed_queue_put(
+    variable root: inout committed_queue_root;
+    data : in byte_string;
+    valid : in boolean)
+  is
+    variable item, chain : committed_queue;
+  begin
+    item := new committed_queue_item;
+    item.all.data := new byte_string(0 to data'length-1);
+    item.all.data.all := data;
+    item.all.valid := valid;
+    item.all.chain := null;
+
+    if root.all = null then
+      root.all := item;
+    else
+      chain := root.all;
+      while chain.all.chain /= null
+      loop
+        chain := chain.all.chain;
+      end loop;
+      chain.all.chain := item;
+    end if;
+  end procedure;
+
+  procedure committed_queue_get(
+    variable root: inout committed_queue_root;
+    data : out byte_stream;
+    valid : out boolean;
+    dt : in time := 10 ns)
+  is
+    variable item : committed_queue;
+  begin
+    while true
+    loop
+      if root.all /= null then
+        item := root.all;
+        root.all := root.all.chain;
+        data := item.data;
+        valid := item.valid;
+        deallocate(item);
+        return;
+      end if;
+      wait for dt;
+    end loop;
+  end procedure;
+
+  procedure committed_queue_check(
+    log_context: string;
+    variable root: inout committed_queue_root;
+    data : in byte_string;
+    valid : in boolean;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+    variable rx_data: byte_stream;
+    variable rx_valid: boolean;
+  begin
+    committed_queue_get(root, rx_data, rx_valid);
+    committed_assert(log_context, rx_data.all, rx_valid, data, valid, level);
+    deallocate(rx_data);
   end procedure;
 
 end package body;
