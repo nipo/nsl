@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_bnoc, nsl_data, nsl_logic;
+library nsl_bnoc, nsl_data, nsl_logic, nsl_math;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
@@ -37,6 +37,9 @@ end entity;
 
 architecture rtl of framed_router is
 
+  constant in_header_count1_c : natural := nsl_math.arith.max(1, in_header_count_c);
+  constant out_header_count1_c : natural := nsl_math.arith.max(1, out_header_count_c);
+
   type input_port_state_t is (
     IS_RESET,
     IS_HEADER,
@@ -50,7 +53,7 @@ architecture rtl of framed_router is
   record
     state : input_port_state_t;
     left : natural range 0 to in_header_count_c-1;
-    header : byte_string(0 to in_header_count_c-1);
+    header : byte_string(0 to in_header_count1_c-1);
     fifo: byte_string(0 to 1);
     fifo_fillness: natural range 0 to 2;
     out_index: natural range 0 to out_count_c-1;
@@ -68,7 +71,7 @@ architecture rtl of framed_router is
   record
     state : output_port_state_t;
     left : natural range 0 to out_header_count_c-1;
-    header : byte_string(0 to out_header_count_c-1);
+    header : byte_string(0 to out_header_count1_c-1);
     fifo: byte_string(0 to 1);
     fifo_fillness: natural range 0 to 2;
     in_index: natural range 0 to in_count_c-1;
@@ -93,8 +96,8 @@ architecture rtl of framed_router is
     state: state_t;
     in_index: natural range 0 to in_count_c-1;
     out_index: natural range 0 to out_count_c-1;
-    in_header : byte_string(0 to in_header_count_c-1);
-    out_header : byte_string(0 to out_header_count_c-1);
+    in_header : byte_string(0 to in_header_count1_c-1);
+    out_header : byte_string(0 to out_header_count1_c-1);
   end record;
 
   signal r, rin: regs_t;
@@ -179,7 +182,7 @@ begin
 
         when IS_HEADER =>
           if in_i(i).valid = '1' then
-            rin.ip(i).header <= rin.ip(i).header(1 to in_header_count_c-1) & in_i(i).data;
+            rin.ip(i).header <= r.ip(i).header(1 to in_header_count_c-1) & in_i(i).data;
             if r.ip(i).left /= 0 then
               rin.ip(i).left <= r.ip(i).left - 1;
             else
