@@ -18,11 +18,11 @@ entity framed_router is
     reset_n_i : in  std_ulogic;
     clock_i   : in  std_ulogic;
 
-    in_i      : in framed_req_array(in_count_c-1 downto 0);
-    in_o      : out framed_ack_array(in_count_c-1 downto 0);
+    in_i      : in framed_req_array(0 to in_count_c-1);
+    in_o      : out framed_ack_array(0 to in_count_c-1);
 
-    out_o     : out framed_req_array(out_count_c-1 downto 0);
-    out_i     : in framed_ack_array(out_count_c-1 downto 0);
+    out_o     : out framed_req_array(0 to out_count_c-1);
+    out_i     : in framed_ack_array(0 to out_count_c-1);
 
     route_valid_o       : out std_ulogic;
     route_header_o      : out byte_string(0 to in_header_count_c-1);
