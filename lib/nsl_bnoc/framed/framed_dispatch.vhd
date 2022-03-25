@@ -51,7 +51,7 @@ begin
     end if;
   end process;
 
-  transition: process(in_i, out_i, r)
+  transition: process(in_i, out_i, r, enable_i, destination_i)
   begin
     rin <= r;
 
