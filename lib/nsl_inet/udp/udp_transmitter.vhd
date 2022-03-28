@@ -96,6 +96,7 @@ begin
 
     fifo_pop := false;
     fifo_push := false;
+    fifo_data := "--------";
 
     case r.in_state is
       when IN_RESET =>
