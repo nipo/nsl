@@ -148,6 +148,29 @@ package mii is
       );
   end component;
 
+  component mii_driver is
+    generic(
+      -- Either "resync" or "oversampled"
+      implementation_c: string := "resync";
+      ipg_c : natural := 96 --bits
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      -- MAC clock, equal or faster than actual RX and TX clocks for "resync",
+      -- at least 2x TX/RX clock for "oversampled"
+      clock_i : in std_ulogic;
+
+      mii_o : out mii_m2p;
+      mii_i : in  mii_p2m;
+
+      rx_o : out nsl_bnoc.committed.committed_req;
+      rx_i : in nsl_bnoc.committed.committed_ack;
+
+      tx_i : in nsl_bnoc.committed.committed_req;
+      tx_o : out nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
   -- MII driver that resynchronizes all signals internally using fifos.
   component mii_driver_resync is
     generic(
