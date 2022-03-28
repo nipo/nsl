@@ -1,12 +1,13 @@
 target = inet_test
-top = main.boundary.fpga_io
-main-srcdir = $(SRC_DIR)/src
+top = work.boundary.fpga_io
+work-srcdir = $(SRC_DIR)/../src
+board := arty_a7
 target_part = xc7a35t
 target_package = csg324
 target_speed = -1
 hwdep = xilinx
 tool = vivado
-NSL ?= ../..
+NSL ?= ../../..
 
 all: $(target)-fast.bit
 

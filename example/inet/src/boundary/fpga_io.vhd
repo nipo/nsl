@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_mii, nsl_clocking, nsl_smi, main, nsl_hwdep, nsl_io, nsl_bnoc;
+library nsl_mii, nsl_clocking, nsl_smi, work, nsl_hwdep, nsl_io, nsl_bnoc;
 
 entity fpga_io is
   port(
@@ -80,7 +80,7 @@ begin
 
   eth_rstn <= '0' when reset_n_25_s = '0' else 'Z';
 
-  main_inst: main.func.func_main
+  main_inst: work.func.func_main
     generic map(
       clock_hz_c => 100e6
       )
