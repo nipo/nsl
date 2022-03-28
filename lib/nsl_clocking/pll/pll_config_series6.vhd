@@ -10,10 +10,10 @@ package body pll_config_series67 is
   function variant_get(hw_variant : string) return pll_variant
   is
   begin
-    if nsl_hwdep.xc6_config.pll_variant_get(hw_variant) = nsl_hwdep.xc6_config.PLL then
-      return S6_PLL;
-    else
+    if hw_variant = "DCM" then
       return S6_DCM;
+    else
+      return S6_PLL;
     end if;
   end function;
         
