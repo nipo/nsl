@@ -43,8 +43,13 @@ package framed_transactor is
   function smi_c22_write(phyad, addr: natural;
                          data: unsigned) return byte_string;
 
+  function smi_c22_read(phyad, addr: natural) return byte_string;
+
   function smi_c22x_write(prtad, devad: natural;
                           addr, data: unsigned) return byte_string;
+
+  function smi_c22x_read(prtad, devad: natural;
+                         addr: unsigned) return byte_string;
 
   function smi_c45_addr(prtad, devad: natural;
                         addr: unsigned) return byte_string;
@@ -152,6 +157,25 @@ package body framed_transactor is
     return ret;
   end function;
 
+  function smi_c22_read(phyad, addr: natural) return byte_string
+  is
+    variable ret: byte_string(1 to 2);
+  begin
+    assert phyad <= 31
+      report "Bad phy address"
+      severity failure;
+    assert addr <= 31
+      report "Bad register address"
+      severity failure;
+
+    ret(1)(7 downto 5) := "100";
+    ret(1)(4 downto 0) := std_ulogic_vector(to_unsigned(phyad, 5));
+    ret(2)(7 downto 5) := "000";
+    ret(2)(4 downto 0) := std_ulogic_vector(to_unsigned(addr, 5));
+    
+    return ret;
+  end function;
+
   function smi_c45_addr(prtad, devad: natural;
                         addr: unsigned) return byte_string
   is
@@ -213,6 +237,16 @@ package body framed_transactor is
       & smi_c22_write(prtad, 14, addr)
       & smi_c22_write(prtad, 13, to_unsigned(16#4000# + devad, 16))
       & smi_c22_write(prtad, 14, data);
+  end function;
+
+  function smi_c22x_read(prtad, devad: natural;
+                         addr: unsigned) return byte_string
+  is
+  begin
+    return smi_c22_write(prtad, 13, to_unsigned(devad, 16))
+      & smi_c22_write(prtad, 14, addr)
+      & smi_c22_write(prtad, 13, to_unsigned(16#4000# + devad, 16))
+      & smi_c22_read(prtad, 14);
   end function;
 
 end package body framed_transactor;
