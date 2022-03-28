@@ -31,6 +31,8 @@ package bytestream is
                       b: byte := dontcare_byte_c) return byte_string;
   function shift_right(s: byte_string;
                        b: byte := dontcare_byte_c) return byte_string;
+  function first_left(s: byte_string) return byte;
+  function first_right(s: byte_string) return byte;
 
   function rot_left(s: byte_string) return byte_string;
   function rot_right(s: byte_string) return byte_string;
@@ -212,12 +214,18 @@ package body bytestream is
   function rot_left(s: byte_string) return byte_string
   is
   begin
+    if s'length = 0 then
+      return null_byte_string;
+    end if;
     return shift_left(s, s(s'left));
   end function;
   
   function rot_right(s: byte_string) return byte_string
   is
   begin
+    if s'length = 0 then
+      return null_byte_string;
+    end if;
     return shift_right(s, s(s'right));
   end function;
 
@@ -287,6 +295,24 @@ package body bytestream is
       ret(i) := xl(i) xor xr(i);
     end loop;
     return ret;
+  end function;
+
+  function first_left(s: byte_string) return byte
+  is
+  begin
+    if s'length = 0 then
+      return dontcare_byte_c;
+    end if;
+    return s(s'left);
+  end function;
+
+  function first_right(s: byte_string) return byte
+  is
+  begin
+    if s'length = 0 then
+      return dontcare_byte_c;
+    end if;
+    return s(s'right);
   end function;
 
 end package body bytestream;
