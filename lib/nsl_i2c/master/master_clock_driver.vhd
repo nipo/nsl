@@ -83,8 +83,8 @@ architecture beh of master_clock_driver is
 
 begin
 
-  idle_timeout_clock_count_i <= half_cycle_clock_count_i & "0000";
-  stuck_timeout_clock_count_i <= half_cycle_clock_count_i & "000";
+  idle_timeout_clock_count_i <= half_cycle_clock_count_i & "1000";
+  stuck_timeout_clock_count_i <= half_cycle_clock_count_i & "100";
   
   ck : process (clock_i, reset_n_i)
   begin
@@ -93,7 +93,7 @@ begin
     end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-      r.bus_state <= BUS_RESET;
+      r.bus_state <= BUS_FREE;
     end if;
   end process;
 

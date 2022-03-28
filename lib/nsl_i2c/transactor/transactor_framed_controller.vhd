@@ -2,12 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_i2c;
+library nsl_bnoc, nsl_i2c, nsl_math;
 use nsl_i2c.transactor.all;
 use nsl_i2c.i2c."+";
 use nsl_i2c.master.all;
 
 entity transactor_framed_controller is
+  generic(
+    clock_i_hz_c : natural
+    );
   port(
     clock_i    : in std_ulogic;
     reset_n_i : in std_ulogic;
@@ -23,6 +26,11 @@ entity transactor_framed_controller is
 end entity;
 
 architecture rtl of transactor_framed_controller is
+
+  constant pre_div_c : natural := clock_i_hz_c / 1e6;
+  constant pre_div_l2_c : natural := nsl_math.arith.log2(pre_div_c);
+  constant pre_div_u_c : unsigned(pre_div_l2_c-2 downto 0) := (others => '1');
+  subtype div_u_t is unsigned(pre_div_l2_c-2+6 downto 0);
   
   type state_t is (
     ST_RESET,
@@ -58,7 +66,7 @@ architecture rtl of transactor_framed_controller is
     cmd        : std_ulogic_vector(7 downto 0);
     data       : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
-    divisor    : unsigned(10 downto 0);
+    divisor    : unsigned(5 downto 0);
   end record;
 
   signal r, rin : regs_t;
@@ -72,8 +80,12 @@ architecture rtl of transactor_framed_controller is
   signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
   signal shift_r_valid_i, shift_r_ready_o : std_ulogic;
   signal shift_w_data_o, shift_r_data_i : std_ulogic_vector(7 downto 0);
+  signal div_s: div_u_t;
+
 begin
 
+  div_s <= r.divisor & pre_div_u_c;
+  
   line_mon: nsl_i2c.i2c.i2c_line_monitor
     generic map(
       debounce_count_c => 2
@@ -92,7 +104,7 @@ begin
       clock_i   => clock_i,
       reset_n_i => reset_n_i,
 
-      half_cycle_clock_count_i => r.divisor,
+      half_cycle_clock_count_i => div_s,
 
       i2c_i => i2c_filt_i,
       i2c_o => i2c_clocker_o,
@@ -177,7 +189,7 @@ begin
 
           elsif std_match(r.cmd, I2C_CMD_DIV) then
             rin.state <= ST_RSP_PUT;
-            rin.divisor <= unsigned(r.cmd(5 downto 0)) & "00000";
+            rin.divisor <= unsigned(r.cmd(5 downto 0));
 
           elsif std_match(r.cmd, I2C_CMD_START) then
             if clocker_owned_i = '1' then

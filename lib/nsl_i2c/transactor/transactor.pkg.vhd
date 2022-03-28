@@ -25,6 +25,9 @@ package transactor is
   constant I2C_CMD_STOP      : nsl_bnoc.framed.framed_data_t := "00100001";
 
   component transactor_framed_controller
+    generic(
+      clock_i_hz_c : natural
+      );
     port(
       clock_i    : in std_ulogic;
       reset_n_i : in std_ulogic;
