@@ -66,6 +66,7 @@ endef
 #  $2: Sources fileset name (should exist)
 #  $2: Constraints fileset name (should exist)
 define vivado-tcl-sources-append
+	$(call file-append,$1,source $(BUILD_ROOT)/support/vivado-msg-suppress.tcl)
 	$(call file-append,$1,set_property source_mgmt_mode DisplayOnly [current_project])
 	$(call file-append,$1,set _sources_fileset_name "$2")
 	$(call file-append,$1,set _constr_fileset_name "$3")
