@@ -89,7 +89,7 @@ include $3/Makefile
 
 $1.$2-vhdl-version := $$(vhdl-version)
 $1.$2-sub-packages := $$(sort $$(packages))
-$$(eval $$(foreach l,$$(sort $$(source-types)),$$(foreach s,$$($$l-sources),$$(call declare-source,$3/$$s,$$l,$1,$2))))
+$$(eval $$(foreach l,$$(sort $$(source-types)),$$(foreach s,$$($$l-sources),$$(call declare-source,$$(if $$(filter /%,$$s),$$s,$3/$$s),$$l,$1,$2))))
 
 $1.$2-deps-unsorted := $$(foreach p,$$(deps),$$(call pkg-full-name,$$p))
 $$(eval $$(call ensure-package-deps-parsed,$1.$2,$4/$1.$2))
