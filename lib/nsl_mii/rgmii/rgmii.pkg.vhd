@@ -1,7 +1,11 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_mii;
+use nsl_mii.mii.all;
+use nsl_bnoc.committed.all;
+use nsl_bnoc.framed.all;
 
 package rgmii is
 
@@ -43,10 +47,6 @@ package rgmii is
     generic(
       rx_clock_delay_ps_c: natural := 0;
       tx_clock_delay_ps_c: natural := 0;
-      -- If not using in-band status, link-up and link mode will be
-      -- deduced from measurement of RX clock from RGMII against TX
-      -- clock.
-      inband_status_c : boolean := true;
       -- In bit time
       ipg_c : natural := 96
       );
@@ -54,20 +54,40 @@ package rgmii is
       reset_n_i : in std_ulogic;
       clock_i : in std_ulogic;
 
-      rgmii_o : out nsl_mii.mii.rgmii_io_group_t;
-      rgmii_i : in  nsl_mii.mii.rgmii_io_group_t;
-
-      mode_o : out rgmii_mode_t;
-      -- Imprecise if inband_status_c = false
-      link_up_o : out std_ulogic;
-      -- Only available if inband_status_c = true
-      full_duplex_o : out std_ulogic;
+      rgmii_o : out rgmii_io_group_t;
+      rgmii_i : in  rgmii_io_group_t;
       
-      rx_o : out nsl_bnoc.committed.committed_req;
-      rx_i : in nsl_bnoc.committed.committed_ack;
+      mode_i : in rgmii_mode_t;
+      
+      rx_o : out committed_req;
+      rx_i : in committed_ack;
 
-      tx_i : in nsl_bnoc.committed.committed_req;
-      tx_o : out nsl_bnoc.committed.committed_ack
+      tx_i : in committed_req;
+      tx_o : out committed_ack
+      );
+  end component;
+
+  component rgmii_smi_status_poller is
+    generic(
+      refresh_hz_c : real := 2.0;
+      clock_i_hz_c: natural
+      );
+    port(
+      reset_n_i   : in std_ulogic;
+      clock_i     : in std_ulogic;
+
+      irq_n_i    : in std_ulogic := '0';
+
+      phyad_i : in unsigned(4 downto 0);
+      
+      link_up_o: out std_ulogic;
+      mode_o: out rgmii_mode_t;
+      fd_o: out std_ulogic;
+      
+      cmd_o  : out framed_req;
+      cmd_i  : in  framed_ack;
+      rsp_i  : in  framed_req;
+      rsp_o  : out framed_ack
       );
   end component;
 
@@ -83,7 +103,7 @@ package rgmii is
       flit_i : in rgmii_sdr_io_t;
       ready_o : out std_ulogic;
 
-      rgmii_o : out nsl_mii.mii.rgmii_io_group_t
+      rgmii_o : out rgmii_io_group_t
       );
   end component;
 
@@ -99,7 +119,7 @@ package rgmii is
       rx_clock_o : out std_ulogic;
 
       mode_i : in rgmii_mode_t;
-      rgmii_i : in  nsl_mii.mii.rgmii_io_group_t;
+      rgmii_i : in  rgmii_io_group_t;
 
       flit_o : out rgmii_sdr_io_t;
       valid_o : out std_ulogic
