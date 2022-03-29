@@ -86,6 +86,11 @@ package ipv4 is
       unicast_i : in ipv4_t;
       broadcast_i : in ipv4_t;
 
+      -- Notification channel to ARP
+      -- l12 header | ipv4 | context
+      notify_o : out byte_string(0 to l12_header_length_c+4);
+      notify_valid_o : out std_ulogic;
+
       l2_i : in committed_req;
       l2_o : out committed_ack;
 
@@ -187,6 +192,11 @@ package ipv4 is
       to_l2_i : in committed_ack;
       from_l2_i : in committed_req;
       from_l2_o : out committed_ack;
+
+      -- Rx notification API
+      -- l1 header | mac | context | ipv4 | context
+      notify_i : in byte_string(0 to l1_header_length_c+7+4);
+      notify_valid_i : in std_ulogic;
 
       -- Resolver API for IP usage
       query_i : in nsl_bnoc.framed.framed_req;

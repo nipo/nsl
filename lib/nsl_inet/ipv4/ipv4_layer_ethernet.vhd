@@ -68,6 +68,9 @@ architecture beh of ipv4_layer_ethernet is
 
   signal arp_req_s: framed_io;
 
+  signal notify_s : byte_string(0 to l1_header_length_c+6+1+4);
+  signal notify_valid_s : std_ulogic;
+
   signal to_l4_drop_s: std_ulogic;
   signal to_l4_in_header_s : byte_string(0 to 0);
   signal to_l4_destination_s : natural range 0 to ip_proto_l_c'length-1;
@@ -100,6 +103,9 @@ begin
       unicast_i => unicast_i,
       broadcast_i => broadcast_s,
 
+      notify_o => notify_s,
+      notify_valid_o => notify_valid_s,
+      
       l2_i => ip_from_l2_i,
       l2_o => ip_from_l2_o,
       
@@ -215,6 +221,9 @@ begin
       hwaddr_i => hwaddr_i,
 
       l1_header_i => l1_header_i,
+
+      notify_i => notify_s,
+      notify_valid_i => notify_valid_s,
       
       to_l2_o => arp_to_l2_o,
       to_l2_i => arp_to_l2_i,

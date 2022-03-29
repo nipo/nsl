@@ -73,6 +73,11 @@ entity arp_ethernet is
     from_l2_i : in committed_req;
     from_l2_o : out committed_ack;
 
+    -- Rx notification API
+    -- l1 header | mac | context | ipv4 | context
+    notify_i : in byte_string(0 to l1_header_length_c+7+4);
+    notify_valid_i : in std_ulogic;
+
     -- Resolver API for IP usage
     query_i : in framed_req;
     query_o : out framed_ack;
@@ -707,7 +712,12 @@ begin
       ST_VICTIM_TTL_WRITE,
       ST_DECAY_TTL_LOAD,
       ST_DECAY_TTL_DEC,
-      ST_DECAY_TTL_STORE
+      ST_DECAY_TTL_STORE,
+      ST_NOTIFY_PA_LOAD,
+      ST_NOTIFY_PA_CMP,
+      ST_NOTIFY_HA_CMP,
+      ST_NOTIFY_TTL_READ,
+      ST_NOTIFY_TTL_WRITE
       );
 
     constant tmp_size_c: natural := nsl_math.arith.max(l1_header_i'length, ethernet_layer_header_length_c);
@@ -722,6 +732,10 @@ begin
       default_entry, entry: cache_line_index_t;
       decay_pending: boolean;
       ttl: unsigned(7 downto 0);
+
+      notify_pending: boolean;
+      notify_pa: ipv4_t;
+      notify_ha: mac48_t;
     end record;
 
     signal r, rin: regs_t;
@@ -737,7 +751,7 @@ begin
     end process;
 
     transition: process(r, from_l2_i, unicast_i, sender_response_ack_s, ticker_s,
-                        receiver_ram_rdata_s) is
+                        receiver_ram_rdata_s, notify_i, notify_valid_i) is
     begin
       rin <= r;
 
@@ -748,6 +762,15 @@ begin
 
       if ticker_s = '1' then
         rin.decay_pending <= true;
+      end if;
+
+      if notify_valid_i = '1' and not r.notify_pending then
+        if notify_i(l1_header_length_c+6) = x"00" and
+          notify_i(l1_header_length_c+6+1+4) = x"00" then
+          rin.notify_ha <= notify_i(l1_header_length_c to l1_header_length_c+5);
+          rin.notify_pa <= notify_i(l1_header_length_c+6+1 to l1_header_length_c+6+4);
+          rin.notify_pending <= true;
+        end if;
       end if;
       
       case r.state is
@@ -778,6 +801,9 @@ begin
             rin.decay_pending <= false;
             rin.entry <= (others => '0');
             rin.state <= ST_DECAY_TTL_LOAD;
+          elsif r.notify_pending then
+            rin.entry <= (others => '0');
+            rin.state <= ST_NOTIFY_PA_LOAD;
           end if;
 
         when ST_GET_L1 =>
@@ -914,17 +940,17 @@ begin
           end if;
 
         when ST_GET_COMMIT =>
-          if from_l2_i.valid = '1' then
-            if from_l2_i.last = '1' and from_l2_i.data = x"01" then
-              if r.is_request then
-                rin.state <= ST_REQ_HANDLE;
-              else
-                rin.state <= ST_VICTIM_TTL_LOAD;
-                rin.entry <= to_unsigned(0, rin.entry'length);
-                rin.default_entry <= to_unsigned(0, rin.entry'length);
-              end if;
-            end if;  
-          end if;
+          if from_l2_i.valid = '1' and from_l2_i.last = '1' then
+            if from_l2_i.data = x"00" then
+              rin.state <= ST_IDLE;
+            elsif r.is_request then
+              rin.state <= ST_REQ_HANDLE;
+            else
+              rin.state <= ST_VICTIM_TTL_LOAD;
+              rin.entry <= to_unsigned(0, rin.entry'length);
+              rin.default_entry <= to_unsigned(0, rin.entry'length);
+            end if;
+          end if;  
 
         when ST_DROP =>
           if from_l2_i.valid = '1' and from_l2_i.last = '1' then
@@ -1015,6 +1041,63 @@ begin
           else
             rin.state <= ST_IDLE;
           end if;
+
+        when ST_NOTIFY_PA_LOAD =>
+          rin.state <= ST_NOTIFY_PA_CMP;
+          rin.ref_pa <= r.notify_pa;
+          rin.left <= 3;
+
+        when ST_NOTIFY_PA_CMP =>
+          rin.ref_pa <= shift_left(r.ref_pa);
+          if r.left /= 0 then
+            rin.left <= r.left - 1;
+          end if;
+
+          if receiver_ram_rdata_s /= r.ref_pa(0) then
+            if r.entry /= cache_count_c-1 then
+              rin.entry <= r.entry + 1;
+              rin.state <= ST_NOTIFY_PA_LOAD;
+            else
+              rin.notify_pending <= false;
+              rin.state <= ST_IDLE;
+            end if;
+          elsif r.left = 0 then
+            rin.state <= ST_NOTIFY_HA_CMP;
+            rin.left <= 5;
+            rin.ha <= r.notify_ha;
+          end if;
+
+        when ST_NOTIFY_HA_CMP =>
+          rin.ha <= shift_left(r.ha);
+          if r.left /= 0 then
+            rin.left <= r.left - 1;
+          end if;
+
+          if receiver_ram_rdata_s /= r.ha(0) then
+            if r.entry /= cache_count_c-1 then
+              rin.entry <= r.entry + 1;
+              rin.state <= ST_NOTIFY_PA_LOAD;
+            else
+              rin.notify_pending <= false;
+              rin.state <= ST_IDLE;
+            end if;
+          elsif r.left = 0 then
+            rin.state <= ST_NOTIFY_TTL_READ;
+            rin.left <= 5;
+          end if;
+
+        when ST_NOTIFY_TTL_READ =>
+          rin.ttl <= to_unsigned(ttl_init_value_c, 8);
+          if receiver_ram_rdata_s(7) /= '1' then
+            rin.state <= ST_NOTIFY_TTL_WRITE;
+          else
+            rin.notify_pending <= false;
+            rin.state <= ST_IDLE;
+          end if;
+
+        when ST_NOTIFY_TTL_WRITE =>
+          rin.notify_pending <= false;
+          rin.state <= ST_IDLE;
           
       end case;
     end process;
@@ -1070,11 +1153,36 @@ begin
           receiver_ram_wdata_s <= r.pa(0);
           col := entry_off_pa3_c - r.left;
 
-        when ST_VICTIM_TTL_WRITE | ST_DECAY_TTL_STORE | ST_INIT_TTL_WRITE =>
+        when ST_VICTIM_TTL_WRITE | ST_DECAY_TTL_STORE | ST_INIT_TTL_WRITE
+          | ST_NOTIFY_TTL_WRITE =>
           receiver_ram_en_s <= '1';
           receiver_ram_wr_s <= '1';
           receiver_ram_wdata_s <= std_ulogic_vector(r.ttl);
           col := entry_off_ttl_c;
+
+        when ST_NOTIFY_PA_LOAD =>
+          col := entry_off_pa0_c; receiver_ram_en_s <= '1';
+
+        when ST_NOTIFY_PA_CMP =>
+          case r.left is
+            when 3 => col := entry_off_pa1_c; receiver_ram_en_s <= '1';
+            when 2 => col := entry_off_pa2_c; receiver_ram_en_s <= '1';
+            when 1 => col := entry_off_pa3_c; receiver_ram_en_s <= '1';
+            when others => col := entry_off_ha0_c; receiver_ram_en_s <= '1';
+          end case;
+
+        when ST_NOTIFY_HA_CMP =>
+          case r.left is
+            when 5 => col := entry_off_ha1_c; receiver_ram_en_s <= '1';
+            when 4 => col := entry_off_ha2_c; receiver_ram_en_s <= '1';
+            when 3 => col := entry_off_ha3_c; receiver_ram_en_s <= '1';
+            when 2 => col := entry_off_ha4_c; receiver_ram_en_s <= '1';
+            when 1 => col := entry_off_ha5_c; receiver_ram_en_s <= '1';
+            when others => col := entry_off_ttl_c; receiver_ram_en_s <= '1';
+          end case;
+
+        when ST_NOTIFY_TTL_READ =>
+          null;
 
       end case;
 

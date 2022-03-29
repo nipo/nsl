@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, nsl_inet, nsl_math, nsl_logic;
 use nsl_bnoc.committed.all;
+use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_inet.ipv4.all;
@@ -20,6 +21,9 @@ entity ipv4_receiver is
 
     unicast_i : in ipv4_t;
     broadcast_i : in ipv4_t;
+
+    notify_o : out byte_string(0 to l12_header_length_c+4);
+    notify_valid_o : out std_ulogic;
 
     l2_i : in nsl_bnoc.committed.committed_req;
     l2_o : out nsl_bnoc.committed.committed_ack;
@@ -84,6 +88,8 @@ architecture beh of ipv4_receiver is
     
     out_state : out_state_t;
     out_left : integer range 0 to 3;
+
+    notify_data: byte_string(0 to 4+l12_header_length_c);
   end record;
 
   signal r, rin: regs_t;
@@ -122,6 +128,7 @@ begin
 
       when IN_L12_HEADER =>
         if l2_i.valid = '1' then
+          rin.notify_data <= shift_left(r.notify_data, l2_i.data);
           if l2_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_left /= 0 then
@@ -293,7 +300,8 @@ begin
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
             rin.total_len <= r.total_len - 1;
             
-            rin.src_addr <= r.src_addr(1 to 3) & l2_i.data;
+            rin.src_addr <= shift_left(r.src_addr, l2_i.data);
+            rin.notify_data <= shift_left(r.notify_data, l2_i.data);
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
             else
@@ -358,6 +366,11 @@ begin
             and (r.is_unicast or r.is_bcast)
             and (r.total_len(15) = '1') then
             rin.in_state <= IN_COMMIT;
+            if r.is_bcast then
+              rin.notify_data <= shift_left(r.notify_data, x"01");
+            else
+              rin.notify_data <= shift_left(r.notify_data, x"00");
+            end if;
           else
             rin.in_state <= IN_CANCEL;
           end if;
@@ -389,7 +402,7 @@ begin
         
       when OUT_PEER_IP =>
         if l4_i.ready = '1' then
-          rin.src_addr <= r.src_addr(1 to 3) & l2_i.data;
+          rin.src_addr <= shift_left(r.src_addr);
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
           else
@@ -447,6 +460,9 @@ begin
 
   moore: process(r) is
   begin
+    notify_valid_o <= '0';
+    notify_o <= r.notify_data;
+
     case r.out_state is
       when OUT_RESET =>
         l4_o <= committed_req_idle_c;
@@ -473,6 +489,7 @@ begin
           valid => r.fifo_fillness /= 0);
 
       when OUT_COMMIT =>
+        notify_valid_o <= '1';
         l4_o <= committed_commit(true);
         
       when OUT_CANCEL =>
