@@ -34,6 +34,7 @@ package framed is
                                               last => '-',
                                               valid => '0');
   constant framed_ack_idle_c : framed_ack := (ready => '0');
+  constant framed_ack_blackhole_c : framed_ack := (ready => '1');
 
   type framed_req_array is array(natural range <>) of framed_req;
   type framed_ack_array is array(natural range <>) of framed_ack;
