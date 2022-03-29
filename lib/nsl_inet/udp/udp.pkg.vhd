@@ -15,6 +15,7 @@ package udp is
   
   -- Frame structure from/to layer 3
   -- * Some fixed context, passed through [0..N]
+  -- * Layer 4 PDU size, big endian [2]
   -- * Layer 4 data [*]
   -- * Status
   --   [0]   Validity bit

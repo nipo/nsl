@@ -54,6 +54,7 @@ package ipv4 is
   -- * IP Context
   --   [0] Address type (0: Unicast, 1: Broadcast)
   --   [7:1] Reserved
+  -- * Layer 4 PDU size, big endian [2]
   -- * Layer 4 PDU
   -- * Status
   --   [0]   Validity bit

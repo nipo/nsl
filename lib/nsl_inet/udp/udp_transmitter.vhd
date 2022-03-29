@@ -42,6 +42,7 @@ architecture beh of udp_transmitter is
   type out_state_t is (
     OUT_RESET,
     OUT_HEADER,
+    OUT_PDU_LEN,
     OUT_LOCAL_PORT,
     OUT_REMOTE_PORT,
     OUT_TOTAL_LEN,
@@ -162,9 +163,8 @@ begin
       when IN_DATA =>
         if l5_s.req.valid = '1' and r.fifo_fillness < fifo_depth_c then
           fifo_push := true;
-          if l5_s.req.last = '0' then
-            fifo_data := l5_s.req.data;
-          else
+          fifo_data := l5_s.req.data;
+          if l5_s.req.last = '1' then
             rin.in_state <= IN_DONE;
           end if;
         end if;
@@ -182,7 +182,7 @@ begin
             rin.out_state <= OUT_HEADER;
             rin.out_left <= header_length_c - 1;
           else
-            rin.out_state <= OUT_REMOTE_PORT;
+            rin.out_state <= OUT_PDU_LEN;
             rin.out_left <= 1;
           end if;
         end if;
@@ -190,6 +190,17 @@ begin
       when OUT_HEADER =>
         if l3_i.ready = '1' then
           rin.header <= shift_left(r.header);
+          if r.out_left /= 0 then
+            rin.out_left <= r.out_left - 1;
+          else
+            rin.out_state <= OUT_PDU_LEN;
+            rin.out_left <= 1;
+          end if;
+        end if;
+
+      when OUT_PDU_LEN =>
+        if l3_i.ready = '1' then
+          rin.total_len <= r.total_len(7 downto 0) & r.total_len(15 downto 8);
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
           else
@@ -317,7 +328,7 @@ begin
       when OUT_REMOTE_PORT =>
         l3_o <= committed_flit(std_ulogic_vector(r.remote_port(15 downto 8)));
 
-      when OUT_TOTAL_LEN =>
+      when OUT_TOTAL_LEN | OUT_PDU_LEN =>
         l3_o <= committed_flit(std_ulogic_vector(r.total_len(15 downto 8)));
     end case;
   end process;

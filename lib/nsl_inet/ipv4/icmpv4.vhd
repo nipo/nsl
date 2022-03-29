@@ -81,14 +81,14 @@ architecture beh of icmpv4 is
     );
 
   constant fifo_depth_c : integer := 2;
-  constant max_step_c : integer := nsl_math.arith.max(header_length_c, 2);
+  constant max_step_c : integer := nsl_math.arith.max(header_length_c+2, 2);
 
   type regs_t is
   record
     in_state : in_state_t;
     in_left : integer range 0 to max_step_c-1;
 
-    header: byte_string(0 to header_length_c-1);
+    header: byte_string(0 to header_length_c+1);
     in_checksum : checksum_t;
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -125,12 +125,8 @@ begin
     case r.in_state is
       when IN_RESET =>
         rin.in_checksum <= (others => '0');
-        if header_length_c /= 0 then
-          rin.in_state <= IN_HEADER;
-          rin.in_left <= header_length_c - 1;
-        else
-          rin.in_state <= IN_CODE;
-        end if;
+        rin.in_state <= IN_HEADER;
+        rin.in_left <= header_length_c + 1;
 
       when IN_HEADER =>
         if from_l3_i.valid = '1' then
@@ -214,12 +210,8 @@ begin
     case r.out_state is
       when OUT_RESET =>
         if r.in_state = IN_DATA then
-          if header_length_c /= 0 then
-            rin.out_state <= OUT_HEADER;
-            rin.out_left <= header_length_c - 1;
-          else
-            rin.out_state <= OUT_TYPE;
-          end if;
+          rin.out_state <= OUT_HEADER;
+          rin.out_left <= header_length_c + 1;
         end if;
 
       when OUT_HEADER =>

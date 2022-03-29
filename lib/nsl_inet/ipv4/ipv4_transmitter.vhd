@@ -39,10 +39,10 @@ architecture beh of ipv4_transmitter is
 
   type in_state_t is (
     IN_RESET,
-    IN_SIZE,
     IN_PROTO,
     IN_PEER_IP,
     IN_CTX,
+    IN_PDU_LEN,
     IN_RESOLVE_CMD,
     IN_RESOLVE_RSP,
     IN_L12_HEADER,
@@ -72,10 +72,6 @@ architecture beh of ipv4_transmitter is
 
   constant fifo_depth_c : integer := 2;
   constant max_step_c : integer := nsl_math.arith.max(l12_header_length_c, 4);
-
-  signal l4_s: committed_bus;
-  signal total_size_s: unsigned(nsl_math.arith.log2(mtu_c)-1 downto 0);
-  signal total_size_ready_s, total_size_valid_s: std_ulogic;
 
   type regs_t is
   record
@@ -123,9 +119,8 @@ begin
     end if;
   end process;
 
-  transition: process(r, l2_i, l4_s.req, unicast_i,
-                      l12_query_i, l12_reply_i,
-                      total_size_valid_s, total_size_s) is
+  transition: process(r, l2_i, l4_i, unicast_i,
+                      l12_query_i, l12_reply_i) is
     variable fifo_push, fifo_pop: boolean;
     variable fifo_data : byte;
   begin
@@ -137,18 +132,12 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_state <= IN_SIZE;
+        rin.in_state <= IN_PROTO;
 
-      when IN_SIZE =>
-        if total_size_valid_s = '1' then
-          rin.total_len <= resize(total_size_s, 16);
-          rin.in_state <= IN_PROTO;
-        end if;
-
-        when IN_PROTO =>
-        if l4_s.req.valid = '1' then
-          rin.proto <= l4_s.req.data;
-          if l4_s.req.last = '1' then
+      when IN_PROTO =>
+        if l4_i.valid = '1' then
+          rin.proto <= l4_i.data;
+          if l4_i.last = '1' then
             rin.in_state <= IN_RESET;
           else
             rin.in_state <= IN_PEER_IP;
@@ -159,20 +148,20 @@ begin
         end if;
 
       when IN_PEER_IP =>
-        if l4_s.req.valid = '1' then
-          if l4_s.req.last = '1' then
+        if l4_i.valid = '1' then
+          if l4_i.last = '1' then
             rin.in_state <= IN_RESET;
           else
-            rin.dst_addr <= r.dst_addr(1 to 3) & l4_s.req.data;
+            rin.dst_addr <= r.dst_addr(1 to 3) & l4_i.data;
             rin.src_addr <= r.src_addr(1 to 3) & r.src_addr(0);
             if r.in_left = 3 or r.in_left = 1 then
               rin.checksum <= checksum_update(r.checksum,
-                                              byte_string'(0 => l4_s.req.data,
+                                              byte_string'(0 => l4_i.data,
                                                            1 => r.src_addr(1)));
             else
               rin.checksum <= checksum_update(r.checksum,
                                               byte_string'(0 => r.src_addr(1),
-                                                           1 => l4_s.req.data));
+                                                           1 => l4_i.data));
             end if;
             
             if r.in_left /= 0 then
@@ -184,23 +173,39 @@ begin
         end if;
 
       when IN_CTX =>
-        if l4_s.req.valid = '1' then
-          if l4_s.req.last = '1' then
+        if l4_i.valid = '1' then
+          if l4_i.last = '1' then
             rin.in_state <= IN_RESET;
           else
-            if l12_header_length_c /= 0 then
-              rin.in_state <= IN_RESOLVE_CMD;
-              rin.in_left <= 3;
-            else
-              rin.in_state <= IN_DATA;
-            end if;
+            rin.in_state <= IN_PDU_LEN;
+            rin.in_left <= 1;
           end if;
         end if;
 
+      when IN_PDU_LEN =>
+        if l4_i.valid = '1' then
+          if l4_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          else
+            rin.total_len <= r.total_len(7 downto 0) & unsigned(l4_i.data);
+            if r.in_left = 0 then
+              if l12_header_length_c /= 0 then
+                rin.in_state <= IN_RESOLVE_CMD;
+                rin.in_left <= 3;
+              else
+                rin.in_state <= IN_DATA;
+              end if;
+            else
+              rin.in_left <= r.in_left - 1;
+            end if;
+          end if;
+        end if;
+                             
       when IN_RESOLVE_CMD =>
         if l12_query_i.ready = '1' then
           rin.dst_addr <= r.dst_addr(1 to 3) & r.dst_addr(0);
           if r.in_left = 0 then
+            rin.total_len <= r.total_len + 20;
             rin.in_state <= IN_RESOLVE_RSP;
           else
             rin.in_left <= r.in_left - 1;
@@ -230,11 +235,11 @@ begin
         end if;
 
       when IN_DATA =>
-        if l4_s.req.valid = '1' and r.fifo_fillness < fifo_depth_c then
-          if l4_s.req.last = '0' then
+        if l4_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          if l4_i.last = '0' then
             fifo_push := true;
-            fifo_data := l4_s.req.data;
-          elsif l4_s.req.data = x"01" then
+            fifo_data := l4_i.data;
+          elsif l4_i.data = x"01" then
             rin.in_state <= IN_COMMIT;
           else
             rin.in_state <= IN_CANCEL;
@@ -247,7 +252,7 @@ begin
         end if;
 
       when IN_DROP =>
-        if l4_s.req.valid = '1' and l4_s.req.last = '1' then
+        if l4_i.valid = '1' and l4_i.last = '1' then
           rin.in_state <= IN_RESET;
         end if;
     end case;
@@ -400,20 +405,16 @@ begin
   moore: process(r) is
   begin
     l2_o <= committed_req_idle_c;
-    l4_s.ack <= committed_ack_idle_c;
+    l4_o <= committed_ack_idle_c;
     l12_query_o <= framed_req_idle_c;
     l12_reply_o <= framed_ack_idle_c;
-    total_size_ready_s <= '0';
 
     case r.in_state is
       when IN_RESET =>
         null;
-
-      when IN_SIZE =>
-        total_size_ready_s <= '1';
         
-      when IN_PEER_IP | IN_CTX | IN_DROP | IN_PROTO =>
-        l4_s.ack <= committed_accept(true);
+      when IN_PEER_IP | IN_CTX | IN_DROP | IN_PROTO | IN_PDU_LEN =>
+        l4_o <= committed_accept(true);
 
       when IN_RESOLVE_CMD =>
         l12_query_o <= framed_flit(r.dst_addr(0), last => r.in_left = 0);
@@ -425,7 +426,7 @@ begin
         l12_reply_o <= framed_accept(r.fifo_fillness < fifo_depth_c);
 
       when IN_DATA =>
-        l4_s.ack <= committed_accept(r.fifo_fillness < fifo_depth_c);
+        l4_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
 
       when IN_COMMIT | IN_CANCEL =>
     end case;
@@ -468,28 +469,5 @@ begin
         l2_o <= committed_commit(false);
     end case;
   end process;
-
-  sizer: nsl_bnoc.committed.committed_sizer
-    generic map(
-      clock_count_c => 1,
-      -- Size of IP header minus l4 header (proto + daddr + ctx)
-      offset_c => 20 - 6,
-      txn_count_c => 4,
-      max_size_l2_c => total_size_s'length
-      )
-    port map(
-      reset_n_i => reset_n_i,
-      clock_i(0) => clock_i,
-
-      in_i => l4_i,
-      in_o => l4_o,
-
-      out_o => l4_s.req,
-      out_i => l4_s.ack,
-
-      size_o => total_size_s,
-      size_valid_o => total_size_valid_s,
-      size_ready_i => total_size_ready_s
-      );
   
 end architecture;

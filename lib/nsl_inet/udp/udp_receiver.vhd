@@ -30,6 +30,7 @@ architecture beh of udp_receiver is
   type in_state_t is (
     IN_RESET,
     IN_HEADER,
+    IN_PDU_LEN,
     IN_SPORT,
     IN_DPORT,
     IN_LENGTH,
@@ -37,6 +38,7 @@ architecture beh of udp_receiver is
     IN_DATA,
     IN_PAD,
     IN_COMMIT,
+    IN_DROP,
     IN_CANCEL
     );
 
@@ -57,6 +59,7 @@ architecture beh of udp_receiver is
     in_left : integer range 0 to max_step_c-1;
 
     total_len : unsigned(15 downto 0);
+    pdu_len: byte_string(0 to 1);
     header: byte_string(0 to header_length_c+3);
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -95,7 +98,7 @@ begin
           rin.in_state <= IN_HEADER;
           rin.in_left <= header_length_c - 1;
         else
-          rin.in_state <= IN_SPORT;
+          rin.in_state <= IN_PDU_LEN;
           rin.in_left <= 1;
         end if;
 
@@ -105,6 +108,21 @@ begin
             rin.in_state <= IN_RESET;
           else
             rin.header <= shift_left(r.header, l3_i.data);
+            if r.in_left /= 0 then
+              rin.in_left <= r.in_left - 1;
+            else
+              rin.in_state <= IN_PDU_LEN;
+              rin.in_left <= 1;
+            end if;
+          end if;
+        end if;
+
+      when IN_PDU_LEN =>
+        if l3_i.valid = '1' then
+          if l3_i.last = '1' then
+            rin.in_state <= IN_RESET;
+          else
+            rin.pdu_len <= shift_left(r.pdu_len, l3_i.data);
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
             else
@@ -164,7 +182,9 @@ begin
           if l3_i.last = '1' then
             rin.in_state <= IN_RESET;
           else
-            if r.in_left /= 0 then
+            if r.total_len > from_be(r.pdu_len) then
+              rin.in_state <= IN_DROP;
+            elsif r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
               rin.total_len <= r.total_len - 8;
             else
@@ -199,6 +219,11 @@ begin
           else
             rin.in_state <= IN_CANCEL;
           end if;
+        end if;
+          
+      when IN_DROP =>
+        if l3_i.valid = '1' and l3_i.last = '1' then
+          rin.in_state <= IN_RESET;
         end if;
 
       when IN_COMMIT | IN_CANCEL =>
@@ -281,7 +306,7 @@ begin
         l3_o <= committed_accept(false);
 
       when IN_HEADER | IN_SPORT | IN_DPORT | IN_LENGTH | IN_CHK
-        | IN_PAD =>
+        | IN_PAD | IN_DROP | IN_PDU_LEN =>
         l3_o <= committed_accept(true);
 
       when IN_DATA =>

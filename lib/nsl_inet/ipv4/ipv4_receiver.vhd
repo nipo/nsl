@@ -56,6 +56,7 @@ architecture beh of ipv4_receiver is
     OUT_PROTO,
     OUT_PEER_IP,
     OUT_CTX,
+    OUT_LEN,
     OUT_DATA,
     OUT_COMMIT,
     OUT_CANCEL
@@ -73,7 +74,7 @@ architecture beh of ipv4_receiver is
     is_bcast, is_unicast: boolean;
     -- Use this counter MSB as an enable. When counter wraps, we are
     -- in padding. Still read input, but dont push to fifo
-    total_len : unsigned(15 downto 0);
+    pdu_len, total_len : unsigned(15 downto 0);
     header_chk : checksum_t;
     header_left : unsigned(5 downto 0);
     proto : byte;
@@ -320,6 +321,7 @@ begin
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
             elsif r.header_left = 0 then
+              rin.pdu_len <= r.total_len;
               rin.in_state <= IN_DATA;
             else
               rin.in_state <= IN_OPTS;
@@ -337,6 +339,7 @@ begin
             rin.total_len <= r.total_len - 1;
 
             if r.header_left = 0 then
+              rin.pdu_len <= r.total_len;
               rin.in_state <= IN_DATA;
             end if;
           end if;
@@ -396,7 +399,18 @@ begin
 
       when OUT_CTX =>
         if l4_i.ready = '1' then
-          rin.out_state <= OUT_DATA;
+          rin.out_state <= OUT_LEN;
+          rin.out_left <= 1;
+        end if;
+
+      when OUT_LEN =>
+        if l4_i.ready = '1' then
+          rin.pdu_len <= r.pdu_len(7 downto 0) & "--------";
+          if r.out_left /= 0 then
+            rin.out_left <= r.out_left - 1;
+          else
+            rin.out_state <= OUT_DATA;
+          end if;
         end if;
 
       when OUT_DATA =>
@@ -449,6 +463,9 @@ begin
         else
           l4_o <= committed_flit(x"00");
         end if;
+
+      when OUT_LEN =>
+        l4_o <= committed_flit(std_ulogic_vector(r.pdu_len(15 downto 8)));
 
       when OUT_DATA =>
         l4_o <= committed_flit(
