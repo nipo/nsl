@@ -136,41 +136,44 @@ begin
     force_fd := r.value(reg_bmcr_c)(8) = '1';
     speed1 := r.value(reg_bmcr_c)(6) = '1';
     speed0 := r.value(reg_bmcr_c)(13) = '1';
-
+    
     supports_10bt_hd := r.value(reg_bmsr_c)(11) = '1';
     supports_10bt_fd := r.value(reg_bmsr_c)(12) = '1';
     supports_100bt_hd := r.value(reg_bmsr_c)(13) = '1';
     supports_100bt_fd := r.value(reg_bmsr_c)(14) = '1';
+    supports_1000bt_hd := false;
+    supports_1000bt_fd := false;
 
     announces_10bt_hd := r.value(reg_anar_c)(5) = '1';
-    announces_100bt_hd := r.value(reg_anar_c)(7) = '1';
-    announces_1000bt_hd := r.value(reg_gcr_c)(8) = '1';
     announces_10bt_fd := r.value(reg_anar_c)(6) = '1';
+    announces_100bt_hd := r.value(reg_anar_c)(7) = '1';
     announces_100bt_fd := r.value(reg_anar_c)(8) = '1';
-    announces_1000bt_fd := r.value(reg_gcr_c)(9) = '1';
+    announces_1000bt_hd := false;
+    announces_1000bt_fd := false;
 
     if has_1g then
+      announces_1000bt_hd := r.value(reg_gcr_c)(8) = '1';
+      announces_1000bt_fd := r.value(reg_gcr_c)(9) = '1';
       supports_1000bt_hd := r.value(reg_gsr_c)(12) = '1';
       supports_1000bt_fd := r.value(reg_gsr_c)(13) = '1';
-    else
-      supports_1000bt_hd := false;
-      supports_1000bt_fd := false;
     end if;
+
+    receives_10bt_hd := false;
+    receives_10bt_fd := false;
+    receives_100bt_hd := false;
+    receives_100bt_fd := false;
+    receives_1000bt_hd := false;
+    receives_1000bt_fd := false;
 
     if autoneg_en and autoneg_done then
       receives_10bt_hd := r.value(reg_lpar_c)(5) = '1';
       receives_100bt_hd := r.value(reg_lpar_c)(7) = '1';
-      receives_1000bt_hd := r.value(reg_gst1_c)(10) = '1';
       receives_10bt_fd := r.value(reg_lpar_c)(6) = '1';
       receives_100bt_fd := r.value(reg_lpar_c)(8) = '1';
-      receives_1000bt_fd := r.value(reg_gst1_c)(11) = '1';
-    else
-      receives_10bt_hd := false;
-      receives_100bt_hd := false;
-      receives_1000bt_hd := false;
-      receives_10bt_fd := false;
-      receives_100bt_fd := false;
-      receives_1000bt_fd := false;
+      if has_1g then
+        receives_1000bt_hd := r.value(reg_gst1_c)(10) = '1';
+        receives_1000bt_fd := r.value(reg_gst1_c)(11) = '1';
+      end if;
     end if;
     
     if r.refresh_timeout /= 0 then
@@ -270,7 +273,7 @@ begin
             rin.mode <= RGMII_MODE_10;
           end if;
           rin.fd <= to_logic(force_fd);
-        else
+        elsif autoneg_done then
           if supports_1000bt_fd and announces_1000bt_fd and receives_1000bt_fd then
             rin.mode <= RGMII_MODE_1000;
             rin.fd <= '1';
@@ -290,6 +293,8 @@ begin
             rin.mode <= RGMII_MODE_10;
             rin.fd <= '0';
           end if;
+        else
+          rin.link_up <= '0';
         end if;
     end case;
 
