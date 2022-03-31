@@ -235,7 +235,7 @@ begin
     
     case r.out_state is
       when OUT_RESET =>
-        if r.in_state = IN_DATA then
+        if r.in_state = IN_DATA or r.in_state = IN_PAD then
           rin.out_state <= OUT_HEADER;
           rin.out_left <= header_length_c + 3;
         end if;
