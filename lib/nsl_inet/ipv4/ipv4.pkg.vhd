@@ -25,6 +25,7 @@ package ipv4 is
 
   subtype ip_proto_t is integer range 0 to 255;
   type ip_proto_vector is array(natural range <>) of ip_proto_t;
+  constant ip_proto_vector_null_c: ip_proto_vector(0 to -1) := (others => 0);
 
   subtype ip_packet_id_t is unsigned(15 downto 0);
 
