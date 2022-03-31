@@ -80,13 +80,17 @@ package testing is
   procedure framed_get(signal req: in nsl_bnoc.framed.framed_req;
                        signal ack: out nsl_bnoc.framed.framed_ack;
                        signal clock: in std_ulogic;
-                       data : inout byte_stream);
+                       data : inout byte_stream;
+                       duty_nom: natural := 1;
+                       duty_denom: natural := 1);
 
   procedure committed_get(signal req: in nsl_bnoc.committed.committed_req;
                           signal ack: out nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
                           data : inout byte_stream;
-                          valid : out boolean);
+                          valid : out boolean;
+                          duty_nom: natural := 1;
+                          duty_denom: natural := 1);
 
   procedure framed_flit_put(signal req: out nsl_bnoc.framed.framed_req;
                             signal ack: in nsl_bnoc.framed.framed_ack;
@@ -98,7 +102,9 @@ package testing is
   procedure framed_put(signal req: out nsl_bnoc.framed.framed_req;
                        signal ack: in nsl_bnoc.framed.framed_ack;
                        signal clock: in std_ulogic;
-                       data : in byte_string);
+                       data : in byte_string;
+                       duty_nom: natural := 1;
+                       duty_denom: natural := 1);
 
   procedure framed_wait(signal req: out nsl_bnoc.framed.framed_req;
                        signal ack: in nsl_bnoc.framed.framed_ack;
@@ -111,13 +117,17 @@ package testing is
     signal ack: out nsl_bnoc.framed.framed_ack;
     signal clock: in std_ulogic;
     data : in byte_string;
-    level : log_level_t := LOG_LEVEL_WARNING);
+    level : log_level_t := LOG_LEVEL_WARNING;
+    duty_nom: natural := 1;
+    duty_denom: natural := 1);
 
   procedure committed_put(signal req: out nsl_bnoc.committed.committed_req;
                           signal ack: in nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
                           data : in byte_string;
-                          valid : in boolean);
+                          valid : in boolean;
+                          duty_nom: natural := 1;
+                          duty_denom: natural := 1);
 
   procedure committed_wait(signal req: out nsl_bnoc.committed.committed_req;
                        signal ack: in nsl_bnoc.committed.committed_ack;
@@ -139,7 +149,9 @@ package testing is
     signal clock: in std_ulogic;
     data : in byte_string;
     valid : in boolean;
-    level : log_level_t := LOG_LEVEL_WARNING);
+    level : log_level_t := LOG_LEVEL_WARNING;
+    duty_nom: natural := 1;
+    duty_denom: natural := 1);
   
   type committed_queue_item;
 
@@ -218,33 +230,47 @@ package body testing is
   procedure framed_get(signal req: in nsl_bnoc.framed.framed_req;
                        signal ack: out nsl_bnoc.framed.framed_ack;
                        signal clock: in std_ulogic;
-                       data : inout byte_stream)
+                       data : inout byte_stream;
+                       duty_nom: natural := 1;
+                       duty_denom: natural := 1)
   is
     variable ret: byte_stream;
     variable item: byte;
     variable last: boolean;
   begin
     ret := new byte_string(1 to 0);
-    last := false;
 
-    while not last
+    while true
     loop
-      framed_flit_get(req, ack, clock, item, last);
-      write(ret, item);
+      for i in 0 to duty_nom-1
+      loop
+        framed_flit_get(req, ack, clock, item, last);
+        write(ret, item);
+        if last then
+          data := ret;
+          return;
+        end if;
+      end loop;
+      for i in duty_nom to duty_denom-1
+      loop
+        wait until rising_edge(clock);
+        wait until falling_edge(clock);
+      end loop;
     end loop;
-
-    data := ret;
   end procedure;
 
   procedure committed_get(signal req: in nsl_bnoc.committed.committed_req;
                           signal ack: out nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
                           data : inout byte_stream;
-                          valid : out boolean)
+                          valid : out boolean;
+                          duty_nom: natural := 1;
+                          duty_denom: natural := 1)
   is
     variable frame: byte_stream;
   begin
-    framed_get(req, ack, clock, frame);
+    framed_get(req, ack, clock, frame,
+               duty_nom, duty_denom);
 
     data := new byte_string(0 to frame.all'length-2);
     data.all := frame.all(frame.all'left to frame.all'right-1);
@@ -280,12 +306,27 @@ package body testing is
   procedure framed_put(signal req: out nsl_bnoc.framed.framed_req;
                        signal ack: in nsl_bnoc.framed.framed_ack;
                        signal clock: in std_ulogic;
-                       data : in byte_string)
+                       data : in byte_string;
+                       duty_nom: natural := 1;
+                       duty_denom: natural := 1)
   is
+    variable i: integer range data'left to data'right := data'left;
   begin
-    for i in data'range
+    while true
     loop
-      framed_flit_put(req, ack, clock, data(i), i = data'right);
+      for x in 0 to duty_nom-1
+      loop
+        framed_flit_put(req, ack, clock, data(i), i = data'right);
+        if i = data'right then
+          return;
+        end if;
+        i := i + 1;
+      end loop;
+      for x in duty_nom to duty_denom-1
+      loop
+        wait until rising_edge(clock);
+        wait until falling_edge(clock);
+      end loop;
     end loop;
   end procedure;
 
@@ -307,11 +348,14 @@ package body testing is
     signal ack: out nsl_bnoc.framed.framed_ack;
     signal clock: in std_ulogic;
     data : in byte_string;
-    level : log_level_t := LOG_LEVEL_WARNING)
+    level : log_level_t := LOG_LEVEL_WARNING;
+    duty_nom: natural := 1;
+    duty_denom: natural := 1)
   is
     variable rx_data: byte_stream;
   begin
-    framed_get(req, ack, clock, rx_data);
+    framed_get(req, ack, clock, rx_data,
+               duty_nom, duty_denom);
 
     if rx_data.all'length /= data'length
       or rx_data.all /= data then
@@ -334,10 +378,13 @@ package body testing is
                           signal ack: in nsl_bnoc.committed.committed_ack;
                           signal clock: in std_ulogic;
                           data : in byte_string;
-                          valid : in boolean)
+                          valid : in boolean;
+                          duty_nom: natural := 1;
+                          duty_denom: natural := 1)
   is
   begin
-    framed_put(req, ack, clock, data & to_byte(if_else(valid, 1, 0)));
+    framed_put(req, ack, clock, data & to_byte(if_else(valid, 1, 0)),
+               duty_nom, duty_denom);
   end procedure;
 
   procedure committed_assert(
@@ -398,12 +445,15 @@ package body testing is
     signal clock: in std_ulogic;
     data : in byte_string;
     valid : in boolean;
-    level : log_level_t := LOG_LEVEL_WARNING)
+    level : log_level_t := LOG_LEVEL_WARNING;
+    duty_nom: natural := 1;
+    duty_denom: natural := 1)
   is
     variable rx_data: byte_stream;
     variable rx_valid: boolean;
   begin
-    committed_get(req, ack, clock, rx_data, rx_valid);
+    committed_get(req, ack, clock, rx_data, rx_valid,
+                  duty_nom, duty_denom);
     committed_assert(log_context, rx_data.all, rx_valid, data, valid, level);
     deallocate(rx_data);
   end procedure;
