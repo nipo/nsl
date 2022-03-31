@@ -42,6 +42,7 @@ architecture rtl of framed_router is
     IS_HEADER,
     IS_ROUTE_REQ,
     IS_DATA,
+    IS_FLUSH,
     IS_DONE,
     IS_DROP
     );
@@ -69,8 +70,8 @@ architecture rtl of framed_router is
     state : output_port_state_t;
     left : natural range 0 to out_header_count_c-1;
     header : byte_string(0 to out_header_count_c-1);
-    fifo: byte_string(0 to 1);
-    fifo_fillness: natural range 0 to 2;
+    fifo: byte_string(0 to 2);
+    fifo_fillness: natural range 0 to 3;
     in_index: natural range 0 to in_count_c-1;
   end record;
 
@@ -211,12 +212,15 @@ begin
             rin.ip(i).state <= IS_RESET;
           end if;
 
-        when IS_DATA =>
-          if fifo_can_push(r.ip(i).fifo, r.ip(i).fifo_fillness)
+        when IS_DATA | IS_FLUSH =>
+          if r.ip(i).state = IS_DATA
+            and fifo_can_push(r.ip(i).fifo, r.ip(i).fifo_fillness)
             and in_i(i).valid = '1'
-            and in_i(i).last = '1'
-            and (r.op(r.ip(i).out_index).state = OS_FLUSH
-                 or r.op(r.ip(i).out_index).state = OS_DATA) then
+            and in_i(i).last = '1' then
+            rin.ip(i).state <= IS_FLUSH;
+          end if;
+          if r.ip(i).state = IS_FLUSH
+            and r.ip(i).fifo_fillness = 0 then
             rin.ip(i).state <= IS_DONE;
           end if;
 
@@ -224,7 +228,7 @@ begin
             storage => r.ip(i).fifo,
             fillness => r.ip(i).fifo_fillness,
 
-            valid => in_i(i).valid = '1',
+            valid => in_i(i).valid = '1' and r.ip(i).state = IS_DATA,
             data => in_i(i).data,
 
             ready => fifo_can_push(
@@ -237,7 +241,7 @@ begin
             storage => r.ip(i).fifo,
             fillness => r.ip(i).fifo_fillness,
 
-            valid => in_i(i).valid = '1',
+            valid => in_i(i).valid = '1' and r.ip(i).state = IS_DATA,
             data => in_i(i).data,
 
             ready => fifo_can_push(
@@ -284,13 +288,15 @@ begin
           end if;
 
         when OS_DATA =>
-          if r.ip(r.op(i).in_index).state = IS_DONE then
+          if r.ip(r.op(i).in_index).state = IS_DONE
+            and r.ip(r.op(i).in_index).fifo_fillness = 0 then
             rin.op(i).state <= OS_FLUSH;
           end if;
 
           rin.op(i).fifo <= fifo_shift_data(
             storage => r.op(i).fifo,
             fillness => r.op(i).fifo_fillness,
+            min_fill => 1,
 
             valid => fifo_can_pop(
               r.ip(r.op(i).in_index).fifo,
@@ -302,6 +308,7 @@ begin
           rin.op(i).fifo_fillness <= fifo_shift_fillness(
             storage => r.op(i).fifo,
             fillness => r.op(i).fifo_fillness,
+            min_fill => 1,
 
             valid => fifo_can_pop(
               r.ip(r.op(i).in_index).fifo,
@@ -348,7 +355,7 @@ begin
     for i in r.ip'range
     loop
       case r.ip(i).state is
-        when IS_RESET | IS_ROUTE_REQ | IS_DONE =>
+        when IS_RESET | IS_ROUTE_REQ | IS_DONE | IS_FLUSH =>
           in_o(i).ready <= '0';
         when IS_HEADER | IS_DROP =>
           in_o(i).ready <= '1';
@@ -371,7 +378,8 @@ begin
           out_o(i).data <= first_left(r.op(i).header);
 
         when OS_DATA =>
-          out_o(i).valid <= fifo_valid(r.op(i).fifo, r.op(i).fifo_fillness);
+          out_o(i).valid <= fifo_valid(r.op(i).fifo, r.op(i).fifo_fillness,
+                                       min_fill => 1);
           out_o(i).last <= '0';
           out_o(i).data <= r.op(i).fifo(0);
 
