@@ -12,6 +12,7 @@ package udp is
 
   subtype udp_port_t is integer range 0 to 65535;
   type udp_port_vector is array(integer range <>) of udp_port_t;
+  constant udp_port_vector_null_c: udp_port_vector(0 to -1) := (others => 0);
   
   -- Frame structure from/to layer 3
   -- * Some fixed context, passed through [0..N]
