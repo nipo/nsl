@@ -44,6 +44,7 @@ architecture beh of mii_flit_to_committed is
   record
     in_state : in_state_t;
     in_overflow : boolean;
+    in_error_seen : boolean;
 
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -83,6 +84,7 @@ begin
         if valid_i = '1' and flit_i.valid = '1' then
           rin.in_state <= IN_PRE;
           rin.in_overflow <= false;
+          rin.in_error_seen <= false;
         end if;
 
       when IN_PRE =>
@@ -107,6 +109,8 @@ begin
           elsif flit_i.valid = '0' and flit_i.error = '1' then
             rin.in_state <= IN_CANCEL;
           elsif flit_i.valid = '1' and flit_i.error = '1' then
+            rin.in_error_seen <= true;
+            fifo_push := true;
             -- GMII / RGMII:
             -- - 00-0d, 10-1e, 20-fe: reserved
             -- - 0e: false carrier
@@ -194,7 +198,7 @@ begin
         committed_o.valid <= '1';
         committed_o.last <= '1';
         committed_o.data <= x"00";
-        committed_o.data(0) <= to_logic(not r.in_overflow);
+        committed_o.data(0) <= to_logic(not r.in_overflow and not r.in_error_seen);
         
       when OUT_CANCEL =>
         committed_o.valid <= '1';
