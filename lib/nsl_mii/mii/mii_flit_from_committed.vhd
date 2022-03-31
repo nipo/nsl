@@ -208,7 +208,7 @@ begin
           flit_o.error <= '1';
           flit_o.data <= x"00";
         else
-          flit_o.valid <= '1';
+          flit_o.valid <= to_logic(r.fifo_fillness /= 0);
           flit_o.error <= '0';
           flit_o.data <= r.fifo(0);
         end if;
