@@ -36,6 +36,8 @@ end entity;
 
 architecture beh of rgmii_driver is
 
+  signal tx_prefilled_s: nsl_bnoc.committed.committed_bus;
+  signal rx_relax_s: nsl_bnoc.committed.committed_bus;
   signal rx_flit_s, tx_flit_s: mii_flit_t;
   signal rx_sdr_s, tx_sdr_s: rgmii_sdr_io_t;
   signal rx_valid_s, tx_ready_s, rx_clock_s: std_ulogic;
@@ -75,11 +77,37 @@ begin
       flit_i => rx_flit_s,
       valid_i => rx_valid_s,
 
-      committed_o => rx_o,
-      committed_i => rx_i
+      committed_o => rx_relax_s.req,
+      committed_i => rx_relax_s.ack
+      );
+
+  rx_relax: nsl_bnoc.committed.committed_fifo
+    generic map(
+      depth_c => 32
+      )
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i(0) => clock_i,
+      in_i => rx_relax_s.req,
+      in_o => rx_relax_s.ack,
+      out_o => rx_o,
+      out_i => rx_i
       );
   
   -- TX side
+  tx_prefill: nsl_bnoc.committed.committed_prefill_buffer
+    generic map(
+      prefill_count_c => 16
+      )
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
+      in_i => tx_i,
+      in_o => tx_o,
+      out_o => tx_prefilled_s.req,
+      out_i => tx_prefilled_s.ack
+      );
+  
   tx_from_committed: work.mii.mii_flit_from_committed
     generic map(
       ipg_c => ipg_c
@@ -88,8 +116,8 @@ begin
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      committed_i => tx_i,
-      committed_o => tx_o,
+      committed_i => tx_prefilled_s.req,
+      committed_o => tx_prefilled_s.ack,
 
       flit_o => tx_flit_s,
       ready_i => tx_ready_s
