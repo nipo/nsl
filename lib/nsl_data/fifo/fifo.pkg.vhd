@@ -9,6 +9,7 @@ package fifo is
   function fifo_shift_fillness(
     storage : byte_string;
     fillness : natural;
+    min_fill : natural := 0;
 
     valid : boolean;
     data : byte;
@@ -19,6 +20,7 @@ package fifo is
   function fifo_shift_data(
     storage : byte_string;
     fillness : natural;
+    min_fill : natural := 0;
 
     valid : boolean;
     data : byte;
@@ -32,7 +34,8 @@ package fifo is
 
   function fifo_can_pop(
     storage : byte_string;
-    fillness : natural) return boolean;
+    fillness : natural;
+    min_fill : natural := 0) return boolean;
 
   function fifo_ready(
     storage : byte_string;
@@ -40,7 +43,8 @@ package fifo is
 
   function fifo_valid(
     storage : byte_string;
-    fillness : natural) return std_ulogic;
+    fillness : natural;
+    min_fill : natural := 0) return std_ulogic;
 
 end package fifo;
 
@@ -49,6 +53,7 @@ package body fifo is
   function fifo_shift_data(
     storage : byte_string;
     fillness : natural;
+    min_fill : natural := 0;
 
     valid : boolean;
     data : byte;
@@ -59,8 +64,8 @@ package body fifo is
     variable push, pop : boolean;
     variable ret: byte_string(storage'range);
   begin
-    pop := ready and fillness /= 0;
-    push := valid and fillness < storage'length;
+    pop := ready and fifo_can_pop(storage, fillness, min_fill);
+    push := valid and fifo_can_push(storage, fillness);
 
     if pop then
       ret := shift_left(storage);
@@ -82,6 +87,7 @@ package body fifo is
   function fifo_shift_fillness(
     storage : byte_string;
     fillness : natural;
+    min_fill : natural := 0;
 
     valid : boolean;
     data : byte;
@@ -91,8 +97,8 @@ package body fifo is
   is
     variable push, pop : boolean;
   begin
-    pop := ready and fillness /= 0;
-    push := valid and fillness < storage'length;
+    pop := ready and fifo_can_pop(storage, fillness, min_fill);
+    push := valid and fifo_can_push(storage, fillness);
 
     if push = pop then
       return fillness;
@@ -113,10 +119,11 @@ package body fifo is
 
   function fifo_can_pop(
     storage : byte_string;
-    fillness : natural) return boolean
+    fillness : natural;
+    min_fill : natural := 0) return boolean
   is
   begin
-    return fillness /= 0;
+    return fillness > min_fill;
   end function;
 
   function fifo_ready(
@@ -133,10 +140,11 @@ package body fifo is
 
   function fifo_valid(
     storage : byte_string;
-    fillness : natural) return std_ulogic
+    fillness : natural;
+    min_fill : natural := 0) return std_ulogic
   is
   begin
-    if fifo_can_pop(storage, fillness) then
+    if fifo_can_pop(storage, fillness, min_fill) then
       return '1';
     else
       return '0';
