@@ -21,9 +21,13 @@ package committed is
   type committed_req_array is array(natural range <>) of committed_req;
   type committed_ack_array is array(natural range <>) of committed_ack;
   type committed_bus_array is array(natural range <>) of committed_bus;
+  subtype committed_req_vector is committed_req_array;
+  subtype committed_ack_vector is committed_ack_array;
+  subtype committed_bus_vector is committed_bus_array;
 
   constant committed_req_idle_c : committed_req := nsl_bnoc.framed.framed_req_idle_c;
   constant committed_ack_idle_c : committed_ack := nsl_bnoc.framed.framed_ack_idle_c;
+  constant committed_ack_blackhole_c : committed_ack := nsl_bnoc.framed.framed_ack_blackhole_c;
 
   function committed_flit(data: nsl_bnoc.framed.framed_data_t;
                           last: boolean := false;
