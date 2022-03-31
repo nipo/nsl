@@ -58,6 +58,12 @@ package rgmii is
       rgmii_i : in  rgmii_io_group_t;
       
       mode_i : in rgmii_mode_t;
+
+      -- RX path copy for in-band status, clock probing, etc.
+      -- No datapath should be taken from this
+      -- Clock is buffered already
+      rx_clock_o : out std_ulogic;
+      rx_flit_o : out mii_flit_t;
       
       rx_o : out committed_req;
       rx_i : in committed_ack;

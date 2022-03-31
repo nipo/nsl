@@ -22,6 +22,9 @@ entity rgmii_driver is
     rgmii_i : in  rgmii_io_group_t;
 
     mode_i : in rgmii_mode_t;
+
+    rx_clock_o : out std_ulogic;
+    rx_flit_o : out mii_flit_t;
     
     rx_o : out nsl_bnoc.committed.committed_req;
     rx_i : in nsl_bnoc.committed.committed_ack;
@@ -39,6 +42,9 @@ architecture beh of rgmii_driver is
   
 begin
 
+  rx_clock_o <= rx_clock_s;
+  rx_flit_o <= rx_flit_s;
+  
   -- RX side
   rgmii_rx: work.rgmii.rgmii_rx_driver
     generic map(
