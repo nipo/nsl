@@ -39,10 +39,11 @@ architecture beh of udp_layer is
   signal to_l5_s, from_l5_s: committed_bus;
 
   signal to_l5_drop_s: std_ulogic;
-  signal to_l5_in_header_s : byte_string(0 to header_length_c+4-1);
-  signal to_l5_out_header_s : byte_string(0 to header_length_c+2-1);
   signal to_l5_destination_s : natural range 0 to udp_port_l_c'length-1;
   signal from_l5_source_s : natural range 0 to udp_port_l_c'length-1;
+
+  signal to_l5_in_header_s : byte_string(0 to header_length_c+4-1);
+  signal to_l5_out_header_s : byte_string(0 to header_length_c+2-1);
   signal from_l5_out_header_s : byte_string(0 to header_length_c+4-1);
   signal from_l5_in_header_s : byte_string(0 to header_length_c+2-1);
   

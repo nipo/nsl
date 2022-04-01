@@ -15,7 +15,7 @@ package udp is
   constant udp_port_vector_null_c: udp_port_vector(0 to -1) := (others => 0);
   
   -- Frame structure from/to layer 3
-  -- * Some fixed context, passed through [0..N]
+  -- * Some fixed context, passed through [0..N] *
   -- * Layer 4 PDU size, big endian [2]
   -- * Layer 4 data [*]
   -- * Status
@@ -23,9 +23,9 @@ package udp is
   --   [7:1] Reserved
   
   -- Frame structure from/to layer 5
-  -- * Upper layer context, passed through [0..N]
+  -- * Upper layer context, passed through [0..N] *
   -- * Remote port, MSB first [2]
-  -- * Local port, MSB first [2] (only from/to receiver and transmitter)
+  -- * Local port, MSB first [2] (not in layer stream)
   -- * Layer 5 data [N]
   -- * Status
   --   [0]   Validity bit
@@ -33,13 +33,11 @@ package udp is
 
   -- [*] For instance, stacked on IPv4 implementation, passed through
   -- context will be:
+  -- * L1 header
+  -- * L2 header
   -- * Peer IP address
   -- * IP Context (address type)
-  -- This way, frame from/to layer 5 contains all needed info:
-  -- * Remote IP,
-  -- * IP addressing mode (unicast/broadcast),
-  -- * Remote port,
-  -- * Data.
+  -- * IP proto
   
   component udp_receiver is
     generic(
