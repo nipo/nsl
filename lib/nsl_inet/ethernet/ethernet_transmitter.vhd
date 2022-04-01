@@ -96,6 +96,7 @@ begin
       when IN_RESET =>
         rin.in_state <= IN_HEADER_DADDR;
         rin.in_left <= 5 + l1_header_length_c;
+        rin.fifo_fillness <= 0;
 
       when IN_HEADER_DADDR =>
         if l3_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
@@ -188,6 +189,10 @@ begin
           if r.out_frame_left /= 0 then
             rin.out_frame_left <= r.out_frame_left - 1;
           end if;
+        end if;
+
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
         end if;
 
         if (to_fcs_s.ack.ready = '1' and r.fifo_fillness = 1) or r.fifo_fillness = 0 then

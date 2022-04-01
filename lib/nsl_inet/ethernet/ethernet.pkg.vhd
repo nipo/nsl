@@ -55,8 +55,8 @@ package ethernet is
   -- * Optional L1 pre-header [N]
   -- * Peer hardware address [6], in network order
   -- * Frame source/destination context
-  --   [1:0] Address type (0: Unicast, 1: Broadcast, 2-3: Reserved)
-  --   [7:2] Reserved
+  --   [0] Address type (0: Unicast, 1: Broadcast)
+  --   [7:1] Reserved
   -- * Layer-3 Data
   -- * Optional padding (should be null on TX)
   -- * Status byte (word with 'last' asserted)
