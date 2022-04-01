@@ -101,6 +101,9 @@ begin
           elsif committed_i.data(0) = '1' then
             rin.in_state <= IN_COMMIT;
           else
+            -- This should not go out, but avoid underrun to have
+            -- error signaled within the packet
+            fifo_push := true;
             rin.in_state <= IN_CANCEL;
           end if;
         end if;
@@ -157,6 +160,7 @@ begin
           or r.fifo_fillness = 0 then
           if r.in_state = IN_CANCEL then
             rin.out_state <= OUT_ERROR;
+            rin.out_counter <= ipg_c / 8 - 1;
           elsif r.in_state = IN_COMMIT then
             rin.out_state <= OUT_IPG;
             rin.out_counter <= ipg_c / 8 - 1;
@@ -165,8 +169,12 @@ begin
 
       when OUT_ERROR =>
         if ready_i = '1' then
-          rin.out_state <= OUT_IPG;
-          rin.out_counter <= ipg_c / 8 - 1;
+          if r.out_counter /= 0 then
+            rin.out_counter <= r.out_counter - 1;
+          else
+            rin.out_state <= OUT_IPG;
+            rin.out_counter <= ipg_c / 8 - 1;
+          end if;
         end if;
     end case;
 
