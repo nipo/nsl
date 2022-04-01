@@ -13,8 +13,7 @@ use nsl_logic.bool.all;
 entity ipv4_transmitter is
   generic(
     ttl_c : integer := 64;
-    mtu_c : integer := 1500;
-    l12_header_length_c : integer
+    header_length_c : integer
     );
   port(
     clock_i : in std_ulogic;
@@ -26,12 +25,7 @@ entity ipv4_transmitter is
     l4_o : out committed_ack;
 
     l2_o : out committed_req;
-    l2_i : in committed_ack;
-
-    l12_query_o : out framed_req;
-    l12_query_i : in framed_ack;
-    l12_reply_i : in framed_req;
-    l12_reply_o : out framed_ack
+    l2_i : in committed_ack
     );
 end entity;
 
@@ -39,24 +33,22 @@ architecture beh of ipv4_transmitter is
 
   type in_state_t is (
     IN_RESET,
-    IN_PROTO,
+    IN_HEADER,
     IN_PEER_IP,
     IN_CTX,
+    IN_PROTO,
     IN_PDU_LEN,
-    IN_RESOLVE_CMD,
-    IN_RESOLVE_RSP,
-    IN_L12_HEADER,
     IN_DATA,
     IN_COMMIT,
-    IN_CANCEL,
-    IN_DROP
+    IN_CANCEL
     );
 
   type out_state_t is (
     OUT_RESET,
-    OUT_L12_HEADER,
+    OUT_HEADER,
     OUT_VER_LEN,
     OUT_TOS,
+    OUT_LEN_WAIT,
     OUT_TOTAL_LEN,
     OUT_IDENTIFICATION,
     OUT_FRAG_OFF,
@@ -71,7 +63,7 @@ architecture beh of ipv4_transmitter is
     );
 
   constant fifo_depth_c : integer := 2;
-  constant max_step_c : integer := nsl_math.arith.max(l12_header_length_c, 4);
+  constant max_step_c : integer := nsl_math.arith.max(header_length_c, 4);
 
   type regs_t is
   record
@@ -119,38 +111,40 @@ begin
     end if;
   end process;
 
-  transition: process(r, l2_i, l4_i, unicast_i,
-                      l12_query_i, l12_reply_i) is
+  transition: process(r, l2_i, l4_i, unicast_i) is
     variable fifo_push, fifo_pop: boolean;
-    variable fifo_data : byte;
   begin
     rin <= r;
 
     fifo_pop := false;
     fifo_push := false;
-    fifo_data := "--------";
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_state <= IN_PROTO;
+        rin.in_state <= IN_HEADER;
+        rin.in_left <= header_length_c - 1;
 
-      when IN_PROTO =>
-        if l4_i.valid = '1' then
-          rin.proto <= l4_i.data;
-          if l4_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          else
+      when IN_HEADER =>
+        rin.src_addr <= unicast_i;
+        rin.checksum <= checksum_update("00000000000000000",
+                                        from_hex("4500")
+                                        & to_byte(ttl_c) & to_byte(0));
+
+        if l4_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          fifo_push := true;
+
+          if r.in_left = 0 then
             rin.in_state <= IN_PEER_IP;
             rin.in_left <= 3;
-            rin.src_addr <= unicast_i;
-            rin.checksum <= (others => '0');
+          else
+            rin.in_left <= r.in_left - 1;
           end if;
         end if;
 
       when IN_PEER_IP =>
         if l4_i.valid = '1' then
           if l4_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           else
             rin.dst_addr <= r.dst_addr(1 to 3) & l4_i.data;
             rin.src_addr <= r.src_addr(1 to 3) & r.src_addr(0);
@@ -175,7 +169,20 @@ begin
       when IN_CTX =>
         if l4_i.valid = '1' then
           if l4_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
+          else
+            rin.in_state <= IN_PROTO;
+          end if;
+        end if;
+
+      when IN_PROTO =>
+        if l4_i.valid = '1' then
+          rin.checksum <= checksum_update(r.checksum,
+                                          byte_string'(0 => to_byte(0),
+                                                       1 => l4_i.data));
+          rin.proto <= l4_i.data;
+          if l4_i.last = '1' then
+            rin.in_state <= IN_CANCEL;
           else
             rin.in_state <= IN_PDU_LEN;
             rin.in_left <= 1;
@@ -185,52 +192,14 @@ begin
       when IN_PDU_LEN =>
         if l4_i.valid = '1' then
           if l4_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           else
             rin.total_len <= r.total_len(7 downto 0) & unsigned(l4_i.data);
             if r.in_left = 0 then
-              if l12_header_length_c /= 0 then
-                rin.in_state <= IN_RESOLVE_CMD;
-                rin.in_left <= 3;
-              else
-                rin.in_state <= IN_DATA;
-              end if;
+              rin.in_state <= IN_DATA;
             else
               rin.in_left <= r.in_left - 1;
             end if;
-          end if;
-        end if;
-                             
-      when IN_RESOLVE_CMD =>
-        if l12_query_i.ready = '1' then
-          rin.dst_addr <= r.dst_addr(1 to 3) & r.dst_addr(0);
-          if r.in_left = 0 then
-            rin.total_len <= r.total_len + 20;
-            rin.in_state <= IN_RESOLVE_RSP;
-          else
-            rin.in_left <= r.in_left - 1;
-          end if;
-        end if;
-
-      when IN_RESOLVE_RSP =>
-        if l12_reply_i.valid = '1' then
-          if l12_reply_i.last = '1' then
-            rin.in_state <= IN_DROP;
-          else
-            rin.in_state <= IN_L12_HEADER;
-            rin.in_left <= l12_header_length_c - 1;
-          end if;
-        end if;
-
-      when IN_L12_HEADER =>
-        if l12_reply_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-          fifo_push := true;
-          fifo_data := l12_reply_i.data;
-
-          if r.in_left = 0 then
-            rin.in_state <= IN_DATA;
-          else
-            rin.in_left <= r.in_left - 1;
           end if;
         end if;
 
@@ -238,7 +207,6 @@ begin
         if l4_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
           if l4_i.last = '0' then
             fifo_push := true;
-            fifo_data := l4_i.data;
           elsif l4_i.data = x"01" then
             rin.in_state <= IN_COMMIT;
           else
@@ -250,24 +218,19 @@ begin
         if r.out_state = OUT_COMMIT or r.out_state = OUT_CANCEL then
           rin.in_state <= IN_RESET;
         end if;
-
-      when IN_DROP =>
-        if l4_i.valid = '1' and l4_i.last = '1' then
-          rin.in_state <= IN_RESET;
-        end if;
     end case;
 
     case r.out_state is
       when OUT_RESET =>
-        if l12_header_length_c /= 0 and r.in_state = IN_L12_HEADER then
-          rin.out_state <= OUT_L12_HEADER;
-          rin.out_left <= l12_header_length_c - 1;
+        if header_length_c /= 0 and r.in_state = IN_HEADER then
+          rin.out_state <= OUT_HEADER;
+          rin.out_left <= header_length_c - 1;
         end if;
-        if l12_header_length_c = 0 and r.in_state = IN_DATA then
+        if header_length_c = 0 and r.in_state = IN_PEER_IP then
           rin.out_state <= OUT_VER_LEN;
         end if;
 
-      when OUT_L12_HEADER =>
+      when OUT_HEADER =>
         if r.fifo_fillness /= 0 and l2_i.ready = '1' then
           fifo_pop := true;
           if r.out_left /= 0 then
@@ -279,15 +242,22 @@ begin
 
       when OUT_VER_LEN =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"45");
           rin.out_state <= OUT_TOS;
         end if;
 
       when OUT_TOS =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"00");
+          rin.out_state <= OUT_LEN_WAIT;
+        end if;
+
+      when OUT_LEN_WAIT =>
+        if r.in_state = IN_DATA or r.in_state = IN_COMMIT then
+          rin.total_len <= r.total_len + 20;
           rin.out_state <= OUT_TOTAL_LEN;
           rin.out_left <= 1;
+        end if;
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
         end if;
 
       when OUT_TOTAL_LEN =>
@@ -305,7 +275,6 @@ begin
 
       when OUT_IDENTIFICATION =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"00");
           if r.out_left = 0 then
             rin.out_state <= OUT_FRAG_OFF;
             rin.out_left <= 1;
@@ -316,7 +285,6 @@ begin
 
       when OUT_FRAG_OFF =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"00");
           if r.out_left = 0 then
             rin.out_state <= OUT_TTL;
           else
@@ -326,13 +294,13 @@ begin
 
       when OUT_TTL =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, to_byte(ttl_c));
           rin.out_state <= OUT_PROTO;
+          rin.checksum <= checksum_update(r.checksum, x"00");
         end if;
 
       when OUT_PROTO =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, r.proto);
+          rin.checksum <= checksum_update(r.checksum, x"00");
           rin.out_state <= OUT_CHKSUM;
           rin.out_left <= 1;
         end if;
@@ -392,9 +360,9 @@ begin
 
     if fifo_push and fifo_pop then
       rin.fifo <= shift_left(r.fifo);
-      rin.fifo(r.fifo_fillness-1) <= fifo_data;
+      rin.fifo(r.fifo_fillness-1) <= l4_i.data;
     elsif fifo_push then
-      rin.fifo(r.fifo_fillness) <= fifo_data;
+      rin.fifo(r.fifo_fillness) <= l4_i.data;
       rin.fifo_fillness <= r.fifo_fillness + 1;
     elsif fifo_pop then
       rin.fifo <= shift_left(r.fifo);
@@ -404,38 +372,22 @@ begin
 
   moore: process(r) is
   begin
-    l2_o <= committed_req_idle_c;
-    l4_o <= committed_ack_idle_c;
-    l12_query_o <= framed_req_idle_c;
-    l12_reply_o <= framed_ack_idle_c;
-
     case r.in_state is
-      when IN_RESET =>
-        null;
+      when IN_RESET | IN_COMMIT | IN_CANCEL =>
+        l4_o <= committed_ack_idle_c;
         
-      when IN_PEER_IP | IN_CTX | IN_DROP | IN_PROTO | IN_PDU_LEN =>
+      when IN_PEER_IP | IN_CTX | IN_PROTO | IN_PDU_LEN =>
         l4_o <= committed_accept(true);
 
-      when IN_RESOLVE_CMD =>
-        l12_query_o <= framed_flit(r.dst_addr(0), last => r.in_left = 0);
-        
-      when IN_RESOLVE_RSP =>
-        l12_reply_o <= framed_accept(true);
-
-      when IN_L12_HEADER =>
-        l12_reply_o <= framed_accept(r.fifo_fillness < fifo_depth_c);
-
-      when IN_DATA =>
+      when IN_HEADER | IN_DATA =>
         l4_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
-
-      when IN_COMMIT | IN_CANCEL =>
     end case;
 
     case r.out_state is
-      when OUT_RESET =>
-        null;
+      when OUT_RESET | OUT_LEN_WAIT =>
+        l2_o <= committed_req_idle_c;
 
-      when OUT_L12_HEADER | OUT_DATA =>
+      when OUT_HEADER | OUT_DATA =>
         l2_o <= committed_flit(r.fifo(0), valid => r.fifo_fillness /= 0);
 
       when OUT_VER_LEN =>

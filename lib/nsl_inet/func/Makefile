@@ -5,4 +5,5 @@ deps += nsl_bnoc.committed
 deps += nsl_inet.ethernet
 deps += nsl_inet.ipv4
 deps += nsl_inet.udp
+deps += nsl_inet.arp
 #deps += nsl_inet.dhcp

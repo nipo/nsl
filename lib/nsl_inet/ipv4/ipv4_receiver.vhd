@@ -12,8 +12,7 @@ use nsl_logic.bool.all;
 
 entity ipv4_receiver is
   generic(
-    l12_header_length_c : integer;
-    mtu_c : integer := 1500
+    header_length_c : integer
     );
   port(
     clock_i : in std_ulogic;
@@ -21,9 +20,6 @@ entity ipv4_receiver is
 
     unicast_i : in ipv4_t;
     broadcast_i : in ipv4_t;
-
-    notify_o : out byte_string(0 to l12_header_length_c+4);
-    notify_valid_o : out std_ulogic;
 
     l2_i : in nsl_bnoc.committed.committed_req;
     l2_o : out nsl_bnoc.committed.committed_ack;
@@ -37,7 +33,7 @@ architecture beh of ipv4_receiver is
 
   type in_state_t is (
     IN_RESET,
-    IN_L12_HEADER,
+    IN_HEADER,
     IN_VER_LEN,
     IN_TOS,
     IN_TOTAL_LEN,
@@ -57,9 +53,10 @@ architecture beh of ipv4_receiver is
 
   type out_state_t is (
     OUT_RESET,
-    OUT_PROTO,
-    OUT_PEER_IP,
+    OUT_HEADER_PEER_IP,
+    OUT_CTX_WAIT,
     OUT_CTX,
+    OUT_PROTO,
     OUT_LEN,
     OUT_DATA,
     OUT_COMMIT,
@@ -67,14 +64,14 @@ architecture beh of ipv4_receiver is
     );
 
   constant fifo_depth_c : integer := 2;
-  constant max_step_c : integer := nsl_math.arith.max(l12_header_length_c, 4);
+  constant max_step_c : integer := nsl_math.arith.max(header_length_c, 4);
 
   type regs_t is
   record
     in_state : in_state_t;
     in_left : integer range 0 to max_step_c-1;
 
-    unicast_addr, bcast_addr, src_addr : ipv4_t;
+    unicast_addr, bcast_addr : ipv4_t;
     is_bcast, is_unicast: boolean;
     -- Use this counter MSB as an enable. When counter wraps, we are
     -- in padding. Still read input, but dont push to fifo
@@ -87,9 +84,7 @@ architecture beh of ipv4_receiver is
     fifo_fillness: integer range 0 to fifo_depth_c;
     
     out_state : out_state_t;
-    out_left : integer range 0 to 3;
-
-    notify_data: byte_string(0 to 4+l12_header_length_c);
+    out_left : integer range 0 to max_step_c+4-1;
   end record;
 
   signal r, rin: regs_t;
@@ -119,18 +114,18 @@ begin
     case r.in_state is
       when IN_RESET =>
         rin.header_chk <= (others => '0');
-        if l12_header_length_c /= 0 then
-          rin.in_state <= IN_L12_HEADER;
-          rin.in_left <= l12_header_length_c - 1;
+        if header_length_c /= 0 then
+          rin.in_state <= IN_HEADER;
+          rin.in_left <= header_length_c - 1;
         else
           rin.in_state <= IN_VER_LEN;
         end if;
 
-      when IN_L12_HEADER =>
-        if l2_i.valid = '1' then
-          rin.notify_data <= shift_left(r.notify_data, l2_i.data);
+      when IN_HEADER =>
+        if l2_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          fifo_push := true;
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           elsif r.in_left /= 0 then
             rin.in_left <= r.in_left - 1;
           else
@@ -141,8 +136,10 @@ begin
       when IN_VER_LEN =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           elsif l2_i.data(7 downto 4) /= x"4" then
+            rin.in_state <= IN_DROP;
+          elsif unsigned(l2_i.data(3 downto 0)) < 5 then
             rin.in_state <= IN_DROP;
           else
             rin.header_left <= (unsigned(l2_i.data(3 downto 0)) - 1) & "10";
@@ -155,9 +152,7 @@ begin
       when IN_TOS =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -170,9 +165,7 @@ begin
       when IN_TOTAL_LEN =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -190,17 +183,13 @@ begin
       when IN_IDENTIFICATION =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
 
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
-            elsif r.total_len > mtu_c - 7 then
-              rin.in_state <= IN_DROP;
             else
               rin.total_len <= r.total_len - 7;
               rin.in_left <= 1;
@@ -212,9 +201,7 @@ begin
       when IN_FRAG_OFF =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -235,9 +222,7 @@ begin
       when IN_TTL =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -250,9 +235,7 @@ begin
       when IN_PROTO =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -267,9 +250,7 @@ begin
       when IN_CHKSUM =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -290,18 +271,16 @@ begin
         rin.is_bcast <= true;
         rin.is_unicast <= true;
 
-        if l2_i.valid = '1' then
+        if l2_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          fifo_push := true;
+
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
-          elsif r.header_left = 0 then
-            rin.in_state <= IN_DROP;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
             rin.total_len <= r.total_len - 1;
             
-            rin.src_addr <= shift_left(r.src_addr, l2_i.data);
-            rin.notify_data <= shift_left(r.notify_data, l2_i.data);
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
             else
@@ -314,7 +293,7 @@ begin
       when IN_DST_ADDR =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -340,7 +319,7 @@ begin
       when IN_OPTS =>
         if l2_i.valid = '1' then
           if l2_i.last = '1' then
-            rin.in_state <= IN_RESET;
+            rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
             rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
@@ -366,11 +345,6 @@ begin
             and (r.is_unicast or r.is_bcast)
             and (r.total_len(15) = '1') then
             rin.in_state <= IN_COMMIT;
-            if r.is_bcast then
-              rin.notify_data <= shift_left(r.notify_data, x"01");
-            else
-              rin.notify_data <= shift_left(r.notify_data, x"00");
-            end if;
           else
             rin.in_state <= IN_CANCEL;
           end if;
@@ -390,27 +364,36 @@ begin
     
     case r.out_state is
       when OUT_RESET =>
-        if r.in_state = IN_DATA then
-          rin.out_state <= OUT_PROTO;
+        if r.in_state = IN_HEADER then
+          rin.out_state <= OUT_HEADER_PEER_IP;
+          rin.out_left <= header_length_c + 4 - 1;
         end if;
 
-      when OUT_PROTO =>
-        if l4_i.ready = '1' then
-          rin.out_state <= OUT_PEER_IP;
-          rin.out_left <= 3;
-        end if;
-        
-      when OUT_PEER_IP =>
-        if l4_i.ready = '1' then
-          rin.src_addr <= shift_left(r.src_addr);
+      when OUT_HEADER_PEER_IP =>
+        if l4_i.ready = '1' and r.fifo_fillness /= 0 then
+          fifo_pop := true;
+
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
+          elsif r.in_state = IN_DST_ADDR then
+            rin.out_state <= OUT_CTX_WAIT;
           else
             rin.out_state <= OUT_CTX;
           end if;
         end if;
 
+      when OUT_CTX_WAIT =>
+        if r.in_state /= IN_DST_ADDR then
+          rin.out_state <= OUT_CTX;
+        end if;
+
       when OUT_CTX =>
+        if l4_i.ready = '1' then
+          rin.out_state <= OUT_PROTO;
+          rin.out_left <= 1;
+        end if;
+
+      when OUT_PROTO =>
         if l4_i.ready = '1' then
           rin.out_state <= OUT_LEN;
           rin.out_left <= 1;
@@ -460,18 +443,14 @@ begin
 
   moore: process(r) is
   begin
-    notify_valid_o <= '0';
-    notify_o <= r.notify_data;
-
     case r.out_state is
-      when OUT_RESET =>
+      when OUT_RESET | OUT_CTX_WAIT =>
         l4_o <= committed_req_idle_c;
 
-      when OUT_PROTO =>
-        l4_o <= committed_flit(r.proto);
-        
-      when OUT_PEER_IP =>
-        l4_o <= committed_flit(r.src_addr(0));
+      when OUT_HEADER_PEER_IP | OUT_DATA =>
+        l4_o <= committed_flit(
+          data => r.fifo(0),
+          valid => r.fifo_fillness /= 0);
 
       when OUT_CTX =>
         if r.is_bcast then
@@ -480,16 +459,13 @@ begin
           l4_o <= committed_flit(x"00");
         end if;
 
+      when OUT_PROTO =>
+        l4_o <= committed_flit(r.proto);
+
       when OUT_LEN =>
         l4_o <= committed_flit(std_ulogic_vector(r.pdu_len(15 downto 8)));
 
-      when OUT_DATA =>
-        l4_o <= committed_flit(
-          data => r.fifo(0),
-          valid => r.fifo_fillness /= 0);
-
       when OUT_COMMIT =>
-        notify_valid_o <= '1';
         l4_o <= committed_commit(true);
         
       when OUT_CANCEL =>
@@ -500,13 +476,13 @@ begin
       when IN_RESET | IN_CANCEL | IN_COMMIT =>
         l2_o <= committed_accept(false);
 
-      when IN_L12_HEADER | IN_VER_LEN | IN_TOS | IN_TOTAL_LEN
+      when IN_VER_LEN | IN_TOS | IN_TOTAL_LEN
         | IN_IDENTIFICATION | IN_FRAG_OFF | IN_TTL | IN_PROTO
-        | IN_CHKSUM | IN_SRC_ADDR | IN_DST_ADDR | IN_OPTS
+        | IN_CHKSUM | IN_DST_ADDR | IN_OPTS
         | IN_DROP =>
         l2_o <= committed_accept(true);
 
-      when IN_DATA =>
+      when IN_HEADER | IN_SRC_ADDR | IN_DATA =>
         l2_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
     end case;
   end process;

@@ -50,7 +50,7 @@ use nsl_logic.bool.all;
 entity arp_ethernet is
   generic(
     -- L2 header length is fixed by MAC layer
-    l1_header_length_c : integer := 0;
+    header_length_c : integer := 0;
     cache_count_c : integer := 1;
     clock_i_hz_c : natural
     );
@@ -59,7 +59,7 @@ entity arp_ethernet is
     reset_n_i : in std_ulogic;
 
     -- Layer-1/2 header, supposed to be fixed, if any.
-    l1_header_i : in byte_string(0 to l1_header_length_c-1) := (others => x"00");
+    header_i : in byte_string(0 to header_length_c-1) := (others => x"00");
 
     -- Host configuration
     unicast_i : in ipv4_t;
@@ -74,15 +74,15 @@ entity arp_ethernet is
     from_l2_o : out committed_ack;
 
     -- Rx notification API
-    -- l1 header | mac | context | ipv4 | context
-    notify_i : in byte_string(0 to l1_header_length_c+7+4);
-    notify_valid_i : in std_ulogic;
+    -- header | mac | context | ipv4 | context
+    notify_i : in byte_string(0 to header_length_c+7+4) := (others => x"00");
+    notify_valid_i : in std_ulogic := '0';
 
     -- Resolver API for IP usage
-    query_i : in framed_req;
-    query_o : out framed_ack;
-    reply_o : out framed_req;
-    reply_i : in framed_ack
+    request_i : in framed_req;
+    request_o : out framed_ack;
+    response_o : out framed_req;
+    response_i : in framed_ack
     );
 end entity;
 
@@ -191,16 +191,16 @@ begin
       ST_FAIL
       );
 
-    constant l1_header_length1_c: natural := nsl_math.arith.max(1, l1_header_i'length);
-    constant left_max: natural := nsl_math.arith.max(6, l1_header_i'length);
+    constant left_max: natural := nsl_math.arith.max(6, header_i'length);
 
     type regs_t is
     record
       state: state_t;
       pa : ipv4_t;
       ha : mac48_t;
+      ttl: byte;
       entry: cache_line_index_t;
-      l1_header: byte_string(0 to l1_header_length1_c-1);
+      header: byte_string(0 to header_length_c-1);
       left: integer range 0 to left_max-1;
     end record;
 
@@ -216,8 +216,8 @@ begin
       end if;
     end process;
 
-    transition: process(r, query_i, reply_i, lookup_ram_rdata_s,
-                        l1_header_i, sender_request_ack_s,
+    transition: process(r, request_i, response_i, lookup_ram_rdata_s,
+                        header_i, sender_request_ack_s,
                         unicast_i, netmask_i, gateway_i) is
     begin
       rin <= r;
@@ -227,9 +227,9 @@ begin
           rin.state <= ST_IDLE;
 
         when ST_IDLE =>
-          if query_i.valid = '1' then
-            rin.pa <= shift_left(r.pa, query_i.data);
-            if query_i.last = '1' then
+          if request_i.valid = '1' then
+            rin.pa <= shift_left(r.pa, request_i.data);
+            if request_i.last = '1' then
               rin.state <= ST_QUERY_MANGLE;
             end if;
           end if;
@@ -265,7 +265,8 @@ begin
           end if;
 
         when ST_TTL_CHECK =>
-          if lookup_ram_rdata_s = x"ff" then
+          rin.ttl <= lookup_ram_rdata_s;
+          if lookup_ram_rdata_s(7) /= '0' then
             rin.state <= ST_STALE;
           else
             rin.state <= ST_HA_LOAD;
@@ -289,16 +290,16 @@ begin
           end if;
 
         when ST_FAIL =>
-          if reply_i.ready = '1' then
+          if response_i.ready = '1' then
             rin.state <= ST_IDLE;
           end if;
           
         when ST_RSP =>
-          if reply_i.ready = '1' then
-            if l1_header_length_c /= 0 then
-              rin.left <= l1_header_length_c-1;
+          if response_i.ready = '1' then
+            if header_length_c /= 0 then
+              rin.left <= header_length_c-1;
               rin.state <= ST_PUT_L1;
-              rin.l1_header <= l1_header_i;
+              rin.header <= header_i;
             else
               rin.left <= 5;
               rin.state <= ST_PUT_HA;
@@ -306,8 +307,8 @@ begin
           end if;
 
         when ST_PUT_L1 =>
-          if reply_i.ready = '1' then
-            rin.l1_header <= shift_left(r.l1_header);
+          if response_i.ready = '1' then
+            rin.header <= shift_left(r.header);
             if r.left /= 0 then
               rin.left <= r.left - 1;
             else
@@ -317,7 +318,7 @@ begin
           end if;
 
         when ST_PUT_HA =>
-          if reply_i.ready = '1' then
+          if response_i.ready = '1' then
             rin.ha <= shift_left(r.ha);
             if r.left /= 0 then
               rin.left <= r.left - 1;
@@ -327,7 +328,7 @@ begin
           end if;
 
         when ST_PUT_CTX =>
-          if reply_i.ready = '1' then
+          if response_i.ready = '1' then
             rin.state <= ST_RESET;
           end if;
       end case;
@@ -337,8 +338,8 @@ begin
       variable col: cache_col_index_t;
     begin
       col := (others => '-');
-      query_o <= framed_ack_idle_c;
-      reply_o <= framed_req_idle_c;
+      request_o <= framed_ack_idle_c;
+      response_o <= framed_req_idle_c;
       lookup_miss_s <= '0';
       lookup_miss_pa_s <= (others => (others => '-'));
       lookup_ram_en_s <= '0';
@@ -348,7 +349,7 @@ begin
           null;
 
         when ST_IDLE =>
-          query_o.ready <= '1';
+          request_o.ready <= '1';
 
         when ST_PA_NEXT | ST_QUERY_MANGLE =>
           null;
@@ -389,19 +390,19 @@ begin
           lookup_miss_pa_s <= r.pa;
 
         when ST_RSP =>
-          reply_o <= framed_flit(x"01");
+          response_o <= framed_flit(r.ttl);
 
         when ST_FAIL =>
-          reply_o <= framed_flit(x"00", last => true);
+          response_o <= framed_flit(x"00", last => true);
 
         when ST_PUT_L1 =>
-          reply_o <= framed_flit(r.l1_header(0));
+          response_o <= framed_flit(r.header(0));
 
         when ST_PUT_HA =>
-          reply_o <= framed_flit(r.ha(0));
+          response_o <= framed_flit(r.ha(0));
 
         when ST_PUT_CTX =>
-          reply_o <= framed_flit(x"00", last => true);
+          response_o <= framed_flit(x"00", last => true);
       end case;
 
       lookup_ram_addr_s <= r.entry & col;
@@ -412,7 +413,7 @@ begin
     type state_t is (
       ST_RESET,
       ST_IDLE,
-      ST_PUT_L1_HEADER,
+      ST_PUT_HEADER,
       ST_PUT_L2_MAC,
       ST_PUT_L2_CTX,
       ST_PUT_HTYPE,
@@ -427,7 +428,7 @@ begin
       ST_COMMIT
       );
       
-    constant tmp_size_c: natural := nsl_math.arith.max(l1_header_i'length, 6);
+    constant tmp_size_c: natural := nsl_math.arith.max(header_i'length, 6);
 
     type regs_t is
     record
@@ -486,10 +487,10 @@ begin
           end if;
 
           if do_start then
-            if l1_header_length_c /= 0 then
-              rin.state <= ST_PUT_L1_HEADER;
-              rin.left <= l1_header_length_c-1;
-              rin.tmp(0 to l1_header_length_c-1) <= l1_header_i;
+            if header_length_c /= 0 then
+              rin.state <= ST_PUT_HEADER;
+              rin.left <= header_length_c-1;
+              rin.tmp(header_i'range) <= header_i;
             else
               -- tmp has been filled above
               rin.state <= ST_PUT_L2_MAC;
@@ -497,7 +498,7 @@ begin
             end if;
           end if;
 
-        when ST_PUT_L1_HEADER =>
+        when ST_PUT_HEADER =>
           if to_l2_i.ready = '1' then
             if r.left /= 0 then
               rin.left <= r.left - 1;
@@ -642,7 +643,7 @@ begin
         when ST_RESET | ST_IDLE =>
           null;
 
-        when ST_PUT_L1_HEADER | ST_PUT_L2_MAC
+        when ST_PUT_HEADER | ST_PUT_L2_MAC
           | ST_PUT_SHA | ST_PUT_SPA | ST_PUT_THA
           | ST_PUT_TPA =>
           to_l2_o <= committed_flit(r.tmp(0));
@@ -720,7 +721,7 @@ begin
       ST_NOTIFY_TTL_WRITE
       );
 
-    constant tmp_size_c: natural := nsl_math.arith.max(l1_header_i'length, ethernet_layer_header_length_c);
+    constant tmp_size_c: natural := nsl_math.arith.max(header_i'length, ethernet_layer_header_length_c);
 
     type regs_t is
     record
@@ -765,10 +766,10 @@ begin
       end if;
 
       if notify_valid_i = '1' and not r.notify_pending then
-        if notify_i(l1_header_length_c+6) = x"00" and
-          notify_i(l1_header_length_c+6+1+4) = x"00" then
-          rin.notify_ha <= notify_i(l1_header_length_c to l1_header_length_c+5);
-          rin.notify_pa <= notify_i(l1_header_length_c+6+1 to l1_header_length_c+6+4);
+        if notify_i(header_length_c+6) = x"00" and
+          notify_i(header_length_c+6+1+4) = x"00" then
+          rin.notify_ha <= notify_i(header_length_c to header_length_c+5);
+          rin.notify_pa <= notify_i(header_length_c+6+1 to header_length_c+6+4);
           rin.notify_pending <= true;
         end if;
       end if;
@@ -790,8 +791,8 @@ begin
           rin.ref_pa <= unicast_i;
 
           if from_l2_i.valid = '1' then
-            if l1_header_length_c /= 0 then
-              rin.left <= l1_header_length_c-1;
+            if header_length_c /= 0 then
+              rin.left <= header_length_c-1;
               rin.state <= ST_GET_L1;
             else
               rin.left <= ethernet_layer_header_length_c-1;
