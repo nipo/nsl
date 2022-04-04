@@ -144,12 +144,24 @@ begin
 
       when IN_COMMIT =>
         if r.out_state = OUT_COMMIT and out_i.ready = '1' then
-          rin.in_state <= IN_RESET;
+          rin.fifo_fillness <= 0;
+          if header_length_c = 0 then
+            rin.in_state <= IN_DATA;
+          else
+            rin.in_state <= IN_HEADER;
+            rin.in_left <= header_length_c-1;
+          end if;
         end if;
         
       when IN_CANCEL =>
         if r.out_state = OUT_CANCEL and out_i.ready = '1' then
-          rin.in_state <= IN_RESET;
+          rin.fifo_fillness <= 0;
+          if header_length_c = 0 then
+            rin.in_state <= IN_DATA;
+          else
+            rin.in_state <= IN_HEADER;
+            rin.in_left <= header_length_c-1;
+          end if;
         end if;
     end case;
 
@@ -179,7 +191,7 @@ begin
           rin.crc <= nsl_data.crc.crc_update(params_c, r.crc, r.fifo(0));
         end if;
 
-        if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL)
+        if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL or (in_i.valid = '1' and in_i.last = '1'))
           and (r.fifo_fillness = 0
                or (r.fifo_fillness = 1 and out_i.ready = '1')) then
           rin.out_state <= OUT_CRC;

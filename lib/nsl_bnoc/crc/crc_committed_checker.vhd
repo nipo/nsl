@@ -32,7 +32,6 @@ architecture beh of crc_committed_checker is
     IN_RESET,
     IN_HEADER,
     IN_DATA,
-    IN_CRC,
     IN_COMMIT,
     IN_CANCEL
     );
@@ -41,8 +40,7 @@ architecture beh of crc_committed_checker is
     OUT_RESET,
     OUT_HEADER,
     OUT_DATA,
-    OUT_COMMIT,
-    OUT_CANCEL
+    OUT_DONE
     );
 
   constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
@@ -114,8 +112,10 @@ begin
       when IN_DATA =>
         if r.fifo_fillness < fifo_depth_c and in_i.valid = '1' then
           if in_i.last = '1' then
-            if in_i.data(0) = '1' then
-              rin.in_state <= IN_CRC;
+            if in_i.data(0) /= '1' then
+              rin.in_state <= IN_CANCEL;
+            elsif r.crc = crc_check(params_c) then
+              rin.in_state <= IN_COMMIT;
             else
               rin.in_state <= IN_CANCEL;
             end if;
@@ -125,17 +125,16 @@ begin
           end if;
         end if;
 
-      when IN_CRC =>
-        if r.crc = crc_check(params_c) then
-          rin.in_state <= IN_COMMIT;
-        else
-          rin.in_state <= IN_CANCEL;
-        end if;
-
       when IN_COMMIT | IN_CANCEL =>
-        if (r.out_state = OUT_COMMIT or r.out_state = OUT_CANCEL)
-          and out_i.ready = '1' then
-          rin.in_state <= IN_RESET;
+        if r.out_state = OUT_DONE and out_i.ready = '1' then
+          rin.crc <= crc_init(params_c);
+          rin.fifo_fillness <= 0;
+          if header_length_c = 0 then
+            rin.in_state <= IN_DATA;
+          else
+            rin.in_state <= IN_HEADER;
+            rin.in_left <= header_length_c-1;
+          end if;
         end if;
     end case;
 
@@ -163,18 +162,15 @@ begin
           fifo_pop := true;
         end if;
 
-        if r.fifo_fillness = crc_byte_count_c
-          or (r.fifo_fillness = crc_byte_count_c+1 and out_i.ready = '1') then
-          if r.in_state = IN_COMMIT then
-            rin.out_state <= OUT_COMMIT;
-          end if;
+        if ((r.in_state = IN_DATA and in_i.valid = '1' and in_i.last = '1')
+            or r.in_state = IN_COMMIT
+            or r.in_state = IN_CANCEL)
+          and (r.fifo_fillness = crc_byte_count_c
+               or (r.fifo_fillness = crc_byte_count_c+1 and out_i.ready = '1')) then
+          rin.out_state <= OUT_DONE;
         end if;
 
-        if r.in_state = IN_CANCEL then
-          rin.out_state <= OUT_CANCEL;
-        end if;
-
-      when OUT_COMMIT | OUT_CANCEL =>
+      when OUT_DONE =>
         if out_i.ready = '1' then
           rin.fifo_fillness <= 0;
           if header_length_c /= 0 then
@@ -202,35 +198,22 @@ begin
   begin
     case r.out_state is
       when OUT_RESET =>
-        out_o.valid <= '0';
-        out_o.data <= "--------";
-        out_o.last <= '-';
+        out_o <= committed_req_idle_c;
 
       when OUT_HEADER | OUT_DATA =>
-        out_o.valid <= to_logic(r.fifo_fillness > crc_byte_count_c);
-        out_o.last <= '0';
-        out_o.data <= r.fifo(0);
+        out_o <= committed_flit(data => r.fifo(0),
+                                valid => r.fifo_fillness > crc_byte_count_c);
 
-      when OUT_COMMIT =>
-        out_o.valid <= '1';
-        out_o.last <= '1';
-        out_o.data <= x"01";
-        
-      when OUT_CANCEL =>
-        out_o.valid <= '1';
-        out_o.last <= '1';
-        out_o.data <= x"00";
+      when OUT_DONE =>
+        out_o <= committed_commit(r.in_state = IN_COMMIT);
     end case;
 
     case r.in_state is
-      when IN_RESET =>
-        in_o.ready <= '0';
+      when IN_RESET | IN_COMMIT | IN_CANCEL =>
+        in_o <= committed_accept(false);
 
       when IN_HEADER | IN_DATA =>
-        in_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
-
-      when IN_COMMIT | IN_CANCEL | IN_CRC =>
-        in_o.ready <= '0';
+        in_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
     end case;
   end process;
 end architecture;

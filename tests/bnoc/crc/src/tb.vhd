@@ -35,6 +35,21 @@ begin
     wait for 100 ns;
     committed_put(adder_in_s.req, adder_in_s.ack, clock_s,
                   packet_c(packet_c'left to packet_c'right-4), true);
+
+    committed_put(adder_in_s.req, adder_in_s.ack, clock_s,
+                  packet_c(packet_c'left to packet_c'right-4), true,
+                  1, 3);
+
+    committed_put(adder_in_s.req, adder_in_s.ack, clock_s,
+                  packet_c(packet_c'left to packet_c'right-4), true,
+                  1, 2);
+
+    wait for 100 ns;
+    committed_put(adder_in_s.req, adder_in_s.ack, clock_s,
+                  packet_c(packet_c'left to packet_c'right-4), true);
+    committed_put(adder_in_s.req, adder_in_s.ack, clock_s,
+                  packet_c(packet_c'left to packet_c'right-4), true);
+
     wait;
   end process;
 
@@ -47,7 +62,26 @@ begin
 
     committed_check("adder check",
                     adder_crc_s.req, adder_crc_s.ack, clock_s,
+                    packet_c, true, LOG_LEVEL_FATAL,
+                    1, 2);
+
+    committed_check("adder check",
+                    adder_crc_s.req, adder_crc_s.ack, clock_s,
+                    packet_c, true, LOG_LEVEL_FATAL,
+                    1, 2);
+
+    committed_check("adder check",
+                    adder_crc_s.req, adder_crc_s.ack, clock_s,
                     packet_c, true, LOG_LEVEL_FATAL);
+
+    wait for 100 ns;
+    committed_check("adder check",
+                    adder_crc_s.req, adder_crc_s.ack, clock_s,
+                    packet_c, true, LOG_LEVEL_FATAL);
+    committed_check("adder check",
+                    adder_crc_s.req, adder_crc_s.ack, clock_s,
+                    packet_c, true, LOG_LEVEL_FATAL);
+    
     done_s(0) <= '1';
     wait;
   end process;
@@ -72,6 +106,18 @@ begin
 
     wait for 100 ns;
     committed_put(checker_crc_s.req, checker_crc_s.ack, clock_s,
+                  packet_c, true, 1, 3);
+
+    committed_put(checker_crc_s.req, checker_crc_s.ack, clock_s,
+                  packet_c, true, 1, 2);
+
+    committed_put(checker_crc_s.req, checker_crc_s.ack, clock_s,
+                  packet_c, true);
+
+    wait for 100 ns;
+    committed_put(checker_crc_s.req, checker_crc_s.ack, clock_s,
+                  packet_c, true);
+    committed_put(checker_crc_s.req, checker_crc_s.ack, clock_s,
                   packet_c, true);
     wait;
   end process;
@@ -86,6 +132,26 @@ begin
     committed_check("checker check",
                     checker_out_s.req, checker_out_s.ack, clock_s,
                     packet_c(packet_c'left to packet_c'right-4), true, LOG_LEVEL_FATAL);
+
+
+    committed_check("checker check",
+                    checker_out_s.req, checker_out_s.ack, clock_s,
+                    packet_c(packet_c'left to packet_c'right-4), true, LOG_LEVEL_FATAL,
+                    1, 4);
+
+
+    committed_check("checker check",
+                    checker_out_s.req, checker_out_s.ack, clock_s,
+                    packet_c(packet_c'left to packet_c'right-4), true, LOG_LEVEL_FATAL);
+
+    wait for 100 ns;
+    committed_check("checker check",
+                    checker_out_s.req, checker_out_s.ack, clock_s,
+                    packet_c(packet_c'left to packet_c'right-4), true, LOG_LEVEL_FATAL);
+    committed_check("checker check",
+                    checker_out_s.req, checker_out_s.ack, clock_s,
+                    packet_c(packet_c'left to packet_c'right-4), true, LOG_LEVEL_FATAL);
+
     done_s(1) <= '1';
     wait;
   end process;
