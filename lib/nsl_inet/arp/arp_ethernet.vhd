@@ -396,7 +396,7 @@ begin
           response_o <= framed_flit(x"00", last => true);
 
         when ST_PUT_L1 =>
-          response_o <= framed_flit(r.header(0));
+          response_o <= framed_flit(first_left(r.header));
 
         when ST_PUT_HA =>
           response_o <= framed_flit(r.ha(0));

@@ -315,7 +315,7 @@ begin
           tx_out_o <= committed_req_idle_c;
 
         when OUT_HEADER =>
-          tx_out_o <= committed_flit(r.header(0));
+          tx_out_o <= committed_flit(first_left(r.header));
 
         when OUT_PA =>
           tx_out_o <= committed_flit(r.pa(0));
