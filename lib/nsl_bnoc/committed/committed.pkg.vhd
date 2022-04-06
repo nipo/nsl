@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_data;
+use nsl_data.bytestream.all;
 
 -- Committed network is a subset of framed network where a frame always ends
 -- with a status word. LSB of status word tells whether frame is valid (active
@@ -148,6 +149,50 @@ package committed is
     port(
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
+      
+      in_i   : in  committed_req;
+      in_o   : out committed_ack;
+
+      out_o  : out committed_req;
+      out_i  : in committed_ack
+      );
+  end component;
+
+  component committed_header_inserter is
+    generic(
+      header_length_c : positive
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      header_i : in byte_string(0 to header_length_c-1);
+      -- Tell the module when to capture header value.  This may
+      -- happen any time before frame_i.valid gets asserted.  If
+      -- capture is asserted multiple times (or continuously) before
+      -- frame_i.valid gets asserted, the last value is used.  If no
+      -- capture happens for two consecutive frames, what is outputted
+      -- to the second frame and later is undefined.
+      capture_i : in std_ulogic;
+      
+      in_i   : in  committed_req;
+      in_o   : out committed_ack;
+
+      out_o  : out committed_req;
+      out_i  : in committed_ack
+      );
+  end component;
+
+  component committed_header_extractor is
+    generic(
+      header_length_c : positive
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      header_o : out byte_string(0 to header_length_c-1);
+      valid_o : out std_ulogic;
       
       in_i   : in  committed_req;
       in_o   : out committed_ack;
