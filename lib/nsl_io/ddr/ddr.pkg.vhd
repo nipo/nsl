@@ -44,7 +44,7 @@ package ddr is
   --                                 v         v         v
   --              ____      ____      ____      ____      __
   --  Clock  ____/    \____/    \____/    \____/    \____/ 
-  --  dd         X D0 X D1 X D2 X D3 X D4 X D5 X
+  --  dd            X D0 X D1 X D2 X D3 X D4 X D5 X
   --  d(0)                  XXXXXX D0 XXXXXX D2 XXXXXX D4 XXXXX
   --  d(1)                  XXXXXX D1 XXXXXX D3 XXXXXX D5 XXXXX
   component ddr_input

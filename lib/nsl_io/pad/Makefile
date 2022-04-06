@@ -1,6 +1,6 @@
 vhdl-sources += pad.pkg.vhd
 
-ifneq ($(filter xc%,$(target_part)),)
+ifeq ($(hwdep),xilinx)
 vhdl-sources += pad_diff_output_xc.vhd
 vhdl-sources += pad_tmds_output_xc.vhd
 vhdl-sources += pad_tmds_input_xc.vhd
@@ -16,6 +16,14 @@ vhdl-sources += pad_diff_clock_input_xc7.vhd
 endif
 
 deps += unisim.vcomponents
+endif
+
+ifeq ($(hwdep),simulation)
+vhdl-sources += pad_diff_output_simulation.vhd
+vhdl-sources += pad_tmds_output_simulation.vhd
+vhdl-sources += pad_tmds_input_simulation.vhd
+vhdl-sources += pad_diff_input_simulation.vhd
+vhdl-sources += pad_diff_clock_input_simulation.vhd
 endif
 
 ifneq ($(filter gowin,$(hwdep)),)

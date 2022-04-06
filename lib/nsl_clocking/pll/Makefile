@@ -1,6 +1,6 @@
 vhdl-sources += pll.pkg.vhd
 
-ifeq ($(target-usage),simulation)
+ifeq ($(hwdep),simulation)
 vhdl-sources += pll_basic_simulation.vhd
 endif
 
