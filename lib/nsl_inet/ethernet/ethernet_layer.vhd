@@ -13,7 +13,9 @@ entity ethernet_layer is
     ethertype_c : ethertype_vector;
     -- Flit count to pass through at the start of a frame
     l1_header_length_c : integer := 0;
-    min_frame_size_c : natural := 64 --bytes
+    min_frame_size_c : natural := 64; --bytes
+    mtu_c : natural := 1500;
+    filter_inbound_packets_c : boolean := true
     );
   port(
     clock_i : in std_ulogic;
@@ -39,7 +41,7 @@ architecture beh of ethernet_layer is
 
   signal s_to_l3_index, s_from_l3_index: integer range 0 to ethertype_l_c'length - 1;
   signal s_from_l3_type : ethertype_t;
-  signal s_from_l1, s_to_l3, s_from_l3: nsl_bnoc.committed.committed_bus;
+  signal s_from_l1, s_to_l3, s_to_l3_valid, s_from_l3: nsl_bnoc.committed.committed_bus;
   
 begin
 
@@ -76,6 +78,29 @@ begin
       l3_i => s_to_l3.ack
       );
 
+  has_filter: if filter_inbound_packets_c
+  generate
+    filter: nsl_bnoc.committed.committed_filter
+      generic map(
+        max_size_c => nsl_math.arith.align_up(mtu_c)
+        )        
+      port map(
+        reset_n_i => reset_n_i,
+        clock_i => clock_i,
+        in_i => s_to_l3.req,
+        in_o => s_to_l3.ack,
+
+        out_o => s_to_l3_valid.req,
+        out_i => s_to_l3_valid.ack
+        );
+  end generate;
+
+  no_filter: if not filter_inbound_packets_c
+  generate
+    s_to_l3_valid.req <= s_to_l3.req;
+    s_to_l3.ack <= s_to_l3_valid.ack;
+  end generate;
+
   l3_dispatch: nsl_bnoc.committed.committed_dispatch
     generic map(
       destination_count_c => ethertype_c'length
@@ -86,8 +111,8 @@ begin
 
       destination_i => s_to_l3_index,
 
-      in_i => s_to_l3.req,
-      in_o => s_to_l3.ack,
+      in_i => s_to_l3_valid.req,
+      in_o => s_to_l3_valid.ack,
 
       out_o => to_l3_o,
       out_i => to_l3_i

@@ -126,7 +126,9 @@ package ethernet is
       ethertype_c : ethertype_vector;
       -- Flit count to pass through at the start of a frame
       l1_header_length_c : integer := 0;
-      min_frame_size_c : natural := 64 --bytes
+      min_frame_size_c : natural := 64; --bytes
+      mtu_c : natural := 1500;
+      filter_inbound_packets_c : boolean := true
       );
     port(
       clock_i : in std_ulogic;
