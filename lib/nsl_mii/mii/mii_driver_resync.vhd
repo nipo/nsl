@@ -15,6 +15,12 @@ entity mii_driver_resync is
     reset_n_i : in std_ulogic;
     clock_i : in std_ulogic;
 
+    rx_clock_o: out std_ulogic;
+    rx_sfd_o: out std_ulogic;
+
+    tx_clock_o: out std_ulogic;
+    tx_sfd_o: out std_ulogic;
+
     mii_o : out mii_m2p;
     mii_i : in  mii_p2m;
 
@@ -48,7 +54,7 @@ architecture beh of mii_driver_resync is
   record
     pipe: mii_p2m_pipe_t(0 to 2);
 
-    is_msb: boolean;
+    is_msb, is_sfd: boolean;
     state: rx_state_t;
     
     flit : mii_flit_t;
@@ -59,6 +65,7 @@ architecture beh of mii_driver_resync is
   record
     flit: mii_flit_t;
     is_msb: std_ulogic;
+    new_frame, is_sfd: boolean;
   end record;
 
   signal rx_r, rx_rin: rx_regs_t;
@@ -90,6 +97,7 @@ begin
   begin
     rx_rin <= rx_r;
 
+    rx_rin.is_sfd <= false;
     rx_rin.pipe <= rx_r.pipe(1 to 2) & mii_i.rx;
 
     -- One cycle out of 2 makes flit valid
@@ -110,6 +118,7 @@ begin
       when RX_PREAMBLE =>
         if rx_r.pipe(0).dv = '1' and rx_r.pipe(1).dv = '1' and
           rx_r.pipe(0).d = x"5" and rx_r.pipe(1).d = x"d" then
+          rx_rin.is_sfd <= true;
           rx_rin.state <= RX_FRAME;
           rx_rin.is_msb <= false;
           rx_rin.flit_valid <= '1';
@@ -124,6 +133,9 @@ begin
       rx_rin.state <= RX_INTERFRAME;
     end if;
   end process;            
+
+  rx_clock_o <= rx_clock_s;
+  rx_sfd_o <= to_logic(rx_r.is_sfd);
   
   rx_cross_domain: nsl_memory.fifo.fifo_homogeneous
     generic map(
@@ -206,6 +218,15 @@ begin
   begin
     tx_rin <= tx_r;
 
+    tx_rin.is_sfd <= false;
+
+    if tx_resynced_flit_s.valid = '0' then
+      tx_rin.new_frame <= true;
+    elsif tx_r.new_frame and tx_resynced_flit_s.data = x"d5" then
+      tx_rin.new_frame <= false;
+      tx_rin.is_sfd <= true;
+    end if;
+      
     tx_rin.is_msb <= not tx_r.is_msb;
     if tx_r.is_msb = '1' then
       tx_rin.flit <= tx_resynced_flit_s;
@@ -245,5 +266,8 @@ begin
       clock_i => mii_i.tx.clk,
       clock_o => tx_clock_s
       );
+
+  tx_clock_o <= tx_clock_s;
+  tx_sfd_o <= to_logic(tx_r.is_sfd);
       
 end architecture;

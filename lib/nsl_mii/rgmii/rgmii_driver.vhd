@@ -23,6 +23,9 @@ entity rgmii_driver is
 
     mode_i : in rgmii_mode_t;
 
+    rx_sfd_o: out std_ulogic;
+    tx_sfd_o: out std_ulogic;
+
     rx_clock_o : out std_ulogic;
     rx_flit_o : out mii_flit_t;
     
@@ -41,7 +44,8 @@ architecture beh of rgmii_driver is
   signal rx_flit_s, tx_flit_s: mii_flit_t;
   signal rx_sdr_s, tx_sdr_s: rgmii_sdr_io_t;
   signal rx_valid_s, tx_ready_s, rx_clock_s: std_ulogic;
-  
+  signal rx_reset_n_s, rx_sfd_s: std_ulogic;
+
 begin
 
   rx_clock_o <= rx_clock_s;
@@ -60,9 +64,26 @@ begin
 
       mode_i => mode_i,
       rgmii_i => rgmii_i,
+      sfd_o => rx_sfd_s,
 
       flit_o => rx_sdr_s,
       valid_o => rx_valid_s
+      );
+
+  reset_sync: nsl_clocking.async.async_edge
+    port map(
+      clock_i => rx_clock_s,
+      data_i => reset_n_i,
+      data_o => rx_reset_n_s
+      );
+  
+  sfd: nsl_clocking.interdomain.interdomain_tick
+    port map(
+      input_clock_i => rx_clock_s,
+      output_clock_i => clock_i,
+      input_reset_n_i => rx_reset_n_s,
+      tick_i => rx_sfd_s,
+      tick_o => rx_sfd_o
       );
 
   rx_flit_s.data <= rx_sdr_s.data;
@@ -138,6 +159,8 @@ begin
       mode_i => mode_i,
       flit_i => tx_sdr_s,
       ready_o => tx_ready_s,
+
+      sfd_o => tx_sfd_o,
 
       rgmii_o => rgmii_o
       );

@@ -7,4 +7,5 @@ vhdl-sources += mii_flit_to_committed.vhd
 
 deps += nsl_data.bytestream
 deps += nsl_clocking.distribution
+deps += nsl_clocking.interdomain
 deps += nsl_bnoc.committed

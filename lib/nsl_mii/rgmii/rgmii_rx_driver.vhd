@@ -16,6 +16,7 @@ entity rgmii_rx_driver is
     clock_i : in std_ulogic;
 
     rx_clock_o : out std_ulogic;
+    sfd_o : out std_ulogic;
 
     mode_i : in rgmii_mode_t;
     rgmii_i : in  nsl_mii.mii.rgmii_io_group_t;
@@ -55,7 +56,7 @@ architecture beh of rgmii_rx_driver is
     mode: rgmii_mode_t;
     reset_n: std_ulogic;
 
-    is_second: boolean;
+    is_second, is_sfd: boolean;
     state: state_t;
     
     flit : rgmii_sdr_io_t;
@@ -105,6 +106,7 @@ begin
 
     rin.pipe <= r.pipe(2 to 3) & rgmii_sdr_s;
     rin.reset_n <= '1';
+    rin.is_sfd <= false;
 
     if resync_free_s < 4 then
       rin.resync_pressure <= true;
@@ -122,7 +124,6 @@ begin
       when RGMII_MODE_1000 =>
         -- All cycles are valid
         rin.flit_valid <= '1';
-        rin.state <= ST_UNSYNC;
         -- Take both edges
         rin.flit.data <= r.pipe(1).data & r.pipe(0).data;
         rin.flit.dv <= r.pipe(0).ctl;
@@ -136,6 +137,35 @@ begin
           rin.resync_pressure <= false;
           rin.flit_valid <= '0';
         end if;
+
+        case r.state is
+          when ST_UNSYNC =>
+            rin.state <= ST_INTERFRAME;
+
+          when ST_INTERFRAME =>
+            if r.pipe(0).ctl = '1' and r.pipe(1).ctl = '1' then
+              rin.state <= ST_PREAMBLE;
+            end if;
+
+          when ST_PREAMBLE =>
+            if r.pipe(0).ctl = '1' and r.pipe(1).ctl = '1' and
+              r.pipe(0).data = x"5" and r.pipe(1).data = x"5" then
+              rin.state <= ST_PREAMBLE_FOUND;
+              rin.is_sfd <= true;
+            end if;
+
+          when ST_PREAMBLE_FOUND =>
+            if r.pipe(0).ctl = '1' and r.pipe(1).ctl = '1' and
+              r.pipe(0).data = x"5" and r.pipe(1).data = x"d" then
+              rin.state <= ST_FRAME;
+            end if;
+
+          when ST_FRAME =>
+            if r.pipe(0).ctl = '0' and r.pipe(1).ctl = '0' then
+              rin.state <= ST_INTERFRAME;
+            end if;
+
+        end case;
 
       when RGMII_MODE_10 | RGMII_MODE_100 =>
         -- One cycle out of 2 is valid
@@ -161,6 +191,7 @@ begin
             if r.pipe(0).ctl = '1' and r.pipe(2).ctl = '1' and
               r.pipe(0).data = x"5" and r.pipe(2).data = x"5" then
               rin.state <= ST_PREAMBLE_FOUND;
+              rin.is_sfd <= true;
             end if;
 
           when ST_PREAMBLE_FOUND =>
@@ -246,4 +277,6 @@ begin
       d_o(9)           => rgmii_sdr_s(1).ctl
       );
 
+  sfd_o <= to_logic(r.is_sfd);
+  
 end architecture;

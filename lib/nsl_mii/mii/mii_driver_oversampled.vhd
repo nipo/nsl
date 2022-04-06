@@ -15,6 +15,9 @@ entity mii_driver_oversampled is
     reset_n_i : in std_ulogic;
     clock_i : in std_ulogic;
 
+    rx_sfd_o: out std_ulogic;
+    tx_sfd_o: out std_ulogic;
+
     mii_o : out mii_m2p;
     mii_i : in  mii_p2m;
 
@@ -43,13 +46,14 @@ architecture beh of mii_driver_oversampled is
     last_rx_clock, last_tx_clock: std_ulogic;
 
     rx_pipe: mii_rx_pipe_t(0 to 2);
-    rx_is_msb: boolean;
+    rx_is_msb, rx_is_sfd: boolean;
     rx_state: rx_state_t;
     rx_flit : mii_flit_t;
     rx_flit_valid : std_ulogic;
 
     tx_flit: mii_flit_t;
     tx_is_msb: boolean;
+    tx_new_frame, tx_sfd: boolean;
     tx_pop: std_ulogic;
   end record;
 
@@ -77,6 +81,7 @@ begin
 
     rin.last_tx_clock <= mii_i.tx.clk;
     rin.last_rx_clock <= mii_i.rx.clk;
+    rin.rx_is_sfd <= false;
 
     rin.rx_flit_valid <= '0';
     if r.last_rx_clock = '0' and mii_i.rx.clk = '1' then
@@ -100,6 +105,7 @@ begin
         when RX_PREAMBLE =>
           if r.rx_pipe(0).dv = '1' and r.rx_pipe(1).dv = '1' and
             r.rx_pipe(0).d = x"5" and r.rx_pipe(1).d = x"d" then
+            rin.rx_is_sfd <= true;
             rin.rx_state <= RX_FRAME;
             rin.rx_is_msb <= false;
             rin.rx_flit_valid <= '1';
@@ -115,6 +121,16 @@ begin
       end if;
     end if;
 
+
+    rin.tx_sfd <= false;
+
+    if tx_flit_s.valid = '0' then
+      rin.tx_new_frame <= true;
+    elsif r.tx_new_frame and tx_flit_s.data = x"d5" then
+      rin.tx_new_frame <= false;
+      rin.tx_sfd <= true;
+    end if;
+    
     rin.tx_pop <= '0';
     if r.last_tx_clock = '0' and mii_i.tx.clk = '1' then
       rin.tx_is_msb <= not r.tx_is_msb;
@@ -123,7 +139,10 @@ begin
         rin.tx_pop <= '1';
       end if;
     end if;
-  end process;            
+  end process;
+
+  rx_sfd_o <= to_logic(r.rx_is_sfd);
+  tx_sfd_o <= to_logic(r.tx_sfd);
 
   mii_o.tx.d <= r.tx_flit.data(7 downto 4)
                 when r.tx_is_msb else r.tx_flit.data(3 downto 0);

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_mii, nsl_bnoc;
+library nsl_mii, nsl_bnoc, nsl_clocking;
 use nsl_mii.mii.all;
 
 entity mii_driver is
@@ -13,6 +13,9 @@ entity mii_driver is
   port(
     reset_n_i : in std_ulogic;
     clock_i : in std_ulogic;
+
+    rx_sfd_o: out std_ulogic;
+    tx_sfd_o: out std_ulogic;
 
     mii_o : out mii_m2p;
     mii_i : in  mii_p2m;
@@ -31,6 +34,9 @@ begin
 
   is_resync: if implementation_c = "resync"
   generate
+    signal rx_reset_n_s, rx_clock_s, rx_sfd_s: std_ulogic;
+    signal tx_reset_n_s, tx_clock_s, tx_sfd_s: std_ulogic;
+  begin
     impl: nsl_mii.mii.mii_driver_resync
       generic map(
         ipg_c => ipg_c
@@ -38,12 +44,48 @@ begin
       port map(
         reset_n_i => reset_n_i,
         clock_i => clock_i,
+        rx_clock_o => rx_clock_s,
+        rx_sfd_o => rx_sfd_s,
+        tx_clock_o => tx_clock_s,
+        tx_sfd_o => tx_sfd_s,
         mii_o => mii_o,
         mii_i => mii_i,
         rx_o => rx_o,
         rx_i => rx_i,
         tx_i => tx_i,
         tx_o => tx_o
+        );
+
+    rx_reset_sync: nsl_clocking.async.async_edge
+      port map(
+        clock_i => rx_clock_s,
+        data_i => reset_n_i,
+        data_o => rx_reset_n_s
+        );
+    
+    rx_sfd: nsl_clocking.interdomain.interdomain_tick
+      port map(
+        input_clock_i => rx_clock_s,
+        output_clock_i => clock_i,
+        input_reset_n_i => rx_reset_n_s,
+        tick_i => rx_sfd_s,
+        tick_o => rx_sfd_o
+        );
+
+    tx_reset_sync: nsl_clocking.async.async_edge
+      port map(
+        clock_i => tx_clock_s,
+        data_i => reset_n_i,
+        data_o => tx_reset_n_s
+        );
+    
+    tx_sfd: nsl_clocking.interdomain.interdomain_tick
+      port map(
+        input_clock_i => tx_clock_s,
+        output_clock_i => clock_i,
+        input_reset_n_i => tx_reset_n_s,
+        tick_i => tx_sfd_s,
+        tick_o => tx_sfd_o
         );
   end generate;
   
@@ -56,6 +98,8 @@ begin
       port map(
         reset_n_i => reset_n_i,
         clock_i => clock_i,
+        rx_sfd_o => rx_sfd_o,
+        tx_sfd_o => tx_sfd_o,
         mii_o => mii_o,
         mii_i => mii_i,
         rx_o => rx_o,

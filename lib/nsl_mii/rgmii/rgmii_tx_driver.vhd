@@ -19,6 +19,8 @@ entity rgmii_tx_driver is
     flit_i : in rgmii_sdr_io_t;
     ready_o : out std_ulogic;
 
+    sfd_o : out std_ulogic;
+
     rgmii_o : out rgmii_io_group_t
     );
 end entity;
@@ -59,6 +61,7 @@ architecture beh of rgmii_tx_driver is
     div2: integer range 0 to 24;
     div: integer range 0 to 9;
     bus_out: rgmii_bus;
+    frame_starting, sfd: boolean;
     mode : rgmii_mode_t;
   end record;
 
@@ -152,8 +155,21 @@ begin
         rin.bus_out.f <= on_wire_first(flit_i, '1');
         rin.bus_out.s <= on_wire_last(flit_i, '0');
     end case;
+
+
+    rin.sfd <= false;
+
+    if r.div = 0 and r.div2 = 0 then
+      if flit_i.dv = '0' then
+        rin.frame_starting <= true;
+      elsif flit_i.data = x"d5" and r.frame_starting then
+        rin.frame_starting <= false;
+        rin.sfd <= true;
+      end if;
+    end if;
   end process;
 
+  sfd_o <= to_logic(r.sfd);
   ready_o <= to_logic(r.div = 0 and r.div2 = 0);
   
   ddr_output: nsl_io.ddr.ddr_bus_output

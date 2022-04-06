@@ -59,6 +59,10 @@ package rgmii is
       
       mode_i : in rgmii_mode_t;
 
+      -- SFD detection, synchronous to clock_i
+      rx_sfd_o: out std_ulogic;
+      tx_sfd_o: out std_ulogic;
+
       -- RX path copy for in-band status, clock probing, etc.
       -- No datapath should be taken from this
       -- Clock is buffered already
@@ -108,6 +112,7 @@ package rgmii is
       mode_i : in rgmii_mode_t;
       flit_i : in rgmii_sdr_io_t;
       ready_o : out std_ulogic;
+      sfd_o: out std_ulogic;
 
       rgmii_o : out rgmii_io_group_t
       );
@@ -123,6 +128,8 @@ package rgmii is
 
       -- Buffered RX clock, for measurement, if any
       rx_clock_o : out std_ulogic;
+      -- SFD detection, synchronous to rx_clock_o
+      sfd_o: out std_ulogic;
 
       mode_i : in rgmii_mode_t;
       rgmii_i : in  rgmii_io_group_t;

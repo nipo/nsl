@@ -160,6 +160,10 @@ package mii is
       -- at least 2x TX/RX clock for "oversampled"
       clock_i : in std_ulogic;
 
+      -- Synchronous to clock_i
+      rx_sfd_o: out std_ulogic;
+      tx_sfd_o: out std_ulogic;
+
       mii_o : out mii_m2p;
       mii_i : in  mii_p2m;
 
@@ -172,6 +176,7 @@ package mii is
   end component;
 
   -- MII driver that resynchronizes all signals internally using fifos.
+  -- Instantiates clock buffers as needed
   component mii_driver_resync is
     generic(
       ipg_c : natural := 96 --bits
@@ -181,9 +186,20 @@ package mii is
       -- MAC clock, equal or faster than actual RX and TX clocks.
       clock_i : in std_ulogic;
 
+      -- Buffered rx clock, only clocks rx_sfd_o
+      rx_clock_o: out std_ulogic;
+      -- Synchronous to rx_clock_o
+      rx_sfd_o: out std_ulogic;
+
+      -- Buffered rx clock, only clocks tx_sfd_o
+      tx_clock_o: out std_ulogic;
+      -- Synchronous to tx_clock_o
+      tx_sfd_o: out std_ulogic;
+
       mii_o : out mii_m2p;
       mii_i : in  mii_p2m;
 
+      -- Syncronized to clock_i
       rx_o : out nsl_bnoc.committed.committed_req;
       rx_i : in nsl_bnoc.committed.committed_ack;
 
@@ -201,6 +217,10 @@ package mii is
       reset_n_i : in std_ulogic;
       -- MAC clock, at least 2x MII clock
       clock_i : in std_ulogic;
+
+      -- Synchronous to clock_i
+      rx_sfd_o: out std_ulogic;
+      tx_sfd_o: out std_ulogic;
 
       mii_o : out mii_m2p;
       mii_i : in  mii_p2m;
