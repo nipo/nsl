@@ -1,17 +1,32 @@
+library ieee;
+use ieee.numeric_std.all;
+
 package arith is
 
-  function log2(x : positive) return natural;
-  function is_pow2(x : positive) return boolean;
+  -- Returns y such that 2**y <= x
+  -- e.g. for x=9..16, this returns 4
+  function log2(x : natural) return natural;
+
+  function is_pow2(x : natural) return boolean;
   function max(x, y : integer) return integer;
   function min(x, y : integer) return integer;
+  -- Greatest comon divisor between two integers
   function gcd(x, y : integer) return integer;
+  -- Least common multiple between two integers.
   function lcm(x, y : integer) return integer;
+  -- Aligns number to next power of two.
+  -- Returns x if x is a power of two.
+  -- Return 1 if x is 0.
+  function align_up(x: natural) return natural;
+  -- Returns the unsigned constant that has the right size to express
+  -- x as unsigned.
+  function to_unsigned_auto(x : natural) return unsigned;
 
 end package arith;
 
 package body arith is
     
-  function log2(x : positive) return natural is
+  function log2(x : natural) return natural is
   begin
     if x <= 1 then
       return 0;
@@ -19,6 +34,13 @@ package body arith is
       return log2((x+1)/2) + 1;
     end if;
   end log2;
+
+  function to_unsigned_auto(x : natural) return unsigned is
+    constant width_c: natural := log2(x+1);
+    variable ret: unsigned(width_c-1 downto 0) := to_unsigned(x, width_c);
+  begin
+    return ret;
+  end to_unsigned_auto;
     
   function max(x, y : integer) return integer is
   begin
@@ -38,7 +60,7 @@ package body arith is
     end if;
   end min;
 
-  function is_pow2(x : positive) return boolean is
+  function is_pow2(x : natural) return boolean is
   begin
     if x < 2 then
       return true;
@@ -48,6 +70,12 @@ package body arith is
       return is_pow2(x / 2);
     end if;
   end is_pow2;
+
+  function align_up(x: natural) return natural
+  is
+  begin
+    return 2 ** log2(x);
+  end function;
 
   function gcd(x, y : integer) return integer is
   begin
