@@ -21,3 +21,9 @@ endif
 deps += unisim.vcomponents
 deps += nsl_data.text
 endif
+
+ifeq ($(hwdep),gowin)
+vhdl-sources += input_delay_fixed_gowin.vhd
+vhdl-sources += output_delay_fixed_gowin.vhd
+deps += gowin.components
+endif
