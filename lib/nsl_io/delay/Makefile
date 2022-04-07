@@ -1,6 +1,8 @@
 vhdl-sources += delay.pkg.vhd
+vhdl-sources += input_delay_aligner.vhd
 vhdl-sources += input_bus_delay_fixed.vhd
 vhdl-sources += output_bus_delay_fixed.vhd
+deps += nsl_math.arith
 
 ifeq ($(hwdep),simulation)
 vhdl-sources += input_delay_fixed_simulation.vhd
