@@ -382,6 +382,10 @@ package body ibm_8b10b_logic is
       ret.code_error := to_logic(not c4b3b.valid or not c6b5b.valid);
     end if;
 
+    if ret.disparity_error = '1' then
+      ret.disparity := '0';
+    end if;
+
     return ret;
   end function;
   

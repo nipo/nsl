@@ -547,11 +547,11 @@ package body ibm_8b10b_table is
     if disparity_i = '0' then
       code_error_o := code_error(0);
       disparity_error_o := disparity_error(0);
-      disparity_o := disparity_toggle xor disparity_i xor disparity_error(0);
+      disparity_o := (disparity_toggle xor disparity_i) and not disparity_error(0);
     else
       code_error_o := code_error(1);
       disparity_error_o := disparity_error(1);
-      disparity_o := disparity_toggle xor disparity_i xor disparity_error(1);
+      disparity_o := (disparity_toggle xor disparity_i) and not disparity_error(1);
     end if;
   end procedure;
 
