@@ -41,7 +41,8 @@ package serdes is
       -- or right to left depending on generic.
       parallel_o : out std_ulogic_vector(0 to 9);
 
-      bitslip_i : in std_ulogic
+      bitslip_i : in std_ulogic;
+      mark_o : out std_ulogic
       );
   end component;
 

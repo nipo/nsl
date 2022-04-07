@@ -16,7 +16,8 @@ entity serdes_ddr10_input is
     serial_i : in std_ulogic;
     parallel_o : out std_ulogic_vector(0 to 9);
 
-    bitslip_i : in std_ulogic
+    bitslip_i : in std_ulogic;
+    mark_o : out std_ulogic
     );
 end entity;
 
@@ -24,10 +25,30 @@ architecture gw1n of serdes_ddr10_input is
 
   signal reset_s, bit_clock_n_s : std_ulogic;
   signal d_s: std_ulogic_vector(0 to 9);
+  signal slip_count: integer range 0 to 9;
 
 begin
 
   reset_s <= not reset_n_i;
+
+  slip_tracker: process(word_clock_i, reset_n_i) is
+  begin
+    if rising_edge(word_clock_i) then
+      if bitslip_i = '1' then
+        if slip_count = 0 then
+          slip_count <= 9;
+        else
+          slip_count <= slip_count - 1;
+        end if;
+      end if;
+    end if;
+
+    if reset_n_i = '0' then
+      slip_count <= 9;
+    end if;
+  end process;
+
+  mark_o <= '1' if slip_count = 0 else '0';
 
   ltr: if left_to_right_c
   generate
