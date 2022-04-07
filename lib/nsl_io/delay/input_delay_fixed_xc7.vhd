@@ -17,7 +17,7 @@ end entity;
 architecture xc7 of input_delay_fixed is
 
   constant ref_freq : real := 200.0e6;
-  constant tap_delay_ps_c : integer := integer(1.0e12 / 32 / 2 / ref_freq);
+  constant tap_delay_ps_c : integer := integer(1.0e12 / 32.0 / 2.0 / ref_freq);
   constant tap_count_i : integer := delay_ps_c / tap_delay_ps_c;
 
 begin

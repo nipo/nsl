@@ -27,6 +27,30 @@ package delay is
       );
   end component;
 
+  component output_delay_variable is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      mark_o : out std_ulogic;
+      shift_i : in std_ulogic;
+
+      data_i : in std_ulogic;
+      data_o : out std_ulogic
+      );
+  end component;
+
+  component input_delay_variable is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      mark_o : out std_ulogic;
+      shift_i : in std_ulogic;
+
+      data_i : in std_ulogic;
+      data_o : out std_ulogic
+      );
+  end component;
+
   component output_bus_delay_fixed is
     generic(
       width_c : natural;
