@@ -5,7 +5,8 @@ library nsl_math;
 
 entity input_delay_aligner is
   generic(
-    stabilization_cycle_c: integer := 8
+    stabilization_cycle_c: integer := 8;
+    stabilization_delay_c: integer := 8
     );
   port(
     clock_i : in std_ulogic;
@@ -16,6 +17,7 @@ entity input_delay_aligner is
     serdes_shift_o : out std_ulogic;
     serdes_mark_i : in std_ulogic := '1';
 
+    restart_i: in std_ulogic := '0';
     valid_i : in std_ulogic;
     ready_o: out std_ulogic
     );
@@ -24,13 +26,14 @@ end entity;
 architecture beh of input_delay_aligner is
 
   constant delay_step_count_c : integer := 256;
-  constant stabilization_max_c : integer := nsl_math.arith.align_up(stabilization_cycle_c);
+  constant stabilization_max_c : integer := nsl_math.arith.align_up(nsl_math.arith.max(stabilization_cycle_c, stabilization_delay_c));
   
   type state_t is (
     ST_RESET,
     ST_SERDES_RESYNC,
     ST_DELAY_RESYNC,
     ST_STABILITY_WAIT,
+    ST_STABILITY_EVAL,
     ST_DELAY_STEP,
     ST_DELAY_SCANNED,
     ST_SERDES_STEP,
@@ -62,7 +65,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, delay_mark_i, serdes_mark_i, valid_i) is
+  transition: process(r, delay_mark_i, serdes_mark_i, valid_i, restart_i) is
   begin
     rin <= r;
 
@@ -81,19 +84,27 @@ begin
           rin.delay_valid_first <= 0;
           rin.delay_valid_last <= 0;
           rin.had_valid <= false;
-          rin.stabilization_timeout <= stabilization_max_c - 1;
+          rin.stabilization_timeout <= stabilization_delay_c - 1;
         end if;
 
       when ST_STABILITY_WAIT =>
         rin.stabilization_timeout <= (r.stabilization_timeout - 1) mod stabilization_max_c;
         if r.stabilization_timeout = 0 then
-          if valid_i = '1' then
-            rin.had_valid <= true;
-            if not r.had_valid then
-              rin.delay_valid_first <= r.delay_value;
-            end if;
-            rin.delay_valid_last <= r.delay_value;
+          rin.state <= ST_STABILITY_EVAL;
+          rin.stabilization_timeout <= stabilization_cycle_c - 1;
+        end if;
+
+      when ST_STABILITY_EVAL =>
+        rin.stabilization_timeout <= (r.stabilization_timeout - 1) mod stabilization_max_c;
+        if valid_i = '0' then
+          rin.delay_value <= (r.delay_value + 1) mod delay_step_count_c;
+          rin.state <= ST_DELAY_STEP;
+        elsif r.stabilization_timeout = 0 then
+          rin.had_valid <= true;
+          if not r.had_valid then
+            rin.delay_valid_first <= r.delay_value;
           end if;
+          rin.delay_valid_last <= r.delay_value;
         
           rin.delay_value <= (r.delay_value + 1) mod delay_step_count_c;
           rin.state <= ST_DELAY_STEP;
@@ -104,6 +115,7 @@ begin
           rin.state <= ST_DELAY_SCANNED;
         else
           rin.state <= ST_STABILITY_WAIT;
+          rin.stabilization_timeout <= stabilization_delay_c - 1;
         end if;
 
       when ST_SERDES_STEP =>
@@ -112,7 +124,7 @@ begin
         rin.delay_valid_last <= 0;
         rin.delay_value <= 0;
         rin.had_valid <= false;
-        rin.stabilization_timeout <= stabilization_max_c - 1;
+        rin.stabilization_timeout <= stabilization_delay_c - 1;
         
       when ST_DELAY_SCANNED =>
         if not r.had_valid then
@@ -131,18 +143,11 @@ begin
         rin.delay_value <= (r.delay_value - 1) mod delay_step_count_c;
         if r.delay_value = 0 then
           rin.state <= ST_LOCKED;
-          rin.stabilization_timeout <= stabilization_max_c - 1;
         end if;
 
       when ST_LOCKED =>
-        if valid_i = '0' then
-          if r.stabilization_timeout = 0 then
-            rin.state <= ST_RESET;
-          else
-            rin.stabilization_timeout <= r.stabilization_timeout - 1;
-          end if;
-        else
-          rin.stabilization_timeout <= stabilization_max_c - 1;
+        if restart_i = '1' then
+          rin.state <= ST_RESET;
         end if;
     end case;
   end process;
@@ -154,7 +159,7 @@ begin
     ready_o <= '0';
 
     case r.state is
-      when ST_RESET | ST_DELAY_SCANNED | ST_STABILITY_WAIT =>
+      when ST_RESET | ST_DELAY_SCANNED | ST_STABILITY_WAIT | ST_STABILITY_EVAL =>
         null;
 
       when ST_SERDES_RESYNC | ST_SERDES_STEP =>
