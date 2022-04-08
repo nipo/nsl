@@ -14,10 +14,8 @@ entity ibm_8b10b_encoder is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    data_i : in data_word;
-    control_i : in std_ulogic;
-
-    data_o : out code_word
+    data_i : in data_t;
+    data_o : out code_word_t
     );
 end entity;
 
@@ -59,13 +57,13 @@ begin
       end if;
     end process;
 
-    transition: process(r, data_i, control_i) is
+    transition: process(r, data_i) is
     begin
       rin <= r;
 
-      rin.cl5 <= classify_5b6b(data_i(4 downto 0), control_i);
-      rin.cl3 <= classify_3b4b(data_i(7 downto 5), control_i);
-      rin.control <= control_i;
+      rin.cl5 <= classify_5b6b(data_i.data(4 downto 0), data_i.control);
+      rin.cl3 <= classify_3b4b(data_i.data(7 downto 5), data_i.control);
+      rin.control <= data_i.control;
 
       rin.ret <= merge_8b10b(r.ret.rd, r.control, r.cl5, r.cl3);
     end process;
@@ -80,7 +78,7 @@ begin
     type regs_t is
     record
       rd: std_ulogic;
-      data: code_word;
+      data: code_word_t;
     end record;
 
     signal r, rin: regs_t;
@@ -96,13 +94,13 @@ begin
       end if;
     end process;
 
-    transition: process(r, data_i, control_i) is
-      variable d_o : code_word;
+    transition: process(r, data_i) is
+      variable d_o : code_word_t;
       variable rd_o : std_ulogic;
     begin
       rin <= r;
 
-      nsl_line_coding.ibm_8b10b_spec.encode(data_i, r.rd, control_i, d_o, rd_o);
+      nsl_line_coding.ibm_8b10b_spec.encode(data_i, r.rd, d_o, rd_o);
       rin.rd <= to_logic(rd_o = '1');
       rin.data <= d_o;
     end process;
@@ -117,7 +115,7 @@ begin
     type regs_t is
     record
       rd: std_ulogic;
-      data: code_word;
+      data: code_word_t;
     end record;
 
     signal r, rin: regs_t;
@@ -138,13 +136,13 @@ begin
       end if;
     end process;
 
-    transition: process(r, data_i, control_i) is
-      variable d_o : code_word;
+    transition: process(r, data_i) is
+      variable d_o : code_word_t;
       variable rd_o : std_ulogic;
     begin
       rin <= r;
 
-      nsl_line_coding.ibm_8b10b_table.encode(data_i, r.rd, control_i, d_o, rd_o);
+      nsl_line_coding.ibm_8b10b_table.encode(data_i, r.rd, d_o, rd_o);
       rin.rd <= to_logic(rd_o = '1');
       rin.data <= d_o;
     end process;
@@ -162,9 +160,9 @@ begin
     is
       variable ret : std_ulogic_vector(0 to 11 * 1024 - 1);
       variable idx: unsigned(9 downto 0);
-      variable d_i: data_word;
-      variable rd_i, rd_o, k_i : std_ulogic;
-      variable d_o : code_word;
+      variable d_i: data_t;
+      variable rd_i, rd_o : std_ulogic;
+      variable d_o : code_word_t;
     begin
       for din in 0 to 1
       loop
@@ -172,12 +170,11 @@ begin
         loop
           for d in 0 to 255
           loop
-            d_i := std_ulogic_vector(to_unsigned(d, 8));
+            d_i.data := std_ulogic_vector(to_unsigned(d, 8));
             rd_i := to_logic(din = 1);
-            k_i := to_logic(k = 1);
-            idx := unsigned(rd_i & k_i & d_i);
-            nsl_line_coding.ibm_8b10b_table.encode(d_i, rd_i, k_i,
-                                   d_o, rd_o);
+            d_i.control := to_logic(k = 1);
+            idx := unsigned(rd_i & d_i.control & d_i.data);
+            nsl_line_coding.ibm_8b10b_table.encode(d_i, rd_i, d_o, rd_o);
             ret(to_integer(idx)*11 to (to_integer(idx)+1)*11 - 1) := rd_o & d_o;
           end loop;
         end loop;
@@ -196,8 +193,8 @@ begin
         clock_i => clock_i,
         enable_i => '1',
         data_i(9) => rd,
-        data_i(8) => control_i,
-        data_i(7 downto 0) => data_i,
+        data_i(8) => data_i.control,
+        data_i(7 downto 0) => data_i.data,
         data_o(10) => rd,
         data_o(9 downto 0) => data_o
         );

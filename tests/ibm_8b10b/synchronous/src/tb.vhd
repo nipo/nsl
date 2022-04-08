@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-library nsl_line_coding, nsl_simulation, nsl_logic, nsl_data, check, nsl_clocking;
+library nsl_line_coding, nsl_simulation, nsl_logic, nsl_data, nsl_clocking;
 use nsl_simulation.logging.all;
 use nsl_simulation.assertions.all;
 use nsl_data.prbs.all;
@@ -53,9 +53,9 @@ architecture arch of tb is
 
   signal done : std_ulogic_vector(0 to 0);
   signal reset_n, reset_n_async, clock : std_ulogic;
-  signal coded_tx, coded_err, coded_rx : code_word;
-  signal input_data, delayed_data, output_data : data_word;
-  signal input_k, delayed_k, output_k, ok, dec_err, disp_err, err_inj : std_ulogic;
+  signal coded_tx, coded_err, coded_rx : code_word_t;
+  signal input_data, delayed_data, output_data : data_t;
+  signal ok, dec_err, disp_err, err_inj : std_ulogic;
   signal stim_gen: prbs_state(30 downto 0);
   signal err_gen: prbs_state(22 downto 0);
 
@@ -88,10 +88,10 @@ begin
       err_inj <= '0';
       stim_gen <= prbs_forward(stim_gen, prbs31, 15);
       err_gen <= prbs_forward(err_gen, prbs23, 10);
-      input_data <= std_ulogic_vector(stim_gen(7 downto 0));
-      input_k <= to_logic(stim_gen(10 downto 8) = "000"
-                          and control_exists(to_integer(unsigned(stim_gen(4 downto 0))),
-                                             to_integer(unsigned(stim_gen(7 downto 5)))));
+      input_data.data <= std_ulogic_vector(stim_gen(7 downto 0));
+      input_data.control <= to_logic(stim_gen(10 downto 8) = "000"
+                                     and control_exists(to_integer(unsigned(stim_gen(4 downto 0))),
+                                                        to_integer(unsigned(stim_gen(7 downto 5)))));
 
       if err_gen(7 downto 0) = x"00" and inject_errors then
         err_inj <= '1';
@@ -109,18 +109,12 @@ begin
         since_reset := 0;
       elsif since_reset > 10 then
         ok <= to_logic((delayed_data = output_data)
-                       and (delayed_k = output_k)
                        and dec_err = '0'
                        and disp_err = '0');
 
         nsl_simulation.assertions.assert_equal(
           "data",
-          delayed_data, output_data,
-          note);
-
-        nsl_simulation.assertions.assert_equal(
-          "k",
-          delayed_k, output_k,
+          to_string(delayed_data), to_string(output_data),
           note);
       else
         since_reset := since_reset + 1;
@@ -131,14 +125,14 @@ begin
   pipe: nsl_clocking.intradomain.intradomain_multi_reg
     generic map(
       cycle_count_c => latency(enc_impl, dec_impl),
-      data_width_c => delayed_data'length+1
+      data_width_c => delayed_data.data'length+1
       )
     port map(
       clock_i => clock,
-      data_i(input_data'length-1 downto 0) => input_data,
-      data_i(input_data'length) => input_k,
-      data_o(delayed_data'length-1 downto 0) => delayed_data,
-      data_o(delayed_data'length) => delayed_k
+      data_i(input_data.data'length-1 downto 0) => input_data.data,
+      data_i(input_data.data'length) => input_data.control,
+      data_o(delayed_data.data'length-1 downto 0) => delayed_data.data,
+      data_o(delayed_data.data'length) => delayed_data.control
       );
 
   encoder: nsl_line_coding.ibm_8b10b.ibm_8b10b_encoder
@@ -150,8 +144,6 @@ begin
       reset_n_i => reset_n,
 
       data_i => input_data,
-      control_i => input_k,
-
       data_o => coded_tx
       );
 
@@ -168,7 +160,6 @@ begin
 
       data_i => coded_rx,
 
-      control_o => output_k,
       data_o => output_data,
       code_error_o => dec_err,
       disparity_error_o => disp_err

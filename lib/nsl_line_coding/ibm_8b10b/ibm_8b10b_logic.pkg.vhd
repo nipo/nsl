@@ -27,21 +27,19 @@ use work.ibm_8b10b.all;
 package ibm_8b10b_logic is
 
   procedure encode(
-    data_i      : in data_word;
+    data_i      : in data_t;
     disparity_i : in std_ulogic;
-    control_i   : in std_ulogic;
 
-    data_o      : out code_word;
+    data_o      : out code_word_t;
     disparity_o : out std_ulogic
     );
 
   procedure decode(
-    data_i      : in code_word;
+    data_i      : in code_word_t;
     disparity_i : in std_ulogic;
 
-    data_o            : out data_word;
+    data_o            : out data_t;
     disparity_o       : out std_ulogic;
-    control_o         : out std_ulogic;
     code_error_o      : out std_ulogic;
     disparity_error_o : out std_ulogic;
 
@@ -65,16 +63,16 @@ package ibm_8b10b_logic is
 
   type encoded_8b10b_t is
   record
-    data : code_word;
+    data : code_word_t;
     rd : std_ulogic;
   end record;
     
   function classify_3b4b(data_i: in std_ulogic_vector(7 downto 5);
-                             control_i: in std_ulogic)
+                         control_i: in std_ulogic)
     return classification_3b4b_t;
 
   function classify_5b6b(data_i: in std_ulogic_vector(4 downto 0);
-                             control_i: in std_ulogic)
+                         control_i: in std_ulogic)
     return classification_5b6b_t;
 
   function merge_8b10b(disparity_i : in std_ulogic;
@@ -99,9 +97,8 @@ package ibm_8b10b_logic is
 
   type decoded_10b8b_t is
   record
-    data            : data_word;
+    data            : data_t;
     disparity       : std_ulogic;
-    control         : std_ulogic;
     code_error      : std_ulogic;
     disparity_error : std_ulogic;
   end record;
@@ -121,16 +118,16 @@ package ibm_8b10b_logic is
   end record;
 
   function classify_4b3b(data_i : in std_ulogic_vector(9 downto 6);
-                            k_i : in boolean;
-                            disp_i : in std_ulogic) return classification_4b3b_t;
+                         k_i : in boolean;
+                         disp_i : in std_ulogic) return classification_4b3b_t;
   function classify_6b5b(data_i : in std_ulogic_vector(5 downto 0);
-                            k_i : in boolean) return classification_6b5b_t;
+                         k_i : in boolean) return classification_6b5b_t;
 
-  function classify_10b8b(data_i : in code_word)
+  function classify_10b8b(data_i : in code_word_t)
     return classification_10b8b_t;
 
   function merge_10b8b(
-    data_i : code_word;
+    data_i : code_word_t;
     disparity_i : std_ulogic;
     classif_i : classification_10b8b_t;
     strict_c : boolean := true)
@@ -146,7 +143,7 @@ package body ibm_8b10b_logic is
     k : boolean;
   end record;
   
-  function decoder_8b10b_classify(data_i : in code_word) return decoder_8b10b_classification_t
+  function decoder_8b10b_classify(data_i : in code_word_t) return decoder_8b10b_classification_t
   is
     variable p : integer range 0 to 4;
     variable k : boolean;
@@ -278,7 +275,7 @@ package body ibm_8b10b_logic is
     end case;
   end function;
 
-  function classify_10b8b(data_i : in code_word)
+  function classify_10b8b(data_i : in code_word_t)
     return classification_10b8b_t
   is
     variable ret : classification_10b8b_t;
@@ -309,7 +306,7 @@ package body ibm_8b10b_logic is
   end function;
 
   function merge_10b8b(
-    data_i : code_word;
+    data_i : code_word_t;
     disparity_i : std_ulogic;
     classif_i : classification_10b8b_t;
     strict_c : boolean := true)
@@ -347,9 +344,9 @@ package body ibm_8b10b_logic is
                   or (disp_mid = '1' and data_i(5 downto 4) = "00")
                   or classif_i.k) and (classif_i.is_y7_alt or classif_i.is_y7_pri);
     
-    ret.data := c4b3b.data & c6b5b.data;
+    ret.data.data := c4b3b.data & c6b5b.data;
     ret.disparity := disparity_i xor to_logic((c6b5b.d_changes xor c4b3b.d_changes) = '1');
-    ret.control := to_logic(classif_i.k);
+    ret.data.control := to_logic(classif_i.k);
 
     if strict_c then
       ret.disparity_error := to_logic(
@@ -390,12 +387,11 @@ package body ibm_8b10b_logic is
   end function;
   
   procedure decode(
-    data_i : in code_word;
+    data_i : in code_word_t;
     disparity_i : in std_ulogic;
 
-    data_o            : out data_word;
+    data_o            : out data_t;
     disparity_o       : out std_ulogic;
-    control_o         : out std_ulogic;
     code_error_o      : out std_ulogic;
     disparity_error_o : out std_ulogic;
 
@@ -406,7 +402,6 @@ package body ibm_8b10b_logic is
   begin
     data_o := r.data;
     disparity_o := r.disparity;
-    control_o := r.control;
     code_error_o := r.code_error;
     disparity_error_o := r.disparity_error;
   end procedure;
@@ -522,16 +517,15 @@ package body ibm_8b10b_logic is
   end function;
   
   procedure encode(
-    data_i : in data_word;
+    data_i : in data_t;
     disparity_i : in std_ulogic;
-    control_i    : in std_ulogic;
 
-    data_o : out code_word;
+    data_o : out code_word_t;
     disparity_o : out std_ulogic)
   is
-    constant cl5 : classification_5b6b_t := classify_5b6b(data_i(4 downto 0), control_i);
-    constant cl3 : classification_3b4b_t := classify_3b4b(data_i(7 downto 5), control_i);
-    constant ret : encoded_8b10b_t := merge_8b10b(disparity_i, control_i, cl5, cl3);
+    constant cl5 : classification_5b6b_t := classify_5b6b(data_i.data(4 downto 0), data_i.control);
+    constant cl3 : classification_3b4b_t := classify_3b4b(data_i.data(7 downto 5), data_i.control);
+    constant ret : encoded_8b10b_t := merge_8b10b(disparity_i, data_i.control, cl5, cl3);
   begin
     disparity_o := ret.rd;
     data_o := ret.data;

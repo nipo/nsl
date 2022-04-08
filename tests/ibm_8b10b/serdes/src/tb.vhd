@@ -17,9 +17,9 @@ architecture arch of tb is
   signal done_s : std_ulogic_vector(0 to 0);
   signal tx_reset_n_s, rx_reset_n_s, rx_resync_n_s, clock_s, bit_clock_s : std_ulogic;
 
-  signal tx_data_s, rx_data_s: data_word;
-  signal tx_10b_s, rx_10b_s: code_word;
-  signal tx_control_s, rx_control_s, rx_code_err_s, rx_disp_err_s,
+  signal tx_data_s, rx_data_s: data_t;
+  signal tx_10b_s, rx_10b_s: code_word_t;
+  signal rx_code_err_s, rx_disp_err_s,
     rx_serial_delayed_s, rx_delay_shift_s, rx_delay_mark_s,
     rx_serdes_shift_s, rx_serdes_mark_s, rx_valid_s, rx_ready_s: std_ulogic;
   
@@ -34,7 +34,6 @@ begin
     loop
       wait until rising_edge(clock_s);
       tx_data_s <= K28_1;
-      tx_control_s <= '1';
     end loop;
     wait;
   end process;
@@ -48,7 +47,6 @@ begin
       reset_n_i => tx_reset_n_s,
 
       data_i => tx_data_s,
-      control_i => tx_control_s,
       data_o => tx_10b_s
       );
 
@@ -109,7 +107,6 @@ begin
 
   rx_valid_s <= to_logic(rx_code_err_s = '0'
                          and rx_disp_err_s = '0'
-                         and rx_control_s = '1'
                          and rx_data_s = K28_1);
   
   rx: nsl_line_coding.ibm_8b10b.ibm_8b10b_decoder
@@ -122,7 +119,6 @@ begin
       reset_n_i => rx_reset_n_s,
 
       data_i => rx_10b_s,
-      control_o => rx_control_s,
       data_o => rx_data_s,
       code_error_o => rx_code_err_s,
       disparity_error_o => rx_disp_err_s

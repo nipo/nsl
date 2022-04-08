@@ -16,39 +16,22 @@ end tb;
 
 architecture arch of tb is
 
-  function code_pprint(d: data_word; k: std_ulogic) return string
-  is
-    variable prefix:string(1 to 1);
-  begin
-    if k = '1' then
-      prefix := "K";
-    else
-      prefix := "D";
-    end if;
-
-    return prefix
-      & to_string(to_integer(unsigned(d(4 downto 0))))
-      & "."
-      & to_string(to_integer(unsigned(d(7 downto 5))));
-  end function;
-
   procedure encode_check(
     disp      : in std_ulogic;
-    data      : in data_word;
-    k         : in std_ulogic)
+    data      : in data_t)
   is
     variable context : line;
-    variable dut_word, ref_word : code_word;
+    variable dut_word, ref_word : code_word_t;
     variable dut_disp, ref_disp : std_ulogic;
   begin
-    write(context, "Encoder for " & code_pprint(data, k) & ", d=" & to_string(disp));
+    write(context, "Encoder for " & to_string(data) & ", d=" & to_string(disp));
 
     nsl_line_coding.ibm_8b10b_table.encode(
-      data, disp, k,
+      data, disp,
       ref_word, ref_disp);
 
     nsl_line_coding.ibm_8b10b_logic.encode(
-      data, disp, k,
+      data, disp,
       dut_word, dut_disp);
 
     assert_equal(context.all, "ref data", dut_word, ref_word, FAILURE);
@@ -57,11 +40,10 @@ architecture arch of tb is
 
   procedure decode_check(
     disp      : in std_ulogic;
-    word      : in code_word)
+    word      : in code_word_t)
   is
     variable context : line;
-    variable dut_data, ref_data : data_word;
-    variable dut_k, ref_k : std_ulogic;
+    variable dut_data, ref_data : data_t;
     variable dut_disp, ref_disp : std_ulogic;
     variable dut_err, ref_err : std_ulogic;
     variable dut_derr, ref_derr : std_ulogic;
@@ -70,17 +52,17 @@ architecture arch of tb is
 
     nsl_line_coding.ibm_8b10b_table.decode(
       word, disp,
-      ref_data, ref_disp, ref_k, ref_err, ref_derr);
+      ref_data, ref_disp, ref_err, ref_derr);
 
     write(context, ", ref DispErr=" & to_string(ref_derr) & ", Err=" & to_string(ref_err));
 
     if ref_derr = '0' and ref_err = '0' then
-      write(context, ", code=" & code_pprint(ref_data, ref_k));
+      write(context, ", code=" & to_string(ref_data));
     end if;
 
     nsl_line_coding.ibm_8b10b_logic.decode(
       word, disp,
-      dut_data, dut_disp, dut_k, dut_err, dut_derr);
+      dut_data, dut_disp, dut_err, dut_derr);
 
     if ref_derr = '1' and dut_derr = '0' then
       log_warning(context.all, "Not reporting disparity error");
@@ -98,8 +80,8 @@ architecture arch of tb is
         log_warning(context.all, "Accepting invalid input");
       else
         assert_equal(context.all, "Dec err", ref_err, dut_err, FAILURE);
-        assert_equal(context.all, "Data", ref_data, dut_data, FAILURE);
-        assert_equal(context.all, "Control", ref_k, dut_k, FAILURE);
+        assert_equal(context.all, "Data", ref_data.data, dut_data.data, FAILURE);
+        assert_equal(context.all, "Control", ref_data.control, dut_data.control, FAILURE);
         assert_equal(context.all, "Disp", ref_disp, dut_disp, FAILURE);
       end if;
     end if;
@@ -108,17 +90,18 @@ architecture arch of tb is
 begin
 
   codec_check: process
-    variable w : data_word;
-    variable c : code_word;
+    variable w : data_t;
+    variable c : code_word_t;
   begin
     log_info("Testing encoder...");
 
     -- Check all data words with both running disparities
     for i in 0 to 255 loop
-      w := std_ulogic_vector(to_unsigned(i, w'length));
+      w.data := std_ulogic_vector(to_unsigned(i, 8));
+      w.control := '0';
 
-      encode_check('0', w, '0');
-      encode_check('1', w, '0');
+      encode_check('0', w);
+      encode_check('1', w);
     end loop;
 
     -- Check all control words, assert failure for non-existing ones
@@ -129,8 +112,8 @@ begin
         end if;
         w := control(a, b);
 
-        encode_check('0', w, '1');
-        encode_check('1', w, '1');
+        encode_check('0', w);
+        encode_check('1', w);
       end loop;
     end loop;
     log_info("Testing encoder done");

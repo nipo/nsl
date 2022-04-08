@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_logic;
+library nsl_logic, nsl_data;
+use nsl_data.bytestream.all;
 use nsl_logic.logic.all;
 use work.ibm_8b10b.all;
 
@@ -11,10 +12,10 @@ use work.ibm_8b10b.all;
 package ibm_8b10b_table is
 
   procedure encode(
-    data_i : in data_word;
-    disparity_i, control_i : in std_ulogic;
+    data_i : in data_t;
+    disparity_i : in std_ulogic;
 
-    data_o : out code_word;
+    data_o : out code_word_t;
     disparity_o : out std_ulogic);
 
   -- Lookup decoding parameters for a given received word.
@@ -31,18 +32,18 @@ package ibm_8b10b_table is
   --
   -- See decode() for example usage.
   procedure decode_lookup(
-    data_i : in code_word;
-    data_o : out data_word;
+    data_i : in code_word_t;
+    data_o : out data_t;
     disparity_error_o : out std_ulogic_vector(0 to 1);
     code_error_o : out std_ulogic_vector(0 to 1);
-    control_o, disparity_toggle_o : out std_ulogic);
+    disparity_toggle_o : out std_ulogic);
 
   -- Decode depending on received word and current disparity.
   procedure decode(
-    data_i : in code_word;
+    data_i : in code_word_t;
     disparity_i : in std_ulogic;
-    data_o : out data_word;
-    disparity_o, control_o, code_error_o, disparity_error_o : out std_ulogic);
+    data_o : out data_t;
+    disparity_o, code_error_o, disparity_error_o : out std_ulogic);
 
 end package;
 
@@ -485,12 +486,12 @@ package body ibm_8b10b_table is
   end function;
   
   procedure encode(
-    data_i : in data_word;
-    disparity_i, control_i : in std_ulogic;
-    data_o : out code_word;
+    data_i : in data_t;
+    disparity_i : in std_ulogic;
+    data_o : out code_word_t;
     disparity_o : out std_ulogic)
   is
-    constant key : std_ulogic_vector(9 downto 0) := disparity_i & control_i & data_i;
+    constant key : std_ulogic_vector(9 downto 0) := disparity_i & data_i.control & data_i.data;
   begin
     data_o(0) := bit_lookup(enc_lut_data_0, key);
     data_o(1) := bit_lookup(enc_lut_data_1, key);
@@ -506,43 +507,44 @@ package body ibm_8b10b_table is
   end procedure;
 
   procedure decode_lookup(
-    data_i : in code_word;
-    data_o : out data_word;
+    data_i : in code_word_t;
+    data_o : out data_t;
     disparity_error_o : out std_ulogic_vector(0 to 1);
     code_error_o : out std_ulogic_vector(0 to 1);
-    control_o, disparity_toggle_o : out std_ulogic)
+    disparity_toggle_o : out std_ulogic)
   is
     constant key : std_ulogic_vector(9 downto 0) := data_i;
   begin
-    data_o(0) := bit_lookup(dec_lut_data_0, key);
-    data_o(1) := bit_lookup(dec_lut_data_1, key);
-    data_o(2) := bit_lookup(dec_lut_data_2, key);
-    data_o(3) := bit_lookup(dec_lut_data_3, key);
-    data_o(4) := bit_lookup(dec_lut_data_4, key);
-    data_o(5) := bit_lookup(dec_lut_data_5, key);
-    data_o(6) := bit_lookup(dec_lut_data_6, key);
-    data_o(7) := bit_lookup(dec_lut_data_7, key);
+    data_o.data(0) := bit_lookup(dec_lut_data_0, key);
+    data_o.data(1) := bit_lookup(dec_lut_data_1, key);
+    data_o.data(2) := bit_lookup(dec_lut_data_2, key);
+    data_o.data(3) := bit_lookup(dec_lut_data_3, key);
+    data_o.data(4) := bit_lookup(dec_lut_data_4, key);
+    data_o.data(5) := bit_lookup(dec_lut_data_5, key);
+    data_o.data(6) := bit_lookup(dec_lut_data_6, key);
+    data_o.data(7) := bit_lookup(dec_lut_data_7, key);
     code_error_o(0) := bit_lookup(dec_lut_err0, key);
     disparity_error_o(0) := bit_lookup(dec_lut_rderr0, key);
     code_error_o(1) := bit_lookup(dec_lut_err1, key);
     disparity_error_o(1) := bit_lookup(dec_lut_rderr1, key);
-    control_o := bit_lookup(dec_lut_k, key);
+    data_o.control := bit_lookup(dec_lut_k, key);
     disparity_toggle_o := bit_lookup(dec_lut_rd_swap, key);
   end procedure;
 
   procedure decode(
-    data_i : in code_word;
+    data_i : in code_word_t;
     disparity_i : in std_ulogic;
-    data_o : out data_word;
-    disparity_o, control_o, code_error_o, disparity_error_o : out std_ulogic)
+    data_o : out data_t;
+    disparity_o, code_error_o, disparity_error_o : out std_ulogic)
   is
     constant key : std_ulogic_vector(9 downto 0) := data_i;
     variable disparity_error, code_error : std_ulogic_vector(0 to 1);
-    variable disparity_toggle : std_ulogic;
+    variable disparity_toggle, control : std_ulogic;
+    variable data: byte;
   begin
     decode_lookup(data_i, data_o,
                   disparity_error, code_error,
-                  control_o, disparity_toggle);
+                  disparity_toggle);
 
     if disparity_i = '0' then
       code_error_o := code_error(0);

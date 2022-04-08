@@ -2,6 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_data;
+use nsl_data.bytestream.all;
+use nsl_data.text.all;
+
 -- Coding scheme from A. X. Widmer and P. A. Franaszek, IBM
 --
 -- See IBM Journal of Research & Development Vol. 27 No. 5 pp. 440-451
@@ -31,53 +35,63 @@ package ibm_8b10b is
   -- singular comma" paragraph on page 446 of IBMRD. Bug is on side of
   -- other implementors.
 
-  -- HGFEDCBA
-  subtype data_word is std_ulogic_vector(7 downto 0);
   -- jhgfiedcba, transmit LSB first (from index 0)
-  subtype code_word is std_ulogic_vector(9 downto 0);
+  subtype code_word_t is std_ulogic_vector(9 downto 0);
 
+  type data_t is
+  record
+    -- HGFEDCBA
+    data : byte;
+    control: std_ulogic;
+  end record;
+  
   -- Data word expressed as pair of integers. Suitable for matching
   -- D/Kx.y notation.
-  function xy(x : integer range 0 to 31;
-              y : integer range 0 to 7)
-    return data_word;
+  function data(x : integer range 0 to 31;
+                y : integer range 0 to 7)
+    return data_t;
 
+  function data(b: byte)
+    return data_t;
+  
   -- Control word expressed as pair of integers. Suitable for matching
   -- Kx.y notation.
   function control(x : integer range 0 to 31;
                    y : integer range 0 to 7)
-    return data_word;
+    return data_t;
 
   -- Whether given x.y matches an existing/valid control code.
   function control_exists(x : integer range 0 to 31;
                           y : integer range 0 to 7)
     return boolean;
 
+  function to_string(d: data_t) return string;
+
   -- Named constants for existing control codes.
   -- idle
-  constant K23_7 : data_word := xy(23, 7);
+  constant K23_7 : data_t := control(23, 7);
   -- idle
-  constant K27_7 : data_word := xy(27, 7);
-  constant K28_0 : data_word := xy(28, 0);
+  constant K27_7 : data_t := control(27, 7);
+  constant K28_0 : data_t := control(28, 0);
   -- is comma
-  constant K28_1 : data_word := xy(28, 1);
-  constant K28_2 : data_word := xy(28, 2);
-  constant K28_3 : data_word := xy(28, 3);
-  constant K28_4 : data_word := xy(28, 4);
+  constant K28_1 : data_t := control(28, 1);
+  constant K28_2 : data_t := control(28, 2);
+  constant K28_3 : data_t := control(28, 3);
+  constant K28_4 : data_t := control(28, 4);
   -- is comma, 50% transition
-  constant K28_5 : data_word := xy(28, 5);
-  constant K28_6 : data_word := xy(28, 6);
+  constant K28_5 : data_t := control(28, 5);
+  constant K28_6 : data_t := control(28, 6);
   -- is comma, repetition yields alternative RL5, forbidden
-  constant K28_7 : data_word := xy(28, 7);
+  constant K28_7 : data_t := control(28, 7);
   -- idle
-  constant K29_7 : data_word := xy(29, 7);
-  constant K30_7 : data_word := xy(30, 7);
+  constant K29_7 : data_t := control(29, 7);
+  constant K30_7 : data_t := control(30, 7);
 
   -- Notable data words
   -- Triggers 0101010101 (transmit right to left)
-  constant D21_5 : data_word := xy(21, 5);
+  constant D21_5 : data_t := data(21, 5);
   -- Triggers 1010101010 (transmit right to left)
-  constant D10_2 : data_word := xy(21, 5);
+  constant D10_2 : data_t := data(21, 5);
   
   -- 8B/10B streaming encoder. Disparity is internal, it is reset on
   -- block reset. Input to output latency is implementation specific.
@@ -107,10 +121,8 @@ package ibm_8b10b is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      data_i : in data_word;
-      control_i : in std_ulogic;
-
-      data_o : out code_word
+      data_i : in data_t;
+      data_o : out code_word_t
       );
   end component;
 
@@ -148,10 +160,8 @@ package ibm_8b10b is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      data_i : in code_word;
-
-      data_o : out data_word;
-      control_o : out std_ulogic;
+      data_i : in code_word_t;
+      data_o : out data_t;
       code_error_o : out std_ulogic;
       disparity_error_o : out std_ulogic
       );
@@ -161,20 +171,29 @@ end package;
 
 package body ibm_8b10b is
 
-  function xy(x : integer range 0 to 31;
-              y : integer range 0 to 7)
-    return data_word
+  function data(b : byte)
+    return data_t
   is
   begin
-    return data_word(std_ulogic_vector(to_unsigned(y, 3) & to_unsigned(x, 5)));
+    return data_t'(data => std_ulogic_vector(b),
+                   control => '0');
+  end function;
+
+  function data(x : integer range 0 to 31;
+                y : integer range 0 to 7)
+    return data_t
+  is
+  begin
+    return data(std_ulogic_vector(to_unsigned(y, 3) & to_unsigned(x, 5)));
   end function;
 
   function control(x : integer range 0 to 31;
                    y : integer range 0 to 7)
-    return data_word
+    return data_t
   is
   begin
-    return xy(x, y);
+    return data_t'(data => std_ulogic_vector(to_unsigned(y, 3) & to_unsigned(x, 5)),
+                   control => '1');
   end function;
 
   function control_exists(x : integer range 0 to 31;
@@ -183,6 +202,22 @@ package body ibm_8b10b is
   is
   begin
     return x = 28 or (y = 7 and (x = 23 or (x >= 27 and x <= 30)));
+  end function;
+
+  function to_string(d: data_t) return string
+  is
+    variable prefix:string(1 to 1);
+  begin
+    if d.control = '1' then
+      prefix := "K";
+    else
+      prefix := "D";
+    end if;
+
+    return prefix
+      & to_string(to_integer(unsigned(d.data(4 downto 0))))
+      & "."
+      & to_string(to_integer(unsigned(d.data(7 downto 5))));
   end function;
 
 end package body;

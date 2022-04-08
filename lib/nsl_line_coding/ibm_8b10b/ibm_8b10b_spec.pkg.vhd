@@ -13,21 +13,19 @@ use work.ibm_8b10b.all;
 package ibm_8b10b_spec is
 
   procedure encode(
-    data_i      : in data_word;
+    data_i      : in data_t;
     disparity_i : in std_ulogic;
-    control_i   : in std_ulogic;
 
-    data_o      : out code_word;
+    data_o      : out code_word_t;
     disparity_o : out std_ulogic
     );
 
   procedure decode(
-    data_i      : in code_word;
+    data_i      : in code_word_t;
     disparity_i : in std_ulogic;
 
-    data_o            : out data_word;
+    data_o            : out data_t;
     disparity_o       : out std_ulogic;
-    control_o         : out std_ulogic;
     code_error_o      : out std_ulogic;
     disparity_error_o : out std_ulogic
     );
@@ -47,12 +45,11 @@ package body ibm_8b10b_spec is
   -- notice is preserved
 
   procedure decode(
-    data_i : in code_word;
+    data_i : in code_word_t;
     disparity_i : in std_ulogic;
 
-    data_o            : out data_word;
+    data_o            : out data_t;
     disparity_o       : out std_ulogic;
-    control_o         : out std_ulogic;
     code_error_o      : out std_ulogic;
     disparity_error_o : out std_ulogic)
   is
@@ -125,27 +122,27 @@ package body ibm_8b10b_spec is
     disp4p := fghjp31;
     disp4n := fghjp13;
 
-    data_o(0) := a xor (p22bncneeqi or p31i or p13dei or p22ancneeqi or p13en or abei or k28p);
-    data_o(1) := b xor (p22bceeqi or p31i or p13dei or p22aceeqi or p13en or abei or k28p);
-    data_o(2) := c xor (p22bceeqi or p31i or p13dei or p22ancneeqi or p13en or anbnenin or k28p);
-    data_o(3) := d xor (p22bncneeqi or p31i or p13dei or p22aceeqi or p13en or abei or k28p);
-    data_o(4) := e xor (p22bncneeqi or p13in or p13dei or p22ancneeqi or p13en or anbnenin or k28p);
-    data_o(5) := (j and not f and (h or not g or k28p))
-                 or (f and not j and (not h or g or not k28p))
-                 or (k28p and g and h)
-                 or (not k28p and not g and not h);
-    data_o(6) := (j and not f and (h or not g or not k28p))
-                 or (f and not j and (not h or g or k28p))
-                 or (not k28p and g and h)
-                 or (k28p and not g and not h);
-    data_o(7) := ((j xor h) and (not ((not f and g and not h and j and not k28p)
-                                      or (not f and g and h and not j and k28p)
-                                      or (f and not g and not h and j and not k28p)
-                                      or (f and not g and h and not j and k28p))))
-                 or (not f and g and h and j)
-                 or (f and not g and not h and not j);
+    data_o.data(0) := a xor (p22bncneeqi or p31i or p13dei or p22ancneeqi or p13en or abei or k28p);
+    data_o.data(1) := b xor (p22bceeqi or p31i or p13dei or p22aceeqi or p13en or abei or k28p);
+    data_o.data(2) := c xor (p22bceeqi or p31i or p13dei or p22ancneeqi or p13en or anbnenin or k28p);
+    data_o.data(3) := d xor (p22bncneeqi or p31i or p13dei or p22aceeqi or p13en or abei or k28p);
+    data_o.data(4) := e xor (p22bncneeqi or p13in or p13dei or p22ancneeqi or p13en or anbnenin or k28p);
+    data_o.data(5) := (j and not f and (h or not g or k28p))
+                      or (f and not j and (not h or g or not k28p))
+                      or (k28p and g and h)
+                      or (not k28p and not g and not h);
+    data_o.data(6) := (j and not f and (h or not g or not k28p))
+                      or (f and not j and (not h or g or k28p))
+                      or (not k28p and g and h)
+                      or (k28p and not g and not h);
+    data_o.data(7) := ((j xor h) and (not ((not f and g and not h and j and not k28p)
+                                           or (not f and g and h and not j and k28p)
+                                           or (f and not g and not h and j and not k28p)
+                                           or (f and not g and h and not j and k28p))))
+                      or (not f and g and h and j)
+                      or (f and not g and not h and not j);
 
-    control_o := (c and d and e and i)
+    data_o.control := (c and d and e and i)
                  or (not c and not d and not e and not i)
                  or (p13 and not e and i and g and h and j)
                  or (p31 and e and not i and not g and not h and not j);
@@ -187,11 +184,10 @@ package body ibm_8b10b_spec is
   end procedure;
 
   procedure encode(
-    data_i : in data_word;
+    data_i : in data_t;
     disparity_i : in std_ulogic;
-    control_i    : in std_ulogic;
 
-    data_o : out code_word;
+    data_o : out code_word_t;
     disparity_o : out std_ulogic)
   is
     variable a, b, c, d, e, f, g, h : std_ulogic;
@@ -199,14 +195,14 @@ package body ibm_8b10b_spec is
     variable alt7, compls4, compls6, disp6 : std_ulogic;
     variable nd1s4, nd1s6, ndos4, ndos6, pd1s4, pd1s6, pdos4, pdos6 : std_ulogic;
   begin
-    a := data_i(0);
-    b := data_i(1);
-    c := data_i(2);
-    d := data_i(3);
-    e := data_i(4);
-    f := data_i(5);
-    g := data_i(6);
-    h := data_i(7);
+    a := data_i.data(0);
+    b := data_i.data(1);
+    c := data_i.data(2);
+    d := data_i.data(3);
+    e := data_i.data(4);
+    f := data_i.data(5);
+    g := data_i.data(6);
+    h := data_i.data(7);
 
     aeqb := a xnor b;
     ceqd := c xnor d;
@@ -218,18 +214,18 @@ package body ibm_8b10b_spec is
     l40 := a and b and c and d;
 
     pd1s6 := (e and d and not c and not b and not a) or (not e and not l22 and not l31);
-    nd1s6 := control_i or (e and not l22 and not l13) or (not e and not d and c and b and a);
+    nd1s6 := data_i.control or (e and not l22 and not l13) or (not e and not d and c and b and a);
 
     ndos6 := pd1s6;
-    pdos6 := control_i or (e and not l22 and not l13);
+    pdos6 := data_i.control or (e and not l22 and not l13);
     disp6 := disparity_i xor (ndos6 or pdos6);
 
     nd1s4 := f and g;
-    pd1s4 := (not f and not g) or (control_i and (f xor g));
+    pd1s4 := (not f and not g) or (data_i.control and (f xor g));
     ndos4 := not f and not g;
     pdos4 := f and g and h;
 
-    alt7 := pdos4 and (control_i or if_else(disparity_i = '1',
+    alt7 := pdos4 and (data_i.control or if_else(disparity_i = '1',
                                             not e and d and l31,
                                             e and not d and l13));
 
@@ -244,7 +240,7 @@ package body ibm_8b10b_spec is
     data_o(5) := compls6 xor ((l22 and not e)
                               or (e and not d and not c and not (a and b))
                               or (e and l40)
-                              or (control_i and e and d and c and not b and not a)
+                              or (data_i.control and e and d and c and not b and not a)
                               or (e and not d and c and not b and not a));
     data_o(6) := compls4 xor (f and not alt7);
     data_o(7) := compls4 xor (g or (not f and not g and not h));
