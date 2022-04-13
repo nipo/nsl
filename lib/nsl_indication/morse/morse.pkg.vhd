@@ -13,62 +13,63 @@ package morse is
   -- - add "1" after code word: "10001",
   -- - padded to 8 bits: "00010001".
   -- - from LSB to MSB: "10001000".
+  function character_encode(c: string) return morse_character_t;
   
-  constant morse_a           : morse_character_t := "00000110";  -- .-
-  constant morse_b           : morse_character_t := "00010001";  -- -...
-  constant morse_c           : morse_character_t := "00010101";  -- -.-.
-  constant morse_d           : morse_character_t := "00000001";  -- -..
-  constant morse_e           : morse_character_t := "00000010";  -- .
-  constant morse_f           : morse_character_t := "00010100";  -- ..-.
-  constant morse_g           : morse_character_t := "00001110";  -- --.
-  constant morse_h           : morse_character_t := "00010000";  -- ....
-  constant morse_i           : morse_character_t := "00000100";  -- ..
-  constant morse_j           : morse_character_t := "00011110";  -- .---
-  constant morse_k           : morse_character_t := "00001101";  -- -.-
-  constant morse_l           : morse_character_t := "00010010";  -- .-..
-  constant morse_m           : morse_character_t := "00000111";  -- --
-  constant morse_n           : morse_character_t := "00000101";  -- -.
-  constant morse_o           : morse_character_t := "00001111";  -- ---
-  constant morse_p           : morse_character_t := "00010110";  -- .--.
-  constant morse_q           : morse_character_t := "00011011";  -- --.-
-  constant morse_r           : morse_character_t := "00001010";  -- .-.
-  constant morse_s           : morse_character_t := "00001000";  -- ...
-  constant morse_t           : morse_character_t := "00000011";  -- -
-  constant morse_u           : morse_character_t := "00001100";  -- ..-
-  constant morse_v           : morse_character_t := "00011000";  -- ...-
-  constant morse_w           : morse_character_t := "00001110";  -- .--
-  constant morse_x           : morse_character_t := "00011001";  -- -..-
-  constant morse_y           : morse_character_t := "00011101";  -- -.--
-  constant morse_z           : morse_character_t := "00010011";  -- --..
-  constant morse_0           : morse_character_t := "00111111";  -- -----
-  constant morse_1           : morse_character_t := "00111110";  -- .----
-  constant morse_2           : morse_character_t := "00111100";  -- ..---
-  constant morse_3           : morse_character_t := "00111000";  -- ...--
-  constant morse_4           : morse_character_t := "00110000";  -- ....-
-  constant morse_5           : morse_character_t := "00100000";  -- .....
-  constant morse_6           : morse_character_t := "00100001";  -- -....
-  constant morse_7           : morse_character_t := "00100011";  -- --...
-  constant morse_8           : morse_character_t := "00100111";  -- ---..
-  constant morse_9           : morse_character_t := "00101111";  -- ----.
-  constant morse_dot         : morse_character_t := "01101010";  -- .-.-.-
-  constant morse_comma       : morse_character_t := "01110011";  -- --..--
-  constant morse_question    : morse_character_t := "01001100";  -- ..--..
-  constant morse_quote       : morse_character_t := "01011110";  -- .----.
+  constant morse_a           : morse_character_t := character_encode(".-");
+  constant morse_b           : morse_character_t := character_encode("-...");
+  constant morse_c           : morse_character_t := character_encode("-.-.");
+  constant morse_d           : morse_character_t := character_encode("-..");
+  constant morse_e           : morse_character_t := character_encode(".");
+  constant morse_f           : morse_character_t := character_encode("..-.");
+  constant morse_g           : morse_character_t := character_encode("--.");
+  constant morse_h           : morse_character_t := character_encode("....");
+  constant morse_i           : morse_character_t := character_encode("..");
+  constant morse_j           : morse_character_t := character_encode(".---");
+  constant morse_k           : morse_character_t := character_encode("-.-");
+  constant morse_l           : morse_character_t := character_encode(".-..");
+  constant morse_m           : morse_character_t := character_encode("--");
+  constant morse_n           : morse_character_t := character_encode("-.");
+  constant morse_o           : morse_character_t := character_encode("---");
+  constant morse_p           : morse_character_t := character_encode(".--.");
+  constant morse_q           : morse_character_t := character_encode("--.-");
+  constant morse_r           : morse_character_t := character_encode(".-.");
+  constant morse_s           : morse_character_t := character_encode("...");
+  constant morse_t           : morse_character_t := character_encode("-");
+  constant morse_u           : morse_character_t := character_encode("..-");
+  constant morse_v           : morse_character_t := character_encode("...-");
+  constant morse_w           : morse_character_t := character_encode(".--");
+  constant morse_x           : morse_character_t := character_encode("-..-");
+  constant morse_y           : morse_character_t := character_encode("-.--");
+  constant morse_z           : morse_character_t := character_encode("--..");
+  constant morse_0           : morse_character_t := character_encode("-----");
+  constant morse_1           : morse_character_t := character_encode(".----");
+  constant morse_2           : morse_character_t := character_encode("..---");
+  constant morse_3           : morse_character_t := character_encode("...--");
+  constant morse_4           : morse_character_t := character_encode("....-");
+  constant morse_5           : morse_character_t := character_encode(".....");
+  constant morse_6           : morse_character_t := character_encode("-....");
+  constant morse_7           : morse_character_t := character_encode("--...");
+  constant morse_8           : morse_character_t := character_encode("---..");
+  constant morse_9           : morse_character_t := character_encode("----.");
+  constant morse_dot         : morse_character_t := character_encode(".-.-.-");
+  constant morse_comma       : morse_character_t := character_encode("--..--");
+  constant morse_question    : morse_character_t := character_encode("..--..");
+  constant morse_quote       : morse_character_t := character_encode(".----.");
   -- unsupported for now, too long
-  --constant morse_bang        : morse_character_t := "";  -- -.-.-----.
-  constant morse_slash       : morse_character_t := "00101001";  -- -..-.
-  constant morse_paren_open  : morse_character_t := "00101101";  -- -.--.
-  constant morse_paren_close : morse_character_t := "01101101";  -- -.--.-
-  constant morse_amp         : morse_character_t := "00100010";  -- .-...
-  constant morse_colon       : morse_character_t := "01000111";  -- ---...
-  constant morse_semicolon   : morse_character_t := "01010101";  -- -.-.-.
-  constant morse_equal       : morse_character_t := "00110001";  -- -...-
-  constant morse_plus        : morse_character_t := "00101010";  -- .-.-.
-  constant morse_dash        : morse_character_t := "00100001";  -- -....-
-  constant morse_underscore  : morse_character_t := "01101100";  -- ..--.-
-  constant morse_doublequote : morse_character_t := "01010010";  -- .-..-.
-  constant morse_dollar      : morse_character_t := "11001000";  -- ...-..-
-  constant morse_at          : morse_character_t := "01010110";  -- .--.-.
+  --constant morse_bang        : morse_character_t := character_encode("-.-.-----.");
+  constant morse_slash       : morse_character_t := character_encode("-..-.");
+  constant morse_paren_open  : morse_character_t := character_encode("-.--.");
+  constant morse_paren_close : morse_character_t := character_encode("-.--.-");
+  constant morse_amp         : morse_character_t := character_encode(".-...");
+  constant morse_colon       : morse_character_t := character_encode("---...");
+  constant morse_semicolon   : morse_character_t := character_encode("-.-.-.");
+  constant morse_equal       : morse_character_t := character_encode("-...-");
+  constant morse_plus        : morse_character_t := character_encode(".-.-.");
+  constant morse_dash        : morse_character_t := character_encode("-....-");
+  constant morse_underscore  : morse_character_t := character_encode("..--.-");
+  constant morse_doublequote : morse_character_t := character_encode(".-..-.");
+  constant morse_dollar      : morse_character_t := character_encode("...-..-");
+  constant morse_at          : morse_character_t := character_encode(".--.-.");
 
   type morse_string is array(positive range <>) of morse_character_t;
   
@@ -104,3 +105,26 @@ package morse is
   end component;
 
 end package morse;
+
+package body morse is
+
+  function character_encode(c: string) return morse_character_t
+  is
+    alias xc : string (1 to c'length) is c;
+    variable ret : morse_character_t := (others => '0');
+  begin
+    assert c'length <= 7
+       report "Character too long"
+       severity failure;
+    for i in 0 to c'length-1
+    loop
+      if xc(1+i) = '-' then
+        ret(i) := '1';
+      end if;
+    end loop;
+    ret(c'length) := '1';
+
+    return ret;
+  end function;
+    
+end package body;
