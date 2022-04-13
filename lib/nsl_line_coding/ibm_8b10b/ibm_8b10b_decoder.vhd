@@ -8,8 +8,7 @@ use nsl_logic.bool.all;
 
 entity ibm_8b10b_decoder is
   generic(
-    implementation_c : string := "logic";
-    strict_c : boolean := true
+    implementation_c : string := "logic"
     );
   port(
     clock_i : in std_ulogic;
@@ -25,7 +24,7 @@ end entity;
 architecture beh of ibm_8b10b_decoder is
 begin
 
-  use_logic: if implementation_c = "logic"
+  use_logic: if implementation_c = "logic" or implementation_c = "logic_strict"
   generate
     use nsl_line_coding.ibm_8b10b_logic.all;
 
@@ -64,7 +63,8 @@ begin
       rin.c <= classify_10b8b(data_i);
       rin.data <= data_i;
       
-      rin.r <= merge_10b8b(r.data, r.r.disparity, r.c, strict_c);
+      rin.r <= merge_10b8b(r.data, r.r.disparity, r.c,
+                           implementation_c = "logic_strict");
     end process;
 
     data_o <= r.r.data;

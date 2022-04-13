@@ -134,11 +134,11 @@ package ibm_8b10b is
   --   Usage: 1024 x 14 ROM, 13 FF, 3 LUTs
   --   Performance: ~260 MHz
   --
-  -- - logic / strict = false
+  -- - logic (non-strict)
   --   Usage: 51 FF, 46 LUTs
   --   Performance: ~260 MHz
   --
-  -- - logic / strict = true
+  -- - logic_strict
   --   Usage: 61 FF, 70 LUTs
   --   Performance: ~230 MHz
   --
@@ -151,10 +151,8 @@ package ibm_8b10b is
   --   Performance: ~170 MHz
   component ibm_8b10b_decoder
     generic(
-      -- logic, rom, spec, lut
-      implementation_c : string := "logic";
-      -- Whether all disparity errors are reported without exception.
-      strict_c : boolean := true
+      -- logic, logic_strict, rom, spec, lut
+      implementation_c : string := "logic"
       );
     port(
       clock_i : in std_ulogic;
