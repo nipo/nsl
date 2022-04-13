@@ -55,7 +55,11 @@ package body diff is
   function to_se(d: diff_pair) return std_ulogic
   is
   begin
-    return d.p;
+    if to_x01(d.p) = not to_x01(d.n) then
+      return to_x01(d.p);
+    else
+      return 'X';
+    end if;
   end function;
 
   function swap(d: diff_pair; swap: boolean := true) return diff_pair

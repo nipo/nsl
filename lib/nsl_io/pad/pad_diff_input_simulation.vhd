@@ -18,11 +18,8 @@ end entity;
 
 architecture sim of pad_diff_input is
   
-  signal s_se : std_ulogic;
-  
 begin
 
-  s_se <= p_diff.p and not p_diff.n;
-  p_se <= s_se when not invert else (not s_se);
+  p_se <= to_se(swap(p_diff, invert));
   
 end architecture;
