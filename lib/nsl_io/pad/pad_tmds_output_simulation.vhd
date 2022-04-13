@@ -4,8 +4,6 @@ use ieee.std_logic_1164.all;
 library nsl_io;
 use nsl_io.diff.all;
 
-library unisim;
-
 entity pad_tmds_output is
   generic(
     invert_c : boolean := false
