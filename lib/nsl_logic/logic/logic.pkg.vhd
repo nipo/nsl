@@ -44,7 +44,7 @@ package body logic is
   function and_reduce(x : std_ulogic_vector) return std_ulogic is
     variable ret : std_ulogic;
   begin
-    ret := '0';
+    ret := '1';
 
     for i in x'range
     loop
