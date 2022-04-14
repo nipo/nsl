@@ -2,19 +2,36 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- Byte, byte string and dynamic byte string buffer abstraction.
 package bytestream is
 
+  -- Pair of hex nibbles that can represent a byte
   subtype byte_hex_string is string(1 to 2);
+  -- A byte
   subtype byte is std_ulogic_vector(7 downto 0);
+  -- A string of bytes. It is mostly supposed to be used as an ascending,
+  -- 0-based vector.
   type byte_string is array(natural range <>) of byte;
 
+  -- Tales a std_ulogic_vector of N * 8 bits and packs it in N bytes. First
+  -- item in the vector will be MSB of first byte, whatever the input blob
+  -- vector direction.
   function from_suv(blob: std_ulogic_vector) return byte_string;
+  -- Parses a couple of hex nibbles and yields a byte
   function byte_from_hex(blob: byte_hex_string) return byte;
+  -- Parses a N * 2 -long string of hex nibbles and yields equivalent
+  -- byte string.
   function from_hex(blob: string) return byte_string;
+  -- Yields a byte from a character, encoded as ASCII. Handles no page codes.
   function to_byte(c : character) return byte;
+  -- Yields a byte from an integer. 0 <= i <= 255.
   function to_byte(i : integer) return byte;
+  -- Yields byte code as integer
   function to_integer(b: byte) return integer;
+  -- Converts a byte to a character, assumes it is ASCII. Handles no page code.
   function to_character(b: byte) return character;
+  -- Converts a string of character to equivalent byte string of ASCII
+  -- bytes.
   function to_byte_string(s : string) return byte_string;
 
   function "="(l, r : byte_string) return boolean;
@@ -24,19 +41,38 @@ package bytestream is
   function "or"(l, r : byte_string) return byte_string;
   function "xor"(l, r : byte_string) return byte_string;
 
+  -- Null vector for an empty byte string.
   constant null_byte_string : byte_string(1 to 0) := (others => x"00");
+  -- A byte of dontcare values
   constant dontcare_byte_c : byte := (others => '-');
 
+  -- Takes a byte string and shifts it one item left. Fills the empty
+  -- position on the right string with second argument, if any.
+  -- Nicely handles cases where passed string is a null vector and returns a
+  -- null vector.
   function shift_left(s: byte_string;
                       b: byte := dontcare_byte_c) return byte_string;
+  -- Takes a byte string and shifts it one item right. Fills the empty
+  -- position on the left string with second argument, if any.
+  -- Nicely handles cases where passed string is a null vector and returns a
+  -- null vector.
   function shift_right(s: byte_string;
                        b: byte := dontcare_byte_c) return byte_string;
+  -- Returns the first byte on the left of the vector. If vector is a null
+  -- vector, returns a dontcare byte.
   function first_left(s: byte_string) return byte;
+  -- Returns the first byte on the right of the vector. If vector is a null
+  -- vector, returns a dontcare byte.
   function first_right(s: byte_string) return byte;
 
+  -- Shifts the byte string left and reinjects back the shifted byte
+  -- in the empty position.
   function rot_left(s: byte_string) return byte_string;
+  -- Shifts the byte string right and reinjects back the shifted byte
+  -- in the empty position.
   function rot_right(s: byte_string) return byte_string;
-  
+
+  -- Byte stream (dynamically sized byte string) helper.
   type byte_stream is access byte_string;
   procedure write(s: inout byte_stream; constant d: byte);
   procedure write(s: inout byte_stream; constant d: byte_string);

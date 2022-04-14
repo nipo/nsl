@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_color;
 
+-- HDMI encodes colors in YCbCr by default. This component generates
+-- color bars in this format.
 package pattern is
 
   component color_bars is

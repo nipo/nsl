@@ -2,11 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- Asynchronous input handling (interdomain where sender domain is not knwown).
 package async is
 
   -- Aligns a transition to a target value after the clock edge.
   -- Typically used to resynchronize reset signals to avoid
-  -- uncertainity.
+  -- uncertainity and abide hold times.
   component async_edge
     generic(
       cycle_count_c : natural range 2 to 8 := 2;
@@ -78,8 +79,8 @@ package async is
   end component;
 
   -- Samples an asynchronous bus, removes metastability and waits for
-  -- /stable_count_c/ cycles with stable input before propagating
-  -- changes.
+  -- /stable_count_c/ cycles with stable input value before
+  -- propagating changes.
   component async_stabilizer is
     generic(
       stable_count_c : natural range 1 to 10 := 1;

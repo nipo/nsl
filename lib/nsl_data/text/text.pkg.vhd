@@ -5,8 +5,10 @@ use ieee.math_real.all;
 use std.textio.all;
 use nsl_data.bytestream.all;
 
+-- Text manipulation helpers
 package text is
 
+  -- Stringifiers, simpler to use than type'image()
   function to_string(v: in std_ulogic_vector) return string;
   function to_string(v: in std_logic_vector) return string;
   function to_string(v: in std_ulogic) return string;
@@ -18,11 +20,13 @@ package text is
   function to_string(data : byte_string) return string;
   function to_string(value: time) return string;
 
+  -- Hex stringifiers
   function to_hex_string(data : byte_string) return string;
   function to_hex_string(v: in std_ulogic_vector) return string;
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
 
+  -- String ternary operation
   function if_else(v: boolean; a,b: string) return string;
   
   -- For a string composed of a space-separated collection of "token(params)"

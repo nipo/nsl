@@ -4,10 +4,12 @@ use ieee.numeric_std.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 
+-- Generic CRC implementation
 package crc is
 
+  -- A CRC state.
   type crc_state is array(natural range <>) of std_ulogic;
-  
+
   subtype crc16 is crc_state(15 downto 0);
   subtype crc32 is crc_state(31 downto 0);
 

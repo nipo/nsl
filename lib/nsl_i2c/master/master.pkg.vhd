@@ -5,6 +5,19 @@ use ieee.numeric_std.all;
 library nsl_i2c;
 use nsl_i2c.i2c."+";
 
+-- I2C master implementation.
+--
+-- Master is split in two: A clock bus driver and a byte shifter.
+--
+-- - Clock driver is able to do bus management (start, stop) and clock
+--   toggling.
+--
+-- - Shift register is able to exchange a byte and an acknowledge at a
+--   time. As I2C is open drain, there is no difference between driving
+--   0xff or NACK and reading.
+--
+-- A Master needs to instiantiate both blocks, a slave may be implemented only
+-- with the latter and a bus monitor
 package master is
 
   type i2c_bus_cmd_t is (

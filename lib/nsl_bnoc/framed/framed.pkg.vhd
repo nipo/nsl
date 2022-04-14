@@ -5,6 +5,10 @@ use ieee.numeric_std.all;
 library nsl_math, nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 
+-- Bnoc framed abstraction. A framed interface is a fifo with data and
+-- frame boundary information. Frame boundary is expressed with the
+-- help of an additional line that is asserted on the last flit of a
+-- frame.
 package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_i2c, nsl_bnoc, nsl_data;
 
+-- I2C bys master transactor that takes command stream from a framed interface.
 package transactor is
 
   -- CMD: [READ | n-1]

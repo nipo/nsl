@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_color, nsl_line_coding, nsl_data, work, nsl_dvi;
 
+-- HDMI data stream encoder. Adds HDMI-specific data islands in the
+-- DVI stream.
 package encoder is
 
   component hdmi_13_encoder is

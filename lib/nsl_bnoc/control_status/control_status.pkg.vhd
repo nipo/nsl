@@ -4,6 +4,9 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc;
 
+-- A frame-based register set with at most 128 registers of 32 bits.
+-- User may implement registers where read value doest not match
+-- current output value.
 package control_status is
 
   subtype control_status_reg is std_ulogic_vector(31 downto 0);

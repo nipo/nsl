@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_io;
 
+-- SWD bus abstracted types.
 package swd is
 
   type swd_master_o is record

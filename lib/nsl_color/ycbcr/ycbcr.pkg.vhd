@@ -6,6 +6,7 @@ use ieee.math_real.all;
 library work;
 use work.rgb.all;
 
+-- YCbCr color encoding.
 package ycbcr is
 
   type ycbcr24 is record

@@ -21,8 +21,8 @@ non-packaged sources defined in its root directory.
 Library Makefiles
 -----------------
 
-Each library's root directory may expose a set of packages in the
-form::
+Each library's root directory Makefile may expose a set of packages in
+the form::
 
   packages += <package name>
 

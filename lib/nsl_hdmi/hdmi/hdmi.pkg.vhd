@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data, nsl_math, nsl_color;
 use nsl_data.bytestream.all;
 
+-- HDMI constant definitions
 package hdmi is
 
   constant control_video_data_period_c : std_ulogic_vector(3 downto 0) := "0001";

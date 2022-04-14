@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 
 library nsl_io, work;
 
+-- DVI signal driver
 package transceiver is
 
   component dvi_driver is

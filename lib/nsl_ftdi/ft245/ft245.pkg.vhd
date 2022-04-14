@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- FT245-style "synchronous fifo" mode.
 package ft245 is
 
   type ft245_sync_fifo_master_o is

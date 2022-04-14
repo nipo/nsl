@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc;
 
+-- Bnoc pipe abstraction. A pipe is a fifo with no other information
+-- than data.
 package pipe is
 
   subtype pipe_data_t is std_ulogic_vector(7 downto 0);

@@ -4,8 +4,12 @@ use ieee.numeric_std.all;
 
 library nsl_color;
 
+-- DVI pattern generators
 package pattern is
 
+  -- By default, DVI (as defined by VESA for monitors) encodes color
+  -- data as RGB.  If you're looking for a valid HDMI stream, you should look
+  -- for nsl_hdmi.pattern.
   component color_bars is
     port(
       clock_i : in  std_ulogic;

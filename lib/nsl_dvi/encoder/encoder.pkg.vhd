@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_color, nsl_line_coding, nsl_data, work;
 
+-- DVI protocol encoder.
+-- Also handles data islands that are used by HDMI.
 package encoder is
 
   type period_t is (

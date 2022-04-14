@@ -8,6 +8,14 @@ use nsl_logic.bool.all;
 
 package pca9555 is
 
+  -- PCA9555 GPIO extender reflector.
+  --
+  -- Takes a bit vector and forwards it to the remote enterder ASAP when it
+  -- changes. There is no guarantee on delivery latency. It depends on the
+  -- internal transactor usage and bus traffic.
+  --
+  -- If IRQ is available, reads the inputs as long as IRQ is asserted.
+  --
   -- Use routed_transactor_once for initialization of device
   component pca9555_driver is
     generic(
@@ -49,7 +57,10 @@ package pca9555 is
   constant pca9555_in_inv : pca9555_pin_config := (output => false, in_inverted => true, value => '0');
 
   type pca9555_pin_config_vector is array(integer range 0 to 15) of pca9555_pin_config;
-  
+
+  -- Spawn a byte string suitable for
+  -- nsl_bnoc.framed_transactor.framed_transactor_once for
+  -- proper initialization of device.
   function pca9555_init(saddr: unsigned;
                         config: pca9555_pin_config_vector) return byte_string;
   

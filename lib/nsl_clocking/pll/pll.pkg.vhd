@@ -2,6 +2,32 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- PLL abstraction.
+--
+-- Vendor clocking resources usually offer PLLs but
+-- they are quite cumbersome to use most of the time because:
+--
+-- - feedback path is vendor specific and depends on the chip lineup,
+--
+-- - VCO locking range is chip-specific,
+--
+-- - There are various competing blocks with different interface for
+--   the same service,
+--
+-- - There are some arbitrary offsets and encodings in dividors that
+--   are not obvious from the port and generic names.
+--
+-- This package gives a simple interface for simple case: one input
+-- clock of fixed frequency and one output clock of fixed
+-- frequency. This is the minimal service every PLL allows to
+-- implement.
+--
+-- VCO parameters and PLL implementation are taken care of
+-- automatically.
+--
+-- For other instantiation cases (multiple outputs, phase shifts,
+-- etc), user should fallback to vendor libraries as there is no
+-- common feature.
 package pll is
 
   -- hw_variant_c are a list of parameters to specify hardware-specific hints.

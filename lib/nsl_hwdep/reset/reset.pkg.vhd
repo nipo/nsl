@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+-- Reset signal generator at end of configuration.
 package reset is
 
   component reset_at_startup is

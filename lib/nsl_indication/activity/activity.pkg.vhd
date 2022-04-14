@@ -6,6 +6,8 @@ library nsl_color;
 
 package activity is
 
+  -- Blinks activity signal when togglable changes.
+  -- Blink duration is fixed.
   component activity_monitor
     generic (
       blink_cycles_c : natural;
@@ -19,12 +21,16 @@ package activity is
       );
   end component;
 
+  -- Blinks constantly with a given rate when idle.
+  -- When there is a one-shot activity, blinks for a given duration at a given
+  -- rate.
+  -- If activity persists, active blinking continues.
   component activity_blinker
     generic (
       clock_hz_c : real;
       idle_blink_hz_c : real := 1.0;
       activity_blink_hz_c : real := 4.0;
-      activity_blink_duration_c: real := 0.25
+      activity_blink_duration_c: real := 0.25 -- seconds
       );
     port (
       reset_n_i  : in  std_ulogic;
@@ -34,6 +40,7 @@ package activity is
       );
   end component;
 
+  -- Color priority encoder. colors_i is meant to be a constant.
   component activity_rgb_priority_encoder
     generic (
       activity_count_c : natural

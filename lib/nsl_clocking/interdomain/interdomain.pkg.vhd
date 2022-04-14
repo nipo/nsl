@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_math;
 
+-- Inter-clock-domain utilities
 package interdomain is
 
   -- Enforces max skew for the whole bus will not be above the fastest
@@ -67,7 +68,7 @@ package interdomain is
       );
   end component;
 
-  -- This is a one word data register with two clocks
+  -- This is a two word data fifo with two clocks
   component interdomain_fifo_slice
     generic(
       data_width_c   : integer
@@ -87,8 +88,9 @@ package interdomain is
   end component;
 
   -- Resynchronizer for mesochronous data buses. Frequency for both
-  -- clocks must be exactly the same, relative phase is unknown and
-  -- unimportant.
+  -- clocks must be exactly the same, relative phase is assumed to be
+  -- unknown and unimportant, but not changing (or frequencies would
+  -- not be the same anyway).
   --
   -- Component must be reset if glitches happen on any of its clocks.
   --
@@ -122,17 +124,22 @@ package interdomain is
       );
   end component;
 
-  -- Estimates a clock rate and discriminates among multiple passed
-  -- clock rates.
+  -- Estimates a clock rate and discriminates among multiple fixed
+  -- possible clock rates.
   component clock_rate_estimator is
     generic(
+      -- Reference clock
       clock_hz_c : real;
+      -- Possible clock rates to discriminate for.
+      -- Will be used as a 0-based ascending order vector.
       rate_choice_c : nsl_math.real_ext.real_vector
       );
     port(
       clock_i: in std_ulogic;
       reset_n_i: in std_ulogic;
       measured_clock_i: in std_ulogic;
+      -- Index of rate in rate_choice_c above. Always 0-based even if
+      -- rate_choice_c is not ascending or not with 'low = 0.
       rate_index_o: out unsigned
       );
   end component;

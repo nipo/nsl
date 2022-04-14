@@ -4,6 +4,9 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_coresight, nsl_io;
 
+-- SW-DP master transactor. Can generate SWD operations with any
+-- turnaround configuration.  Handle parity checking and bus error
+-- conditions internally.
 package transactor is
 
   constant DP_CMD_RUN           : std_ulogic_vector(7 downto 0):= "0-------";

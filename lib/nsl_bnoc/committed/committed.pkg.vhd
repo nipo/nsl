@@ -5,9 +5,9 @@ use ieee.numeric_std.all;
 library nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 
--- Committed network is a subset of framed network where a frame always ends
--- with a status word. LSB of status word tells whether frame is valid (active
--- high).
+-- Committed network is a subset of framed network where a frame
+-- always ends with an additional status word. LSB of status word
+-- tells whether frame is valid (active high).
   
 package committed is
 
@@ -55,6 +55,7 @@ package committed is
       );
   end component;
 
+  -- Sort of one-to-many router where route is taken from a port.
   component committed_dispatch is
     generic(
       destination_count_c : natural
@@ -74,6 +75,7 @@ package committed is
       );
   end component;
 
+  -- Many to one router.
   component committed_funnel is
     generic(
       source_count_c : natural
@@ -93,6 +95,7 @@ package committed is
       );
   end component;
 
+  -- Simple basic fifo. Equivalent to a framed fifo.
   component committed_fifo is
     generic(
       clock_count_c : natural range 1 to 2 := 1;
@@ -142,6 +145,8 @@ package committed is
       );
   end component;
 
+  -- A small fifo that allows the frame to get out only when fillness reaches a
+  -- given threshold. Handle frames shorter that the threshold nicely.
   component committed_prefill_buffer is
     generic(
       prefill_count_c : natural
@@ -158,6 +163,8 @@ package committed is
       );
   end component;
 
+  -- Adds a fixed-length header taken from ports before a message.
+  -- Header is captured on demand from the instantiator.
   component committed_header_inserter is
     generic(
       header_length_c : positive
@@ -183,6 +190,8 @@ package committed is
       );
   end component;
 
+  -- Strips a header from a committed network frame, and exposes it to
+  -- interface port.
   component committed_header_extractor is
     generic(
       header_length_c : positive

@@ -4,6 +4,16 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc;
 
+-- Bnoc Routed convention.
+--
+-- Routed network is a specialization of a framed network where first byte in a
+-- frame conveys routing information. Route byte is a couple of source and
+-- destination indices (4-bit values, MSBs are source).
+--
+-- Above this routed network, usually, there is a framed network encapsulation
+-- with tagged frames. Second byte in routed frames usually convey tad IDs.
+-- This infrastructure is mostly suited for command/response-based blocks where
+-- one command imples exactly one matching response frame.
 package routed is
 
   subtype routed_req is nsl_bnoc.framed.framed_req;
@@ -26,10 +36,15 @@ package routed is
   subtype component_id is natural range 0 to 15;
   type routed_routing_table is array(component_id) of natural;
 
+  -- Router interprets first flit of a frame and uses it to route the message
+  -- to the destination port by dereferencing the routing table.
+  -- Routing header is forwarded with no alteration.
   component routed_router is
     generic(
       in_port_count : natural;
       out_port_count : natural;
+      -- Routing table, as an array of output port index depending on routing
+      -- destionation value.
       routing_table : routed_routing_table
       );
     port(
@@ -44,6 +59,7 @@ package routed is
       );
   end component;
 
+  -- Implementation detail of router
   component routed_router_inbound is
     generic(
       out_port_count : natural;
@@ -64,6 +80,7 @@ package routed is
       );
   end component;
 
+  -- Implementation detail of router
   component routed_router_outbound is
     generic(
       in_port_count : natural

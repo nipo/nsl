@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 package clock is
 
+  -- Generates an i2s clock from bit clock division factor and word
+  -- bit count.
   component i2s_clock_generator is
     port(
       clock_i   : in std_ulogic;

@@ -4,6 +4,7 @@ use ieee.std_logic_1164.all;
 library nsl_data;
 use nsl_data.bytestream.all;
 
+-- Fifo implemented as byte strings
 package fifo is
 
   function fifo_shift_fillness(

@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- RGB color data type. For now, RGB24 and RGB3 are defined.
+-- There are data convertors from/to vectors of bits.
 package rgb is
 
   type rgb3 is record

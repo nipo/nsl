@@ -3,6 +3,13 @@ use ieee.std_logic_1164.all;
 
 library nsl_bnoc;
 
+-- Bnoc sized abstraction. A sized network conveys frames through a
+-- pipe (i.e.  data flits with a boundary across a continuous stream
+-- interface). Ths is done by adding a header between every frame data
+-- with following frame size.
+--
+-- Frame size is encoded as 16-bit value, little endian, off by one
+-- (size field of 0x0000 denotes a 1-byte frame).
 package sized is
 
   alias sized_data is nsl_bnoc.pipe.pipe_data_t;

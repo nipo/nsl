@@ -8,7 +8,7 @@ Libraries
 HDL Code-base uses VHDL library/package/entity classification:
 
 * Libraries are used to separate code as big families
-  (hardware-dependant modules, utilities, communication framework,
+  (hardware-dependent modules, utilities, communication framework,
   etc.),
 
 * Packages are used to separate logical groups of sources as a
@@ -148,8 +148,8 @@ Internal signal names
 ---------------------
 
 Internal signal names have no naming requirements. They should use the
-lower_case_with_underscore convention anyway. Records are recommended
-when multiple signals are to be grouped, in array or not.
+`lower_case_with_underscore_s` convention anyway. Records are
+recommended when multiple signals are to be grouped, in array or not.
 
 Internal registers (i.e. internal state of a module) should ideally be
 grouped in a `r` signal record.

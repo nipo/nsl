@@ -9,6 +9,12 @@ use nsl_data.bytestream.all;
 
 package framed_transactor is
   
+  -- Generates a set of frames defined by a constant instance parameter. Mostly
+  -- suited for issuing a bunch of initialization through protocol transactors
+  -- (spi, i2c, etc.).
+  --
+  -- As routed interface is a superset of framed, you may connect this module
+  -- to a routed network and issue frames with relevant headers.
   component framed_transactor_once
     generic(
       config_c : byte_string

@@ -4,8 +4,10 @@ use ieee.numeric_std.all;
 use nsl_data.bytestream.all;
 use nsl_logic.logic.xor_reduce;
 
+-- Generic PRBS implementation
 package prbs is
 
+  -- A PRBS state
   type prbs_state is array(natural range <>) of std_ulogic;
 
   function "not"(x:prbs_state) return prbs_state;
@@ -13,13 +15,21 @@ package prbs is
   function "="(x, y:prbs_state) return boolean;
   function "/="(x, y:prbs_state) return boolean;
   function bitswap(x:prbs_state) return prbs_state;
+
+  -- Moves `count` cycles forward in the PRBS stream, yields next
+  -- state.
   function prbs_forward(state, poly : prbs_state;
                          count : integer := 1) return prbs_state;
+  -- Moves `count` cycles backwards in the PRBS stream, yields next
+  -- state.
   function prbs_backward(state, poly : prbs_state;
                          count : integer := 1) return prbs_state;
+  -- Generates a PRBS byte string from initial value and generating
+  -- polynom
   function prbs_byte_string(init, poly : prbs_state;
                             length : integer) return byte_string;
 
+  -- Known PRBS polynoms
   constant prbs7 : prbs_state(7 downto 0) := (7 => '1', 6 => '1', 0 => '1', others => '0');
   constant prbs9 : prbs_state(9 downto 0) := (9 => '1', 5 => '1', 0 => '1', others => '0');
   constant prbs11 : prbs_state(11 downto 0) := (11 => '1', 9 => '1', 0 => '1', others => '0');

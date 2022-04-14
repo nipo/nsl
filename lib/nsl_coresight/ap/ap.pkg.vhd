@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_coresight, nsl_axi;
 
+-- Coresight Access Port implemetations
 package ap is
 
   component axi4_lite_a32_d32_ap is

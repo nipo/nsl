@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- Intra-domain clocking utilities.
 package intradomain is
 
   -- Basic multi-cycle synchronous register pipeline.  Mostly suited
@@ -18,7 +19,10 @@ package intradomain is
       );
   end component;
 
-  -- Pipelined counter, with minimal timing requirements on inc_i.
+  -- Pipelined counter, with minimal timing requirements on
+  -- inc_i. inc_i ends up being an enable signal to DFFs. Next value
+  -- is itself pre-computed. This avoids having both the accumulator carry
+  -- chain and the increment enable in the critical path.
   component intradomain_counter is
   generic(
     width_c : positive;
@@ -33,6 +37,7 @@ package intradomain is
 
     increment_i : in std_ulogic;
     value_o  : out unsigned(width_c-1 downto 0);
+    -- Next value lookahead
     next_o : out unsigned(width_c-1 downto 0);
     -- Whether value_o is matching max_c, i.e. next value is min_c
     wrap_o : out std_ulogic

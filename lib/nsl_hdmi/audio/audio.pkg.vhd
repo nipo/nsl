@@ -7,6 +7,7 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use work.hdmi.all;
 
+-- HDMI Audio data islands encoding.
 package audio is
 
   function di_audio_clock_regen(cts, n: unsigned(19 downto 0)) return data_island_t;

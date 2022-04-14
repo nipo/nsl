@@ -4,6 +4,9 @@ use ieee.numeric_std.all;
 library nsl_data;
 use nsl_data.bytestream.byte_string;
 
+-- Endianness handling
+--
+-- Converts multi-byte numbers to byte strings.
 package endian is
 
   function to_le(word : unsigned) return byte_string;

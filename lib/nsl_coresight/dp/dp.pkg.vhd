@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_coresight;
 
+-- Coresight SW-DP implementation, either self-clocked from SWCLK or oversampled.
 package dp is
 
   component swdp is

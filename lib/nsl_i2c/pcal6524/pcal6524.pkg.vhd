@@ -8,6 +8,14 @@ use nsl_logic.bool.all;
 
 package pcal6524 is
 
+  -- PCAL6524 GPIO extender reflector.
+  --
+  -- Takes a bit vector and forwards it to the remote enterder ASAP when it
+  -- changes. There is no guarantee on delivery latency. It depends on the
+  -- internal transactor usage and bus traffic.
+  --
+  -- If IRQ is available, reads the inputs as long as IRQ is asserted.
+  --
   -- Use routed_transactor_once for initialization of device
   component pcal6524_driver is
     generic(
@@ -49,6 +57,9 @@ package pcal6524 is
 
   type pcal6524_pin_config_vector is array(integer range 0 to 23) of pcal6524_pin_config;
   
+  -- Spawn a byte string suitable for
+  -- nsl_bnoc.framed_transactor.framed_transactor_once for
+  -- proper initialization of device.
   function pcal6524_init(saddr: unsigned;
                          config: pcal6524_pin_config_vector) return byte_string;
 

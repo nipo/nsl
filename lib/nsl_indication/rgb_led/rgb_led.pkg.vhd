@@ -6,6 +6,7 @@ library nsl_color;
 
 package rgb_led is
 
+  -- Drives an RGB LED with 3 PWM drivers.
   component rgb24_pwm_driver
     generic (
       clock_prescaler_c : positive := 1;

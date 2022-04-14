@@ -55,6 +55,14 @@ avoided. There are multiple reasons, for instance:
 * in an actual implementation, we may have to forward enable signal to
   some external driver chip that implements the tri-state.
 
+Using abstract types
+====================
+
+Once we start to carry around `_i`, `_o` and `_oe_o` signals, we start
+to get to a pattern where IOs are guarded by an enable signal.  Let's
+define a type to express exactly that.  Records that hold signal
+semantics together should be used where possible.
+
 Using standard libraries
 ========================
 
@@ -100,12 +108,12 @@ value.
 When using integers, having counters that roll over on overflow may
 not be critical. Use `mod` operator accordingly.
 
-When there is a counter to count to a parametric number, it may be
-better to write counter as a downcounter as termination condition will
-always be comparison to `0`. This yields smaller implementation than a
-comparator between two registers. (Exceptions: if backend fabric has
-some numeric comparators, or if a difference between the two values is
-computed anyway).
+When there is a counter in some state machine where count of cycles it
+goes through is not always the same, having the cycle count as start
+value and implement a downcounter will save some logic for final value
+comparison: it will alwas be 0. If there is only one reset value,
+difference will not be significant if comparator is implemented in
+LUTs.
 
 Letting the synthesizer and optimizer do their jobs
 ===================================================
@@ -121,9 +129,9 @@ Use dont care value `-` everywhere possible in
   easily.
 
 Sometimes, signals are grouped together and there is a global enable
-for the group. A typical example is AXI-Stream. If tvalid is not
-asserted, tlast, tdata, and all other master-to-slave signals are not
-meaningful.
+for the group. A typical example is AXI-Stream. If `tvalid` is not
+asserted, `tlast`, `tdata`, and all other master-to-slave signals are
+not meaningful.
 
 When we write code that generates AXI-Stream outputs for an entity, we
 should try to tell the synthesizer all the places where we do not

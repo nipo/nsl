@@ -4,6 +4,9 @@ use std.textio.all;
 library nsl_data;
 use nsl_data.bytestream.all;
 
+-- Helper package for loading or writing binary data from/to disk
+-- files.  This is mostly suited for simulation, even if some
+-- synthesis tools allow to read files at elaboration stage.
 package binary_io is
 
   alias binary_file_item is character;
