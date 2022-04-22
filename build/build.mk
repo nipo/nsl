@@ -347,14 +347,14 @@ endif
 
 sources := $(foreach l,$(libraries),$($l-sources))
 
-include $(TOOL_ROOT)/$(tool).mk
-
 ifeq ($(V),)
 SILENT:=@
 else
 SILENT:=
 endif
 
+include $(TOOL_ROOT)/$(tool).mk
+
 clean:
-	rm -f $(sort $(clean-files))
-	rm -rf $(clean-dirs)
+	$(SILENT)rm -f $(sort $(clean-files))
+	$(SILENT)rm -rf $(clean-dirs)
