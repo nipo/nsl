@@ -5,3 +5,4 @@ packages += transactor
 packages += router
 packages += fifo_transport
 packages += io_extender
+packages += flash
