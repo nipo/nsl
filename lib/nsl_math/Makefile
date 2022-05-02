@@ -6,3 +6,4 @@ packages += arith
 packages += fixed
 packages += cordic
 packages += float
+packages += timing
