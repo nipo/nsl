@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_data;
 
 entity pca9555_driver is
   generic(
@@ -20,8 +20,8 @@ entity pca9555_driver is
 
     irq_n_i     : in std_ulogic := '1';
 
-    pin_i       : in std_ulogic_vector(15 downto 0);
-    pin_o       : out std_ulogic_vector(15 downto 0);
+    pin_i       : in std_ulogic_vector(0 to 15);
+    pin_o       : out std_ulogic_vector(0 to 15);
 
     cmd_o  : out nsl_bnoc.framed.framed_req;
     cmd_i  : in  nsl_bnoc.framed.framed_ack;
@@ -109,16 +109,19 @@ begin
   end process;
 
   transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, force_i) is
+    variable pin_i_swapped: std_ulogic_vector(15 downto 0);
   begin
     rin <= r;
+
+    pin_i_swapped := nsl_data.endian.bitswap(pin_i);
 
     if in_supported_c and (irq_n_i = '0' or force_i = '1') then
       rin.in_dirty <= true;
     end if;
 
-    if pin_i /= r.io_out or force_i = '1' then
+    if pin_i_swapped /= r.io_out or force_i = '1' then
       rin.out_dirty <= true;
-      rin.io_out <= pin_i;
+      rin.io_out <= pin_i_swapped;
     end if;
     
     case r.cmd_state is
@@ -280,7 +283,7 @@ begin
 
   moore: process(r) is
   begin
-    pin_o <= r.io_in;
+    pin_o <= nsl_data.endian.bitswap(r.io_in);
 
     case r.cmd_state is
       when CMD_RESET | CMD_IDLE | CMD_WAIT_DONE =>

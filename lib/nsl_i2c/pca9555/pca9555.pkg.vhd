@@ -34,8 +34,8 @@ package pca9555 is
 
       irq_n_i     : in std_ulogic := '1';
 
-      pin_i       : in std_ulogic_vector(15 downto 0);
-      pin_o       : out std_ulogic_vector(15 downto 0);
+      pin_i       : in std_ulogic_vector(0 to 15);
+      pin_o       : out std_ulogic_vector(0 to 15);
 
       cmd_o  : out nsl_bnoc.framed.framed_req;
       cmd_i  : in  nsl_bnoc.framed.framed_ack;
