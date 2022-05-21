@@ -117,8 +117,47 @@ package hdlc is
       clock_i     : in std_ulogic;
       reset_n_i   : in std_ulogic;
 
-      frame_i : in nsl_bnoc.framed.framed_req;
-      frame_o : out nsl_bnoc.framed.framed_ack;
+      frame_i : in nsl_bnoc.committed.committed_req;
+      frame_o : out nsl_bnoc.committed.committed_ack;
+
+      hdlc_o : out nsl_bnoc.pipe.pipe_req_t;
+      hdlc_i : in nsl_bnoc.pipe.pipe_ack_t
+      );
+  end component;
+
+  -- If frame is received broken, it will not be forwarded.
+  -- As frame is put in fifo before getting through (waiting for CRC
+  -- validation), there is a maximum size. Oversized frame will trigger
+  -- unpredictable results.
+  -- HDLC Address and command bytes are ignored
+  component hdlc_framed_unframer is
+    generic(
+      frame_max_size_c: natural := 512
+      );
+    port(
+      clock_i     : in std_ulogic;
+      reset_n_i   : in std_ulogic;
+
+      hdlc_i : in nsl_bnoc.pipe.pipe_req_t;
+      hdlc_o : out nsl_bnoc.pipe.pipe_ack_t;
+
+      framed_o : out nsl_bnoc.framed.framed_req;
+      framed_i : in nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
+  -- Generic Address and command bytes are inserted. FCS is computed as
+  -- necessary. All outbound frames are valid.
+  component hdlc_framed_framer is
+    generic(
+      stuff_c : boolean := false
+      );
+    port(
+      clock_i     : in std_ulogic;
+      reset_n_i   : in std_ulogic;
+
+      framed_i : in nsl_bnoc.framed.framed_req;
+      framed_o : out nsl_bnoc.framed.framed_ack;
 
       hdlc_o : out nsl_bnoc.pipe.pipe_req_t;
       hdlc_i : in nsl_bnoc.pipe.pipe_ack_t

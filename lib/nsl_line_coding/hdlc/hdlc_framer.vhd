@@ -13,8 +13,8 @@ entity hdlc_framer is
     clock_i     : in std_ulogic;
     reset_n_i   : in std_ulogic;
 
-    frame_i : in nsl_bnoc.framed.framed_req;
-    frame_o : out nsl_bnoc.framed.framed_ack;
+    frame_i : in nsl_bnoc.committed.committed_req;
+    frame_o : out nsl_bnoc.committed.committed_ack;
 
     hdlc_o : out nsl_bnoc.pipe.pipe_req_t;
     hdlc_i : in nsl_bnoc.pipe.pipe_ack_t
@@ -40,8 +40,8 @@ architecture beh of hdlc_framer is
     OUT_FLAG_END
     );
 
-  signal fcsed_i : nsl_bnoc.framed.framed_req;
-  signal fcsed_o : nsl_bnoc.framed.framed_ack;
+  signal fcsed_i : nsl_bnoc.committed.committed_req;
+  signal fcsed_o : nsl_bnoc.committed.committed_ack;
 
   constant fifo_depth_c : integer := 2;
 
