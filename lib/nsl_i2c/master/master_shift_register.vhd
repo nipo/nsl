@@ -193,8 +193,6 @@ begin
     if start_i = '1' then
       if enable_i = '1' then
         rin.state <= ST_NEXT;
-      else
---        rin.state <= ST_ARB_LOST;
       end if;
     end if;
   end process;

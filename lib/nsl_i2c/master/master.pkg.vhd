@@ -21,9 +21,11 @@ use nsl_i2c.i2c."+";
 package master is
 
   type i2c_bus_cmd_t is (
+    I2C_BUS_RELEASE,
     I2C_BUS_START,
-    I2C_BUS_STOP,
-    I2C_BUS_BYTE
+    I2C_BUS_HOLD,
+    I2C_BUS_RUN,
+    I2C_BUS_STOP
     );
   
   component master_clock_driver is
@@ -36,12 +38,11 @@ package master is
       i2c_o  : out nsl_i2c.i2c.i2c_o;
       i2c_i  : in  nsl_i2c.i2c.i2c_i;
 
-      ready_o : out std_ulogic;
-      valid_i : in std_ulogic;
+      -- Accepted when ready_o is set
       cmd_i : in i2c_bus_cmd_t;
 
-      abort_i : in std_ulogic;
-      failed_o : out std_ulogic;
+      ready_o : out std_ulogic;
+      -- Only meaningful when ready_o is set
       owned_o : out std_ulogic
       );
   end component;

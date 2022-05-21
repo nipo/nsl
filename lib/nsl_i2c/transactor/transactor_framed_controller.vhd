@@ -36,11 +36,11 @@ architecture rtl of transactor_framed_controller is
     ST_RESET,
     ST_CMD_GET,
 
-    ST_EXEC,
+    ST_ROUTE,
 
-    ST_START_RUN,
-    ST_RESTART_RUN,
-    ST_STOP_RUN,
+    ST_START,
+    ST_STOP,
+    ST_START_STOP_WAIT,
 
     ST_READ_RUN,
     ST_READ_DATA,
@@ -63,6 +63,7 @@ architecture rtl of transactor_framed_controller is
   type regs_t is record
     state      : state_t;
     last       : std_ulogic;
+    owned      : std_ulogic;
     cmd        : std_ulogic_vector(7 downto 0);
     data       : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
@@ -74,7 +75,7 @@ architecture rtl of transactor_framed_controller is
   signal i2c_filt_i : nsl_i2c.i2c.i2c_i;
   signal i2c_clocker_o, i2c_shifter_o : nsl_i2c.i2c.i2c_o;
   signal start_i, stop_i : std_ulogic;
-  signal clocker_owned_i, clocker_abort_o, clocker_failed_i, clocker_ready_i, clocker_valid_o : std_ulogic;
+  signal clocker_owned_i, clocker_ready_i : std_ulogic;
   signal clocker_cmd_o : i2c_bus_cmd_t;
   signal shift_enable_o, shift_send_data_o, shift_arb_ok_i : std_ulogic;
   signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
@@ -109,12 +110,9 @@ begin
       i2c_i => i2c_filt_i,
       i2c_o => i2c_clocker_o,
 
-      ready_o => clocker_ready_i,
-      valid_i => clocker_valid_o,
       cmd_i => clocker_cmd_o,
 
-      abort_i => clocker_abort_o,
-      failed_o => clocker_failed_i,
+      ready_o => clocker_ready_i,
       owned_o => clocker_owned_i
       );
   
@@ -152,11 +150,19 @@ begin
   end process;
 
   transition : process (clocker_owned_i, clocker_ready_i,
-                        cmd_i, r, rsp_i, clocker_failed_i,
-                        shift_r_data_i, shift_r_valid_i, shift_w_ready_i)
+                        cmd_i, r, rsp_i,
+                        shift_r_data_i, shift_r_valid_i, shift_w_ready_i,
+                        shift_arb_ok_i)
   begin
     rin <= r;
 
+    if clocker_ready_i = '1' then
+      rin.owned <= clocker_owned_i;
+    end if;
+    if shift_arb_ok_i = '0' then
+      rin.owned <= '0';
+    end if;
+    
     case r.state is
       when ST_RESET =>
         rin.divisor <= (others => '1');
@@ -166,52 +172,53 @@ begin
         if cmd_i.valid = '1' then
           rin.cmd <= cmd_i.data;
           rin.last <= cmd_i.last;
-          rin.state <= ST_EXEC;
+          rin.state <= ST_ROUTE;
         end if;
 
-      when ST_EXEC =>
-        if clocker_ready_i = '1' then
-          if std_match(r.cmd, I2C_CMD_READ) then
-            rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
-            if clocker_owned_i = '1' then
-              rin.state <= ST_READ_RUN;
-            else
-              rin.state <= ST_IO_FLUSH_PUT;
-            end if;
+      when ST_ROUTE =>
+        if std_match(r.cmd, I2C_CMD_READ) then
+          rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
+          if r.owned = '1' then
+            rin.state <= ST_READ_RUN;
+          else
+            rin.state <= ST_IO_FLUSH_PUT;
+          end if;
 
-          elsif std_match(r.cmd, I2C_CMD_WRITE) then
-            rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
-            if clocker_owned_i = '1' then
-              rin.state <= ST_WRITE_GET;
-            else
-              rin.state <= ST_IO_FLUSH_GET;
-            end if;
+        elsif std_match(r.cmd, I2C_CMD_WRITE) then
+          rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
+          if r.owned = '1' then
+            rin.state <= ST_WRITE_GET;
+          else
+            rin.state <= ST_IO_FLUSH_GET;
+          end if;
 
-          elsif std_match(r.cmd, I2C_CMD_DIV) then
-            rin.state <= ST_RSP_PUT;
-            rin.divisor <= unsigned(r.cmd(5 downto 0));
+        elsif std_match(r.cmd, I2C_CMD_DIV) then
+          rin.state <= ST_RSP_PUT;
+          rin.divisor <= unsigned(r.cmd(5 downto 0));
 
-          elsif std_match(r.cmd, I2C_CMD_START) then
-            if clocker_owned_i = '1' then
-              rin.state <= ST_RESTART_RUN;
-            else
-              rin.state <= ST_START_RUN;
-            end if;
+        elsif std_match(r.cmd, I2C_CMD_START) then
+          rin.state <= ST_START;
 
-          elsif std_match(r.cmd, I2C_CMD_STOP) then
-            if clocker_owned_i = '1' then
-              rin.state <= ST_STOP_RUN;
-            else
-              rin.state <= ST_RSP_PUT_FAILED;
-            end if;
+        elsif std_match(r.cmd, I2C_CMD_STOP) then
+          if r.owned = '1' then
+            rin.state <= ST_STOP;
+          else
+            rin.state <= ST_RSP_PUT_FAILED;
           end if;
         end if;
 
-      when ST_START_RUN | ST_RESTART_RUN | ST_STOP_RUN =>
-        if clocker_failed_i = '1' then
-          rin.state <= ST_RSP_PUT_FAILED;
-        elsif clocker_ready_i = '1' then
-          rin.state <= ST_RSP_PUT;
+      when ST_START | ST_STOP =>
+        if clocker_ready_i = '1' then
+          rin.state <= ST_START_STOP_WAIT;
+        end if;
+
+      when ST_START_STOP_WAIT =>
+        if clocker_ready_i = '1' then
+          if clocker_owned_i = '1' or r.cmd = I2C_CMD_STOP then
+            rin.state <= ST_RSP_PUT;
+          else 
+            rin.state <= ST_RSP_PUT_FAILED;
+          end if;
         end if;
       
       when ST_READ_RUN =>
@@ -298,12 +305,9 @@ begin
   end process;
 
   i2c_o <= i2c_clocker_o + i2c_shifter_o;
-  clocker_abort_o <= not shift_arb_ok_i;
 
-  moore : process (r)
+  moore: process (r)
   begin
-    clocker_valid_o <= '0';
-    clocker_cmd_o <= I2C_BUS_START;
     cmd_o.ready <= '0';
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
@@ -314,27 +318,33 @@ begin
     shift_r_ready_o <= '0';
     shift_w_data_o <= (others => '-');
 
+    if r.owned = '1' then
+      clocker_cmd_o <= I2C_BUS_HOLD;
+    else
+      clocker_cmd_o <= I2C_BUS_RELEASE;
+    end if;
+
     case r.state is
       when ST_RESET =>
         null;
 
-      when ST_CMD_GET | ST_WRITE_GET | ST_IO_FLUSH_GET =>
-        cmd_o.ready <= '1';
+      when ST_START_STOP_WAIT =>
+        clocker_cmd_o <= I2C_BUS_HOLD;
 
-      when ST_EXEC =>
-        null;
-
-      when ST_START_RUN | ST_RESTART_RUN =>
-        clocker_valid_o <= '1';
+      when ST_START =>
         clocker_cmd_o <= I2C_BUS_START;
 
-      when ST_STOP_RUN =>
-        clocker_valid_o <= '1';
+      when ST_STOP =>
         clocker_cmd_o <= I2C_BUS_STOP;
 
       when ST_READ_RUN | ST_WRITE_RUN =>
-        clocker_valid_o <= '1';
-        clocker_cmd_o <= I2C_BUS_BYTE;
+        clocker_cmd_o <= I2C_BUS_RUN;
+
+      when ST_CMD_GET | ST_WRITE_GET | ST_IO_FLUSH_GET =>
+        cmd_o.ready <= '1';
+
+      when ST_ROUTE =>
+        null;
 
       when ST_READ_DATA | ST_WRITE_ACK =>
         shift_r_ready_o <= '1';
@@ -383,9 +393,7 @@ begin
 
       when others =>
         null;
-        
     end case;
-
   end process;
 
 end architecture;
