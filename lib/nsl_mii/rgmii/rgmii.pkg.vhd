@@ -77,10 +77,16 @@ package rgmii is
       );
   end component;
 
+  type phy_type_t is (
+    PHY_DP83xxx,
+    PHY_RTL8211F
+    );
+
   component rgmii_smi_status_poller is
     generic(
       refresh_hz_c : real := 2.0;
-      clock_i_hz_c: natural
+      clock_i_hz_c: natural;
+      phy_type_c: phy_type_t
       );
     port(
       reset_n_i   : in std_ulogic;

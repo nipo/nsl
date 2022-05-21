@@ -13,7 +13,8 @@ use nsl_mii.rgmii.all;
 entity rgmii_smi_status_poller is
   generic(
     refresh_hz_c : real := 2.0;
-    clock_i_hz_c: natural
+    clock_i_hz_c: natural;
+    phy_type_c: phy_type_t
     );
   port(
     reset_n_i   : in std_ulogic;
@@ -72,8 +73,26 @@ architecture beh of rgmii_smi_status_poller is
   type register_value_vector is array (natural range <>) of register_value_t;
   type register_addr_vector is array (natural range <>) of register_addr_t;
 
+  constant dp83xxx_isr_addr_c: register_addr_t := "10011";
+  -- The way RTL8211F has a banked register set at address 0x10-0x17.
+  -- Bank base address is set in register 0x1f.
+  -- Actual register address is (bank << 3) | (addr & 0x7)
+  -- Registers 0x00-0x0f and 0x18-0x1f are not really banked.
+  -- IEEE register set starts at bank 0xa40.
+  -- IEEE reigster 0 is accessible at reg 0x00 (any bank) or bank 0xa40 reg 0x18.
+  -- ISR at 0x1d is always mapped.
+  constant rtl8211f_isr_addr_c: register_addr_t := "11101";
+
+  function isr_reg_addr(t: phy_type_t) return register_addr_t is
+  begin
+    case t is
+      when PHY_DP83xxx => return dp83xxx_isr_addr_c;
+      when PHY_RTL8211F => return rtl8211f_isr_addr_c;
+    end case;
+  end function;
+
   constant register_addr_c : register_addr_vector(0 to reg_count_c-1) := (
-    reg_isr_c  => "10011",
+    reg_isr_c  => isr_reg_addr(phy_type_c),
     reg_bmcr_c => "00000",
     reg_bmsr_c => "00001",
     reg_anar_c => "00100",
