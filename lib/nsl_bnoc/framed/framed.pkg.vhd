@@ -141,6 +141,8 @@ package framed is
       p_clk      : in  std_ulogic;
 
       p_selected : out unsigned(nsl_math.arith.log2(source_count)-1 downto 0);
+      p_request : out std_ulogic;
+      p_grant : in std_ulogic := '1';
       
       p_cmd_val   : in framed_req_array(0 to source_count - 1);
       p_cmd_ack   : out framed_ack_array(0 to source_count - 1);

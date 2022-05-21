@@ -13,6 +13,8 @@ entity framed_arbitrer is
     p_clk      : in  std_ulogic;
 
     p_selected : out unsigned(nsl_math.arith.log2(source_count)-1 downto 0);
+    p_request : out std_ulogic;
+    p_grant : in std_ulogic := '1';
 
     p_cmd_val   : in nsl_bnoc.framed.framed_req_array(0 to source_count - 1);
     p_cmd_ack   : out nsl_bnoc.framed.framed_ack_array(0 to source_count - 1);
@@ -32,6 +34,8 @@ architecture rtl of framed_arbitrer is
     STATE_RESET,
     STATE_ELECT_FAIR,
     STATE_ELECT,
+    STATE_REQUEST,
+    STATE_GRANT,
     STATE_FORWARD,
     STATE_FLUSH
     );
@@ -56,7 +60,7 @@ begin
     end if;
   end process;
 
-  transition: process(p_cmd_val, p_rsp_ack, p_target_cmd_ack, p_target_rsp_val, r)
+  transition: process(p_cmd_val, p_rsp_ack, p_target_cmd_ack, p_target_rsp_val, p_grant, r)
   begin
     rin <= r;
 
@@ -69,7 +73,7 @@ begin
         for i in source_count-1 downto 0 loop
           if p_cmd_val(i).valid = '1' and i /= r.elected then
             rin.elected <= i;
-            rin.state <= STATE_FORWARD;
+            rin.state <= STATE_REQUEST;
           end if;
         end loop;
 
@@ -77,9 +81,17 @@ begin
         for i in source_count-1 downto 0 loop
           if p_cmd_val(i).valid = '1' then
             rin.elected <= i;
-            rin.state <= STATE_FORWARD;
+            rin.state <= STATE_REQUEST;
           end if;
         end loop;
+
+      when STATE_REQUEST =>
+        rin.state <= STATE_GRANT;
+
+      when STATE_GRANT =>
+        if p_grant = '1' then
+          rin.state <= STATE_FORWARD;
+        end if;
 
       when STATE_FORWARD =>
         if p_cmd_val(r.elected).valid = '1' and p_target_cmd_ack.ready = '1' and p_cmd_val(r.elected).last = '1' then
@@ -123,6 +135,7 @@ begin
     end case;
   end process;
 
+  p_request <= '1' when r.state = STATE_REQUEST else '0';
   p_selected <= to_unsigned(r.elected, p_selected'length);
   
 end architecture;
