@@ -115,6 +115,7 @@ begin
 
       when ST_IDLE =>
         rin.mdio <= (v => '-', output => '0');
+        rin.clock <= '0';
         if cmd_valid_i = '1' then
           rin.state <= ST_STARTING;
           rin.prtad <= std_ulogic_vector(cmd_prtad_phyad_i);
