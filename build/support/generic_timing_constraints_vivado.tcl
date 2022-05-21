@@ -72,3 +72,8 @@ foreach {bscan} [get_cells -hier {*jtag_bscane2_inst*}] {
     create_clock -period 20.000 [get_pins -filter {REF_PIN_NAME=~TCK} -of $bscan]
 }
 
+foreach {bscan} [get_cells -hier {*/tap/*}] {
+    common::send_msg_id "NSL-1-02" "INFO" "Adding TCK clock for $bscan"
+    create_clock -period 20.000 [get_pins -filter {REF_PIN_NAME=~TCK} -of $bscan]
+}
+

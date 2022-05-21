@@ -40,6 +40,13 @@ define _vivado-add-verilog
 
 endef
 
+define _vivado-add-xci
+	$(call file-append,$1,set f [read_ip [file normalize {$2}]])
+	$(call file-append,$1,set_property -dict { "library" "$($2-library)" "used_in" "synthesis implementation"} $$f)
+
+endef
+#	$(call file-append,$1,set_property generate_synth_checkpoint 1 $$f)
+
 _VIVADO_CONSTRAINT_TYPE_xdc = XDC
 _VIVADO_CONSTRAINT_TYPE_tcl = TCL
 
@@ -77,13 +84,23 @@ define vivado-tcl-sources-append
 	$(call _vivado-add-constraint,$1,$(BUILD_ROOT)/support/generic_timing_constraints_vivado.tcl)
 	$(call _vivado-add-implementation_constraint,$1,$(BUILD_ROOT)/support/vivado-userid.tcl)
 	$(call _vivado-add-implementation_constraint,$1,$(BUILD_ROOT)/support/vivado-drc.tcl)
+	$(call file-append,$1,set_property "top_lib" "$(top-lib)" $$_sources_fileset)
 	$(call file-append,$1,set_property "top" "$(top-entity)" $$_sources_fileset)
 	$(call file-append,$1,set_property "generic" "$(topcell-generics)" $$_sources_fileset)
+	$(call file-append,$1,set_param synth.elaboration.rodinMoreOptions {rt::set_parameter ignoreVhdlAssertStmts false})
+	$(call file-append,$1,foreach {xci} [get_files -of_objects [get_filesets $$_sources_fileset_name] "*.xci"] {)
+	$(call file-append,$1,    generate_target "synthesis implementation" $$xci)
+	$(call file-append,$1,})
 
 endef
 
 define vivado-tcl-run
-	$(SILENT)$(VIVADO_PREPARE) ; cd $(dir $1) ; vivado -mode batch -source $(notdir $1)
+	$(SILENT)$(VIVADO_PREPARE) ; cd $(dir $1) ; vivado -nojournal -mode batch -source $(notdir $1)
+
+endef
+
+define vivado-tcl-cmd
+	$(SILENT)$(VIVADO_PREPARE) ; vivado -nojournal -nolog -mode tcl <<< '$1'
 
 endef
 

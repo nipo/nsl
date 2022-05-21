@@ -207,7 +207,10 @@ $(build-dir)/$(target)-fast.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) $(M
 	$(call file-clear,$@)
 	$(call project_init,$@)
 	$(call file-append,$@,source sources.tcl)
-	$(call file-append,$@,set_param synth.elaboration.rodinMoreOptions {rt::set_parameter ignoreVhdlAssertStmts false})
+	$(call file-append,$@,foreach {ip} [get_ips] {)
+	$(call file-append,$@,    generate_target "synthesis implementation" $$ip)
+	$(call file-append,$@,    synth_ip $$ip)
+	$(call file-append,$@,})
 	$(call file-append,$@,synth_design -top $(top-entity) -part $(target_part)$(target_package)$(target_speed) -assert)
 	$(call file-append,$@,opt_design)
 	$(call file-append,$@,place_design)
@@ -222,5 +225,23 @@ $(build-dir)/$(target)-fast.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) $(M
 
 $(target)-fast.bit: $(build-dir)/$(target)-fast.tcl
 	$(call vivado-tcl-run,$<)
+
+$(target)-fast.x1.mcs: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format MCS -interface SPIx1 -loadbit "up 0x0 $<" $@)
+
+$(target)-fast.x2.mcs: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format MCS -interface SPIx2 -loadbit "up 0x0 $<" $@)
+
+$(target)-fast.x4.mcs: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format MCS -interface SPIx4 -loadbit "up 0x0 $<" $@)
+
+$(target)-fast.x1.bin: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format BIN -interface SPIx1 -loadbit "up 0x0 $<" $@)
+
+$(target)-fast.x2.bin: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format BIN -interface SPIx2 -loadbit "up 0x0 $<" $@)
+
+$(target)-fast.x4.bin: $(target)-fast.bit
+	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format BIN -interface SPIx4 -loadbit "up 0x0 $<" $@)
 
 clean-dirs += $(build-dir)
