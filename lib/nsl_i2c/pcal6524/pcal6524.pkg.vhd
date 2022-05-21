@@ -10,6 +10,9 @@ package pcal6524 is
 
   -- PCAL6524 GPIO extender reflector.
   --
+  -- This module is register-compatible with the following:
+  -- - TCA6424 (010001-, initialization differs, though)
+  --
   -- Takes a bit vector and forwards it to the remote enterder ASAP when it
   -- changes. There is no guarantee on delivery latency. It depends on the
   -- internal transactor usage and bus traffic.
@@ -34,8 +37,8 @@ package pcal6524 is
 
       irq_n_i     : in std_ulogic := '1';
 
-      pin_i       : in std_ulogic_vector(23 downto 0);
-      pin_o       : out std_ulogic_vector(23 downto 0);
+      pin_i       : in std_ulogic_vector(0 to 23);
+      pin_o       : out std_ulogic_vector(0 to 23);
 
       cmd_o  : out nsl_bnoc.framed.framed_req;
       cmd_i  : in  nsl_bnoc.framed.framed_ack;
@@ -103,13 +106,13 @@ package body pcal6524 is
       strength(i*2+1 downto i*2) := std_ulogic_vector(to_unsigned(config(i).drive_strength, 2));
     end loop;
 
-    return pcal6524_write_multiple(saddr, x"50", pull_val)
-      & pcal6524_write_multiple(saddr, x"4c", pull_en)
-      & pcal6524_write_multiple(saddr, x"40", strength)
-      & pcal6524_write_multiple(saddr, x"08", in_inverted)
-      & pcal6524_write_multiple(saddr, x"04", value)
-      & pcal6524_write_multiple(saddr, x"0c", hiz)
-      & pcal6524_write_multiple(saddr, x"54", irq_en)
+    return pcal6524_write_multiple(saddr, x"d0", pull_val)
+      & pcal6524_write_multiple(saddr, x"cc", pull_en)
+      & pcal6524_write_multiple(saddr, x"c0", strength)
+      & pcal6524_write_multiple(saddr, x"88", in_inverted)
+      & pcal6524_write_multiple(saddr, x"84", value)
+      & pcal6524_write_multiple(saddr, x"8c", hiz)
+      & pcal6524_write_multiple(saddr, x"d4", irq_en)
       ;    
   end function;
   
