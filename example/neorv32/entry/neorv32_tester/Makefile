@@ -1,0 +1,18 @@
+vhdl-sources += neorv32_tester.pkg.vhd
+vhdl-sources += tester_root.vhd
+vhdl-sources += usb_function.vhd
+
+deps += neorv32.neorv32_package
+deps += nsl_usb.usb
+deps += nsl_usb.utmi
+deps += nsl_usb.ulpi
+deps += nsl_usb.func
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.pipe
+deps += nsl_bnoc.sized
+deps += nsl_bnoc.routed
+deps += nsl_bnoc.control_status
+deps += nsl_jtag.transactor
+deps += nsl_uart.transactor
+deps += nsl_clocking.pll
+deps += nsl_clocking.async
