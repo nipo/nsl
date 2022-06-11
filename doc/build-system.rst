@@ -2,6 +2,104 @@
  Build system
 ==============
 
+Overview
+========
+
+Build system relies on GNU Make. It is pluggable in the sense there
+may be out-of-tree libraries and projects that reuse NSL core and
+build system. For instance, NSL can be used as a git submodule from a
+wrapper project.
+
+There are different types of Makefiles in the tree.
+
+Library makefiles
+-----------------
+
+Library makefiles should only point to packages. A typical library
+Makefile contains::
+
+  packages += foo
+  packages += bar
+
+Then in library directory, along with the Makefile, there should be
+`foo` and `bar` directories for matching packages. Each of them should
+contain a Package Makefile.
+
+Package makefiles
+-----------------
+
+Package makefiles should enumerate package-related HDL source files,
+and dependencies of the package on other packages.  A typical `foo`
+package Makefile contains::
+
+  vhdl-sources += foo.pkg.vhd
+  vhdl-sources += foo_module_1.vhd
+  vhdl-sources += foo_module_2.vhd
+  deps += other.baz
+
+Here package `foo` is composed of 3 VHDL source files, one package and
+two modules. Naming of files is conventional only and is not enforced
+by tools.
+
+Dependencies are in the form `library.package`, and may reference
+packages in the same library or others. Dependency cycles are
+unsupported and should be avoided.
+
+Note about package names and dependencies::
+
+  Packages, in terms of VHDL namespacing, do not technically have to
+  match the package directory name and deps variables. The
+  build-system does not parse the HDL files contents. The only
+  requirement is that build-system dependencies target
+  build-system-declared package names (i.e. `deps += a.b` should match a
+  `package += b` in library `a`).
+
+Project makefiles
+-----------------
+
+Project makefiles share a common structure, but then have a big
+backend-specific part. See relevant chapter for build backends.
+
+Common part takes care of enumerating:
+
+* Libraries (in-tree libraries in `lib/` are automatically
+  enumerated),
+* Top module (root of design),
+* Build backend specifics: target, constraints, etc.
+
+Most of the time, project makefile declares the "work" library with a
+path relative to the project makefile, and declares "top" module to be
+some cell in the "work" library::
+
+  target = my_project
+  top = work.top
+  work-srcdir = $(SRC_DIR)/src
+  tool = ghdl
+
+  include path/to/nsl/build/build.mk
+
+Then in src/Makefile, we have a (non-hierarchic) library containing
+only one (or multiple) module::
+
+  vhdl-sources += top.vhd
+  deps += mylib.bar
+
+`top=` variable defines a `library.entity` name to use as top cell
+(`library.package.entity` notation may also be used).
+
+That's actually the `work` library source directory that pulls the
+dependencies from the rest of the library with `deps +=` lines.
+
+`target =` simply defines the project output base name.
+
+Two special variables may select different HDL implementation files
+from the build-system: `hwdep` selects the hardware-dependent vendor
+library, `target_part` defines the target part, allowing to select for
+hardware-specific cells.
+
+`tool =` defines the backend, all other variable are tool-specific.
+
+
 Filesystem layout
 =================
 
