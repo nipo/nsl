@@ -1,6 +1,6 @@
 top = work.tb
 work-srcdir = $(SRC_DIR)/src
-tool = isim
+tool = ghdl
 
 include ../../build/build.mk
 

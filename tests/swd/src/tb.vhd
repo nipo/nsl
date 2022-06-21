@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_clocking, nsl_bnoc, nsl_coresight, util, signalling;
+library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation;
 
 architecture arch of tb is
 
@@ -31,10 +31,13 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 to 1);
 
-  signal s_cmd_val_fifo, s_rsp_val_fifo : nsl_bnoc.framed.framed_req;
-  signal s_cmd_ack_fifo, s_rsp_ack_fifo : nsl_bnoc.framed.framed_ack;
-  signal s_swd_cmd_val, s_swd_rsp_val : nsl_bnoc.framed.framed_req;
-  signal s_swd_cmd_ack, s_swd_rsp_ack : nsl_bnoc.framed.framed_ack;
+  type framed_io is
+  record
+    req: nsl_bnoc.framed.framed_req;
+    ack: nsl_bnoc.framed.framed_ack;
+  end record;
+
+  signal s_swd_cmd, s_swd_rsp, s_cmd_fifo, s_rsp_fifo : framed_io;
 
 begin
 
@@ -50,14 +53,14 @@ begin
   begin
     dio := '1';
 
-    if s_swd_master_o.dio.en = '1' and s_swd_slave_o.dio.en = '1' then
+    if s_swd_master_o.dio.output = '1' and s_swd_slave_o.dio.output = '1' then
       assert false
         report "Write conflict on SWDIO line"
         severity warning;
       dio := 'L';
-    elsif s_swd_master_o.dio.en = '1' and s_swd_slave_o.dio.en = '0' then
+    elsif s_swd_master_o.dio.output = '1' and s_swd_slave_o.dio.output = '0' then
       dio := s_swd_master_o.dio.v;
-    elsif s_swd_slave_o.dio.en = '1' and s_swd_master_o.dio.en = '0' then
+    elsif s_swd_slave_o.dio.output = '1' and s_swd_master_o.dio.output = '0' then
       dio := s_swd_slave_o.dio.v;
     else
       dio := 'H';
@@ -103,15 +106,15 @@ begin
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
 
-      p_cmd_in_val => s_cmd_val_fifo,
-      p_cmd_in_ack => s_cmd_ack_fifo,
-      p_rsp_out_val => s_rsp_val_fifo,
-      p_rsp_out_ack => s_rsp_ack_fifo,
+      p_cmd_in_val => s_cmd_fifo.req,
+      p_cmd_in_ack => s_cmd_fifo.ack,
+      p_rsp_out_val => s_rsp_fifo.req,
+      p_rsp_out_ack => s_rsp_fifo.ack,
       
-      p_cmd_out_val => s_swd_cmd_val,
-      p_cmd_out_ack => s_swd_cmd_ack,
-      p_rsp_in_val => s_swd_rsp_val,
-      p_rsp_in_ack => s_swd_rsp_ack
+      p_cmd_out_val => s_swd_cmd.req,
+      p_cmd_out_ack => s_swd_cmd.ack,
+      p_rsp_in_val => s_swd_rsp.req,
+      p_rsp_in_ack => s_swd_rsp.ack
       );
 
   dp: nsl_coresight.transactor.dp_framed_transactor
@@ -119,11 +122,11 @@ begin
       clock_i  => s_clk,
       reset_n_i => s_resetn_clk,
       
-      cmd_i => s_cmd_swd.req,
-      cmd_o => s_cmd_swd.ack,
+      cmd_i => s_swd_cmd.req,
+      cmd_o => s_swd_cmd.ack,
 
-      rsp_o => s_rsp_swd.req,
-      rsp_i => s_rsp_swd.ack,
+      rsp_o => s_swd_rsp.req,
+      rsp_i => s_swd_rsp.ack,
 
       swd_o => s_swd_master_o,
       swd_i => s_swd_master_i
@@ -136,8 +139,8 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_out_val => s_cmd_val_fifo,
-      p_out_ack => s_cmd_ack_fifo,
+      p_out_val => s_cmd_fifo.req,
+      p_out_ack => s_cmd_fifo.ack,
       p_done => s_done(0)
       );
 
@@ -148,8 +151,8 @@ begin
     port map(
       p_resetn => s_resetn_clk,
       p_clk => s_clk,
-      p_in_val => s_rsp_val_fifo,
-      p_in_ack => s_rsp_ack_fifo,
+      p_in_val => s_rsp_fifo.req,
+      p_in_ack => s_rsp_fifo.ack,
       p_done => s_done(1)
       );
 
