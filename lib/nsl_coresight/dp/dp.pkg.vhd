@@ -46,4 +46,28 @@ package dp is
       );
   end component;
 
+  type dp_tech_t is (
+    DP_TECH_SWD,
+    DP_TECH_JTAG,
+    DP_TECH_DORMANT,
+    DP_TECH_JTAG_SERIAL
+    );
+
+  type dp_state_t is (
+    DP_UNSYNC,
+    DP_RESET,
+    DP_ACTIVE
+    );
+
+  component dp_monitor is
+    port(
+      reset_n_i: in std_ulogic := '1';
+
+      dp_i : in nsl_coresight.swd.swd_slave_i;
+
+      tech_o: out dp_tech_t;
+      state_o: out dp_state_t
+      );
+  end component;
+  
 end dp;
