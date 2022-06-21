@@ -25,6 +25,15 @@ class Base:
     def turnaround(self, n):
         self.pipe.put([0xd0 | (n-1)])
 
+    def muxed_select(self, targetsel, idcode):
+        self.run(1, 50)
+        self.bitbang(0xe79e, 16)
+        self.run(1, 50)
+        self.run(0, 2)
+        self.write(0, 3, targetsel, ack = None)
+        self.run(0, 10)
+        self.read(0, 0, idcode)
+
     def reset(self, idcode):
         self.run(1, 50)
         self.bitbang(0xe79e, 16)
@@ -46,7 +55,7 @@ class MasterCmd(Base):
         else:
             self.pipe.put([0x90 | (ad & 0x3)])
 
-    def write(self, ap, ad, val):
+    def write(self, ap, ad, val, ack = 1):
         if ap:
             self.pipe.put([0xa0 | (ad & 0x3)])
         else:
@@ -81,11 +90,18 @@ class MasterRsp(Base):
             for i in range(4):
                 self.pipe.put([(0, 0)])
 
-    def write(self, ap, ad, val):
+    def write(self, ap, ad, val, ack = 1):
+        try:
+            ack, mask = ack
+        except:
+            mask = 7
+        if ack is None:
+            ack, mask = 0, 0
+
         if ap:
-            self.pipe.put([0xa1])
+            self.pipe.put([(0xa0 | ack, 0xf8 | mask)])
         else:
-            self.pipe.put([0x81])
+            self.pipe.put([(0x80 | ack, 0xf8 | mask)])
         
     def run(self, val, cycles):
         while cycles:

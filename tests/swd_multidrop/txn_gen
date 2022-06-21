@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import sys
+from nsl import routed, swd, cs
+
+if __name__ == "__main__":
+    n = sys.argv[1]
+
+    f = routed.Routed(n)
+
+    if n.startswith("swd_res"):
+        t = swd.MasterRsp(routed.SplitRouted(f, 0xf, 0x0))
+#        c = cs.MasterRsp(routed.SplitRouted(f, 0xf, 0x1))
+    else:
+        t = swd.MasterCmd(routed.SplitRouted(f, 0x0, 0xf))
+#        c = cs.MasterCmd(routed.SplitRouted(f, 0x1, 0xf))
+
+    t.divisor(4)
+
+    t.muxed_select(0x0dead123, 0x2ba01477)
+    t.run(0, 20)
+    t.flush()
+
+#    c.write(0, 2 * 1024 * 1024)
+#    c.write(1, 1)
+#    c.flush()
+
+    t.write(False, 2, 0x1)
+    t.write(False, 1, 0x300)
+    t.turnaround(4)
+    t.run(0, 20)
+    t.flush()
+
+    t.read(False, 0, 0x2ba01477)
+    t.flush()
+
+    t.write(True, 0, 0xdecafbad)
+    t.run(0, 20)
+    t.read(True, 0, None)
+    t.run(0, 20)
+    t.read(False, 3, 0xdecafbad)
+    t.flush()
+
+#    c.write(0, int(25e6 * 2))
+#    c.flush()
+    
+    t.write(True, 0, 0xdecafbad)
+    t.run(0, 20)
+    t.read(True, 0, None)
+    t.run(0, 20)
+    t.read(False, 3, 0xdecafbad)
+    t.flush()
+    

@@ -3,6 +3,7 @@ packages += ap
 packages += dapbus
 packages += dp
 packages += swd
+packages += swd_multidrop
 packages += tpiu
 packages += testing
 packages += transactor
