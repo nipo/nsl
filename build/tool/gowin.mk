@@ -4,6 +4,7 @@ PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
 c:=,
 user_id := $(shell python3 -c 'import random ; print(f"{random.randint(0, 1<<32):x}")')
+gowin-use-as-gpio ?=
 
 target ?= $(top)
 
@@ -58,6 +59,7 @@ $(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
 	$(call file-append,$@,set_option -rpt_auto_place_io_info 1)
 	$(call file-append,$@,set_option -bit_compress 1)
 	$(call file-append,$@,set_option -user_code {$(user_id)})
+	$(foreach u,$(gowin-use-as-gpio),$(call file-append,$@,set_option -use_$u_as_gpio 1))
 	$(call file-append,$@,run all)
 
 $(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl
