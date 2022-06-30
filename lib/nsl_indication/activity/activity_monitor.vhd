@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math;
+library nsl_math, nsl_clocking;
 
 entity activity_monitor is
   generic (
@@ -32,8 +32,17 @@ architecture rtl of activity_monitor is
   end record;
 
   signal r, rin: regs_t;
+
+  signal togglable_s: std_ulogic;
   
 begin
+  
+  deglitcher: nsl_clocking.async.async_deglitcher
+    port map(
+      clock_i => clock_i,
+      data_i => togglable_i,
+      data_o => togglable_s
+      );
 
   process (clock_i, reset_n_i)
   begin
@@ -48,7 +57,7 @@ begin
     end if;
   end process;
 
-  process (r, togglable_i)
+  process (r, togglable_s)
   begin
     rin <= r;
     
@@ -65,7 +74,7 @@ begin
       rin.blink_timeout <= r.blink_timeout - 1;
     end if;
 
-    if r.old /= togglable_i then
+    if r.old /= togglable_s then
       if r.inactive_timeout = ctr_zero then
         rin.blink_timeout <= ctr_init;
         rin.blink <= '1';
@@ -73,7 +82,7 @@ begin
       rin.inactive_timeout <= ctr_init;
     end if;
     
-    rin.old <= togglable_i;
+    rin.old <= togglable_s;
     
   end process;
 

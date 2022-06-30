@@ -25,10 +25,14 @@ package activity is
   -- When there is a one-shot activity, blinks for a given duration at a given
   -- rate.
   -- If activity persists, active blinking continues.
+  --
+  -- What is considered activity is selectable through generic, it is either
+  -- "change", "rising", "falling", "1" or "0"
   component activity_blinker
     generic (
       clock_hz_c : real;
       idle_blink_hz_c : real := 1.0;
+      mode_c: string := "change";
       activity_blink_hz_c : real := 4.0;
       activity_blink_duration_c: real := 0.25 -- seconds
       );
