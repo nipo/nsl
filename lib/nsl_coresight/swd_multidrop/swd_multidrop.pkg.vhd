@@ -7,9 +7,6 @@ use work.swd.all;
 
 package swd_multidrop is
 
-  type swd_master_o_vector is array (integer range <>) of swd_master_o;
-  type swd_master_i_vector is array (integer range <>) of swd_master_i;
-  
   component swd_multidrop_router is
     generic(
       target_count_c: natural range 1 to 16;
