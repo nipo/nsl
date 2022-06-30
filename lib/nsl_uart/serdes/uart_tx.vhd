@@ -112,7 +112,7 @@ begin
           rin.bit_ctr <= r.bit_ctr - 1;
           rin.shreg <= "-" & r.shreg(r.shreg'left downto 1);
         else
-          rin.state <= ST_IDLE;
+          rin.state <= ST_WAIT;
         end if;
 
     end case;
