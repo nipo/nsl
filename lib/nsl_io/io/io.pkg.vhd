@@ -30,8 +30,13 @@ package io is
   function to_tristated(x : opendrain) return tristated;
   function to_tristated(x : directed) return tristated;
   function to_tristated(v : std_ulogic; en : std_ulogic := '1') return tristated;
+  function to_directed(x : opendrain) return directed;
+  function to_directed(x : tristated) return directed;
+  function to_directed(v : std_ulogic; output : std_ulogic := '1') return directed;
 
   constant tristated_z : tristated := (en => '0', v => '-');
+  constant directed_z : directed := (output => '0', v => '-');
+  constant opendrain_z : opendrain := (drain_n => '1');
   
   component tristated_io_driver is
     port(
@@ -115,6 +120,24 @@ package body io is
     r.v := v;
     r.en := en;
     return r;
+  end function;
+
+  function to_directed(x : opendrain) return directed
+  is
+  begin
+    return directed'(output => not x.drain_n, v => '0');
+  end function;
+  
+  function to_directed(x : tristated) return directed
+  is
+  begin
+    return directed'(output => x.en, v => x.v);
+  end function;
+  
+  function to_directed(v : std_ulogic; output : std_ulogic := '1') return directed
+  is
+  begin
+    return directed'(output => output, v => v);
   end function;
 
 end package body io;
