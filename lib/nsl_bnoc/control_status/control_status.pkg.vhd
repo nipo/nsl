@@ -10,7 +10,8 @@ library nsl_bnoc;
 package control_status is
 
   subtype control_status_reg is std_ulogic_vector(31 downto 0);
-  type control_status_reg_array is array (natural range <>) of control_status_reg;
+  type control_status_reg_vector is array (natural range <>) of control_status_reg;
+  subtype control_status_reg_array is control_status_reg_vector;
 
   constant CONTROL_STATUS_REG_WRITE: std_ulogic_vector(7 downto 0) := "0-------";
   constant CONTROL_STATUS_REG_READ : std_ulogic_vector(7 downto 0) := "1-------";
@@ -30,8 +31,8 @@ package control_status is
       rsp_o   : out nsl_bnoc.framed.framed_req;
       rsp_i   : in nsl_bnoc.framed.framed_ack;
 
-      config_o : out control_status_reg_array(0 to config_count_c-1);
-      status_i : in  control_status_reg_array(0 to status_count_c-1) := (others => (others => '-'))
+      config_o : out control_status_reg_vector(0 to config_count_c-1);
+      status_i : in  control_status_reg_vector(0 to status_count_c-1) := (others => (others => '-'))
       );
   end component;
 
