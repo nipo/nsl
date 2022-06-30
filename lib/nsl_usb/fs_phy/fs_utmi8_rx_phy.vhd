@@ -320,7 +320,8 @@ begin
 
   dpll_other: if ref_clock_mhz_c /= 60 and ref_clock_mhz_c /= 48
   generate
-    report "Unimplemented clock rate"
+    assert false
+      report "Unimplemented clock rate"
       severity failure;
   end generate;
  
