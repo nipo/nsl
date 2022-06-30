@@ -43,6 +43,9 @@ package framed is
   type framed_req_array is array(natural range <>) of framed_req;
   type framed_ack_array is array(natural range <>) of framed_ack;
   type framed_bus_array is array(natural range <>) of framed_bus;
+  subtype framed_req_vector is framed_req_array;
+  subtype framed_ack_vector is framed_ack_array;
+  subtype framed_bus_vector is framed_bus_array;
 
   component framed_fifo is
     generic(
