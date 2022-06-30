@@ -28,6 +28,7 @@ endif
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += clock_internal_gowin.vhd
 deps += nsl_hwdep.gowin_config
+deps += gowin.components
 endif
 
 ifneq ($(filter lattice-ice40,$(hwdep)),)

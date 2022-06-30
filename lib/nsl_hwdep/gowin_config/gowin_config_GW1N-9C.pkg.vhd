@@ -15,7 +15,7 @@ package body gowin_config is
   function internal_osc return string
   is
   begin
-    return "osch";
+    return "osc";
   end function;
 
   function pll_type return string
