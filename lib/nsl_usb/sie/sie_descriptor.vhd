@@ -53,14 +53,14 @@ architecture beh of sie_descriptor is
                            fs_data, hs_data : byte_string) return byte_string
   is
   begin
-    if fs_data'length = 0 or hs_data'length = 0 then
-      return null_byte_string;
-    end if;
-
     if not hs_supported_c then
       return sie_descriptor_entry(dtype, index, fs_data);
     end if;
     
+    if fs_data'length = 0 and hs_data'length = 0 then
+      return null_byte_string;
+    end if;
+
     return sie_descriptor_entry(dtype, index, fs_data, true, false)
          & sie_descriptor_entry(dtype, index, hs_data, true, true);
   end function;
