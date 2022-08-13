@@ -8,12 +8,14 @@ entity pca9555_driver is
   generic(
     i2c_addr_c    : unsigned(6 downto 0) := "0100000";
     i2c_divisor_c : unsigned(4 downto 0);
+    irq_backoff_timeout_c : natural := 0;
     in_supported_c : boolean := true
     );
   port(
     reset_n_i   : in std_ulogic;
     clock_i     : in std_ulogic;
 
+    enable_i : in std_ulogic := '1';
     force_i : in std_ulogic := '0';
 
     busy_o  : out std_ulogic;
@@ -84,6 +86,7 @@ architecture beh of pca9555_driver is
     rsp_state: rsp_state_t;
     io_out, io_in : std_ulogic_vector(15 downto 0);
     txn_is_read: boolean;
+    backoff_timeout : natural range 0 to irq_backoff_timeout_c;
     out_dirty, in_dirty, txn_success: boolean;
   end record;
 
@@ -105,18 +108,23 @@ begin
       r.io_out <= (others => '0');
       r.out_dirty <= true;
       r.in_dirty <= in_supported_c;
+      r.backoff_timeout <= 0;
     end if;
   end process;
 
-  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, force_i) is
+  transition: process(r, irq_n_i, cmd_i, rsp_i, pin_i, force_i, enable_i) is
     variable pin_i_swapped: std_ulogic_vector(15 downto 0);
   begin
     rin <= r;
 
     pin_i_swapped := nsl_data.endian.bitswap(pin_i);
 
-    if in_supported_c and (irq_n_i = '0' or force_i = '1') then
-      rin.in_dirty <= true;
+    if in_supported_c then
+      if r.backoff_timeout /= 0 then
+        rin.backoff_timeout <= r.backoff_timeout - 1;
+      elsif enable_i = '1' and (irq_n_i = '0' or force_i = '1') then
+        rin.in_dirty <= true;
+      end if;
     end if;
 
     if pin_i_swapped /= r.io_out or force_i = '1' then
@@ -129,15 +137,18 @@ begin
         rin.cmd_state <= CMD_IDLE;
 
       when CMD_IDLE =>
-        if r.out_dirty then
-          rin.out_dirty <= false;
-          rin.txn_is_read <= false;
-          rin.cmd_state <= CMD_PUT_DIV;
-        end if;
+        if enable_i = '1' then
+          if r.out_dirty then
+            rin.out_dirty <= false;
+            rin.txn_is_read <= false;
+            rin.cmd_state <= CMD_PUT_DIV;
+          end if;
 
-        if r.in_dirty then
-          rin.txn_is_read <= true;
-          rin.cmd_state <= CMD_PUT_DIV;
+          if r.in_dirty then
+            rin.txn_is_read <= true;
+            rin.cmd_state <= CMD_PUT_DIV;
+            rin.backoff_timeout <= irq_backoff_timeout_c;
+          end if;
         end if;
 
       when CMD_PUT_DIV =>
@@ -278,7 +289,6 @@ begin
           rin.rsp_state <= RSP_IDLE;
         end if;
     end case;
-
   end process;
 
   moore: process(r) is

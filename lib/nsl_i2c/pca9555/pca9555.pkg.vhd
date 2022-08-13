@@ -21,12 +21,15 @@ package pca9555 is
     generic(
       i2c_addr_c    : unsigned(6 downto 0) := "0100000";
       i2c_divisor_c : unsigned(4 downto 0);
+      irq_backoff_timeout_c : integer := 0;
       in_supported_c : boolean := true
       );
     port(
       reset_n_i   : in std_ulogic;
       clock_i     : in std_ulogic;
 
+      -- allow transactions
+      enable_i : in std_ulogic := '1';
       -- Forces refresh
       force_i : in std_ulogic := '0';
 
