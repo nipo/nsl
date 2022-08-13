@@ -1,6 +1,7 @@
 vhdl-sources += trigonometry.pkg.vhd
 vhdl-sources += rect_table.vhd
 vhdl-sources += rect_cordic.vhd
+vhdl-sources += rect_cordic_scaled.vhd
 
 deps += nsl_memory.rom_fixed
 deps += nsl_math.fixed
