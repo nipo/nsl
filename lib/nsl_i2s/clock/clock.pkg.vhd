@@ -38,5 +38,22 @@ package clock is
       );
   end component;
 
+  component i2s_clock_generator_from_tick is
+    generic(
+      -- Stereo sample implied, means 1 word clock cycle.
+      -- Defaults to 128fs
+      tick_per_sample_c : natural range 128 to 1024 := 128
+      );
+    port(
+      clock_i    : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      tick_i : in std_ulogic;
+
+      sck_o : out std_ulogic;
+      ws_o  : out std_ulogic
+      );
+  end component;
+
 end package clock;
 
