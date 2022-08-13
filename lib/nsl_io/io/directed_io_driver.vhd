@@ -17,6 +17,6 @@ architecture beh of directed_io_driver is
 begin
 
   io_io <= v_i.v when v_i.output = '1' else 'Z';
-  v_o <= to_x01(io_io) when v_i.output = '0' else '-';
+  v_o <= to_x01(io_io);
   
 end architecture;
