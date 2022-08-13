@@ -45,6 +45,9 @@ package framed_transactor is
 
   function i2c_write(saddr: unsigned;
                      data: byte_string) return byte_string;
+  function i2c_write_read(saddr: unsigned;
+                          data: byte_string;
+                          rsize: integer) return byte_string;
 
   function smi_c22_write(phyad, addr: natural;
                          data: unsigned) return byte_string;
@@ -134,6 +137,44 @@ package body framed_transactor is
     ret(4 to 4+data'length-1) := data;
     -- Stop
     ret(4 + data'length) := "00100001";
+    return ret;
+  end function;
+
+  function i2c_write_read(saddr: unsigned;
+                          data: byte_string;
+                          rsize: integer) return byte_string
+  is
+    -- START / WRITE / SADDR / DATA... / START / WRITE / SADDR / READ x / STOP
+    variable ret: byte_string(1 to data'length + 8);
+  begin
+    assert saddr'length = 7
+      report "Bad slave address size"
+      severity failure;
+    assert data'length < 2**6
+      report "Write data too long"
+      severity failure;
+    assert rsize < 2**6
+      report "Read data too long"
+      severity failure;
+
+    -- Start
+    ret(1) := "00100000";
+    -- Write command
+    ret(2) := "01" & std_ulogic_vector(to_unsigned(data'length-1+1, 6));
+    -- saddr[W]
+    ret(3) := std_ulogic_vector(saddr) & "0";
+    -- Data
+    ret(4 to 4+data'length-1) := data;
+    -- Restart
+    ret(4 + data'length) := "00100000";
+    -- Write command
+    ret(5 + data'length) := "01000000";
+    -- saddr[R]
+    ret(6 + data'length) := std_ulogic_vector(saddr) & "1";
+    -- Read nack command
+    ret(7 + data'length) := "10" & std_ulogic_vector(to_unsigned(rsize-1, 6));
+    -- Stop
+    ret(8 + data'length) := "00100001";
     return ret;
   end function;
 
