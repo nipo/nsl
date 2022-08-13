@@ -140,7 +140,7 @@ package body rom_fixed is
     loop
       value_f := to_ufixed(values(i), vl, vr);
 
-      entry := (others => '-');
+      entry := (others => '0');
       entry(value_f'length-1 downto 0) := to_suv(value_f);
 
       ret(dt_byte_count * i to dt_byte_count * (i + 1) - 1)
