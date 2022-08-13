@@ -178,6 +178,24 @@ package framed is
       );
   end component;
 
+  component framed_matrix is
+    generic(
+      source_count_c : natural;
+      destination_count_c : natural
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      in_i   : in framed_req_array(0 to source_count_c - 1);
+      in_o   : out framed_ack_array(0 to source_count_c - 1);
+
+      source_i: in nsl_math.int_ext.integer_vector(0 to destination_count_c - 1);
+      out_o   : out framed_req_array(0 to destination_count_c - 1);
+      out_i   : in framed_ack_array(0 to destination_count_c - 1)
+      );
+  end component;
+
   component framed_dispatch is
     generic(
       destination_count_c : natural

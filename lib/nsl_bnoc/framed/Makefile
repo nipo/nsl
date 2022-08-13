@@ -12,10 +12,12 @@ vhdl-sources += framed_committer.vhd
 vhdl-sources += framed_framer.vhd
 vhdl-sources += framed_unframer.vhd
 vhdl-sources += framed_router.vhd
+vhdl-sources += framed_matrix.vhd
 
 deps += nsl_memory.fifo
 deps += nsl_bnoc.pipe
 deps += nsl_math.arith
+deps += nsl_math.int_ext
 deps += nsl_logic.bool
 deps += nsl_data.bytestream
 deps += nsl_data.fifo
