@@ -16,6 +16,55 @@ package si5351 is
   type drv_src_t is (DRV_SRC_XTAL, DRV_SRC_CLKIN, DRV_SRC_MSREF, DRV_SRC_MS);
   type drv_strength_t is (DRV_2MA, DRV_4MA, DRV_6MA, DRV_8MA);
   type output_enable_t is (OUT_LOW, OUT_HIGH, OUT_HIGHZ, OUT_ON);
+
+  type config_t is
+  record
+    enabled: boolean;
+    integer_only: boolean;
+    pll: ms_src_t;
+    inverted: boolean;
+    strength: drv_strength_t;
+    source: drv_src_t;
+    ratio: real;
+    denom: integer;
+  end record;
+
+  type config_vector is array(natural range <>) of config_t;
+  
+  -- SI5351 dynamic configuration module
+  --
+  -- Takes a configuration ID for each multisynth and allows to apply
+  -- given configuration when configuration index changes.
+  --
+  -- Use routed_transactor_once for initialization of other registers
+  component si5351_config_switcher is
+    generic(
+      i2c_addr_c: unsigned(6 downto 0) := "1100000";
+      config_c: config_vector
+      );
+    port(
+      reset_n_i   : in std_ulogic;
+      clock_i     : in std_ulogic;
+
+      -- Forces refresh
+      force_i : in std_ulogic := '0';
+      busy_o  : out std_ulogic;
+
+      ms0_i : natural range 0 to config_c'length-1;
+      ms1_i : natural range 0 to config_c'length-1;
+      ms2_i : natural range 0 to config_c'length-1;
+      ms3_i : natural range 0 to config_c'length-1;
+      ms4_i : natural range 0 to config_c'length-1;
+      ms5_i : natural range 0 to config_c'length-1;
+      ms6_i : natural range 0 to config_c'length-1;
+      ms7_i : natural range 0 to config_c'length-1;
+
+      cmd_o  : out nsl_bnoc.framed.framed_req;
+      cmd_i  : in  nsl_bnoc.framed.framed_ack;
+      rsp_i  : in  nsl_bnoc.framed.framed_req;
+      rsp_o  : out nsl_bnoc.framed.framed_ack
+      );
+  end component;
   
   function si5351_addr_set(
     saddr: unsigned(6 downto 0);
