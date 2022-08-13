@@ -372,20 +372,19 @@ package body fixed is
     variable ret : sfixed(left downto right);
     variable vu : unsigned(value'length-1 downto 0);
     variable lost : unsigned(value'left-left-1 downto 0);
-    variable s : std_ulogic := value(value'left);
-    variable sc : character;
+    variable s : std_ulogic;
   begin
-    ret := resize(value, left, right);
+    s := value(value'left);
     vu := unsigned(to_slv(value));
     lost := vu(vu'left-1 downto vu'left-lost'length);
-    if s = '0' then
-      sc := '+';
-    else
-      sc := '-';
+
+    ret := resize(value, left, right);
+
+    if not (lost'length > 0) then
+      return ret;
     end if;
 
-    if lost'length > 0
-        and lost /= (lost'range => s) then
+    if lost /= (lost'range => s) then
       ret := (others => not s);
       ret(ret'left) := s;
     end if;
