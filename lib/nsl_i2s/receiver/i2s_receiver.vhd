@@ -23,8 +23,7 @@ architecture beh of i2s_receiver is
   record
     ws : std_ulogic;
     sck : std_ulogic;
-    rx, en : unsigned(data_o'range);
-    valid : std_ulogic;
+    rx, en : unsigned(data_o'length-1 downto 0);
   end record;
 
   signal r, rin: regs_t;
@@ -40,7 +39,6 @@ begin
     if reset_n_i = '0' then
       r.en <= (others => '0');
       r.rx <= (others => '0');
-      r.valid <= '0';
     end if;
   end process;
 
@@ -49,12 +47,7 @@ begin
     rin <= r;
 
     rin.sck <= sck_i;
-    rin.valid <= '0';
-
     if r.sck = '0' and sck_i = '1' then
-      rin.ws <= ws_i;
-      rin.en <= "0" & r.en(r.en'left downto r.en'right + 1);
-
       for i in r.en'range
       loop
         if r.en(i) = '1' then
@@ -62,26 +55,19 @@ begin
         end if;
       end loop;
 
+      rin.en <= "0" & r.en(r.en'left downto 1);
+
+      rin.ws <= ws_i;
       if r.ws /= ws_i then
         rin.en <= (others => '0');
         rin.en(rin.en'left) <= '1';
-        rin.valid <= '1';
       end if;
     end if;
   end process;
 
-  mealy: process(r) is
-  begin
-    valid_o <= '0';
-    channel_o <= '-';
-    data_o <= (others => '-');
-
-    if r.valid = '1' then
-      valid_o <= '1';
-      channel_o <= not r.ws;
-      data_o <= r.rx;
-    end if;
-  end process;
+  valid_o <= r.en(r.en'left);
+  channel_o <= not r.ws;
+  data_o <= r.rx;
   
 end architecture;
 

@@ -22,8 +22,6 @@ end entity;
 architecture beh of i2s_receiver_slave is
 
   signal sck, ws, sd : std_ulogic;
-  constant word_width_m1 : unsigned(nsl_math.arith.log2(data_o'length)-1 downto 0)
-    := to_unsigned(data_o'length - 1, nsl_math.arith.log2(data_o'length));
   
 begin
 
