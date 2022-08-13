@@ -5,8 +5,9 @@ use ieee.numeric_std.all;
 library nsl_math, nsl_clocking;
 use nsl_math.fixed.all;
 
-entity receiver_tick_recovery is
+entity tick_extractor_self_clocking is
   generic(
+    debounce_count_c: natural := 0;
     period_max_c : natural range 4 to integer'high;
     run_length_max_c : natural := 3;
     tick_learn_c: natural := 64
@@ -16,14 +17,15 @@ entity receiver_tick_recovery is
     reset_n_i : in std_ulogic;
 
     reset_i : in std_ulogic := '0';
-    tick_i : in std_ulogic;
+
+    signal_i : in std_ulogic;
 
     valid_o : out std_ulogic;
     tick_180_o : out std_ulogic
     );
 end entity;
 
-architecture beh of receiver_tick_recovery is
+architecture beh of tick_extractor_self_clocking is
 
   type regs_t is
   record
@@ -34,8 +36,10 @@ architecture beh of receiver_tick_recovery is
     ref_period: integer range 0 to period_max_c;
 
     to_180: integer range 0 to period_max_c;
-  end record;
 
+    last_tick, changed: std_ulogic;
+  end record;
+  
   signal r, rin : regs_t;
   
 begin
@@ -54,11 +58,14 @@ begin
     end if;
   end process;
 
-  transition: process(r, tick_i) is
+  transition: process(r, signal_i) is
   begin
     rin <= r;
 
-    if tick_i = '1' then
+    rin.last_tick <= signal_i;
+    rin.changed <= r.last_tick xor signal_i;
+    
+    if r.changed = '1' then
       rin.learn_counter <= 0;
       if r.learn_period >= r.learn_counter then
         rin.learn_period <= r.learn_counter;
@@ -90,8 +97,8 @@ begin
     if not r.ref_period_valid then
       rin.to_180 <= 0;
     else
-      if tick_i = '1' then
-        rin.to_180 <= r.ref_period / 2;
+      if r.changed = '1' then
+        rin.to_180 <= r.ref_period / 2 - 1;
       elsif r.to_180 = 0 then
         rin.to_180 <= r.ref_period;
       else

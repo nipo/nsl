@@ -5,7 +5,7 @@ use ieee.math_real.all;
 library nsl_math;
 use nsl_math.fixed.all;
 
-entity tick_recoverer is
+entity tick_pll is
   generic(
     clock_i_hz_c : natural;
     tick_skip_max_c : natural := 2;
@@ -33,9 +33,9 @@ begin
     report "Block clock must be above Nyquist limit for generating output tick"
     severity failure;
   
-end tick_recoverer;
+end tick_pll;
 
-architecture rtl of tick_recoverer is
+architecture rtl of tick_pll is
 
   constant clock_i_hz : real := real(clock_i_hz_c);
   constant tick_i_hz : real := real(tick_i_hz_c);

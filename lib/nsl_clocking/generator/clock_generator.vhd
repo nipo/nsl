@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 library nsl_math, work;
 use nsl_math.fixed.all;
 
-entity clock_divisor is
+entity clock_generator is
   port(
     clock_i    : in  std_ulogic;
     reset_n_i  : in  std_ulogic;
@@ -15,7 +15,7 @@ entity clock_divisor is
     );
 end entity;
 
-architecture beh of clock_divisor is
+architecture beh of clock_generator is
 
   subtype half_period_t is ufixed(period_i'left-1 downto period_i'right-1);
 
@@ -55,7 +55,7 @@ begin
 
   half_period_s <= period_i;
   
-  ticker: work.generator.tick_generator
+  ticker: work.tick.tick_generator
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
