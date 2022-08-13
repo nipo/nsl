@@ -29,22 +29,19 @@ architecture beh of nrzi_receiver_recovery is
   
   type regs_t is
   record
-    last_data: std_ulogic;
-
     last_synced_data: std_ulogic;
     decoded_data: std_ulogic;
   end record;
 
   signal r, rin: regs_t;
 
-  signal s_tick, s_synced, s_sample_tick: std_ulogic;
+  signal s_synced, s_sample_tick: std_ulogic;
   
 begin
 
   tick_o <= s_sample_tick;
-  s_tick <= r.last_data xor data_i;
 
-  recovery: nsl_clocking.receiver.receiver_tick_recovery
+  recovery: nsl_clocking.tick.tick_extractor_self_clocking
     generic map(
       period_max_c => integer(ceil(real(clock_i_hz_c) / real(signal_hz_c))),
       run_length_max_c => run_length_limit_c
@@ -53,7 +50,7 @@ begin
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      tick_i => s_tick,
+      signal_i => data_i,
       valid_o => s_synced,
       tick_180_o => s_sample_tick
       );
@@ -66,7 +63,6 @@ begin
 
     if reset_n_i = '0' then
       r.last_synced_data <= '0';
-      r.last_data <= '0';
     end if;
   end process;
 
@@ -74,8 +70,6 @@ begin
   begin
     rin <= r;
 
-    rin.last_data <= data_i;
-    
     if s_sample_tick = '1' then
       rin.last_synced_data <= data_i;
       if r.last_synced_data = data_i then
