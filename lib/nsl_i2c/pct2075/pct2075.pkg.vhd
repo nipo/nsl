@@ -35,21 +35,13 @@ package pct2075 is
 
   -- PCT2075 reader.
   --
-  -- If IRQ is available, reads the inputs as long as IRQ is asserted.
-  --
   -- Use routed_transactor_once for initialization of device
   component pct2075_reader is
     generic(
       i2c_addr_c    : unsigned(6 downto 0) := "0100000";
 
-      -- Minimum interval between two temperature readings.
-      irq_backoff_timeout_c : integer := 0;
-
-      -- If set to a non-zero value, set Thys (low limit reg) and Tots
-      -- (high limit reg) around current temperature and wait for
-      -- interrupt.  If set to zero, simply wait irq_backoff_timeout_c
-      -- between two inconditional readings, do not update Thys and Tots.
-      temp_threshold_c: real := 0.0
+      -- Interval between two temperature readings.
+      period_c : integer := 1e6
       );
     port(
       reset_n_i   : in std_ulogic;
@@ -62,9 +54,6 @@ package pct2075 is
       force_i : in std_ulogic := '0';
 
       busy_o  : out std_ulogic;
-
-      -- Only used if temp_threshold_c is non-zero.
-      irq_n_i     : in std_ulogic := '1';
 
       temp_o       : out sfixed(7 downto -3);
 
@@ -108,7 +97,7 @@ package body pct2075 is
       when others => assert false report "Bad queue value" severity failure;
     end case;
 
-    os_comp_int := not to_logic(os_is_interrupt);
+    os_comp_int := to_logic(os_is_interrupt);
     shutdown := not to_logic(running);
 
     tidle := to_unsigned(integer(period / 100.0e-3), 5);
