@@ -52,7 +52,7 @@ architecture beh of block_rx is
     state: state_t;
     user: std_ulogic_vector(0 to 191);
     channel_status: std_ulogic_vector(0 to 191);
-    channel_status_crc: aesebu_crc;
+    channel_status_crc: aesebu_crc_t;
     frame_to_go: integer range 0 to 191;
 
     a, b: channel_data_t;
@@ -112,8 +112,9 @@ begin
 
           rin.user <= r.user(1 to 191) & frame_i.user;
           rin.channel_status <= r.channel_status(1 to 191) & frame_i.channel_status;
-          rin.channel_status_crc <= aesebu_crc_update(r.channel_status_crc,
-                                                      frame_i.channel_status);
+          rin.channel_status_crc <= crc_update(aesebu_crc_params_c,
+                                               r.channel_status_crc,
+                                               frame_i.channel_status);
 
           if channel_i = '1' then
             rin.state <= ST_PUT_FRAME;
@@ -139,7 +140,7 @@ begin
     if valid_i = '1' and block_start_i = '1' and channel_i = '0' then
       rin.state <= ST_WAIT_B;
       rin.frame_to_go <= 191;
-      rin.channel_status_crc <= aesebu_crc_init;
+      rin.channel_status_crc <= crc_init(aesebu_crc_params_c);
     end if;
 
     if synced_i = '0' then
@@ -175,7 +176,7 @@ begin
     end case;
 
     block_channel_status_o <= r.channel_status;
-    if r.channel_status_crc = x"00" then
+    if r.channel_status_crc = crc_check(aesebu_crc_params_c) then
       block_channel_status_aesebu_crc_ok_o <= '1';
     end if;
     block_user_o <= r.user;

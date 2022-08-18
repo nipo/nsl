@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library work, nsl_data;
 use work.spdif.all;
 use work.framer.all;
-use nsl_data.crc.crc_state;
+use nsl_data.crc.all;
 use nsl_data.bytestream.byte_string;
 
 package blocker is
@@ -17,12 +17,18 @@ package blocker is
     valid: std_ulogic;
   end record;
 
-  subtype aesebu_crc is crc_state(7 downto 0);
-  constant aesebu_crc_init : aesebu_crc := x"ff";
-  function aesebu_crc_update(init : aesebu_crc;
-                             data : std_ulogic) return aesebu_crc;
-  function aesebu_crc_update(init : aesebu_crc;
-                             data : byte_string) return aesebu_crc;
+  subtype aesebu_crc_t is crc_state(7 downto 0);
+  constant aesebu_crc_params_c : crc_params_t := (
+    length           => 8,
+    init             => 16#00#,
+    poly             => 16#b8#,
+    complement_input => false,
+    insert_msb       => true,
+    pop_lsb          => true,
+    complement_state => false,
+    spill_bitswap    => false,
+    spill_lsb_first  => false
+    );
   
   component block_tx is
     port(
@@ -83,32 +89,3 @@ package blocker is
   end component;
   
 end package blocker;
-
-package body blocker is
-
-  use nsl_data.crc.crc_update;
-
-  constant aesebu_crc_poly : aesebu_crc := x"b8";
-  constant aesebu_crc_insert_msb : boolean := true;
-  constant aesebu_crc_pop_lsb : boolean := true;
-
-  function aesebu_crc_update(init : aesebu_crc;
-                             data : std_ulogic) return aesebu_crc is
-  begin
-    return crc_update(init,
-                      aesebu_crc_poly,
-                      aesebu_crc_insert_msb,
-                      data);
-  end function;
-
-  function aesebu_crc_update(init : aesebu_crc;
-                             data : byte_string) return aesebu_crc is
-  begin
-    return crc_update(init,
-                      aesebu_crc_poly,
-                      aesebu_crc_insert_msb,
-                      aesebu_crc_pop_lsb,
-                      data);
-  end function;
-
-end package body;

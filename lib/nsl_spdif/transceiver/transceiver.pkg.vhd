@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library work, nsl_data;
 use work.blocker.all;
+use nsl_data.bytestream.all;
 
 package transceiver is
   
@@ -18,8 +19,8 @@ package transceiver is
       -- Guards consumption of block data
       block_ready_o : out std_ulogic;
       block_valid_i : in std_ulogic := '1';
-      block_user_i : in std_ulogic_vector(0 to 191);
-      block_channel_status_i : in std_ulogic_vector(0 to 191);
+      block_user_i : in byte_string(0 to 23);
+      block_channel_status_i : in byte_string(0 to 23);
       block_channel_status_aesebu_auto_crc_i : in std_ulogic := '0';
 
       -- Guards consumption of audio/aux/valid data
@@ -51,8 +52,8 @@ package transceiver is
       -- Guards block data
       block_valid_o : out std_ulogic;
       block_ready_i : in std_ulogic := '1';
-      block_user_o : out std_ulogic_vector(0 to 191);
-      block_channel_status_o : out std_ulogic_vector(0 to 191);
+      block_user_o : out byte_string(0 to 23);
+      block_channel_status_o : out byte_string(0 to 23);
       block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
       -- Guards audio/aux/valid data

@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work, nsl_data;
+use nsl_data.crc.all;
 use work.spdif.all;
 use work.framer.all;
 use work.blocker.all;
@@ -46,7 +47,7 @@ architecture beh of block_tx is
     user: std_ulogic_vector(0 to 191);
     channel_status: std_ulogic_vector(0 to 191);
     do_crc: boolean;
-    channel_status_crc: aesebu_crc;
+    channel_status_crc: aesebu_crc_t;
     frame_to_go: integer range 0 to 191;
 
     a, b: channel_data_t;
@@ -85,7 +86,7 @@ begin
           rin.frame_to_go <= 191;
           rin.channel_status <= block_channel_status_i;
           rin.do_crc <= block_channel_status_aesebu_auto_crc_i = '1';
-          rin.channel_status_crc <= aesebu_crc_init;
+          rin.channel_status_crc <= crc_init(aesebu_crc_params_c);
           rin.user <= block_user_i;
         end if;
 
@@ -94,8 +95,9 @@ begin
           rin.a <= a_i;
           rin.b <= b_i;
           rin.state <= ST_PUT_A;
-          rin.channel_status_crc <= aesebu_crc_update(r.channel_status_crc,
-                                                      r.channel_status(0));
+          rin.channel_status_crc <= crc_update(aesebu_crc_params_c,
+                                               r.channel_status_crc,
+                                               r.channel_status(0));
           if r.frame_to_go = 7 and r.do_crc then
             rin.channel_status(0 to 7) <= nsl_data.endian.bitswap(std_ulogic_vector(r.channel_status_crc));
           end if;

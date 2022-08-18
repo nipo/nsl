@@ -2,8 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library work, nsl_data;
 use work.blocker.all;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
 entity spdif_rx_recovery is
   generic(
@@ -24,8 +26,8 @@ entity spdif_rx_recovery is
     -- Guards block data
     block_valid_o : out std_ulogic;
     block_ready_i : in std_ulogic := '1';
-    block_user_o : out std_ulogic_vector(0 to 191);
-    block_channel_status_o : out std_ulogic_vector(0 to 191);
+    block_user_o : out byte_string(0 to 23);
+    block_channel_status_o : out byte_string(0 to 23);
     block_channel_status_aesebu_crc_ok_o : out std_ulogic;
 
     -- Guards audio/aux/valid data
@@ -47,9 +49,13 @@ architecture beh of spdif_rx_recovery is
   signal s_unf_frame : work.framer.frame_t;
   signal s_unf_parity_ok : std_ulogic;
   signal s_unf_valid : std_ulogic;
+  signal block_user_s, block_channel_status_s: std_ulogic_vector(0 to 191);
 
 begin
 
+  block_user_o <= to_be(unsigned(bitswap(block_user_s)));
+  block_channel_status_o <= to_be(unsigned(bitswap(block_channel_status_s)));
+  
   serdes: work.serdes.spdif_deserializer
     generic map(
       clock_i_hz_c => clock_i_hz_c,
@@ -101,8 +107,8 @@ begin
       
       block_valid_o => block_valid_o,
       block_ready_i => block_ready_i,
-      block_user_o => block_user_o,
-      block_channel_status_o => block_channel_status_o,
+      block_user_o => block_user_s,
+      block_channel_status_o => block_channel_status_s,
       block_channel_status_aesebu_crc_ok_o => block_channel_status_aesebu_crc_ok_o,
 
       valid_o => valid_o,

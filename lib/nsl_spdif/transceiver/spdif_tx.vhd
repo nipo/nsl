@@ -2,7 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library work, nsl_data;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 use work.blocker.all;
 
 entity spdif_tx is
@@ -16,8 +18,8 @@ entity spdif_tx is
     -- Guards consumption of block data
     block_ready_o : out std_ulogic;
     block_valid_i : in std_ulogic := '1';
-    block_user_i : in std_ulogic_vector(0 to 191);
-    block_channel_status_i : in std_ulogic_vector(0 to 191);
+    block_user_i : in byte_string(0 to 23);
+    block_channel_status_i : in byte_string(0 to 23);
     block_channel_status_aesebu_auto_crc_i : in std_ulogic := '0';
 
     -- Guards consumption of audio/aux/valid data
@@ -39,9 +41,13 @@ architecture beh of spdif_tx is
 
   signal s_ser_symbol : work.serdes.spdif_symbol_t;
   signal s_ser_ready : std_ulogic;
+  signal block_user_s, block_channel_status_s: std_ulogic_vector(0 to 191);
 
 begin
 
+  block_user_s <= bitswap(std_ulogic_vector(from_be(block_user_i)));
+  block_channel_status_s <= bitswap(std_ulogic_vector(from_be(block_channel_status_i)));
+  
   blocker: work.blocker.block_tx
     port map(
       clock_i => clock_i,
@@ -49,8 +55,8 @@ begin
 
       block_ready_o => block_ready_o,
       block_valid_i => block_valid_i,
-      block_user_i => block_user_i,
-      block_channel_status_i => block_channel_status_i,
+      block_user_i => block_user_s,
+      block_channel_status_i => block_channel_status_s,
       block_channel_status_aesebu_auto_crc_i => block_channel_status_aesebu_auto_crc_i,
 
       ready_o => ready_o,

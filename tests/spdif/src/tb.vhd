@@ -5,11 +5,12 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_spdif, nsl_logic, nsl_clocking, nsl_simulation, nsl_math;
+library nsl_spdif, nsl_logic, nsl_clocking, nsl_simulation, nsl_math, nsl_data;
 use nsl_spdif.serdes.all;
 use nsl_spdif.blocker.all;
 use nsl_logic.logic.xor_reduce;
 use nsl_math.fixed.all;
+use nsl_data.bytestream.all;
 
 architecture arch of tb is
 
@@ -31,7 +32,7 @@ architecture arch of tb is
 
   signal s_tx_ready : std_ulogic;
   signal s_tx_block_ready : std_ulogic;
-  signal s_tx_user, s_tx_channel_status : std_ulogic_vector(0 to 191);
+  signal s_tx_user, s_tx_channel_status : byte_string(0 to 23);
   signal s_tx_data : data_t;
 
   procedure spdif_frame_put(signal io_clk, io_spdif_ready : in std_ulogic;
@@ -72,7 +73,7 @@ begin
       clock_i => s_clk(1)
       );
 
-  freq_gen: nsl_clocking.generator.tick_generator
+  freq_gen: nsl_clocking.tick.tick_generator
     port map(
       reset_n_i => s_resetn_clk(0),
       clock_i => s_clk(0),
@@ -111,7 +112,7 @@ begin
       ui_tick_o => s_rx_tick
       );
 
-  measurer : nsl_clocking.receiver.tick_measurer
+  measurer : nsl_clocking.tick.tick_measurer
     generic map(
       tau_c => 2**(1-s_period'right)-1
       )
@@ -135,12 +136,12 @@ begin
       end if;
     end loop;
 
-    s_tx_user <= (others => '0');
-    s_tx_channel_status <= (others => '0');
+    s_tx_user <= (others => x"00");
+    s_tx_channel_status <= from_hex("060c00020000000000000000000000000000000000000086");
 
     for i in 0 to 3
     loop
-      s_tx_channel_status(8 to 15) <= std_ulogic_vector(to_unsigned(i, 8));
+--      s_tx_channel_status(8 to 15) <= std_ulogic_vector(to_unsigned(i, 8));
       
       for frame in 0 to 191
       loop
