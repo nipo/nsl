@@ -352,9 +352,9 @@ package body crc is
     end if;
 
     if params.spill_lsb_first then
-      return to_le(unsigned(state));
+      return to_le(unsigned(ret));
     else
-      return to_be(unsigned(state));
+      return to_be(unsigned(ret));
     end if;
   end function;
 
