@@ -3,3 +3,4 @@ packages += encoder
 packages += pattern
 packages += audio
 packages += mode
+packages += cec
