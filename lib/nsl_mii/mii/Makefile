@@ -1,5 +1,6 @@
 vhdl-sources += mii.pkg.vhd
 vhdl-sources += mii_driver_resync.vhd
+vhdl-sources += rmii_driver_resync.vhd
 vhdl-sources += mii_driver_oversampled.vhd
 vhdl-sources += mii_driver.vhd
 vhdl-sources += mii_flit_from_committed.vhd

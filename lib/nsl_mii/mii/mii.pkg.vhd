@@ -227,4 +227,28 @@ package mii is
       );
   end component;
 
+  component rmii_driver_resync is
+    generic(
+      ipg_c : natural := 96 --bits
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i : in std_ulogic;
+
+      rmii_ref_clock_i: in std_ulogic;
+      rmii_o : out rmii_m2p;
+      rmii_i : in  rmii_p2m;
+
+      -- In clock_i domain
+      tx_sfd_o : out std_ulogic;
+      rx_sfd_o : out std_ulogic;
+      
+      rx_o : out nsl_bnoc.committed.committed_req;
+      rx_i : in nsl_bnoc.committed.committed_ack;
+
+      tx_i : in nsl_bnoc.committed.committed_req;
+      tx_o : out nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
 end package mii;
