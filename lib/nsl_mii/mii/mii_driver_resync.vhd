@@ -41,6 +41,7 @@ architecture beh of mii_driver_resync is
   signal rx_valid_s, tx_flit_pop_s: std_ulogic;
   signal tx_clock_s, tx_reset_n_s : std_ulogic;
   signal rx_clock_s, rx_reset_n_s : std_ulogic;
+  signal rx_sfd_s, tx_sfd_s : std_ulogic;
 
   type mii_p2m_pipe_t is array (integer range <>) of mii_rx_p2m;
 
@@ -135,7 +136,6 @@ begin
   end process;            
 
   rx_clock_o <= rx_clock_s;
-  rx_sfd_o <= to_logic(rx_r.is_sfd);
   
   rx_cross_domain: nsl_memory.fifo.fifo_homogeneous
     generic map(
@@ -267,7 +267,26 @@ begin
       clock_o => tx_clock_s
       );
 
+  tx_sfd_resync: nsl_clocking.interdomain.interdomain_tick
+    port map(
+      input_clock_i => tx_clock_s,
+      output_clock_i => clock_i,
+      input_reset_n_i => tx_reset_n_s,
+      tick_i => tx_sfd_s,
+      tick_o => tx_sfd_o
+      );
+
+  rx_sfd_resync: nsl_clocking.interdomain.interdomain_tick
+    port map(
+      input_clock_i => rx_clock_s,
+      output_clock_i => clock_i,
+      input_reset_n_i => rx_reset_n_s,
+      tick_i => rx_sfd_s,
+      tick_o => rx_sfd_o
+      );
+  
   tx_clock_o <= tx_clock_s;
-  tx_sfd_o <= to_logic(tx_r.is_sfd);
+  rx_sfd_s <= to_logic(rx_r.is_sfd);
+  tx_sfd_s <= to_logic(tx_r.is_sfd);
       
 end architecture;

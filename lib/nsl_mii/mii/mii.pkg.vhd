@@ -186,14 +186,8 @@ package mii is
       -- MAC clock, equal or faster than actual RX and TX clocks.
       clock_i : in std_ulogic;
 
-      -- Buffered rx clock, only clocks rx_sfd_o
-      rx_clock_o: out std_ulogic;
-      -- Synchronous to rx_clock_o
+      -- In clock_i domain
       rx_sfd_o: out std_ulogic;
-
-      -- Buffered rx clock, only clocks tx_sfd_o
-      tx_clock_o: out std_ulogic;
-      -- Synchronous to tx_clock_o
       tx_sfd_o: out std_ulogic;
 
       mii_o : out mii_m2p;
@@ -218,7 +212,7 @@ package mii is
       -- MAC clock, at least 2x MII clock
       clock_i : in std_ulogic;
 
-      -- Synchronous to clock_i
+      -- In clock_i domain
       rx_sfd_o: out std_ulogic;
       tx_sfd_o: out std_ulogic;
 
