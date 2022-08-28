@@ -98,6 +98,11 @@ package crc is
                       state : crc_state;
                       data : byte_string) return crc_state;
 
+  -- Serialize current state as a crc_state bit vector (bitswapping
+  -- applied, if any)
+  function crc_spill_vector(params : crc_params_t;
+                            state : crc_state) return crc_state;
+
   -- Serialize current state as a byte string
   function crc_spill(params : crc_params_t;
                      state : crc_state) return byte_string;
@@ -337,12 +342,14 @@ package body crc is
 
   function crc_check(params : crc_params_t) return crc_state
   is
+    constant v: crc_state := crc_spill_vector(params, crc_init(params));
+    constant check: crc_state := crc_update(params, crc_init(params), std_ulogic_vector(v));
   begin
-    return crc_update(params, crc_init(params), crc_spill(params, crc_init(params)));
+    return crc_spill_vector(params, check);
   end function;
 
-  function crc_spill(params : crc_params_t;
-                     state : crc_state) return byte_string
+  function crc_spill_vector(params : crc_params_t;
+                            state : crc_state) return crc_state
   is
     variable ret : crc_state(state'length-1 downto 0);
   begin
@@ -350,6 +357,15 @@ package body crc is
     if params.spill_bitswap then
       ret := bitswap(ret);
     end if;
+    return ret;
+  end function;
+
+  function crc_spill(params : crc_params_t;
+                     state : crc_state) return byte_string
+  is
+    variable ret : crc_state(state'length-1 downto 0);
+  begin
+    ret := crc_spill_vector(params, state);
 
     if params.spill_lsb_first then
       return to_le(unsigned(ret));
@@ -361,8 +377,10 @@ package body crc is
   function crc_is_valid(params : crc_params_t;
                         data : byte_string) return boolean
   is
+    constant check: crc_state := crc_check(params);
+    constant value: crc_state := crc_spill_vector(params, crc_update(params, crc_init(params), data));
   begin
-    return crc_update(params, crc_init(params), data) = crc_check(params);
+    return value = check;
   end function;
 
 end package body crc;
