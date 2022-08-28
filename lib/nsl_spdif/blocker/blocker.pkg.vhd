@@ -5,7 +5,6 @@ use ieee.numeric_std.all;
 library work, nsl_data;
 use work.spdif.all;
 use work.framer.all;
-use nsl_data.crc.all;
 use nsl_data.bytestream.byte_string;
 
 package blocker is
@@ -16,19 +15,6 @@ package blocker is
     audio : unsigned(19 downto 0);
     valid: std_ulogic;
   end record;
-
-  subtype aesebu_crc_t is crc_state(7 downto 0);
-  constant aesebu_crc_params_c : crc_params_t := (
-    length           => 8,
-    init             => 16#00#,
-    poly             => 16#b8#,
-    complement_input => false,
-    insert_msb       => true,
-    pop_lsb          => true,
-    complement_state => false,
-    spill_bitswap    => false,
-    spill_lsb_first  => false
-    );
   
   component block_tx is
     port(
