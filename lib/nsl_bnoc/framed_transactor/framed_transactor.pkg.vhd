@@ -17,7 +17,8 @@ package framed_transactor is
   -- to a routed network and issue frames with relevant headers.
   component framed_transactor_once
     generic(
-      config_c : byte_string
+      config_c : byte_string;
+      inter_transaction_cycle_count_c : integer := 0
       );
     port(
       reset_n_i   : in  std_ulogic;

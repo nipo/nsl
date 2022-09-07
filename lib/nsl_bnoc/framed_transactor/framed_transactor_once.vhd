@@ -8,7 +8,8 @@ use nsl_data.bytestream.all;
 
 entity framed_transactor_once is
   generic(
-    config_c : byte_string
+    config_c : byte_string;
+    inter_transaction_cycle_count_c : integer := 0
     );
   port(
     reset_n_i   : in  std_ulogic;
@@ -49,6 +50,7 @@ architecture beh of framed_transactor_once is
     ST_SIZE_GET,
     ST_CMD_PUT,
     ST_RSP_WAIT,
+    ST_RSP_BACKOFF,
     ST_DONE
     );
   
@@ -57,6 +59,7 @@ architecture beh of framed_transactor_once is
     state: state_t;
     addr : addr_t;
     left : unsigned(7 downto 0);
+    timeout: integer range 0 to inter_transaction_cycle_count_c-1;
   end record;
   
   signal r, rin: regs_t;
@@ -114,6 +117,18 @@ begin
 
       when ST_RSP_WAIT =>
         if rsp_i.valid = '1' and rsp_i.last = '1' then
+          if inter_transaction_cycle_count_c /= 0 then
+            rin.state <= ST_RSP_BACKOFF;
+            rin.timeout <= inter_transaction_cycle_count_c -  1;
+          else
+            rin.state <= ST_START;
+          end if;
+        end if;
+
+      when ST_RSP_BACKOFF =>
+        if r.timeout /= 0 then
+          rin.timeout <= r.timeout - 1;
+        else
           rin.state <= ST_START;
         end if;
 
