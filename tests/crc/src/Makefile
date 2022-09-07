@@ -6,3 +6,6 @@ deps += nsl_data.text
 deps += nsl_simulation.assertions
 deps += nsl_simulation.logging
 deps += nsl_inet.ethernet
+deps += nsl_spdif.spdif
+deps += nsl_usb.usb
+deps += nsl_line_coding.hdlc
