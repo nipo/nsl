@@ -1,4 +1,4 @@
-GOWIN = /opt/Gowin/V1.9.8.06
+GOWIN = /opt/Gowin/V1.9.8.07
 GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
