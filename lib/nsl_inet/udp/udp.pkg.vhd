@@ -2,10 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet;
+library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use work.ipv4.all;
+use work.checksum.all;
 
 -- UDP is a layer-4 protocol. It is meant to be transported on IP.
 package udp is
@@ -110,30 +112,32 @@ package udp is
   function udp_pack(
     destination, source : udp_port_t;
     data : byte_string;
-    header_checksum : boolean := false) return byte_string;
+    destination_ip, source_ip: ipv4_t := to_ipv4(0,0,0,0)) return byte_string;
 
 end package;
 
 package body udp is
-
+  
   function udp_pack(
     destination, source : udp_port_t;
     data : byte_string;
-    header_checksum : boolean := false) return byte_string
+    destination_ip, source_ip: ipv4_t := to_ipv4(0,0,0,0)) return byte_string
   is
     variable dp, sp, len, c: unsigned(15 downto 0);
+    variable check : checksum_acc_t := (others => '0');
   begin
     dp := to_unsigned(destination, 16);
     sp := to_unsigned(source, 16);
     len := to_unsigned(data'length + 8, 16);
-    if header_checksum then
-      c := x"ffff";
-      c := c - dp - sp - len;
-    else
-      c := x"0000";
-    end if;
 
-    return to_be(sp) & to_be(dp) & to_be(len) & to_be(c) & data;
+    check := checksum_update(check, source_ip);
+    check := checksum_update(check, destination_ip);
+    check := checksum_update(check, x"00");
+    check := checksum_update(check, to_byte(ip_proto_udp));
+    check := checksum_update(check, to_be(len));
+    check := checksum_update(check, to_be(sp) & to_be(dp) & to_be(len) & x"00" & x"00" & data);
+
+    return to_be(sp) & to_be(dp) & to_be(len) & checksum_spill(check, (data'length mod 2) = 1) & data;
   end function;
 
 end package body;

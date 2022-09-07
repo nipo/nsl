@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math;
-use nsl_inet.ethernet.all;
+library nsl_bnoc, nsl_data, work, nsl_math;
+use work.ethernet.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.udp.all;
+use work.udp.all;
 
 entity udp_layer is
   generic(
@@ -62,7 +62,7 @@ begin
     s_from_l5_i(i) <= from_l5_i(i);
   end generate;
   
-  receiver: nsl_inet.udp.udp_receiver
+  receiver: work.udp.udp_receiver
     generic map(
       header_length_c => header_length_c
       )
@@ -153,7 +153,7 @@ begin
                             & to_be(to_unsigned(udp_port_l_c(from_l5_source_s), 16));
   end process;
   
-  transmitter: nsl_inet.udp.udp_transmitter
+  transmitter: work.udp.udp_transmitter
     generic map(
       mtu_c => tx_mtu_c,
       header_length_c => header_length_c

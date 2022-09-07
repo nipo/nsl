@@ -2,12 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math, nsl_logic;
+library nsl_bnoc, nsl_data, work, nsl_math, nsl_logic;
 use nsl_bnoc.framed.all;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.udp.all;
+use work.udp.all;
 use nsl_logic.bool.all;
 
 entity udp_transmitter is
