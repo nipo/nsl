@@ -2,11 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_inet, nsl_data, nsl_math;
+library nsl_bnoc, nsl_data, nsl_math, work;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.ipv4.all;
+use work.ipv4.all;
+use work.checksum.all;
 
 entity icmpv4 is
   generic(
@@ -89,11 +90,10 @@ architecture beh of icmpv4 is
     in_left : integer range 0 to max_step_c-1;
 
     header: byte_string(0 to header_length_c+1);
-    in_checksum : checksum_t;
+    in_checksum : checksum_acc_t;
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
 
-    out_checksum : checksum_t;
     out_state : out_state_t;
     out_left : integer range 0 to max_step_c-1;
   end record;
@@ -124,7 +124,7 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_checksum <= (others => '0');
+        rin.in_checksum <= checksum_acc_init_c;
         rin.in_state <= IN_HEADER;
         rin.in_left <= header_length_c + 1;
 
@@ -169,7 +169,6 @@ begin
       when IN_CHK =>
         if from_l3_i.valid = '1' then
           rin.in_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
-          rin.out_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
           if from_l3_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_left /= 0 then
@@ -190,7 +189,7 @@ begin
         end if;
 
       when IN_CHK_ASSESS =>
-        if r.in_checksum = "01111111111111111" or r.in_checksum = "11111111111111110" then
+        if checksum_acc_is_valid(r.in_checksum) then
           rin.in_state <= IN_COMMIT;
         else
           rin.in_state <= IN_CANCEL;
@@ -227,19 +226,16 @@ begin
       when OUT_TYPE =>
         if to_l3_i.ready = '1' then
           rin.out_state <= OUT_CODE;
-          rin.out_checksum <= checksum_update(r.out_checksum, x"00");
         end if;
 
       when OUT_CODE =>
         if to_l3_i.ready = '1' then
           rin.out_state <= OUT_CHK;
           rin.out_left <= 1;
-          rin.out_checksum <= checksum_update(r.out_checksum, x"00");
         end if;
 
       when OUT_CHK =>
         if to_l3_i.ready = '1' then
-          rin.out_checksum <= "-" & r.out_checksum(7 downto 0) & "--------";
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
           else
@@ -299,11 +295,8 @@ begin
       when OUT_HEADER =>
         to_l3_o <= committed_flit(r.header(0));
 
-      when OUT_TYPE | OUT_CODE =>
+      when OUT_TYPE | OUT_CODE | OUT_CHK =>
         to_l3_o <= committed_flit(x"00");
-
-      when OUT_CHK =>
-        to_l3_o <= committed_flit(std_ulogic_vector(r.out_checksum(15 downto 8)));
 
       when OUT_DATA =>
         to_l3_o <= committed_flit(r.fifo(0), valid => r.fifo_fillness /= 0);

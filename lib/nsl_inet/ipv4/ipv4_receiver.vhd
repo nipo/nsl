@@ -2,12 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math, nsl_logic;
+library nsl_bnoc, nsl_data, work, nsl_math, nsl_logic;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.ipv4.all;
+use work.ipv4.all;
+use work.checksum.all;
 use nsl_logic.bool.all;
 
 entity ipv4_receiver is
@@ -76,7 +77,7 @@ architecture beh of ipv4_receiver is
     -- Use this counter MSB as an enable. When counter wraps, we are
     -- in padding. Still read input, but dont push to fifo
     pdu_len, total_len : unsigned(15 downto 0);
-    header_chk : checksum_t;
+    header_chk : checksum_acc_t;
     header_left : unsigned(5 downto 0);
     proto : byte;
 
@@ -113,7 +114,7 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.header_chk <= (others => '0');
+        rin.header_chk <= checksum_acc_init_c;
         if header_length_c /= 0 then
           rin.in_state <= IN_HEADER;
           rin.in_left <= header_length_c - 1;
@@ -334,14 +335,12 @@ begin
 
       when IN_DATA =>
         if l2_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-          rin.header_chk <= checksum_update(r.header_chk, x"00");
-
           if l2_i.last = '0' then
             if r.total_len(15) = '0' then
               rin.total_len <= r.total_len - 1;
               fifo_push := true;
             end if;
-          elsif l2_i.data = x"01" and r.header_chk = "01111111111111111"
+          elsif l2_i.data = x"01" and checksum_acc_is_valid(r.header_chk)
             and (r.is_unicast or r.is_bcast)
             and (r.total_len(15) = '1') then
             rin.in_state <= IN_COMMIT;

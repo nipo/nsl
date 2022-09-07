@@ -2,19 +2,20 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math;
-use nsl_inet.ethernet.all;
+library nsl_bnoc, nsl_data, work, nsl_math;
+use work.ethernet.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.ipv4.all;
+use work.ipv4.all;
 
 entity ipv4_layer is
   generic(
     header_length_c : integer := 0;
     ttl_c : integer := 64;
-    ip_proto_c : ip_proto_vector
+    ip_proto_c : ip_proto_vector;
+    mtu_c: integer := 1500
     );
   port(
     clock_i : in std_ulogic;
@@ -41,7 +42,7 @@ architecture beh of ipv4_layer is
   constant ip_proto_l_c : ip_proto_vector(0 to ip_proto_c'length)
     := ip_proto_c & icmp_singleton;
   
-  signal to_l4_s, from_l4_s: committed_bus;
+  signal to_l4_s, from_l4_s, to_transmit_s: committed_bus;
   signal to_l4_req_s : framed_req_array(0 to ip_proto_l_c'length-1);
   signal to_l4_ack_s : framed_ack_array(0 to ip_proto_l_c'length-1);
   signal from_l4_req_s : framed_req_array(0 to ip_proto_l_c'length-1);
@@ -64,7 +65,7 @@ begin
     from_l4_req_s(i) <= from_l4_i(i);
   end generate;
  
-  receiver: nsl_inet.ipv4.ipv4_receiver
+  receiver: work.ipv4.ipv4_receiver
     generic map(
       header_length_c => header_length_c
       )
@@ -154,7 +155,7 @@ begin
                             & to_byte(ip_proto_l_c(from_l4_source_s));
   end process;
   
-  transmitter: nsl_inet.ipv4.ipv4_transmitter
+  transmitter: work.ipv4.ipv4_transmitter
     generic map(
       ttl_c => ttl_c,
       header_length_c => header_length_c
@@ -168,13 +169,31 @@ begin
       l4_i => from_l4_s.req,
       l4_o => from_l4_s.ack,
 
-      l2_o => to_l2_o,
-      l2_i => to_l2_i
+      l2_o => to_transmit_s.req,
+      l2_i => to_transmit_s.ack
       );
 
-  icmp: nsl_inet.ipv4.icmpv4
+  checksummer: work.ipv4.ipv4_checksum_inserter
     generic map(
-      header_length_c => header_length_c + 6
+      header_length_c => header_length_c,
+      mtu_c => mtu_c,
+      handle_tcp_c => vector_contains(ip_proto_l_c, ip_proto_tcp),
+      handle_udp_c => vector_contains(ip_proto_l_c, ip_proto_udp)
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+
+      input_i => to_transmit_s.req,
+      input_o => to_transmit_s.ack,
+
+      output_o => to_l2_o,
+      output_i => to_l2_i
+      );
+  
+  icmp: work.ipv4.icmpv4
+    generic map(
+      header_length_c => header_length_c + 5
       )
     port map(
       clock_i => clock_i,

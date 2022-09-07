@@ -2,12 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math, nsl_logic;
+library nsl_bnoc, nsl_data, work, nsl_math, nsl_logic;
 use nsl_bnoc.framed.all;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.ipv4.all;
+use work.ipv4.all;
 use nsl_logic.bool.all;
 
 entity ipv4_transmitter is
@@ -72,7 +72,6 @@ architecture beh of ipv4_transmitter is
 
     src_addr, dst_addr : ipv4_t;
     total_len : unsigned(15 downto 0);
-    checksum : checksum_t;
     proto : byte;
 
     fifo: byte_string(0 to fifo_depth_c-1);
@@ -83,19 +82,6 @@ architecture beh of ipv4_transmitter is
   end record;
 
   signal r, rin: regs_t;
-
-  -- Header checksum:
-  -- 45 | TOS      == cst | 0
-  -- Len           == var
-  -- Id            == 0
-  -- Off           == 0
-  -- TTL | Proto   == cst | var
-  -- Chk           -> dest
-  -- src(0 to 1)   == var
-  -- src(2 to 3)   == var
-  -- dst(0 to 1)   == var
-  -- dst(2 to 3)   == var
-  -- src/dst IP are transmitter after checksum, we need to sum them up before.
   
 begin
 
@@ -126,9 +112,6 @@ begin
 
       when IN_HEADER =>
         rin.src_addr <= unicast_i;
-        rin.checksum <= checksum_update("00000000000000000",
-                                        from_hex("4500")
-                                        & to_byte(ttl_c) & to_byte(0));
 
         if l4_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
           fifo_push := true;
@@ -148,15 +131,6 @@ begin
           else
             rin.dst_addr <= r.dst_addr(1 to 3) & l4_i.data;
             rin.src_addr <= r.src_addr(1 to 3) & r.src_addr(0);
-            if r.in_left = 3 or r.in_left = 1 then
-              rin.checksum <= checksum_update(r.checksum,
-                                              byte_string'(0 => l4_i.data,
-                                                           1 => r.src_addr(1)));
-            else
-              rin.checksum <= checksum_update(r.checksum,
-                                              byte_string'(0 => r.src_addr(1),
-                                                           1 => l4_i.data));
-            end if;
             
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
@@ -177,9 +151,6 @@ begin
 
       when IN_PROTO =>
         if l4_i.valid = '1' then
-          rin.checksum <= checksum_update(r.checksum,
-                                          byte_string'(0 => to_byte(0),
-                                                       1 => l4_i.data));
           rin.proto <= l4_i.data;
           if l4_i.last = '1' then
             rin.in_state <= IN_CANCEL;
@@ -262,8 +233,6 @@ begin
 
       when OUT_TOTAL_LEN =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum,
-                                          std_ulogic_vector(r.total_len(15 downto 8)));
           rin.total_len <= r.total_len(7 downto 0) & r.total_len(15 downto 8);
           if r.out_left = 0 then
             rin.out_state <= OUT_IDENTIFICATION;
@@ -295,19 +264,16 @@ begin
       when OUT_TTL =>
         if l2_i.ready = '1' then
           rin.out_state <= OUT_PROTO;
-          rin.checksum <= checksum_update(r.checksum, x"00");
         end if;
 
       when OUT_PROTO =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"00");
           rin.out_state <= OUT_CHKSUM;
           rin.out_left <= 1;
         end if;
 
       when OUT_CHKSUM =>
         if l2_i.ready = '1' then
-          rin.checksum <= checksum_update(r.checksum, x"00");
           if r.out_left = 0 then
             rin.out_state <= OUT_SRC_ADDR;
             rin.out_left <= 3;
@@ -393,7 +359,7 @@ begin
       when OUT_VER_LEN =>
         l2_o <= committed_flit(x"45");
         
-      when OUT_TOS | OUT_IDENTIFICATION | OUT_FRAG_OFF =>
+      when OUT_TOS | OUT_IDENTIFICATION | OUT_FRAG_OFF | OUT_CHKSUM =>
         l2_o <= committed_flit(x"00");
 
       when OUT_TOTAL_LEN =>
@@ -404,9 +370,6 @@ begin
 
       when OUT_PROTO =>
         l2_o <= committed_flit(r.proto);
-
-      when OUT_CHKSUM =>
-        l2_o <= committed_flit(not std_ulogic_vector(r.checksum(15 downto 8)));
 
       when OUT_SRC_ADDR =>
         l2_o <= committed_flit(r.src_addr(0));

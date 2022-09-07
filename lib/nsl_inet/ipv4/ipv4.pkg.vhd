@@ -2,12 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet;
+library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
+use work.checksum.all;
 
 -- IPv4 is a layer-3 protocol, it requires ICMP to function
 -- correctly, ICMP is layer-4. Both are defined here.
@@ -31,6 +32,8 @@ package ipv4 is
   constant ip_proto_udp  : ip_proto_t := 17;
   constant ip_proto_gre  : ip_proto_t := 47;
 
+  function vector_contains(v: ip_proto_vector; p: ip_proto_t) return boolean;
+  
   -- Peer IP, Context
   constant ipv4_layer_header_length_c : natural := 5;
   -- Peer IP, Context, Proto
@@ -105,6 +108,38 @@ package ipv4 is
       );
   end component;
 
+  -- This module is meant to be inserted between IP layer and its
+  -- parent.  This module rewrites IP/TCP/UDP/ICMP headers to
+  -- implement checksumming with minimal delay.  IP and ICMP are
+  -- mandatory.  UDP and TCP handling is optional.
+  --
+  -- Frame structure:
+  -- * Header of fixed length, passed through [N]
+  -- * IP header [20+]
+  -- * L4 PDU (ICMP, TCP, UDP)
+  -- * Status byte
+  --   [0] = validity bit
+  component ipv4_checksum_inserter is
+    generic(
+      header_length_c : integer;
+      mtu_c: integer := 1500;
+      handle_tcp_c: boolean := true;
+      handle_udp_c: boolean := true
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      -- IPv4 packet input
+      input_i : in committed_req;
+      input_o : out committed_ack;
+
+      -- IPv4 packet output
+      output_o : out committed_req;
+      output_i : in committed_ack
+      );
+  end component;
+
   -- Meant to be stacked on IPv4
   -- Able to respond to ICMP echo requests (Ping)
   component icmpv4 is
@@ -149,7 +184,8 @@ package ipv4 is
     generic(
       header_length_c : integer := 0;
       ttl_c : integer := 64;
-      ip_proto_c : ip_proto_vector
+      ip_proto_c : ip_proto_vector;
+      mtu_c: integer := 1500
       );
     port(
       clock_i : in std_ulogic;
@@ -201,15 +237,6 @@ package ipv4 is
   constant ip_off_dst2     : integer := 18;
   constant ip_off_dst3     : integer := 19;
 
-  subtype checksum_t is unsigned(16 downto 0);
-  
-  function checksum_update(state: checksum_t; d: byte)
-    return checksum_t;
-
-  function checksum_update(state: checksum_t; s: byte_string)
-    return checksum_t;
-  function checksum_is_valid(data : byte_string) return boolean;
-
   function ipv4_pack(
     destination, source : ipv4_t;
     proto : ip_proto_t;
@@ -244,46 +271,6 @@ package body ipv4 is
     return ret;
   end function;
 
-  function checksum_update(state: checksum_t; d: byte)
-    return checksum_t
-  is
-    variable a, b, ret: checksum_t;
-  begin
-    a := x"00" & state(16) & unsigned(d);
-    b := "0" & state(7 downto 0) & state(15 downto 8);
-    ret := a + b;
-    return ret;
-  end function;
-
-  function checksum_update2(state: checksum_t; s: byte_string(0 to 1))
-    return checksum_t
-  is
-    variable a, b, ret: checksum_t;
-    variable c: unsigned(0 downto 0);
-  begin
-    a := "0" & from_be(s);
-    b := "0" & state(15 downto 0);
-    c := state(16 downto 16);
-    ret := a + b + c;
-    return ret;
-  end function;    
-
-  function checksum_update(state: checksum_t; s: byte_string)
-    return checksum_t
-  is
-    variable ret: checksum_t := state;
-  begin
-    if s'length = 2 then
-      return checksum_update2(ret, s);
-    end if;
-    
-    for i in s'range
-    loop
-      ret := checksum_update(ret, s(i));
-    end loop;
-    return ret;
-  end function;    
-
   function ipv4_pack(
     destination, source : ipv4_t;
     proto : ip_proto_t;
@@ -292,7 +279,7 @@ package body ipv4 is
     ttl : integer := 64) return byte_string
   is
     variable header : byte_string(0 to 19) := (others => x"00");
-    variable chk : checksum_t := (others => '0');
+    variable chk : checksum_acc_t := checksum_acc_init_c;
   begin
     header(ip_off_type_len) := x"45";
     header(ip_off_len_h to ip_off_len_l) := to_be(to_unsigned(header'length + data'length, 16));
@@ -303,9 +290,7 @@ package body ipv4 is
     header(ip_off_dst0 to ip_off_dst3) := destination;
 
     chk := checksum_update(chk, header);
-    chk := checksum_update(chk, x"00");
-    chk := checksum_update(chk, x"00");
-    header(ip_off_chk_h to ip_off_chk_l) := to_be(unsigned(not chk(15 downto 0)));
+    header(ip_off_chk_h to ip_off_chk_l) := checksum_spill(chk);
 
     return header & data;
   end function;
@@ -315,7 +300,7 @@ package body ipv4 is
   is
     alias xd: byte_string(0 to datagram'length-1) is datagram;
     variable header_size : integer;
-    variable chk : checksum_t := (others => '0');
+    variable chk : checksum_acc_t := checksum_acc_init_c;
   begin
     header_size := to_integer(unsigned(xd(ip_off_type_len)(4 downto 0)));
     if header_size < 5 then
@@ -327,14 +312,7 @@ package body ipv4 is
       return false;
     end if;
 
-    chk := checksum_update(chk, xd(0 to header_size - 1));
-    chk := checksum_update(chk, x"00");
-    
-    if chk /= "01111111111111111" then
-      return false;
-    end if;
-
-    return true;
+    return checksum_is_valid(xd(0 to header_size - 1));
   end function;
 
   function ip_to_string(ip: ipv4_t) return string
@@ -353,7 +331,7 @@ package body ipv4 is
     return byte_string
   is
     variable hdr: byte_string(0 to 7) := (others => x"00");
-    variable chk: checksum_t := (others => '0');
+    variable chk : checksum_acc_t := checksum_acc_init_c;
   begin
     hdr(0) := to_byte(typ);
     hdr(1) := to_byte(code);
@@ -362,14 +340,7 @@ package body ipv4 is
     chk := checksum_update(chk, hdr);
     chk := checksum_update(chk, data);
 
-    -- This one is for carry propagation
-    chk := checksum_update(chk, x"00");
-    if (data'length mod 2) = 0 then
-      -- This one for re-alignment
-      chk := checksum_update(chk, x"00");
-    end if;
-
-    hdr(2 to 3) := to_be(not chk(15 downto 0));
+    hdr(2 to 3) := checksum_spill(chk, data'length mod 2 = 1);
 
     return hdr & data;
   end function;
@@ -386,17 +357,16 @@ package body ipv4 is
                        data);
   end function;
 
-  function checksum_is_valid(
-    data : byte_string)
-    return boolean
+  function vector_contains(v: ip_proto_vector; p: ip_proto_t) return boolean
   is
-    variable chk: checksum_t := (others => '0');
   begin
-    chk := checksum_update(chk, data);
-    chk := checksum_update(chk, x"00");
-    chk := checksum_update(chk, x"00");
-
-    return chk(15 downto 0) = x"ffff";
+    for i in v'range
+    loop
+      if v(i) = p then
+        return true;
+      end if;
+    end loop;
+    return false;
   end function;
 
 end package body;
