@@ -359,7 +359,7 @@ package body testing is
 
     if rx_data.all'length /= data'length
       or rx_data.all /= data then
-      log(level, log_context & ": " &
+      log(LOG_LEVEL_INFO, log_context & ": " &
           " > " & to_string(rx_data.all)
           & " *** BAD");
       log(level, log_context & ": " &
@@ -421,7 +421,7 @@ package body testing is
 
     if rx_data'length /= ref_data'length
       or rx_data /= ref_data then
-      log(level, log_context & ": " &
+      log(LOG_LEVEL_INFO, log_context & ": " &
           " > " & to_string(rx_data)
           & ", valid: " & to_string(rx_valid)
           & " *** BAD");
