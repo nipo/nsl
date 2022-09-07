@@ -2,14 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_inet, nsl_data;
+library nsl_bnoc, work, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
-use nsl_inet.ethernet.all;
-use nsl_inet.arp.all;
-use nsl_inet.ipv4.all;
-use nsl_inet.udp.all;
+use work.ethernet.all;
+use work.arp.all;
+use work.ipv4.all;
+use work.udp.all;
 
 entity ethernet_host is
   generic(
@@ -117,7 +117,7 @@ begin
     ip_tx_req_s(i) <= ip_tx_i(i);
   end generate;
   
-  eth: nsl_inet.ethernet.ethernet_layer
+  eth: work.ethernet.ethernet_layer
     generic map(
       ethertype_c => ethertype_list_c,
       l1_header_length_c => 0
@@ -143,7 +143,7 @@ begin
       from_l1_o => l1_rx_o
       );
 
-  ipv4: nsl_inet.ipv4.ipv4_layer
+  ipv4: work.ipv4.ipv4_layer
     generic map(
       header_length_c => ethernet_layer_header_length_c,
       ip_proto_c => ip_proto_l_c
@@ -166,7 +166,7 @@ begin
       from_l2_o => ipv4_s.rx.ack
       );
 
-  arp: nsl_inet.arp.arp_ethernet
+  arp: work.arp.arp_ethernet
     generic map(
       header_length_c => 0,
       cache_count_c => 8,
@@ -207,7 +207,7 @@ begin
       udp_tx_req_s(i) <= udp_tx_i(i);
     end generate;
     
-    udp: nsl_inet.udp.udp_layer
+    udp: work.udp.udp_layer
       generic map(
         tx_mtu_c => 1500,
         udp_port_c => udp_port_l_c,
@@ -230,7 +230,7 @@ begin
 
     -- This could be moved before the UDP layer, i.e. have one
     -- resolver context per UDP channel.
-    udp_arp: nsl_inet.arp.arp_resolver
+    udp_arp: work.arp.arp_resolver
       generic map(
         header_length_c => 0,
         ha_length_c => 7,
@@ -258,7 +258,7 @@ begin
 
     if_dhcp: if dhcp_c
     generate
---      dhcp: nsl_inet.dhcp.dhcp_client
+--      dhcp: work.dhcp.dhcp_client
 --        port map(
 --          reset_n_i => reset_n_i,
 --          clock_i => clock_i,

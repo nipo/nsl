@@ -2,11 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_inet;
+library nsl_bnoc, work;
 use nsl_bnoc.committed.all;
-use nsl_inet.ethernet.all;
-use nsl_inet.ipv4.all;
-use nsl_inet.udp.all;
+use work.ethernet.all;
+use work.ipv4.all;
+use work.udp.all;
 
 package func is
   component ethernet_host is

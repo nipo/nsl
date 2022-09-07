@@ -2,11 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet;
+library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
-use nsl_inet.ethernet.all;
-use nsl_inet.ipv4.all;
+use work.ethernet.all;
+use work.ipv4.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
@@ -35,7 +35,7 @@ package arp is
       netmask_i : in ipv4_t := (others => x"ff");
       -- If all zero, dont divert to default route
       gateway_i : in ipv4_t := (others => x"00");
-      hwaddr_i : in nsl_inet.ethernet.mac48_t;
+      hwaddr_i : in mac48_t;
 
       -- Layer 2 link
       to_l2_o : out committed_req;

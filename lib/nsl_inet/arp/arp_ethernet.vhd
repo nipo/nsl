@@ -39,9 +39,9 @@ use ieee.numeric_std.all;
 --    Orders taken from: Network, TTL refresh timeout
 --    Read/Write: Cache storage
 
-library nsl_bnoc, nsl_inet, nsl_data, nsl_memory, nsl_math, nsl_logic;
-use nsl_inet.ethernet.all;
-use nsl_inet.ipv4.all;
+library nsl_bnoc, work, nsl_data, nsl_memory, nsl_math, nsl_logic;
+use work.ethernet.all;
+use work.ipv4.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;

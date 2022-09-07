@@ -2,11 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_inet, nsl_math;
+library nsl_bnoc, nsl_data, work, nsl_math;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_inet.ethernet.all;
+use work.ethernet.all;
 
 entity ethernet_layer is
   generic(
@@ -47,7 +47,7 @@ begin
 
   receiver_fifo: nsl_bnoc.framed.framed_fifo
     generic map(
-      depth => 8,
+      depth => 32,
       clk_count => 1
       )
     port map(
@@ -61,7 +61,7 @@ begin
       p_out_ack => s_from_l1.ack
       );
   
-  receiver: nsl_inet.ethernet.ethernet_receiver
+  receiver: work.ethernet.ethernet_receiver
     generic map(
       ethertype_c => ethertype_l_c,
       l1_header_length_c => l1_header_length_c
@@ -137,7 +137,7 @@ begin
 
   s_from_l3_type <= ethertype_l_c(s_from_l3_index);
   
-  transmitter: nsl_inet.ethernet.ethernet_transmitter
+  transmitter: work.ethernet.ethernet_transmitter
     generic map(
       l1_header_length_c => l1_header_length_c,
       min_frame_size_c => min_frame_size_c
