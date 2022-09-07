@@ -461,6 +461,7 @@ begin
       rin <= r;
 
       rin.ack <= false;
+      do_start := false;
 
       case r.state is
         when ST_RESET =>
