@@ -9,10 +9,17 @@ use nsl_data.bytestream.byte_string;
 -- Converts multi-byte numbers to byte strings.
 package endian is
 
+  type endian_t is (
+    ENDIAN_LITTLE,
+    ENDIAN_BIG
+    );
+  
   function to_le(word : unsigned) return byte_string;
   function from_le(data : byte_string) return unsigned;
   function to_be(word : unsigned) return byte_string;
   function from_be(data : byte_string) return unsigned;
+  function to_endian(word : unsigned; order: endian_t) return byte_string;
+  function from_endian(data : byte_string; order: endian_t) return unsigned;
   function bitswap(x: std_ulogic_vector) return std_ulogic_vector;
   function byteswap(x: std_ulogic_vector) return std_ulogic_vector;
   function byteswap(x: unsigned) return unsigned;
@@ -98,4 +105,24 @@ package body endian is
     return word;
   end function;
 
+  function to_endian(word : unsigned; order: endian_t) return byte_string
+  is
+  begin
+    if order = ENDIAN_LITTLE then
+      return to_le(word);
+    else
+      return to_be(word);
+    end if;
+  end function;
+  
+  function from_endian(data : byte_string; order: endian_t) return unsigned
+  is
+  begin
+    if order = ENDIAN_LITTLE then
+      return from_le(data);
+    else
+      return from_be(data);
+    end if;
+  end function;
+  
 end package body endian;
