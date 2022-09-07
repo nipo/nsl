@@ -8,6 +8,7 @@ end tb;
 library nsl_simulation, nsl_bnoc, nsl_clocking, nsl_inet, nsl_data;
 use nsl_simulation.logging.all;
 use nsl_inet.ethernet.all;
+use nsl_inet.testing.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
 use nsl_bnoc.testing.all;
@@ -23,13 +24,8 @@ architecture arch of tb is
   
   signal clock_s : std_ulogic := '0';
   signal reset_n_s : std_ulogic;
-
-  constant ethertype_list_c : ethertype_vector(0 to 1) := (ethertype_ipv4, ethertype_arp);
-  constant ip_proto_list_c: ip_proto_vector(0 to 0) := (0 => ip_proto_udp);
   
   signal l1_to_l2_s, l2_to_l1_s : nsl_bnoc.committed.committed_bus;
-  signal l2_to_ipv4_s, ipv4_to_l2_s, l2_to_arp_s, arp_to_l2_s,
-    l3_to_udp_s, udp_to_l3_s: nsl_bnoc.committed.committed_bus;
 
   type committed_io is
   record
@@ -439,86 +435,33 @@ begin
     wait;
   end process;
   
-  eth: nsl_inet.ethernet.ethernet_layer
+  eth: nsl_inet.func.ethernet_host
     generic map(
-      ethertype_c => ethertype_list_c,
-      l1_header_length_c => 0
+      clock_hz_c => clock_hz_c,
+      udp_port_c => (1234, 4567)
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
-
-      local_address_i => dut_mac_c,
-
-      to_l3_o(0) => l2_to_ipv4_s.req,
-      to_l3_o(1) => l2_to_arp_s.req,
-      to_l3_i(0) => l2_to_ipv4_s.ack,
-      to_l3_i(1) => l2_to_arp_s.ack,
-      from_l3_i(0) => ipv4_to_l2_s.req,
-      from_l3_i(1) => arp_to_l2_s.req,
-      from_l3_o(0) => ipv4_to_l2_s.ack,
-      from_l3_o(1) => arp_to_l2_s.ack,
-
-      to_l1_o => l2_to_l1_s.req,
-      to_l1_i => l2_to_l1_s.ack,
-      from_l1_i => l1_to_l2_s.req,
-      from_l1_o => l1_to_l2_s.ack
-      );
-
-  ipv4: nsl_inet.ipv4.ipv4_layer_ethernet
-    generic map(
-      l1_header_length_c => 0,
-      ip_proto_c => ip_proto_list_c,
-      clock_i_hz_c => clock_hz_c
-      )
-    port map(
-      reset_n_i => reset_n_s,
-      clock_i => clock_s,
 
       unicast_i => dut_ipv4_c,
       netmask_i => netmask_ipv4_c,
       gateway_i => gateway_ipv4_c,
       hwaddr_i => dut_mac_c,
 
-      to_l4_o(0) => l3_to_udp_s.req,
-      to_l4_i(0) => l3_to_udp_s.ack,
-      from_l4_i(0) => udp_to_l3_s.req,
-      from_l4_o(0) => udp_to_l3_s.ack,
+      l1_tx_o => l2_to_l1_s.req,
+      l1_tx_i => l2_to_l1_s.ack,
+      l1_rx_i => l1_to_l2_s.req,
+      l1_rx_o => l1_to_l2_s.ack,
 
-      ip_to_l2_o => ipv4_to_l2_s.req,
-      ip_to_l2_i => ipv4_to_l2_s.ack,
-      ip_from_l2_i => l2_to_ipv4_s.req,
-      ip_from_l2_o => l2_to_ipv4_s.ack,
-
-      arp_to_l2_o => arp_to_l2_s.req,
-      arp_to_l2_i => arp_to_l2_s.ack,
-      arp_from_l2_i => l2_to_arp_s.req,
-      arp_from_l2_o => l2_to_arp_s.ack
-      );
-
-  udp: nsl_inet.udp.udp_layer
-    generic map(
-      tx_mtu_c => 1500,
-      udp_port_c => (1234, 4567),
-      header_length_c => ipv4_header_length_c
-      )
-    port map(
-      reset_n_i => reset_n_s,
-      clock_i => clock_s,
-
-      from_L3_i => l3_to_udp_s.req,
-      from_L3_o => l3_to_udp_s.ack,
-      to_L3_o => udp_to_l3_s.req,
-      to_L3_i => udp_to_l3_s.ack,
-
-      to_l5_o(0) => udp_1234_s.inbound.req,
-      to_l5_o(1) => udp_4567_s.inbound.req,
-      to_l5_i(0) => udp_1234_s.inbound.ack,
-      to_l5_i(1) => udp_4567_s.inbound.ack,
-      from_l5_i(0) => udp_1234_s.outbound.req,
-      from_l5_i(1) => udp_4567_s.outbound.req,
-      from_l5_o(0) => udp_1234_s.outbound.ack,
-      from_l5_o(1) => udp_4567_s.outbound.ack
+      udp_rx_o(0) => udp_1234_s.inbound.req,
+      udp_rx_o(1) => udp_4567_s.inbound.req,
+      udp_rx_i(0) => udp_1234_s.inbound.ack,
+      udp_rx_i(1) => udp_4567_s.inbound.ack,
+      udp_tx_i(0) => udp_1234_s.outbound.req,
+      udp_tx_i(1) => udp_4567_s.outbound.req,
+      udp_tx_o(0) => udp_1234_s.outbound.ack,
+      udp_tx_o(1) => udp_4567_s.outbound.ack
       );
   
   driver: nsl_simulation.driver.simulation_driver
