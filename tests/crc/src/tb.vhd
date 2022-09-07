@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_inet, nsl_spdif, nsl_usb, nsl_line_coding;
+library nsl_data, nsl_simulation, nsl_inet, nsl_spdif, nsl_usb, nsl_line_coding, nsl_ble;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -173,6 +173,24 @@ begin
                  crc_spill(params_c,
                            crc_update(params_c, crc_init(params_c), from_hex("deadbeef"))),
                  failure);
+
+    log_info(context, "done");
+    wait;
+  end process;
+
+  b: process
+    use nsl_ble.ble.all;
+    constant context: log_context := "BLE";
+    constant pdu : byte_string := from_hex("27104a49aeadacabaaa9bcead60507090b0d");
+    constant crc: byte_string := crc_spill(crc_params_c,
+                           crc_update(crc_params_c, crc_init(crc_params_c), pdu));
+    constant wh: byte_string := whitened(pdu&crc, "1000111");
+
+  begin
+
+    log_info(context, "PDU: "&to_string(pdu));
+    log_info(context, "CRC: "&to_string(crc));
+    log_info(context, "WH: "&to_string(wh));
 
     log_info(context, "done");
     wait;

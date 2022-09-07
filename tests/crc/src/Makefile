@@ -9,3 +9,4 @@ deps += nsl_inet.ethernet
 deps += nsl_spdif.spdif
 deps += nsl_usb.usb
 deps += nsl_line_coding.hdlc
+deps += nsl_ble.ble
