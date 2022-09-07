@@ -33,4 +33,10 @@ package spi is
     miso : std_ulogic;
   end record;
 
+  type spi_master_io is
+  record
+    o: spi_master_o;
+    i: spi_master_i;
+  end record;    
+
 end package spi;

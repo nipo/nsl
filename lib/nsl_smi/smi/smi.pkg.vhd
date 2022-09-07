@@ -13,6 +13,11 @@ package smi is
   type smi_master_i is record
     mdio : std_ulogic;
   end record;
+
+  type smi_master_io is record
+    i : smi_master_i;
+    o : smi_master_o;
+  end record;
   
   type smi_slave_o is record
     mdio : nsl_io.io.directed;

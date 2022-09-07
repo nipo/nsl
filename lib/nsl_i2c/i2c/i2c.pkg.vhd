@@ -26,11 +26,17 @@ package i2c is
     sda : nsl_io.io.opendrain;
   end record;
 
+  type i2c_io is record
+    i: i2c_i;
+    o: i2c_o;
+  end record;
+
   -- Helper that internally merges two I2C drivers as one.
   function "+"(a, b : i2c_o) return i2c_o;
   
   type i2c_i_vector is array(natural range <>) of i2c_i;
   type i2c_o_vector is array(natural range <>) of i2c_o;
+  type i2c_io_vector is array(natural range <>) of i2c_io;
 
   -- Drives an I2C bus from differentiated IO types.
   component i2c_line_driver is
