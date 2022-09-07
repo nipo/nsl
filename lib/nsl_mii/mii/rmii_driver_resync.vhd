@@ -211,8 +211,13 @@ begin
       ready_i => tx_flit_pop_s
       );
 
-  rmii_o.tx_d <= r.tx.flit.data(1 downto 0);
-  rmii_o.tx_en <= r.tx.flit.valid;
+  rmii_outputs: process(rmii_ref_clock_i) is
+  begin
+    if falling_edge(rmii_ref_clock_i) then
+      rmii_o.tx_d <= r.tx.flit.data(1 downto 0);
+      rmii_o.tx_en <= r.tx.flit.valid;
+    end if;
+  end process;
 
   tx_cross_domain: nsl_memory.fifo.fifo_homogeneous
     generic map(
