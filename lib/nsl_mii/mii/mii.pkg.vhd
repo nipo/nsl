@@ -121,7 +121,8 @@ package mii is
   
   component mii_flit_from_committed is
     generic(
-      ipg_c : natural := 96 -- bits
+      ipg_c : natural := 96; -- bits
+      handle_underrun_c: boolean := true
       );
     port(
       clock_i : in std_ulogic;
@@ -130,6 +131,9 @@ package mii is
       committed_i : in nsl_bnoc.committed.committed_req;
       committed_o : out nsl_bnoc.committed.committed_ack;
 
+      -- Whether we are currently in a packet
+      -- When implementing a Phy, this can be mapped to CRS.
+      packet_o : out std_ulogic;
       flit_o : out mii_flit_t;
       ready_i : in std_ulogic
       );

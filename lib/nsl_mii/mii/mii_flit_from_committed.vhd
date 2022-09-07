@@ -8,7 +8,8 @@ use nsl_data.bytestream.all;
 
 entity mii_flit_from_committed is
   generic(
-    ipg_c : natural := 96 -- bits
+    ipg_c : natural := 96; -- bits
+    handle_underrun_c: boolean := true
     );
   port(
     clock_i : in std_ulogic;
@@ -17,6 +18,7 @@ entity mii_flit_from_committed is
     committed_i : in nsl_bnoc.committed.committed_req;
     committed_o : out nsl_bnoc.committed.committed_ack;
 
+    packet_o : out std_ulogic;
     flit_o : out mii_flit_t;
     ready_i : in std_ulogic
     );
@@ -209,33 +211,36 @@ begin
         flit_o.valid <= '0';
         flit_o.error <= '0';
         flit_o.data <= x"00";
+        packet_o <= '0';
 
       when OUT_DATA =>
-        if r.fifo_underrun then
-          flit_o.valid <= '1';
+        if r.fifo_underrun and handle_underrun_c then
           flit_o.error <= '1';
-          flit_o.data <= x"00";
         else
-          flit_o.valid <= to_logic(r.fifo_fillness /= 0);
           flit_o.error <= '0';
-          flit_o.data <= r.fifo(0);
         end if;
+        flit_o.valid <= to_logic(r.fifo_fillness /= 0);
+        flit_o.data <= r.fifo(0);
+        packet_o <= '1';
 
       when OUT_PRE =>
         flit_o.valid <= '1';
         flit_o.error <= '0';
         flit_o.data <= x"55";
+        packet_o <= '1';
 
       when OUT_SFD =>
         flit_o.valid <= '1';
         flit_o.error <= '0';
         flit_o.data <= x"d5";
+        packet_o <= '1';
 
       when OUT_ERROR =>
         flit_o.valid <= '1';
         flit_o.error <= '1';
         flit_o.data <= x"00";
+        packet_o <= '1';
     end case;
   end process;
-
+  
 end architecture;
