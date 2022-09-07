@@ -23,7 +23,7 @@ workdir = $(build-dir)/$1
 ghdl-library-analyze-rules :=
 
 define ghdl-library-rules
-	echo Compiling $(l)
+	@echo Compiling $(l)
 	$(SILENT)mkdir -p $(call workdir,$1)
 	$(SILENT)$(GHDL) -i \
 		--workdir=$(call workdir,$1) \
