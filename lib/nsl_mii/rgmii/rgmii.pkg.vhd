@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_mii;
-use nsl_mii.mii.all;
+library nsl_bnoc, work;
+use work.flit.all;
+use work.link.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 
@@ -24,22 +25,27 @@ package rgmii is
   --   [0]   CRC valid / Frame complete
   --   [7:1] Reserved
 
+  -- RGMII Base signaling, reference clock is external
+  -- RGMII from Phy to Mac
+  type rgmii_io_group_t is record
+    d   : std_ulogic_vector(3 downto 0);
+    c   : std_ulogic;
+    ctl : std_ulogic;
+  end record;
+
+  -- RGMII signal group
+  type rgmii_io is
+  record
+    p2m : rgmii_io_group_t;
+    m2p : rgmii_io_group_t;
+  end record;
+
   type rgmii_sdr_io_t is record
     -- data[3:0] + ctl(0), on wire first
     -- data[7:4] + ctl(1), on wire last
     data   : std_ulogic_vector(7 downto 0);
     dv, er : std_ulogic;
   end record;
-
-  type rgmii_mode_t is (
-    RGMII_MODE_10,
-    RGMII_MODE_100,
-    RGMII_MODE_1000
-    );
-
-  function to_logic(mode: rgmii_mode_t) return std_ulogic_vector;
-  function to_string(mode: rgmii_mode_t) return string;
-  function to_mode(rxd21: std_ulogic_vector(1 downto 0)) return rgmii_mode_t;
   
   -- RGMII driver. Implements 10/100/1000 transparently. Always feed a
   -- 125 MHz clock to TX clock.
@@ -57,7 +63,7 @@ package rgmii is
       rgmii_o : out rgmii_io_group_t;
       rgmii_i : in  rgmii_io_group_t;
       
-      mode_i : in rgmii_mode_t;
+      mode_i : in link_speed_t;
 
       -- SFD detection, synchronous to clock_i
       rx_sfd_o: out std_ulogic;
@@ -77,36 +83,6 @@ package rgmii is
       );
   end component;
 
-  type phy_type_t is (
-    PHY_DP83xxx,
-    PHY_RTL8211F
-    );
-
-  component rgmii_smi_status_poller is
-    generic(
-      refresh_hz_c : real := 2.0;
-      clock_i_hz_c: natural;
-      phy_type_c: phy_type_t
-      );
-    port(
-      reset_n_i   : in std_ulogic;
-      clock_i     : in std_ulogic;
-
-      irq_n_i    : in std_ulogic := '0';
-
-      phyad_i : in unsigned(4 downto 0);
-      
-      link_up_o: out std_ulogic;
-      mode_o: out rgmii_mode_t;
-      fd_o: out std_ulogic;
-      
-      cmd_o  : out framed_req;
-      cmd_i  : in  framed_ack;
-      rsp_i  : in  framed_req;
-      rsp_o  : out framed_ack
-      );
-  end component;
-
   component rgmii_tx_driver is
     generic(
       clock_delay_ps_c: natural := 0
@@ -115,7 +91,7 @@ package rgmii is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      mode_i : in rgmii_mode_t;
+      mode_i : in link_speed_t;
       flit_i : in rgmii_sdr_io_t;
       ready_o : out std_ulogic;
       sfd_o: out std_ulogic;
@@ -137,7 +113,7 @@ package rgmii is
       -- SFD detection, synchronous to rx_clock_o
       sfd_o: out std_ulogic;
 
-      mode_i : in rgmii_mode_t;
+      mode_i : in link_speed_t;
       rgmii_i : in  rgmii_io_group_t;
 
       flit_o : out rgmii_sdr_io_t;
@@ -146,40 +122,3 @@ package rgmii is
   end component;
 
 end package rgmii;
-
-package body rgmii is
-
-  function to_logic(mode: rgmii_mode_t) return std_ulogic_vector
-  is
-    variable ret: std_ulogic_vector(1 downto 0) := "00";
-  begin
-    case mode is
-      when RGMII_MODE_10   => ret := "00";
-      when RGMII_MODE_100  => ret := "01";
-      when RGMII_MODE_1000 => ret := "10";
-    end case;
-
-    return ret;
-  end function;
-
-  function to_string(mode: rgmii_mode_t) return string
-  is
-  begin
-    case mode is
-      when RGMII_MODE_10   => return "10M";
-      when RGMII_MODE_100  => return "100M";
-      when RGMII_MODE_1000 => return "1G";
-    end case;
-  end function;
-
-  function to_mode(rxd21: std_ulogic_vector(1 downto 0)) return rgmii_mode_t
-  is
-  begin
-    case rxd21 is
-      when "00" => return RGMII_MODE_10;
-      when "01" => return RGMII_MODE_100;
-      when others => return RGMII_MODE_1000;
-    end case;
-  end function;
-
-end package body;

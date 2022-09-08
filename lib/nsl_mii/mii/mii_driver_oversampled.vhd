@@ -2,9 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_mii, nsl_logic, nsl_bnoc;
+library work, nsl_logic, nsl_bnoc;
 use nsl_logic.bool.all;
-use nsl_mii.mii.all;
+use work.mii.all;
+use work.flit.all;
 use nsl_logic.bool.all;
 
 entity mii_driver_oversampled is
@@ -149,7 +150,7 @@ begin
   mii_o.tx.en <= r.tx_flit.valid;
   mii_o.tx.er <= r.tx_flit.error;
 
-  rx_to_committed: work.mii.mii_flit_to_committed
+  rx_to_committed: work.flit.mii_flit_to_committed
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -161,7 +162,7 @@ begin
       committed_i => rx_i
       );
   
-  tx_from_committed: work.mii.mii_flit_from_committed
+  tx_from_committed: work.flit.mii_flit_from_committed
     generic map(
       ipg_c => ipg_c
       )

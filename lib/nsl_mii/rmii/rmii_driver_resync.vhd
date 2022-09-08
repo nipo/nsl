@@ -2,10 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_mii, nsl_memory, nsl_logic, nsl_bnoc, nsl_clocking;
+library work, nsl_memory, nsl_logic, nsl_bnoc, nsl_clocking;
 use nsl_logic.bool.all;
-use nsl_mii.mii.all;
+use work.flit.all;
+use work.rmii.all;
 use nsl_logic.bool.all;
+use work.link.all;
 
 entity rmii_driver_resync is
   generic(
@@ -18,6 +20,8 @@ entity rmii_driver_resync is
     rmii_ref_clock_i: in std_ulogic;
     rmii_o : out rmii_m2p;
     rmii_i : in  rmii_p2m;
+
+    link_speed_i: in link_speed_t := LINK_SPEED_100;
 
     tx_sfd_o : out std_ulogic;
     rx_sfd_o : out std_ulogic;
@@ -69,6 +73,7 @@ architecture beh of rmii_driver_resync is
   
   type regs_t is
   record
+    div10: integer range 0 to 9;
     rx: rx_regs_t;
     tx: tx_regs_t;
   end record;
@@ -95,64 +100,75 @@ begin
       r.rx.state <= RX_INTERFRAME;
       r.rx.dibit_to_go <= "00";
       r.tx.dibit_to_go <= "00";
+      r.div10 <= 0;
     end if;
   end process;
 
-  transition: process(r, rmii_i, tx_resynced_flit_s) is
+  transition: process(r, rmii_i, tx_resynced_flit_s, link_speed_i) is
   begin
     rin <= r;
 
-    -- RX Side
-    rin.rx.is_sfd <= false;
-    rin.rx.pipe <= r.rx.pipe(1 to 4) & rmii_i;
+    if r.div10 /= 0 then
+      rin.div10 <= r.div10 - 1;
+    else
+      if link_speed_i = LINK_SPEED_10 then
+        rin.div10 <= 9;
+      else
+        rin.div10 <= 0;
+      end if;
+        
+      -- RX Side
+      rin.rx.is_sfd <= false;
+      rin.rx.pipe <= r.rx.pipe(1 to 4) & rmii_i;
 
-    -- One cycle out of 4 makes flit complete
-    rin.rx.dibit_to_go <= r.rx.dibit_to_go - 1;
+      -- One cycle out of 4 makes flit complete
+      rin.rx.dibit_to_go <= r.rx.dibit_to_go - 1;
 
-    -- Merge consecutive cycles
-    rin.rx.flit.data <= r.rx.pipe(3).rx_d & r.rx.pipe(2).rx_d & r.rx.pipe(1).rx_d & r.rx.pipe(0).rx_d;
-    -- Carrier sensing is on first dibit of each nibble.  Validity is
-    -- on second dibit of each nibble.  During preamble and SFD, we do
-    -- not care to differentiate as CRS_DV is constant high.
-    rin.rx.flit.valid <= r.rx.pipe(1).crs_dv and r.rx.pipe(3).crs_dv;
-    rin.rx.flit.error <= r.rx.pipe(0).rx_er or r.rx.pipe(1).rx_er or r.rx.pipe(2).rx_er or r.rx.pipe(3).rx_er;
+      -- Merge consecutive cycles
+      rin.rx.flit.data <= r.rx.pipe(3).rx_d & r.rx.pipe(2).rx_d & r.rx.pipe(1).rx_d & r.rx.pipe(0).rx_d;
+      -- Carrier sensing is on first dibit of each nibble.  Validity is
+      -- on second dibit of each nibble.  During preamble and SFD, we do
+      -- not care to differentiate as CRS_DV is constant high.
+      rin.rx.flit.valid <= r.rx.pipe(1).crs_dv and r.rx.pipe(3).crs_dv;
+      rin.rx.flit.error <= r.rx.pipe(0).rx_er or r.rx.pipe(1).rx_er or r.rx.pipe(2).rx_er or r.rx.pipe(3).rx_er;
 
-    case r.rx.state is
-      when RX_INTERFRAME =>
-        if r.rx.pipe(0).crs_dv = '1' and r.rx.pipe(1).crs_dv = '1' then
-          rin.rx.state <= RX_PREAMBLE;
-        end if;
+      case r.rx.state is
+        when RX_INTERFRAME =>
+          if r.rx.pipe(0).crs_dv = '1' and r.rx.pipe(1).crs_dv = '1' then
+            rin.rx.state <= RX_PREAMBLE;
+          end if;
 
-      when RX_PREAMBLE =>
-        if r.rx.flit.data = x"d5" and r.rx.flit.valid = '1' and r.rx.flit.error = '0' then
-          rin.rx.is_sfd <= true;
-          rin.rx.state <= RX_FRAME;
-          rin.rx.dibit_to_go <= "11";
-        end if;
+        when RX_PREAMBLE =>
+          if r.rx.flit.data = x"d5" and r.rx.flit.valid = '1' and r.rx.flit.error = '0' then
+            rin.rx.is_sfd <= true;
+            rin.rx.state <= RX_FRAME;
+            rin.rx.dibit_to_go <= "11";
+          end if;
 
-      when RX_FRAME =>
-        null;
-    end case;
+        when RX_FRAME =>
+          null;
+      end case;
 
-    -- Packet end matching, both for PREAMBLE and FRAME states.
-    if r.rx.dibit_to_go = 0 and r.rx.pipe(1).crs_dv = '0' and r.rx.pipe(3).crs_dv = '0' then
-      rin.rx.state <= RX_INTERFRAME;
-    end if;
+      -- Packet end matching, both for PREAMBLE and FRAME states.
+      if r.rx.dibit_to_go = 0 and r.rx.pipe(1).crs_dv = '0' and r.rx.pipe(3).crs_dv = '0' then
+        rin.rx.state <= RX_INTERFRAME;
+      end if;
 
-    -- Tx side
-    rin.tx.is_sfd <= false;
+      -- Tx side
+      rin.tx.is_sfd <= false;
 
-    if tx_resynced_flit_s.valid = '0' then
-      rin.tx.new_frame <= true;
-    elsif r.tx.new_frame and tx_resynced_flit_s.data = x"d5" then
-      rin.tx.new_frame <= false;
-      rin.tx.is_sfd <= true;
-    end if;
+      if tx_resynced_flit_s.valid = '0' then
+        rin.tx.new_frame <= true;
+      elsif r.tx.new_frame and tx_resynced_flit_s.data = x"d5" then
+        rin.tx.new_frame <= false;
+        rin.tx.is_sfd <= true;
+      end if;
       
-    rin.tx.dibit_to_go <= r.tx.dibit_to_go - 1;
-    rin.tx.flit.data(5 downto 0) <= r.tx.flit.data(7 downto 2);
-    if r.tx.dibit_to_go = 0 then
-      rin.tx.flit <= tx_resynced_flit_s;
+      rin.tx.dibit_to_go <= r.tx.dibit_to_go - 1;
+      rin.tx.flit.data(5 downto 0) <= r.tx.flit.data(7 downto 2);
+      if r.tx.dibit_to_go = 0 then
+        rin.tx.flit <= tx_resynced_flit_s;
+      end if;
     end if;
   end process;
 
@@ -181,9 +197,9 @@ begin
       in_valid_i => s_rx_flit_complete
       );
 
-  s_rx_flit_complete <= to_logic(r.rx.dibit_to_go = 0);
+  s_rx_flit_complete <= to_logic(r.rx.dibit_to_go = 0 and r.div10 = 0);
 
-  rx_to_committed: work.mii.mii_flit_to_committed
+  rx_to_committed: work.flit.mii_flit_to_committed
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -196,7 +212,7 @@ begin
       );
   
   -- TX side
-  tx_from_committed: work.mii.mii_flit_from_committed
+  tx_from_committed: work.flit.mii_flit_from_committed
     generic map(
       ipg_c => ipg_c
       )
@@ -242,7 +258,7 @@ begin
       out_ready_i => tx_ready_s
       );
 
-  tx_ready_s <= '1' when r.tx.dibit_to_go = 0 else '0';
+  tx_ready_s <= to_logic(r.tx.dibit_to_go = 0 and r.div10 = 0);
 
   tx_sfd_resync: nsl_clocking.interdomain.interdomain_tick
     port map(

@@ -1,9 +1,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io, nsl_mii, nsl_clocking, nsl_memory, nsl_logic;
-use nsl_mii.mii.all;
-use nsl_mii.rgmii.all;
+library nsl_io, work, nsl_clocking, nsl_memory, nsl_logic;
+use work.flit.all;
+use work.link.all;
+use work.rgmii.all;
 use nsl_io.diff.all;
 use nsl_logic.bool.all;
 
@@ -18,8 +19,8 @@ entity rgmii_rx_driver is
     rx_clock_o : out std_ulogic;
     sfd_o : out std_ulogic;
 
-    mode_i : in rgmii_mode_t;
-    rgmii_i : in  nsl_mii.mii.rgmii_io_group_t;
+    mode_i : in link_speed_t;
+    rgmii_i : in  work.rgmii.rgmii_io_group_t;
 
     flit_o : out rgmii_sdr_io_t;
     valid_o : out std_ulogic
@@ -53,7 +54,7 @@ architecture beh of rgmii_rx_driver is
   type regs_t is
   record
     pipe: rgmii_in_pipe_t(0 to 3);
-    mode: rgmii_mode_t;
+    mode: link_speed_t;
     reset_n: std_ulogic;
 
     is_second, is_sfd: boolean;
@@ -121,7 +122,7 @@ begin
     end if;
 
     case r.mode is
-      when RGMII_MODE_1000 =>
+      when LINK_SPEED_1000 =>
         -- All cycles are valid
         rin.flit_valid <= '1';
         -- Take both edges
@@ -167,7 +168,7 @@ begin
 
         end case;
 
-      when RGMII_MODE_10 | RGMII_MODE_100 =>
+      when LINK_SPEED_10 | LINK_SPEED_100 =>
         -- One cycle out of 2 is valid
         rin.is_second <= not r.is_second;
         rin.flit_valid <= to_logic(r.is_second);

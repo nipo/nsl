@@ -2,9 +2,9 @@ vhdl-sources += rgmii.pkg.vhd
 vhdl-sources += rgmii_driver.vhd
 vhdl-sources += rgmii_rx_driver.vhd
 vhdl-sources += rgmii_tx_driver.vhd
-vhdl-sources += rgmii_smi_status_poller.vhd
 
-deps += nsl_mii.mii
+deps += nsl_mii.flit
+deps += nsl_mii.link
 deps += nsl_math.arith
 deps += nsl_clocking.distribution
 deps += nsl_clocking.intradomain

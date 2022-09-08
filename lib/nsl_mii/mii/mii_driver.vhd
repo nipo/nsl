@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_mii, nsl_bnoc, nsl_clocking;
-use nsl_mii.mii.all;
+library work, nsl_bnoc, nsl_clocking;
+use work.mii.all;
 
 entity mii_driver is
   generic(
@@ -34,7 +34,7 @@ begin
 
   is_resync: if implementation_c = "resync"
   generate
-    impl: nsl_mii.mii.mii_driver_resync
+    impl: work.mii.mii_driver_resync
       generic map(
         ipg_c => ipg_c
         )
@@ -54,7 +54,7 @@ begin
   
   is_oversampled: if implementation_c = "oversampled"
   generate
-    impl: nsl_mii.mii.mii_driver_oversampled
+    impl: work.mii.mii_driver_oversampled
       generic map(
         ipg_c => ipg_c
         )

@@ -1,9 +1,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io, nsl_mii, nsl_clocking, nsl_memory, nsl_logic;
-use nsl_mii.mii.all;
-use nsl_mii.rgmii.all;
+library nsl_io, work, nsl_clocking, nsl_memory, nsl_logic;
+use work.flit.all;
+use work.link.all;
+use work.rgmii.all;
 use nsl_io.diff.all;
 use nsl_logic.bool.all;
 
@@ -15,7 +16,7 @@ entity rgmii_tx_driver is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    mode_i : in rgmii_mode_t;
+    mode_i : in link_speed_t;
     flit_i : in rgmii_sdr_io_t;
     ready_o : out std_ulogic;
 
@@ -62,7 +63,7 @@ architecture beh of rgmii_tx_driver is
     div: integer range 0 to 9;
     bus_out: rgmii_bus;
     frame_starting, sfd: boolean;
-    mode : rgmii_mode_t;
+    mode : link_speed_t;
   end record;
 
   signal r, rin: regs_t;
@@ -76,7 +77,7 @@ begin
     end if;
 
     if reset_n_i = '0' then
-      r.mode <= RGMII_MODE_10;
+      r.mode <= LINK_SPEED_10;
       r.div <= 0;
       r.div2 <= 0;
     end if;
@@ -93,7 +94,7 @@ begin
       rin.div2 <= 0;
     else
       case r.mode is
-        when RGMII_MODE_10 =>
+        when LINK_SPEED_10 =>
           -- In this mode, there is div2 doing a first divide by 25;
           -- then second div does 9, 6, 3, 0, which is piggy backed on
           -- matching states of the 100M mode.
@@ -109,7 +110,7 @@ begin
             end if;
           end if;
 
-        when RGMII_MODE_100 =>
+        when LINK_SPEED_100 =>
           if r.div /= 0 then
             rin.div <= r.div - 1;
           else
@@ -117,14 +118,14 @@ begin
           end if;
           rin.div2 <= 0;
 
-        when RGMII_MODE_1000 =>
+        when LINK_SPEED_1000 =>
           rin.div <= 0;
           rin.div2 <= 0;
       end case;
     end if;
 
     case r.mode is
-      when RGMII_MODE_10 | RGMII_MODE_100 =>
+      when LINK_SPEED_10 | LINK_SPEED_100 =>
         if r.div2 = 0 then
           case r.div is
             when 9 | 8 =>
@@ -151,7 +152,7 @@ begin
           end case;
         end if;
 
-      when RGMII_MODE_1000 =>
+      when LINK_SPEED_1000 =>
         rin.bus_out.f <= on_wire_first(flit_i, '1');
         rin.bus_out.s <= on_wire_last(flit_i, '0');
     end case;

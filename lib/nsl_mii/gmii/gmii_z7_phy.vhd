@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, work;
-use work.mii.all;
+use work.flit.all;
 use work.gmii.all;
 use nsl_bnoc.committed.all;
 
@@ -37,7 +37,7 @@ architecture beh of gmii_z7_phy is
 
 begin
 
-  tx_path: work.mii.mii_flit_from_committed
+  tx_path: work.flit.mii_flit_from_committed
     generic map(
       ipg_c => ipg_c
       )
@@ -58,7 +58,7 @@ begin
   gmii_rx_o.er <= s_flit_to_mac.error;
   gmii_rx_clk_o <= clock_i;
 
-  rx_path: work.mii.mii_flit_to_committed
+  rx_path: work.flit.mii_flit_to_committed
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,

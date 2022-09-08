@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, work;
-use work.mii.all;
+library nsl_bnoc;
 use nsl_bnoc.committed.all;
 
 package gmii is

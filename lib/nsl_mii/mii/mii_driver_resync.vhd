@@ -2,9 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_mii, nsl_memory, nsl_logic, nsl_bnoc, nsl_clocking;
+library work, nsl_memory, nsl_logic, nsl_bnoc, nsl_clocking;
 use nsl_logic.bool.all;
-use nsl_mii.mii.all;
+use work.mii.all;
+use work.flit.all;
 use nsl_logic.bool.all;
 
 entity mii_driver_resync is
@@ -168,7 +169,7 @@ begin
       clock_o => rx_clock_s
       );
 
-  rx_to_committed: work.mii.mii_flit_to_committed
+  rx_to_committed: work.flit.mii_flit_to_committed
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -181,7 +182,7 @@ begin
       );
   
   -- TX side
-  tx_from_committed: work.mii.mii_flit_from_committed
+  tx_from_committed: work.flit.mii_flit_from_committed
     generic map(
       ipg_c => ipg_c
       )

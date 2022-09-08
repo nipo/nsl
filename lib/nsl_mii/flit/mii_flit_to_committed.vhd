@@ -1,9 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_bnoc, nsl_mii, nsl_data, nsl_math, nsl_logic;
+library nsl_bnoc, work, nsl_data, nsl_math, nsl_logic;
 use nsl_logic.bool.all;
-use nsl_mii.mii.all;
+use work.flit.all;
 use nsl_data.bytestream.all;
 
 entity mii_flit_to_committed is

@@ -23,19 +23,6 @@ package mii is
   -- Signals have 10ns/10ns setup/hold time requirements.
   -- With 25MHz clock, we have 20ns half cycle -> Phy can update on
   -- falling edge.
-
-  type mii_flit_t is record
-    data   : std_ulogic_vector(7 downto 0);
-    valid  : std_ulogic;
-    error  : std_ulogic;
-  end record;
-
-  -- IEEE Std 802.3-2018, Section 2, Table 22-2
-  constant mii_lpi_c : byte := x"01";
-  constant mii_false_carrier_c : byte := x"0e";
-  -- IEEE Std 802.3-2018, Section 3, Table 35-1
-  constant mii_carrier_extend_c : byte := x"0f";
-  constant mii_carrier_extend_error_c : byte := x"1f";
   
   -- MII Base signaling
   type mii_rx_p2m is
@@ -82,76 +69,6 @@ package mii is
     m2p: mii_m2p;
   end record;
   
-  -- RMII Base signaling, reference clock is external
-  -- RMII from Phy to Mac
-  type rmii_p2m is record
-    rx_d   : std_ulogic_vector(1 downto 0);
-    rx_er  : std_ulogic;
-    crs_dv : std_ulogic;
-  end record;
-
-  -- RMII from Mac to Phy
-  type rmii_m2p is record
-    tx_d   : std_ulogic_vector(1 downto 0);
-    tx_en  : std_ulogic;
-  end record;
-
-  -- RMII signal group
-  type rmii_io is
-  record
-    ref_clk : std_ulogic;
-    p2m : rmii_p2m;
-    m2p : rmii_m2p;
-  end record;
-  
-  -- RGMII Base signaling, reference clock is external
-  -- RGMII from Phy to Mac
-  type rgmii_io_group_t is record
-    d   : std_ulogic_vector(3 downto 0);
-    c   : std_ulogic;
-    ctl : std_ulogic;
-  end record;
-
-  -- RGMII signal group
-  type rgmii_io is
-  record
-    p2m : rgmii_io_group_t;
-    m2p : rgmii_io_group_t;
-  end record;
-  
-  component mii_flit_from_committed is
-    generic(
-      ipg_c : natural := 96; -- bits
-      handle_underrun_c: boolean := true
-      );
-    port(
-      clock_i : in std_ulogic;
-      reset_n_i : in std_ulogic;
-
-      committed_i : in nsl_bnoc.committed.committed_req;
-      committed_o : out nsl_bnoc.committed.committed_ack;
-
-      -- Whether we are currently in a packet
-      -- When implementing a Phy, this can be mapped to CRS.
-      packet_o : out std_ulogic;
-      flit_o : out mii_flit_t;
-      ready_i : in std_ulogic
-      );
-  end component;
-  
-  component mii_flit_to_committed is
-    port(
-      clock_i : in std_ulogic;
-      reset_n_i : in std_ulogic;
-
-      flit_i : in mii_flit_t;
-      valid_i : in std_ulogic;
-
-      committed_o : out nsl_bnoc.committed.committed_req;
-      committed_i : in nsl_bnoc.committed.committed_ack
-      );
-  end component;
-
   component mii_driver is
     generic(
       -- Either "resync" or "oversampled"
@@ -223,30 +140,6 @@ package mii is
       mii_o : out mii_m2p;
       mii_i : in  mii_p2m;
 
-      rx_o : out nsl_bnoc.committed.committed_req;
-      rx_i : in nsl_bnoc.committed.committed_ack;
-
-      tx_i : in nsl_bnoc.committed.committed_req;
-      tx_o : out nsl_bnoc.committed.committed_ack
-      );
-  end component;
-
-  component rmii_driver_resync is
-    generic(
-      ipg_c : natural := 96 --bits
-      );
-    port(
-      reset_n_i : in std_ulogic;
-      clock_i : in std_ulogic;
-
-      rmii_ref_clock_i: in std_ulogic;
-      rmii_o : out rmii_m2p;
-      rmii_i : in  rmii_p2m;
-
-      -- In clock_i domain
-      tx_sfd_o : out std_ulogic;
-      rx_sfd_o : out std_ulogic;
-      
       rx_o : out nsl_bnoc.committed.committed_req;
       rx_i : in nsl_bnoc.committed.committed_ack;
 
