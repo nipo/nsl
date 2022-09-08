@@ -168,7 +168,7 @@ begin
     rsp_o.ready <= '0';
 
     case r.state is
-      when ST_RESET | ST_START | ST_SIZE_GET | ST_DONE | ST_WAIT_START =>
+      when ST_RESET | ST_START | ST_SIZE_GET | ST_DONE | ST_WAIT_START | ST_RSP_BACKOFF =>
         null;
         
       when ST_CMD_PUT =>
