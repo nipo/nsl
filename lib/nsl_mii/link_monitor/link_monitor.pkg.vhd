@@ -97,17 +97,17 @@ package body link_monitor is
   is
     variable ret: link_status_t;
   begin
-    ret.up <= rxd(0) = '1';
+    ret.up := rxd(0) = '1';
 
     case rxd(2 downto 1) is
-      when "00" => ret.speed <= LINK_SPEED_10;
-      when "01" => ret.speed <= LINK_SPEED_100;
-      when others => ret.speed <= LINK_SPEED_1000;
+      when "00" => ret.speed := LINK_SPEED_10;
+      when "01" => ret.speed := LINK_SPEED_100;
+      when others => ret.speed := LINK_SPEED_1000;
     end case;
 
     case rxd(3) is
-      when '1' => ret.duplex <= LINK_DUPLEX_FULL;
-      when others => ret.duplex <= LINK_DUPLEX_HALF;
+      when '1' => ret.duplex := LINK_DUPLEX_FULL;
+      when others => ret.duplex := LINK_DUPLEX_HALF;
     end case;
 
     return ret;
