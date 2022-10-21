@@ -56,16 +56,15 @@ architecture beh of link_monitor_smi is
     RSP_REPORT
     );
 
-  type reg_idx_t is (
-    isr,
-    bmcr,
-    bmsr,
-    anar,
-    lpar,
-    gsr,
-    gcr,
-    gst1
-    );
+  subtype reg_idx_t is integer range 0 to 7;
+  constant gst1 : reg_idx_t := 0;
+  constant gcr  : reg_idx_t := 1;
+  constant gsr  : reg_idx_t := 2;
+  constant lpar : reg_idx_t := 3;
+  constant anar : reg_idx_t := 4;
+  constant bmsr : reg_idx_t := 5;
+  constant bmcr : reg_idx_t := 6;
+  constant isr  : reg_idx_t := 7;
   
   type value_vector is array (reg_idx_t) of phy_reg_value_t;
   type addr_vector is array (reg_idx_t) of phy_reg_addr_t;
@@ -296,7 +295,7 @@ begin
       when CMD_PUT_ADDR =>
         if cmd_i.ready = '1' then
           if r.cmd_index /= reg_idx_t'high then
-            rin.cmd_index <= reg_idx_t'succ(r.cmd_index);
+            rin.cmd_index <= r.cmd_index + 1;
             rin.cmd_state <= CMD_PUT_READ;
           else
             rin.cmd_state <= CMD_WAIT_DONE;
@@ -341,7 +340,7 @@ begin
         if rsp_i.valid = '1' then
           rin.value(r.rsp_index) <= from_be(r.in_data);
           if r.rsp_index /= reg_idx_t'high then
-            rin.rsp_index <= reg_idx_t'succ(r.rsp_index);
+            rin.rsp_index <= r.rsp_index + 1;
             if rsp_i.last = '1' then
               rin.rsp_state <= RSP_IDLE;
             else
