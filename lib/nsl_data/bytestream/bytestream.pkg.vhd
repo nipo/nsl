@@ -123,8 +123,11 @@ package body bytestream is
   end function;
 
   function byte_from_hex(blob: byte_hex_string) return byte is
+    alias xblob : string(1 to blob'length) is blob;
+    variable ret : byte;
   begin
-    return nibble_to_suv(blob(1)) & nibble_to_suv(blob(2));
+    ret := nibble_to_suv(xblob(1)) & nibble_to_suv(xblob(2));
+    return ret;
   end function;
 
   function from_hex(blob: string) return byte_string is
