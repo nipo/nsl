@@ -2,11 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, work;
+library nsl_bnoc, work, nsl_logic;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use work.link.all;
 use work.flit.all;
+use nsl_logic.bool.all;
 
 package link_monitor is
   
@@ -71,6 +72,7 @@ package link_monitor is
   function phy_supports(t: phy_type_t; speed: link_speed_t) return boolean;
   function phy_supports(t: phy_type_t; duplex: link_duplex_t) return boolean;
   function rgmii_ibs_decode(rxd: std_ulogic_vector(3 downto 0)) return link_status_t;
+  function rgmii_ibs_encode(st: link_status_t) return std_ulogic_vector;
 
 end package link_monitor;
 
@@ -108,6 +110,28 @@ package body link_monitor is
     case rxd(3) is
       when '1' => ret.duplex := LINK_DUPLEX_FULL;
       when others => ret.duplex := LINK_DUPLEX_HALF;
+    end case;
+
+    return ret;
+  end function;
+
+  -- See RGMII-v2.0, Table 4, Inter-frame In-band status
+  -- Only valid when rx_dv and rx_er are deasserted
+  function rgmii_ibs_encode(st: link_status_t) return std_ulogic_vector
+  is
+    variable ret: std_ulogic_vector(3 downto 0);
+  begin
+    ret(0) := to_logic(st.up);
+
+    case st.speed is
+      when LINK_SPEED_10 => ret(2 downto 1) := "00";
+      when LINK_SPEED_100 => ret(2 downto 1) := "01";
+      when others => ret(2 downto 1) := "10";
+    end case;
+
+    case st.duplex is
+      when LINK_DUPLEX_FULL => ret(3) := '1';
+      when others =>  ret(3) := '0';
     end case;
 
     return ret;
