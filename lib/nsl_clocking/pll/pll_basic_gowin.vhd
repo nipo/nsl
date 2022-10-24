@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_hwdep, gowin;
+library nsl_data, nsl_hwdep, gowin, nsl_synthesis;
 use nsl_data.text.all;
 use nsl_hwdep.gowin_config.all;
 
@@ -76,31 +76,28 @@ architecture gw1n of pll_basic is
 
   type gowin_pll_params is
   record
-    vcodiv, idiv, fdiv : integer;
+    odiv, idiv, fbdiv : integer;
   end record;
 
   type gowin_pll_constraints is
   record
     vcomin, vcomax : real;
+    pfdmin, pfdmax : real;
   end record;
 
   type int_vector is array (integer range <>) of integer;
-  constant vcodiv_possibilities_c : int_vector(0 to 10) :=
+  constant odiv_possibilities_c : int_vector(0 to 10) :=
     (2,4,8,16,32,48,64,80,96,112,128);
   
-  function gowin_out_freq(fin : real;
+  function calc_fclkout(fin : real;
                           params : gowin_pll_params;
                           constraints : gowin_pll_constraints)
     return real
   is
-    variable fvco : real;
+    variable fclkout : real;
   begin
-    fvco := (fin / real(params.idiv + 1)) * real(params.fdiv + 1) * real(params.vcodiv);
-    if fvco > constraints.vcomax or fvco < constraints.vcomin then
-      return 0.0;
-    end if;
-
-    return fvco / real(params.vcodiv);
+    fclkout := (fin * real(params.fbdiv)) / real(params.idiv);
+    return fclkout;
   end function;
 
   function gowin_pll_params_generate(fin, fout : integer;
@@ -111,31 +108,45 @@ architecture gw1n of pll_basic is
     constant fout_r : real := real(fout);
     variable best_params, params : gowin_pll_params := (0, 0, 0);
     variable best_found : boolean := false;
-    variable best_fout, fout_calc, fout_err_next : real := 0.0;
-    variable fout_err : real := 1.0e9;
-    variable vcodiv: integer;
+    variable best_fclkout, fclkout_calc, fclkout_err_next : real := 0.0;
+    variable best_fvco, fvco_calc, pfd_freq : real := 0.0;
+    variable fclkout_err : real := 1.0e9;
   begin
-    for idiv in 0 to 63
+    for idiv in 64 downto 1
     loop
-      for fdiv in 0 to 63
+      for fbdiv in 1 to 64
       loop
-        for vcodiv_idx in vcodiv_possibilities_c'range
+        for odiv_idx in odiv_possibilities_c'reverse_range
         loop
-          vcodiv := vcodiv_possibilities_c(vcodiv_idx);
           params.idiv := idiv;
-          params.fdiv := fdiv;
-          params.vcodiv := vcodiv;
+          params.fbdiv := fbdiv;
+          params.odiv := odiv_possibilities_c(odiv_idx);
 
-          fout_calc := gowin_out_freq(fin_r, params, constraints);
-
-          fout_err_next := abs(fout_calc - fout_r);
-
-          if fout_err_next < fout_err and fout_calc /= 0.0 then
-            best_found := true;
-            best_params := params;
-            fout_err := fout_err_next;
-            best_fout := fout_calc;
+          pfd_freq := fin_r / real(params.idiv);
+          if pfd_freq < constraints.pfdmin or pfd_freq > constraints.pfdmax then
+            next;
           end if;
+
+          fclkout_calc := (fin_r * real(params.fbdiv)) / real(params.idiv);
+          fvco_calc := fclkout_calc * real(params.odiv);
+          if fvco_calc > constraints.vcomax or fvco_calc < constraints.vcomin then
+            next;
+          end if;
+
+          fclkout_err_next := abs(fclkout_calc - fout_r);
+          if fclkout_err_next > fclkout_err then
+            next;
+          end if;
+            
+          if fvco_calc < best_fvco and fclkout_err = 0.0 then
+            next;
+          end if;
+          
+          best_found := true;
+          best_params := params;
+          fclkout_err := fclkout_err_next;
+          best_fclkout := fclkout_calc;
+          best_fvco := fvco_calc;
         end loop;
       end loop;
     end loop;
@@ -149,12 +160,13 @@ architecture gw1n of pll_basic is
       report "Cannot find a matching configuration"
       severity failure;
 
-    report "Best option: idiv=" & to_string(best_params.idiv+1) & ", "
-      & "fdiv=" & to_string(best_params.fdiv+1) & ", "
-      & "vcodiv=" & to_string(2**best_params.vcodiv) & ", "
-      & "vco=" & to_string(fin_r / real(best_params.idiv + 1) * real(best_params.fdiv + 1) / 1.0e6) & "MHz, "
-      & "fout=" & to_string(best_fout / 1.0e6) & "MHz, "
-      & "fout error=" & to_string(real(fout_err) / 1.0e6) & "MHz"
+    report "Best option: idiv=" & to_string(best_params.idiv) & ", "
+      & "fbdiv=" & to_string(best_params.fbdiv) & ", "
+      & "odiv=" & to_string(best_params.odiv) & ", "
+      & "vco=" & to_string(best_fvco / 1.0e6) & "MHz, "
+      & "pfd=" & to_string(fin_r / real(best_params.idiv) / 1.0e6) & "MHz, "
+      & "fclkout=" & to_string(best_fclkout / 1.0e6) & "MHz, "
+      & "fclkout error=" & to_string(fclkout_err / 1.0e6) & "MHz"
       severity note;
     
     return best_params;
@@ -165,12 +177,21 @@ architecture gw1n of pll_basic is
   constant gowin_params : string := str_param_extract(hw_variant_c, "gowin");
   constant pll_constraints : gowin_pll_constraints := (
     vcomin => nsl_hwdep.gowin_config.pll_vco_fmin,
-    vcomax => nsl_hwdep.gowin_config.pll_vco_fmax);
+    vcomax => nsl_hwdep.gowin_config.pll_vco_fmax,
+    pfdmin => nsl_hwdep.gowin_config.pll_pfd_fmin,
+    pfdmax => nsl_hwdep.gowin_config.pll_pfd_fmax);
 
   constant params : gowin_pll_params := gowin_pll_params_generate(input_hz_c,
                                                                   output_hz_c,
                                                                   pll_constraints);
 
+  constant synth_report_c : string
+    := "Best option: idiv=" & to_string(params.idiv) & ", "
+      & "fbdiv=" & to_string(params.fbdiv) & ", "
+      & "odiv=" & to_string(params.odiv) & ", "
+      & "vco=" & to_string(real(input_hz_c) * real(params.fbdiv) * real(params.odiv) / real(params.idiv) / 1.0e6) & "MHz, "
+      & "pfd=" & to_string(real(input_hz_c) / real(params.idiv) / 1.0e6) & "MHz, "
+      & "fclkout=" & to_string(real(input_hz_c) * real(params.fbdiv) / real(params.idiv) / 1.0e6) & "MHz";
   
   constant fin_mhz_str : string := to_string(real(input_hz_c) / 1.0e6);
 
@@ -178,6 +199,14 @@ architecture gw1n of pll_basic is
   
 begin
 
+  log0: nsl_synthesis.logging.synth_log
+    generic map(
+      message_c => synth_report_c
+      )
+    port map(
+      unused_i => '0'
+      );
+  
   reset_s <= not reset_n_i;
   clock_o <= clockout_buffered_s;
 
@@ -193,15 +222,18 @@ begin
       generic map(
         fclkin => fin_mhz_str,
         device => nsl_hwdep.gowin_config.device_name,
-        idiv_sel => params.idiv,
-        fbdiv_sel => params.fdiv,
-        odiv_sel => params.vcodiv,
-        clkfb_sel => "external",
-        clkoutd_src => "clkout"
+        idiv_sel => params.idiv - 1,
+        fbdiv_sel => params.fbdiv - 1,
+        odiv_sel => params.odiv,
+        clkfb_sel => "internal",
+        clkoutd_src => "clkout",
+        dyn_idiv_sel => "false",
+        dyn_fbdiv_sel => "false",
+        dyn_odiv_sel => "false"
         )
       port map(
         clkin => clock_i,
-        clkfb => clockout_buffered_s,
+--        clkfb => clockout_buffered_s,
         idsel => "000000",
         fbdsel => "000000",
         odsel => "000000",

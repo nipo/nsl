@@ -36,4 +36,16 @@ package body gowin_config is
     return 900.0e6;
   end function;
 
+  function pll_pfd_fmin return real
+  is
+  begin
+    return 3.0e6;
+  end function;
+
+  function pll_pfd_fmax return real
+  is
+  begin
+    return 400.0e6;
+  end function;
+
 end package body;

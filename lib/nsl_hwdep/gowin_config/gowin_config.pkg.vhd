@@ -6,5 +6,7 @@ package gowin_config is
   function pll_type return string;
   function pll_vco_fmin return real;
   function pll_vco_fmax return real;
+  function pll_pfd_fmin return real;
+  function pll_pfd_fmax return real;
   
 end package;
