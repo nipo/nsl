@@ -18,6 +18,7 @@ entity tick_extractor_self_clocking is
 
     reset_i : in std_ulogic := '0';
 
+    enable_i : in std_ulogic := '1';
     signal_i : in std_ulogic;
 
     valid_o : out std_ulogic;
@@ -58,14 +59,19 @@ begin
     end if;
   end process;
 
-  transition: process(r, signal_i, reset_i) is
+  transition: process(r, signal_i, reset_i, enable_i) is
   begin
     rin <= r;
 
     rin.last_tick <= signal_i;
     rin.changed <= r.last_tick xor signal_i;
-    
-    if r.changed = '1' then
+
+    if enable_i = '0' then
+      rin.ref_period_valid <= false;
+      rin.learn_period <= period_max_c;
+      rin.learn_to_go <= tick_learn_c - 1;
+      rin.learn_counter <= 0;
+    elsif r.changed = '1' then
       rin.learn_counter <= 0;
       if r.learn_period >= r.learn_counter then
         rin.learn_period <= r.learn_counter;

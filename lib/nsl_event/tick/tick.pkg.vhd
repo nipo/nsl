@@ -51,6 +51,8 @@ package tick is
       -- Synchronous positive-logic soft-reset
       reset_i : in std_ulogic := '0';
 
+      -- Whether to enable learning of period
+      enable_i: in std_ulogic := '1';
       -- Actual self-clocking signal.
       signal_i : in std_ulogic;
 
