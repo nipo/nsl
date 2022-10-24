@@ -29,7 +29,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data;
+library nsl_usb, nsl_data, nsl_clocking;
 use nsl_usb.usb.all;
 use nsl_data.bytestream.byte;
 
@@ -196,134 +196,20 @@ begin
   -- DPLL                                                                               --
   --====================================================================================--
 
-  dpll_60: if ref_clock_mhz_c = 60
-  generate
-    signal dpll_cntr : unsigned(3 downto 0);
-  begin
-    -- This design uses a clock enable to do 12Mhz timing and not a
-    -- real 12Mhz clock. Everything always runs at 60 Mhz. We want to
-    -- make sure however, that the clock enable is always exactly in
-    -- the middle between two virtual 12Mhz rising edges.
-    -- We monitor rxdp and rxdn for any changes and do the appropiate
-    -- adjustments.
+  ticker: nsl_clocking.tick.tick_extractor_self_clocking
+    generic map(
+      period_max_c => (ref_clock_mhz_c+11) / 12,
+      run_length_max_c => 5,
+      tick_learn_c => 8
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-    lock_en <= rx_en; -- Allow clock adjustments only when we are receiving
-
-    p_rxd_r: process (clock_i)
-    begin
-      if rising_edge(clock_i) then
-        rxd_r   <= rxd_s;
-      end if;
-    end process;
-
-    change  <= rxd_r xor rxd_s; -- Edge detector
-
-    p_dpll_cntr: process (clock_i, reset_n_i)
-    begin
-      if reset_n_i ='0' then
-        dpll_cntr <= "0011";
-      elsif rising_edge(clock_i) then
-        if lock_en = '1' and change = '1' then
-          if dpll_cntr(3)='1' then
-            dpll_cntr <= "0010";       -- fe_ce detected, now centered in following cycle
-          else
-            dpll_cntr <= "0111";       -- adjust fe_ce to center cycle
-          end if;
-        elsif dpll_cntr(3) = '1' then  -- normal count sequence is 8->4->5->6->7->8->4...
-          dpll_cntr <= "0100";
-        else
-          dpll_cntr <= dpll_cntr +1;
-        end if;
-      end if;
-    end process;
-
-    fs_ce <= dpll_cntr(3);
-  end generate;
-
-  dpll_48: if ref_clock_mhz_c = 48
-  generate
-    signal dpll_state, dpll_next_state        : std_ulogic_vector(1 downto 0);
-    signal fs_ce_d                            : std_ulogic;
-    signal fs_ce_r1, fs_ce_r2                 : std_ulogic;
-  begin
-    -- This design uses a clock enable to do 12Mhz timing and not a
-    -- real 12Mhz clock. Everything always runs at 48Mhz. We want to
-    -- make sure however, that the clock enable is always exactly in
-    -- the middle between two virtual 12Mhz rising edges.
-    -- We monitor rxdp and rxdn for any changes and do the appropiate
-    -- adjustments.
-    -- In addition to the locking done in the dpll FSM, we adjust the
-    -- final latch enable to compensate for various sync registers ...
-
-    lock_en <= rx_en; -- Allow clock adjustments only when we are receiving
-
-    p_rxd_r: process (clock_i)
-    begin
-      if rising_edge(clock_i) then
-        rxd_r   <= rxd_s;
-      end if;
-    end process;
-
-    change  <= rxd_r xor rxd_s; -- Edge detector
-
-    -- DPLL FSM
-    p_dpll_state: process (clock_i, reset_n_i)
-    begin
-      if reset_n_i ='0' then
-        dpll_state <= "01";
-      elsif rising_edge(clock_i) then
-        dpll_state <= dpll_next_state;
-      end if;
-    end process;
-
-    p_dpll_next_state: process (dpll_state, lock_en, change)
-    begin
-      case (dpll_state) is
-        when "00" =>
-          if ((lock_en = '1') and (change = '1')) then
-            dpll_next_state <= "00";
-          else
-            dpll_next_state <= "01";
-          end if;
-        when "01" =>
-          if ((lock_en = '1') and (change = '1')) then
-            dpll_next_state <= "11";
-          else
-            dpll_next_state <= "10";
-          end if;
-        when "10" =>
-          if ((lock_en = '1') and (change = '1')) then
-            dpll_next_state <= "00";
-          else
-            dpll_next_state <= "11";
-          end if;
-        when OTHERS =>
-          dpll_next_state <= "00";
-      end case;
-    end process;
-
-    fs_ce_d <= '1' when dpll_state = "01" else '0';
-
-    -- Compensate for sync registers at the input - allign full speed ...
-    -- ... clock enable to be in the middle between two bit changes :
-
-    p_fs_ce: process (clock_i)
-    begin
-      if rising_edge(clock_i) then
-        fs_ce_r1  <= fs_ce_d;
-        fs_ce_r2  <= fs_ce_r1;
-        fs_ce <= fs_ce_r2;
-      end if;
-    end process;
-
-  end generate;
-
-  dpll_other: if ref_clock_mhz_c /= 60 and ref_clock_mhz_c /= 48
-  generate
-    assert false
-      report "Unimplemented clock rate"
-      severity failure;
-  end generate;
+      enable_i => rx_en,
+      signal_i => rxd_r,
+      tick_180_o => fs_ce
+      );
  
   --====================================================================================--
   -- Find Sync Pattern FSM                                                              --
