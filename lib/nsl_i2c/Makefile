@@ -7,3 +7,4 @@ packages += pca9555
 packages += pca9534a
 packages += pcal6524
 packages += pct2075
+packages += mcp4726
