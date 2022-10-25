@@ -206,7 +206,13 @@ begin
 
       when ST_TOKEN_ROUTE =>
         rin.handshake <= HANDSHAKE_SILENT;
-        if r.token(6 downto 0) /= dev_addr_i then
+        if r.pid = PID_SOF then
+          rin.frame_number <= r.token;
+          if not hs_supported_c or r.token /= r.frame_number then
+            rin.frame <= '1';
+          end if;
+          rin.state <= ST_TOKEN_WAIT_PID;
+        elsif r.token(6 downto 0) /= dev_addr_i then
           rin.state <= ST_TOKEN_WAIT_PID;
         else
           case r.pid is
@@ -227,12 +233,7 @@ begin
             when PID_OUT =>
               rin.state <= ST_OUT_DATA_WAIT_PID;
               rin.wait_timeout <= host_wait_timeout_c;
-
-            when PID_SOF =>
-              rin.frame_number <= r.token;
-              rin.frame <= '1';
-              rin.state <= ST_TOKEN_WAIT_PID;
-              
+             
             when others =>
               null;
           end case;
