@@ -99,6 +99,7 @@ package func is
 
       frame_number_o : out frame_no_t;
       frame_o        : out std_ulogic;
+      microframe_o   : out std_ulogic;
 
       transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
       transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;

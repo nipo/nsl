@@ -436,6 +436,7 @@ package sie is
 
       frame_number_o : out frame_no_t;
       frame_o        : out std_ulogic;
+      microframe_o   : out std_ulogic;
 
       hs_i        : in  std_ulogic;
       dev_addr_i  : in  device_address_t;

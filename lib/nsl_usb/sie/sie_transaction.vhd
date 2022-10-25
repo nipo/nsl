@@ -20,6 +20,7 @@ entity sie_transaction is
 
     frame_number_o : out frame_no_t;
     frame_o        : out std_ulogic;
+    microframe_o   : out std_ulogic;
 
     hs_i        : in  std_ulogic;
     dev_addr_i  : in  device_address_t;
@@ -111,6 +112,7 @@ architecture beh of sie_transaction is
 
     frame_number : frame_no_t;
     frame : std_ulogic;
+    microframe : std_ulogic;
 
     handshake : handshake_t;
     
@@ -152,6 +154,7 @@ begin
 
     rin.hs <= hs_i;
     rin.frame <= '0';
+    rin.microframe <= '0';
 
     if r.wait_timeout /= 0 then
       rin.wait_timeout <= r.wait_timeout - 1;
@@ -211,6 +214,7 @@ begin
           if not hs_supported_c or r.token /= r.frame_number then
             rin.frame <= '1';
           end if;
+          rin.microframe <= '1';
           rin.state <= ST_TOKEN_WAIT_PID;
         elsif r.token(6 downto 0) /= dev_addr_i then
           rin.state <= ST_TOKEN_WAIT_PID;
@@ -680,5 +684,6 @@ begin
 
   frame_number_o <= r.frame_number;
   frame_o <= r.frame;
+  microframe_o <= r.microframe;
 
 end architecture beh;

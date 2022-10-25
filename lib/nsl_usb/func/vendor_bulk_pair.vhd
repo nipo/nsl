@@ -46,6 +46,7 @@ entity vendor_bulk_pair is
 
     frame_number_o : out frame_no_t;
     frame_o        : out std_ulogic;
+    microframe_o        : out std_ulogic;
 
     transaction_cmd_tap_o : out transaction_cmd;
     transaction_rsp_tap_o : out transaction_rsp;
@@ -154,6 +155,7 @@ begin
 
       frame_number_o => frame_number_o,
       frame_o => frame_o,
+      microframe_o => microframe_o,
       
       transaction_cmd_tap_o => transaction_cmd_tap_o,
       transaction_rsp_tap_o => transaction_rsp_tap_o,
