@@ -97,15 +97,15 @@ package fixed is
   function to_string(value: sfixed) return string;
   function to_string(value: ufixed) return string;
   
+  constant nauf: ufixed(0 downto 1) := (others => '0');
+  constant nasf: sfixed(0 downto 1) := (others => '0');
+
 end package;
 
 package body fixed is
 
   use nsl_data.text.all;
   
-  constant nauf: ufixed(0 downto 1) := (others => '0');
-  constant nasf: sfixed(0 downto 1) := (others => '0');
-
   function to_suv(value : ufixed) return std_ulogic_vector
   is
     alias v : ufixed(value'length-1 downto 0) is value;
