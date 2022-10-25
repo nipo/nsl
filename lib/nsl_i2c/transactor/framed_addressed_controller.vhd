@@ -5,10 +5,11 @@ use ieee.numeric_std.all;
 library nsl_bnoc, nsl_i2c, nsl_data, nsl_math;
 use nsl_i2c.transactor.all;
 use nsl_data.endian.all;
+use nsl_data.bytestream.all;
 
 entity framed_addressed_controller is
   generic(
-    addr_byte_count_c : positive;
+    addr_byte_count_c : natural;
     big_endian_c : boolean;
     txn_byte_count_max_c : positive
     );
@@ -24,7 +25,7 @@ entity framed_addressed_controller is
     valid_i : in std_ulogic;
     ready_o : out std_ulogic;
     saddr_i : in unsigned(7 downto 1);
-    addr_i : in unsigned(8 * addr_byte_count_c - 1 downto 0);
+    addr_i : in unsigned(8 * addr_byte_count_c - 1 downto 0) := (others => '0');
     write_i : in std_ulogic;
     wdata_i : in nsl_data.bytestream.byte_string(0 to txn_byte_count_max_c-1);
     data_byte_count_i : natural range 1 to txn_byte_count_max_c;
@@ -131,26 +132,35 @@ begin
 
       when CMD_START =>
         if cmd_i.ready = '1' then
-          rin.cmd <= CMD_WRITE_CMD;
+          if addr_byte_count_c /= 0 or r.write then
+            rin.cmd <= CMD_WRITE_CMD;
+          else
+            rin.cmd <= CMD_READ_CMD;
+          end if;
         end if;
 
       when CMD_WRITE_CMD =>
         if cmd_i.ready = '1' then
           rin.cmd <= CMD_SADDR_PUT;
-          rin.cmd_byte_count <= addr_byte_count_c - 1;
+          if addr_byte_count_c /= 0 then
+            rin.cmd_byte_count <= addr_byte_count_c - 1;
+          end if;
         end if;
 
       when CMD_SADDR_PUT =>
         if cmd_i.ready = '1' then
-          rin.cmd_byte_count <= addr_byte_count_c - 1;
-          rin.cmd <= CMD_ADDR_PUT;
+          if addr_byte_count_c /= 0 then
+            rin.cmd_byte_count <= addr_byte_count_c - 1;
+            rin.cmd <= CMD_ADDR_PUT;
+          else
+            rin.cmd <= CMD_DATA_PUT;
+          end if;
         end if;
 
       when CMD_ADDR_PUT =>
         if cmd_i.ready = '1' then
-          rin.addr(0 to r.addr'right-1) <= r.addr(1 to r.addr'right);
-          rin.addr(r.addr'right) <= "--------";
           if r.cmd_byte_count /= 0 then
+            rin.addr <= shift_left(r.addr);
             rin.cmd_byte_count <= r.cmd_byte_count - 1;
           elsif r.write then
             rin.cmd <= CMD_DATA_PUT;
@@ -162,8 +172,7 @@ begin
 
       when CMD_DATA_PUT =>
         if cmd_i.ready = '1' then
-          rin.data(0 to r.data'right-1) <= r.data(1 to r.data'right);
-          rin.data(r.data'right) <= "--------";
+          rin.data <= shift_left(r.data);
           if r.cmd_byte_count /= 0 then
             rin.cmd_byte_count <= r.cmd_byte_count - 1;
           else
@@ -219,7 +228,11 @@ begin
 
       when RSP_START =>
         if rsp_i.valid = '1' then
-          rin.rsp <= RSP_SADDR_ACK;
+          if addr_byte_count_c /= 0 or r.write then
+            rin.rsp <= RSP_SADDR_ACK;
+          else
+            rin.rsp <= RSP_SADDR_ACK2;
+          end if;
           if rsp_i.last = '1' then
             rin.error <= true;
             rin.rsp <= RSP_IDLE;
@@ -228,9 +241,14 @@ begin
 
       when RSP_SADDR_ACK =>
         if rsp_i.valid = '1' then
-          rin.rsp <= RSP_ADDR_ACK;
           rin.error <= r.error or (rsp_i.data(0) /= '1');
-          rin.rsp_byte_count <= addr_byte_count_c - 1;
+          if addr_byte_count_c /= 0 then
+            rin.rsp_byte_count <= addr_byte_count_c - 1;
+            rin.rsp <= RSP_ADDR_ACK;
+          else
+            rin.rsp <= RSP_DATA_ACK;
+            rin.rsp_byte_count <= r.data_byte_count - 1;
+          end if;
           if rsp_i.last = '1' then
             rin.error <= true;
             rin.rsp <= RSP_IDLE;
@@ -359,12 +377,12 @@ begin
       when CMD_ADDR_PUT =>
         cmd_o.valid <= '1';
         cmd_o.last <= '0';
-        cmd_o.data <= r.addr(0);
+        cmd_o.data <= first_left(r.addr);
 
       when CMD_DATA_PUT =>
         cmd_o.valid <= '1';
         cmd_o.last <= '0';
-        cmd_o.data <= r.data(0);
+        cmd_o.data <= first_left(r.data);
 
       when CMD_WRITE_CMD2 =>
         cmd_o.valid <= '1';

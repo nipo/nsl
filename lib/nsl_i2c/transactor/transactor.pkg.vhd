@@ -45,7 +45,7 @@ package transactor is
 
   component framed_addressed_controller
     generic(
-      addr_byte_count_c : positive;
+      addr_byte_count_c : natural;
       big_endian_c : boolean;
       txn_byte_count_max_c : positive
       );
@@ -61,7 +61,7 @@ package transactor is
       valid_i : in std_ulogic;
       ready_o : out std_ulogic;
       saddr_i : in unsigned(7 downto 1);
-      addr_i : in unsigned(8 * addr_byte_count_c - 1 downto 0);
+      addr_i : in unsigned(8 * addr_byte_count_c - 1 downto 0) := (others => '0');
       write_i : in std_ulogic;
       wdata_i : in nsl_data.bytestream.byte_string(0 to txn_byte_count_max_c-1);
       data_byte_count_i : in natural range 1 to txn_byte_count_max_c;
