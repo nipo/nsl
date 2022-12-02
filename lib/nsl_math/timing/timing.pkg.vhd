@@ -5,6 +5,7 @@ use ieee.math_real.all;
 package timing is
 
   function to_seconds(t : time) return real;
+  function seconds_to_time(s : real) return time;
   function to_cycles(seconds: real; clock_rate: real; min_cycles : natural := 1) return natural;
   function to_cycles(t : time; clock_rate: real; min_cycles : natural := 1) return natural;
   function to_cycles(seconds: real; clock_rate: natural; min_cycles : natural := 1) return natural;
@@ -13,6 +14,24 @@ package timing is
 end package timing;
 
 package body timing is
+
+  function seconds_to_time(s : real) return time
+  is
+  begin
+    if s >= 1.0e6 then
+      return integer(s) * 1 sec;
+    elsif s >= 1.0e3 then
+      return integer(s * 1.0e3) * 1 ms;
+    elsif s >= 1.0 then
+      return integer(s * 1.0e6) * 1 us;
+    elsif s >= 1.0e-3 then
+      return integer(s * 1.0e9) * 1 ns;
+    elsif s >= 1.0e-6 then
+      return integer(s * 1.0e12) * 1 ps;
+    else
+      return integer(s * 1.0e15) * 1 fs;
+    end if;
+  end function;
 
   function to_seconds(t : time) return real
   is
