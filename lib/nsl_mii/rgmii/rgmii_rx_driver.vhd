@@ -19,7 +19,7 @@ entity rgmii_rx_driver is
     rx_clock_o : out std_ulogic;
     sfd_o : out std_ulogic;
 
-    mode_i : in link_speed_t;
+    speed_i : in link_speed_t;
     rgmii_i : in  work.rgmii.rgmii_io_group_t;
 
     flit_o : out rgmii_sdr_io_t;
@@ -41,7 +41,7 @@ architecture beh of rgmii_rx_driver is
   signal rgmii_ddr_s: rgmii_io_group_t;
   signal rgmii_clock_s, reset_n_s : std_ulogic;
   signal resync_free_s: integer range 0 to resync_depth_c;
-  signal mode_s : std_ulogic_vector(1 downto 0);
+  signal speed_s : std_ulogic_vector(1 downto 0);
 
   type state_t is (
     ST_UNSYNC,
@@ -54,7 +54,7 @@ architecture beh of rgmii_rx_driver is
   type regs_t is
   record
     pipe: rgmii_in_pipe_t(0 to 3);
-    mode: link_speed_t;
+    speed: link_speed_t;
     reset_n: std_ulogic;
 
     is_second, is_sfd: boolean;
@@ -66,6 +66,7 @@ architecture beh of rgmii_rx_driver is
     resync_pressure: boolean;
   end record;
 
+  signal speed_async_s: std_ulogic_vector(1 downto 0);
   signal r, rin: regs_t;
   
 begin
@@ -77,14 +78,16 @@ begin
       data_o => reset_n_s
       );
 
-  mode_resync: nsl_clocking.interdomain.interdomain_static_reg
+  speed_async_s <= to_logic(speed_i);
+  
+  speed_resync: nsl_clocking.interdomain.interdomain_static_reg
     generic map(
       data_width_c => 2
       )
     port map(
       input_clock_i => clock_i,
-      data_i => to_logic(mode_i),
-      data_o => mode_s
+      data_i => speed_async_s,
+      data_o => speed_s
       );
   
   regs: process(rgmii_clock_s, reset_n_s) is
@@ -101,7 +104,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, rgmii_sdr_s, mode_s, resync_free_s) is
+  transition: process(r, rgmii_sdr_s, speed_s, resync_free_s) is
   begin
     rin <= r;
 
@@ -113,15 +116,15 @@ begin
       rin.resync_pressure <= true;
     end if;
 
-    rin.mode <= to_mode(mode_s);
-    if r.mode /= to_mode(mode_s) then
+    rin.speed <= to_speed(speed_s);
+    if r.speed /= to_speed(speed_s) then
       rin.reset_n <= '0';
       rin.state <= ST_UNSYNC;
       rin.is_second <= false;
       rin.resync_pressure <= false;
     end if;
 
-    case r.mode is
+    case r.speed is
       when LINK_SPEED_1000 =>
         -- All cycles are valid
         rin.flit_valid <= '1';
@@ -197,7 +200,7 @@ begin
 
           when ST_PREAMBLE_FOUND =>
             -- On some phys (Like VSC8531), there may be an odd number
-            -- of preamble nibbles in RGMII 10/100 mode. Realign here.
+            -- of preamble nibbles in RGMII 10/100 speed. Realign here.
             if r.pipe(0).ctl = '1' and r.pipe(2).ctl = '1' and
               r.pipe(0).data = x"5" and r.pipe(2).data = x"d" then
               rin.state <= ST_FRAME;
