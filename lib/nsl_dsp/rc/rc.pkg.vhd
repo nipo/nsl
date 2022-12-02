@@ -30,6 +30,22 @@ package rc is
       );
   end component;    
 
+  component rc_sfixed is
+    generic(
+      -- Time constant, in cycles.
+      -- Smoothing factor will be 1/(tau_c+1).
+      tau_c : natural
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      valid_i : in std_ulogic := '1';
+      in_i : in sfixed;
+      out_o : out sfixed
+      );
+  end component;    
+  
   -- Calculate tau_c constant suitable for rc_ufixed in
   -- accordance to cutoff frequency and instance running frequency.
   --

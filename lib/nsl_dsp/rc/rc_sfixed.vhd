@@ -27,7 +27,7 @@ use nsl_math.fixed.all;
 --
 -- Which only coses two adders
 
-entity rc_ufixed is
+entity rc_sfixed is
   generic(
     -- Time constant, in cycles
     tau_c : natural
@@ -37,19 +37,18 @@ entity rc_ufixed is
     reset_n_i : in std_ulogic;
 
     valid_i : in std_ulogic := '1';
-    in_i : in ufixed;
-    out_o : out ufixed
+    in_i : in sfixed;
+    out_o : out sfixed
     );
 end entity;
 
-architecture beh of rc_ufixed is
+architecture beh of rc_sfixed is
 
   constant tau_w : integer := nsl_math.arith.log2(tau_c);
   constant can_shift : boolean := tau_c = ((2 ** tau_w) - 1);
   constant wl: integer := nsl_math.arith.max(in_i'left, out_o'left);
   constant wr: integer := nsl_math.arith.min(in_i'right, out_o'right);
   subtype acc_t is sfixed(wl+1 downto wr - tau_w);
-  subtype uacc_t is ufixed(wl downto wr);
 
   type regs_t is
   record
@@ -87,7 +86,7 @@ begin
   begin
     rin <= r;
 
-    to_add := (others => '0');
+    to_add := (others => in_i(in_i'left));
     to_add(in_i'left - tau_w downto in_i'right-tau_w) := sfixed(in_i);
 
     if can_shift then
@@ -101,15 +100,6 @@ begin
     end if;
   end process;
 
-  moore: process(r) is
-    variable res: uacc_t;
-  begin
-    if r.acc(r.acc'left) = '1' then
-      out_o <= (others => '0');
-    else
-      res := ufixed(r.acc(uacc_t'range));
-      out_o <= resize_saturate(res, out_o'left, out_o'right);
-    end if;
-  end process;
+  out_o <= resize_saturate(r.acc, out_o'left, out_o'right);
 
 end architecture;
