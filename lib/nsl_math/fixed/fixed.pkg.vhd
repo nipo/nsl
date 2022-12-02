@@ -31,13 +31,37 @@ package fixed is
   type sfixed is array(integer range <>) of fixed_bit;
   type ufixed is array(integer range <>) of fixed_bit;
 
+  function to_x01(value : ufixed) return ufixed;
+  function to_x01(value : sfixed) return sfixed;
+  function to_01(value : ufixed) return ufixed;
+  function to_01(value : sfixed) return sfixed;
   function to_suv(value : ufixed) return std_ulogic_vector;
   function to_slv(value : ufixed) return std_logic_vector;
   function to_unsigned(value : ufixed) return unsigned;
   function to_unsigned(value : sfixed) return unsigned;
+  function to_signed(value : sfixed) return signed;
+  function sign(value : sfixed) return std_ulogic;
 
   function to_ufixed(value : real;
                      constant left, right : integer) return ufixed;
+  function to_ufixed_auto(value : real;
+                          constant length : integer) return ufixed;
+  function to_sfixed_auto(value : real;
+                          constant length : integer) return sfixed;
+  function ufixed_left(value : real;
+                          constant length : integer) return integer;
+  function ufixed_right(value : real;
+                           constant length : integer) return integer;
+  function sfixed_left(value : real;
+                          constant length : integer) return integer;
+  function sfixed_right(value : real;
+                           constant length : integer) return integer;
+
+  function to_ufixed_saturate(s: sfixed;
+                              constant left, right : integer) return ufixed;
+  function to_sfixed(u: ufixed) return sfixed;
+  function to_sfixed_scaled(u: ufixed) return sfixed;
+  function to_ufixed_scaled(s: sfixed) return ufixed;
 
   function to_real(value : ufixed) return real;
 
@@ -54,6 +78,7 @@ package fixed is
   function mul(a, b: sfixed;
                constant left, right : integer) return sfixed;
   function "-"(a, b: ufixed) return ufixed;
+  function sub_saturate(a, b: ufixed) return sfixed;
   function "-"(a: ufixed) return ufixed;
   function "not"(a: ufixed) return ufixed;
   function shr(a: ufixed; l : natural) return ufixed;
@@ -83,8 +108,13 @@ package fixed is
 
   function "abs"(a: sfixed) return ufixed;
   function "+"(a, b: sfixed) return sfixed;
+  function add_saturate(a, b: sfixed) return sfixed;
+  -- Add with one extra bit on the output to avoid overflows
+  function add_extend(a, b: sfixed) return sfixed;
   function "-"(a, b: sfixed) return sfixed;
+  function sub_extend(a, b: sfixed) return sfixed;
   function "-"(a: sfixed) return sfixed;
+  function neg_extend(a: sfixed) return sfixed;
   function "not"(a: sfixed) return sfixed;
 
   function "="(a, b: sfixed) return boolean;
@@ -93,6 +123,13 @@ package fixed is
   function "<"(a, b: sfixed) return boolean;
   function ">="(a, b: sfixed) return boolean;
   function "<="(a, b: sfixed) return boolean;
+
+  function "="(a: sfixed; b: real) return boolean;
+  function "/="(a: sfixed; b: real) return boolean;
+  function ">"(a: sfixed; b: real) return boolean;
+  function "<"(a: sfixed; b: real) return boolean;
+  function ">="(a: sfixed; b: real) return boolean;
+  function "<="(a: sfixed; b: real) return boolean;
 
   function to_string(value: sfixed) return string;
   function to_string(value: ufixed) return string;
@@ -105,29 +142,138 @@ end package;
 package body fixed is
 
   use nsl_data.text.all;
+
+  function sign(value : sfixed) return std_ulogic
+  is
+  begin
+    if value'length > 0 then
+      return value(value'left);
+    end if;
+    return '0';
+  end function;
+
+  function ufixed_left(value : real;
+                          constant length : integer) return integer
+  is
+  begin
+    if value <= 0.0 then
+      return 0;
+    else
+      return integer(floor(log2(value)));
+    end if;
+  end function;
+
+  function ufixed_right(value : real;
+                           constant length : integer) return integer
+  is
+  begin
+    return ufixed_left(value, length) - length + 1;
+  end function;
+
+  function sfixed_left(value : real;
+                          constant length : integer) return integer
+  is
+  begin
+    if value = 0.0 then
+      return 1;
+    elsif value < -0.0 then
+      return integer(floor(log2(-value))) + 1;
+    else
+      return integer(floor(log2(value))) + 1;
+    end if;
+  end function;
+
+  function sfixed_right(value : real;
+                        constant length : integer) return integer
+  is
+  begin
+    return sfixed_left(value, length) - length + 1;
+  end function;
+
+  function to_ufixed_auto(value : real;
+                          constant length : integer) return ufixed
+  is
+    constant ret: ufixed(ufixed_left(value, length) downto ufixed_right(value, length))
+      := to_ufixed(value, ufixed_left(value, length), ufixed_right(value, length));
+  begin
+    return ret;
+  end function;
   
+  function to_sfixed_auto(value : real;
+                          constant length : integer) return sfixed
+  is
+    constant ret: sfixed(sfixed_left(value, length) downto sfixed_right(value, length))
+      := to_sfixed(value, sfixed_left(value, length), sfixed_right(value, length));
+  begin
+    return ret;
+  end function;
+
+  function to_x01(value : ufixed) return ufixed
+  is
+    constant ret: ufixed(value'left downto value'right) := ufixed(to_x01(to_suv(value)));
+  begin
+    return ret;
+  end function;
+
+  function to_x01(value : sfixed) return sfixed
+  is
+    constant ret: sfixed(value'left downto value'right) := sfixed(to_x01(to_suv(value)));
+  begin
+    return ret;
+  end function;
+
+  function to_01(value : ufixed) return ufixed
+  is
+    variable ret: ufixed(value'left downto value'right);
+  begin
+    for i in value'range
+    loop
+      if value(i) = '1' then
+        ret(i) := '1';
+      else
+        ret(i) := '0';
+      end if;
+    end loop;
+
+    return ret;
+  end function;
+
+  function to_01(value : sfixed) return sfixed
+  is
+    variable ret: sfixed(value'left downto value'right);
+  begin
+    for i in value'range
+    loop
+      if value(i) = '1' then
+        ret(i) := '1';
+      else
+        ret(i) := '0';
+      end if;
+    end loop;
+
+    return ret;
+  end function;
+
   function to_suv(value : ufixed) return std_ulogic_vector
   is
-    alias v : ufixed(value'length-1 downto 0) is value;
-    variable ret : std_ulogic_vector(value'length-1 downto 0);
+    constant v : ufixed(value'length downto 1) := value;
+    constant vu : std_ulogic_vector(value'length downto 1) := std_ulogic_vector(v);
   begin
-    if value'length <= 0 then
+    if v'length <= 0 then
       return "";
     end if;
-    ret := std_ulogic_vector(v);
-    return ret;
+    return vu;
   end function;
 
   function to_slv(value : ufixed) return std_logic_vector
   is
-    alias v : ufixed(value'length-1 downto 0) is value;
-    variable ret : std_logic_vector(value'length-1 downto 0);
+    constant v : ufixed(value'length downto 1) := value;
+    constant vl : std_logic_vector(value'length downto 1) := std_logic_vector(v);
   begin
-    if value'length <= 0 then
+    if v'length <= 0 then
       return "";
     end if;
-    ret := std_logic_vector(v);
-    return ret;
+    return vl;
   end function;
 
   function to_unsigned(value : ufixed) return unsigned
@@ -142,6 +288,12 @@ package body fixed is
     return unsigned(to_suv(value));
   end function;
 
+  function to_signed(value : sfixed) return signed
+  is
+  begin
+    return signed(to_suv(value));
+  end function;
+
   function to_ufixed(value : real;
                      constant left, right : integer) return ufixed
   is
@@ -154,7 +306,7 @@ package body fixed is
     elsif value >= 2.0 ** (left+1) - 2.0 ** right then
       return sat_max;
     else
-      ret := ufixed(to_unsigned(integer(0.5 + (value * 2.0 ** (-right))), left - right + 1));
+      ret := ufixed(to_unsigned(integer(round(value * 2.0 ** (-right))), left - right + 1));
       return ret;
     end if;
   end function;
@@ -163,6 +315,10 @@ package body fixed is
   is
     alias xv : ufixed(value'length-1 downto 0) is value;
   begin
+    if value'length <= 0 then
+      return 0.0;
+    end if;
+
     return real(to_integer(unsigned(xv))) * 2.0 ** real(value'right);
   end function;
 
@@ -231,7 +387,7 @@ package body fixed is
     variable ret : sfixed(a'range);
     constant w : integer := a'length - l;
   begin
-    if a(a'left) = '1' then
+    if sign(a) = '1' then
       ret := (others => '1');
     else
       ret := (others => '0');
@@ -265,12 +421,16 @@ package body fixed is
     variable ru : unsigned(a'length+b'length-1 downto 0);
     variable rf : ufixed(a'right+b'right+ru'length-1 downto a'right+b'right);
   begin
+    if a'length <= 0 or b'length <= 0 then
+      return (left downto right => '0');
+    end if;
+    
     au := unsigned(to_suv(a));
     bu := unsigned(to_suv(b));
     ru := au * bu;
     rf := ufixed(ru);
 
-    return resize(rf, left, right);
+    return resize_saturate(rf, left, right);
   end function;
 
   function mul(a: sfixed; b: ufixed;
@@ -278,6 +438,10 @@ package body fixed is
   is
     constant bs : sfixed(b'left+1 downto b'right) := sfixed("0" & b);
   begin
+    if a'length <= 0 or b'length <= 0 then
+      return (left downto right => '0');
+    end if;
+    
     return mul(a, bs, left, right);
   end function;
 
@@ -289,12 +453,16 @@ package body fixed is
     variable rs : signed(a'length+b'length-1 downto 0);
     variable rf : sfixed(a'right+b'right+rs'length-1 downto a'right+b'right);
   begin
-    as := signed(to_suv(a));
-    bs := signed(to_suv(b));
+    if a'length <= 0 or b'length <= 0 then
+      return (left downto right => '0');
+    end if;
+    
+    as := to_signed(a);
+    bs := to_signed(b);
     rs := as * bs;
     rf := sfixed(rs);
     
-    return resize(rf, left, right);
+    return resize_saturate(rf, left, right);
   end function;
 
   function "-"(a, b: ufixed) return ufixed
@@ -311,17 +479,33 @@ package body fixed is
     return ret;
   end function;
 
+  function sub_saturate(a, b: ufixed) return sfixed
+  is
+    variable ret: sfixed(a'left+1 downto a'right);
+    variable xa: ufixed(a'left+1 downto a'right) := "0" & a;
+    variable xb: ufixed(b'left+1 downto b'right) := "0" & b;
+  begin
+    ret := sfixed(xa - xb);
+    return ret;
+  end function;
+
   function to_suv(value : sfixed) return std_ulogic_vector
   is
-    constant v : sfixed(value'length-1 downto 0) := value;
+    constant v : sfixed(value'left-value'right+1 downto 1) := value;
   begin
+    if v'length <= 0 then
+      return "";
+    end if;
     return std_ulogic_vector(v);
   end function;
 
   function to_slv(value : sfixed) return std_logic_vector
   is
-    constant v : sfixed(value'length-1 downto 0) := value;
+    constant v : sfixed(value'left-value'right+1 downto 1) := value;
   begin
+    if v'length <= 0 then
+      return "";
+    end if;
     return std_logic_vector(v);
   end function;
 
@@ -331,10 +515,10 @@ package body fixed is
   is
     variable ret : sfixed(left downto right);
   begin
-    if value <= -2.0**(left-1) then
+    if value <= -2.0**left then
       ret := (others => '0');
       ret(ret'left) := '0';
-    elsif value > 2.0**(left-1) then
+    elsif value > 2.0**left then
       ret := (others => '1');
     else
       ret := sfixed(to_signed(integer(value * 2.0 ** (-right)), left - right + 1));
@@ -344,10 +528,12 @@ package body fixed is
 
   function to_real(value : sfixed) return real
   is
-    constant v : sfixed(value'length-1 downto 0) := value;
-    constant sv : signed(value'length-1 downto 0) := signed(v);
   begin
-    return real(to_integer(sv)) * 2.0 ** value'right;
+    if value'length <= 0 then
+      return 0.0;
+    end if;
+    
+    return real(to_integer(to_signed(value))) * 2.0 ** value'right;
   end function;
 
   function resize(value : sfixed;
@@ -357,11 +543,16 @@ package body fixed is
     constant overlap_left : integer := nsl_math.arith.min(value'left, left);
     constant overlap_right : integer := nsl_math.arith.max(value'right, right);
   begin
-    ret := (others => '0');
+    ret := (others => sign(value));
 
-    ret(overlap_left-1 downto overlap_right) := value(overlap_left-1 downto overlap_right);
-    ret(ret'left downto overlap_left) := (others => value(value'left));
-    ret(overlap_right-1 downto ret'right) := (others => value(value'right));
+    if overlap_left < overlap_right then
+      return ret;
+    end if;
+
+    if value'length > 0 and ret'length > 0 then
+      ret(overlap_left-1 downto overlap_right) := value(overlap_left-1 downto overlap_right);
+      ret(overlap_right-1 downto ret'right) := (others => value(value'right));
+    end if;
 
     return ret;
   end function;
@@ -370,23 +561,22 @@ package body fixed is
                            constant left, right : integer) return sfixed
   is
     variable ret : sfixed(left downto right);
-    variable vu : unsigned(value'length-1 downto 0);
-    variable lost : unsigned(value'left-left-1 downto 0);
-    variable s : std_ulogic;
+    constant s : std_ulogic := sign(value);
   begin
-    s := value(value'left);
-    vu := unsigned(to_slv(value));
-    lost := vu(vu'left-1 downto vu'left-lost'length);
-
     ret := resize(value, left, right);
 
-    if not (lost'length > 0) then
+    if left >= value'left or ret'length <= 1 then
       return ret;
     end if;
 
-    if lost /= (lost'range => s) then
-      ret := (others => not s);
-      ret(ret'left) := s;
+    if value'left-1 - left + 1 > 0 and value'right < left then
+--      report integer'image(value'left) & ":" & integer'image(value'right)
+--        & ":" & integer'image(left)  & ":" & integer'image(right)
+--        severity note;
+      if value(value'left-1 downto left) /= (value'left-1 downto left => s) then
+        ret := (others => not s);
+        ret(ret'left) := s;
+      end if;
     end if;
 
     return ret;
@@ -397,13 +587,27 @@ package body fixed is
     variable ret : sfixed(a'range);
   begin
     if a'left /= b'left or a'right /= b'right then
-      report "Both ufixed arguments are not the same range, returning null vector"
+      report "Both arguments are not the same range, returning null vector"
         severity warning;
       return nasf;
     end if;
 
     ret := sfixed(signed(to_suv(a)) + signed(to_suv(b)));
     return ret;
+  end function;
+
+  function add_extend(a, b: sfixed) return sfixed
+  is
+    variable xa: sfixed(a'left+1 downto a'right) := sign(a) & a;
+    variable xb: sfixed(b'left+1 downto b'right) := sign(b) & b;
+  begin
+    return xa + xb;
+  end function;
+
+  function add_saturate(a, b: sfixed) return sfixed
+  is
+  begin
+    return resize_saturate(add_extend(a, b), a'left, a'right);
   end function;
 
   function "-"(a, b: sfixed) return sfixed
@@ -416,15 +620,23 @@ package body fixed is
       return nasf;
     end if;
 
-    ret := sfixed(signed(to_suv(a)) - signed(to_suv(b)));
+    ret := sfixed(to_signed(a) - to_signed(b));
     return ret;
+  end function;
+
+  function sub_extend(a, b: sfixed) return sfixed
+  is
+    variable xa: sfixed(a'left+1 downto a'right) := sign(a) & a;
+    variable xb: sfixed(b'left+1 downto b'right) := sign(b) & b;
+  begin
+    return xa - xb;
   end function;
 
   function "abs"(a: sfixed) return ufixed
   is
     variable ret : sfixed(a'left+1 downto a'right);
   begin
-    if a(a'left) = '1' then
+    if sign(a) = '1' then
       ret := -a;
     else
       ret := "0" & a;
@@ -449,6 +661,17 @@ package body fixed is
     lsb := (others => '0');
     lsb(a'right) := '1';
     ret := (not a) + lsb;
+    return ret;
+  end function;
+
+  function neg_extend(a: sfixed) return sfixed
+  is
+    variable aa, ret, lsb : sfixed(a'left+1 downto a'right);
+  begin
+    aa := sign(a) & a;
+    lsb := (others => '0');
+    lsb(lsb'right) := '1';
+    ret := (not aa) + lsb;
     return ret;
   end function;
 
@@ -634,6 +857,84 @@ package body fixed is
     constant frac : string := to_string(to_suv(value(-1 downto value'right)));
   begin
     return int & "." & frac;
+  end function;
+
+  function to_ufixed_saturate(s: sfixed;
+                              constant left, right : integer) return ufixed
+  is
+    variable ret: ufixed(left downto right);
+    constant su: ufixed(s'left-1 downto s'right) := ufixed(s(s'left-1 downto s'right));
+  begin
+    if sign(s) = '1' then
+      ret := (others => '0');
+    else
+      ret := resize_saturate(su, left, right);
+    end if;
+    
+    return ret;
+  end function;
+
+  function to_sfixed(u: ufixed) return sfixed
+  is
+    constant ret: sfixed(u'left+1 downto u'right) := "0" & sfixed(u);
+  begin
+    return ret;
+  end function;
+
+  function to_sfixed_scaled(u: ufixed) return sfixed
+  is
+    constant ret: sfixed(u'left downto u'right) := (not u(u'left)) & sfixed(u(u'left-1 downto u'right));
+  begin
+    return ret;
+  end function;
+
+  function to_ufixed_scaled(s: sfixed) return ufixed
+  is
+    constant ret: ufixed(s'left downto s'right) := (not sign(s)) & ufixed(s(s'left-1 downto s'right));
+  begin
+    return ret;
+  end function;
+
+  function "="(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a = bf;
+  end function;
+
+  function "/="(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a /= bf;
+  end function;
+
+  function ">"(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a > bf;
+  end function;
+
+  function "<"(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a < bf;
+  end function;
+
+  function ">="(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a >= bf;
+  end function;
+
+  function "<="(a: sfixed; b: real) return boolean
+  is
+    constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a <= bf;
   end function;
 
 end package body;
