@@ -21,7 +21,7 @@ architecture beh of tick_generator is
   constant msb: integer := nsl_math.arith.max(period_i'left, 0) + 1;
   constant lsb: integer := nsl_math.arith.min(period_i'right, 0);
   subtype acc_t is ufixed(msb downto lsb);
-  constant unit: acc_t := (0 => '1', others => '0');
+  constant unit: acc_t := to_ufixed(1.0, msb, lsb);
 
   type regs_t is
   record

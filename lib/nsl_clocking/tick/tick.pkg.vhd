@@ -21,6 +21,17 @@ package tick is
       );
   end component;
 
+  component tick_generator_integer is
+    port(
+      clock_i    : in  std_ulogic;
+      reset_n_i  : in  std_ulogic;
+
+      period_m1_i : in unsigned;
+      
+      tick_o   : out std_ulogic
+      );
+  end component;
+
   -- Recovers an UI tick from a self-clocking signal and asserts a
   -- tick phase shifted at 180 deg once block is confident enough
   -- about the stability of the measurement.
@@ -140,4 +151,15 @@ package tick is
       );
   end component;
   
+  component tick_oscillator is
+    port(
+      clock_i : in  std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      -- Half period tick
+      tick_i : in std_ulogic;
+      osc_o : out std_ulogic
+      );
+  end component;
+
 end package tick;
