@@ -1,4 +1,5 @@
 library ieee;
+use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package arith is
@@ -18,9 +19,23 @@ package arith is
   -- Returns x if x is a power of two.
   -- Return 1 if x is 0.
   function align_up(x: natural) return natural;
+
   -- Returns the unsigned constant that has the right size to express
   -- x as unsigned.
-  function to_unsigned_auto(x : natural) return unsigned;
+  function to_unsigned_auto(value : natural) return unsigned;
+  -- Returns the signed constant that has the right size to express
+  -- x as signed.
+  function to_signed_auto(value : integer) return signed;
+
+  -- Returns the unsigned maximum value for a given length.
+  function unsigned_max(length : natural) return unsigned;
+  -- Returns the unsigned minimum (0) for a given length.
+  function unsigned_min(length : natural) return unsigned;
+
+  -- Returns the signed maximum value for a given length.
+  function signed_max(length : natural) return signed;
+  -- Returns the signed minimum value for a given length.
+  function signed_min(length : natural) return signed;
 
 end package arith;
 
@@ -35,13 +50,64 @@ package body arith is
     end if;
   end log2;
 
-  function to_unsigned_auto(x : natural) return unsigned is
-    constant width_c: natural := log2(x+1);
-    variable ret: unsigned(width_c-1 downto 0) := to_unsigned(x, width_c);
+  function to_unsigned_auto(value : natural) return unsigned is
+    constant width_c: natural := log2(value+1);
+    variable ret: unsigned(width_c-1 downto 0) := to_unsigned(value, width_c);
   begin
     return ret;
   end to_unsigned_auto;
-    
+
+  function signed_left(value : integer) return integer
+  is
+  begin
+    if value = 0 then
+      return 0;
+    elsif value < 0 then
+      return log2(-value);
+    else
+      return log2(value+1);
+    end if;
+  end function;
+
+  function to_signed_auto(value : integer) return signed is
+    constant ret: signed(signed_left(value) downto 0)
+      := to_signed(value, signed_left(value)+1);
+  begin
+    return ret;
+  end to_signed_auto;
+
+  function unsigned_max(length : natural) return unsigned
+  is
+    constant ret : unsigned(length-1 downto 0) := (others => '1');
+  begin
+    return ret;
+  end function;
+
+  function unsigned_min(length : natural) return unsigned
+  is
+    constant ret : unsigned(length-1 downto 0) := (others => '0');
+  begin
+    return ret;
+  end function;
+
+  function signed_max(length : natural) return signed
+  is
+    variable ret : signed(length-1 downto 0);
+  begin
+    ret := (others => '1');
+    ret(ret'left) := '0';
+    return ret;
+  end function;
+
+  function signed_min(length : natural) return signed
+  is
+    variable ret : signed(length-1 downto 0);
+  begin
+    ret := (others => '0');
+    ret(ret'left) := '1';
+    return ret;
+  end function;
+
   function max(x, y : integer) return integer is
   begin
     if x < y then
