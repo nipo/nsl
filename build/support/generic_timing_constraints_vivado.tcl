@@ -38,7 +38,7 @@ foreach {dest_clock} [get_clocks -quiet -of_objects $reg_cells] {
         set dest_clock_period  [get_property -quiet -min PERIOD $dest_clock]
         set source_clock_period  [get_property -quiet -min PERIOD $source_clock]
         set_max_delay -from $source_clock -to $dest_clock -through $reg_input_pins $source_clock_period -datapath_only
-        set_bus_skew  -from $source_clock -to $dest_clock -through $reg_input_pins [expr min ($source_clock_period, $dest_clock_period)]
+        set_bus_skew -quiet -from $source_clock -to $dest_clock -through $reg_input_pins [expr min ($source_clock_period, $dest_clock_period)]
     }
 }
 
@@ -63,7 +63,7 @@ foreach {source_clock} [get_clocks -quiet -of_objects $dpram_cells] {
         set dest_clock_period  [get_property -quiet -min PERIOD $dest_clock]
         set source_clock_period  [get_property -quiet -min PERIOD $source_clock]
         set_max_delay -from $source_clock -to $dest_clock -through $dpram_output_pins $dest_clock_period -datapath_only
-        set_bus_skew  -from $source_clock -to $dest_clock -through $dpram_output_pins [expr min ($source_clock_period, $dest_clock_period)]
+        set_bus_skew -quiet -from $source_clock -to $dest_clock -through $dpram_output_pins [expr min ($source_clock_period, $dest_clock_period)]
     }
 }
 
