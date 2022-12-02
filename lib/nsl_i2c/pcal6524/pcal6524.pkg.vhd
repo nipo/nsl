@@ -68,6 +68,7 @@ package pcal6524 is
 
   constant pcal6524_in          : pcal6524_pin_config := (drive_strength => 0, output => false, in_inverted => false, irq => false, pull_enable => false, pull_value => '0', value => '0');
   constant pcal6524_out0        : pcal6524_pin_config := (drive_strength => 0, output =>  true, in_inverted => false, irq => false, pull_enable => false, pull_value => '0', value => '0');
+  constant pcal6524_out1        : pcal6524_pin_config := (drive_strength => 0, output =>  true, in_inverted => false, irq => false, pull_enable => false, pull_value => '0', value => '1');
   constant pcal6524_out0_3      : pcal6524_pin_config := (drive_strength => 3, output =>  true, in_inverted => false, irq => false, pull_enable => false, pull_value => '0', value => '0');
   constant pcal6524_in_irq      : pcal6524_pin_config := (drive_strength => 0, output => false, in_inverted => false, irq =>  true, pull_enable => false, pull_value => '0', value => '0');
   constant pcal6524_in_irq_pu   : pcal6524_pin_config := (drive_strength => 0, output => false, in_inverted => false, irq =>  true, pull_enable =>  true, pull_value => '1', value => '0');
