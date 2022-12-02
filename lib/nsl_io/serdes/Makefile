@@ -1,5 +1,6 @@
 vhdl-sources += serdes.pkg.vhd
 
+deps += nsl_data.text
 
 ifeq ($(hwdep),xilinx)
 ifneq ($(filter xc7%,$(target_part)),)
