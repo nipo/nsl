@@ -17,10 +17,11 @@ entity crc_committed_checker is
   port(
     reset_n_i   : in  std_ulogic;
     clock_i     : in  std_ulogic;
-    
+
     in_i   : in  committed_req;
     in_o   : out committed_ack;
 
+    valid_o : out std_ulogic;
     out_o  : out committed_req;
     out_i  : in committed_ack
     );
@@ -216,4 +217,6 @@ begin
         in_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
     end case;
   end process;
+
+  valid_o <= to_logic(r.crc = crc_check(params_c));
 end architecture;

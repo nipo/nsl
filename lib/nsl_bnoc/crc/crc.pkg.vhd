@@ -59,6 +59,7 @@ package crc is
       in_i   : in  committed_req;
       in_o   : out committed_ack;
 
+      valid_o : out std_ulogic;
       out_o  : out committed_req;
       out_i  : in committed_ack
       );
