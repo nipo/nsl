@@ -58,7 +58,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, signal_i) is
+  transition: process(r, signal_i, reset_i) is
   begin
     rin <= r;
 
@@ -104,6 +104,13 @@ begin
       else
         rin.to_180 <= r.to_180 - 1;
       end if;
+    end if;
+
+    if reset_i = '1' then
+      rin.learn_counter <= 0;
+      rin.learn_period <= period_max_c;
+      rin.learn_to_go <= tick_learn_c - 1;
+      rin.ref_period_valid <= false;
     end if;
   end process;
 
