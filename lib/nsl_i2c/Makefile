@@ -6,5 +6,6 @@ packages += transactor
 packages += pca9555
 packages += pca9534a
 packages += pcal6524
+packages += is31fl3731
 packages += pct2075
 packages += mcp4726
