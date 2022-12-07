@@ -155,8 +155,20 @@ architecture beh of si5351_config_switcher is
     return ret;
   end function;
 
+  function enable_generate(cfg: config_vector) return std_ulogic_vector is
+    alias config: config_vector(0 to cfg'length-1) is cfg;
+    variable ret : std_ulogic_vector(0 to cfg'length-1);
+  begin
+    for i in ret'range
+    loop
+      ret(i) := to_logic(config(i).enabled);
+    end loop;
+    return ret;
+  end function;
+
   constant config_data05_c : config_data05_vector := config_data05_generate(config_c);
   constant config_data67_c : config_data67_vector := config_data67_generate(config_c);
+  constant config_enable_c : std_ulogic_vector(0 to config_c'length-1) := enable_generate(config_c);
   
   type state_t is (
     ST_RESET,
@@ -165,7 +177,8 @@ architecture beh of si5351_config_switcher is
     ST_PUT_CONTROL05,
     ST_PUT_MS05,
     ST_PUT_CONTROL67,
-    ST_PUT_MS67
+    ST_PUT_MS67,
+    ST_PUT_OEB
     );
 
   signal config_index_s: config_index_vector;
@@ -182,6 +195,7 @@ architecture beh of si5351_config_switcher is
     config_index: config_index_vector;
     config_dirty: std_ulogic_vector(0 to 7);
     index: natural range 0 to 7;
+    clock_oeb: std_ulogic_vector(7 downto 0);
   end record;
 
   signal r, rin : regs_t;
@@ -196,6 +210,7 @@ begin
 
     if reset_n_i = '0' then
       r.state <= ST_RESET;
+      r.clock_oeb <= (others => '1');
     end if;
   end process;
 
@@ -234,6 +249,7 @@ begin
           end if;
           rin.config_dirty(r.index) <= '0';
           rin.config_index(r.index) <= config_index_s(r.index);
+          rin.clock_oeb(r.index) <= not config_enable_c(config_index_s(r.index));
         else
           rin.index <= (r.index + 1) mod 8;
         end if;
@@ -249,6 +265,11 @@ begin
         end if;
 
       when ST_PUT_MS05 | ST_PUT_MS67 =>
+        if controller_ready_s = '1' then
+          rin.state <= ST_PUT_OEB;
+        end if;
+
+      when ST_PUT_OEB =>
         if controller_ready_s = '1' then
           rin.state <= ST_IDLE;
           rin.index <= (r.index + 1) mod 8;
@@ -307,6 +328,13 @@ begin
         controller_data_s(0 to config_data67_c(r.config_index(r.index)).ms'length-1)
           <= config_data67_c(r.config_index(r.index)).ms;
         controller_addr_s <= to_unsigned(90 + r.index - 6, 8);
+
+      when ST_PUT_OEB =>
+        busy_o <= '1';
+        controller_valid_s <= '1';
+        controller_data_len_s <= 1;
+        controller_data_s(0) <= r.clock_oeb;
+        controller_addr_s <= to_unsigned(3, 8);
     end case;
   end process;
 
