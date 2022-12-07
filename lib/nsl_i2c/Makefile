@@ -9,3 +9,4 @@ packages += pcal6524
 packages += is31fl3731
 packages += pct2075
 packages += mcp4726
+packages += pca8574
