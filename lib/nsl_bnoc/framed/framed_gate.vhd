@@ -32,6 +32,7 @@ architecture beh of framed_gate is
   end record;
 
   signal r, rin: regs_t;
+  signal enable_s : std_ulogic;
 
 begin
 
@@ -56,9 +57,7 @@ begin
 
       when ST_IDLE =>
         if in_i.valid = '1' and out_i.ready = '1' and enable_i = '1' then
-          if in_i.last = '0' then
-            rin.state <= ST_FWD;
-          end if;
+          rin.state <= ST_FWD;
         end if;
 
       when ST_FWD =>
@@ -70,7 +69,9 @@ begin
 
   out_o.data <= in_i.data;
   out_o.last <= in_i.last;
-  out_o.valid <= in_i.valid and enable_i;
-  in_o.ready <= out_i.ready and enable_i;
-  
+  out_o.valid <= in_i.valid and enable_s;
+  in_o.ready <= out_i.ready and enable_s;
+
+  enable_s <= '1' when r.state = ST_FWD else '0';
+
 end architecture;
