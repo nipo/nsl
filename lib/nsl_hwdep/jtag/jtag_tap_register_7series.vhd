@@ -35,7 +35,7 @@ begin
   tlr_o <= reset;
   run_o <= run;
 
-  inst: bscane2
+  jtag_bscane2_inst: bscane2
     generic map(
       jtag_chain => id_c
       )
