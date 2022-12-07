@@ -173,6 +173,9 @@ package body bytestream is
   function to_byte(i : integer) return byte
   is
   begin
+    assert i < 256
+      report "Value too high"
+      severity failure;
     return byte(to_unsigned(i, 8));
   end function;
 
