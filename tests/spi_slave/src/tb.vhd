@@ -12,10 +12,11 @@ end entity;
 
 architecture sim of tb is
 
-  signal clock_s: std_ulogic;
-  signal done_s: std_ulogic_vector(0 to 2);
+  signal clock_s, reset_n_s: std_ulogic;
+  signal done_s: std_ulogic_vector(0 to 1);
 
-  signal tx_data_s, rx_data_s: std_ulogic_vector(7 downto 0);
+  signal addr_s: unsigned(15 downto 0);
+  signal tx_data_s, rx_data_s: byte_string(0 to 3);
   signal tx_ready_s, rx_valid_s: std_ulogic;
   signal active_s : std_ulogic;
 
@@ -28,7 +29,6 @@ architecture sim of tb is
   
   procedure spi_io(signal m: out nsl_spi.spi.spi_slave_i;
                    signal s: in nsl_spi.spi.spi_slave_o;
-                   signal spi_cpol_s, spi_cpha_s: out std_ulogic;
                    tx, rx: byte_string;
                    cpol, cpha : std_ulogic)
   is
@@ -38,8 +38,6 @@ architecture sim of tb is
   begin
     assert_equal("I/o vectors", tx'length, rx'length, failure);
 
-    spi_cpol_s <= cpol;
-    spi_cpha_s <= cpha;
     m.mosi <= '-';
     m.sck <= cpol;
 
@@ -79,42 +77,68 @@ architecture sim of tb is
     wait for half_cycle;
   end procedure;
 
-  procedure parallel_tx(signal data: out std_ulogic_vector(7 downto 0);
+  procedure parallel_tx(signal data: out byte_string;
                         signal ready: in std_ulogic;
                         signal active: in std_ulogic;
+                        signal address: in unsigned;
+                        addr: unsigned;
                         tx: byte_string)
   is
+    alias txs : byte_string(0 to tx'length-1) is tx;
+    alias datas : byte_string(0 to data'length-1) is data;
+    variable i : integer;
+    variable expected_addr : unsigned(addr'range) := addr;
   begin
-    data <= tx(tx'left);
+    datas <= txs(0 to datas'length-1);
 
     wait until active = '1';
 
-    for off in tx'range
+    i := 0;
+
+    while i < txs'length
     loop
-      data <= tx(off);
+      data <= tx(i to i + datas'length - 1);
       if ready = '0' then
         wait until ready = '1';
+        assert_equal("Parallel TX addr", address, expected_addr, warning);
       end if;
       wait until ready = '0';
+
+      expected_addr := expected_addr + 1;
+
+      i := i + datas'length;
     end loop;
 
-    data <= (others => '-');
+    data <= (others => dontcare_byte_c);
     wait until active = '0';
   end procedure;
 
-  procedure parallel_rx(signal data: in std_ulogic_vector(7 downto 0);
+  procedure parallel_rx(signal data: in byte_string;
                         signal valid: in std_ulogic;
                         signal active: in std_ulogic;
+                        signal address: in unsigned;
+                        addr: unsigned;
                         rx: byte_string)
   is
+    alias rxs : byte_string(0 to rx'length-1) is rx;
+    alias datas : byte_string(0 to data'length-1) is data;
+    variable i : integer;
+    variable expected_addr : unsigned(addr'range) := addr;
   begin
     wait until active = '1';
 
-    for off in rx'range
+    i := 0;
+
+    while i < rxs'length
     loop
       wait until valid = '1';
-      assert_equal("Parallel RX", data, rx(off), warning);
+      assert_equal("Parallel RX addr", address, expected_addr, warning);
+      assert_equal("Parallel RX", datas, rxs(i to i + datas'length - 1), warning);
       wait until valid = '0';
+
+      expected_addr := expected_addr + 1;
+
+      i := i + datas'length;
     end loop;
 
     wait until active = '0';
@@ -127,73 +151,59 @@ begin
     spi_m.cs_n <= '1';
     done_s(0) <= '0';
 
-    spi_io(spi_m, spi_s, cpol_s, cpha_s, from_hex("deadbeef"), from_hex("decafbad"), '0', '0');
-    spi_io(spi_m, spi_s, cpol_s, cpha_s, from_hex("deadbeef"), from_hex("decafbad"), '1', '0');
-    spi_io(spi_m, spi_s, cpol_s, cpha_s, from_hex("deadbeef"), from_hex("decafbad"), '0', '1');
-    spi_io(spi_m, spi_s, cpol_s, cpha_s, from_hex("deadbeef"), from_hex("decafbad"), '1', '1');
+    spi_io(spi_m, spi_s, from_hex("031234----------------"), from_hex("------deadbeefdecafbad"), '0', '0');
+    spi_io(spi_m, spi_s, from_hex("0b45679876543219876541"), from_hex("----------------------"), '0', '0');
 
     done_s(0) <= '1';
     wait;
   end process;
 
-  par_tx: process
+  par_trx: process
   begin
     done_s(1) <= '0';
 
-    parallel_tx(tx_data_s, tx_ready_s, active_s, from_hex("decafbad"));
-    parallel_tx(tx_data_s, tx_ready_s, active_s, from_hex("decafbad"));
-    parallel_tx(tx_data_s, tx_ready_s, active_s, from_hex("decafbad"));
-    parallel_tx(tx_data_s, tx_ready_s, active_s, from_hex("decafbad"));
+    parallel_tx(tx_data_s, tx_ready_s, active_s, addr_s, x"1234", from_hex("deadbeefdecafbad"));
+    parallel_rx(rx_data_s, rx_valid_s, active_s, addr_s, x"4567", from_hex("9876543219876541"));
 
     done_s(1) <= '1';
     wait;
   end process;
-
-  par_rx: process
-  begin
-    done_s(2) <= '0';
-
-    parallel_rx(rx_data_s, rx_valid_s, active_s, from_hex("deadbeef"));
-    parallel_rx(rx_data_s, rx_valid_s, active_s, from_hex("deadbeef"));
-    parallel_rx(rx_data_s, rx_valid_s, active_s, from_hex("deadbeef"));
-    parallel_rx(rx_data_s, rx_valid_s, active_s, from_hex("deadbeef"));
-
-    done_s(2) <= '1';
-    wait;
-  end process;
   
-  dut: nsl_spi.shift_register.slave_shift_register_oversampled
+  dut: nsl_spi.slave.spi_memory_controller
     generic map(
-      width_c => 8
+      addr_bytes_c => addr_s'length/8,
+      data_bytes_c => tx_data_s'length,
+      write_opcode_c => x"0b"
       )
     port map(
       clock_i => clock_s,
-
-      cpol_i => cpol_s,
-      cpha_i => cpha_s,
+      reset_n_i => reset_n_s,
 
       spi_i => spi_m,
       spi_o => spi_s,
 
-      active_o => active_s,
-      tx_data_i => tx_data_s,
-      tx_ready_o => tx_ready_s,
+      selected_o => active_s,
 
-      rx_data_o => rx_data_s,
-      rx_valid_o => rx_valid_s
+      addr_o => addr_s,
+
+      rdata_i => tx_data_s,
+      rready_o => tx_ready_s,
+
+      wdata_o => rx_data_s,
+      wvalid_o => rx_valid_s
       );
-      
   
   simdrv: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 1,
-      reset_count => 0,
+      reset_count => 1,
       done_count => done_s'length
       )
     port map(
       clock_period(0) => 10 ns,
       reset_duration => (others => 10 ns),
       clock_o(0) => clock_s,
+      reset_n_o(0) => reset_n_s,
       done_i => done_s
       );
   

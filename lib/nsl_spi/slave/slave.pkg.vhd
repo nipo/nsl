@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi, nsl_bnoc;
+library nsl_spi, nsl_bnoc, nsl_data;
+use nsl_data.bytestream.all;
 
 package slave is
 
@@ -11,24 +12,32 @@ package slave is
   -- There is one byte for opcode. Any opcode other than write one is
   -- read.
   --
-  -- There is a configurable count of bytes for address, and then
-  -- every byte in transaction is either one more byte read or write.
+  -- There is a configurable count of bytes for address, used as big-endian.
+  -- Data words are transceived in order.
   component spi_memory_controller is
     generic(
-      addr_bytes_c   : natural range 1 to 4          := 1;
-      write_opcode_c : std_ulogic_vector(7 downto 0) := x"F8"
+      addr_bytes_c   : natural range 1 to 4 := 1;
+      data_bytes_c   : natural range 1 to 4 := 1;
+      write_opcode_c : byte := x"0b"
       );
     port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
       spi_i          : in nsl_spi.spi.spi_slave_i;
       spi_o          : out nsl_spi.spi.spi_slave_o;
+
       selected_o     : out std_ulogic;
-      mem_addr_o     : out unsigned(addr_bytes_c*8-1 downto 0);
-      mem_r_data_i   : in  std_ulogic_vector(7 downto 0);
-      mem_r_strobe_o : out std_ulogic;
-      mem_r_done_i   : in  std_ulogic := '1';
-      mem_w_data_o   : out std_ulogic_vector(7 downto 0);
-      mem_w_strobe_o : out std_ulogic;
-      mem_w_done_i   : in  std_ulogic := '1'
+
+      addr_o  : out unsigned(addr_bytes_c*8-1 downto 0);
+
+      rdata_i  : in  byte_string(0 to data_bytes_c-1);
+      rready_o : out std_ulogic;
+      rvalid_i : in  std_ulogic := '1';
+
+      wdata_o  : out byte_string(0 to data_bytes_c-1);
+      wvalid_o : out std_ulogic;
+      wready_i : in  std_ulogic := '1'
       );
   end component;
 

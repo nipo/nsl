@@ -2,139 +2,183 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi;
+library nsl_spi, nsl_data, nsl_logic;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
+use nsl_logic.bool.all;
 
 entity spi_memory_controller is
   generic(
-    addr_bytes_c   : natural range 1 to 4          := 1;
-    write_opcode_c : std_ulogic_vector(7 downto 0) := x"F8"
+    addr_bytes_c   : natural range 1 to 4 := 1;
+    data_bytes_c   : natural range 1 to 4 := 1;
+    write_opcode_c : byte := x"0b"
     );
   port(
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
+
     spi_i          : in nsl_spi.spi.spi_slave_i;
     spi_o          : out nsl_spi.spi.spi_slave_o;
+
     selected_o     : out std_ulogic;
-    mem_addr_o     : out unsigned(addr_bytes_c*8-1 downto 0);
-    mem_r_data_i   : in  std_ulogic_vector(7 downto 0);
-    mem_r_strobe_o : out std_ulogic;
-    mem_r_done_i   : in  std_ulogic := '1';
-    mem_w_data_o   : out std_ulogic_vector(7 downto 0);
-    mem_w_strobe_o : out std_ulogic;
-    mem_w_done_i   : in  std_ulogic := '1'
+
+    addr_o  : out unsigned(addr_bytes_c*8-1 downto 0);
+
+    rdata_i  : in  byte_string(0 to data_bytes_c-1);
+    rready_o : out std_ulogic;
+    rvalid_i : in  std_ulogic := '1';
+
+    wdata_o  : out byte_string(0 to data_bytes_c-1);
+    wvalid_o : out std_ulogic;
+    wready_i : in  std_ulogic := '1'
     );
 end entity;
 
 architecture rtl of spi_memory_controller is
 
   type st_t is (
+    ST_IDLE,
     ST_CMD,
     ST_ADDR,
-    ST_DATA_INIT,
-    ST_DATA
+    ST_WRITE,
+    ST_READ
     );
 
   type regs_t is
   record
     state : st_t;
-    addr_bytes_c_left : natural range 0 to addr_bytes_c-1;
-    addr : unsigned(mem_addr_o'range);
-    wdata : std_ulogic_vector(7 downto 0);
+    addr_left : natural range 0 to addr_bytes_c-1;
+    data_left : natural range 0 to data_bytes_c-1;
+    addr : byte_string(0 to addr_bytes_c-1);
+    data : byte_string(0 to data_bytes_c-1);
+
     writing: boolean;
-    write_pending, read_pending: std_ulogic;
+
+    mem_read_pending, mem_write_pending : boolean;
   end record;
 
   signal r, rin: regs_t;
-  signal tx_strobe, rx_strobe : std_ulogic;
-  signal tx_data, rx_data : std_ulogic_vector(7 downto 0);
+  signal to_spi_ready_s, from_spi_valid_s, active_s : std_ulogic;
+  signal to_spi_data_s, from_spi_data_s : std_ulogic_vector(7 downto 0);
 
 begin
 
-  regs: process(mem_r_done_i, mem_w_done_i, spi_i)
+  regs: process(clock_i, reset_n_i)
   begin
-    if rising_edge(spi_i.sck) then
+    if rising_edge(clock_i) then
       r <= rin;
     end if;
-    if spi_i.cs_n = '1' then
-      r.state <= ST_CMD;
-      r.writing <= false;
+
+    if reset_n_i = '0' then
+      r.state <= ST_IDLE;
+      r.mem_write_pending <= false;
+      r.mem_read_pending <= false;
     end if;
   end process;
 
-  transition: process(r, rx_data, rx_strobe, tx_strobe, mem_w_done_i, mem_r_done_i)
+  transition: process(r, to_spi_ready_s, from_spi_valid_s, active_s, to_spi_data_s, from_spi_data_s,
+                      rvalid_i, rdata_i, wready_i)
   begin
     rin <= r;
 
-    if mem_w_done_i = '1' then
-      rin.write_pending <= '0';
-    end if;
-
-    if mem_r_done_i = '1' then
-      rin.read_pending <= '0';
-    end if;
-
     case r.state is
+      when ST_IDLE =>
+        if active_s = '1' then
+          rin.state <= ST_CMD;
+        end if;
+
       when ST_CMD =>
-        if rx_strobe = '1' then
-          rin.addr_bytes_c_left <= addr_bytes_c-1;
-          rin.addr <= (others => '-');
-          if std_match(rx_data, write_opcode_c) then
-            rin.writing <= true;
-          end if;
+        if from_spi_valid_s = '1' then
+          rin.writing <= from_spi_data_s = write_opcode_c;
           rin.state <= ST_ADDR;
+          rin.addr_left <= addr_bytes_c - 1;
         end if;
 
       when ST_ADDR =>
-        if rx_strobe = '1' then
-          if r.addr_bytes_c_left = 0 then
-            rin.state <= ST_DATA_INIT;
+        if from_spi_valid_s = '1' then
+          rin.state <= ST_ADDR;
+          if r.addr_left = 0 then
+            if r.writing then
+              rin.data_left <= data_bytes_c - 1;
+              rin.state <= ST_WRITE;
+            else
+              rin.data_left <= data_bytes_c - 1;
+              rin.state <= ST_READ;
+              rin.mem_read_pending <= true;
+            end if;
           else
-            rin.addr_bytes_c_left <= r.addr_bytes_c_left-1;
+            rin.addr_left <= r.addr_left - 1;
           end if;
-          rin.addr <= r.addr(r.addr'left-8 downto 0) & unsigned(rx_data);
+          rin.addr <= shift_left(r.addr, from_spi_data_s);
         end if;
-
-      when ST_DATA_INIT =>
-        if tx_strobe = '1' then
-          rin.state <= ST_DATA;
-        end if;
-
-      when ST_DATA =>
-        if tx_strobe = '1' then
-          rin.addr <= r.addr + 1;
-        end if;
-
-        if rx_strobe = '1' then
-          if r.writing then
-            rin.write_pending <= '1';
-            rin.wdata <= rx_data;
+        
+      when ST_READ =>
+        if to_spi_ready_s = '1' then
+          if r.data_left = 0 then
+            rin.data_left <= data_bytes_c - 1;
+            rin.mem_read_pending <= true;
+            rin.addr <= to_be(from_be(r.addr) + 1);
           else
-            -- Set read pending here, it relaxes the timing for downstream
-            -- memory implementation.
-            rin.read_pending <= '1';
+            rin.data <= shift_left(r.data);
+            rin.data_left <= r.data_left - 1;
           end if;
         end if;
+
+      when ST_WRITE =>
+        if from_spi_valid_s = '1' then
+          rin.data <= shift_left(r.data, from_spi_data_s);
+          if r.data_left = 0 then
+            rin.mem_write_pending <= true;
+            rin.data_left <= data_bytes_c - 1;
+          else
+            rin.data_left <= r.data_left - 1;
+          end if;
+        end if;
+
     end case;
+
+    if r.mem_read_pending and rvalid_i = '1' then
+      rin.data <= rdata_i;
+      rin.mem_read_pending <= false;
+    end if;
+
+    if r.mem_write_pending and wready_i = '1' then
+      rin.addr <= to_be(from_be(r.addr) + 1);
+      rin.mem_write_pending <= false;
+    end if;
+
+    if active_s = '0' then
+      rin.state <= ST_IDLE;
+      rin.addr <= (others => dontcare_byte_c);
+      rin.data <= (others => dontcare_byte_c);
+    end if;
+    
   end process;
 
-  mem_addr_o <= r.addr;
-  mem_r_strobe_o <= r.read_pending;
-  mem_w_strobe_o <= r.write_pending;
-  mem_w_data_o <= r.wdata;
-  selected_o <= not spi_i.cs_n;
-  tx_data <= mem_r_data_i when r.state = ST_DATA else x"66";
+  addr_o <= from_be(r.addr);
+  rready_o <= to_logic(r.mem_read_pending);
+  wvalid_o <= to_logic(r.mem_write_pending);
+  wdata_o <= r.data;
+  selected_o <= to_logic(r.state /= ST_IDLE);
+  to_spi_data_s <= first_left(r.data) when r.state = ST_READ else dontcare_byte_c;
 
-  shreg: nsl_spi.shift_register.spi_shift_register
+  shreg: nsl_spi.shift_register.slave_shift_register_oversampled
     generic map(
       width_c => 8,
-      msb_first_c => true
+      msb_first_c => true,
+      cs_n_active_c => '0'
       )
     port map(
+      clock_i => clock_i,
+
       spi_i => spi_i,
       spi_o => spi_o,
 
-      tx_data_i => tx_data,
-      tx_strobe_o => tx_strobe,
-      rx_data_o => rx_data,
-      rx_strobe_o => rx_strobe
+      active_o => active_s,
+      tx_data_i => to_spi_data_s,
+      tx_ready_o => to_spi_ready_s,
+      rx_data_o => from_spi_data_s,
+      rx_valid_o => from_spi_valid_s
       );
 
 end architecture rtl;
