@@ -118,6 +118,7 @@ package body bytestream is
       when 'd'|'D' => return x"d";
       when 'e'|'E' => return x"e";
       when 'f'|'F' => return x"f";
+      when '-' => return "----";
       when others => return "XXXX";
     end case;
   end function;
