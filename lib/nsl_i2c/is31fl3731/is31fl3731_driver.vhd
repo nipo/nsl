@@ -17,6 +17,8 @@ entity is31fl3731_driver is
     reset_n_i   : in std_ulogic;
     clock_i     : in std_ulogic;
 
+    enable_i : in std_ulogic := '1';
+
     -- Forces refresh
     force_i : in std_ulogic := '0';
 
@@ -96,14 +98,16 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
-        if r.dirty(r.cur) = '1' then
-          rin.state <= ST_PUT_PAGE;
-          rin.data <= r.value(r.cur);
-          rin.addr <= to_byte(16#24# + order_c(r.cur));
-        elsif r.cur /= 0 then
-          rin.cur <= r.cur - 1;
-        else
-          rin.cur <= order_c'length - 1;
+        if enable_i = '1' then
+          if r.dirty(r.cur) = '1' then
+            rin.state <= ST_PUT_PAGE;
+            rin.data <= r.value(r.cur);
+            rin.addr <= to_byte(16#24# + order_c(r.cur));
+          elsif r.cur /= 0 then
+            rin.cur <= r.cur - 1;
+          else
+            rin.cur <= order_c'length - 1;
+          end if;
         end if;
 
       when ST_PUT_PAGE =>

@@ -176,6 +176,8 @@ package is31fl3731 is
       reset_n_i   : in std_ulogic;
       clock_i     : in std_ulogic;
 
+      enable_i : in std_ulogic := '1';
+
       -- Forces refresh
       force_i : in std_ulogic := '0';
 
