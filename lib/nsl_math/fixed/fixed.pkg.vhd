@@ -131,6 +131,13 @@ package fixed is
   function ">="(a: sfixed; b: real) return boolean;
   function "<="(a: sfixed; b: real) return boolean;
 
+  function "="(a: ufixed; b: real) return boolean;
+  function "/="(a: ufixed; b: real) return boolean;
+  function ">"(a: ufixed; b: real) return boolean;
+  function "<"(a: ufixed; b: real) return boolean;
+  function ">="(a: ufixed; b: real) return boolean;
+  function "<="(a: ufixed; b: real) return boolean;
+
   function to_string(value: sfixed) return string;
   function to_string(value: ufixed) return string;
   
@@ -933,6 +940,48 @@ package body fixed is
   function "<="(a: sfixed; b: real) return boolean
   is
     constant bf: sfixed(a'range) := to_sfixed(b, a'left, a'right);
+  begin
+    return a <= bf;
+  end function;
+
+  function "="(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
+  begin
+    return a = bf;
+  end function;
+
+  function "/="(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
+  begin
+    return a /= bf;
+  end function;
+
+  function ">"(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
+  begin
+    return a > bf;
+  end function;
+
+  function "<"(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
+  begin
+    return a < bf;
+  end function;
+
+  function ">="(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
+  begin
+    return a >= bf;
+  end function;
+
+  function "<="(a: ufixed; b: real) return boolean
+  is
+    constant bf: ufixed(a'range) := to_ufixed(b, a'left, a'right);
   begin
     return a <= bf;
   end function;
