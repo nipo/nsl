@@ -8,8 +8,10 @@ vhdl-sources += tick_generator_integer.vhd
 vhdl-sources += tick_measurer.vhd
 vhdl-sources += tick_pll.vhd
 vhdl-sources += tick_scaler_l2.vhd
+vhdl-sources += tick_pulse.vhd
 
 deps += nsl_math.arith
 deps += nsl_math.fixed
+deps += nsl_math.timing
 deps += nsl_clocking.async
 deps += nsl_dsp.rc

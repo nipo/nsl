@@ -162,4 +162,22 @@ package tick is
       );
   end component;
 
+
+  -- Pulse generator. Will assert output for assert_sec_c seconds every time
+  -- tick_i is high. When tick_i period is less than assert_sec_c, pulse_o
+  -- stays asserted.
+  component tick_pulse is
+    generic(
+      clock_hz_c : integer;
+      assert_sec_c : real
+      );
+    port(
+      clock_i : in  std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      tick_i : in std_ulogic;
+      pulse_o : out std_ulogic
+      );
+  end component;
+
 end package tick;

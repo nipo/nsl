@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_clocking, nsl_math;
+library nsl_clocking, nsl_math, nsl_event;
 
 entity nrzi_receiver_recovery is
   generic (
@@ -41,7 +41,7 @@ begin
 
   tick_o <= s_sample_tick;
 
-  recovery: nsl_clocking.tick.tick_extractor_self_clocking
+  recovery: nsl_event.tick.tick_extractor_self_clocking
     generic map(
       period_max_c => integer(ceil(real(clock_i_hz_c) / real(signal_hz_c))),
       run_length_max_c => run_length_limit_c
