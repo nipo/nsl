@@ -32,8 +32,7 @@ package mcp4726 is
 
       valid_i : in std_ulogic := '1';
       value_i : in unsigned(11 downto 0);
-
-      busy_o : out std_ulogic;
+      ready_o : out std_ulogic;
       
       cmd_o  : out nsl_bnoc.framed.framed_req;
       cmd_i  : in  nsl_bnoc.framed.framed_ack;

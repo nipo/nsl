@@ -24,9 +24,8 @@ entity mcp4726_updater is
     force_i : in std_ulogic := '0';
 
     valid_i : in std_ulogic := '1';
+    ready_o : out std_ulogic;
     value_i : in unsigned(11 downto 0);
-
-    busy_o : out std_ulogic;
 
     cmd_o  : out nsl_bnoc.framed.framed_req;
     cmd_i  : in  nsl_bnoc.framed.framed_ack;
@@ -78,10 +77,11 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
+        rin.value <= x"800";
         rin.dirty <= true;
 
       when ST_IDLE =>
-        if force_i = '1' or (value_i /= r.value and valid_i = '1') then
+        if (force_i = '1' or value_i /= r.value) and valid_i = '1' and not r.dirty then
           rin.dirty <= true;
           rin.value <= value_i;
         end if;
@@ -103,7 +103,7 @@ begin
     end case;
   end process;
 
-  busy_o <= to_logic(r.dirty);
+  ready_o <= not to_logic(r.dirty);
 
   cmd_valid_s <= to_logic(r.state = ST_WRITE);
   cmd_data_s <= to_be("0000" & r.value);
