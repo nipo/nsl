@@ -26,9 +26,6 @@ use nsl_spi.slave.all;
 -- RX query: MOSI   [c0] [--] [--]  [--] x (HHLL + 1)
 --           MISO   [--] [LL] [HH]  [--] x (HHLL + 1)
 
--- Loopback query: MOSI   [40] [**]
---                 MISO   [--] [**]
-
 entity spi_framed_gateway is
   generic(
     msb_first_c   : boolean := true;
@@ -58,13 +55,13 @@ architecture rtl of spi_framed_gateway is
     ST_STATUS,
     ST_FROM_SPI_DATA,
     ST_TO_SPI_DATA,
-    ST_LOOP,
     ST_OVER
     );
   
   type regs_t is record
     state : state_t;
     tmp   : nsl_bnoc.framed.framed_data_t;
+    invert : boolean;
   end record;
 
   signal r, rin: regs_t;
@@ -137,36 +134,33 @@ begin
             rin.state <= ST_STATUS;
           elsif std_match(s_from_spi, SPI_FRAMED_GW_PUT) then
             rin.state <= ST_FROM_SPI_DATA;
-          elsif std_match(s_from_spi, SPI_FRAMED_GW_LOOP) then
-            rin.state <= ST_LOOP;
           elsif std_match(s_from_spi, SPI_FRAMED_GW_GET) then
             if s_inbound.req.valid = '0' then
               rin.state <= ST_OVER;
+              rin.tmp <= x"ee";
             else
               rin.state <= ST_TO_SPI_DATA;
             end if;
           else
             rin.state <= ST_OVER;
+            rin.tmp <= x"ba";
           end if;
         end if;
 
       when ST_STATUS =>
         if s_from_spi_valid = '1' then
           rin.state <= ST_OVER;
+          rin.tmp <= x"ff";
         end if;
 
       when ST_FROM_SPI_DATA =>
         null;
 
-      when ST_LOOP =>
-        if s_from_spi_valid = '1' then
-          rin.tmp <= s_from_spi;
-        end if;
-
       when ST_TO_SPI_DATA =>
         if s_from_spi_valid = '1' then
           if s_inbound.req.valid = '0' then
             rin.state <= ST_OVER;
+            rin.tmp <= x"ee";
           end if;
         end if;
 
@@ -203,7 +197,7 @@ begin
         s_outbound.req.valid <= s_from_spi_valid;
         s_outbound.req.data <= s_from_spi;
 
-      when ST_LOOP =>
+      when ST_OVER =>
         s_to_spi <= r.tmp;
 
       when others =>

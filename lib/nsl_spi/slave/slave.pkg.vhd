@@ -49,7 +49,6 @@ package slave is
   constant SPI_FRAMED_GW_ST_IN_VALID : nsl_bnoc.framed.framed_data_t := "-------1";
   constant SPI_FRAMED_GW_PUT         : nsl_bnoc.framed.framed_data_t := "10------";
   constant SPI_FRAMED_GW_GET         : nsl_bnoc.framed.framed_data_t := "11------";
-  constant SPI_FRAMED_GW_LOOP        : nsl_bnoc.framed.framed_data_t := "01------";
 
   -- A SPI slave that allows to talk to a pair of framed pipes.
   component spi_framed_gateway
