@@ -52,6 +52,7 @@ package async is
   -- Asynchronous one-bit sampler with edge detection.
   component async_input is
     generic (
+      sample_count_c: integer := 2;
       debounce_count_c: integer := 2
       );
     port (

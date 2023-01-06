@@ -5,6 +5,7 @@ library nsl_clocking;
 
 entity async_input is
   generic (
+    sample_count_c: integer := 2;
     debounce_count_c: integer := 2
   );
   port (
@@ -30,17 +31,25 @@ architecture arch of async_input is
 
 begin
 
-  sampler: nsl_clocking.async.async_sampler
-    generic map(
-      cycle_count_c => 2,
-      data_width_c => 1
-      )
-    port map(
-      clock_i => clock_i,
-      data_i(0) => data_i,
-      data_o(0) => synced
-      );
-  
+  has_sampler: if sample_count_c > 0
+  generate
+    sampler: nsl_clocking.async.async_sampler
+      generic map(
+        cycle_count_c => 2,
+        data_width_c => 1
+        )
+      port map(
+        clock_i => clock_i,
+        data_i(0) => data_i,
+        data_o(0) => synced
+        );
+  end generate;
+
+  has_no_sampler: if sample_count_c <= 0
+  generate
+    synced <= data_i;
+  end generate;
+    
   regs: process(clock_i, reset_n_i)
   begin
     if rising_edge(clock_i) then
