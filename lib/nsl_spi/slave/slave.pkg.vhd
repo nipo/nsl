@@ -26,6 +26,9 @@ package slave is
 
       spi_i          : in nsl_spi.spi.spi_slave_i;
       spi_o          : out nsl_spi.spi.spi_slave_o;
+    
+      cpol_i : in std_ulogic := '0';
+      cpha_i : in std_ulogic := '0';
 
       selected_o     : out std_ulogic;
 
@@ -41,12 +44,12 @@ package slave is
       );
   end component;
 
-  constant SPI_FRAMED_GW_STATUS      : nsl_bnoc.framed.framed_data_t := "0-------";
+  constant SPI_FRAMED_GW_STATUS      : nsl_bnoc.framed.framed_data_t := "00------";
   constant SPI_FRAMED_GW_ST_OUT_RDY  : nsl_bnoc.framed.framed_data_t := "------1-";
   constant SPI_FRAMED_GW_ST_IN_VALID : nsl_bnoc.framed.framed_data_t := "-------1";
   constant SPI_FRAMED_GW_PUT         : nsl_bnoc.framed.framed_data_t := "10------";
-  constant SPI_FRAMED_GW_GET         : nsl_bnoc.framed.framed_data_t := "11-----0";
-  constant SPI_FRAMED_GW_GET_CONT    : nsl_bnoc.framed.framed_data_t := "11-----1";
+  constant SPI_FRAMED_GW_GET         : nsl_bnoc.framed.framed_data_t := "11------";
+  constant SPI_FRAMED_GW_LOOP        : nsl_bnoc.framed.framed_data_t := "01------";
 
   -- A SPI slave that allows to talk to a pair of framed pipes.
   component spi_framed_gateway
@@ -60,6 +63,9 @@ package slave is
 
       spi_i : in  nsl_spi.spi.spi_slave_i;
       spi_o : out nsl_spi.spi.spi_slave_o;
+    
+      cpol_i : in std_ulogic := '0';
+      cpha_i : in std_ulogic := '0';
 
       outbound_o  : out nsl_bnoc.framed.framed_req;
       outbound_i  : in  nsl_bnoc.framed.framed_ack;

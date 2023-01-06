@@ -58,7 +58,8 @@ package shift_register is
       );
     port(
       clock_i     : in std_ulogic;
-
+      reset_n_i   : in std_ulogic;
+    
       cpol_i : in std_ulogic := '0';
       cpha_i : in std_ulogic := '0';
 

@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_spi, nsl_logic;
+library nsl_spi, nsl_logic, nsl_clocking;
 use nsl_logic.bool.all;
 
 entity slave_shift_register_oversampled is
@@ -12,6 +12,7 @@ entity slave_shift_register_oversampled is
     );
   port(
     clock_i     : in std_ulogic;
+    reset_n_i   : in std_ulogic;
 
     cpol_i : in std_ulogic := '0';
     cpha_i : in std_ulogic := '0';
@@ -32,14 +33,11 @@ end entity;
 architecture rtl of slave_shift_register_oversampled is
   
   type regs_t is record
-    sck: std_ulogic;
-    cs_n: std_ulogic;
-
-    bit_idx : natural range 0 to width_c - 1;
-    shreg : std_ulogic_vector(width_c - 1 downto 0);
-    first, refill: boolean;
-
-    din: std_ulogic;
+    dout_left : natural range 0 to width_c - 1;
+    dout_shreg : std_ulogic_vector(width_c - 1 downto 0);
+    dout_refill: boolean;
+    din_left : natural range 0 to width_c - 1;
+    din_shreg : std_ulogic_vector(width_c - 1 downto 0);
 
     rx : std_ulogic_vector(width_c - 1 downto 0);
     rx_valid : std_ulogic;
@@ -65,7 +63,56 @@ architecture rtl of slave_shift_register_oversampled is
     end if;
   end function;
 
+  signal spi_i_s : nsl_spi.spi.spi_slave_i;
+  signal cs_fall, cs_rise: std_ulogic;
+  signal sck_fall, sck_rise: std_ulogic;
+  signal cs_begin, cs_end: std_ulogic;
+  signal sck_lead, sck_trail: std_ulogic;
+
 begin
+
+  sck_sync: nsl_clocking.async.async_input
+    generic map(
+      debounce_count_c => 2
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      data_i => spi_i.sck,
+      data_o => spi_i_s.sck,
+      falling_o => sck_fall,
+      rising_o => sck_rise
+      );
+
+  sck_lead <= sck_rise when cpol_i = '0' else sck_fall;
+  sck_trail <= sck_fall when cpol_i = '0' else sck_rise;
+  
+  mosi_sync: nsl_clocking.async.async_input
+    generic map(
+      debounce_count_c => 2
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      data_i => spi_i.mosi,
+      data_o => spi_i_s.mosi
+      );
+
+  cs_n_sync: nsl_clocking.async.async_input
+    generic map(
+      debounce_count_c => 2
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      data_i => spi_i.cs_n,
+      data_o => spi_i_s.cs_n,
+      falling_o => cs_fall,
+      rising_o => cs_rise
+      );
+
+  cs_begin <= cs_fall when cs_n_active_c = '0' else cs_rise;
+  cs_end <= cs_rise when cs_n_active_c = '0' else cs_fall;
 
   regs: process(clock_i)
   begin
@@ -74,84 +121,80 @@ begin
     end if;
   end process;
 
-  transition: process(r, spi_i, tx_data_i) is
-    variable sample, shift: boolean;
+  transition: process(r, spi_i_s, tx_data_i, cs_begin, cs_end, sck_lead, sck_trail) is
+    variable take, put: boolean;
   begin
     rin <= r;
 
-    sample := false;
-    shift := false;
+    take := false;
+    put := false;
 
-    rin.refill <= false;
+    rin.dout_refill <= false;
     rin.rx_valid <= '0';
-    rin.sck <= spi_i.sck;
-    rin.cs_n <= spi_i.cs_n;
 
-    if spi_i.cs_n /= cs_n_active_c then
-      rin.first <= true;
-      rin.shreg <= (others => '-');
+    if spi_i_s.cs_n /= cs_n_active_c then
+      rin.din_shreg <= (others => '-');
+      rin.dout_shreg <= (others => '-');
       rin.rx <= (others => '-');
-      rin.refill <= false;
-
-      if cpha_i = '0' then
-        rin.bit_idx <= 0;
-      else
-        rin.bit_idx <= width_c - 1;
+      rin.dout_refill <= false;
+      rin.din_left <= 0;
+      rin.dout_left <= 0;
+    else
+      if sck_lead = '1' then
+        if cpha_i = '0' then
+          take := true;
+        else
+          put := true;
+        end if;
+      end if;
+      if sck_trail = '1' then
+        if cpha_i = '0' then
+          put := true;
+        else
+          take := true;
+        end if;
       end if;
     end if;
 
-    if spi_i.cs_n /= r.cs_n and spi_i.cs_n = cs_n_active_c then
-      rin.refill <= true;
+    if cs_begin = '1' then
+      if cpha_i = '0' then
+        rin.dout_refill <= true;
+      end if;
+      rin.din_left <= width_c - 1;
     end if;
 
-    if rin.refill then
-      rin.shreg <= tx_data_i;
+    if r.dout_refill then
+      rin.dout_shreg <= tx_data_i;
+      rin.dout_left <= width_c - 1;
     end if;
 
-    if spi_i.cs_n = cs_n_active_c
-      and spi_i.sck /= r.sck then
-        if spi_i.sck /= cpol_i then
-          if cpha_i = '0' then
-            sample := true;
-          else
-            shift := true;
-          end if;
-        else
-          if cpha_i = '0' then
-            shift := true;
-          else
-            sample := true;
-          end if;
-        end if;
-    end if;
-
-    if sample then
-      rin.din <= spi_i.mosi;
-      rin.first <= false;
-      if r.bit_idx = width_c - 1 then
-        rin.rx <= shreg_shift(r.shreg, spi_i.mosi);
-        rin.rx_valid <= to_logic(not r.first);
+    if take then
+      if r.din_left /= 0 then
+        rin.din_left <= r.din_left - 1;
+        rin.din_shreg <= shreg_shift(r.din_shreg, spi_i_s.mosi);
+      else
+        rin.din_shreg <= (others => '-');
+        rin.din_left <= width_c - 1;
+        rin.rx <= shreg_shift(r.din_shreg, spi_i_s.mosi);
+        rin.rx_valid <= '1';
       end if;
     end if;
     
-    if shift then
-      if r.bit_idx = width_c - 1 then
-        rin.bit_idx <= 0;
-        rin.refill <= not r.first;
+    if put then
+      rin.dout_shreg <= shreg_shift(r.dout_shreg, '-');
+      if r.dout_left = 0 then
+        rin.dout_refill <= true;
+        rin.dout_left <= width_c - 1;
       else
-        rin.bit_idx <= r.bit_idx + 1;
-        rin.shreg <= shreg_shift(r.shreg, r.din);
+        rin.dout_left <= r.dout_left - 1;
       end if;
     end if;
   end process;
 
-  moore: process(r) is
-  begin
-    spi_o.miso <= shreg_out(r.shreg);
-    tx_ready_o <= to_logic(r.refill);
-    rx_data_o <= r.rx;
-    rx_valid_o <= r.rx_valid;
-    active_o <= to_logic(r.cs_n = cs_n_active_c);
-  end process;
+  spi_o.miso <= shreg_out(r.dout_shreg);
+  tx_ready_o <= to_logic(r.dout_refill);
+  rx_data_o <= r.rx;
+  rx_valid_o <= r.rx_valid;
+  active_o <= to_logic(spi_i_s.cs_n = cs_n_active_c);
 
 end architecture;

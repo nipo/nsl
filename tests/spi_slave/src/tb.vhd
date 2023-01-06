@@ -12,6 +12,10 @@ end entity;
 
 architecture sim of tb is
 
+  constant cpol_c: std_ulogic := '1';
+  constant cpha_c: std_ulogic := '0';
+  constant half_cycle: time := 77 ns;
+  
   signal clock_s, reset_n_s: std_ulogic;
   signal done_s: std_ulogic_vector(0 to 1);
 
@@ -23,10 +27,6 @@ architecture sim of tb is
   signal spi_m: nsl_spi.spi.spi_slave_i;
   signal spi_s: nsl_spi.spi.spi_slave_o;
 
-  signal cpol_s, cpha_s : std_ulogic;
-  
-  constant half_cycle: time := 55 ns;
-  
   procedure spi_io(signal m: out nsl_spi.spi.spi_slave_i;
                    signal s: in nsl_spi.spi.spi_slave_o;
                    tx, rx: byte_string;
@@ -151,8 +151,8 @@ begin
     spi_m.cs_n <= '1';
     done_s(0) <= '0';
 
-    spi_io(spi_m, spi_s, from_hex("031234----------------"), from_hex("------deadbeefdecafbad"), '0', '0');
-    spi_io(spi_m, spi_s, from_hex("0b45679876543219876541"), from_hex("----------------------"), '0', '0');
+    spi_io(spi_m, spi_s, from_hex("031234----------------"), from_hex("------deadbeefdecafbad"), cpol_c, cpha_c);
+    spi_io(spi_m, spi_s, from_hex("0b45679876543219876541"), from_hex("----------------------"), cpol_c, cpha_c);
 
     done_s(0) <= '1';
     wait;
@@ -185,6 +185,9 @@ begin
       selected_o => active_s,
 
       addr_o => addr_s,
+
+      cpol_i => cpol_c,
+      cpha_i => cpha_c,
 
       rdata_i => tx_data_s,
       rready_o => tx_ready_s,

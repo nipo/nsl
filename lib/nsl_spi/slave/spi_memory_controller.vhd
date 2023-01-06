@@ -19,6 +19,9 @@ entity spi_memory_controller is
 
     spi_i          : in nsl_spi.spi.spi_slave_i;
     spi_o          : out nsl_spi.spi.spi_slave_o;
+    
+    cpol_i : in std_ulogic := '0';
+    cpha_i : in std_ulogic := '0';
 
     selected_o     : out std_ulogic;
 
@@ -170,9 +173,13 @@ begin
       )
     port map(
       clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
       spi_i => spi_i,
       spi_o => spi_o,
+
+      cpol_i => cpol_i,
+      cpha_i => cpha_i,
 
       active_o => active_s,
       tx_data_i => to_spi_data_s,
