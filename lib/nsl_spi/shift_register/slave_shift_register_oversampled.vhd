@@ -160,8 +160,10 @@ begin
     end if;
 
     if cs_begin = '1' then
-      if cpha_i = '0' then
+      if cpha_i = '0' and spi_i_s.sck = cpol_i then
         rin.dout_refill <= true;
+      else
+        rin.dout_left <= 0;
       end if;
       rin.din_left <= width_c - 1;
     end if;
