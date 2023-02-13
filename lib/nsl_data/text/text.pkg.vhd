@@ -73,14 +73,14 @@ package body text is
   end function;    
 
   function to_string(v: in std_ulogic_vector) return string is
-    variable c: character;
-    variable ret: line := new string'("");
+    alias xv: std_ulogic_vector(1 to v'length) is v;
+    variable ret: string(1 to v'length);
   begin
-    for i in v'range loop
-      write(ret, to_string(v(i)));
+    for i in xv'range loop
+      ret(i to i) := to_string(xv(i));
     end loop;
 
-    return ret.all;
+    return ret;
   end function to_string;
 
   function to_string(v: in real) return string is
@@ -104,19 +104,18 @@ package body text is
   end function;
 
   function to_string(data : byte_string) return string is
-    variable ret : line := new string'("");
+    alias xdata: byte_string(1 to data'length) is data;
+    variable ret: string(1 to data'length * 3 + 1);
   begin
-    write(ret, string'("["), left, 1);
-    for i in data'range
+    for i in xdata'range
     loop
-      if i /= data'left then
-        write(ret, string'(" "), left, 1);
-      end if;
-      write(ret, to_hex_string(data(i)), left, 2);
+      ret(i*3) := ' ';
+      ret(i*3 + 1 to i*3 + 2) := to_hex_string(data(i));
     end loop;
-    write(ret, string'("]"), left, 1);
+    ret(ret'left) := '[';
+    ret(ret'right) := ']';
 
-    return ret.all;
+    return ret;
   end function;
 
   function to_string(v: in unsigned) return string
