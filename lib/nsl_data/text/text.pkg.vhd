@@ -52,6 +52,8 @@ package text is
   -- response boolean value)
   function strfind(haystack, needle : string) return boolean;
 
+  function "*"(s: string; n: natural) return string;
+  
 end package;
 
 package body text is
@@ -272,6 +274,18 @@ package body text is
       return b;
     end if;
   end function;
+
+  function "*"(s: string; n: natural) return string is
+    alias xs: string(1 to s'length) is s;
+    variable ret : string(1 to xs'length*n);
+  begin
+    for i in 0 to n-1
+    loop
+      ret(i * xs'length + 1 to xs'length * (i + 1)) := xs;
+    end loop;
+    return ret;
+  end function;
+      
 
 end package body;
 
