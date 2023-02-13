@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_clocking, nsl_simulation, nsl_math;
+library nsl_clocking, nsl_simulation, nsl_math, nsl_event;
 use nsl_math.fixed.all;
 
 architecture arch of tb is
@@ -16,6 +16,7 @@ architecture arch of tb is
 
   signal s_gen_tick, s_rcv_tick : std_ulogic;
   constant c_period: ufixed(4 downto -5) := to_ufixed(10.0, 4, -5);
+  constant c_unit: ufixed(c_period'range) := to_ufixed(1.0, c_period'left, c_period'right);
   signal s_period: nsl_math.fixed.ufixed(6 downto -8);
 
   signal s_done : std_ulogic_vector(0 to 0);
@@ -36,11 +37,12 @@ begin
       clock_i => s_clk(1)
       );
 
-  freq_gen: nsl_clocking.generator.tick_generator
+  freq_gen: nsl_event.tick.tick_generator_frac
     port map(
       reset_n_i => s_resetn_clk(0),
       clock_i => s_clk(0),
-      period_i => c_period,
+      freq_denom_i => c_period,
+      freq_num_i => c_unit,
       tick_o => s_gen_tick
       );
 
@@ -53,7 +55,7 @@ begin
       tick_o => s_rcv_tick
       );
 
-  measurer : nsl_clocking.receiver.tick_measurer
+  measurer : nsl_event.tick.tick_measurer
     generic map(
       tau_c => 2**(s_period'length)-1
       )
