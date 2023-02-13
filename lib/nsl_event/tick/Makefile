@@ -4,6 +4,7 @@ vhdl-sources += tick_extractor_clock.vhd
 vhdl-sources += tick_oscillator.vhd
 vhdl-sources += tick_extractor_self_clocking.vhd
 vhdl-sources += tick_generator.vhd
+vhdl-sources += tick_generator_frac.vhd
 vhdl-sources += tick_generator_integer.vhd
 vhdl-sources += tick_measurer.vhd
 vhdl-sources += tick_pll.vhd

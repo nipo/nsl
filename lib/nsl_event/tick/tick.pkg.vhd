@@ -21,6 +21,22 @@ package tick is
       );
   end component;
 
+  -- Fractional tick generator. Asserts tick_o for exactly one cycle
+  -- every freq_denom_i/freq_num_i cycles on average.
+  --
+  -- Only makes sense if freq_num_i < freq_denom_i
+  component tick_generator_frac is
+    port(
+      clock_i    : in  std_ulogic;
+      reset_n_i  : in  std_ulogic;
+
+      freq_num_i : in ufixed;
+      freq_denom_i : in ufixed;
+      
+      tick_o   : out std_ulogic
+      );
+  end component;
+
   component tick_generator_integer is
     port(
       clock_i    : in  std_ulogic;
