@@ -45,21 +45,26 @@ package fixed is
   function to_ufixed(value : real;
                      constant left, right : integer) return ufixed;
   function to_ufixed_auto(value : real;
-                          constant length : integer) return ufixed;
+                          constant length : integer;
+                          constant fixed_length: boolean := false;
+                          constant allow_null: boolean := false) return ufixed;
   function to_sfixed_auto(value : real;
-                          constant length : integer) return sfixed;
-  function ufixed_left(value : real;
-                          constant length : integer) return integer;
+                          constant length : integer;
+                          constant fixed_length: boolean := false;
+                          constant allow_null: boolean := false) return sfixed;
+  function ufixed_left(value : real) return integer;
   function ufixed_right(value : real;
-                           constant length : integer) return integer;
-  function sfixed_left(value : real;
-                          constant length : integer) return integer;
+                        constant length : integer) return integer;
+  function sfixed_left(value : real) return integer;
   function sfixed_right(value : real;
-                           constant length : integer) return integer;
+                        constant length : integer) return integer;
 
   function to_ufixed_saturate(s: sfixed;
                               constant left, right : integer) return ufixed;
+  function to_sfixed(u: ufixed;
+                     constant left, right : integer) return sfixed;
   function to_sfixed(u: ufixed) return sfixed;
+  function to_sfixed(s: signed) return sfixed;
   function to_sfixed_scaled(u: ufixed) return sfixed;
   function to_ufixed_scaled(s: sfixed) return ufixed;
 
@@ -159,8 +164,7 @@ package body fixed is
     return '0';
   end function;
 
-  function ufixed_left(value : real;
-                          constant length : integer) return integer
+  function ufixed_left(value : real) return integer
   is
   begin
     if value <= 0.0 then
@@ -174,11 +178,10 @@ package body fixed is
                            constant length : integer) return integer
   is
   begin
-    return ufixed_left(value, length) - length + 1;
+    return ufixed_left(value) - length + 1;
   end function;
 
-  function sfixed_left(value : real;
-                          constant length : integer) return integer
+  function sfixed_left(value : real) return integer
   is
   begin
     if value = 0.0 then
@@ -194,25 +197,61 @@ package body fixed is
                         constant length : integer) return integer
   is
   begin
-    return sfixed_left(value, length) - length + 1;
+    return sfixed_left(value) - length + 1;
   end function;
 
   function to_ufixed_auto(value : real;
-                          constant length : integer) return ufixed
+                          constant length : integer;
+                          constant fixed_length: boolean := false;
+                          constant allow_null: boolean := false) return ufixed
   is
-    constant ret: ufixed(ufixed_left(value, length) downto ufixed_right(value, length))
-      := to_ufixed(value, ufixed_left(value, length), ufixed_right(value, length));
+    constant l: integer := ufixed_left(value);
+    constant r: integer := ufixed_right(value, length);
+    constant ret: ufixed := to_ufixed(value, l, r);
   begin
-    return ret;
+    if fixed_length then
+      return to_ufixed(value, l, r);
+    end if;
+
+    for i in r to l-1
+    loop
+      if ret(i) /= '0' then
+        return to_ufixed(value, l, i);
+      end if;
+    end loop;
+
+    if ret(l) = '0' and allow_null then
+      return nauf;
+    end if;
+
+    return to_ufixed(value, l, l);
   end function;
   
   function to_sfixed_auto(value : real;
-                          constant length : integer) return sfixed
+                          constant length : integer;
+                          constant fixed_length: boolean := false;
+                          constant allow_null: boolean := false) return sfixed
   is
-    constant ret: sfixed(sfixed_left(value, length) downto sfixed_right(value, length))
-      := to_sfixed(value, sfixed_left(value, length), sfixed_right(value, length));
+    constant l: integer := sfixed_left(value);
+    constant r: integer := sfixed_right(value, length);
+    constant ret: sfixed := to_sfixed(value, l, r);
   begin
-    return ret;
+    if fixed_length then
+      return to_sfixed(value, l, r);
+    end if;
+
+    for i in r to l-1
+    loop
+      if ret(i) /= '0' then
+        return to_sfixed(value, l, i);
+      end if;
+    end loop;
+
+    if ret(l) = '0' and allow_null then
+      return nasf;
+    end if;
+
+    return to_sfixed(value, l, l);
   end function;
 
   function to_x01(value : ufixed) return ufixed
@@ -338,8 +377,10 @@ package body fixed is
   begin
     ret := (others => '0');
 
-    ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
-    ret(overlap_right-1 downto ret'right) := (others => value(overlap_right));
+    if overlap_left >= overlap_right then
+      ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
+      ret(overlap_right-1 downto ret'right) := (others => value(overlap_right));
+    end if;
 
     return ret;
   end function;
@@ -351,7 +392,8 @@ package body fixed is
   begin
     ret := resize(value, left, right);
 
-    if value'left > left
+    if value'length > 0
+      and value'left > left
       and value(value'left downto left+1) /= (value'left downto left+1 => '0') then
         ret := (others => '1');
     end if;
@@ -498,7 +540,7 @@ package body fixed is
 
   function to_suv(value : sfixed) return std_ulogic_vector
   is
-    constant v : sfixed(value'left-value'right+1 downto 1) := value;
+    constant v : sfixed(value'length-1 downto 0) := value;
   begin
     if v'length <= 0 then
       return "";
@@ -552,13 +594,12 @@ package body fixed is
   begin
     ret := (others => sign(value));
 
-    if overlap_left < overlap_right then
-      return ret;
+    if overlap_left >= overlap_right then
+      ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
     end if;
-
-    if value'length > 0 and ret'length > 0 then
-      ret(overlap_left-1 downto overlap_right) := value(overlap_left-1 downto overlap_right);
-      ret(overlap_right-1 downto ret'right) := (others => value(value'right));
+      
+    if overlap_right-1 >= ret'right then
+      ret(overlap_right-1 downto ret'right) := (others => '0');
     end if;
 
     return ret;
@@ -572,7 +613,7 @@ package body fixed is
   begin
     ret := resize(value, left, right);
 
-    if left >= value'left or ret'length <= 1 then
+    if value'length = 0 or left >= value'left or ret'length <= 1 then
       return ret;
     end if;
 
@@ -852,18 +893,42 @@ package body fixed is
 
   function to_string(value: ufixed) return string
   is
-    constant int : string := to_string(to_suv(value(value'left downto 0)));
-    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
   begin
-    return int & "." & frac;
+    if value'length <= 0 then
+      return to_string(to_real(value)) & " (-.u)";
+    elsif value'left >= 0 then
+      if value'right < 0 then
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto 0)))
+          & "." & to_string(to_suv(value(-1 downto value'right))) & "u)";
+      else
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "u)";
+      end if;
+    else
+      return to_string(to_real(value))
+          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "u)";
+    end if;
   end function;
 
   function to_string(value: sfixed) return string
   is
-    constant int : string := to_string(to_suv(value(value'left downto 0)));
-    constant frac : string := to_string(to_suv(value(-1 downto value'right)));
   begin
-    return int & "." & frac;
+    if value'length <= 0 then
+      return to_string(to_real(value)) & " (-.s)";
+    elsif value'left >= 0 then
+      if value'right < 0 then
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto 0)))
+          & "." & to_string(to_suv(value(-1 downto value'right))) & "s)";
+      else
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "s)";
+      end if;
+    else
+      return to_string(to_real(value))
+          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "s)";
+    end if;
   end function;
 
   function to_ufixed_saturate(s: sfixed;
@@ -884,6 +949,21 @@ package body fixed is
   function to_sfixed(u: ufixed) return sfixed
   is
     constant ret: sfixed(u'left+1 downto u'right) := "0" & sfixed(u);
+  begin
+    return ret;
+  end function;
+
+  function to_sfixed(u: ufixed;
+                     constant left, right : integer) return sfixed
+  is
+    constant s: sfixed(u'left+1 downto u'right) := "0" & sfixed(u);
+  begin
+    return resize(s, left, right);
+  end function;
+
+  function to_sfixed(s: signed) return sfixed
+  is
+    constant ret: sfixed(s'length-1 downto 0) := sfixed(s);
   begin
     return ret;
   end function;
