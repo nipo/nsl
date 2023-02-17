@@ -39,7 +39,7 @@ begin
 
   shreg: process(jtag_i.tck)
   begin
-    if rising_edge(jtag_i.tck) then
+    if rising_edge(jtag_i.tck.v) then
       if s_ir_capture = '1' then
         ir_shreg <= ir_out_i & "01";
       end if;
@@ -51,14 +51,14 @@ begin
       end if;
       
       if s_ir_shift = '1' then
-        ir_shreg <= jtag_i.tdi & ir_shreg(ir_shreg'left downto 1);
+        ir_shreg <= jtag_i.tdi.v & ir_shreg(ir_shreg'left downto 1);
       end if;
     end if;
   end process;
 
   tdo_gen: process(jtag_i.tck)
   begin
-    if falling_edge(jtag_i.tck) then
+    if falling_edge(jtag_i.tck.v) then
       if s_ir_shift = '1' then
         jtag_o.tdo <= ir_shreg(0);
       elsif s_dr_shift = '1' then
@@ -70,15 +70,15 @@ begin
   end process;
   
   ir_o <= ir;
-  dr_tdi_o <= jtag_i.tdi;
+  dr_tdi_o <= jtag_i.tdi.v;
   reset_o <= s_reset;
   dr_shift_o <= s_dr_shift;
   
   controller: nsl_jtag.tap.tap_controller
     port map(
-      tck_i => jtag_i.tck,
-      tms_i => jtag_i.tms,
-      trst_i => jtag_i.trst,
+      tck_i => jtag_i.tck.v,
+      tms_i => jtag_i.tms.v,
+      trst_i => jtag_i.trst.v,
       reset_o => s_reset,
       run_o => run_o,
       ir_capture_o => s_ir_capture,

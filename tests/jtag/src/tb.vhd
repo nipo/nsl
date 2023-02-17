@@ -95,7 +95,7 @@ begin
       dr_len => 32
       )
     port map(
-      tck_i => ate_o.tck,
+      tck_i => ate_o.tck.v,
       tdi_i => s_tap_dr_in,
       tdo_o => s_idcode_out,
 
@@ -115,7 +115,7 @@ begin
       dr_len => 1
       )
     port map(
-      tck_i => ate_o.tck,
+      tck_i => ate_o.tck.v,
       tdi_i => s_tap_dr_in,
       tdo_o => s_bypass_out,
 

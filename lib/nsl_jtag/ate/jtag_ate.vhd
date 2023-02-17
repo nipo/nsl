@@ -1,7 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_jtag, nsl_math;
+library nsl_jtag, nsl_math, nsl_io;
+use nsl_io.io.all;
 
 entity jtag_ate is
   generic (
@@ -315,13 +316,13 @@ begin
   begin
     cmd_ready_o <= '0';
     rsp_valid_o <= '0';
-    jtag_o.tck <= r.tck_shreg(0);
-    jtag_o.tdi <= r.data_shreg(0);
-    jtag_o.tms <= r.tms_shreg(0);
+    jtag_o.tck <= to_tristated(r.tck_shreg(0));
+    jtag_o.tdi <= to_tristated(r.data_shreg(0));
+    jtag_o.tms <= to_tristated(r.tms_shreg(0));
     if r.tap_branch = TAP_RESET then
-      jtag_o.trst <= '0';
+      jtag_o.trst <= to_tristated('0');
     else
-      jtag_o.trst <= '1';
+      jtag_o.trst <= to_tristated('1');
     end if;
 
     rsp_data_o <= r.data_shreg;
@@ -333,12 +334,12 @@ begin
       when ST_SHIFTING =>
         if r.data_left = 0 then
           if allow_pipelining and r.pipeline_avaiable then
-            jtag_o.tms <= '0';
+            jtag_o.tms <= to_tristated('0');
           else
-            jtag_o.tms <= '1';
+            jtag_o.tms <= to_tristated('1');
           end if;
         else
-          jtag_o.tms <= '0';
+          jtag_o.tms <= to_tristated('0');
         end if;
 
       when ST_SHIFT_DONE | ST_SHIFT_PIPE_RSP =>
