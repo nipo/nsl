@@ -33,33 +33,23 @@ end entity;
 
 architecture rtl of jtag_ate is
 
-  -- r.prescaler     543210------54321054321054321054321054
-  --       ___________ ___________ ___________ ___________
-  -- TMS   ___________X___________X___________X___________X 
-  --            _____                   _____       _____
-  -- TCK   ____/     \_________________/     \_____/     \ 
-  --                ^ ^
-  --                | |
-  --                | \-- Decision taking for next cycle,
-  --                |     retrieve commands, update outputs
-  --                \-------- Gather TDO
-
   type tap_branch_t is (
     TAP_UNDEFINED,
     TAP_RESET,
-    TAP_REG,
-    TAP_RTI
+    TAP_RTI,
+    TAP_CAPTURED
     );
 
   type state_t is (
     ST_RESET,
     ST_IDLE,
-    ST_MOVING, -- shift TMS
-    ST_SHIFT_PRE, -- Special kind of MOVING where next state is SHIFTING
-    ST_SHIFTING,
-    ST_SHIFT_PIPE_RSP,
-    ST_SHIFT_PIPE_CMD,
-    ST_SHIFT_POST,
+    ST_MOVE_LOW,
+    ST_MOVE_HIGH,
+    ST_SHIFT_LOW,
+    ST_SHIFT_HIGH,
+    -- Waiting for TDO to settle before sampling it and outputting
+    -- data.
+    ST_SHIFT_HOLD,
     ST_SHIFT_DONE
     );
 
@@ -75,9 +65,7 @@ architecture rtl of jtag_ate is
     data_shreg_insertion_index, data_left : natural range 0 to data_max_size-1;
     tms_shreg : std_ulogic_vector(0 to tms_shreg_len-1);
     tms_left : natural range 0 to tms_move_max_len - 1 + 2;
-    tck_shreg : std_ulogic_vector(0 to 1);
-    pipeline_avaiable : boolean;
-    tdo : std_ulogic;
+    tdi, tdi_next : tristated;
   end record;
 
   signal r, rin: regs_t;
@@ -89,37 +77,26 @@ begin
     if rising_edge(clock_i) then
       r <= rin;
     end if;
+
     if reset_n_i = '0' then
       r.state <= ST_RESET;
       r.prescaler <= 0;
-      r.tck_shreg <= (others => '0');
-      r.pipeline_avaiable <= false;
     end if;
   end process;
 
   transition: process(r, jtag_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
                       divisor_i)
-    variable start : boolean;
   begin
     rin <= r;
 
-    start := false;
-    
-    if r.tck_shreg /= (r.tck_shreg'range => '0') then
-      if r.prescaler /= 0 then
-        rin.prescaler <= r.prescaler - 1;
-      else
-        rin.prescaler <= divisor_i;
-        rin.tck_shreg <= r.tck_shreg(1 to r.tck_shreg'right) & '0';
-
-        if r.tck_shreg = "01" then -- rising edge
-          rin.tdo <= jtag_i.tdo;
-        end if;
-      end if;
+    if r.prescaler /= 0 then
+      rin.prescaler <= r.prescaler - 1;
     else
       case r.state is
         when ST_RESET =>
           rin.state <= ST_IDLE;
+          rin.tdi_next <= tristated_z;
+          rin.tdi <= tristated_z;
 
         when ST_IDLE =>
           if cmd_valid_i = '1' then
@@ -127,11 +104,10 @@ begin
               when nsl_jtag.ate.ATE_OP_RESET =>
                 -- From state * to Reset
                 rin.tms_shreg <= (others => '1');
-                rin.tms_left <= 4;
+                rin.tms_left <= cmd_size_m1_i;
                 rin.tap_branch <= TAP_RESET;
-                rin.state <= ST_MOVING;
+                rin.state <= ST_MOVE_LOW;
                 rin.prescaler <= divisor_i;
-                start := true;
 
               when nsl_jtag.ate.ATE_OP_RTI =>
                 case r.tap_branch is
@@ -143,17 +119,17 @@ begin
                     rin.tms_shreg <= (others => '0');
                     rin.tms_left <= cmd_size_m1_i;
                     rin.tap_branch <= TAP_RTI;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
 
-                  when TAP_REG =>
-                    -- go through Exit2, Update to Rti
+                  when TAP_CAPTURED =>
+                    -- go through Exit1, Update to Rti
                     rin.tms_shreg <= (others => '0');
                     rin.tms_shreg(0 to 2) <= "110";
                     rin.tms_left <= cmd_size_m1_i + 2;
                     rin.tap_branch <= TAP_RTI;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
                 end case;
 
               when nsl_jtag.ate.ATE_OP_DR_CAPTURE =>
@@ -162,23 +138,23 @@ begin
                     null;
 
                   when TAP_RTI =>
-                    -- Through Sel-DR, Capture, Exit1 to Pause
+                    -- Through Sel-DR, stay in Capture
                     rin.tms_shreg <= (others => '-');
-                    rin.tms_shreg(0 to 3) <= "1010";
-                    rin.tms_left <= 3;
-                    rin.tap_branch <= TAP_REG;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.tms_shreg(0 to 1) <= "10";
+                    rin.tms_left <= 1;
+                    rin.tap_branch <= TAP_CAPTURED;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
 
-                  when TAP_REG =>
-                    -- Loop through Exit2, Update, Sel-DR, Capture, Exit1 to Pause
+                  when TAP_CAPTURED =>
+                    -- Loop through Exit1, Update, Sel-DR, Capture
                     -- Dont touch Rti
                     rin.tms_shreg <= (others => '-');
-                    rin.tms_shreg(0 to 5) <= "111010";
-                    rin.tms_left <= 5;
-                    rin.tap_branch <= TAP_REG;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.tms_shreg(0 to 3) <= "1110";
+                    rin.tms_left <= 3;
+                    rin.tap_branch <= TAP_CAPTURED;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
                 end case;
 
               when nsl_jtag.ate.ATE_OP_IR_CAPTURE =>
@@ -189,51 +165,49 @@ begin
                   when TAP_RTI =>
                     -- Through Sel-DR, Sel-IR, Capture, Exit1 to Pause
                     rin.tms_shreg <= (others => '-');
-                    rin.tms_shreg(0 to 4) <= "11010";
-                    rin.tms_left <= 4;
-                    rin.tap_branch <= TAP_REG;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.tms_shreg(0 to 2) <= "110";
+                    rin.tms_left <= 2;
+                    rin.tap_branch <= TAP_CAPTURED;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
 
-                  when TAP_REG =>
-                    -- Loop through Exit2, Update, Sel-DR, Sel-IR, Capture, Exit1 to Pause
+                  when TAP_CAPTURED =>
+                    -- Loop through Exit1, Update, Sel-DR, Sel-IR, stay in Capture
                     -- Dont touch Rti
                     rin.tms_shreg <= (others => '-');
-                    rin.tms_shreg(0 to 6) <= "1111010";
-                    rin.tms_left <= 6;
-                    rin.tap_branch <= TAP_REG;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.tms_shreg(0 to 4) <= "11110";
+                    rin.tms_left <= 4;
+                    rin.tap_branch <= TAP_CAPTURED;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
                 end case;
 
               when nsl_jtag.ate.ATE_OP_SWD_TO_JTAG =>
                 case r.tap_branch is
-                  when TAP_UNDEFINED | TAP_RESET | TAP_RTI =>
+                  when TAP_UNDEFINED | TAP_RESET =>
                     rin.tms_shreg <= (others => '1');
                     rin.tms_shreg(0 to 12) <= "0011110011100";
                     rin.tms_left <= 13;
                     rin.tap_branch <= TAP_UNDEFINED;
-                    rin.state <= ST_MOVING;
-                    start := true;
+                    rin.state <= ST_MOVE_LOW;
+                    rin.prescaler <= divisor_i;
 
-                  when TAP_REG =>
+                  when TAP_CAPTURED | TAP_RTI =>
                     null;
                 end case;
 
               when nsl_jtag.ate.ATE_OP_SHIFT =>
                 case r.tap_branch is
-                  when TAP_REG =>
-                    -- Through Exit2 to Shift
-                    rin.tms_shreg <= (others => '-');
-                    rin.tms_shreg(0 to 1) <= "10";
-                    rin.tms_left <= 1;
+                  when TAP_CAPTURED =>
+                    -- We are in Capture or ending Shift with
+                    -- uncompleted cycle, we need to insert one TMS=0
+                    -- cycle to go to next Shift cycle.
                     rin.data_shreg <= cmd_data_i;
                     rin.data_left <= cmd_size_m1_i;
                     rin.data_shreg_insertion_index <= cmd_size_m1_i;
-                    rin.tap_branch <= TAP_REG;
-                    rin.state <= ST_SHIFT_PRE;
-                    rin.pipeline_avaiable <= false;
-                    start := true;
+                    rin.tap_branch <= TAP_CAPTURED;
+                    rin.state <= ST_SHIFT_LOW;
+                    rin.prescaler <= divisor_i;
 
                   when others =>
                     -- This is an error, but still go though SHIFT_DONE in
@@ -243,60 +217,45 @@ begin
             end case;
           end if;
 
-        when ST_MOVING | ST_SHIFT_PRE | ST_SHIFT_POST =>
+        when ST_MOVE_LOW =>
+          rin.state <= ST_MOVE_HIGH;
+          rin.prescaler <= divisor_i;
+          rin.tdi_next <= tristated_z;
+          
+        when ST_MOVE_HIGH =>
+          rin.tdi <= r.tdi_next;
           if r.tms_left /= 0 then
             -- extend on right, on purpose
             rin.tms_shreg(0 to rin.tms_shreg'right-1) <= r.tms_shreg(1 to r.tms_shreg'right);
             rin.tms_left <= r.tms_left - 1;
-            start := true;
-          elsif r.state = ST_SHIFT_PRE then
-            rin.state <= ST_SHIFTING;
-            start := true;
-          elsif r.state = ST_SHIFT_POST then
-            rin.state <= ST_SHIFT_DONE;
+            rin.prescaler <= divisor_i;
+            rin.state <= ST_MOVE_LOW;
           else
             rin.state <= ST_IDLE;
           end if;
 
-        when ST_SHIFTING =>
+        when ST_SHIFT_LOW =>
           rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
-          rin.data_shreg(r.data_shreg_insertion_index) <= r.tdo;
-          start := true;
-          if r.data_left = 0 then
-            if allow_pipelining and r.pipeline_avaiable then
-              rin.state <= ST_SHIFT_PIPE_RSP;
-              start := false;
-            else
-              -- Last cycle was shifted with TMS=1, next cycle we are in Exit1.
-              -- Now we need to go to Pause
-              rin.tms_shreg <= (others => '-');
-              rin.tms_shreg(0 to 0) <= "0";
-              rin.tms_left <= 0;
-              rin.state <= ST_SHIFT_POST;
-            end if;
-          else
+          rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
+          rin.tdi_next <= to_tristated(r.data_shreg(0));
+          rin.state <= ST_SHIFT_HIGH;
+          rin.prescaler <= divisor_i;
+
+        when ST_SHIFT_HIGH =>
+          rin.tdi <= r.tdi_next;
+          if r.data_left /= 0 then
+            rin.state <= ST_SHIFT_LOW;
             rin.data_left <= r.data_left - 1;
-            case cmd_op_i is
-              when nsl_jtag.ate.ATE_OP_SHIFT =>
-                rin.pipeline_avaiable <= (rsp_ready_i = '1')
-                                         and (cmd_valid_i = '1')
-                                         and allow_pipelining;
-
-              when others =>
-                rin.pipeline_avaiable <= false;
-            end case;
+          else
+            rin.state <= ST_SHIFT_HOLD;
           end if;
+          rin.prescaler <= divisor_i;
 
-        when ST_SHIFT_PIPE_RSP =>
-          rin.state <= ST_SHIFT_PIPE_CMD;
-
-        when ST_SHIFT_PIPE_CMD =>
-          rin.data_shreg <= cmd_data_i;
-          rin.data_left <= cmd_size_m1_i;
-          rin.data_shreg_insertion_index <= cmd_size_m1_i;
-          rin.state <= ST_SHIFTING;
-          rin.pipeline_avaiable <= false;
-          start := true;
+        when ST_SHIFT_HOLD =>
+          rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
+          rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
+          rin.tdi_next <= to_tristated(r.data_shreg(0));
+          rin.state <= ST_SHIFT_DONE;
           
         when ST_SHIFT_DONE =>
           if rsp_ready_i = '1' then
@@ -304,45 +263,45 @@ begin
           end if;
       end case;
     end if;
-
-    if start then
-      rin.prescaler <= divisor_i;
-      rin.tck_shreg <= "01";
-    end if;
-    
   end process;
 
   moore: process(r)
   begin
-    cmd_ready_o <= '0';
-    rsp_valid_o <= '0';
-    jtag_o.tck <= to_tristated(r.tck_shreg(0));
-    jtag_o.tdi <= to_tristated(r.data_shreg(0));
+    jtag_o.trst <= to_tristated('1');
+    jtag_o.tdi <= r.tdi;
+    jtag_o.tck <= to_tristated('0');
     jtag_o.tms <= to_tristated(r.tms_shreg(0));
-    if r.tap_branch = TAP_RESET then
-      jtag_o.trst <= to_tristated('0');
-    else
-      jtag_o.trst <= to_tristated('1');
-    end if;
-
-    rsp_data_o <= r.data_shreg;
 
     case r.state is
-      when ST_IDLE | ST_SHIFT_PIPE_CMD =>
-        cmd_ready_o <= '1';
+      when ST_SHIFT_HIGH | ST_MOVE_HIGH =>
+        jtag_o.tck <= to_tristated('1');
 
-      when ST_SHIFTING =>
-        if r.data_left = 0 then
-          if allow_pipelining and r.pipeline_avaiable then
-            jtag_o.tms <= to_tristated('0');
-          else
-            jtag_o.tms <= to_tristated('1');
-          end if;
-        else
-          jtag_o.tms <= to_tristated('0');
+      when others =>
+        null;
+    end case;
+
+    case r.state is
+      when ST_MOVE_LOW | ST_MOVE_HIGH =>
+        if r.tms_shreg(0 to 4) = "11111"
+          and r.tms_left >= 4 then
+          jtag_o.trst <= to_tristated('0');
         end if;
 
-      when ST_SHIFT_DONE | ST_SHIFT_PIPE_RSP =>
+      when ST_SHIFT_HIGH | ST_SHIFT_HOLD | ST_SHIFT_LOW =>
+        jtag_o.tms <= to_tristated('0');
+
+      when others =>
+        null;
+    end case;
+
+    cmd_ready_o <= '0';
+    rsp_valid_o <= '0';
+    rsp_data_o <= r.data_shreg;
+    case r.state is
+      when ST_IDLE =>
+        cmd_ready_o <= '1';
+
+      when ST_SHIFT_DONE =>
         rsp_valid_o <= '1';
 
       when others =>
