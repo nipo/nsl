@@ -28,6 +28,7 @@ package pipe is
   constant pipe_req_idle_c : pipe_req_t := (data => "--------",
                                             valid => '0');
   constant pipe_ack_idle_c : pipe_ack_t := (ready => '0');
+  constant pipe_ack_blackhole_c : pipe_ack_t := (ready => '1');
 
   function pipe_flit(data: pipe_data_t) return pipe_req_t;
   
