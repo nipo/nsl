@@ -29,7 +29,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data, nsl_clocking;
+library nsl_usb, nsl_data, nsl_event;
 use nsl_usb.usb.all;
 use nsl_data.bytestream.byte;
 
@@ -196,7 +196,7 @@ begin
   -- DPLL                                                                               --
   --====================================================================================--
 
-  ticker: nsl_clocking.tick.tick_extractor_self_clocking
+  ticker: nsl_event.tick.tick_extractor_self_clocking
     generic map(
       period_max_c => (ref_clock_mhz_c+11) / 12,
       run_length_max_c => 5,

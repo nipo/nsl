@@ -6,4 +6,4 @@ vhdl-sources += fs_utmi8_rx_phy.vhd
 deps += nsl_usb.usb
 deps += nsl_usb.utmi
 deps += nsl_data.bytestream
-deps += nsl_clocking.tick
+deps += nsl_event.tick
