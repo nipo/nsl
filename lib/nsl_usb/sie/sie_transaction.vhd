@@ -152,6 +152,9 @@ begin
   begin
     rin <= r;
 
+    put := false;
+    take := false;
+
     rin.hs <= hs_i;
     rin.frame <= '0';
     rin.microframe <= '0';
