@@ -27,4 +27,15 @@ package clock is
       );
   end component;
 
+  component clock_output_se_divided is
+    generic(
+      divisor_c: positive := 1
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      port_o: out std_ulogic
+      );
+  end component;
+
 end package clock;
