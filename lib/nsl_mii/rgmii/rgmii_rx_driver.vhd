@@ -19,7 +19,7 @@ entity rgmii_rx_driver is
     rx_clock_o : out std_ulogic;
     sfd_o : out std_ulogic;
 
-    speed_i : in link_speed_t;
+    mode_i : in link_speed_t;
     rgmii_i : in  work.rgmii.rgmii_io_group_t;
 
     flit_o : out rgmii_sdr_io_t;
@@ -78,7 +78,7 @@ begin
       data_o => reset_n_s
       );
 
-  speed_async_s <= to_logic(speed_i);
+  speed_async_s <= to_logic(mode_i);
   
   speed_resync: nsl_clocking.interdomain.interdomain_static_reg
     generic map(
