@@ -5,6 +5,8 @@ vhdl-sources += device_ep_in_noop.vhd
 vhdl-sources += device_ep_bulk_out.vhd
 vhdl-sources += device_ep_bulk_in.vhd
 vhdl-sources += device_ep_intr_in.vhd
+vhdl-sources += device_ep_framed_out.vhd
+vhdl-sources += device_ep_framed_in.vhd
 
 deps += nsl_usb.sie
 deps += nsl_usb.ulpi
@@ -14,3 +16,4 @@ deps += nsl_memory.ram
 deps += nsl_logic.bool
 deps += nsl_data.bytestream
 deps += nsl_clocking.async
+deps += nsl_bnoc.framed

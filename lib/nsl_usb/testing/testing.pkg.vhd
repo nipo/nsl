@@ -54,7 +54,8 @@ package testing is
   procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
                                 signal p2s: out utmi8_p2s;
                                 pid : pid_t;
-                                data : byte_string := null_byte_string);
+                                data : byte_string := null_byte_string;
+                                timeout_cycles : integer := 1024);
   
   procedure utmi_transfer_out(signal s2p: in utmi8_s2p;
                               signal p2s: out utmi8_p2s;
@@ -281,11 +282,13 @@ package body testing is
   procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
                                 signal p2s: out utmi8_p2s;
                                 pid : pid_t;
-                                data : byte_string := null_byte_string)
+                                data : byte_string := null_byte_string;
+                                timeout_cycles : integer := 1024)
   is
     constant packet : byte_string := pid_byte(pid) & data;
     variable rxdata : byte_string(0 to 8191 + 3);
     variable rx_ptr : integer;
+    variable left : integer := timeout_cycles;
   begin
     log_debug("   < " & packet_to_string(packet));
 
@@ -294,7 +297,7 @@ package body testing is
     p2s.data.rx_valid <= '0';
     utmi_cycle(s2p, p2s);
 
-    wait_transmit: while true
+    wait_transmit: for i in 0 to timeout_cycles-1
     loop
       utmi_cycle(s2p, p2s);
       exit when s2p.data.tx_valid = '1';
@@ -304,17 +307,19 @@ package body testing is
 
     wait_end: while true
     loop
+      exit when s2p.data.tx_valid = '0';
       rxdata(rx_ptr) := s2p.data.data;
       rx_ptr := rx_ptr + 1;
       utmi_cycle(s2p, p2s);
-      exit when s2p.data.tx_valid = '0';
     end loop;
 
     p2s.data.tx_ready <= '0';
 
     utmi_cycle(s2p, p2s);
 
-    if rx_ptr /= packet'length or rxdata(0 to rx_ptr-1) /= packet then
+    if rx_ptr = 0 and data'length = 0 and pid = PID_STALL then
+      log_debug("   * Had no response at all");
+    elsif rx_ptr /= packet'length or rxdata(0 to rx_ptr-1) /= packet then
       log_debug("   ! " & packet_to_string(rxdata(0 to rx_ptr-1)) & " (Received)");
       log_error("   ! " & to_hex_string(rxdata(0 to rx_ptr-1)));
       log_error("   Received packet does not match");

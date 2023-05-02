@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data, nsl_logic;
+library nsl_usb, nsl_data, nsl_logic, nsl_bnoc;
 use nsl_data.bytestream.byte;
 use nsl_data.bytestream.byte_string;
 use nsl_data.bytestream.null_byte_string;
@@ -178,6 +178,42 @@ package device is
 
       transaction_i : in  transaction_cmd;
       transaction_o : out transaction_rsp
+      );
+  end component;
+
+  component device_ep_framed_in is
+    generic (
+      hs_supported_c : boolean;
+      fs_mps_l2_c : integer range 3 to 6 := 6;
+      double_buffer_c : boolean := true
+      );
+    port (
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
+
+      framed_i : in nsl_bnoc.framed.framed_req;
+      framed_o : out nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
+  component device_ep_framed_out is
+    generic (
+      hs_supported_c : boolean;
+      fs_mps_l2_c : integer range 3 to 6 := 6;
+      double_buffer_c : boolean := true
+      );
+    port (
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      transaction_i : in  transaction_cmd;
+      transaction_o : out transaction_rsp;
+
+      framed_o : out nsl_bnoc.framed.framed_req;
+      framed_i : in nsl_bnoc.framed.framed_ack
       );
   end component;
 

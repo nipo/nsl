@@ -107,6 +107,10 @@ package body debug is
   is
     alias blob : byte_string(0 to data'length-1) is data;
   begin
+    if data'length = 0 then
+      return "<Empty>";
+    end if;
+
     if not pid_byte_is_correct(blob(0)) then
       return "[Invalid PID :" & to_string(unsigned(blob(0))) & "], added data: " & to_string(blob(1 to blob'right));
     end if;
