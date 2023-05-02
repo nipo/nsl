@@ -74,6 +74,7 @@ package bytestream is
 
   -- Byte stream (dynamically sized byte string) helper.
   type byte_stream is access byte_string;
+  procedure clear(s: inout byte_stream);
   procedure write(s: inout byte_stream; constant d: byte);
   procedure write(s: inout byte_stream; constant d: byte_string);
   procedure write(s: inout byte_stream; d: inout byte_stream);
@@ -206,13 +207,27 @@ package body bytestream is
     return ret;
   end function;
 
+  procedure clear(s: inout byte_stream)
+  is
+  begin
+    if s /= null then
+      deallocate(s);
+    end if;
+    s := new byte_string(0 to -1);
+  end procedure;
+
   procedure write(s: inout byte_stream; constant d: byte)
   is
     variable n: byte_stream;
   begin
-    n := new byte_string(0 to s.all'length);
-    n.all := s.all & d;
-    deallocate(s);
+    if s /= null then
+      n := new byte_string(0 to s.all'length);
+      n.all := s.all & d;
+      deallocate(s);
+    else
+      n := new byte_string(0 to 0);
+      n.all(0) := d;
+    end if;
     s := n;
   end procedure;
 
@@ -220,9 +235,14 @@ package body bytestream is
   is
     variable n: byte_stream;
   begin
-    n := new byte_string(0 to s.all'length + d'length - 1);
-    n.all := s.all & d;
-    deallocate(s);
+    if s /= null then
+      n := new byte_string(0 to s.all'length + d'length - 1);
+      n.all := s.all & d;
+      deallocate(s);
+    else
+      n := new byte_string(0 to d'length-1);
+      n.all := d;
+    end if;
     s := n;
   end procedure;
 
