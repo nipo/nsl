@@ -179,6 +179,7 @@ begin
       ST_QUERY_MANGLE,
       ST_PA_NEXT,
       ST_PA_LOAD3,
+      ST_PA_LOAD32,
       ST_PA_CMP,
       ST_STALE,
       ST_MISSING,
@@ -250,6 +251,9 @@ begin
           end if;
 
         when ST_PA_LOAD3 =>
+          rin.state <= ST_PA_LOAD32;
+
+        when ST_PA_LOAD32 =>
           rin.state <= ST_PA_CMP;
           rin.left <= 3;
 
@@ -358,32 +362,36 @@ begin
           lookup_ram_en_s <= '1';
           col := entry_off_pa3_c;
 
+        when ST_PA_LOAD32 =>
+          lookup_ram_en_s <= '1';
+          col := entry_off_pa2_c;
+
         when ST_PA_CMP =>
           lookup_ram_en_s <= '1';
           case r.left is
-            when 3 => col := entry_off_pa2_c;
-            when 2 => col := entry_off_pa1_c;
-            when 1 => col := entry_off_pa0_c;
-            when others => col := entry_off_ttl_c;
+            when 3 => col := entry_off_pa1_c;
+            when 2 => col := entry_off_pa0_c;
+            when 1 => col := entry_off_ttl_c;
+            when others => col := entry_off_ha0_c;
           end case;
 
         when ST_TTL_CHECK =>
           lookup_ram_en_s <= '1';
-          col := entry_off_ha0_c;
+          col := entry_off_ha1_c;
 
         when ST_HA_LOAD =>
           case r.left is
-            when 5 => col := entry_off_ha1_c; lookup_ram_en_s <= '1';
-            when 4 => col := entry_off_ha2_c; lookup_ram_en_s <= '1';
-            when 3 => col := entry_off_ha3_c; lookup_ram_en_s <= '1';
-            when 2 => col := entry_off_ha4_c; lookup_ram_en_s <= '1';
-            when 1 => col := entry_off_ha5_c; lookup_ram_en_s <= '1';
-            when others => null;
+            when 5 => col := entry_off_ha2_c; lookup_ram_en_s <= '1';
+            when 4 => col := entry_off_ha3_c; lookup_ram_en_s <= '1';
+            when 3 => col := entry_off_ha4_c; lookup_ram_en_s <= '1';
+            when 2 => col := entry_off_ha5_c; lookup_ram_en_s <= '1';
+            when others => lookup_ram_en_s <= '1';
           end case;
 
         when ST_STALE =>
-          lookup_ram_en_s <= '1';
-          col := entry_off_ttl_c;
+--          lookup_ram_en_s <= '1';
+--          col := entry_off_ttl_c;
+          null;
 
         when ST_MISSING =>
           lookup_miss_s <= '1';
@@ -707,15 +715,18 @@ begin
       ST_DROP,
       ST_REQ_HANDLE,
       ST_VICTIM_TTL_LOAD,
+      ST_VICTIM_TTL_LOAD2,
       ST_VICTIM_TTL_CMP,
       ST_VICTIM_PA_CMP,
       ST_VICTIM_PA_WRITE,
       ST_VICTIM_HA_WRITE,
       ST_VICTIM_TTL_WRITE,
       ST_DECAY_TTL_LOAD,
+      ST_DECAY_TTL_LOAD2,
       ST_DECAY_TTL_DEC,
       ST_DECAY_TTL_STORE,
       ST_NOTIFY_PA_LOAD,
+      ST_NOTIFY_PA_LOAD2,
       ST_NOTIFY_PA_CMP,
       ST_NOTIFY_HA_CMP,
       ST_NOTIFY_TTL_READ,
@@ -960,6 +971,9 @@ begin
           end if;  
 
         when ST_VICTIM_TTL_LOAD =>
+          rin.state <= ST_VICTIM_TTL_LOAD2;
+          
+        when ST_VICTIM_TTL_LOAD2 =>
           rin.state <= ST_VICTIM_TTL_CMP;
           
         when ST_VICTIM_TTL_CMP =>
@@ -1023,6 +1037,9 @@ begin
           end if;
 
         when ST_DECAY_TTL_LOAD =>
+          rin.state <= ST_DECAY_TTL_LOAD2;
+
+        when ST_DECAY_TTL_LOAD2 =>
           rin.state <= ST_DECAY_TTL_DEC;
 
         when ST_DECAY_TTL_DEC =>
@@ -1045,8 +1062,11 @@ begin
           end if;
 
         when ST_NOTIFY_PA_LOAD =>
-          rin.state <= ST_NOTIFY_PA_CMP;
+          rin.state <= ST_NOTIFY_PA_LOAD2;
           rin.ref_pa <= r.notify_pa;
+
+        when ST_NOTIFY_PA_LOAD2 =>
+          rin.state <= ST_NOTIFY_PA_CMP;
           rin.left <= 3;
 
         when ST_NOTIFY_PA_CMP =>
@@ -1132,15 +1152,16 @@ begin
         when ST_VICTIM_TTL_LOAD | ST_DECAY_TTL_LOAD =>
           col := entry_off_ttl_c; receiver_ram_en_s <= '1';
 
-        when ST_VICTIM_TTL_CMP =>
+        when ST_VICTIM_TTL_LOAD2 | ST_DECAY_TTL_LOAD2 =>
           col := entry_off_pa0_c; receiver_ram_en_s <= '1';
+          
+        when ST_VICTIM_TTL_CMP =>
+          col := entry_off_pa1_c; receiver_ram_en_s <= '1';
 
         when ST_VICTIM_PA_CMP =>
           case r.left is
-            when 3 => col := entry_off_pa1_c; receiver_ram_en_s <= '1';
-            when 2 => col := entry_off_pa2_c; receiver_ram_en_s <= '1';
-            when 1 => col := entry_off_pa3_c; receiver_ram_en_s <= '1';
-            when others => null;
+            when 3 => col := entry_off_pa2_c; receiver_ram_en_s <= '1';
+            when others => col := entry_off_pa3_c; receiver_ram_en_s <= '1';
           end case;
 
         when ST_VICTIM_HA_WRITE =>
@@ -1165,21 +1186,23 @@ begin
         when ST_NOTIFY_PA_LOAD =>
           col := entry_off_pa0_c; receiver_ram_en_s <= '1';
 
+        when ST_NOTIFY_PA_LOAD2 =>
+          col := entry_off_pa1_c; receiver_ram_en_s <= '1';
+
         when ST_NOTIFY_PA_CMP =>
           case r.left is
-            when 3 => col := entry_off_pa1_c; receiver_ram_en_s <= '1';
-            when 2 => col := entry_off_pa2_c; receiver_ram_en_s <= '1';
-            when 1 => col := entry_off_pa3_c; receiver_ram_en_s <= '1';
-            when others => col := entry_off_ha0_c; receiver_ram_en_s <= '1';
+            when 3 => col := entry_off_pa2_c; receiver_ram_en_s <= '1';
+            when 2 => col := entry_off_pa3_c; receiver_ram_en_s <= '1';
+            when 1 => col := entry_off_ha0_c; receiver_ram_en_s <= '1';
+            when others => col := entry_off_ha1_c; receiver_ram_en_s <= '1';
           end case;
 
         when ST_NOTIFY_HA_CMP =>
           case r.left is
-            when 5 => col := entry_off_ha1_c; receiver_ram_en_s <= '1';
-            when 4 => col := entry_off_ha2_c; receiver_ram_en_s <= '1';
-            when 3 => col := entry_off_ha3_c; receiver_ram_en_s <= '1';
-            when 2 => col := entry_off_ha4_c; receiver_ram_en_s <= '1';
-            when 1 => col := entry_off_ha5_c; receiver_ram_en_s <= '1';
+            when 5 => col := entry_off_ha2_c; receiver_ram_en_s <= '1';
+            when 4 => col := entry_off_ha3_c; receiver_ram_en_s <= '1';
+            when 3 => col := entry_off_ha4_c; receiver_ram_en_s <= '1';
+            when 2 => col := entry_off_ha5_c; receiver_ram_en_s <= '1';
             when others => col := entry_off_ttl_c; receiver_ram_en_s <= '1';
           end case;
 
@@ -1197,7 +1220,7 @@ begin
       addr_size_c => cache_addr_size_c,
       word_size_c => 8,
       data_word_count_c => 1,
-      registered_output_c => false,
+      registered_output_c => true,
       b_can_write_c => false
       )
     port map(
