@@ -71,6 +71,19 @@ package testing is
       );
   end component;
 
+  component framed_dumper is
+    generic(
+      name_c: string
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      val_i       : in nsl_bnoc.framed.framed_req;
+      ack_i       : in nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
   procedure framed_flit_get(signal req: in nsl_bnoc.framed.framed_req;
                             signal ack: out nsl_bnoc.framed.framed_ack;
                             signal clock: in std_ulogic;
