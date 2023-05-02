@@ -23,9 +23,9 @@ architecture beh of complementary_led_driver is
 
   constant prescaler_exact_c : integer := integer(clock_hz_c / blink_rate_c / 2.0);
   constant prescaler_pow2_c : integer := nsl_math.arith.align_up(prescaler_exact_c);
-  constant prescaler_c : nsl_logic.bool.if_else(pow2_divisor_c,
-                                                prescaler_pow2_c,
-                                                prescaler_exact_c);
+  constant prescaler_c : integer := nsl_logic.bool.if_else(pow2_divisor_c,
+                                                           prescaler_pow2_c,
+                                                           prescaler_exact_c);
   
   type regs_t is
   record
