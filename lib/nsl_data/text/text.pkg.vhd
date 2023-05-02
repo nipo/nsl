@@ -111,8 +111,8 @@ package body text is
   begin
     for i in xdata'range
     loop
-      ret(i*3) := ' ';
-      ret(i*3 + 1 to i*3 + 2) := to_hex_string(data(i));
+      ret(i*3-2) := ' ';
+      ret(i*3-1 to i*3) := to_hex_string(xdata(i));
     end loop;
     ret(ret'left) := '[';
     ret(ret'right) := ']';
