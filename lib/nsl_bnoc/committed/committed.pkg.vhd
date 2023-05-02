@@ -211,6 +211,19 @@ package committed is
       );
   end component;
 
+  component committed_fifo_slice is
+    port(
+      reset_n_i  : in  std_ulogic;
+      clock_i    : in  std_ulogic;
+
+      in_i   : in committed_req;
+      in_o   : out committed_ack;
+
+      out_o   : out committed_req;
+      out_i   : in committed_ack
+      );
+  end component;
+
 end package committed;
 
 package body committed is
