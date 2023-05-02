@@ -7,3 +7,4 @@ packages += swd_multidrop
 packages += tpiu
 packages += testing
 packages += transactor
+packages += bridge
