@@ -271,6 +271,7 @@ begin
           rin.pkt(r.stream_pkt).valid <= true;
           rin.pkt(r.stream_pkt).length <= (others => '0');
           rin.stream_pkt <= packet_next(r.stream_pkt);
+          rin.stream_state <= STREAM_FILL;
         end if;
     end case;
         
@@ -324,7 +325,7 @@ begin
   moore: process(r, framed_i) is
   begin
     transaction_o <= TRANSACTION_RSP_IDLE;
-    transaction_o.toggle  <= '-';
+    transaction_o.toggle  <= r.sie_packet_no;
     transaction_o.last <= '-';
     transaction_o.data <= (others => '-');
 
@@ -348,7 +349,6 @@ begin
       when SIE_SEND =>
         ram_ren_s <= '1';
         transaction_o.phase <= PHASE_DATA;
-        transaction_o.toggle  <= r.sie_packet_no;
         transaction_o.last <= '0';
         transaction_o.data <= r.fifo(0);
         transaction_o.handshake <= HANDSHAKE_ACK;
@@ -360,7 +360,6 @@ begin
           transaction_o.phase <= PHASE_HANDSHAKE;
         end if;
         transaction_o.handshake <= HANDSHAKE_ACK;
-        transaction_o.toggle  <= r.sie_packet_no;
         transaction_o.data <= r.fifo(0);
         transaction_o.last <= to_logic(r.fifo_fillness <= 1 and not r.sie_has_read);
 

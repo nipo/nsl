@@ -314,6 +314,145 @@ begin
                      hex_data => to_hex_string(prbs_buffer(1030 + 512 to 1030 + 512 + 8)),
                      handshake_pid => PID_ACK);
 
+    log_info("* Bulk aligned packet");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => to_hex_string(prbs_buffer(0 to 511)),
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "",
+                      handshake_pid => PID_NYET);
+    utmi_wait(s2p, p2s, 10 us);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => to_hex_string(prbs_buffer(0 to 511)),
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      error_pid => PID_NAK);
+
+
+    log_info("* Bulk aligned packet2");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => to_hex_string(prbs_buffer(512 to 1023)),
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => to_hex_string(prbs_buffer(1024 to 1024+511)),
+                      handshake_pid => PID_ACK);
+    utmi_wait(s2p, p2s, 10 us);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => to_hex_string(prbs_buffer(512 to 1023)),
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => to_hex_string(prbs_buffer(1024 to 1024+511)),
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+
+
+    log_info("* Bulk One-byte packet");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "aa",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "aa",
+                      handshake_pid => PID_ACK);
+    
+
+    log_info("* Bulk ZLP out (should drop)");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "",
+                      handshake_pid => PID_ACK);
+
+    log_info("* Bulk One-byte packet");
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "aa",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '1',
+                      hex_data => "aa",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_out(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "bb",
+                      handshake_pid => PID_ACK);
+    utmi_transfer_in(s2p, p2s,
+                      dev_addr => x"24",
+                      ep_no => x"1",
+                      toggle => '0',
+                      hex_data => "bb",
+                      handshake_pid => PID_ACK);
     
     log_info("* Halting OUT endpoint");
     utmi_control_write(s2p, p2s,

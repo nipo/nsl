@@ -271,9 +271,9 @@ begin
         end if;
 
         if r.stream_ptr = r.pkt(r.stream_pkt).length then
-          rin.pkt(r.stream_pkt).valid <= false;
-          rin.stream_pkt <= packet_next(r.stream_pkt);
           if r.stream_state = STREAM_FULL then
+            rin.pkt(r.stream_pkt).valid <= false;
+            rin.stream_pkt <= packet_next(r.stream_pkt);
             rin.stream_state <= STREAM_IDLE;
           else
             rin.stream_state <= STREAM_SHORT_COMMIT;
@@ -287,6 +287,8 @@ begin
 
         if r.fifo_fillness = 0
           or (r.fifo_fillness = 1 and framed_i.ready = '1') then
+          rin.stream_pkt <= packet_next(r.stream_pkt);
+          rin.pkt(r.stream_pkt).valid <= false;
           rin.stream_state <= STREAM_IDLE;
         end if;
     end case;
