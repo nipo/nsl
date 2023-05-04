@@ -299,7 +299,11 @@ begin
 --======================================================================================--
   -- output registers                                                                   --
 --======================================================================================--
- 
+
+  -- Just to please some synth tools
+  bus_o.dp_pullup_en <= '-';
+
+  
   p_txdpn: process (clock_i, reset_n_i)
   begin
     if reset_n_i ='0' then
