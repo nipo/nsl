@@ -37,14 +37,12 @@ package func is
       online_o    : out std_ulogic;
       serial_i    : in string(1 to serial_i_length_c) := (others => nul);
 
-      rx_valid_o     : out std_ulogic;
-      rx_data_o      : out byte;
-      rx_ready_i     : in  std_ulogic;
+      rx_o     : out nsl_bnoc.pipe.pipe_req_t;
+      rx_i     : in  nsl_bnoc.pipe.pipe_ack_t;
       rx_available_o : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
-      tx_valid_i  : in  std_ulogic;
-      tx_data_i   : in  byte;
-      tx_ready_o  : out std_ulogic;
+      tx_i  : in  nsl_bnoc.pipe.pipe_req_t;
+      tx_o  : out nsl_bnoc.pipe.pipe_ack_t;
       tx_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
       tx_flush_i   : in  std_ulogic := '0';
@@ -85,14 +83,12 @@ package func is
       online_o    : out std_ulogic;
       serial_i    : in string(1 to serial_i_length_c) := (others => nul);
 
-      rx_valid_o     : out std_ulogic;
-      rx_data_o      : out byte;
-      rx_ready_i     : in  std_ulogic;
+      rx_o     : out nsl_bnoc.pipe.pipe_req_t;
+      rx_i     : in  nsl_bnoc.pipe.pipe_ack_t;
       rx_available_o : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
-      tx_valid_i  : in  std_ulogic;
-      tx_data_i   : in  byte;
-      tx_ready_o  : out std_ulogic;
+      tx_i  : in  nsl_bnoc.pipe.pipe_req_t;
+      tx_o  : out nsl_bnoc.pipe.pipe_ack_t;
       tx_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
       tx_flush_i   : in  std_ulogic := '0';

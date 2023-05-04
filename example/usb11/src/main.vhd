@@ -118,7 +118,7 @@ begin
       utmi_system_o => utmi_system_from_phy
       );
 
-  func: nsl_usb.func.vendor_bulk_pair
+  func: nsl_usb.func.vendor_framed_pair
     generic map(
       vendor_id_c => x"dead",
       product_id_c => x"beef",
@@ -143,13 +143,11 @@ begin
 
       online_o => online,
 
-      rx_valid_o => comm_spi.pre_fifo.cmd.req.valid,
-      rx_data_o => comm_spi.pre_fifo.cmd.req.data,
-      rx_ready_i => comm_spi.pre_fifo.cmd.ack.ready,
+      rx_o => comm_spi.pre_fifo.cmd.req,
+      rx_i => comm_spi.pre_fifo.cmd.ack,
 
-      tx_valid_i => comm_spi.pre_fifo.rsp.req.valid,
-      tx_data_i => comm_spi.pre_fifo.rsp.req.data,
-      tx_ready_o => comm_spi.pre_fifo.rsp.ack.ready
+      tx_i => comm_spi.pre_fifo.rsp.req,
+      tx_o => comm_spi.pre_fifo.rsp.ack
       );
 
   spi_cmd_fifo: nsl_bnoc.framed.framed_fifo

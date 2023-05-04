@@ -114,13 +114,13 @@ begin
 
       online_o => online,
       
-      rx_valid_o => rx_valid,
-      rx_data_o => rx_data,
-      rx_ready_i => rx_ready,
+      rx_o.valid => rx_valid,
+      rx_o.data => rx_data,
+      rx_i.ready => rx_ready,
 
-      tx_valid_i => tx_valid,
-      tx_data_i => tx_data,
-      tx_ready_o => tx_ready,
+      tx_i.valid => tx_valid,
+      tx_i.data => tx_data,
+      tx_o.ready => tx_ready,
 
       tx_flush_i => '1'
       );

@@ -11,3 +11,5 @@ deps += nsl_usb.device
 deps += nsl_usb.sie
 deps += nsl_usb.usb
 deps += nsl_usb.utmi
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.pipe

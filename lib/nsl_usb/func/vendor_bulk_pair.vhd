@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_logic, nsl_math, nsl_data, nsl_clocking;
+library nsl_usb, nsl_logic, nsl_math, nsl_data, nsl_clocking, nsl_bnoc;
 use nsl_usb.usb.all;
 use nsl_usb.sie.all;
 use nsl_usb.device.all;
@@ -33,14 +33,12 @@ entity vendor_bulk_pair is
     online_o    : out std_ulogic;
     serial_i    : in string(1 to serial_i_length_c) := (others => nul);
 
-    rx_valid_o     : out std_ulogic;
-    rx_data_o      : out byte;
-    rx_ready_i     : in  std_ulogic;
+    rx_o     : out nsl_bnoc.pipe.pipe_req_t;
+    rx_i     : in  nsl_bnoc.pipe.pipe_ack_t;
     rx_available_o : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
-    tx_valid_i  : in  std_ulogic;
-    tx_data_i   : in  byte;
-    tx_ready_o  : out std_ulogic;
+    tx_i  : in  nsl_bnoc.pipe.pipe_req_t;
+    tx_o  : out nsl_bnoc.pipe.pipe_ack_t;
     tx_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
 
     tx_flush_i   : in  std_ulogic := '0';
@@ -180,9 +178,9 @@ begin
       transaction_i => s_in_cmd(data_ep_no_c),
       transaction_o => s_in_rsp(data_ep_no_c),
       
-      valid_i => tx_valid_i,
-      data_i  => tx_data_i,
-      ready_o => tx_ready_o,
+      valid_i => tx_i.valid,
+      data_i  => tx_i.data,
+      ready_o => tx_o.ready,
       room_o  => tx_room_o,
 
       flush_i => tx_flush_i
@@ -201,9 +199,9 @@ begin
       transaction_i => s_out_cmd(data_ep_no_c),
       transaction_o => s_out_rsp(data_ep_no_c),
 
-      valid_o => rx_valid_o,
-      data_o  => rx_data_o,
-      ready_i => rx_ready_i,
+      valid_o => rx_o.valid,
+      data_o  => rx_o.data,
+      ready_i => rx_i.ready,
       available_o => rx_available_o
       );
 
