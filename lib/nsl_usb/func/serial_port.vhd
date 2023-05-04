@@ -6,6 +6,7 @@ library nsl_usb, nsl_logic, nsl_math, nsl_data, nsl_clocking;
 use nsl_usb.usb.all;
 use nsl_usb.sie.all;
 use nsl_usb.device.all;
+use nsl_usb.descriptor.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
 
@@ -106,7 +107,7 @@ architecture beh of serial_port is
         endpoint0 => nsl_usb.descriptor.endpoint(
           direction => DEVICE_TO_HOST,
           number => notif_ep_no_c,
-          ttype => "11",
+          ttype => EP_TTYPE_INTERRUPT,
           mps => 8,
           interval => interval)),
 
@@ -116,12 +117,12 @@ architecture beh of serial_port is
         endpoint0 => nsl_usb.descriptor.endpoint(
           direction => DEVICE_TO_HOST,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps),
         endpoint1 => nsl_usb.descriptor.endpoint(
           direction => HOST_TO_DEVICE,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps)));
 
   end function;

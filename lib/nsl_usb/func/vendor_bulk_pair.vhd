@@ -8,6 +8,7 @@ use nsl_usb.sie.all;
 use nsl_usb.device.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
+use nsl_usb.descriptor.all;
 
 entity vendor_bulk_pair is
   generic (
@@ -95,12 +96,12 @@ architecture beh of vendor_bulk_pair is
         endpoint0 => nsl_usb.descriptor.endpoint(
           direction => DEVICE_TO_HOST,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps),
         endpoint1 => nsl_usb.descriptor.endpoint(
           direction => HOST_TO_DEVICE,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps)));
 
   end function;

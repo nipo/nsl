@@ -39,6 +39,9 @@ package descriptor is
   constant SUBTYPE_CDC_FUNC_CAPI            : integer := 16#0e#;
   constant SUBTYPE_CDC_FUNC_ETHERNET        : integer := 16#0f#;
   constant SUBTYPE_CDC_FUNC_ATM             : integer := 16#10#;
+
+  constant EP_TTYPE_BULK : unsigned(1 downto 0) := "10";
+  constant EP_TTYPE_INTERRUPT : unsigned(1 downto 0) := "11";
   
   function device(
     hs_support : boolean;

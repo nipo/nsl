@@ -8,6 +8,7 @@ use nsl_usb.sie.all;
 use nsl_usb.device.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
+use nsl_usb.descriptor.all;
 
 entity vendor_framed_pair is
   generic (
@@ -70,7 +71,7 @@ architecture beh of vendor_framed_pair is
     end if;
   end function;
 
-  function do_config_descriptor(interval, mps : integer)
+  function do_config_descriptor(mps : integer)
     return byte_string
   is
   begin
@@ -86,12 +87,12 @@ architecture beh of vendor_framed_pair is
         endpoint0 => nsl_usb.descriptor.endpoint(
           direction => DEVICE_TO_HOST,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps),
         endpoint1 => nsl_usb.descriptor.endpoint(
           direction => HOST_TO_DEVICE,
           number => data_ep_no_c,
-          ttype => "10",
+          ttype => EP_TTYPE_BULK,
           mps => mps)));
 
   end function;
@@ -117,8 +118,8 @@ begin
         usb_version => 16#0200#,
         mps0 => 64),
 
-      fs_config_1_c => do_config_descriptor(interval => 255, mps => 2 ** framed_fs_mps_l2_c),
-      hs_config_1_c => do_config_descriptor(interval => 15, mps => 2 ** 9),
+      fs_config_1_c => do_config_descriptor(mps => 2 ** framed_fs_mps_l2_c),
+      hs_config_1_c => do_config_descriptor(mps => 2 ** 9),
 
       string_1_c => manufacturer_c,
       string_2_c => product_c,
