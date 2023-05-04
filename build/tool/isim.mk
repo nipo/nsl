@@ -49,6 +49,9 @@ $(target).vcd: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)echo 'quit -f' >> $@.tmp
 	$(SILENT)$(ISE_PRE) $< -tclbatch $@.tmp
 
+gui: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
+	$(SILENT)$(ISE_PRE) $< -gui
+
 define ise_source_do_vhdl
 	echo "$($1-language) $($1-library) $1" >> $@.tmp
 	$(SILENT)
