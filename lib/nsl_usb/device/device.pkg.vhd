@@ -127,9 +127,8 @@ package device is
       transaction_i : in  transaction_cmd;
       transaction_o : out transaction_rsp;
 
-      valid_o     : out std_ulogic;
-      data_o      : out byte;
-      ready_i     : in  std_ulogic;
+      data_o : out nsl_bnoc.pipe.pipe_req_t;
+      data_i : in  nsl_bnoc.pipe.pipe_ack_t;
       available_o : out unsigned(if_else(hs_supported_c, 9, fs_mps_l2_c) + mps_count_l2_c downto 0)
       );
   end component;
@@ -147,9 +146,8 @@ package device is
       transaction_i : in  transaction_cmd;
       transaction_o : out transaction_rsp;
 
-      valid_i : in  std_ulogic;
-      data_i  : in  byte;
-      ready_o : out std_ulogic;
+      data_i : in  nsl_bnoc.pipe.pipe_req_t;
+      data_o : out nsl_bnoc.pipe.pipe_ack_t;
       room_o  : out unsigned(if_else(hs_supported_c, 9, fs_mps_l2_c) + mps_count_l2_c downto 0);
 
       flush_i : in std_ulogic := '0'

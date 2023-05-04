@@ -178,9 +178,8 @@ begin
       transaction_i => s_in_cmd(data_ep_no_c),
       transaction_o => s_in_rsp(data_ep_no_c),
       
-      valid_i => tx_i.valid,
-      data_i  => tx_i.data,
-      ready_o => tx_o.ready,
+      data_i  => tx_i,
+      data_o => tx_o,
       room_o  => tx_room_o,
 
       flush_i => tx_flush_i
@@ -199,9 +198,8 @@ begin
       transaction_i => s_out_cmd(data_ep_no_c),
       transaction_o => s_out_rsp(data_ep_no_c),
 
-      valid_o => rx_o.valid,
-      data_o  => rx_o.data,
-      ready_i => rx_i.ready,
+      data_o => rx_o,
+      data_i => rx_i,
       available_o => rx_available_o
       );
 

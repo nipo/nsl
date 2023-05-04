@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_data, nsl_logic, nsl_math, nsl_memory;
+library nsl_usb, nsl_data, nsl_logic, nsl_math, nsl_memory, nsl_bnoc;
 use nsl_usb.usb.all;
 use nsl_usb.sie.all;
 use nsl_usb.device.all;
@@ -22,9 +22,8 @@ entity device_ep_bulk_out is
     transaction_i : in  transaction_cmd;
     transaction_o : out transaction_rsp;
 
-    valid_o     : out std_ulogic;
-    data_o      : out byte;
-    ready_i     : in  std_ulogic;
+    data_o      : out nsl_bnoc.pipe.pipe_req_t;
+    data_i     : in  nsl_bnoc.pipe.pipe_ack_t;
     available_o : out unsigned(if_else(hs_supported_c, 9, fs_mps_l2_c) + mps_count_l2_c downto 0)
     );
 end entity;
@@ -213,9 +212,9 @@ begin
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      out_data_o      => data_o,
-      out_ready_i     => ready_i,
-      out_valid_o     => valid_o,
+      out_data_o      => data_o.data,
+      out_ready_i     => data_i.ready,
+      out_valid_o     => data_o.valid,
       out_available_o => available_o,
 
       in_data_i       => fifo_in_data,
