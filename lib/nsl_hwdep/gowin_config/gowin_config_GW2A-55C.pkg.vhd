@@ -21,7 +21,7 @@ package body gowin_config is
   function pll_type return string
   is
   begin
-    return "pll";
+    return "rpll";
   end function;
 
   function pll_vco_fmin return real
