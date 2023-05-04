@@ -85,8 +85,6 @@ architecture rtl of fs_utmi8_tx_phy is
   signal txoe_n_1, txoe_n_2   : std_ulogic;
  
 begin
- 
-  bus_o.dp_pullup_en <= '-';
 
 --======================================================================================--
   -- misc logic                                                                         --
