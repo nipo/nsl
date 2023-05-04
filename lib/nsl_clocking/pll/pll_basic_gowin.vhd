@@ -226,7 +226,38 @@ begin
         fbdiv_sel => params.fbdiv - 1,
         odiv_sel => params.odiv,
         clkfb_sel => "internal",
-        clkoutd_src => "clkout",
+        clkoutd_src => "CLKOUT",
+        dyn_idiv_sel => "false",
+        dyn_fbdiv_sel => "false",
+        dyn_odiv_sel => "false"
+        )
+      port map(
+        clkin => clock_i,
+--        clkfb => clockout_buffered_s,
+        idsel => "000000",
+        fbdsel => "000000",
+        odsel => "000000",
+        reset => reset_s,
+        reset_p => '0',
+        psda => "0000",
+        fdly => "0000",
+        dutyda => "0000",
+        lock => locked_o,
+        clkout => clkout_s
+        );
+  end generate;
+
+  use_pll: if nsl_hwdep.gowin_config.pll_type = "pll"
+  generate
+    inst: gowin.components.pll
+      generic map(
+        fclkin => fin_mhz_str,
+        device => nsl_hwdep.gowin_config.device_name,
+        idiv_sel => params.idiv - 1,
+        fbdiv_sel => params.fbdiv - 1,
+        odiv_sel => params.odiv,
+        clkfb_sel => "internal",
+        clkoutd_src => "CLKOUT",
         dyn_idiv_sel => "false",
         dyn_fbdiv_sel => "false",
         dyn_odiv_sel => "false"
