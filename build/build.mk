@@ -88,6 +88,7 @@ $(if $(wildcard $3/Makefile),,$(warning $(call user-package-name,$(notdir $4)) r
 include $3/Makefile
 
 $1.$2-vhdl-version := $$(vhdl-version)
+$1.$2-vhdl-sources := $$(filter %.pkg.vhd,$$($1.$2-vhdl-sources)) $$(filter-out %.pkg.vhd,$$($1.$2-vhdl-sources))
 $1.$2-sub-packages := $$(sort $$(packages))
 $$(eval $$(foreach l,$$(sort $$(source-types)),$$(foreach s,$$($$l-sources),$$(call declare-source,$$(if $$(filter /%,$$s),$$s,$3/$$s),$$l,$1,$2))))
 
