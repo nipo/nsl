@@ -33,18 +33,24 @@ define _gowin-project-add-verilog
 
 endef
 
-define _gowin-project-add-constraint
-	$(call file-append,$1,add_file -type cst {$2})
+define _gowin-project-sdc-sdc
+	$(call file-append,$1,exec sh $(BUILD_ROOT)/support/gowin_sdc_append.sh $2 $(build-dir)/all.sdc)
 
 endef
 
-define _gowin-project-add-sdc
-	$(call file-append,$1,add_file -type sdc {$2})
+define _gowin-cst-add-constraint
+	echo "# From $2" >> $1
+	cat $2 >> $1
+	echo "" >> $1
 
 endef
+
+$(build-dir)/all.cst: $(all-constraint-sources) $(MAKEFILE_LIST)
+	$(call file-clear,$@)
+	$(foreach s,$(sources),$(call _gowin-cst-add-$($s-language),$@,$s))
 
 # Generate batch build command
-$(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
+$(build-dir)/$(target).tcl: $(MAKEFILE_LIST)
 	$(call file-clear,$@)
 	$(call file-append,$@,set_device -name $(target_part_name) $(target_part))
 	$(call file-append,$@,add_file -type vhdl {$(BUILD_ROOT)/support/ieee/math_real.pkg.vhd})
@@ -52,6 +58,8 @@ $(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
 	$(call file-append,$@,add_file -type vhdl {$(BUILD_ROOT)/support/ieee/math_real-body.vhd})
 	$(call file-append,$@,set_file_prop -lib {ieee} {$(BUILD_ROOT)/support/ieee/math_real-body.vhd})
 	$(foreach s,$(sources),$(call _gowin-project-add-$($s-language),$@,$s))
+	$(call file-append,$@,add_file -type cst $(build-dir)/all.cst)
+	$(call file-append,$@,add_file -type sdc $(build-dir)/all.sdc)
 	$(call file-append,$@,set_option -top_module $(top-entity))
 	$(call file-append,$@,set_option -output_base_name $(target))
 	$(call file-append,$@,set_option -print_all_synthesis_warning 1)
@@ -60,9 +68,13 @@ $(build-dir)/$(target).tcl: $(sources) $(MAKEFILE_LIST)
 	$(call file-append,$@,set_option -bit_compress 1)
 	$(call file-append,$@,set_option -user_code {$(user_id)})
 	$(foreach u,$(gowin-use-as-gpio),$(call file-append,$@,set_option -use_$u_as_gpio 1))
-	$(call file-append,$@,run all)
+	$(call file-append,$@,run syn)
+	$(call file-append,$@,puts {Generating auto constraints...})
+	$(call file-append,$@,exec sh $(BUILD_ROOT)/support/gowin_sdc_auto.sh $(build-dir)/impl/gwsynthesis/$(target).vg $(build-dir)/all.sdc)
+	$(foreach s,$(sources),$(call _gowin-project-sdc-$($s-language),$@,$s))
+	$(call file-append,$@,run pnr)
 
-$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl
+$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl $(sources) $(build-dir)/all.cst
 	$(SILENT)cd $(build-dir) && $(GOWIN_BIN)/gw_sh $<
 
 $(target).fs: $(build-dir)/impl/pnr/$(target).fs
