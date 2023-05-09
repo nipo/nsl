@@ -11,6 +11,8 @@ package arith is
   function is_pow2(x : natural) return boolean;
   function max(x, y : integer) return integer;
   function min(x, y : integer) return integer;
+  function clamp(low, value, high : integer) return integer;
+
   -- Greatest comon divisor between two integers
   function gcd(x, y : integer) return integer;
   -- Least common multiple between two integers.
@@ -125,6 +127,11 @@ package body arith is
       return y;
     end if;
   end min;
+
+  function clamp(low, value, high : integer) return integer is
+  begin
+    return max(low, min(value, high));
+  end function;
 
   function is_pow2(x : natural) return boolean is
   begin
