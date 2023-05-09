@@ -103,7 +103,7 @@ architecture beh of ethernet_host is
   signal arp_backend_s : arp_api;
   signal arp_api_s : arp_api_vector(0 to 0);
   constant arp_api_udp_index_c: natural := 0;
-  signal ipv4_s, arp_s, udp_s: committed_trx;
+  signal ipv4_s, arp_s, arp2_s, udp_s: committed_trx;
   signal ip_rx_req_s, ip_tx_req_s : committed_req_array(0 to ip_proto_l_c'length-1);
   signal ip_rx_ack_s, ip_tx_ack_s : committed_ack_array(0 to ip_proto_l_c'length-1);
 
@@ -181,10 +181,10 @@ begin
       gateway_i => gateway_s,
       hwaddr_i => hwaddr_i,
       
-      to_l2_o => arp_s.tx.req,
-      to_l2_i => arp_s.tx.ack,
-      from_l2_i => arp_s.rx.req,
-      from_l2_o => arp_s.rx.ack,
+      to_l2_o => arp2_s.tx.req,
+      to_l2_i => arp2_s.tx.ack,
+      from_l2_i => arp2_s.rx.req,
+      from_l2_o => arp2_s.rx.ack,
 
       request_i => arp_backend_s.request.req,
       request_o => arp_backend_s.request.ack,
@@ -192,6 +192,29 @@ begin
       response_i => arp_backend_s.response.ack
       );
 
+  arp_rx_fifo: nsl_bnoc.committed.committed_fifo_slice
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
+
+      in_i => arp_s.rx.req,
+      in_o => arp_s.rx.ack,
+      out_o => arp2_s.rx.req,
+      out_i => arp2_s.rx.ack
+      );
+
+  arp_tx_fifo: nsl_bnoc.committed.committed_fifo_slice
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
+
+      in_i => arp2_s.tx.req,
+      in_o => arp2_s.tx.ack,
+      out_o => arp_s.tx.req,
+      out_i => arp_s.tx.ack
+      );
+    
+  
   if_udp: if has_udp
   generate
     constant dhcp_index_c : natural := udp_port_c'length;
