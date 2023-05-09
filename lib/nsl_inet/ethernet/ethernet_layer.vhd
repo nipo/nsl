@@ -80,6 +80,8 @@ begin
 
   has_filter: if filter_inbound_packets_c
   generate
+    signal s_tmp: nsl_bnoc.committed.committed_bus;
+  begin
     filter: nsl_bnoc.committed.committed_filter
       generic map(
         max_size_c => nsl_math.arith.align_up(mtu_c)
@@ -89,10 +91,19 @@ begin
         clock_i => clock_i,
         in_i => s_to_l3.req,
         in_o => s_to_l3.ack,
+        out_o => s_tmp.req,
+        out_i => s_tmp.ack
+        );
 
+    slice: nsl_bnoc.committed.committed_fifo_slice
+      port map(
+        reset_n_i => reset_n_i,
+        clock_i => clock_i,
+        in_i => s_tmp.req,
+        in_o => s_tmp.ack,
         out_o => s_to_l3_valid.req,
         out_i => s_to_l3_valid.ack
-        );
+        );        
   end generate;
 
   no_filter: if not filter_inbound_packets_c
