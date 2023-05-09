@@ -167,14 +167,19 @@ begin
 
         if r.sie_ptr = r.pkt(r.sie_pkt).length then
           rin.sie_state <= SIE_SEND_LAST;
-        elsif r.fifo_fillness >= fifo_depth_c - 1 then
-          rin.sie_state <= SIE_SEND;
         else
+          if r.fifo_fillness > 0 then
+            rin.sie_state <= SIE_SEND;
+          end if;
+          
           rin.sie_ptr <= r.sie_ptr + 1;
           rin.sie_has_read <= true;
         end if;
         
       when SIE_SEND | SIE_SEND_LAST =>
+        rin.sie_has_read <= false;
+        fifo_push := r.sie_has_read;
+
         case transaction_i.phase is
           when PHASE_NONE =>
             rin.sie_ptr <= (others => '0');
@@ -184,14 +189,12 @@ begin
             null;
 
           when PHASE_DATA =>
-            rin.sie_has_read <= false;
-            fifo_push := r.sie_has_read;
             fifo_pop := transaction_i.nxt = '1' and r.fifo_fillness > 0;
 
             if r.sie_state = SIE_SEND then
               if r.sie_ptr = r.pkt(r.sie_pkt).length then
                 rin.sie_state <= SIE_SEND_LAST;
-              elsif r.fifo_fillness < fifo_depth_c - 1 then
+              elsif r.fifo_fillness < 3 then
                 rin.sie_ptr <= r.sie_ptr + 1;
                 rin.sie_has_read <= true;
               end if;
