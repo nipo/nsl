@@ -231,14 +231,18 @@ begin
         end if;
     end case;
 
+    rin.stream_take <= false;
+    fifo_push := r.stream_take;
+
     case r.stream_state is
       when STREAM_RESET =>
         rin.stream_state <= STREAM_IDLE;
-        rin.stream_take <= false;
+        rin.fifo_fillness <= 0;
+        fifo_push := false;
+        fifo_pop := false;
 
       when STREAM_IDLE =>
         rin.stream_ptr <= (others => '0');
-        rin.stream_take <= false;
         if r.pkt(r.stream_pkt).valid and not r.halted then
           if r.pkt(r.stream_pkt).length = 0 then
             rin.stream_state <= STREAM_SHORT_COMMIT;
@@ -256,32 +260,39 @@ begin
           rin.stream_state <= STREAM_FULL;
         end if;
 
-      when STREAM_FULL | STREAM_SHORT =>
-        rin.stream_take <= false;
-        fifo_push := r.stream_take;
-
-        if r.fifo_fillness >= 2 and framed_i.ready = '1' then
+      when STREAM_FULL =>
+        if framed_i.ready = '1' and r.fifo_fillness >= 2 then
           fifo_pop := true;
         end if;
 
-        if r.fifo_fillness <= fifo_depth_c - 2
-          and r.stream_ptr <= r.pkt(r.stream_pkt).length then
-          rin.stream_take <= true;
-          rin.stream_ptr <= r.stream_ptr + 1;
-        end if;
-
-        if r.stream_ptr = r.pkt(r.stream_pkt).length then
-          if r.stream_state = STREAM_FULL then
+        if r.stream_ptr < r.pkt(r.stream_pkt).length then
+          if r.fifo_fillness <= fifo_depth_c - 2 then
+            rin.stream_take <= true;
+            rin.stream_ptr <= r.stream_ptr + 1;
+          end if;
+        elsif r.fifo_fillness = 1
+          or (framed_i.ready = '1' and r.fifo_fillness = 2) then
             rin.pkt(r.stream_pkt).valid <= false;
             rin.stream_pkt <= packet_next(r.stream_pkt);
             rin.stream_state <= STREAM_IDLE;
-          else
-            rin.stream_state <= STREAM_SHORT_COMMIT;
+        end if;
+
+      when STREAM_SHORT =>
+        if framed_i.ready = '1' and r.fifo_fillness >= 2 then
+          fifo_pop := true;
+        end if;
+
+        if r.stream_ptr < r.pkt(r.stream_pkt).length then
+          if r.fifo_fillness <= fifo_depth_c - 2 then
+            rin.stream_take <= true;
+            rin.stream_ptr <= r.stream_ptr + 1;
           end if;
+        else
+          rin.stream_state <= STREAM_SHORT_COMMIT;
         end if;
 
       when STREAM_SHORT_COMMIT =>
-        if r.fifo_fillness >= 1 and framed_i.ready = '1' then
+        if framed_i.ready = '1' and r.fifo_fillness /= 0 then
           fifo_pop := true;
         end if;
 
@@ -298,6 +309,7 @@ begin
       rin.sie_packet_no <= '0';
       rin.sie_pkt <= 0;
       rin.stream_pkt <= 0;
+      rin.stream_state <= STREAM_RESET;
 
       for i in packet_array'range
       loop
@@ -336,7 +348,9 @@ begin
 
       when SIE_TAKE =>
         transaction_o.phase <= PHASE_DATA;
-        ram_wen_s <= transaction_i.nxt;
+        if transaction_i.phase = PHASE_DATA then
+          ram_wen_s <= transaction_i.nxt;
+        end if;
 
       when SIE_IGNORE_ACK | SIE_IGNORE_NAK =>
         transaction_o.phase <= PHASE_DATA;
@@ -368,7 +382,11 @@ begin
       when STREAM_FILL =>
         ram_ren_s <= '1';
 
-      when STREAM_FULL | STREAM_SHORT =>
+      when STREAM_FULL =>
+        framed_o <= framed_flit(r.fifo(0), last => false, valid => r.fifo_fillness > 1);
+        ram_ren_s <= '1';
+
+      when STREAM_SHORT =>
         framed_o <= framed_flit(r.fifo(0), last => false, valid => r.fifo_fillness > 1);
         ram_ren_s <= '1';
         
