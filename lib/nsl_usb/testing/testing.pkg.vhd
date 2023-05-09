@@ -37,6 +37,9 @@ package testing is
   procedure utmi_wait(signal s2p: in utmi8_s2p;
                       signal p2s: out utmi8_p2s;
                       cycles : integer);
+  procedure utmi_wait_until(signal s2p: in utmi8_s2p;
+                            signal p2s: out utmi8_p2s;
+                            target : time);
   procedure utmi_hs_handshake(signal s2p: in utmi8_s2p;
                               signal p2s: out utmi8_p2s);
   procedure utmi_cycle(signal s2p: in utmi8_s2p;
@@ -48,8 +51,17 @@ package testing is
 
   procedure utmi_packet_send(signal s2p: in utmi8_s2p;
                           signal p2s: out utmi8_p2s;
+                          packet : byte_string);
+
+  procedure utmi_packet_send(signal s2p: in utmi8_s2p;
+                          signal p2s: out utmi8_p2s;
                           pid : pid_t;
                           data : byte_string := null_byte_string);
+
+  procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
+                                signal p2s: out utmi8_p2s;
+                                packet : byte_string;
+                                timeout_cycles : integer := 1024);
 
   procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
                                 signal p2s: out utmi8_p2s;
@@ -197,6 +209,16 @@ package body testing is
     end loop;
   end procedure;
 
+  procedure utmi_wait_until(signal s2p: in utmi8_s2p;
+                            signal p2s: out utmi8_p2s;
+                            target : time)
+  is
+  begin
+    if target > now then
+      utmi_wait(s2p, p2s, target - now);
+    end if;
+  end procedure;
+
   procedure utmi_wait_tx_to_tx(signal s2p: in utmi8_s2p;
                                signal p2s: out utmi8_p2s)
   is
@@ -254,10 +276,11 @@ package body testing is
 
   procedure utmi_packet_send(signal s2p: in utmi8_s2p;
                              signal p2s: out utmi8_p2s;
-                             pid : pid_t;
-                             data : byte_string := null_byte_string)
+                             packet : byte_string)
   is
-    constant packet : byte_string := pid_byte(pid) & data;
+    variable stuff_count : integer := 0;
+    variable run_length : integer := 0;
+    variable stuff_buf : std_ulogic_vector(6+8-1 downto 0) := "00000000"&"000001";
   begin
     log_debug("   > " & packet_to_string(packet));
 
@@ -266,6 +289,23 @@ package body testing is
     utmi_cycle(s2p, p2s);
     for i in packet'range
     loop
+      stuff_buf := packet(i) & stuff_buf(stuff_buf'left downto 8); 
+      for j in 0 to stuff_buf'left-5
+      loop
+        if stuff_buf(5+j downto j) = "111111" then
+          stuff_count := stuff_count + 1;
+          stuff_buf(5+j) := '0';
+        end if;
+      end loop;
+
+      while stuff_count > 8
+      loop
+        p2s.data.rx_valid <= '0';
+        p2s.data.data <= "--------";
+        utmi_cycle(s2p, p2s);
+        stuff_count := stuff_count - 8;
+      end loop;
+      
       p2s.data.rx_valid <= '1';
       p2s.data.data <= packet(i);
       utmi_cycle(s2p, p2s);
@@ -279,6 +319,97 @@ package body testing is
     utmi_wait_tx_to_tx(s2p, p2s);
   end procedure;
 
+  procedure utmi_packet_send(signal s2p: in utmi8_s2p;
+                             signal p2s: out utmi8_p2s;
+                             pid : pid_t;
+                             data : byte_string := null_byte_string)
+  is
+    constant packet : byte_string := pid_byte(pid) & data;
+  begin
+    utmi_packet_send(s2p, p2s, packet);
+  end procedure;
+
+  procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
+                                signal p2s: out utmi8_p2s;
+                                variable packet : inout byte_stream;
+                                timeout_cycles : integer := 1024)
+  is
+    variable stuff_count : integer := 0;
+    variable run_length : integer := 0;
+    variable stuff_buf : std_ulogic_vector(6+8-1 downto 0) := "00000000"&"000001";
+    variable left : integer := timeout_cycles;
+  begin
+    p2s.data.rx_active <= '0';
+    p2s.data.rx_valid <= '0';
+    utmi_cycle(s2p, p2s);
+
+    clear(packet);
+    
+    wait_transmit: for i in 0 to timeout_cycles-1
+    loop
+      utmi_cycle(s2p, p2s);
+      exit when s2p.data.tx_valid = '1';
+    end loop;
+
+    if s2p.data.tx_valid = '0' then
+      return;
+    end if;
+
+    p2s.data.tx_ready <= '1';
+
+    wait_end: while true
+    loop
+      exit when s2p.data.tx_valid = '0';
+      write(packet, s2p.data.data);
+      utmi_cycle(s2p, p2s);
+
+      stuff_buf := s2p.data.data & stuff_buf(stuff_buf'left downto 8); 
+      for j in 0 to stuff_buf'left-5
+      loop
+        if stuff_buf(5+j downto j) = "111111" then
+          stuff_count := stuff_count + 1;
+          stuff_buf(5+j) := '0';
+        end if;
+      end loop;
+
+      while stuff_count > 8
+      loop
+        p2s.data.tx_ready <= '0';
+        utmi_cycle(s2p, p2s);
+        stuff_count := stuff_count - 8;
+        p2s.data.tx_ready <= '1';
+      end loop;
+    end loop;
+
+    p2s.data.tx_ready <= '0';
+
+    utmi_cycle(s2p, p2s);
+    utmi_wait_rx_to_tx(s2p, p2s);
+  end procedure;
+
+  procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
+                                signal p2s: out utmi8_p2s;
+                                packet : byte_string;
+                                timeout_cycles : integer := 1024)
+  is
+    variable rxdata : byte_stream;
+    variable pid: pid_t := pid_get(packet(packet'left));
+  begin
+    log_debug("   < " & packet_to_string(packet));
+
+    utmi_packet_receive(s2p, p2s, rxdata, timeout_cycles);
+
+    if rxdata.all'length = 0 and packet'length < 2 and pid = PID_STALL then
+      log_debug("   * Had no response at all");
+    elsif rxdata.all'length /= packet'length or rxdata.all /= packet then
+      log_debug("   ! " & packet_to_string(rxdata.all) & " (Received)");
+      log_error("   ! " & to_hex_string(rxdata.all));
+      log_error("   Received packet does not match");
+    end if;
+
+    deallocate(rxdata);
+  end procedure;
+
   procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
                                 signal p2s: out utmi8_p2s;
                                 pid : pid_t;
@@ -286,46 +417,8 @@ package body testing is
                                 timeout_cycles : integer := 1024)
   is
     constant packet : byte_string := pid_byte(pid) & data;
-    variable rxdata : byte_string(0 to 8191 + 3);
-    variable rx_ptr : integer;
-    variable left : integer := timeout_cycles;
   begin
-    log_debug("   < " & packet_to_string(packet));
-
-    rx_ptr := 0;
-    p2s.data.rx_active <= '0';
-    p2s.data.rx_valid <= '0';
-    utmi_cycle(s2p, p2s);
-
-    wait_transmit: for i in 0 to timeout_cycles-1
-    loop
-      utmi_cycle(s2p, p2s);
-      exit when s2p.data.tx_valid = '1';
-    end loop;
-
-    p2s.data.tx_ready <= '1';
-
-    wait_end: while true
-    loop
-      exit when s2p.data.tx_valid = '0';
-      rxdata(rx_ptr) := s2p.data.data;
-      rx_ptr := rx_ptr + 1;
-      utmi_cycle(s2p, p2s);
-    end loop;
-
-    p2s.data.tx_ready <= '0';
-
-    utmi_cycle(s2p, p2s);
-
-    if rx_ptr = 0 and data'length = 0 and pid = PID_STALL then
-      log_debug("   * Had no response at all");
-    elsif rx_ptr /= packet'length or rxdata(0 to rx_ptr-1) /= packet then
-      log_debug("   ! " & packet_to_string(rxdata(0 to rx_ptr-1)) & " (Received)");
-      log_error("   ! " & to_hex_string(rxdata(0 to rx_ptr-1)));
-      log_error("   Received packet does not match");
-    end if;
-
-    utmi_wait_rx_to_tx(s2p, p2s);
+    utmi_packet_receive(s2p, p2s, packet, timeout_cycles);
   end procedure;
 
   function packet_data_with_crc(data : byte_string) return byte_string
