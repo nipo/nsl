@@ -4,6 +4,7 @@ use ieee.std_logic_1164.all;
 library nsl_bnoc, nsl_data;
 use nsl_data.crc.all;
 use nsl_bnoc.committed.all;
+use nsl_bnoc.framed.all;
 
 -- Utilities to add/check CRC from a committed interface.  CRC is
 -- meant to be added/removed from the N last bytes before the frame
@@ -36,6 +37,26 @@ package crc is
 
       out_o  : out committed_req;
       out_i  : in committed_ack
+      );
+  end component;
+
+  -- Computes and append the CRC of the message as it runs through the module.
+  component crc_framed_adder is
+    generic(
+      -- length not part of CRC
+      header_length_c : natural := 0;
+
+      params_c : crc_params_t
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+      
+      in_i   : in  framed_req;
+      in_o   : out framed_ack;
+
+      out_o  : out framed_req;
+      out_i  : in framed_ack
       );
   end component;
 

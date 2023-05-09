@@ -3,11 +3,11 @@ use ieee.std_logic_1164.all;
 
 library nsl_bnoc, nsl_data, nsl_math, nsl_logic;
 use nsl_logic.bool.all;
-use nsl_bnoc.committed.all;
+use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 
-entity crc_committed_adder is
+entity crc_framed_adder is
   generic(
     header_length_c : natural := 0;
 
@@ -17,31 +17,28 @@ entity crc_committed_adder is
     reset_n_i   : in  std_ulogic;
     clock_i     : in  std_ulogic;
     
-    in_i   : in  committed_req;
-    in_o   : out committed_ack;
+    in_i   : in  framed_req;
+    in_o   : out framed_ack;
 
-    out_o  : out committed_req;
-    out_i  : in committed_ack
+    out_o  : out framed_req;
+    out_i  : in framed_ack
     );
 end entity;
 
-architecture beh of crc_committed_adder is
+architecture beh of crc_framed_adder is
 
   type in_state_t is (
     IN_RESET,
     IN_HEADER,
     IN_DATA,
-    IN_COMMIT,
-    IN_CANCEL
+    IN_COMMIT
     );
 
   type out_state_t is (
     OUT_RESET,
     OUT_HEADER,
     OUT_DATA,
-    OUT_CRC,
-    OUT_COMMIT,
-    OUT_CANCEL
+    OUT_CRC
     );
 
   constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
@@ -119,7 +116,7 @@ begin
       when IN_HEADER =>
         if r.fifo_fillness < fifo_depth_c and in_i.valid = '1' then
           if in_i.last = '1' then
-            rin.in_state <= IN_CANCEL;
+            rin.in_state <= IN_COMMIT;
           elsif r.in_left /= 0 then
             rin.in_left <= r.in_left - 1;
             fifo_push := true;
@@ -131,30 +128,14 @@ begin
 
       when IN_DATA =>
         if r.fifo_fillness < fifo_depth_c and in_i.valid = '1' then
+          fifo_push := true;
           if in_i.last = '1' then
-            if in_i.data(0) = '1' then
-              rin.in_state <= IN_COMMIT;
-            else
-              rin.in_state <= IN_CANCEL;
-            end if;
-          else
-            fifo_push := true;
+            rin.in_state <= IN_COMMIT;
           end if;
         end if;
 
       when IN_COMMIT =>
-        if r.out_state = OUT_COMMIT and out_i.ready = '1' then
-          rin.fifo_fillness <= 0;
-          if header_length_c = 0 then
-            rin.in_state <= IN_DATA;
-          else
-            rin.in_state <= IN_HEADER;
-            rin.in_left <= header_length_c-1;
-          end if;
-        end if;
-        
-      when IN_CANCEL =>
-        if r.out_state = OUT_CANCEL and out_i.ready = '1' then
+        if r.out_state = OUT_CRC and r.out_left = 0 and out_i.ready = '1' then
           rin.fifo_fillness <= 0;
           if header_length_c = 0 then
             rin.in_state <= IN_DATA;
@@ -181,8 +162,8 @@ begin
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
           else
-            rin.out_state <= OUT_DATA;
             rin.crc <= crc_init(params_c);
+            rin.out_state <= OUT_DATA;
           end if;
         end if;
 
@@ -192,34 +173,20 @@ begin
           rin.crc <= nsl_data.crc.crc_update(params_c, r.crc, r.fifo(0));
         end if;
 
-        if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL or (in_i.valid = '1' and in_i.last = '1'))
+        if r.in_state = IN_COMMIT
           and (r.fifo_fillness = 0
                or (r.fifo_fillness = 1 and out_i.ready = '1')) then
           rin.out_state <= OUT_CRC;
           rin.out_left <= crc_byte_count_c - 1;
         end if;
 
-        when OUT_CRC =>
+      when OUT_CRC =>
         if out_i.ready = '1' then
           if r.out_left /= 0 then
             rin.crc <= crc_shift(r.crc);
             rin.out_left <= r.out_left - 1;
-          elsif r.in_state = IN_COMMIT then
-            rin.out_state <= OUT_COMMIT;
           else
-            rin.out_state <= OUT_CANCEL;
-          end if;
-        end if;
-
-      when OUT_COMMIT | OUT_CANCEL =>
-        if out_i.ready = '1' then
-          rin.crc <= crc_init(params_c);
-          rin.out_state <= OUT_DATA;
-          if header_length_c /= 0 then
-            rin.out_state <= OUT_HEADER;
-            rin.out_left <= header_length_c - 1;
-          else
-            rin.out_state <= OUT_DATA;
+            rin.out_state <= OUT_RESET;
           end if;
         end if;
     end case;
@@ -251,18 +218,8 @@ begin
 
       when OUT_CRC =>
         out_o.valid <= '1';
-        out_o.last <= '0';
+        out_o.last <= to_logic(r.out_left = 0);
         out_o.data <= crc_out_byte(r.crc);
-
-      when OUT_COMMIT =>
-        out_o.valid <= '1';
-        out_o.last <= '1';
-        out_o.data <= x"01";
-        
-      when OUT_CANCEL =>
-        out_o.valid <= '1';
-        out_o.last <= '1';
-        out_o.data <= x"00";
     end case;
 
     case r.in_state is
@@ -272,7 +229,7 @@ begin
       when IN_HEADER | IN_DATA =>
         in_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
 
-      when IN_COMMIT | IN_CANCEL =>
+      when IN_COMMIT =>
         in_o.ready <= '0';
     end case;
   end process;
