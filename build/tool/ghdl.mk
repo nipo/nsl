@@ -103,6 +103,9 @@ $(target): $(sources) $(MAKEFILE_LIST)
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
 	$(call ghdl-compile-rules)
 
+run: $(target)
+	$(call ghdl-run-rules,)
+
 $(target).ghw: $(target)
 	$(call ghdl-run-rules,--wave=$@)
 
