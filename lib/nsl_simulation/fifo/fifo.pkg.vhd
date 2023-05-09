@@ -3,6 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
+library nsl_data;
+
 package fifo is
 
   component fifo_file_reader
@@ -101,6 +103,38 @@ package fifo is
     valid_i: in std_ulogic;
     data_i: in std_ulogic_vector(width-1 downto 0)
     );
+  end component;
+
+  component fifo_bytestream_reader
+    generic (
+      flit_byte_count_c    : positive;
+      filename_c : string
+      );
+    port (
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      valid_o : out std_ulogic;
+      ready_i : in  std_ulogic;
+      data_o  : out nsl_data.bytestream.byte_string(0 to flit_byte_count_c-1);
+
+      done_o : out std_ulogic
+      );
+  end component;
+
+  component fifo_bytestream_writer
+    generic (
+      flit_byte_count_c    : positive;
+      filename_c : string
+      );
+    port (
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      ready_o : out std_ulogic;
+      valid_i : in  std_ulogic;
+      data_i  : in  nsl_data.bytestream.byte_string(0 to flit_byte_count_c-1)
+      );
   end component;
 
 end package fifo;
