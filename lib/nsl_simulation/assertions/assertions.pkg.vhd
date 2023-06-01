@@ -14,6 +14,11 @@ package assertions is
                          b : in std_ulogic_vector;
                          sev : in severity_level);
 
+  procedure assert_match(what: in string;
+                         a : in std_ulogic_vector;
+                         b : in std_ulogic_vector;
+                         sev : in severity_level);
+
   procedure assert_equal(what: in string;
                          a : in integer;
                          b : in integer;
@@ -39,6 +44,11 @@ package assertions is
                          b : in std_logic_vector;
                          sev : in severity_level);
 
+  procedure assert_match(what: in string;
+                         a : in std_logic_vector;
+                         b : in std_logic_vector;
+                         sev : in severity_level);
+
   procedure assert_equal(what: in string;
                          a : in unsigned;
                          b : in unsigned;
@@ -55,6 +65,12 @@ package assertions is
                          sev : in severity_level);
 
   procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in std_ulogic_vector;
+                         b : in std_ulogic_vector;
+                         sev : in severity_level);
+
+  procedure assert_match(context: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
@@ -85,6 +101,12 @@ package assertions is
                          sev : in severity_level);
 
   procedure assert_equal(context: in log_context;
+                         what: in string;
+                         a : in std_logic_vector;
+                         b : in std_logic_vector;
+                         sev : in severity_level);
+
+  procedure assert_match(context: in log_context;
                          what: in string;
                          a : in std_logic_vector;
                          b : in std_logic_vector;
@@ -130,6 +152,19 @@ package body assertions is
                          sev : in severity_level) is
   begin
     if a /= b then
+      assert_equal_failure("UNK", what,
+                           """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
+                           """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
+                           sev);
+    end if;
+  end procedure;
+
+  procedure assert_match(what: in string;
+                         a : in std_ulogic_vector;
+                         b : in std_ulogic_vector;
+                         sev : in severity_level) is
+  begin
+    if not std_match(a, b) then
       assert_equal_failure("UNK", what,
                            """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
                            """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
@@ -196,6 +231,22 @@ package body assertions is
   begin
     assert_equal("UNK", what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
   end procedure;
+
+  procedure assert_match(what: in string;
+                         a : in std_logic_vector;
+                         b : in std_logic_vector;
+                         sev : in severity_level) is
+  begin
+    assert_match("UNK", what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
+  end procedure;
+
+  procedure assert_match(what: in string;
+                         a : in unsigned;
+                         b : in unsigned;
+                         sev : in severity_level) is
+  begin
+    assert_match("UNK", what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
+  end procedure;
   
   procedure assert_equal(what: in string;
                          a : in byte_string;
@@ -227,6 +278,20 @@ package body assertions is
                          sev : in severity_level) is
   begin
     if a /= b then
+      assert_equal_failure(context, what,
+                           """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
+                           """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
+                           sev);
+    end if;
+  end procedure;
+
+  procedure assert_match(context: in log_context;
+                         what: in string;
+                         a : in std_ulogic_vector;
+                         b : in std_ulogic_vector;
+                         sev : in severity_level) is
+  begin
+    if not std_match(a, b) then
       assert_equal_failure(context, what,
                            """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
                            """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
@@ -289,6 +354,15 @@ package body assertions is
     if a /= b then
       assert_equal_failure(context, what, "'" & to_string(a) & "'", "'" & to_string(b) & "'", sev);
     end if;
+  end procedure;
+
+  procedure assert_match(context: in log_context;
+                         what: in string;
+                         a : in std_logic_vector;
+                         b : in std_logic_vector;
+                         sev : in severity_level) is
+  begin
+    assert_match(context, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
   end procedure;
 
   procedure assert_equal(context: in log_context;
