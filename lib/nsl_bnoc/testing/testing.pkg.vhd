@@ -213,6 +213,57 @@ package testing is
     valid : in boolean;
     level : log_level_t := LOG_LEVEL_WARNING);
 
+
+  procedure framed_assert(
+    log_context: string;
+    rx_data : in byte_string;
+    ref_data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING);
+  
+  type framed_queue_item;
+
+  type framed_queue is access framed_queue_item;
+
+  type framed_queue_item is
+  record
+    chain : framed_queue;
+    data : byte_stream;
+    valid : boolean;
+  end record;
+
+  type framed_queue_root is access framed_queue;
+
+  procedure framed_queue_init(
+    variable root: inout framed_queue_root);
+
+  procedure framed_queue_master_worker(
+    signal req: out nsl_bnoc.framed.framed_req;
+    signal ack: in nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout framed_queue_root;
+    constant context: string := "");
+
+  procedure framed_queue_slave_worker(
+    signal req: in nsl_bnoc.framed.framed_req;
+    signal ack: out nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout framed_queue_root);
+
+  procedure framed_queue_put(
+    variable root: inout framed_queue_root;
+    data : in byte_string);
+
+  procedure framed_queue_get(
+    variable root: inout framed_queue_root;
+    data : out byte_stream;
+    dt : in time := 10 ns);
+
+  procedure framed_queue_check(
+    log_context: string;
+    variable root: inout framed_queue_root;
+    data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING);
+  
 end package testing;
 
 package body testing is
@@ -584,6 +635,127 @@ package body testing is
     committed_queue_get(root, rx_data, rx_valid);
     committed_assert(log_context, rx_data.all, rx_valid, data, valid, level);
     deallocate(rx_data);
+  end procedure;
+
+  procedure framed_queue_init(
+    variable root: inout framed_queue_root)
+  is
+  begin
+    root := new framed_queue;
+    root.all := null;
+  end procedure;
+
+  procedure framed_queue_master_worker(
+    signal req: out nsl_bnoc.framed.framed_req;
+    signal ack: in nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout framed_queue_root;
+    constant context: string := "")
+  is
+    variable data: byte_stream;
+  begin
+    while true
+    loop
+      framed_wait(req, ack, clock, 1);
+      framed_queue_get(root, data);
+      framed_put(req, ack, clock, data.all);
+      deallocate(data);
+    end loop;
+  end procedure;
+
+  procedure framed_queue_slave_worker(
+    signal req: in nsl_bnoc.framed.framed_req;
+    signal ack: out nsl_bnoc.framed.framed_ack;
+    signal clock: in std_ulogic;
+    variable root: inout framed_queue_root)
+  is
+    variable data: byte_stream;
+  begin
+    while true
+    loop
+      framed_get(req, ack, clock, data);
+      framed_queue_put(root, data.all);
+      deallocate(data);
+    end loop;
+  end procedure;
+
+  procedure framed_queue_put(
+    variable root: inout framed_queue_root;
+    data : in byte_string)
+  is
+    variable item, chain : framed_queue;
+  begin
+    item := new framed_queue_item;
+    item.all.data := new byte_string(0 to data'length-1);
+    item.all.data.all := data;
+    item.all.chain := null;
+
+    if root.all = null then
+      root.all := item;
+    else
+      chain := root.all;
+      while chain.all.chain /= null
+      loop
+        chain := chain.all.chain;
+      end loop;
+      chain.all.chain := item;
+    end if;
+  end procedure;
+
+  procedure framed_queue_get(
+    variable root: inout framed_queue_root;
+    data : out byte_stream;
+    dt : in time := 10 ns)
+  is
+    variable item : framed_queue;
+  begin
+    while true
+    loop
+      if root.all /= null then
+        item := root.all;
+        root.all := root.all.chain;
+        data := item.data;
+        deallocate(item);
+        return;
+      end if;
+      wait for dt;
+    end loop;
+  end procedure;
+
+  procedure framed_queue_check(
+    log_context: string;
+    variable root: inout framed_queue_root;
+    data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+    variable rx_data: byte_stream;
+  begin
+    framed_queue_get(root, rx_data);
+    framed_assert(log_context, rx_data.all, data, level);
+    deallocate(rx_data);
+  end procedure;
+
+  procedure framed_assert(
+    log_context: string;
+    rx_data : in byte_string;
+    ref_data : in byte_string;
+    level : log_level_t := LOG_LEVEL_WARNING)
+  is
+  begin
+    if rx_data'length /= ref_data'length
+      or rx_data /= ref_data then
+      log(LOG_LEVEL_INFO, log_context & ": " &
+          " > " & to_string(rx_data)
+          & " *** BAD");
+      log(level, log_context & ": " &
+          " * " & to_string(ref_data)
+          & " *** Expected");
+      return;
+    end if;
+
+    log_info(log_context & ": " &
+             " > " & to_string(rx_data)
+             & " OK");
   end procedure;
 
 end package body;
