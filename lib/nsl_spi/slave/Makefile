@@ -1,6 +1,8 @@
 vhdl-sources += slave.pkg.vhd
 vhdl-sources += spi_memory_controller.vhd
 vhdl-sources += spi_framed_gateway.vhd
+vhdl-sources += spi_framed_sink.vhd
+vhdl-sources += spi_committed_sink.vhd
 
 deps += nsl_data.bytestream
 deps += nsl_data.endian

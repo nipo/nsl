@@ -44,6 +44,54 @@ package slave is
       );
   end component;
 
+  -- A SPI slave controller that spills data to a framed network.
+  --
+  -- First byte on MOSI is padding. This allows to fetch handshake without
+  -- outputting any frame.
+  --
+  -- Data on MISO only contains a handshake. Bits:
+  -- [0]: Next byte may be pushed safely (write buffer is not full)
+  -- [1]: Overflow in current transaction (a byte was pushed on SPI while write
+  --      buffer was full).
+  -- [2]: Slave is not ready to process frame (sticky for a complete frame).
+  -- [3]: Reserved
+  -- [7:4]: Snapshot of handshake bits 3:0 on last unselection of slave.
+  component spi_framed_sink is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      spi_i : in nsl_spi.spi.spi_slave_i;
+      spi_o : out nsl_spi.spi.spi_slave_o;
+    
+      cpol_i : in std_ulogic := '0';
+      cpha_i : in std_ulogic := '0';
+
+      framed_o  : out nsl_bnoc.framed.framed_req;
+      framed_i  : in nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
+  -- A SPI slave controller that spills data to a committed network.
+  -- Commit will only happen if data stream did not suffer an overflow.
+  --
+  -- Handshaking and formatting of SPI data is the same as spi_framed_sink.
+  component spi_committed_sink is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      spi_i : in nsl_spi.spi.spi_slave_i;
+      spi_o : out nsl_spi.spi.spi_slave_o;
+    
+      cpol_i : in std_ulogic := '0';
+      cpha_i : in std_ulogic := '0';
+
+      committed_o  : out nsl_bnoc.committed.committed_req;
+      committed_i  : in nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
   constant SPI_FRAMED_GW_STATUS      : nsl_bnoc.framed.framed_data_t := "00------";
   constant SPI_FRAMED_GW_ST_OUT_RDY  : nsl_bnoc.framed.framed_data_t := "------1-";
   constant SPI_FRAMED_GW_ST_IN_VALID : nsl_bnoc.framed.framed_data_t := "-------1";
