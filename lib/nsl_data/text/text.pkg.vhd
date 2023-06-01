@@ -109,6 +109,10 @@ package body text is
     alias xdata: byte_string(1 to data'length) is data;
     variable ret: string(1 to data'length * 3 + 1);
   begin
+    if data'length = 0 then
+      return "[]";
+    end if;
+
     for i in xdata'range
     loop
       ret(i*3-2) := ' ';
