@@ -23,6 +23,12 @@ package spi is
     miso : std_ulogic;
   end record;
 
+  type spi_slave_io is
+  record
+    o: spi_slave_o;
+    i: spi_slave_i;
+  end record;    
+
   type spi_master_o is record
     mosi : std_ulogic;
     sck  : std_ulogic;
@@ -39,4 +45,29 @@ package spi is
     i: spi_master_i;
   end record;    
 
+  function to_slave(m: spi_master_o) return spi_slave_i;
+  function to_master(s: spi_slave_o) return spi_master_i;
+  
 end package spi;
+
+package body spi is
+
+  function to_slave(m: spi_master_o) return spi_slave_i
+  is
+  begin
+    return (
+      mosi => m.mosi,
+      sck => m.sck,
+      cs_n => m.cs_n.drain_n
+      );
+  end function;
+
+  function to_master(s: spi_slave_o) return spi_master_i
+  is
+  begin
+    return (
+      miso => s.miso
+      );
+  end function;
+
+end package body;
