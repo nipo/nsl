@@ -52,8 +52,8 @@ package async is
   -- Asynchronous one-bit sampler with edge detection.
   component async_input is
     generic (
-      sample_count_c: integer := 2;
-      debounce_count_c: integer := 2
+      sample_count_c: natural := 2;
+      debounce_count_c: natural := 2
       );
     port (
       clock_i   : in std_ulogic;
@@ -66,10 +66,12 @@ package async is
   end component;
 
   -- Asynchronous bus sampler. Totally ignores the timing of input
-  -- port, and tries to cope with metastability.
+  -- port, and tries to cope with metastability when cycle_count_c >= 2.
+  -- If cycle_count_c is 0, no retiming is done and this block is an
+  -- asynchronous wire.
   component async_sampler is
     generic(
-      cycle_count_c : natural range 1 to 40 := 2;
+      cycle_count_c : natural := 2;
       data_width_c  : integer
       );
     port(

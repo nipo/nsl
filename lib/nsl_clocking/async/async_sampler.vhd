@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity async_sampler is
   generic(
-    cycle_count_c : natural range 1 to 40 := 2;
+    cycle_count_c : natural := 2;
     data_width_c : integer
     );
   port(
@@ -23,23 +23,50 @@ architecture rtl of async_sampler is
   attribute syn_keep : boolean;
   attribute nomerge : string;
 
-  signal tig_reg_d : word_t;
-  signal metastable_reg_d : word_vector_t (0 to cycle_count_c-2);
-  attribute keep of tig_reg_d, metastable_reg_d : signal is "TRUE";
-  attribute syn_keep of tig_reg_d, metastable_reg_d : signal is true;
-  attribute async_reg of tig_reg_d, metastable_reg_d : signal is "TRUE";
-  attribute nomerge of tig_reg_d, metastable_reg_d : signal is "TRUE";
 begin
 
-  clock: process (clock_i)
+  has_sampler: if cycle_count_c >= 2
+  generate
+    signal tig_reg_d : word_t;
+    signal metastable_reg_d : word_vector_t (0 to cycle_count_c-2);
+    attribute keep of tig_reg_d, metastable_reg_d : signal is "TRUE";
+    attribute syn_keep of tig_reg_d, metastable_reg_d : signal is true;
+    attribute async_reg of tig_reg_d, metastable_reg_d : signal is "TRUE";
+    attribute nomerge of tig_reg_d, metastable_reg_d : signal is "TRUE";
   begin
-    if rising_edge(clock_i) then
-      metastable_reg_d
-        <= metastable_reg_d(1 to metastable_reg_d'high) & tig_reg_d;
-      tig_reg_d <= data_i;
-    end if;
-  end process clock;
+    clock: process (clock_i)
+    begin
+      if rising_edge(clock_i) then
+        metastable_reg_d
+          <= metastable_reg_d(1 to metastable_reg_d'high) & tig_reg_d;
+        tig_reg_d <= data_i;
+      end if;
+    end process clock;
 
-  data_o <= metastable_reg_d(metastable_reg_d'left);
+    data_o <= metastable_reg_d(metastable_reg_d'left);
+  end generate;
+
+  has_tig_only: if cycle_count_c = 1
+  generate
+    signal tig_reg_d : word_t;
+    attribute keep of tig_reg_d : signal is "TRUE";
+    attribute syn_keep of tig_reg_d : signal is true;
+    attribute async_reg of tig_reg_d : signal is "TRUE";
+    attribute nomerge of tig_reg_d : signal is "TRUE";
+  begin
+    clock: process (clock_i)
+    begin
+      if rising_edge(clock_i) then
+        tig_reg_d <= data_i;
+      end if;
+    end process clock;
+
+    data_o <= tig_reg_d;
+  end generate;
+
+  wire_only: if cycle_count_c = 0
+  generate
+    data_o <= data_i;
+  end generate;
   
 end rtl;
