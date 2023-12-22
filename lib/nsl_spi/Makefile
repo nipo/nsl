@@ -7,3 +7,4 @@ packages += fifo_transport
 packages += io_extender
 packages += flash
 packages += testing
+packages += source
