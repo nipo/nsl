@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 -- RGB color data type. For now, RGB24 and RGB3 are defined.
 -- There are data convertors from/to vectors of bits.
@@ -204,9 +205,9 @@ package rgb is
 
   function to_rgb24(r, g, b : real) return rgb24;
 
-  function to_rgb24(rgb: rgb3) return rgb24;
+  function to_rgb24(c: rgb3) return rgb24;
 
-  -- h : angle (radians)
+  -- h : angle (turns)
   -- s : [0..1]
   -- v : [0..1]
   function rgb24_from_hsv(h, s, v : real) return rgb24;
@@ -438,36 +439,35 @@ package body rgb is
     return ret;
   end function;
 
-  constant pi: real := 3.1415926535;
-
-  function over_2pi(v: real) return real
-  is
-    variable complete, ret : real;
+  function frac(x: real) return real is
   begin
-    ret := v / pi / 2.0;
-    ret := ret - real(integer(ret));
-    return ret * 2.0;    
+    return x - floor(x);
   end function;
-  
+
   function rgb24_from_hsv(h, s, v : real) return rgb24
   is
-    variable ar, ag, ab, hr, hg, hb : real;
-    variable sr, vr : real;
+    variable hr, sr, vr, c, x, m : real;
+    variable rp, gp, bp : real;
+    variable sx: integer;
   begin
-    ar := over_2pi(h / pi) - 1.0;
-    ag := over_2pi(h + pi * 4.0 / 3.0) - 1.0;
-    ab := over_2pi(h + pi * 2.0 / 3.0) - 1.0;
-    hr := clamp(0.0, -1.0 + abs(ar) * 3.0, 1.0);
-    hg := clamp(0.0, -1.0 + abs(ag) * 3.0, 1.0);
-    hb := clamp(0.0, -1.0 + abs(ab) * 3.0, 1.0);
-
+    hr := frac(h);
     sr := clamp(0.0, s, 1.0);
     vr := clamp(0.0, v, 1.0);
-    hr := hr * s + (1.0 - s);
-    hg := hg * s + (1.0 - s);
-    hb := hb * s + (1.0 - s);
+    c := vr * sr;
+    x := c * (1.0 - abs(2.0 * (frac(hr * 3.0) - 0.5)));
+    m := vr - c;
+    sx := integer(hr * 6.0);
 
-    return to_rgb24(hr * v, hg * v, hb * v);
+    case sx is
+      when 0      => rp := c;   gp := x;   bp := 0.0;
+      when 1      => rp := x;   gp := c;   bp := 0.0;
+      when 2      => rp := 0.0; gp := c;   bp := x;
+      when 3      => rp := 0.0; gp := x;   bp := c;
+      when 4      => rp := x;   gp := 0.0; bp := c;
+      when others => rp := c;   gp := 0.0; bp := x;
+    end case;
+
+    return to_rgb24(rp + m, gp + m, bp + m);
   end function;
 
   function attenuate(c : rgb24;
@@ -513,22 +513,22 @@ package body rgb is
   end function;
 
 
-  function to_rgb24(rgb: rgb3) return rgb24
+  function to_rgb24(c: rgb3) return rgb24
   is
   begin
-    if rgb = rgb3_black then
+    if c = rgb3_black then
       return rgb24_black;
-    elsif rgb = rgb3_blue then
+    elsif c = rgb3_blue then
       return rgb24_blue;
-    elsif rgb = rgb3_green then
+    elsif c = rgb3_green then
       return rgb24_green;
-    elsif rgb = rgb3_cyan then
+    elsif c = rgb3_cyan then
       return rgb24_cyan;
-    elsif rgb = rgb3_red then
+    elsif c = rgb3_red then
       return rgb24_red;
-    elsif rgb = rgb3_magenta then
+    elsif c = rgb3_magenta then
       return rgb24_magenta;
-    elsif rgb = rgb3_yellow then
+    elsif c = rgb3_yellow then
       return rgb24_yellow;
     else
       return rgb24_white;
