@@ -43,6 +43,7 @@ architecture rtl of spi_committed_sink is
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
 
+    empty: boolean;
     status: std_ulogic_vector(3 downto 0);
     last_status: std_ulogic_vector(3 downto 0);
   end record;
@@ -77,15 +78,17 @@ begin
     fifo_push := false;
 
     rin.status(0) <= to_logic(r.fifo_fillness /= fifo_depth_c);
+    rin.status(1) <= to_logic(r.fifo_fillness < fifo_depth_c);
     
     case r.state is
       when ST_WAIT_IDLE =>
         if active_s = '0' then
-          rin.status(3 downto 1) <= (others => '0');
+          rin.status(3 downto 0) <= (others => '0');
           rin.state <= ST_IDLE;
         end if;
 
       when ST_IDLE =>
+        rin.empty <= true;
         if active_s = '1' then
           rin.state <= ST_PADDING;
         end if;
@@ -103,14 +106,18 @@ begin
           rin.last_status <= r.status;
           -- These will appear on HS byte if slave is selected again before
           -- write buffer is flushed.
-          rin.status(1) <= '0';
-          rin.status(2) <= '1';
-          rin.state <= ST_FLUSH;
+          rin.status(3) <= '1';
+          if not r.empty then
+            rin.state <= ST_FLUSH;
+          else
+            rin.state <= ST_WAIT_IDLE;
+          end if;
         elsif from_spi_valid_s = '1' then
+          rin.empty <= false;
           if r.fifo_fillness /= fifo_depth_c then
             fifo_push := true;
           else
-            rin.status(1) <= '1';
+            rin.status(2) <= '1';
           end if;
         end if;
 
@@ -154,7 +161,7 @@ begin
                                       valid => r.fifo_fillness /= 0);
 
       when ST_COMMIT =>
-        committed_o <= committed_commit(r.last_status(1) /= '1');
+        committed_o <= committed_commit(r.last_status(2) /= '1');
     end case;
   end process;
   

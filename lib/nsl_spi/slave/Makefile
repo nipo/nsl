@@ -9,6 +9,7 @@ deps += nsl_data.endian
 deps += nsl_logic.bool
 deps += nsl_bnoc.sized
 deps += nsl_bnoc.framed
+deps += nsl_bnoc.committed
 deps += nsl_memory.fifo
 deps += nsl_spi.spi
 deps += nsl_spi.shift_register
