@@ -67,14 +67,14 @@ architecture rtl of slave_shift_register_oversampled is
   signal cs_fall, cs_rise: std_ulogic;
   signal sck_fall, sck_rise: std_ulogic;
   signal cs_begin, cs_end: std_ulogic;
-  signal sck_lead, sck_trail: std_ulogic;
+  signal sck_lead, sck_tail: std_ulogic;
 
 begin
 
   sck_sync: nsl_clocking.async.async_input
     generic map(
-      sample_count_c => 0,
-      debounce_count_c => 2
+      sample_count_c => 1,
+      debounce_count_c => 0
       )
     port map(
       clock_i => clock_i,
@@ -86,7 +86,7 @@ begin
       );
 
   sck_lead <= sck_rise when cpol_i = '0' else sck_fall;
-  sck_trail <= sck_fall when cpol_i = '0' else sck_rise;
+  sck_tail <= sck_fall when cpol_i = '0' else sck_rise;
   
   mosi_sync: nsl_clocking.async.async_input
     generic map(
@@ -124,7 +124,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, spi_i_s, tx_data_i, cs_begin, cs_end, sck_lead, sck_trail) is
+  transition: process(r, spi_i_s, tx_data_i, cs_begin, cs_end, sck_lead, sck_tail) is
     variable take, put: boolean;
   begin
     rin <= r;
@@ -150,7 +150,7 @@ begin
           put := true;
         end if;
       end if;
-      if sck_trail = '1' then
+      if sck_tail = '1' then
         if cpha_i = '0' then
           put := true;
         else
