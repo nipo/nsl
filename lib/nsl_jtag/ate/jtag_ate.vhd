@@ -1,8 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_jtag, nsl_math, nsl_io;
+library nsl_jtag, nsl_math, nsl_io, nsl_logic;
 use nsl_io.io.all;
+use nsl_logic.logic.all;
 
 entity jtag_ate is
   generic (
@@ -61,8 +62,8 @@ architecture rtl of jtag_ate is
     state : state_t;
     tap_branch : tap_branch_t;
     prescaler : natural range 0 to 2 ** prescaler_width - 1;
-    data_shreg : std_ulogic_vector(data_max_size-1 downto 0);
-    data_shreg_insertion_index, data_left : natural range 0 to data_max_size-1;
+    data_shreg, insertion_mask, insertion_val : std_ulogic_vector(data_max_size-1 downto 0);
+    data_left : natural range 0 to data_max_size-1;
     tms_shreg : std_ulogic_vector(0 to tms_shreg_len-1);
     tms_left : natural range 0 to tms_move_max_len - 1 + 2;
     tdi, tdi_next : tristated;
@@ -85,10 +86,12 @@ begin
   end process;
 
   transition: process(r, jtag_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
-                      divisor_i)
+                      divisor_i) is
   begin
     rin <= r;
 
+    rin.insertion_val <= (others => jtag_i.tdo);
+    
     if r.prescaler /= 0 then
       rin.prescaler <= r.prescaler - 1;
     else
@@ -204,7 +207,7 @@ begin
                     -- cycle to go to next Shift cycle.
                     rin.data_shreg <= cmd_data_i;
                     rin.data_left <= cmd_size_m1_i;
-                    rin.data_shreg_insertion_index <= cmd_size_m1_i;
+                    rin.insertion_mask <= mask_range(data_max_size, cmd_size_m1_i, cmd_size_m1_i);
                     rin.tap_branch <= TAP_CAPTURED;
                     rin.state <= ST_SHIFT_LOW;
                     rin.prescaler <= divisor_i;
@@ -235,8 +238,10 @@ begin
           end if;
 
         when ST_SHIFT_LOW =>
-          rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
-          rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
+          rin.data_shreg <= mask_merge(
+            '0' & r.data_shreg(r.data_shreg'left downto 1),
+            r.insertion_val,
+            r.insertion_mask);
           rin.tdi_next <= to_tristated(r.data_shreg(0));
           rin.state <= ST_SHIFT_HIGH;
           rin.prescaler <= divisor_i;
@@ -252,8 +257,10 @@ begin
           rin.prescaler <= divisor_i;
 
         when ST_SHIFT_HOLD =>
-          rin.data_shreg <= '-' & r.data_shreg(r.data_shreg'left downto 1);
-          rin.data_shreg(r.data_shreg_insertion_index) <= jtag_i.tdo;
+          rin.data_shreg <= mask_merge(
+            '0' & r.data_shreg(r.data_shreg'left downto 1),
+            r.insertion_val,
+            r.insertion_mask);
           rin.tdi_next <= to_tristated(r.data_shreg(0));
           rin.state <= ST_SHIFT_DONE;
           
