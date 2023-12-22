@@ -1,8 +1,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 
 library nsl_bnoc, nsl_spi, nsl_io, nsl_data, nsl_logic;
+use nsl_data.bytestream.all;
 
 package transactor is
 
@@ -132,7 +134,7 @@ package body transactor is
       return spi_div(32);
     else
       return spi_div(integer(ceil(ratio)));
-    end function;
+    end if;
   end function;
 
   function spi_shift(byte_count: integer range 1 to 64; read_miso : boolean)
@@ -144,10 +146,10 @@ package body transactor is
     -- We have no option to have no input/no output shift, so shift zeros
     -- when we have no miso reading.
     if read_miso then
-      ret(0) := "01" & std_ulogic_vector(to_unsigned(byte_count-1, 6));
+      ret(0) := std_ulogic_vector("01" & to_unsigned(byte_count-1, 6));
       return ret;
     else
-      ret(0) := "10" & std_ulogic_vector(to_unsigned(byte_count-1, 6));
+      ret(0) := std_ulogic_vector("10" & to_unsigned(byte_count-1, 6));
       return ret & pad;
     end if;
   end function;
