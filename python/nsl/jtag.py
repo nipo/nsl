@@ -15,7 +15,7 @@ class AteBase:
             if data:
                 self.pipe.put(list(data[off:off+size]))
             if not self.is_cmd:
-                self.pipe.put([0x00])
+                self.pipe.put([0x5a])
 
     def shift_bits(self, opts, length, data):
         if self.is_cmd:
@@ -24,34 +24,38 @@ class AteBase:
             mask = (1 << length) - 1
             self.pipe.put([(data, mask)])
         if not self.is_cmd:
-            self.pipe.put([0x00])
+            self.pipe.put([0x5a])
 
     def reset(self, cycles = 5):
         while cycles > 7:
             packs = min(cycles // 8, 16)
-            self.pipe.put([0xb0 | (packs - 1)])
+            c = (0xb0 | (packs - 1)) if self.is_cmd else 0x5a
+            self.pipe.put([c])
             cycles -= packs * 8
         if cycles:
-            self.pipe.put([0x98 | (cycles - 1)])
+            c = (0x98 | (cycles - 1)) if self.is_cmd else 0x5a
+            self.pipe.put([c])
 
     def rti(self, cycles = 5):
         while cycles > 7:
             packs = min(cycles // 8, 16)
-            self.pipe.put([0xa0 | (packs - 1)])
+            c = (0xa0 | (packs - 1)) if self.is_cmd else 0x5a
+            self.pipe.put([c])
             cycles -= packs * 8
         if cycles:
-            self.pipe.put([0x90 | (cycles - 1)])
+            c = (0x90 | (cycles - 1)) if self.is_cmd else 0x5a
+            self.pipe.put([c])
 
     def swd_to_jtag(self):
         self.reset(50)
-        self.pipe.put([0x82])
+        self.pipe.put([0x82 if self.is_cmd else 0x5a])
         self.reset()
 
     def dr_capture(self):
-        self.pipe.put([0x80])
+        self.pipe.put([0x80 if self.is_cmd else 0x5a])
 
     def ir_capture(self):
-        self.pipe.put([0x81])
+        self.pipe.put([0x81 if self.is_cmd else 0x5a])
 
     def shift(self, tdi, tdo, length):
         bytelength = length // 8
@@ -124,7 +128,7 @@ class AteRsp(AteBase):
         AteBase.shift_bits(self, opts, length, tdo)
 
     def divisor(self, value):
-        self.pipe.put([0x83])
+        self.pipe.put([0x5a])
 
 class Tap:
     def __init__(self, master, ir_len, ir_pre = 0, ir_post = 0, dr_pre = 0, dr_post = 0):
