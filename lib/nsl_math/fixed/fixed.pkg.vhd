@@ -598,7 +598,7 @@ package body fixed is
       ret(overlap_left downto overlap_right) := value(overlap_left downto overlap_right);
     end if;
       
-    if overlap_right-1 >= ret'right then
+    if overlap_right-1 <= ret'left then
       ret(overlap_right-1 downto ret'right) := (others => '0');
     end if;
 
