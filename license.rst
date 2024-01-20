@@ -1,4 +1,4 @@
-Copyright (c) 2017-2021, Nicolas Pouillon <nipo@ssji.net>.
+Copyright (c) 2017-2024, Nicolas Pouillon <nipo@ssji.net>.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

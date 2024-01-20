@@ -11,8 +11,33 @@ main purposes:
 
 * Improve debuggability.
 
-Avoiding std_logic
-==================
+Avoiding inout ports
+====================
+
+If an input/output bus is to be created on an entity port map, there
+should be `_i`, `_o` and `_oe_o` ports. Inout ports should be
+avoided. There are multiple reasons, for instance:
+
+* Simulation may prefer to check unidirectional vectors and enable
+  value,
+
+* IO buffer may not be directly connected to the component, but may
+  itself be multiplexed before getting to the actual IO block.
+
+* In an actual implementation, we may have to forward enable signal to
+  some external driver chip that implements the tri-state (using
+  external tri-state level shifter or isolator is a typical example).
+
+Using abstract types
+====================
+
+Once we start to carry around `_i`, `_o` and `_oe_o` signals, we start
+to get to a pattern where IOs are guarded by an enable signal.  Let's
+define a type to express exactly that.  Records that hold signal
+semantics together should be used where possible.
+
+Avoiding resolved types
+=======================
 
 `std_logic(_vector)` and `std_ulogic(_vector)` only differ by one
 feature: resolution.
@@ -32,6 +57,8 @@ drivers. This can be determined statically at elaboration. Moreover,
 simulation is expected to be faster as simulation engine does not have
 to care about resolution at all.
 
+Then we should prefer unresolved signal types over resolved ones.
+
 There is still one place where `std_logic` makes sense, this is for
 inferring tri-states from ‘Z’ state on `inout` pin ports. This should
 only happen in topcell, as we defined before that bi-directional buses
@@ -39,29 +66,6 @@ should use in/out/enable for entities.
 
 `std_logic` and `std_ulogic` are type compatible without cast.
 `std_logic_vector` and `std_ulogic_vector` require a simple type cast.
-
-Avoiding inout ports
-====================
-
-If an input/output bus is to be created on an entity port map, there
-should be `_i`, `_o` and `_oe_o` ports. Inout ports should be
-avoided. There are multiple reasons, for instance:
-
-* `std_ulogic` is preferred,
-
-* Simulation may prefer to check unidirectional vectors and enable
-  value,
-
-* in an actual implementation, we may have to forward enable signal to
-  some external driver chip that implements the tri-state.
-
-Using abstract types
-====================
-
-Once we start to carry around `_i`, `_o` and `_oe_o` signals, we start
-to get to a pattern where IOs are guarded by an enable signal.  Let's
-define a type to express exactly that.  Records that hold signal
-semantics together should be used where possible.
 
 Using standard libraries
 ========================
@@ -105,20 +109,20 @@ specification rather than `unsigned` may yield better results as
 synthesizer will be responsible for selecting relevant encoding of
 value.
 
-When using integers, having counters that roll over on overflow may
-not be critical. Use `mod` operator accordingly.
+When using integers types, having counters that roll over on overflow
+may not be critical. Use `mod` operator accordingly.
 
 When there is a counter in some state machine where count of cycles it
 goes through is not always the same, having the cycle count as start
-value and implement a downcounter will save some logic for final value
-comparison: it will alwas be 0. If there is only one reset value,
-difference will not be significant if comparator is implemented in
-LUTs.
+value and implement a downcounter will save some logic for loop exit
+clause comparison: it will alwas be comparison against 0.  Moreover,
+if synthesized to hardware adders, comparison-to-zero may be available
+for free.
 
 Letting the synthesizer and optimizer do their jobs
 ===================================================
 
-Use dont care value `-` everywhere possible in
+Use dont care value (`-`) everywhere possible in
 `std_(u)logic(_vector)`. This has two benefic side effects:
 
 * Tools will be able to perform simplification driving logic for
@@ -146,13 +150,13 @@ actually care about the signal value.
 Component forward declaration
 =============================
 
-Components should be declared in a package. Package is used as a
-header in C.
+Components should be declared in a package. Package is to VHDL what
+header file is to C.
 
 Architecture should never have any component declaration in
 declarative part.
 
-Components should rely on packages. Instanciations should always use
+Components should rely on packages. Instantiations should always use
 component instantiation variant::
 
   label: [component] library.package.component_name
@@ -166,7 +170,7 @@ and port map before elaboration. Moreover, we can then use assignation
 of array or record elements one by one, and perform type conversion on
 output ports. i.e.::
 
-  label: entity library.entity_name
+  label: library.component.entity_name
   port map(
     std_ulogic_vector(unsigned_data_o) => some_suv_signal, -- output port type cast
     unsigned_data_i => unsigned(other_suv_signal), -- input port type cast
@@ -180,8 +184,7 @@ Using records
 =============
 
 Records are just another data type. They can group signals of various
-types logically. They can be used as ports, they can be used in
-arrays.
+types. They can be used as ports, they can be used in arrays.
 
 When using ports with records, we should use one record for each
 direction. Let’s take an example with AXI-Lite::

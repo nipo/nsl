@@ -26,13 +26,15 @@ Supported build toolsuites
 This library build system targets major vendor's tool suites among
 which:
 
-* Vivado (Synthesis/PNR/Bitstream, IP-Xact Packaging),
+* Vivado (Synthesis/PNR/Bitstream, IP-Xact Packaging, stable),
 
-* ISE (Synthesis/PNR/Bitstream), ISIM (simulation),
+* Gowin (Synthesis/PNR/Bitstream, stable),
 
-* GHDL (simulation),
+* ISE (Synthesis/PNR/Bitstream, stable), ISIM (simulation, stable),
 
-* Lattice Diamond and IceCube (Synthesis/PNR/Bitstream),
+* GHDL (simulation, stable),
+
+* Lattice Diamond and IceCube (Synthesis/PNR/Bitstream, stable),
 
 * nvc (simulation, experimental).
 
@@ -40,21 +42,10 @@ Component scope
 ===============
 
 This library started off as a support library for debugging probe
-project, therefore, there is everything needed to build such project.
-This is not limitative.
+project, therefore, there is a strong bias towards serial protocols
+handling.  Then the library grew to handle more things.
 
 Components currently available in the HDL library include:
-
-* Backend / target specific blocks:
-
-  * Internal Clock generation components (FPGA startup clock blocks),
-
-  * Internal Reset pulse generation components,
-
-  * JTAG chain design-specific registers (DRs reserved for user in
-    FPGA's TAP),
-
-  * Pad/IO cell abstraction.
 
 * The usual Low-level primitives:
 
@@ -65,11 +56,32 @@ Components currently available in the HDL library include:
 
   * FIFOs (sync, async).
 
+* Abstract types for tri-stated, opendrain and bidirectional IOs.
+
+* Vendor-abstract blocks for simple use-cases:
+
+  * Internal Clock generation components (FPGA startup clock blocks),
+
+  * Internal Reset pulse generation components,
+
+  * Clock distribution buffers,
+
+  * Single-output PLL block with automatic parameter calculation,
+
+  * Clock forwarding output,
+
+  * IO blocks for differential pairs, DDR IOs, etc,
+
+  * JTAG chain design-specific registers (DRs reserved for user in
+    FPGA's TAP).
+
 * Communication networks:
 
   * AXI4-Lite, AXI4-Stream, message-queue,
 
-  * Message routers.
+  * Message routers,
+
+  * NSL-specific NoC called `bnoc`.
 
 * Bi-directional FIFO Communication bridges:
 
@@ -83,13 +95,15 @@ Components currently available in the HDL library include:
 
   * JTAG register to fifo bridge,
 
-  * UART to fifo bridge,
+  * UART to fifo bridge.
 
-  * USB function.
+Standard IO protocols:
 
-* Utilities for a test-bench framework.
+  * USB function,
 
-* Debugger bus masters:
+  * Ethernet, TCP, IP, ARP blocks.
+
+* Various serial bus masters and transactors:
 
   * JTAG,
   * SWD,
@@ -99,3 +113,5 @@ Components currently available in the HDL library include:
   * UART,
   * WS2812,
   * GPIO.
+
+* Utilities for a test-bench framework.

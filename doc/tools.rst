@@ -14,23 +14,12 @@ generate a full trace of all signals::
   
   include $(NSL)/build/build.mk
 
-NVC
----
-
-NVC is mostly the same usage as GHDL::
-
-  top = work.tb
-  work-srcdir = $(SRC_DIR)/src
-  tool = nvc
-  
-  include $(NSL)/build/build.mk
-
 ISIM
 ----
 
-ISIM is Xilinx' simulator. It transparently handles Xilinx-specific
-libraries (unisim, unimacros). It also comes with a fair-enough GUI
-for interactive tracing.
+ISIM is Xilinx' simulator from the ISE era. It transparently handles
+Xilinx-specific libraries (unisim, unimacros). It also comes with a
+fair-enough GUI for interactive tracing.
 
   top = work.tb
   work-srcdir = $(SRC_DIR)/src
@@ -69,16 +58,24 @@ Goal of this backend is to generate a working planahead project file
 that can be opened in PlanAhead afterwards. This makes little interest
 and is mostly unsupported.
 
+Vivado project
+--------------
+
+This backend creates a Vivado project for opening in Vivado. It relies
+on user interaction for the rest of the compilation. This is mostly
+unsupported.
+
 Vivado
 ------
 
-This backend creates a Vivado project on the fly and drives the
-synthesis process down to a bitstream file.
+This backend internally creates a Vivado project on the fly and drives
+the synthesis/PNR process down to a bitstream file.  This is the
+preferred usage for 7-series.
 
 Vivado IP
 ---------
 
-This backend uses Vivado for packaging a topcell as an IP, that can in
+This backend uses Vivado for packaging design topcell as an IP that can in
 turn be used in Vivado's board design. This is useful for building IPs
 from NSL basic blocks, and integrating them in a Zynq design::
 
@@ -100,7 +97,7 @@ from NSL basic blocks, and integrating them in a Zynq design::
   
   ip-vendor = nsl
   ip-display-vendor = NSL
-  ip-company-url = http://www.ssji.net
+  ip-company-url = http://www.example.com
 
   # Target family filter
   target_families = zynq
@@ -111,6 +108,25 @@ from NSL basic blocks, and integrating them in a Zynq design::
   target_speed = -1
 
   include $(NSL)/build/build.mk
+
+Gowin
+-----
+
+Gowin backend. Mostly the same requirement and usage than ise
+backend::
+
+  target = blink
+  top = work.top
+  work-srcdir = $(SRC_DIR)/src
+  target_part_name = GW1N-9C
+  target_part = GW1N-UV9UG256C6/I5
+  hwdep = gowin
+  tool = gowin
+  gowin-use-as-gpio = sspi mspi
+  
+  all: $(target).fs
+  
+  include $(NSL)/../build/build.mk
 
 Icecube2
 --------
