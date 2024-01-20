@@ -20,7 +20,7 @@ entity dacx0508_slope_controller is
     reset_n_i   : in  std_ulogic;
     clock_i     : in  std_ulogic;
 
-    div_i       : in unsigned(4 downto 0);
+    div_i       : in unsigned(6 downto 0);
     cs_id_i     : in unsigned(2 downto 0);
 
     slave_cmd_i : in  framed_req;
@@ -59,7 +59,8 @@ architecture beh of dacx0508_slope_controller is
   type master_cmd_state_t is (
     ST_MASTER_CMD_RESET,
     ST_MASTER_CMD_IDLE,
-    ST_MASTER_CMD_DIV,
+    ST_MASTER_CMD_DIVH,
+    ST_MASTER_CMD_DIVL,
     ST_MASTER_CMD_CS,
     ST_MASTER_CMD_SHIFT_OP,
     ST_MASTER_CMD_SHIFT_CMD,
@@ -210,12 +211,17 @@ begin
           and r.cmd_allowed_count /= 0 then
           command_started := true;
           rin.cmd_left_before_next <= min_command_interval_c-1;
-          rin.master_cmd_state <= ST_MASTER_CMD_DIV;
+          rin.master_cmd_state <= ST_MASTER_CMD_DIVH;
           rin.dac_val <= r.current(rin.dac_val'range);
           rin.current_dirty <= false;
         end if;
 
-      when ST_MASTER_CMD_DIV =>
+      when ST_MASTER_CMD_DIVH =>
+        if master_cmd_i.ready = '1' then
+          rin.master_cmd_state <= ST_MASTER_CMD_DIVL;
+        end if;
+
+      when ST_MASTER_CMD_DIVL =>
         if master_cmd_i.ready = '1' then
           rin.master_cmd_state <= ST_MASTER_CMD_CS;
         end if;
@@ -362,10 +368,16 @@ begin
       when ST_MASTER_CMD_RESET | ST_MASTER_CMD_IDLE =>
         null;
 
-      when ST_MASTER_CMD_DIV =>
+      when ST_MASTER_CMD_DIVH =>
         master_cmd_o.valid <= '1';
-        master_cmd_o.data <= SPI_CMD_DIV(7 downto 5)
-                             & std_ulogic_vector(div_i);
+        master_cmd_o.data <= SPI_CMD_DIVH(7 downto 4)
+                             & std_ulogic_vector(div_i(6 downto 3));
+        master_cmd_o.last <= '0';
+
+      when ST_MASTER_CMD_DIVL =>
+        master_cmd_o.valid <= '1';
+        master_cmd_o.data <= SPI_CMD_DIVL(7 downto 3)
+                             & std_ulogic_vector(div_i(2 downto 0));
         master_cmd_o.last <= '0';
 
       when ST_MASTER_CMD_CS =>

@@ -43,7 +43,7 @@ package dacx0508 is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
 
-      div_i       : in unsigned(4 downto 0);
+      div_i       : in unsigned(6 downto 0);
       cs_id_i     : in unsigned(2 downto 0);
 
       slave_cmd_i : in  nsl_bnoc.framed.framed_req;

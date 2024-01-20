@@ -21,7 +21,7 @@ entity spi_committed_source is
     cpol_i : in std_ulogic := '0';
     cpha_i : in std_ulogic := '0';
     slave_i : in unsigned(2 downto 0) := "000";
-    div_i : in unsigned(4 downto 0) := "00000";
+    div_i : in unsigned(6 downto 0) := "0000000";
 
     spi_cmd_o  : out nsl_bnoc.framed.framed_req;
     spi_cmd_i  : in nsl_bnoc.framed.framed_ack;
@@ -36,7 +36,8 @@ architecture rtl of spi_committed_source is
   type cmd_st_t is (
     CMD_RESET,
     CMD_IDLE,
-    CMD_PUT_DIV,
+    CMD_PUT_DIVH,
+    CMD_PUT_DIVL,
     CMD_PUT_SELECT,
     CMD_PUT_CMD_SHIFT,
     CMD_PUT_CMD_DATA,
@@ -114,10 +115,15 @@ begin
 
       when CMD_IDLE =>
         if committed_i.valid = '1' and r.rsp_state = RSP_IDLE then
-          rin.cmd_state <= CMD_PUT_DIV;
+          rin.cmd_state <= CMD_PUT_DIVH;
         end if;
 
-      when CMD_PUT_DIV =>
+      when CMD_PUT_DIVH =>
+        if spi_cmd_i.ready = '1' then
+          rin.cmd_state <= CMD_PUT_DIVL;
+        end if;
+
+      when CMD_PUT_DIVL =>
         if spi_cmd_i.ready = '1' then
           rin.cmd_state <= CMD_PUT_SELECT;
         end if;
@@ -204,7 +210,7 @@ begin
         rin.rsp_state <= RSP_IDLE;
 
       when RSP_IDLE =>
-        if r.cmd_state = CMD_PUT_DIV then
+        if r.cmd_state = CMD_PUT_DIVH then
           rin.rsp_state <= RSP_GET_DONE;
         end if;
 
@@ -227,8 +233,11 @@ begin
       when CMD_RESET | CMD_IDLE =>
         null;
 
-      when CMD_PUT_DIV =>
-        spi_cmd_o <= framed_flit(data => "001" & std_ulogic_vector(div_i));
+      when CMD_PUT_DIVH =>
+        spi_cmd_o <= framed_flit(data => "0010" & std_ulogic_vector(div_i(6 downto 3)));
+
+      when CMD_PUT_DIVL =>
+        spi_cmd_o <= framed_flit(data => "00110" & std_ulogic_vector(div_i(2 downto 0)));
 
       when CMD_PUT_SELECT =>
         spi_cmd_o <= framed_flit(data => "000" & cpol_i & cpha_i & std_ulogic_vector(slave_i));

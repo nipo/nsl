@@ -7,7 +7,15 @@ class MasterCmd:
         self.pipe.flush(**kwargs)
         
     def div(self, div):
-        self.pipe.put([0x20 | (div - 1)])
+        div_v = div-1
+        if div_v >= 0x7f:
+            div_v = 0x7f
+        self.pipe.put([0x20 | (div_v >> 3), 0x30 | (div_v & 0x7)])
+
+    def width(self, w):
+        w_v = w-1
+        assert 0 <= w_v <= 7
+        self.pipe.put([0x38 | (w_v)])
 
     def select(self, slave, mode = 0):
         self.pipe.put([(mode << 3) | slave])
@@ -45,7 +53,15 @@ class MasterRsp:
         self.pipe.flush(**kwargs)
 
     def div(self, div):
-        self.pipe.put([0x20 | (div - 1)])
+        div_v = div-1
+        if div_v >= 0x7f:
+            div_v = 0x7f
+        self.pipe.put([0x20 | (div_v >> 3), 0x30 | (div_v & 0x7)])
+
+    def width(self, w):
+        w_v = w-1
+        assert 0 <= w_v <= 7
+        self.pipe.put([0x38 | (w_v)])
 
     def select(self, slave, mode = 0):
         self.pipe.put([(mode << 3) | slave])

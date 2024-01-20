@@ -87,7 +87,7 @@ begin
       reset_n_i    => reset_n,
       clock_i      => clock,
 
-      div_i        => "01000",
+      div_i        => "0001000",
       cs_id_i      => "000",
 
       slave_cmd_i  => buffered.cmd.req,

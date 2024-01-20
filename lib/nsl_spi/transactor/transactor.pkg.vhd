@@ -21,7 +21,9 @@ package transactor is
   constant SPI_CMD_SELECT_MODE2 : nsl_bnoc.framed.framed_data_t := "---10---";
   constant SPI_CMD_SELECT_MODE3 : nsl_bnoc.framed.framed_data_t := "---11---";
   constant SPI_CMD_UNSELECT     : nsl_bnoc.framed.framed_data_t := "000--111";
-  constant SPI_CMD_DIV          : nsl_bnoc.framed.framed_data_t := "001-----";
+  constant SPI_CMD_DIVH         : nsl_bnoc.framed.framed_data_t := "0010----";
+  constant SPI_CMD_DIVL         : nsl_bnoc.framed.framed_data_t := "00110---";
+  constant SPI_CMD_WIDTH        : nsl_bnoc.framed.framed_data_t := "00111---";
 
   function spi_select(cs: integer := -1;
                       cpol : std_ulogic := '0';
@@ -32,7 +34,7 @@ package transactor is
                       mode : integer range 0 to 3 := 0)
     return nsl_data.bytestream.byte_string;
 
-  function spi_div(divisor : integer range 1 to 32)
+  function spi_div(divisor : integer range 1 to 128)
     return nsl_data.bytestream.byte_string;
 
   function spi_clock(clock_hz: real; sck_hz: real)
@@ -113,12 +115,14 @@ package body transactor is
     return spi_select(cs, mode_v(1), mode_v(0));
   end function;
 
-  function spi_div(divisor : integer range 1 to 32)
+  function spi_div(divisor : integer range 1 to 128)
     return nsl_data.bytestream.byte_string
   is
-    variable ret: nsl_data.bytestream.byte_string(0 to 0);
+    variable ret: nsl_data.bytestream.byte_string(0 to 1);
+    constant d: unsigned(6 downto 0) := to_unsigned(divisor-1, 7);
   begin
-    ret(0) := "001" & std_ulogic_vector(to_unsigned(divisor-1, 5));
+    ret(0) := "0010" & std_ulogic_vector(d(6 downto 3));
+    ret(1) := "00110" & std_ulogic_vector(d(2 downto 0));
 
     return ret;
   end function;
@@ -130,8 +134,8 @@ package body transactor is
   begin
     if ratio < 1.0 then
       return spi_div(1);
-    elsif ratio > 31.0 then
-      return spi_div(32);
+    elsif ratio > 127.0 then
+      return spi_div(128);
     else
       return spi_div(integer(ceil(ratio)));
     end if;

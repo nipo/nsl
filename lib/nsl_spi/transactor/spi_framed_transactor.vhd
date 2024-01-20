@@ -50,10 +50,11 @@ architecture rtl of spi_framed_transactor is
     shreg      : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
     selected   : natural range 0 to 7;
-    bit_count  : natural range 0 to 7;
+    bit_count, width_m1  : natural range 0 to 7;
+    insertion_mask : std_ulogic_vector(0 to 7);
     last       : std_ulogic;
-    div        : unsigned(4 downto 0);
-    cnt        : unsigned(4 downto 0);
+    div        : unsigned(6 downto 0);
+    cnt        : unsigned(6 downto 0);
     mosi       : std_ulogic;
     cpol       : std_ulogic;
     cpha       : std_ulogic;
@@ -89,7 +90,9 @@ begin
       when ST_RESET =>
         rin.state <= ST_IDLE;
         rin.selected <= 7;
-        rin.div <= "10000";
+        rin.div <= "1000000";
+        rin.width_m1 <= 7;
+        rin.insertion_mask <= (7 => '1', others => '0');
         rin.cnt <= (others => '0');
         rin.cpol <= '0';
         rin.cpha <= '0';
@@ -112,8 +115,18 @@ begin
       when ST_RSP =>
         if rsp_i.ready = '1' then
           rin.state <= ST_IDLE;
-          if std_match(r.cmd, SPI_CMD_DIV) then
-            rin.div <= unsigned(r.cmd(4 downto 0));
+          if std_match(r.cmd, SPI_CMD_DIVH) then
+            rin.div <= unsigned(r.cmd(3 downto 0)) & "000";
+
+          elsif std_match(r.cmd, SPI_CMD_DIVL) then
+            rin.div(2 downto 0) <= unsigned(r.cmd(2 downto 0));
+
+          elsif std_match(r.cmd, SPI_CMD_WIDTH) then
+            rin.width_m1 <= to_integer(unsigned(r.cmd(2 downto 0)));
+            for i in rin.insertion_mask'range
+            loop
+              rin.insertion_mask(i) <= to_logic(i = unsigned(r.cmd(2 downto 0)));
+            end loop;
 
           elsif std_match(r.cmd, SPI_CMD_SELECT) then
             rin.cnt <= r.div;
@@ -122,6 +135,8 @@ begin
               rin.cpha <= r.cmd(3);
             end if;
             rin.state <= ST_SELECTED_PRE;
+            rin.width_m1 <= 7;
+            rin.insertion_mask <= (7 => '1', others => '0');
 
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IO) then
             rin.state <= ST_DATA_GET;
@@ -132,7 +147,7 @@ begin
             rin.shreg <= (others => '1');
             rin.mosi <= '1';
             rin.cnt <= r.div;
-            rin.bit_count <= 7;
+            rin.bit_count <= r.width_m1;
             rin.word_count <= to_integer(unsigned(r.cmd(5 downto 0)));
           end if;
         end if;
@@ -145,11 +160,11 @@ begin
       when ST_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.shreg <= cmd_i.data;
-          rin.mosi <= cmd_i.data(7);
+          rin.mosi <= cmd_i.data(r.width_m1);
           rin.cnt <= r.div;
           rin.last <= cmd_i.last;
           rin.state <= ST_SHIFT_FIRST_HALF;
-          rin.bit_count <= 7;
+          rin.bit_count <= r.width_m1;
         end if;
         
       when ST_SELECTED_PRE =>
@@ -177,9 +192,14 @@ begin
         if ready then
           rin.cnt <= r.div;
 
-          rin.bit_count <= (r.bit_count - 1) mod 8;
           if r.bit_count /= 0 then
-            rin.mosi <= r.shreg(7);
+            rin.bit_count <= r.bit_count - 1;
+          else
+            rin.bit_count <= r.width_m1;
+          end if;
+
+          if r.bit_count /= 0 then
+            rin.mosi <= r.shreg(r.width_m1);
             rin.state <= ST_SHIFT_FIRST_HALF;
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN)
             or std_match(r.cmd, SPI_CMD_SHIFT_IO) then
@@ -202,7 +222,7 @@ begin
           elsif std_match(r.cmd, SPI_CMD_SHIFT_IN) then
             rin.word_count <= r.word_count - 1;
             rin.shreg <= (others => '1');
-            rin.bit_count <= 7;
+            rin.bit_count <= r.width_m1;
             rin.state <= ST_SHIFT_FIRST_HALF;
           else -- SPI_CMD_SHIFT_IO
             rin.word_count <= r.word_count - 1;
