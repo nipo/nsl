@@ -62,14 +62,16 @@ begin
   dout: process(spi_i.sck)
   begin
     if falling_edge(spi_i.sck) then
-      spi_o.miso <= shreg_mosi(r.shreg);
+      spi_o.miso.v <= shreg_mosi(r.shreg);
 
       if r.bit_idx = 0 then
-        spi_o.miso <= shreg_mosi(tx_data_i);
+        spi_o.miso.v <= shreg_mosi(tx_data_i);
       end if;
     end if;
   end process;
 
+  spi_o.miso.en <= not spi_i.cs_n;
+  
   spi_io: process(spi_i.mosi, spi_i.cs_n, r)
   begin
     tx_strobe_o <= '0';

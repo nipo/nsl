@@ -2,8 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_spi, nsl_io;
+library nsl_bnoc, nsl_spi, nsl_io, nsl_logic;
 use nsl_spi.transactor.all;
+use nsl_logic.logic.all;
+use nsl_logic.bool.all;
+use nsl_io.io.all;
 
 entity spi_framed_transactor is
   generic(
@@ -15,7 +18,7 @@ entity spi_framed_transactor is
 
     sck_o  : out std_ulogic;
     cs_n_o  : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
-    mosi_o : out std_ulogic;
+    mosi_o : out nsl_io.io.tristated;
     miso_i : in  std_ulogic;
 
     cmd_i : in  nsl_bnoc.framed.framed_req;
@@ -212,16 +215,16 @@ begin
 
   moore: process(r)
   begin
-    cs_n_o <= (others => (drain_n => '1'));
     cmd_o.ready <= '0';
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
     rsp_o.data <= (others => '-');
-    if r.selected < slave_count_c then
-      cs_n_o(r.selected).drain_n <= '0';
-    end if;
-    
-    mosi_o <= r.mosi;
+
+    for i in cs_n_o'range
+    loop
+      cs_n_o(i).drain_n <= not to_logic(r.selected = i);
+    end loop;
+    mosi_o <= to_tristated(r.mosi, r.selected < slave_count_c);
     sck_o <= r.cpol;
 
     case r.state is

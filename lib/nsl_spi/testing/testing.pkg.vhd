@@ -34,11 +34,13 @@ package body testing is
   begin
     assert_equal("I/o vectors", tx'length, rx'length, failure);
 
-    m.mosi <= '-';
+    m.mosi.v <= '-';
+    m.mosi.en <= '0';
     m.sck <= cpol;
 
     wait for half_cycle * 2;
     m.cs_n.drain_n <= '0';
+    m.mosi.en <= '1';
     wait for half_cycle;
 
     for off in txs'range
@@ -48,7 +50,7 @@ package body testing is
       for b in shreg'range
       loop
         if cpha = '0' then
-          m.mosi <= shreg(shreg'left);
+          m.mosi.v <= shreg(shreg'left);
           wait for half_cycle;
           m.sck <= not cpol;
           shreg := shreg(shreg'left-1 downto 0) & s.miso;
@@ -57,7 +59,7 @@ package body testing is
         else
           wait for half_cycle;
           m.sck <= not cpol;
-          m.mosi <= shreg(shreg'left);
+          m.mosi.v <= shreg(shreg'left);
           wait for half_cycle;
           m.sck <= cpol;
           shreg := shreg(shreg'left-1 downto 0) & s.miso;
@@ -68,6 +70,7 @@ package body testing is
     end loop;
 
     wait for half_cycle;
+    m.mosi.en <= '0';
     m.cs_n <= opendrain_z;
     wait for half_cycle;
   end procedure;

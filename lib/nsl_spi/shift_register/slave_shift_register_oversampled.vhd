@@ -41,6 +41,7 @@ architecture rtl of slave_shift_register_oversampled is
 
     rx : std_ulogic_vector(width_c - 1 downto 0);
     rx_valid : std_ulogic;
+    active : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -117,14 +118,21 @@ begin
   cs_begin <= cs_fall when cs_n_active_c = '0' else cs_rise;
   cs_end <= cs_rise when cs_n_active_c = '0' else cs_fall;
 
-  regs: process(clock_i)
+  regs: process(clock_i, reset_n_i)
   begin
     if rising_edge(clock_i) then
       r <= rin;
     end if;
+
+    if reset_n_i = '0' then
+      r.dout_shreg <= (others => '0');
+      r.active <= '0';
+      r.rx_valid <= '0';
+      r.dout_refill <= false;
+    end if;
   end process;
 
-  transition: process(r, spi_i_s, tx_data_i, cs_begin, cs_end, sck_lead, sck_tail) is
+  transition: process(r, spi_i_s, tx_data_i, cs_begin, cs_end, sck_lead, sck_tail, cpol_i, cpha_i) is
     variable take, put: boolean;
   begin
     rin <= r;
@@ -160,12 +168,17 @@ begin
     end if;
 
     if cs_begin = '1' then
+      rin.active <= '1';
       if cpha_i = '0' and spi_i_s.sck = cpol_i then
         rin.dout_refill <= true;
       else
         rin.dout_left <= 0;
       end if;
       rin.din_left <= width_c - 1;
+    end if;
+
+    if cs_end = '1' then
+      rin.active <= '0';
     end if;
 
     if r.dout_refill then
@@ -196,10 +209,11 @@ begin
     end if;
   end process;
 
-  spi_o.miso <= shreg_out(r.dout_shreg);
+  spi_o.miso.v <= shreg_out(r.dout_shreg);
+  spi_o.miso.en <= r.active;
   tx_ready_o <= to_logic(r.dout_refill);
   rx_data_o <= r.rx;
   rx_valid_o <= r.rx_valid;
-  active_o <= to_logic(spi_i_s.cs_n = cs_n_active_c);
+  active_o <= r.active;
 
 end architecture;

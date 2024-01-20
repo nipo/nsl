@@ -18,10 +18,14 @@ package spi is
     sck  : std_ulogic;
     cs_n : std_ulogic;
   end record;
-
+  
   type spi_slave_o is record
-    miso : std_ulogic;
+    miso : nsl_io.io.tristated;
   end record;
+
+  constant spi_slave_idle_c : spi_slave_o := (
+    miso => nsl_io.io.tristated_z
+    );
 
   type spi_slave_io is
   record
@@ -30,10 +34,16 @@ package spi is
   end record;    
 
   type spi_master_o is record
-    mosi : std_ulogic;
+    mosi : nsl_io.io.tristated;
     sck  : std_ulogic;
     cs_n : nsl_io.io.opendrain;
   end record;
+
+  constant spi_master_idle_c : spi_master_o := (
+    sck => '-',
+    cs_n => nsl_io.io.opendrain_z,
+    mosi => nsl_io.io.tristated_z
+    );
 
   type spi_master_i is record
     miso : std_ulogic;
@@ -56,7 +66,7 @@ package body spi is
   is
   begin
     return (
-      mosi => m.mosi,
+      mosi => m.mosi.v,
       sck => m.sck,
       cs_n => m.cs_n.drain_n
       );
@@ -66,7 +76,7 @@ package body spi is
   is
   begin
     return (
-      miso => s.miso
+      miso => s.miso.v
       );
   end function;
 

@@ -16,7 +16,7 @@ package router is
 
       sck_o  : out std_ulogic;
       cs_n_o : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
-      mosi_o : out std_ulogic;
+      mosi_o : out nsl_io.io.tristated;
       miso_i : in  std_ulogic_vector(0 to slave_count_c-1)
       );
   end component;

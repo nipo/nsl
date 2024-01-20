@@ -14,7 +14,7 @@ entity spi_router is
 
     sck_o  : out std_ulogic;
     cs_n_o : out nsl_io.io.opendrain_vector(0 to slave_count_c-1);
-    mosi_o : out std_ulogic;
+    mosi_o : out nsl_io.io.tristated;
     miso_i : in  std_ulogic_vector(0 to slave_count_c-1)
     );
 end entity;
@@ -88,14 +88,16 @@ begin
   begin
     if falling_edge(spi_i.sck) then
       cs_n_o <= (others => (drain_n => '1'));
+      mosi_o.en <= '0';
 
       if r.selected and r.valid then
         cs_n_o(r.target).drain_n <= '0';
+        mosi_o.en <= '1';
       end if;
     end if;
   end process;
 
   sck_o <= spi_i.sck;
-  mosi_o <= spi_i.mosi;
+  mosi_o.v <= spi_i.mosi;
   
 end architecture beh;
