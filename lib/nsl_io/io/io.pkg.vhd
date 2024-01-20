@@ -30,9 +30,15 @@ package io is
   function to_tristated(x : opendrain) return tristated;
   function to_tristated(x : directed) return tristated;
   function to_tristated(v : std_ulogic; en : std_ulogic := '1') return tristated;
+  function to_tristated(v : std_ulogic; en : boolean) return tristated;
   function to_directed(x : opendrain) return directed;
   function to_directed(x : tristated) return directed;
   function to_directed(v : std_ulogic; output : std_ulogic := '1') return directed;
+  function to_directed(v : std_ulogic; output : boolean) return directed;
+  function to_logic(x : opendrain) return std_logic;
+  function to_logic(x : directed) return std_logic;
+  function to_logic(x : tristated) return std_logic;
+  function to_logic(v : std_ulogic; en : std_ulogic := '1') return std_logic;
 
   constant tristated_z : tristated := (en => '0', v => '-');
   constant directed_z : directed := (output => '0', v => '-');
@@ -138,6 +144,66 @@ package body io is
   is
   begin
     return directed'(output => output, v => v);
+  end function;
+
+  function to_logic(x : opendrain) return std_logic
+  is
+  begin
+    if x.drain_n = '0' then
+      return '0';
+    else
+      return 'Z';
+    end if;
+  end function;
+
+  function to_logic(x : tristated) return std_logic
+  is
+  begin
+    if x.en = '1' then
+      return x.v;
+    else
+      return 'Z';
+    end if;
+  end function;
+
+  function to_logic(x : directed) return std_logic
+  is
+  begin
+    if x.output = '1' then
+      return x.v;
+    else
+      return 'Z';
+    end if;
+  end function;
+
+  function to_logic(v : std_ulogic; en : std_ulogic := '1') return std_logic
+  is
+  begin
+    if en = '1' then
+      return v;
+    else
+      return 'Z';
+    end if;
+  end function;
+
+  function to_tristated(v : std_ulogic; en : boolean) return tristated
+  is
+  begin
+    if en then
+      return tristated'(v => v, en => '1');
+    else
+      return tristated'(v => '-', en => '0');
+    end if;
+  end function;
+
+  function to_directed(v : std_ulogic; output : boolean) return directed
+  is
+  begin
+    if output then
+      return directed'(v => v, output => '1');
+    else
+      return directed'(v => '-', output => '0');
+    end if;
   end function;
 
 end package body io;
