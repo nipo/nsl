@@ -43,8 +43,10 @@ architecture rtl of fifo_register_slice is
 
   attribute keep : string;
   attribute nomerge : string;
+  attribute syn_preserve : integer;
   attribute keep of r : signal is "TRUE";
   attribute nomerge of r : signal is "true";
+  attribute syn_preserve of r: signal is 1;
 
 begin
 
