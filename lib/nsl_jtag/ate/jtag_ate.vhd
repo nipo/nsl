@@ -274,14 +274,14 @@ begin
 
   moore: process(r)
   begin
-    jtag_o.trst <= to_tristated('1');
+    jtag_o.trst <= '1';
     jtag_o.tdi <= r.tdi;
-    jtag_o.tck <= to_tristated('0');
-    jtag_o.tms <= to_tristated(r.tms_shreg(0));
+    jtag_o.tck <= '0';
+    jtag_o.tms <= r.tms_shreg(0);
 
     case r.state is
       when ST_SHIFT_HIGH | ST_MOVE_HIGH =>
-        jtag_o.tck <= to_tristated('1');
+        jtag_o.tck <= '1';
 
       when others =>
         null;
@@ -291,11 +291,11 @@ begin
       when ST_MOVE_LOW | ST_MOVE_HIGH =>
         if r.tms_shreg(0 to 4) = "11111"
           and r.tms_left >= 4 then
-          jtag_o.trst <= to_tristated('0');
+          jtag_o.trst <= '0';
         end if;
 
       when ST_SHIFT_HIGH | ST_SHIFT_HOLD | ST_SHIFT_LOW =>
-        jtag_o.tms <= to_tristated('0');
+        jtag_o.tms <= '0';
 
       when others =>
         null;

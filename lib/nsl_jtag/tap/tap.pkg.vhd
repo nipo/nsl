@@ -28,8 +28,8 @@ package tap is
       ir_len : natural
       );
     port(
-      jtag_i : in  nsl_jtag.jtag.jtag_ate_o := nsl_jtag.jtag.jtag_ate_o_default;
-      jtag_o : out  nsl_jtag.jtag.jtag_ate_i;
+      jtag_i : in  nsl_jtag.jtag.jtag_tap_i := nsl_jtag.jtag.jtag_tap_i_default;
+      jtag_o : out  nsl_jtag.jtag.jtag_tap_o;
 
       -- Default instruction is the value loaded to IR when passing
       -- through TLR. Per spec, it must either be IDCODE instruction

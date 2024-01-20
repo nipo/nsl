@@ -29,11 +29,11 @@ architecture beh of jtag_ate_pin_driver is
 
 begin
 
-  trst_io <= ate_i.trst.v when ate_i.trst.en = '1' and enable_i = '1' else 'Z';
+  trst_io <= ate_i.trst;
   tdi_io <= ate_i.tdi.v when ate_i.tdi.en = '1' and enable_i = '1' else 'Z';
-  tck_io <= ate_i.tck.v when ate_i.tck.en = '1' and enable_i = '1' else 'Z';
-  tms_io <= ate_i.tms.v when ate_i.tms.en = '1' and enable_i = '1' else 'Z';
-  ate_o.rtck <= rtck_i when use_rtck_c else ate_i.tck.v;
+  tck_io <= ate_i.tck;
+  tms_io <= ate_i.tms;
+  ate_o.rtck <= rtck_i when use_rtck_c else ate_i.tck;
   ate_o.tdo <= tdo_i;
 
 end architecture;

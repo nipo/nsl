@@ -21,19 +21,37 @@ package jtag is
   end record;
 
   type jtag_ate_o is record
-    trst : nsl_io.io.tristated;
+    trst : std_ulogic;
     tdi  : nsl_io.io.tristated;
-    tck  : nsl_io.io.tristated;
-    tms  : nsl_io.io.tristated;
+    tck  : std_ulogic;
+    tms  : std_ulogic;
   end record;
 
-  constant jtag_ate_o_default : jtag_ate_o := (tristated_z, tristated_z, tristated_z, tristated_z);
+  constant jtag_ate_o_default : jtag_ate_o := ('1', tristated_z, '0', '1');
   
   type jtag_ate_i is record
     tdo : std_ulogic;
     rtck: std_ulogic;
   end record;
 
+  type jtag_tap_o is
+  record
+    tdo  : nsl_io.io.tristated;
+    rtck : std_ulogic;
+  end record;
+
+  constant jtag_tap_o_default : jtag_tap_o := (tristated_z, '0');
+  
+  type jtag_tap_i is record
+    tck  : std_ulogic;
+    tms  : std_ulogic;
+    tdi  : std_ulogic;
+    trst : std_ulogic;
+  end record;
+
+  function to_ate(s: jtag_tap_o) return jtag_ate_i;
+  function to_tap(s: jtag_ate_o) return jtag_tap_i;
+  
   component jtag_ate_pin_driver is
     generic(
       use_rtck_c: boolean := false
@@ -54,3 +72,26 @@ package jtag is
   end component;
   
 end package jtag;
+
+package body jtag is
+
+  function to_ate(s: jtag_tap_o) return jtag_ate_i is
+  begin
+    return (
+      tdo => s.tdo.v,
+      rtck => s.rtck
+      );
+  end function;
+  
+  function to_tap(s: jtag_ate_o) return jtag_tap_i is
+  begin
+    return (
+      trst => s.trst,
+      tms => s.tms,
+      tck => s.tck,
+      tdi => s.tdi.v
+      );
+  end function;
+
+end package body;
+  
