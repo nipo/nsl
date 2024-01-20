@@ -37,16 +37,19 @@ define ghdl-compile-rules
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity)
 	rm -f $@
-endef
-
-define ghdl-run-rules
-	$(SILENT)$(GHDL) -r \
+	echo '#!/bin/sh' > $@
+	echo '$(GHDL) -r \
 		--workdir=$(call workdir,$(top-lib)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
 		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity) \
-		--ieee-asserts=disable $1
+		--ieee-asserts=disable --unbuffered $$*' >> $@
+	chmod +x $@
+endef
+
+define ghdl-run-rules
+	./$< $1
 endef
 
 else

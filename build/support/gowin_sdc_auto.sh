@@ -13,7 +13,6 @@ add_rule $1 $2 to tig_reg_clr CLEAR >> $2
 add_rule $1 $2 to tig_reg_pre PRE >> $2
 add_rule $1 $2 from tig_reg_q O >> $2
 add_rule $1 $2 from tig_reg_q Q >> $2
-add_rule $1 $2 from tig_static_reg O >> $2
 add_rule $1 $2 from tig_static_reg Q >> $2
 add_rule $1 $2 to tig_static_reg D >> $2
 add_rule $1 $2 to cross_region_reg D >> $2

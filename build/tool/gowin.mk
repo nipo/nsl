@@ -39,9 +39,9 @@ define _gowin-project-sdc-sdc
 endef
 
 define _gowin-cst-add-constraint
-	echo "# From $2" >> $1
-	cat $2 >> $1
-	echo "" >> $1
+	$(SILENT)echo "# From $2" >> $1
+	$(SILENT)cat $2 >> $1
+	$(SILENT)echo "" >> $1
 
 endef
 
@@ -62,10 +62,14 @@ $(build-dir)/$(target).tcl: $(MAKEFILE_LIST)
 	$(call file-append,$@,add_file -type sdc $(build-dir)/all.sdc)
 	$(call file-append,$@,set_option -top_module $(top-entity))
 	$(call file-append,$@,set_option -output_base_name $(target))
+	$(call file-append,$@,set_option -looplimit 0)
 	$(call file-append,$@,set_option -print_all_synthesis_warning 1)
 	$(call file-append,$@,set_option -gen_text_timing_rpt 1)
 	$(call file-append,$@,set_option -rpt_auto_place_io_info 1)
 	$(call file-append,$@,set_option -bit_compress 1)
+	$(call file-append,$@,set_option -retiming 1)
+	$(call file-append,$@,set_option -gen_vhdl_sim_netlist 1)
+	$(call file-append,$@,set_option -gen_text_timing_rpt 1)
 	$(call file-append,$@,set_option -user_code {$(user_id)})
 	$(foreach u,$(gowin-use-as-gpio),$(call file-append,$@,set_option -use_$u_as_gpio 1))
 	$(call file-append,$@,run syn)

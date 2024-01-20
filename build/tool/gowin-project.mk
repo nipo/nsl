@@ -3,7 +3,7 @@ GOWIN_BIN = $(GOWIN)/IDE/bin
 PROGRAMMER_BIN = $(GOWIN)/Programmer/bin
 DEVICE_INFO=$(GOWIN)/IDE/data/device/device_info.csv
 c:=,
-internal-pn:=$(shell grep "^[^,]*,$(target_part)," $(DEVICE_INFO) | head -n 1 | cut -d$c -f1)
+internal-pn:=$(shell grep "^[^,]*,$(target_part),[^,]*,$(target_part_name)" $(DEVICE_INFO) | head -n 1 | cut -d$c -f1)
 
 ifeq ($(internal-pn),)
 $(info Close to $(target_part):)
@@ -53,10 +53,22 @@ define _gowin-project-add-cst
 
 endef
 
+define _gowin-project-add-constraint
+	$(call file-append,$1,        <File path="$2" type="file.cst" enable="1"/>)
+
+endef
+
+define _gowin-project-add-sdc
+	$(call file-append,$1,        <File path="$2" type="file.sdc" enable="1"/>)
+
+endef
+
 # Generate batch build command
 $(build-dir)/$(target).gprj: $(sources) $(MAKEFILE_LIST)
-	$(call file-clear,$@,$(internal-pn))
+	$(call file-clear,$@)
 	$(call _gowin-project-header,$@,$(internal-pn))
+	$(call file-append,$@,        <File path="$(BUILD_ROOT)/support/ieee/math_real.pkg.vhd" type="file.vhdl" enable="1" library="ieee"/>)
+	$(call file-append,$@,        <File path="$(BUILD_ROOT)/support/ieee/math_real-body.vhd" type="file.vhdl" enable="1" library="ieee"/>)
 	$(foreach s,$(sources),$(call _gowin-project-add-$($s-language),$@,$s))
 	$(call _gowin-project-footer,$@)
 
@@ -68,6 +80,8 @@ $(build-dir)/$(target).config: $(sources) $(MAKEFILE_LIST)
 	$(call file-clear,$@)
 	$(call file-append,$@,s:__BASE_NAME__:$(target):g)
 	$(call file-append,$@,s:__TOP_MODULE__:$(top-entity):g)
+	$(foreach u,$(gowin-use-as-gpio),$(call file-append,$@,s:__USE_$u_AS_GPIO__:true:g))
+	$(foreach u,$(gpio-overrides),$(call file-append,$@,s:__USE_$u_AS_GPIO__:false:g))
 
 $(target).fs: $(build-dir)/$(target).gprj $(build-dir)/impl/project_process_config.json
 	@
