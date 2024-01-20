@@ -17,10 +17,10 @@ entity routed_router_inbound is
     p_in_ack   : out nsl_bnoc.routed.routed_ack;
 
     p_out_val  : out nsl_bnoc.routed.routed_req;
-    p_out_ack  : in nsl_bnoc.routed.routed_ack_array(out_port_count-1 downto 0);
+    p_out_ack  : in nsl_bnoc.routed.routed_ack_array(0 to out_port_count-1);
 
-    p_request  : out std_ulogic_vector(out_port_count-1 downto 0);
-    p_selected : in  std_ulogic_vector(out_port_count-1 downto 0)
+    p_request  : out std_ulogic_vector(0 to out_port_count-1);
+    p_selected : in  std_ulogic_vector(0 to out_port_count-1)
     );
 end entity;
 

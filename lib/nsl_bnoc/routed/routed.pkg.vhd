@@ -50,11 +50,11 @@ package routed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_in_val   : in routed_req_array(in_port_count-1 downto 0);
-      p_in_ack   : out routed_ack_array(in_port_count-1 downto 0);
+      p_in_val   : in routed_req_array(0 to in_port_count-1);
+      p_in_ack   : out routed_ack_array(0 to in_port_count-1);
 
-      p_out_val   : out routed_req_array(out_port_count-1 downto 0);
-      p_out_ack   : in routed_ack_array(out_port_count-1 downto 0)
+      p_out_val   : out routed_req_array(0 to out_port_count-1);
+      p_out_ack   : in routed_ack_array(0 to out_port_count-1)
       );
   end component;
 
@@ -68,14 +68,14 @@ package routed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_in_val   : in routed_req;
-      p_in_ack   : out routed_ack;
+      p_in_val   : in routed_req_t;
+      p_in_ack   : out routed_ack_t;
 
-      p_out_val  : out routed_req;
-      p_out_ack  : in routed_ack_array(out_port_count-1 downto 0);
+      p_out_val  : out routed_req_t;
+      p_out_ack  : in routed_ack_array(0 to out_port_count-1);
 
-      p_request  : out std_ulogic_vector(out_port_count-1 downto 0);
-      p_selected : in  std_ulogic_vector(out_port_count-1 downto 0)
+      p_request  : out std_ulogic_vector(0 to out_port_count-1);
+      p_selected : in  std_ulogic_vector(0 to out_port_count-1)
       );
   end component;
 
@@ -88,14 +88,14 @@ package routed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_in_val   : in routed_req_array(in_port_count-1 downto 0);
-      p_in_ack   : out routed_ack;
+      p_in_val   : in routed_req_array(0 to in_port_count-1);
+      p_in_ack   : out routed_ack_t;
 
-      p_out_val  : out routed_req;
-      p_out_ack  : in routed_ack;
+      p_out_val  : out routed_req_t;
+      p_out_ack  : in routed_ack_t;
 
-      p_request  : in  std_ulogic_vector(in_port_count-1 downto 0);
-      p_selected : out std_ulogic_vector(in_port_count-1 downto 0)
+      p_request  : in  std_ulogic_vector(0 to in_port_count-1);
+      p_selected : out std_ulogic_vector(0 to in_port_count-1)
       );
   end component;
 

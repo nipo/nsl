@@ -14,24 +14,24 @@ entity routed_router is
     p_resetn   : in  std_ulogic;
     p_clk      : in  std_ulogic;
 
-    p_in_val   : in nsl_bnoc.routed.routed_req_array(in_port_count-1 downto 0);
-    p_in_ack   : out nsl_bnoc.routed.routed_ack_array(in_port_count-1 downto 0);
+    p_in_val   : in nsl_bnoc.routed.routed_req_array(0 to in_port_count-1);
+    p_in_ack   : out nsl_bnoc.routed.routed_ack_array(0 to in_port_count-1);
 
-    p_out_val   : out nsl_bnoc.routed.routed_req_array(out_port_count-1 downto 0);
-    p_out_ack   : in nsl_bnoc.routed.routed_ack_array(out_port_count-1 downto 0)
+    p_out_val   : out nsl_bnoc.routed.routed_req_array(0 to out_port_count-1);
+    p_out_ack   : in nsl_bnoc.routed.routed_ack_array(0 to out_port_count-1)
     );
 end entity;
 
 architecture rtl of routed_router is
 
-  signal s_req: nsl_bnoc.routed.routed_req_array(in_port_count-1 downto 0);
-  signal s_ack: nsl_bnoc.routed.routed_ack_array(out_port_count-1 downto 0);
+  signal s_req: nsl_bnoc.routed.routed_req_array(0 to in_port_count-1);
+  signal s_ack: nsl_bnoc.routed.routed_ack_array(0 to out_port_count-1);
 
-  subtype select_in_part_t is std_ulogic_vector(in_port_count-1 downto 0);
+  subtype select_in_part_t is std_ulogic_vector(0 to in_port_count-1);
   type select_in_t is array(natural range 0 to out_port_count-1) of select_in_part_t;
   signal s_request_out, s_selected_in : select_in_t;
 
-  subtype select_out_part_t is std_ulogic_vector(out_port_count-1 downto 0);
+  subtype select_out_part_t is std_ulogic_vector(0 to out_port_count-1);
   type select_out_t is array(natural range 0 to in_port_count-1) of select_out_part_t;
   signal s_request_in, s_selected_out : select_out_t;
 
