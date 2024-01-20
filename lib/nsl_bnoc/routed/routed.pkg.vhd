@@ -118,6 +118,38 @@ package routed is
       );
   end component;
 
+  component routed_fifo is
+    generic(
+      depth_c      : natural;
+      clock_count_c  : natural range 1 to 2;
+      input_slice_c : boolean := false;
+      output_slice_c : boolean := false
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
+
+      in_i   : in routed_req_t;
+      in_o   : out routed_ack_t;
+
+      out_o   : out routed_req_t;
+      out_i   : in routed_ack_t
+      );
+  end component;
+
+  component routed_fifo_slice is
+    port(
+      reset_n_i  : in  std_ulogic;
+      clock_i    : in  std_ulogic;
+
+      in_i   : in routed_req_t;
+      in_o   : out routed_ack_t;
+
+      out_o   : out routed_req_t;
+      out_i   : in routed_ack_t
+      );
+  end component;
+
   -- This is the exit node for a one-way message. It strips routing
   -- information header.
   component routed_exit is

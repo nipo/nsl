@@ -7,6 +7,8 @@ vhdl-sources += routed_router_outbound.vhd
 vhdl-sources += routed_router.vhd
 vhdl-sources += routed_entry.vhd
 vhdl-sources += routed_exit.vhd
+vhdl-sources += routed_fifo.vhd
+vhdl-sources += routed_fifo_slice.vhd
 
 deps += nsl_memory.ram
 deps += nsl_bnoc.framed
