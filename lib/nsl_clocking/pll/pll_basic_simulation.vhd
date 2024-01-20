@@ -47,17 +47,18 @@ architecture sim of pll_basic is
   begin
     return real(t / 1 ps) / 1.0e12;
   end function;
+
+  signal period_s : real;
   
 begin
 
   clock_i_measure : process(clock_i, reset_n_i) is
     variable period_time : time;
-    variable period_s : real;
   begin
     if rising_edge(clock_i) then
       if last_clock_i_edge /= 0 ps then
         period_time := now - last_clock_i_edge;
-        period_s := to_real(period_time);
+        period_s <= to_real(period_time);
         clock_i_period_lp <= clock_i_period_lp
                              + (period_s - clock_i_period_lp) / input_lowpass_factor_c;
       end if;
@@ -111,7 +112,14 @@ begin
                       < clock_i_period_c * allowable_error_c;
   clock_i_locked <= clock_i_stable and clock_i_running and clock_i_in_range;
 
-  clock_o_period <= clock_i_period_lp * clock_ratio_c;
+  period_updater: process (clock_i_period_lp) is
+  begin
+    if clock_i_period_lp > 0.0 and clock_i_period_lp < 1.0e-3 then
+      clock_o_period <= clock_i_period_lp * clock_ratio_c;
+    else
+      clock_o_period <= 1.0e-3;
+    end if;
+  end process;
   
   clock_o_gen: process
     variable half_period : time := 0 ps;
