@@ -54,7 +54,9 @@ package framed is
   component framed_fifo is
     generic(
       depth      : natural;
-      clk_count  : natural range 1 to 2
+      clk_count  : natural range 1 to 2;
+      input_slice_c : boolean := false;
+      output_slice_c : boolean := false
       );
     port(
       p_resetn   : in  std_ulogic;

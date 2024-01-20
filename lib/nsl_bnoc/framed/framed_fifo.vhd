@@ -7,7 +7,9 @@ library nsl_memory, nsl_bnoc;
 entity framed_fifo is
   generic(
     depth : natural;
-    clk_count  : natural range 1 to 2
+    clk_count  : natural range 1 to 2;
+    input_slice_c : boolean := false;
+    output_slice_c : boolean := false
     );
   port(
     p_resetn   : in  std_ulogic;
@@ -29,7 +31,9 @@ begin
     generic map(
       word_count_c => depth,
       data_width_c => 9,
-      clock_count_c => clk_count
+      clock_count_c => clk_count,
+      output_slice_c => output_slice_c,
+      input_slice_c => input_slice_c
       )
     port map(
       reset_n_i => p_resetn,
