@@ -13,7 +13,11 @@ architecture gen of reset_at_startup is
   signal sh : std_ulogic_vector(0 to 7) := (others => '0');
   attribute keep : string;
   attribute keep of sh : signal is "TRUE";
-
+  attribute syn_srlstyle:string;
+  attribute syn_srlstyle of sh : signal is "registers";
+  attribute syn_preserve:integer;
+  attribute syn_preserve of sh : signal is 1;
+  
 begin
 
   gen: process(clock_i)
