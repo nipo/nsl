@@ -18,20 +18,19 @@ package routed is
 
   subtype routed_req is nsl_bnoc.framed.framed_req;
   subtype routed_ack is nsl_bnoc.framed.framed_ack;
+  subtype routed_bus is nsl_bnoc.framed.framed_bus;
+  subtype routed_req_t is nsl_bnoc.framed.framed_req_t;
+  subtype routed_ack_t is nsl_bnoc.framed.framed_ack_t;
+  subtype routed_bus_t is nsl_bnoc.framed.framed_bus_t;
 
-  type routed_bus is record
-    req: routed_req;
-    ack: routed_ack;
-  end record;
-
-  constant routed_req_idle_c : routed_req := nsl_bnoc.framed.framed_req_idle_c;
-  constant routed_ack_idle_c : routed_ack := nsl_bnoc.framed.framed_ack_idle_c;
+  constant routed_req_idle_c : routed_req_t := nsl_bnoc.framed.framed_req_idle_c;
+  constant routed_ack_idle_c : routed_ack_t := nsl_bnoc.framed.framed_ack_idle_c;
   function routed_flit(data: nsl_bnoc.framed.framed_data_t;
-                       last: boolean := false) return routed_req;
+                       last: boolean := false) return routed_req_t;
   
-  type routed_req_array is array(natural range <>) of routed_req;
-  type routed_ack_array is array(natural range <>) of routed_ack;
-  type routed_bus_array is array(natural range <>) of routed_bus;
+  type routed_req_array is array(natural range <>) of routed_req_t;
+  type routed_ack_array is array(natural range <>) of routed_ack_t;
+  type routed_bus_array is array(natural range <>) of routed_bus_t;
   
   subtype component_id is natural range 0 to 15;
   type routed_routing_table is array(component_id) of natural;
@@ -114,8 +113,8 @@ package routed is
 
       framed_i   : in nsl_bnoc.framed.framed_req;
       framed_o   : out nsl_bnoc.framed.framed_ack;
-      routed_o  : out routed_req;
-      routed_i  : in routed_ack
+      routed_o  : out routed_req_t;
+      routed_i  : in routed_ack_t
       );
   end component;
 
@@ -126,8 +125,8 @@ package routed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
 
-      routed_i  : in routed_req;
-      routed_o  : out routed_ack;
+      routed_i  : in routed_req_t;
+      routed_o  : out routed_ack_t;
       framed_o : out nsl_bnoc.framed.framed_req;
       framed_i : in nsl_bnoc.framed.framed_ack
       );
@@ -144,15 +143,15 @@ package routed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_cmd_in_val   : in routed_req;
-      p_cmd_in_ack   : out routed_ack;
+      p_cmd_in_val   : in routed_req_t;
+      p_cmd_in_ack   : out routed_ack_t;
       p_cmd_out_val   : out nsl_bnoc.framed.framed_req;
       p_cmd_out_ack   : in nsl_bnoc.framed.framed_ack;
 
       p_rsp_in_val   : in nsl_bnoc.framed.framed_req;
       p_rsp_in_ack   : out nsl_bnoc.framed.framed_ack;
-      p_rsp_out_val   : out routed_req;
-      p_rsp_out_ack   : in routed_ack
+      p_rsp_out_val   : out routed_req_t;
+      p_rsp_out_ack   : in routed_ack_t
       );
   end component;
 
@@ -175,15 +174,15 @@ package routed is
 
       target_id_i : in component_id;
 
-      routed_in_i   : in routed_req;
-      routed_in_o   : out routed_ack;
+      routed_in_i   : in routed_req_t;
+      routed_in_o   : out routed_ack_t;
       framed_out_o  : out nsl_bnoc.framed.framed_req;
       framed_out_i  : in nsl_bnoc.framed.framed_ack;
 
       framed_in_i   : in nsl_bnoc.framed.framed_req;
       framed_in_o   : out nsl_bnoc.framed.framed_ack;
-      routed_out_o  : out routed_req;
-      routed_out_i  : in routed_ack
+      routed_out_o  : out routed_req_t;
+      routed_out_i  : in routed_ack_t
       );
   end component;
 
@@ -196,15 +195,15 @@ package routed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic;
 
-      p_cmd_in_val   : in routed_req;
-      p_cmd_in_ack   : out routed_ack;
-      p_cmd_out_val   : out routed_req;
-      p_cmd_out_ack   : in routed_ack;
+      p_cmd_in_val   : in routed_req_t;
+      p_cmd_in_ack   : out routed_ack_t;
+      p_cmd_out_val   : out routed_req_t;
+      p_cmd_out_ack   : in routed_ack_t;
 
-      p_rsp_in_val   : in routed_req;
-      p_rsp_in_ack   : out routed_ack;
-      p_rsp_out_val   : out routed_req;
-      p_rsp_out_ack   : in routed_ack
+      p_rsp_in_val   : in routed_req_t;
+      p_rsp_in_ack   : out routed_ack_t;
+      p_rsp_out_val   : out routed_req_t;
+      p_rsp_out_ack   : in routed_ack_t
       );
   end component;
   
@@ -237,7 +236,7 @@ package body routed is
   end;
 
   function routed_flit(data: nsl_bnoc.framed.framed_data_t;
-                       last: boolean := false) return routed_req
+                       last: boolean := false) return routed_req_t
   is
   begin
     if last then

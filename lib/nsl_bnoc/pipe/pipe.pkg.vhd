@@ -30,7 +30,9 @@ package pipe is
   constant pipe_ack_idle_c : pipe_ack_t := (ready => '0');
   constant pipe_ack_blackhole_c : pipe_ack_t := (ready => '1');
 
-  function pipe_flit(data: pipe_data_t) return pipe_req_t;
+  function pipe_flit(data: pipe_data_t;
+                     valid : boolean := true) return pipe_req_t;
+  function pipe_accept(ready: boolean := true) return pipe_ack_t;
   
   type pipe_req_vector is array(integer range <>) of pipe_req_t;
   type pipe_ack_vector is array(integer range <>) of pipe_ack_t;
@@ -56,10 +58,25 @@ end package pipe;
 
 package body pipe is
 
-  function pipe_flit(data: pipe_data_t) return pipe_req_t
+  function pipe_flit(data: pipe_data_t;
+                     valid : boolean := true) return pipe_req_t
   is
   begin
-    return (valid => '1', data => data);
+    if valid then
+      return (valid => '1', data => data);
+    else
+      return pipe_req_idle_c;
+    end if;
+  end function;
+
+  function pipe_accept(ready: boolean := true) return pipe_ack_t
+  is
+  begin
+    if ready then
+      return (ready => '1');
+    else
+      return (ready => '0');
+    end if;
   end function;
 
 end package body;

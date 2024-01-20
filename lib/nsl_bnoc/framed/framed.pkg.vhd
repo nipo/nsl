@@ -13,36 +13,40 @@ package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
 
-  type framed_req is record
+  type framed_req_t is record
     data : framed_data_t;
     last : std_ulogic;
     valid  : std_ulogic;
   end record;
 
-  type framed_ack is record
+  type framed_ack_t is record
     ready  : std_ulogic;
   end record;
 
-  type framed_bus is record
-    req: framed_req;
-    ack: framed_ack;
+  type framed_bus_t is record
+    req: framed_req_t;
+    ack: framed_ack_t;
   end record;
+
+  subtype framed_req is framed_req_t;
+  subtype framed_ack is framed_ack_t;
+  subtype framed_bus is framed_bus_t;
 
   function framed_flit(data: framed_data_t;
                        last: boolean := false;
-                       valid: boolean := true) return framed_req;
+                       valid: boolean := true) return framed_req_t;
 
-  function framed_accept(ready: boolean := true) return framed_ack;
+  function framed_accept(ready: boolean := true) return framed_ack_t;
 
-  constant framed_req_idle_c : framed_req := (data => "--------",
+  constant framed_req_idle_c : framed_req_t := (data => "--------",
                                               last => '-',
                                               valid => '0');
-  constant framed_ack_idle_c : framed_ack := (ready => '0');
-  constant framed_ack_blackhole_c : framed_ack := (ready => '1');
+  constant framed_ack_idle_c : framed_ack_t := (ready => '0');
+  constant framed_ack_blackhole_c : framed_ack_t := (ready => '1');
 
-  type framed_req_array is array(natural range <>) of framed_req;
-  type framed_ack_array is array(natural range <>) of framed_ack;
-  type framed_bus_array is array(natural range <>) of framed_bus;
+  type framed_req_array is array(natural range <>) of framed_req_t;
+  type framed_ack_array is array(natural range <>) of framed_ack_t;
+  type framed_bus_array is array(natural range <>) of framed_bus_t;
   subtype framed_req_vector is framed_req_array;
   subtype framed_ack_vector is framed_ack_array;
   subtype framed_bus_vector is framed_bus_array;
@@ -56,11 +60,11 @@ package framed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
-      p_in_val   : in framed_req;
-      p_in_ack   : out framed_ack;
+      p_in_val   : in framed_req_t;
+      p_in_ack   : out framed_ack_t;
 
-      p_out_val   : out framed_req;
-      p_out_ack   : in framed_ack
+      p_out_val   : out framed_req_t;
+      p_out_ack   : in framed_ack_t
       );
   end component;
 
@@ -73,15 +77,15 @@ package framed is
       grant_i     : in  std_ulogic;
       busy_o      : out std_ulogic;
 
-      in_cmd_i   : in  framed_req;
-      in_cmd_o   : out framed_ack;
-      in_rsp_o   : out framed_req;
-      in_rsp_i   : in  framed_ack;
+      in_cmd_i   : in  framed_req_t;
+      in_cmd_o   : out framed_ack_t;
+      in_rsp_o   : out framed_req_t;
+      in_rsp_i   : in  framed_ack_t;
 
-      out_cmd_o  : out framed_req;
-      out_cmd_i  : in  framed_ack;
-      out_rsp_i  : in  framed_req;
-      out_rsp_o  : out framed_ack
+      out_cmd_o  : out framed_req_t;
+      out_cmd_i  : in  framed_ack_t;
+      out_rsp_i  : in  framed_req_t;
+      out_rsp_o  : out framed_ack_t
       );
   end component;
 
@@ -109,11 +113,11 @@ package framed is
       reset_n_i  : in  std_ulogic;
       clock_i    : in  std_ulogic;
 
-      in_i   : in framed_req;
-      in_o   : out framed_ack;
+      in_i   : in framed_req_t;
+      in_o   : out framed_ack_t;
 
-      out_o   : out framed_req;
-      out_i   : in framed_ack
+      out_o   : out framed_req_t;
+      out_i   : in framed_ack_t
       );
   end component;
 
@@ -127,11 +131,11 @@ package framed is
       p_resetn   : in  std_ulogic;
       p_clk      : in  std_ulogic_vector(0 to clk_count-1);
 
-      p_in_val   : in framed_req;
-      p_in_ack   : out framed_ack;
+      p_in_val   : in framed_req_t;
+      p_in_ack   : out framed_ack_t;
 
-      p_out_val   : out framed_req;
-      p_out_ack   : in framed_ack
+      p_out_val   : out framed_req_t;
+      p_out_ack   : in framed_ack_t
       );
   end component;
 
@@ -152,10 +156,10 @@ package framed is
       p_rsp_val   : out framed_req_array(0 to source_count - 1);
       p_rsp_ack   : in framed_ack_array(0 to source_count - 1);
 
-      p_target_cmd_val   : out framed_req;
-      p_target_cmd_ack   : in framed_ack;
-      p_target_rsp_val   : in framed_req;
-      p_target_rsp_ack   : out framed_ack
+      p_target_cmd_val   : out framed_req_t;
+      p_target_cmd_ack   : in framed_ack_t;
+      p_target_rsp_val   : in framed_req_t;
+      p_target_rsp_ack   : out framed_ack_t
       );
   end component;
 
@@ -173,8 +177,8 @@ package framed is
       in_i   : in framed_req_array(0 to source_count_c - 1);
       in_o   : out framed_ack_array(0 to source_count_c - 1);
 
-      out_o   : out framed_req;
-      out_i   : in framed_ack
+      out_o   : out framed_req_t;
+      out_i   : in framed_ack_t
       );
   end component;
 
@@ -207,8 +211,8 @@ package framed is
       enable_i : in std_ulogic := '1';
       destination_i  : in natural range 0 to destination_count_c - 1;
       
-      in_i   : in framed_req;
-      in_o   : out framed_ack;
+      in_i   : in framed_req_t;
+      in_o   : out framed_ack_t;
 
       out_o   : out framed_req_array(0 to destination_count_c - 1);
       out_i   : in framed_ack_array(0 to destination_count_c - 1)
@@ -222,10 +226,10 @@ package framed is
 
       enable_i   : in std_ulogic;
 
-      in_i   : in framed_req;
-      in_o   : out framed_ack;
-      out_o   : out framed_req;
-      out_i   : in framed_ack
+      in_i   : in framed_req_t;
+      in_o   : out framed_ack_t;
+      out_o   : out framed_req_t;
+      out_i   : in framed_ack_t
       );
   end component;
 
@@ -257,8 +261,8 @@ package framed is
 
       flush_i : in std_ulogic;
 
-      req_o : out framed_req;
-      ack_i : in framed_ack
+      req_o : out framed_req_t;
+      ack_i : in framed_ack_t
       );
   end component;
 
@@ -274,8 +278,8 @@ package framed is
       pipe_i   : in  nsl_bnoc.pipe.pipe_req_t;
       pipe_o   : out nsl_bnoc.pipe.pipe_ack_t;
 
-      frame_o  : out framed_req;
-      frame_i  : in framed_ack
+      frame_o  : out framed_req_t;
+      frame_i  : in framed_ack_t
       );
   end component;
 
@@ -284,8 +288,8 @@ package framed is
       reset_n_i : in  std_ulogic;
       clock_i   : in  std_ulogic;
 
-      frame_i  : in framed_req;
-      frame_o  : out framed_ack;
+      frame_i  : in framed_req_t;
+      frame_o  : out framed_ack_t;
 
       pipe_o   : out nsl_bnoc.pipe.pipe_req_t;
       pipe_i   : in nsl_bnoc.pipe.pipe_ack_t
@@ -337,7 +341,7 @@ package body framed is
 
   function framed_flit(data: framed_data_t;
                        last: boolean := false;
-                       valid: boolean := true) return framed_req
+                       valid: boolean := true) return framed_req_t
   is
   begin
     if not valid then
@@ -349,7 +353,7 @@ package body framed is
     end if;
   end function;
 
-  function framed_accept(ready: boolean := true) return framed_ack
+  function framed_accept(ready: boolean := true) return framed_ack_t
   is
   begin
     if ready then

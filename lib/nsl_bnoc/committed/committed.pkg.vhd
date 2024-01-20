@@ -11,32 +11,35 @@ use nsl_data.bytestream.all;
   
 package committed is
 
-  subtype committed_req is nsl_bnoc.framed.framed_req;
-  subtype committed_ack is nsl_bnoc.framed.framed_ack;
+  subtype committed_req_t is nsl_bnoc.framed.framed_req;
+  subtype committed_ack_t is nsl_bnoc.framed.framed_ack;
+  subtype committed_req is committed_req_t;
+  subtype committed_ack is committed_ack_t;
 
-  type committed_bus is record
+  type committed_bus_t is record
     req: committed_req;
     ack: committed_ack;
   end record;
-  
-  type committed_req_array is array(natural range <>) of committed_req;
-  type committed_ack_array is array(natural range <>) of committed_ack;
-  type committed_bus_array is array(natural range <>) of committed_bus;
+  subtype committed_bus is committed_bus_t;
+
+  type committed_req_array is array(natural range <>) of committed_req_t;
+  type committed_ack_array is array(natural range <>) of committed_ack_t;
+  type committed_bus_array is array(natural range <>) of committed_bus_t;
   subtype committed_req_vector is committed_req_array;
   subtype committed_ack_vector is committed_ack_array;
   subtype committed_bus_vector is committed_bus_array;
 
-  constant committed_req_idle_c : committed_req := nsl_bnoc.framed.framed_req_idle_c;
-  constant committed_ack_idle_c : committed_ack := nsl_bnoc.framed.framed_ack_idle_c;
-  constant committed_ack_blackhole_c : committed_ack := nsl_bnoc.framed.framed_ack_blackhole_c;
+  constant committed_req_idle_c : committed_req_t := nsl_bnoc.framed.framed_req_idle_c;
+  constant committed_ack_idle_c : committed_ack_t := nsl_bnoc.framed.framed_ack_idle_c;
+  constant committed_ack_blackhole_c : committed_ack_t := nsl_bnoc.framed.framed_ack_blackhole_c;
 
   function committed_flit(data: nsl_bnoc.framed.framed_data_t;
                           last: boolean := false;
-                          valid: boolean := true) return committed_req;
+                          valid: boolean := true) return committed_req_t;
 
-  function committed_accept(ready: boolean := true) return committed_ack;
+  function committed_accept(ready: boolean := true) return committed_ack_t;
 
-  function committed_commit(valid: boolean := true) return committed_req;
+  function committed_commit(valid: boolean := true) return committed_req_t;
   
   -- Only pass through frames with a valid status byte.
   -- Buffers the frame before letting it through.
@@ -48,10 +51,10 @@ package committed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
 
-      in_i   : in  committed_req;
-      in_o   : out committed_ack;
-      out_o  : out committed_req;
-      out_i  : in committed_ack
+      in_i   : in  committed_req_t;
+      in_o   : out committed_ack_t;
+      out_o  : out committed_req_t;
+      out_i  : in committed_ack_t
       );
   end component;
 
@@ -67,8 +70,8 @@ package committed is
       enable_i : in std_ulogic := '1';
       destination_i  : in natural range 0 to destination_count_c - 1;
       
-      in_i   : in committed_req;
-      in_o   : out committed_ack;
+      in_i   : in committed_req_t;
+      in_o   : out committed_ack_t;
 
       out_o   : out committed_req_array(0 to destination_count_c - 1);
       out_i   : in committed_ack_array(0 to destination_count_c - 1)
@@ -90,8 +93,8 @@ package committed is
       in_i   : in committed_req_array(0 to source_count_c - 1);
       in_o   : out committed_ack_array(0 to source_count_c - 1);
 
-      out_o   : out committed_req;
-      out_i   : in committed_ack
+      out_o   : out committed_req_t;
+      out_i   : in committed_ack_t
       );
   end component;
 
@@ -105,11 +108,11 @@ package committed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
       
-      in_i   : in committed_req;
-      in_o   : out committed_ack;
+      in_i   : in committed_req_t;
+      in_o   : out committed_ack_t;
 
-      out_o   : out committed_req;
-      out_i   : in committed_ack
+      out_o   : out committed_req_t;
+      out_i   : in committed_ack_t
       );
   end component;
 
@@ -133,15 +136,16 @@ package committed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
       
-      in_i   : in committed_req;
-      in_o   : out committed_ack;
+      in_i   : in committed_req_t;
+      in_o   : out committed_ack_t;
 
       size_o : out unsigned(max_size_l2_c-1 downto 0);
+      good_o : out std_ulogic;
       size_valid_o : out std_ulogic;
       size_ready_i : in std_ulogic;
 
-      out_o   : out committed_req;
-      out_i   : in committed_ack
+      out_o   : out committed_req_t;
+      out_i   : in committed_ack_t
       );
   end component;
 
@@ -155,11 +159,11 @@ package committed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
       
-      in_i   : in  committed_req;
-      in_o   : out committed_ack;
+      in_i   : in  committed_req_t;
+      in_o   : out committed_ack_t;
 
-      out_o  : out committed_req;
-      out_i  : in committed_ack
+      out_o  : out committed_req_t;
+      out_i  : in committed_ack_t
       );
   end component;
 
@@ -182,11 +186,11 @@ package committed is
       -- to the second frame and later is undefined.
       capture_i : in std_ulogic;
       
-      in_i   : in  committed_req;
-      in_o   : out committed_ack;
+      in_i   : in  committed_req_t;
+      in_o   : out committed_ack_t;
 
-      out_o  : out committed_req;
-      out_i  : in committed_ack
+      out_o  : out committed_req_t;
+      out_i  : in committed_ack_t
       );
   end component;
 
@@ -203,11 +207,11 @@ package committed is
       header_o : out byte_string(0 to header_length_c-1);
       valid_o : out std_ulogic;
       
-      in_i   : in  committed_req;
-      in_o   : out committed_ack;
+      in_i   : in  committed_req_t;
+      in_o   : out committed_ack_t;
 
-      out_o  : out committed_req;
-      out_i  : in committed_ack
+      out_o  : out committed_req_t;
+      out_i  : in committed_ack_t
       );
   end component;
 
@@ -216,11 +220,11 @@ package committed is
       reset_n_i  : in  std_ulogic;
       clock_i    : in  std_ulogic;
 
-      in_i   : in committed_req;
-      in_o   : out committed_ack;
+      in_i   : in committed_req_t;
+      in_o   : out committed_ack_t;
 
-      out_o   : out committed_req;
-      out_i   : in committed_ack
+      out_o   : out committed_req_t;
+      out_i   : in committed_ack_t
       );
   end component;
 
@@ -230,7 +234,7 @@ package body committed is
 
   function committed_flit(data: nsl_bnoc.framed.framed_data_t;
                           last: boolean := false;
-                          valid: boolean := true) return committed_req
+                          valid: boolean := true) return committed_req_t
   is
   begin
     if not valid then
@@ -242,7 +246,7 @@ package body committed is
     end if;
   end function;
 
-  function committed_commit(valid: boolean := true) return committed_req
+  function committed_commit(valid: boolean := true) return committed_req_t
   is
   begin
     if valid then
@@ -252,7 +256,7 @@ package body committed is
     end if;
   end function;
 
-  function committed_accept(ready: boolean := true) return committed_ack
+  function committed_accept(ready: boolean := true) return committed_ack_t
   is
   begin
     if ready then
