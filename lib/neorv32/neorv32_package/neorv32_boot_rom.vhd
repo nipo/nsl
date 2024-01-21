@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library neorv32, nsl_memory, nsl_data, nsl_synthesis;
+library neorv32, nsl_memory, nsl_data, nsl_synthesis, user_data;
 use neorv32.neorv32_package.all;
 
 entity neorv32_boot_rom is
@@ -20,7 +20,7 @@ begin
 
   rom: neorv32.nsl_adaptation.nsl_neorv32_rom
     generic map(
-      init_file_name_c => "neorv32_boot_rom.bin"
+      contents_c => user_data.neorv32_init.neorv32_bootrom_init
       )
     port map(
       clk_i => clk_i,

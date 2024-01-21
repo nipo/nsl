@@ -68,8 +68,6 @@ architecture beh of usb_function is
 
   signal app_reset_n : std_ulogic;
 
-  signal s_host: sized_io;
-  
   type framed_io is
   record
     cmd, rsp : nsl_bnoc.framed.framed_bus;
@@ -192,7 +190,7 @@ begin
       device_descriptor_c => nsl_usb.descriptor.device(
         hs_support => hs_supported_c,
         mps => 64,
-        vendor_id => x"1500",
+        vendor_id => x"dead",
         product_id => x"df55",
         device_version => x"0100",
         manufacturer_str_index => 1,
@@ -240,11 +238,10 @@ begin
       transaction_in_i => s_in_rsp
       );
 
-  debug_bulk_in : nsl_usb.device.device_ep_bulk_in
+  debug_bulk_in : nsl_usb.device.device_ep_framed_in
     generic map(
       hs_supported_c => hs_supported_c,
-      fs_mps_l2_c => bulk_fs_mps_l2_c,
-      mps_count_l2_c => bulk_mps_count_l2_c
+      fs_mps_l2_c => bulk_fs_mps_l2_c
       )
     port map(
       clock_i   => utmi.phy2sie.system.clock,
@@ -253,19 +250,14 @@ begin
       transaction_i => s_in_cmd(debug_ep_no_c),
       transaction_o => s_in_rsp(debug_ep_no_c),
       
-      valid_i => s_host.rsp.req.valid,
-      data_i => s_host.rsp.req.data,
-      ready_o => s_host.rsp.ack.ready,
-      room_o  => open,
-
-      flush_i => open
+      framed_i => s_routed.rsp.req,
+      framed_o => s_routed.rsp.ack
       );
 
-  debug_bulk_out : nsl_usb.device.device_ep_bulk_out
+  debug_bulk_out : nsl_usb.device.device_ep_framed_out
     generic map(
       hs_supported_c      => hs_supported_c,
-      fs_mps_l2_c => bulk_fs_mps_l2_c,
-      mps_count_l2_c => bulk_mps_count_l2_c
+      fs_mps_l2_c => bulk_fs_mps_l2_c
       )
     port map(
       clock_i   => utmi.phy2sie.system.clock,
@@ -274,10 +266,8 @@ begin
       transaction_i => s_out_cmd(debug_ep_no_c),
       transaction_o => s_out_rsp(debug_ep_no_c),
 
-      valid_o => s_host.cmd.req.valid,
-      data_o => s_host.cmd.req.data,
-      ready_i => s_host.cmd.ack.ready,
-      available_o => open
+      framed_o => s_routed.cmd.req,
+      framed_i => s_routed.cmd.ack
       );
 
   serial_bulk_in : nsl_usb.device.device_ep_bulk_in
@@ -293,9 +283,8 @@ begin
       transaction_i => s_in_cmd(data_ep_no_c),
       transaction_o => s_in_rsp(data_ep_no_c),
       
-      valid_i => s_uart_tx.req.valid,
-      data_i  => s_uart_tx.req.data,
-      ready_o => s_uart_tx.ack.ready,
+      data_i  => s_uart_tx.req,
+      data_o => s_uart_tx.ack,
       room_o  => open,
 
       flush_i => '1'
@@ -314,9 +303,8 @@ begin
       transaction_i => s_out_cmd(data_ep_no_c),
       transaction_o => s_out_rsp(data_ep_no_c),
 
-      valid_o => s_uart_rx.req.valid,
-      data_o  => s_uart_rx.req.data,
-      ready_i => s_uart_rx.ack.ready,
+      data_o  => s_uart_rx.req,
+      data_i => s_uart_rx.ack,
       available_o => open
       );
 
@@ -361,33 +349,6 @@ begin
 
       transaction_i => s_in_cmd(notif_ep_no_c),
       transaction_o => s_in_rsp(notif_ep_no_c)
-      );
-
-  to_framed: nsl_bnoc.sized.sized_to_framed
-    port map(
-      p_resetn => app_reset_n,
-      p_clk => clock_i,
-
-      p_in_val => s_host.cmd.req,
-      p_in_ack => s_host.cmd.ack,
-
-      p_out_val => s_routed.cmd.req,
-      p_out_ack => s_routed.cmd.ack
-      );
-
-  from_framed: nsl_bnoc.sized.sized_from_framed
-    generic map(
-      max_txn_length => 2048
-      )
-    port map(
-      p_resetn => app_reset_n,
-      p_clk => clock_i,
-
-      p_in_val => s_routed.rsp.req,
-      p_in_ack => s_routed.rsp.ack,
-
-      p_out_val => s_host.rsp.req,
-      p_out_ack => s_host.rsp.ack
       );
 
   cmd_router: nsl_bnoc.routed.routed_router

@@ -6,9 +6,11 @@ use ieee.math_real.all;
 library nsl_usb, nsl_io, nsl_hwdep,
   nsl_color, nsl_math, neorv32,
   nsl_bnoc, nsl_jtag, nsl_clocking,
-  nsl_spi, nsl_data, work, nsl_uart;
+  nsl_spi, nsl_data, work, nsl_uart,
+  nsl_i2c;
 use nsl_color.rgb.all;
 use nsl_data.text.all;
+use nsl_jtag.jtag.all;
 
 entity tester_root is
   generic(
@@ -48,8 +50,10 @@ architecture beh of tester_root is
 
   constant REG_UNUSED : integer := 0;
 
-  signal s_jtag_cmd: nsl_jtag.jtag.jtag_ate_o;
-  signal s_jtag_rsp: nsl_jtag.jtag.jtag_ate_i;
+  signal s_jtag_ate_cmd: nsl_jtag.jtag.jtag_ate_o;
+  signal s_jtag_ate_rsp: nsl_jtag.jtag.jtag_ate_i;
+  signal s_jtag_tap_cmd: nsl_jtag.jtag.jtag_tap_i;
+  signal s_jtag_tap_rsp: nsl_jtag.jtag.jtag_tap_o;
     
   signal s_cmd_req, s_rsp_req: nsl_bnoc.framed.framed_req_array(0 to transactor_count_c-1);
   signal s_cmd_ack, s_rsp_ack: nsl_bnoc.framed.framed_ack_array(0 to transactor_count_c-1);
@@ -63,6 +67,8 @@ architecture beh of tester_root is
   signal core_spi_sck_s, core_spi_sdo_s, core_spi_sdi_s: std_ulogic;
   signal core_spi_csn_s: std_ulogic_vector(7 downto 0);
 
+  signal core_i2c_s: nsl_i2c.i2c.i2c_io;
+  
   constant uart_div_c: unsigned := nsl_math.arith.to_unsigned_auto(app_clock_hz_c / 19200);
 
 begin
@@ -127,8 +133,8 @@ begin
       rsp_o => s_rsp_req(1),
       rsp_i => s_rsp_ack(1),
 
-      jtag_o => s_jtag_cmd,
-      jtag_i => s_jtag_rsp,
+      jtag_o => s_jtag_ate_cmd,
+      jtag_i => s_jtag_ate_rsp,
 
       system_reset_n_o => s_jtag_system_reset_n
       );
@@ -149,70 +155,53 @@ begin
 
   neorv32_inst: neorv32.neorv32_package.neorv32_top
     generic map (
-      -- General --
-      CLOCK_FREQUENCY              => app_clock_hz_c,   -- clock frequency of clk_i in Hz
-      INT_BOOTLOADER_EN            => true,             -- boot configuration: true = boot explicit bootloader; false = boot from int/ext (I)MEM
-      MEM_INT_IMEM_EN              => true,             -- implement processor-internal instruction memory
-      MEM_INT_DMEM_EN              => true,             -- implement processor-internal data memory
-      HW_THREAD_ID                 => 0,                -- hardware thread id (32-bit)
+      CLOCK_FREQUENCY              => app_clock_hz_c,
+      INT_BOOTLOADER_EN            => true,
+      MEM_INT_IMEM_EN              => true,
+      MEM_INT_DMEM_EN              => true,
 
-      -- On-Chip Debugger (OCD) --
-      ON_CHIP_DEBUGGER_EN          => true,             -- implement on-chip debugger?
-      CPU_EXTENSION_RISCV_Zifencei => true,             -- implement instruction stream sync.?
+      ON_CHIP_DEBUGGER_EN          => true,
 
-      -- Processor peripherals --
-      IO_GPIO_EN                   => true,     -- implement general purpose input/output port unit (GPIO)?
-      IO_MTIME_EN                  => false,    -- implement machine system timer (MTIME)?
-      IO_UART0_EN                  => true,     -- implement primary universal asynchronous receiver/transmitter (UART0)?
-      IO_UART1_EN                  => false,    -- implement secondary universal asynchronous receiver/transmitter (UART1)?
-      IO_SPI_EN                    => true,     -- implement serial peripheral interface (SPI)?
-      IO_TWI_EN                    => true,     -- implement two-wire interface (TWI)?
-      IO_PWM_NUM_CH                => 0,        -- number of PWM channels to implement (0..60); 0 = disabled
-      IO_WDT_EN                    => false,    -- implement watch dog timer (WDT)?
-      IO_TRNG_EN                   => false,    -- implement true random number generator (TRNG)?
-      IO_NEOLED_EN                 => true      -- implement NeoPixel-compatible smart LED interface (NEOLED)?
+      IO_GPIO_NUM                  => core_gpio_o_s'length,
+      IO_UART0_EN                  => true,
+      IO_SPI_EN                    => true,
+      IO_TWI_EN                    => true,
+      IO_NEOLED_EN                 => true
       )
     port map (
-      -- Global control --
-      clk_i       => s_app_clock,                -- global clock, rising edge
-      rstn_i      => s_jtag_system_reset_n.drain_n, -- global reset, low-active, async
+      clk_i       => s_app_clock,
+      rstn_i      => s_jtag_system_reset_n.drain_n,
 
-      -- JTAG on-chip debugger interface (available if ON_CHIP_DEBUGGER_EN = true) --
-      jtag_trst_i => '1',                        -- low-active TAP reset (optional)
-      jtag_tck_i  => s_jtag_cmd.tck,             -- serial clock
-      jtag_tdi_i  => s_jtag_cmd.tdi,             -- serial data input
-      jtag_tdo_o  => s_jtag_rsp.tdo,             -- serial data output
-      jtag_tms_i  => s_jtag_cmd.tms,             -- mode select
+      jtag_trst_i => '1',
+      jtag_tck_i  => s_jtag_tap_cmd.tck,
+      jtag_tdi_i  => s_jtag_tap_cmd.tdi,
+      jtag_tdo_o  => s_jtag_tap_rsp.tdo.v,
+      jtag_tms_i  => s_jtag_tap_cmd.tms,
 
-      -- Wishbone bus interface (available if MEM_EXT_EN = true) --
-      wb_dat_i    => (others => '0'),              -- read data
-      wb_ack_i    => '0',                          -- transfer acknowledge
-      wb_err_i    => '0',                          -- transfer error
+      gpio_o      => core_gpio_o_s,
+      gpio_i      => core_gpio_i_s,
 
-      -- GPIO (available if IO_GPIO_EN = true) --
-      gpio_o      => core_gpio_o_s,                   -- parallel output
-      gpio_i      => core_gpio_i_s,                   -- parallel input
+      uart0_txd_o => core_txd_s,
+      uart0_rxd_i => core_rxd_s,
+      uart0_rts_o => core_rts_s,
+      uart0_cts_i => core_cts_s,
 
-      -- primary UART0 (available if IO_UART0_EN = true) --
-      uart0_txd_o => core_txd_s,                   -- UART0 send data
-      uart0_rxd_i => core_rxd_s,                   -- UART0 receive data
-      uart0_rts_o => core_rts_s,                   -- hw flow control: UART0.RX ready to receive ("RTR"), low-active, optional
-      uart0_cts_i => core_cts_s,                   -- hw flow control: UART0.TX allowed to transmit, low-active, optional
+      spi_clk_o   => core_spi_sck_s,
+      spi_dat_o   => core_spi_sdo_s,
+      spi_dat_i   => core_spi_sdi_s,
+      spi_csn_o   => core_spi_csn_s,
 
-      -- SPI (available if IO_SPI_EN = true) --
-      spi_sck_o   => core_spi_sck_s,                  -- SPI serial clock
-      spi_sdo_o   => core_spi_sdo_s,                  -- controller data out, peripheral data in
-      spi_sdi_i   => core_spi_sdi_s,                  -- controller data in, peripheral data out
-      spi_csn_o   => core_spi_csn_s,                  -- SPI CS
+      twi_sda_i   => core_i2c_s.i.sda,
+      twi_sda_o   => core_i2c_s.o.sda.drain_n,
+      twi_scl_i   => core_i2c_s.i.scl,
+      twi_scl_o   => core_i2c_s.o.scl.drain_n,
 
-      -- TWI (available if IO_TWI_EN = true) --
-      twi_sda_io  => sda_io,                   -- twi serial data line
-      twi_scl_io  => scl_io,                   -- twi serial clock line
-
-      -- NeoPixel-compatible smart LED interface (available if IO_NEOLED_EN = true) --
-      neoled_o    => led_o                         -- async serial data line
+      neoled_o    => led_o
       );
 
+  s_jtag_tap_cmd <= to_tap(s_jtag_ate_cmd);
+  s_jtag_ate_rsp <= to_ate(s_jtag_tap_rsp);
+  s_jtag_tap_rsp.tdo.en <= '1';
   flash_cs_n_o.drain_n <= core_spi_csn_s(0) and core_spi_csn_s(1);
   flash_d_o(0).output <= '1';
   flash_d_o(0).v <= core_spi_sdo_s;
@@ -226,6 +215,14 @@ begin
   s_cs_status(1) <= core_gpio_o_s(63 downto 32);
   s_cs_status(0) <= core_gpio_o_s(31 downto 0);
 
+  i2c_driver: nsl_i2c.i2c.i2c_line_driver
+    port map(
+      bus_io.scl => scl_io,
+      bus_io.sda => sda_io,
+      bus_o => core_i2c_s.i,
+      bus_i => core_i2c_s.o
+      );
+  
   uart: nsl_uart.transactor.uart8
     port map(
       reset_n_i => s_app_reset_n,

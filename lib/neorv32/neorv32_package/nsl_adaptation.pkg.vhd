@@ -5,11 +5,13 @@ use ieee.numeric_std.all;
 library neorv32;
 use neorv32.neorv32_package.all;
 
+library nsl_data;
+
 package nsl_adaptation is
 
   component nsl_neorv32_rom is
     generic (
-      init_file_name_c : string;
+      contents_c : nsl_data.bytestream.byte_string;
       byte_count_c    : natural := 0
       );
     port (

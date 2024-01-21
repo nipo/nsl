@@ -51,5 +51,5 @@ vhdl-sources += ../neorv32_project/rtl/core/neorv32_xirq.vhd
 
 deps += nsl_memory.ram
 deps += nsl_memory.rom
-deps += nsl_data.binary_io
-
+deps += nsl_synthesis.logging
+deps += user_data.neorv32_init

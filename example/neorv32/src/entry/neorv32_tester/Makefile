@@ -3,6 +3,7 @@ vhdl-sources += tester_root.vhd
 vhdl-sources += usb_function.vhd
 
 deps += neorv32.neorv32_package
+deps += nsl_i2c.i2c
 deps += nsl_usb.usb
 deps += nsl_usb.utmi
 deps += nsl_usb.ulpi
