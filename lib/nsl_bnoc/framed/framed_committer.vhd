@@ -9,9 +9,8 @@ entity framed_committer is
     reset_n_i   : in  std_ulogic;
     clock_i     : in  std_ulogic;
 
-    data_i : in nsl_bnoc.framed.framed_data_t;
-    valid_i : in std_ulogic;
-    ready_o : out std_ulogic;
+    in_i : in  nsl_bnoc.pipe.pipe_req_t;
+    in_o : out nsl_bnoc.pipe.pipe_ack_t;
 
     flush_i : in std_ulogic;
 
@@ -64,7 +63,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, ack_i, data_i, valid_i, flush_i)
+  transition: process(r, ack_i, in_i.data, in_i.valid, flush_i)
   begin
     rin <= r;
 
@@ -73,9 +72,9 @@ begin
         rin.state <= ST_FILL_0;
 
       when ST_FILL_0 =>
-        if valid_i = '1' then
+        if in_i.valid = '1' then
           -- (0) <- in
-          rin.data(0).data <= data_i;
+          rin.data(0).data <= in_i.data;
           rin.data(0).last <= '0';
           rin.state <= ST_FILL_1;
         end if;
@@ -84,19 +83,19 @@ begin
         -- (0) is filled, can only go out if (0).last is set.
         if ack_i.ready = '1' and r.data(0).last = '1' then
           -- flushing here makes no sense.
-          if valid_i = '1' then
+          if in_i.valid = '1' then
             -- out <- (0) <- in
-            rin.data(0).data <= data_i;
+            rin.data(0).data <= in_i.data;
             rin.data(0).last <= '0';
           else
             -- out <- (0)
             rin.state <= ST_FILL_0;
           end if;
         else
-          if valid_i = '1' then
+          if in_i.valid = '1' then
             -- (1) <- in
             -- Last may be set to (0)
-            rin.data(1).data <= data_i;
+            rin.data(1).data <= in_i.data;
             rin.data(1).last <= '0';
             rin.state <= ST_FILL_2;
           end if;
@@ -112,9 +111,9 @@ begin
           -- Last may be set to (0)
           rin.data(0) <= r.data(1);
 
-          if valid_i = '1' then
+          if in_i.valid = '1' then
             -- out <- (0) <- (1) <- in
-            rin.data(1).data <= data_i;
+            rin.data(1).data <= in_i.data;
             rin.data(1).last <= '0';
           else
             -- out <- (0) <- (1)
@@ -127,9 +126,9 @@ begin
           end if;
         else
           -- Last may be set to (1)
-          if valid_i = '1' then
+          if in_i.valid = '1' then
             -- (2) <- in
-            rin.data(2).data <= data_i;
+            rin.data(2).data <= in_i.data;
             rin.data(2).last <= '0';
             rin.state <= ST_FILL_3;
           end if;
@@ -184,10 +183,10 @@ begin
 
     case r.state is
       when ST_RESET | ST_FILL_3 =>
-        ready_o <= '0';
+        in_o.ready <= '0';
 
       when ST_FILL_0 | ST_FILL_1 | ST_FILL_2 =>
-        ready_o <= '1';
+        in_o.ready <= '1';
     end case;
   end process;
 

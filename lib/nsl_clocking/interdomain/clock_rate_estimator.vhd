@@ -20,6 +20,23 @@ entity clock_rate_estimator is
     );
 end entity;
 
+-- General architecture:
+--
+-- Have a free-running counter clocked with measured clock, snapshot
+-- it after some time measured with local clock, deduct what is the
+-- closest frequency among choices.
+--
+-- To determine the update interval, find the two closest frequencies
+-- in the choices in a way a given counter value can only map to one
+-- choice.
+--
+-- Then take the threshold between the two fastest clocks as an upper
+-- bound to the counter.
+--
+-- Finally, build a lookup table from all possible counter values to
+-- output rate index.  With reasonable choice count, lookup table will
+-- actually collapse to some logical expression with few terms.
+
 architecture beh of clock_rate_estimator is
 
   function lowest_delta return real is

@@ -8,6 +8,7 @@ use nsl_data.bytestream.all;
   
 package packetizer is
 
+  -- This packetizes a frame to a committed frame.
   component committed_packetizer is
     generic(
       header_length_c : natural := 0
@@ -30,6 +31,7 @@ package packetizer is
       );
   end component;
 
+  -- This unpacketizes a committed to a frame.
   component committed_unpacketizer is
     generic(
       header_length_c : natural := 0

@@ -5,10 +5,10 @@ use ieee.numeric_std.all;
 library nsl_math, nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 
--- Bnoc framed abstraction. A framed interface is a fifo with data and
--- frame boundary information. Frame boundary is expressed with the
--- help of an additional line that is asserted on the last flit of a
--- frame.
+-- Bnoc framed abstraction. A framed interface is a 8-bit fifo with
+-- data and frame boundary information. Frame boundary is expressed
+-- with the help of an additional line that is asserted on the last
+-- flit of a frame.
 package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
@@ -51,6 +51,7 @@ package framed is
   subtype framed_ack_vector is framed_ack_array;
   subtype framed_bus_vector is framed_bus_array;
 
+  -- Fifo. May have two clocks. If so, clock 0 is input, 1 is output.
   component framed_fifo is
     generic(
       depth      : natural;
@@ -70,6 +71,42 @@ package framed is
       );
   end component;
 
+  -- A fifo slice (i.e. a 2-deep fifo)
+  component framed_fifo_slice is
+    port(
+      reset_n_i  : in  std_ulogic;
+      clock_i    : in  std_ulogic;
+
+      in_i   : in framed_req_t;
+      in_o   : out framed_ack_t;
+
+      out_o   : out framed_req_t;
+      out_i   : in framed_ack_t
+      );
+  end component;
+
+  -- An atomic fifo, i.e. a fifo where output is active only if frame
+  -- is complete and can be outputted atomically with no dead cycle.
+  component framed_fifo_atomic is
+    generic(
+      depth : natural;
+      txn_depth : natural := 4;
+      clk_count  : natural range 1 to 2
+      );
+    port(
+      p_resetn   : in  std_ulogic;
+      p_clk      : in  std_ulogic_vector(0 to clk_count-1);
+
+      p_in_val   : in framed_req_t;
+      p_in_ack   : out framed_ack_t;
+
+      p_out_val   : out framed_req_t;
+      p_out_ack   : in framed_ack_t
+      );
+  end component;
+
+  -- A gateway that lets exactly one command frame and one response
+  -- frame go through when granted.
   component framed_granted_gate is
     port(
       reset_n_i   : in  std_ulogic;
@@ -91,6 +128,7 @@ package framed is
       );
   end component;
 
+  -- An abstract arbitrer. Does not handle the acutal data
   component framed_gate_arbitrer is
     generic(
       gate_count_c : integer
@@ -110,37 +148,8 @@ package framed is
       );
   end component;
 
-  component framed_fifo_slice is
-    port(
-      reset_n_i  : in  std_ulogic;
-      clock_i    : in  std_ulogic;
-
-      in_i   : in framed_req_t;
-      in_o   : out framed_ack_t;
-
-      out_o   : out framed_req_t;
-      out_i   : in framed_ack_t
-      );
-  end component;
-
-  component framed_fifo_atomic is
-    generic(
-      depth : natural;
-      txn_depth : natural := 4;
-      clk_count  : natural range 1 to 2
-      );
-    port(
-      p_resetn   : in  std_ulogic;
-      p_clk      : in  std_ulogic_vector(0 to clk_count-1);
-
-      p_in_val   : in framed_req_t;
-      p_in_ack   : out framed_ack_t;
-
-      p_out_val   : out framed_req_t;
-      p_out_ack   : in framed_ack_t
-      );
-  end component;
-
+  -- Framed arbitrer. Takes multiple framed masters and allow them to
+  -- send one command and get one response atomically in turn.
   component framed_arbitrer is
     generic(
       source_count : natural
@@ -165,6 +174,8 @@ package framed is
       );
   end component;
 
+  -- Funnel takes multiple framed sources and merges them in a
+  -- fair round-robin manner.
   component framed_funnel is
     generic(
       source_count_c : natural
@@ -184,6 +195,7 @@ package framed is
       );
   end component;
 
+  -- A M-to-N crossbar.
   component framed_matrix is
     generic(
       source_count_c : natural;
@@ -196,12 +208,16 @@ package framed is
       in_i   : in framed_req_array(0 to source_count_c - 1);
       in_o   : out framed_ack_array(0 to source_count_c - 1);
 
+      -- Source port index for each output.  Sources should appear at
+      -- most once.  Use a source number outside of
+      -- [0..source_count_c-1] to tell a port has no active source.
       source_i: in nsl_math.int_ext.integer_vector(0 to destination_count_c - 1);
       out_o   : out framed_req_array(0 to destination_count_c - 1);
       out_i   : in framed_ack_array(0 to destination_count_c - 1)
       );
   end component;
 
+  -- A 1-to-N dispatcher taking route from a port.
   component framed_dispatch is
     generic(
       destination_count_c : natural
@@ -221,6 +237,8 @@ package framed is
       );
   end component;
 
+  -- An atomic gate.  If enable is deasserted in the middle of a
+  -- frame, it is allowed to go through until it ends.
   component framed_gate is
     port(
       reset_n_i   : in  std_ulogic;
@@ -245,10 +263,10 @@ package framed is
   --            _   _   _   _   _   _   _   _   _   _   _   _   _   _
   -- clock_i \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \
   --         _______________________________________________
-  -- ready_o                                                \_________
+  -- ready                                                  \_________
   --             ___________         _______________________     _____
-  -- valid_i ___/           \_______/                       \___/
-  -- data_i  ---X 0 X 1 X 2 X-------X 0 X 1 X 2 X 0 X 1 X 2 X---X 8 X
+  -- valid   ___/           \_______/                       \___/
+  -- data    ---X 0 X 1 X 2 X-------X 0 X 1 X 2 X 0 X 1 X 2 X---X 8 X
   --                             ___             ___             ___
   -- flush_i ___________________/   \___________/   \___________/   \_
   --
@@ -257,9 +275,8 @@ package framed is
       reset_n_i   : in  std_ulogic;
       clock_i     : in  std_ulogic;
 
-      data_i : in framed_data_t;
-      valid_i : in std_ulogic;
-      ready_o : out std_ulogic;
+      in_i : in  nsl_bnoc.pipe.pipe_req_t;
+      in_o : out nsl_bnoc.pipe.pipe_ack_t;
 
       flush_i : in std_ulogic;
 
@@ -268,6 +285,8 @@ package framed is
       );
   end component;
 
+  -- This component creates a frame from a pipe based on a timeout and
+  -- maximum size.
   component framed_framer is
     generic(
       timeout_c : natural;
@@ -285,6 +304,8 @@ package framed is
       );
   end component;
 
+  -- This component takes framed data and yields pipe (unframed) data
+  -- stream.
   component framed_unframer is
     port(
       reset_n_i : in  std_ulogic;

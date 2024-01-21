@@ -17,6 +17,16 @@ entity interdomain_mesochronous_resync is
     );
 end entity;
 
+-- General architecture:
+--
+-- Have a 4-word buffer written-to in a round-robbin manner.  Have the
+-- read side read the buffer being late by at least 2 cycles.  This
+-- way, data is always guaranteed to be stable in the register when
+-- read.
+--
+-- Clocks can jit at most one cycle before/after one from the other,
+-- and setup/hold times will still be correct.
+
 architecture beh of interdomain_mesochronous_resync is
 
   subtype word_t is std_ulogic_vector(data_width_c-1 downto 0);

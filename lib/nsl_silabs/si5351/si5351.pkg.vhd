@@ -9,6 +9,17 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_bnoc.framed_transactor.all;
 
+-- This package defines constants and functions suitable to initialize
+-- a SI5351 PLL using
+-- nsl_bnoc.framed_transactor.framed_transactor_once piped to a
+-- nsl_i2c.transactor.transactor_framed_controller.
+--
+-- This package also defines a configuration switcher that is able to
+-- update PLL output port configuration among a pre-defined set (in
+-- terms of generics).
+--
+-- This avoids having a soft-core in a design just to do PLL
+-- management.
 package si5351 is
 
   type pll_src_t is (PLL_SRC_XTAL, PLL_SRC_CLKIN);

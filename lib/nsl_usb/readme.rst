@@ -70,3 +70,11 @@ with the following features:
 * Predefined function cores:
 
   * CDC-ACM function.
+
+* TODO:
+
+  * Add support for handling device (vendor), class/endpoint (Std,
+    vendor) control requests.
+
+  * Rework interface between SIE and interfaces/endpoints to fit in
+    nsl_bnoc.committed (which would facilitate the previous point).

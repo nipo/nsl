@@ -7,6 +7,13 @@ use nsl_math.fixed.all;
 
 package gfsk is
 
+  -- This component is little brother of nsl_sdr/fsk/fsk_frequency_plan for GFSK.
+  --
+  -- In addition to the FSK frequency plan, it takes the gaussian
+  -- characteristics (symbol rate, BT product) as constants.
+  --
+  -- Output stream is the same, but will be filtered through some
+  -- filter approaching ideal gaussian.
   component gfsk_frequency_plan is
     generic (
       -- Sampling frequency

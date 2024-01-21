@@ -119,10 +119,18 @@ package committed is
   -- Measures the actual byte length of committed frame (validity flit
   -- not included).
   --
-  -- If there is a frame bigger than 2**max_size_l2_c, and reader
-  -- waits for size word to appear before starting to pop from out
-  -- port, there will be a lockup. There is no provision for this not
-  -- to happen here.
+  -- For every frame that comes in the component, exactly one word is
+  -- outputted on the size fifo, and exactly one frame is outputted on
+  -- the output port.
+  --
+  -- Synchronously to the size output, a good output tells whether the
+  -- frame is good for consumption. If not, some words will still be
+  -- forwarded to the output port.  Size may not reflect the actual
+  -- count of flits on the output port when frame is bad.
+  --
+  -- If a frame bigger than 2**max_size_l2_c gets to the input, it is
+  -- automatically considered bad and will be forwarded truncated
+  -- (with status byte marking the cancellation).
   component committed_sizer is
     generic(
       clock_count_c : natural range 1 to 2 := 1;
@@ -183,7 +191,7 @@ package committed is
       -- capture is asserted multiple times (or continuously) before
       -- frame_i.valid gets asserted, the last value is used.  If no
       -- capture happens for two consecutive frames, what is outputted
-      -- to the second frame and later is undefined.
+      -- to the frames after the first one is undefined.
       capture_i : in std_ulogic;
       
       in_i   : in  committed_req_t;

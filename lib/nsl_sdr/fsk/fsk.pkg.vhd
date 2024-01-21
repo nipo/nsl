@@ -7,6 +7,24 @@ use nsl_math.fixed.all;
 
 package fsk is
 
+  -- This component gives oscillator frequency for a given channel and
+  -- symbol in a FSK frequency plan.
+  --
+  -- Frequency plan takes the following elaboration-time parameters:
+  -- - Total number of channels,
+  -- - Channel spacing,
+  -- - Frequency stride for symbols,
+  -- - Total symbol count,
+  -- - Sampling frequency.
+  --
+  -- Then at any time, for a channel/symbol, it gives the frequency to
+  -- feed in the baseband oscillator.
+  --
+  -- See nsl_signal_generator.nco for oscillator accepting this.
+  --
+  -- It is actually implemented as an elaboration-time ROM, but this
+  -- should be considered to be an implementation detail as this could
+  -- be runtime-calculated as well.
   component fsk_frequency_plan is
     generic (
       -- Sampling frequency

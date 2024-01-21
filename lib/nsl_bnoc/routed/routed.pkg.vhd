@@ -11,9 +11,11 @@ library nsl_bnoc;
 -- destination indices (4-bit values, MSBs are source).
 --
 -- Above this routed network, usually, there is a framed network encapsulation
--- with tagged frames. Second byte in routed frames usually convey tad IDs.
--- This infrastructure is mostly suited for command/response-based blocks where
--- one command imples exactly one matching response frame.
+-- with tagged frames. Second byte in routed frames usually convey tag IDs.
+--
+-- This encapsulation and tag infrastructure is mostly suited for
+-- command/response-based blocks where one command imples exactly one
+-- matching response frame.
 package routed is
 
   subtype routed_req is nsl_bnoc.framed.framed_req;
@@ -164,12 +166,16 @@ package routed is
       );
   end component;
 
-  -- This components strips routing information from routed network, pipes the
-  -- frame in a framed network, and waits for exactly one response frame back,
-  -- where it inserts back reverse routing information and tag.
+  -- This components strips routing information from routed network,
+  -- strips the tag byte, pipes the rest of the frame in a framed
+  -- network, and waits for exactly one response frame back, where it
+  -- inserts reverse routing information and tag.
   --
-  -- Command/response frames must be balanced. Tag of response will match tag
-  -- from command.
+  -- Command/response frames must be balanced. Tag of response will
+  -- match tag from command.
+  --
+  -- This component is well suited for framed transactors found in
+  -- various other libraries of the project.
   component routed_endpoint
     port(
       p_resetn   : in  std_ulogic;
@@ -196,6 +202,9 @@ package routed is
   --
   -- Tag added to incoming frames will be taken from last-seen routed message.
   -- This may not be strictly timely ordered because of fifos.
+  --
+  -- Routed-to-framed and Framed-to-routed streams may not be balanced
+  -- here.
   component routed_framed_gateway is
     generic(
       source_id_c : component_id

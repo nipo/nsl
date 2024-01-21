@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_io;
 
+-- Easyscale is a Ti-specific dynamic voltage setting bus for some Buck DC-DCs.
+-- TPS62420/TPS62421 were the target for this development.
 package easyscale is
 
   component easyscale_framed_master is

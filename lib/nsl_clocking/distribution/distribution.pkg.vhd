@@ -13,8 +13,11 @@ package distribution is
     generic(
       -- Buffer mode.
       -- Typical values are "global", "region", "row", "io", "none". Others may exist.
+      --
       -- "none" is always implemented. Other modes are
       -- implementation-specific and may fallback to "global".
+      --
+      -- "none" means there is no distribution buffer inserted. Output signal is input signal copy.
       mode_c : string := "global"
       );
     port(

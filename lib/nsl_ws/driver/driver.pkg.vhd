@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_color;
 
+-- WorldSemi-compatible LED driver
 package driver is
 
   component ws_2812_driver is

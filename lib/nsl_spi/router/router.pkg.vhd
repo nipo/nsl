@@ -6,6 +6,10 @@ library nsl_spi, nsl_io;
 
 package router is
 
+  -- A one-to-many SPI router where first word of transaction tells
+  -- what output is used.
+  --
+  -- CS_n is asserted on output side before the second word.
   component spi_router is
     generic(
       slave_count_c : positive range 1 to 255

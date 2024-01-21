@@ -13,7 +13,7 @@ package bytestream is
   -- 0-based vector.
   type byte_string is array(natural range <>) of byte;
 
-  -- Tales a std_ulogic_vector of N * 8 bits and packs it in N bytes. First
+  -- Takes a std_ulogic_vector of N * 8 bits and packs it in N bytes. First
   -- item in the vector will be MSB of first byte, whatever the input blob
   -- vector direction.
   function from_suv(blob: std_ulogic_vector) return byte_string;

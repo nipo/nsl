@@ -23,7 +23,7 @@ package crc is
   -- forwarding the vailidity.
   component crc_committed_adder is
     generic(
-      -- length not part of CRC
+      -- data payload prefix length not part of CRCed data
       header_length_c : natural := 0;
 
       params_c : crc_params_t
@@ -43,7 +43,7 @@ package crc is
   -- Computes and append the CRC of the message as it runs through the module.
   component crc_framed_adder is
     generic(
-      -- length not part of CRC
+      -- data payload prefix length not part of CRCed data
       header_length_c : natural := 0;
 
       params_c : crc_params_t
@@ -60,15 +60,15 @@ package crc is
       );
   end component;
 
-  -- Computes the CRC of the message as it runs through the module, when
-  -- validity flit is presented, enough bytes to hold CRC are not forwarded but
-  -- compared to the locally calculated value. If CRC values do not match,
-  -- frame is marked bad. If a frame that is marked bad is received and
-  -- checked, it will be still forwarded, but its validity flit will be
-  -- forcibly reset.
+  -- Computes the CRC of the message as it runs through the module,
+  -- when validity flit is presented, enough bytes to hold CRC are not
+  -- forwarded but compared to the locally calculated value. If CRC
+  -- values do not match, frame is marked bad. If a frame that is
+  -- marked bad is received and checked valid, it will be still
+  -- forwarded, but its validity flit will be forcibly reset.
   component crc_committed_checker is
     generic(
-      -- length not part of CRC
+      -- data payload prefix length not part of CRCed data
       header_length_c : natural := 0;
 
       params_c : crc_params_t
