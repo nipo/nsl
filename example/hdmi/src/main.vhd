@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library work, nsl_color, nsl_io, nsl_clocking, unisim, nsl_data, nsl_hdmi, nsl_dvi, nsl_i2c, nsl_math, nsl_signal_generator;
+library work, nsl_color, nsl_io, nsl_clocking, unisim, nsl_data, nsl_hdmi, nsl_dvi, nsl_i2c, nsl_math, nsl_signal_generator, nsl_event;
 use nsl_color.rgb.all;
 use nsl_math.fixed.all;
 use nsl_data.bytestream.all;
@@ -181,7 +181,7 @@ begin
   -- Generate a tick matching audio sample rate to gate audio samples (both
   -- HDMI out and sinus generators may work at full clock rate, we need some
   -- artificial rate limiter).
-  audio_tick_gen: nsl_clocking.generator.tick_generator
+  audio_tick_gen: nsl_event.tick.tick_generator
     port map(
       reset_n_i => hdmi_pixel_clock_reset_n_s,
       clock_i => hdmi_pixel_clock_s,

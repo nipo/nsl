@@ -5,7 +5,7 @@ implementation_constraint-sources += pins.xdc
 
 deps += nsl_clocking.async
 deps += nsl_clocking.distribution
-deps += nsl_clocking.generator
+deps += nsl_event.tick
 deps += nsl_clocking.pll
 deps += nsl_dvi.driver
 deps += nsl_dvi.transceiver
