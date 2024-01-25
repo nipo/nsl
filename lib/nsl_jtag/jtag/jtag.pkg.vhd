@@ -49,6 +49,8 @@ package jtag is
     trst : std_ulogic;
   end record;
 
+  constant jtag_tap_i_default : jtag_tap_i := ('0', '1', '1', '1');
+
   function to_ate(s: jtag_tap_o) return jtag_ate_i;
   function to_tap(s: jtag_ate_o) return jtag_tap_i;
   
