@@ -81,10 +81,10 @@ architecture beh of usb_function is
   signal s_routed: framed_io;
   signal s_uart_tx, s_uart_rx: nsl_bnoc.pipe.pipe_bus_t;
 
-  signal s_routed_cmd_req: nsl_bnoc.routed.routed_req_array(transactor_count_c-1 downto 0);
-  signal s_routed_cmd_ack: nsl_bnoc.routed.routed_ack_array(transactor_count_c-1 downto 0);
-  signal s_routed_rsp_req: nsl_bnoc.routed.routed_req_array(transactor_count_c-1 downto 0);
-  signal s_routed_rsp_ack: nsl_bnoc.routed.routed_ack_array(transactor_count_c-1 downto 0);
+  signal s_routed_cmd_req: nsl_bnoc.routed.routed_req_array(0 to transactor_count_c-1);
+  signal s_routed_cmd_ack: nsl_bnoc.routed.routed_ack_array(0 to transactor_count_c-1);
+  signal s_routed_rsp_req: nsl_bnoc.routed.routed_req_array(0 to transactor_count_c-1);
+  signal s_routed_rsp_ack: nsl_bnoc.routed.routed_ack_array(0 to transactor_count_c-1);
 
   function routing_table_gen(port_count: integer) return nsl_bnoc.routed.routed_routing_table
   is
@@ -245,7 +245,7 @@ begin
       )
     port map(
       clock_i   => utmi.phy2sie.system.clock,
-      reset_n_i => app_reset_n,
+      reset_n_i => reset_n_i,
 
       transaction_i => s_in_cmd(debug_ep_no_c),
       transaction_o => s_in_rsp(debug_ep_no_c),
@@ -261,7 +261,7 @@ begin
       )
     port map(
       clock_i   => utmi.phy2sie.system.clock,
-      reset_n_i => app_reset_n,
+      reset_n_i => reset_n_i,
 
       transaction_i => s_out_cmd(debug_ep_no_c),
       transaction_o => s_out_rsp(debug_ep_no_c),
@@ -386,7 +386,7 @@ begin
 
   by_port: for i in 0 to transactor_count_c-1
   generate
-    signal s_routed: routed_io;
+    signal s_port: routed_io;
   begin
     cmd_fifo: nsl_bnoc.framed.framed_fifo
       generic map(
@@ -401,8 +401,8 @@ begin
         p_in_val  => s_routed_cmd_req(i),
         p_in_ack  => s_routed_cmd_ack(i),
 
-        p_out_val => s_routed.cmd.req,
-        p_out_ack => s_routed.cmd.ack
+        p_out_val => s_port.cmd.req,
+        p_out_ack => s_port.cmd.ack
         );
 
     rsp_fifo: nsl_bnoc.framed.framed_fifo
@@ -415,8 +415,8 @@ begin
         p_clk(0) => app_clock_i,
         p_clk(1) => clock_i,
 
-        p_in_val => s_routed.rsp.req,
-        p_in_ack => s_routed.rsp.ack,
+        p_in_val => s_port.rsp.req,
+        p_in_ack => s_port.rsp.ack,
         
         p_out_val => s_routed_rsp_req(i),
         p_out_ack => s_routed_rsp_ack(i)
@@ -427,10 +427,10 @@ begin
         p_resetn => app_reset_n,
         p_clk => app_clock_i,
 
-        p_cmd_in_val => s_routed.cmd.req,
-        p_cmd_in_ack => s_routed.cmd.ack,
-        p_rsp_out_val => s_routed.rsp.req,
-        p_rsp_out_ack => s_routed.rsp.ack,
+        p_cmd_in_val => s_port.cmd.req,
+        p_cmd_in_ack => s_port.cmd.ack,
+        p_rsp_out_val => s_port.rsp.req,
+        p_rsp_out_ack => s_port.rsp.ack,
 
         p_cmd_out_val  => cmd_o(i),
         p_cmd_out_ack  => cmd_i(i),

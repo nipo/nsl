@@ -4,13 +4,15 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 library nsl_usb, nsl_io, nsl_hwdep,
-  nsl_color, nsl_math, neorv32,
+  nsl_color, nsl_math, nsl_neorv32,
   nsl_bnoc, nsl_jtag, nsl_clocking,
   nsl_spi, nsl_data, work, nsl_uart,
-  nsl_i2c;
+  nsl_i2c, nsl_wishbone;
 use nsl_color.rgb.all;
 use nsl_data.text.all;
 use nsl_jtag.jtag.all;
+use nsl_wishbone.wishbone.all;
+use nsl_neorv32.processor.all;
 
 entity tester_root is
   generic(
@@ -34,7 +36,7 @@ entity tester_root is
     sda_io, scl_io : inout std_logic;
 
     button_i: in std_ulogic_vector(1 to 4);
-    led_o: out std_ulogic;
+    led_color_o: out nsl_color.rgb.rgb24_vector(1 to 4);
     done_led_o: out std_ulogic
     );
 end entity;
@@ -63,14 +65,26 @@ architecture beh of tester_root is
   signal uart_from_usb_s, uart_to_usb_s: nsl_bnoc.pipe.pipe_bus_t;
 
   signal core_gpio_o_s, core_gpio_i_s: std_ulogic_vector(63 downto 0);
-  signal core_txd_s, core_rxd_s, core_rts_s, core_cts_s: std_ulogic;
+  signal core_tx_s, core_rx_s, core_rts_s, core_cts_s: std_ulogic;
   signal core_spi_sck_s, core_spi_sdo_s, core_spi_sdi_s: std_ulogic;
   signal core_spi_csn_s: std_ulogic_vector(7 downto 0);
 
   signal core_i2c_s: nsl_i2c.i2c.i2c_io;
   
-  constant uart_div_c: unsigned := nsl_math.arith.to_unsigned_auto(app_clock_hz_c / 19200);
+  constant uart_div_c: unsigned := nsl_math.arith.to_unsigned_auto(app_clock_hz_c / 115200 - 1);
 
+  constant wb_config_c : wb_config_t := neorv32_wb_pipelined_c;
+
+  signal wb_s : wb_bus_t;
+
+  constant idx_code: integer := 0;
+  constant idx_ram: integer := 1;
+
+  signal wb_memory_req_s : wb_req_vector(0 to 1);
+  signal wb_memory_ack_s : wb_ack_vector(0 to 1);
+
+  signal core_reset_n_s : std_ulogic;
+  
 begin
 
   usb: work.neorv32_tester.usb_function
@@ -104,7 +118,7 @@ begin
       );
 
   done_led_o <= '1';
-
+  
   cs: nsl_bnoc.control_status.framed_control_status
     generic map(
       config_count_c => s_cs_config'length,
@@ -153,55 +167,82 @@ begin
       locked_o => open
       );
 
-  neorv32_inst: neorv32.neorv32_package.neorv32_top
+  core_reset_n_s <= s_jtag_system_reset_n.drain_n and not button_i(4);
+  s_jtag_ate_rsp <= to_ate(s_jtag_tap_rsp);
+  s_jtag_tap_cmd <= to_tap(s_jtag_ate_cmd);
+  s_jtag_tap_rsp.rtck <= s_jtag_ate_cmd.tck;
+  
+  neorv32_inst: nsl_neorv32.processor.neorv32_processor
     generic map (
-      CLOCK_FREQUENCY              => app_clock_hz_c,
-      INT_BOOTLOADER_EN            => true,
-      MEM_INT_IMEM_EN              => true,
-      MEM_INT_DMEM_EN              => true,
-
-      ON_CHIP_DEBUGGER_EN          => true,
-
-      IO_GPIO_NUM                  => core_gpio_o_s'length,
-      IO_UART0_EN                  => true,
-      IO_SPI_EN                    => true,
-      IO_TWI_EN                    => true,
-      IO_NEOLED_EN                 => true
+      clock_i_hz_c => app_clock_hz_c,
+      wb_config_c => wb_config_c,
+      tap_enable_c => true,
+      config_c => neorv32_config_full_c,
+      uart_enable_c => true
       )
-    port map (
-      clk_i       => s_app_clock,
-      rstn_i      => s_jtag_system_reset_n.drain_n,
+    port map(
+      clock_i => s_app_clock,
+      reset_n_i => core_reset_n_s,
 
-      jtag_trst_i => '1',
-      jtag_tck_i  => s_jtag_tap_cmd.tck,
-      jtag_tdi_i  => s_jtag_tap_cmd.tdi,
-      jtag_tdo_o  => s_jtag_tap_rsp.tdo.v,
-      jtag_tms_i  => s_jtag_tap_cmd.tms,
+      tap_i => s_jtag_tap_cmd,
+      tap_o => s_jtag_tap_rsp,
 
-      gpio_o      => core_gpio_o_s,
-      gpio_i      => core_gpio_i_s,
+      wb_o => wb_s.req,
+      wb_i => wb_s.ack,
 
-      uart0_txd_o => core_txd_s,
-      uart0_rxd_i => core_rxd_s,
-      uart0_rts_o => core_rts_s,
-      uart0_cts_i => core_cts_s,
+      uart_tx_o => core_tx_s,
+      uart_rx_i => core_rx_s,
+      uart_rts_o => core_rts_s,
+      uart_cts_i => core_cts_s,
 
-      spi_clk_o   => core_spi_sck_s,
-      spi_dat_o   => core_spi_sdo_s,
-      spi_dat_i   => core_spi_sdi_s,
-      spi_csn_o   => core_spi_csn_s,
-
-      twi_sda_i   => core_i2c_s.i.sda,
-      twi_sda_o   => core_i2c_s.o.sda.drain_n,
-      twi_scl_i   => core_i2c_s.i.scl,
-      twi_scl_o   => core_i2c_s.o.scl.drain_n,
-
-      neoled_o    => led_o
+      gpio_o => core_gpio_o_s,
+      gpio_i => core_gpio_i_s
       );
 
-  s_jtag_tap_cmd <= to_tap(s_jtag_ate_cmd);
-  s_jtag_ate_rsp <= to_ate(s_jtag_tap_rsp);
-  s_jtag_tap_rsp.tdo.en <= '1';
+  arb: nsl_wishbone.crossbar.wishbone_crossbar
+    generic map(
+      wb_config_c => wb_config_c,
+      slave_count_c => 2,
+      routing_mask_c => x"80000000",
+      routing_table_c => nsl_math.int_ext.integer_vector'(idx_code, idx_ram)
+      )
+    port map(
+      clock_i => s_app_clock,
+      reset_n_i => s_jtag_system_reset_n.drain_n,
+
+      master_i => wb_s.req,
+      master_o => wb_s.ack,
+
+      slave_o => wb_memory_req_s,
+      slave_i => wb_memory_ack_s
+      );
+
+  imem: nsl_wishbone.memory.wishbone_ram
+    generic map(
+      wb_config_c => wb_config_c,
+      byte_size_l2_c => 3+10
+      )
+    port map(
+      clock_i => s_app_clock,
+      reset_n_i => s_jtag_system_reset_n.drain_n,
+
+      wb_i => wb_memory_req_s(idx_code),
+      wb_o => wb_memory_ack_s(idx_code)
+      );      
+
+  dmem: nsl_wishbone.memory.wishbone_ram
+    generic map(
+      wb_config_c => wb_config_c,
+      byte_size_l2_c => 3+10
+      )
+    port map(
+      clock_i => s_app_clock,
+      reset_n_i => s_jtag_system_reset_n.drain_n,
+
+      wb_i => wb_memory_req_s(idx_ram),
+      wb_o => wb_memory_ack_s(idx_ram)
+      );      
+  
   flash_cs_n_o.drain_n <= core_spi_csn_s(0) and core_spi_csn_s(1);
   flash_d_o(0).output <= '1';
   flash_d_o(0).v <= core_spi_sdo_s;
@@ -230,9 +271,9 @@ begin
 
       divisor_i => uart_div_c,
 
-      tx_o => core_rxd_s,
+      tx_o => core_rx_s,
       cts_i => core_rts_s,
-      rx_i => core_txd_s,
+      rx_i => core_tx_s,
       rts_o => core_cts_s,
 
       tx_data_i => uart_from_usb_s.req,
@@ -241,4 +282,9 @@ begin
       rx_data_o => uart_to_usb_s.req
       );
 
+  led_color_o(1) <= rgb24_red when button_i(1) = '1' else rgb24_red when core_gpio_o_s(0) = '1' else rgb24_black;
+  led_color_o(2) <= rgb24_red when button_i(2) = '1' else rgb24_red when core_gpio_o_s(1) = '1' else rgb24_black;
+  led_color_o(3) <= rgb24_red when button_i(3) = '1' else rgb24_red when core_gpio_o_s(2) = '1' else rgb24_black;
+  led_color_o(4) <= rgb24_red when button_i(4) = '1' else rgb24_red when core_gpio_o_s(3) = '1' else rgb24_black;
+  
 end architecture;

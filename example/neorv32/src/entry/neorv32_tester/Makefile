@@ -2,7 +2,10 @@ vhdl-sources += neorv32_tester.pkg.vhd
 vhdl-sources += tester_root.vhd
 vhdl-sources += usb_function.vhd
 
-deps += neorv32.neorv32_package
+deps += nsl_neorv32.processor
+deps += nsl_wishbone.wishbone
+deps += nsl_wishbone.crossbar
+deps += nsl_wishbone.memory
 deps += nsl_i2c.i2c
 deps += nsl_usb.usb
 deps += nsl_usb.utmi

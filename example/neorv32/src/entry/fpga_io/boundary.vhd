@@ -40,6 +40,7 @@ architecture arch of boundary is
   signal clock_60 : std_ulogic;
 
   signal done_led, done_led_n: std_ulogic;
+  signal led_color_s: nsl_color.rgb.rgb24_vector(1 to 4);
 
   signal s_device_uid : unsigned(31 downto 0);
   signal s_device_serial : string(1 to (s_device_uid'length + 3) / 4);
@@ -75,6 +76,8 @@ architecture arch of boundary is
     return ret;
   end function;
 
+  signal eos_s: std_ulogic;
+  
 begin
 
   clock_buf: nsl_hwdep.clock.clock_buffer
@@ -86,7 +89,7 @@ begin
   startup: unisim.vcomponents.startupe2
     port map (
       cfgmclk => open,
-      eos => open,
+      eos => eos_s,
       clk => '0',
       gsr => '0',
       gts => '0',
@@ -98,10 +101,11 @@ begin
       usrdonets => done_led_n -- oe_n
       );
 
-  reset_sync: nsl_hwdep.reset.reset_at_startup
+  reset_sync: nsl_clocking.async.async_edge
     port map(
       clock_i => clock_60,
-      reset_n_o => reset_n
+      data_i => eos_s,
+      data_o => reset_n
       );
 
   done_led_n <= not done_led;
@@ -129,7 +133,7 @@ begin
       scl_io => i2c_scl_io,
 
       button_i => button_pressed,
-      led_o => led_ctrl_o,
+      led_color_o => led_color_s,
       done_led_o => done_led
       );
   
@@ -186,5 +190,23 @@ begin
         );
   end generate;
   button_pressed <= not button_pressed_n;
+  
+  led_driver: nsl_ws.driver.ws_2812_multi_driver
+    generic map(
+      clk_freq_hz => 60e6,
+      color_order => "GRB",
+      led_count => 4,
+      t0h_ns => 300,
+      t0l_ns => 900,
+      t1h_ns => 900,
+      t1l_ns => 300,
+      attenuation_l2_c => 3
+      )
+    port map(
+      clock_i => clock_60,
+      reset_n_i => reset_n,
+      led_o => led_ctrl_o,
+      color_i => led_color_s
+      );
   
 end arch;

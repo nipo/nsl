@@ -27,7 +27,7 @@ package neorv32_tester is
       sda_io, scl_io : inout std_logic;
 
       button_i: in std_ulogic_vector(1 to 4);
-      led_o: out std_ulogic;
+      led_color_o: out nsl_color.rgb.rgb24_vector(1 to 4);
       done_led_o: out std_ulogic
       );
   end component;
