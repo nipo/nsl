@@ -78,6 +78,8 @@ package bytestream is
   procedure write(s: inout byte_stream; constant d: byte);
   procedure write(s: inout byte_stream; constant d: byte_string);
   procedure write(s: inout byte_stream; d: inout byte_stream);
+
+  function std_match(a, b: in byte_string) return boolean;
   
 end package bytestream;
 
@@ -377,5 +379,25 @@ package body bytestream is
     end if;
     return s(s'right);
   end function;
+
+  function std_match(a, b: in byte_string) return boolean
+  is
+    alias xa: byte_string(0 to a'length-1) is a;
+    alias xb: byte_string(0 to b'length-1) is b;
+  begin
+    if xa'length /= xb'length then
+      return false;
+    end if;
+
+    for i in xa'range
+    loop
+      if not std_match(xa(i), xb(i)) then
+        return false;
+      end if;
+    end loop;
+
+    return true;
+  end function;
+      
 
 end package body bytestream;
