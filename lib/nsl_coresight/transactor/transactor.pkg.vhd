@@ -20,10 +20,10 @@ package transactor is
   constant DP_CMD_RW            : std_ulogic_vector(7 downto 0):= "10------";
   constant DP_CMD_W             : std_ulogic_vector(7 downto 0):= "10-0----";
   constant DP_CMD_R             : std_ulogic_vector(7 downto 0):= "10-1----";
-  constant DP_CMD_AP_READ       : std_ulogic_vector(7 downto 0):= "1011----";
-  constant DP_CMD_AP_WRITE      : std_ulogic_vector(7 downto 0):= "1010----";
-  constant DP_CMD_DP_READ       : std_ulogic_vector(7 downto 0):= "1001----";
-  constant DP_CMD_DP_WRITE      : std_ulogic_vector(7 downto 0):= "1000----";
+  constant DP_CMD_AP_READ       : std_ulogic_vector(7 downto 0):= "1011----"; -- |
+  constant DP_CMD_AP_WRITE      : std_ulogic_vector(7 downto 0):= "1010----"; -- | bits 3-2 are unused,
+  constant DP_CMD_DP_READ       : std_ulogic_vector(7 downto 0):= "1001----"; -- | 1-0 is register name
+  constant DP_CMD_DP_WRITE      : std_ulogic_vector(7 downto 0):= "1000----"; -- |
 
   constant DP_RSP_ACK          : std_ulogic_vector(7 downto 0):= "-----001";
   constant DP_RSP_WAIT         : std_ulogic_vector(7 downto 0):= "-----010";
