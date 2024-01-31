@@ -8,3 +8,4 @@ packages += tpiu
 packages += testing
 packages += transactor
 packages += bridge
+packages += memap_mapper
