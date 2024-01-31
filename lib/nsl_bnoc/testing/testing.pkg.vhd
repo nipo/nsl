@@ -263,6 +263,14 @@ package testing is
     variable root: inout framed_queue_root;
     data : in byte_string;
     level : log_level_t := LOG_LEVEL_WARNING);
+
+  procedure framed_txn_check(
+    constant log_context: string;
+    variable cmd_root: inout framed_queue_root;
+    variable rsp_root: inout framed_queue_root;
+    constant cmd : in byte_string;
+    constant rsp : in byte_string;
+    constant level : log_level_t := LOG_LEVEL_WARNING);
   
 end package testing;
 
@@ -742,8 +750,7 @@ package body testing is
     level : log_level_t := LOG_LEVEL_WARNING)
   is
   begin
-    if rx_data'length /= ref_data'length
-      or rx_data /= ref_data then
+    if not std_match(rx_data, ref_data) then
       log(LOG_LEVEL_INFO, log_context & ": " &
           " > " & to_string(rx_data)
           & " *** BAD");
@@ -756,6 +763,20 @@ package body testing is
     log_info(log_context & ": " &
              " > " & to_string(rx_data)
              & " OK");
+  end procedure;
+
+  procedure framed_txn_check(
+    constant log_context: string;
+    variable cmd_root: inout framed_queue_root;
+    variable rsp_root: inout framed_queue_root;
+    constant cmd : in byte_string;
+    constant rsp : in byte_string;
+    constant level : log_level_t := LOG_LEVEL_WARNING)
+  is
+  begin
+    log(LOG_LEVEL_INFO, log_context & ": " & " < " & to_string(cmd));
+    framed_queue_put(cmd_root, cmd);
+    framed_queue_check(log_context, rsp_root, rsp, level);
   end procedure;
 
 end package body;
