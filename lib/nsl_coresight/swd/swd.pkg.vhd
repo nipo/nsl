@@ -65,4 +65,28 @@ package swd is
       );
   end component;
 
+  function to_master(s: swd_slave_o) return swd_master_i;
+  function to_slave(m: swd_master_o) return swd_slave_i;
+  
 end package swd;
+
+package body swd is
+
+  function to_master(s: swd_slave_o) return swd_master_i
+  is
+  begin
+    return swd_master_i'(
+      dio => s.dio.v
+      );
+  end function;
+
+  function to_slave(m: swd_master_o) return swd_slave_i
+  is
+  begin
+    return swd_slave_i'(
+      clk => m.clk,
+      dio => m.dio.v
+      );
+  end function;
+
+end package body;
