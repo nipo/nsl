@@ -15,6 +15,9 @@ use nsl_coresight.swd.all;
 
 architecture arch of tb is
 
+  constant dut_clock_period_c : time := 20 ns;
+  constant ate_clock_period_c : time := 10 ns;
+
   signal ate_clock_s : std_ulogic;
   signal ate_reset_n_s : std_ulogic;
   signal dut_clock_s : std_ulogic;
@@ -34,6 +37,16 @@ architecture arch of tb is
   
 begin
 
+    snooper_cmd: process is
+    begin
+      nsl_bnoc.testing.framed_snooper("ate cmd", memap_s.cmd, ate_clock_s, 65536, ate_clock_period_c);
+    end process;
+
+    snooper_rsp: process is
+    begin
+      nsl_bnoc.testing.framed_snooper("ate rsp", memap_s.rsp, ate_clock_s, 65536, ate_clock_period_c);
+    end process;
+
   ate: block is
     constant cpol_c: std_ulogic := '0';
     constant cpha_c: std_ulogic := '0';
@@ -50,15 +63,12 @@ begin
       wait for 100 ns;
 
       memap_dp_swd_init("Init", ate_cmd_v, ate_rsp_v, dp_idr_c);
-      memap_param_set("Params", ate_cmd_v, ate_rsp_v, x"00000000", x"800000", 4);
-      memap_write("Write", ate_cmd_v, ate_rsp_v, from_hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"));
-      memap_param_set("Params2", ate_cmd_v, ate_rsp_v, x"00000008", x"800000", 4);
-      memap_read_check("Read", ate_cmd_v, ate_rsp_v, from_hex("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"));
-      memap_param_set("Params3", ate_cmd_v, ate_rsp_v, x"00000008", x"800000", 4);
-      memap_write16("Write16", ate_cmd_v, ate_rsp_v, from_hex("9988"));
-      memap_write8("Write8", ate_cmd_v, ate_rsp_v, from_hex("77"));
-      memap_param_set("Params4", ate_cmd_v, ate_rsp_v, x"00000008", x"800000", 4);
-      memap_read_check("Read", ate_cmd_v, ate_rsp_v, from_hex("9988770b0c0d0e0f"));
+      memap_param_set("Params", ate_cmd_v, ate_rsp_v, x"800000", 4);
+      memap_write("Write", ate_cmd_v, ate_rsp_v, x"00000000", from_hex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"));
+      memap_read_check("Read", ate_cmd_v, ate_rsp_v, x"00000008", from_hex("08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"));
+      memap_read_check("Read", ate_cmd_v, ate_rsp_v, x"00000001", from_hex("0102030405060708090a"));
+      memap_write("Write16", ate_cmd_v, ate_rsp_v, x"00000008", from_hex("998877"));
+      memap_read_check("Read", ate_cmd_v, ate_rsp_v, x"00000008", from_hex("9988770b0c0d0e0f"));
       memap_read8_check("Read8/0", ate_cmd_v, ate_rsp_v, from_hex("10"), 0);
       memap_read8_check("Read8/1", ate_cmd_v, ate_rsp_v, from_hex("11"), 1);
       memap_read8_check("Read8/2", ate_cmd_v, ate_rsp_v, from_hex("12"), 2);
@@ -225,8 +235,8 @@ begin
       done_count => done_s'length
       )
     port map(
-      clock_period(0) => 10 ns,
-      clock_period(1) => 20 ns,
+      clock_period(0) => ate_clock_period_c,
+      clock_period(1) => dut_clock_period_c,
       reset_duration(0) => 42 ns,
       reset_duration(1) => 42 ns,
       reset_n_o(0) => ate_reset_n_s,
