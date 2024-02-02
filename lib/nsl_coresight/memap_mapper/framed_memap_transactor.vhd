@@ -558,8 +558,7 @@ begin
         cmd_o <= framed_accept(true);
   
       when CMD_RW_ABORT =>
-        dp_cmd_o <= framed_flit(data => DP_CMD_ABORT,
-                                last => r.cmd_last);
+        dp_cmd_o <= framed_flit(data => DP_CMD_ABORT);
 
       when CMD_RW_CSW_CMD =>
         dp_cmd_o <= framed_flit(data => DP_CMD_AP_WRITE(7 downto 4) & memap_csw_c);
