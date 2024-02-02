@@ -39,12 +39,12 @@ package processor is
     pmp_nr => 0,
     hpm_nr => 0,
     icache_en => false,
-    icache_nb => 0,
-    icache_bs => 0,
+    icache_nb => 1,
+    icache_bs => 4,
     icache_as => 1,
     dcache_en => false,
-    dcache_nb => 0,
-    dcache_bs => 0,
+    dcache_nb => 1,
+    dcache_bs => 4,
     mtime => false
     );
 
@@ -58,12 +58,12 @@ package processor is
     pmp_nr => 0,
     hpm_nr => 0,
     icache_en => false,
-    icache_nb => 0,
-    icache_bs => 0,
+    icache_nb => 1,
+    icache_bs => 4,
     icache_as => 1,
     dcache_en => false,
-    dcache_nb => 0,
-    dcache_bs => 0,
+    dcache_nb => 1,
+    dcache_bs => 4,
     mtime => true
     );
 
