@@ -29,6 +29,12 @@ package prbs is
   function prbs_byte_string(init, poly : prbs_state;
                             length : integer) return byte_string;
 
+  -- Generates subsequent bytes for a given PRBS and state. Updates
+  -- state.
+  procedure prbs_next(constant poly : in prbs_state;
+                      variable state : inout prbs_state;
+                      variable data : out byte_string);
+
   -- Known PRBS polynoms
   constant prbs7 : prbs_state(7 downto 0) := (7 => '1', 6 => '1', 0 => '1', others => '0');
   constant prbs9 : prbs_state(9 downto 0) := (9 => '1', 5 => '1', 0 => '1', others => '0');
@@ -148,5 +154,31 @@ package body prbs is
 
     return ret;
   end function;
+
+  procedure prbs_next(constant poly : in prbs_state;
+                      variable state : inout prbs_state;
+                      variable data : out byte_string)
+  is
+    variable ret : byte_string(0 to data'length-1);
+    variable tmp : prbs_state(state'length-1 downto 0);
+  begin
+    assert state'length >= 8
+      report "Cannot do bytes with less than 8-bit state"
+      severity failure;
+
+    tmp := state;
+
+    for i in ret'range
+    loop
+      for j in 0 to 7
+      loop
+        ret(i)(j) := tmp(tmp'left);
+        tmp := prbs_forward(tmp, poly, 1);
+      end loop;
+    end loop;
+
+    state := tmp;
+    data := ret;
+  end procedure;
 
 end package body prbs;
