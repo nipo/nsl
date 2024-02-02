@@ -1,0 +1,20 @@
+vhdl-sources += tb.vhd
+deps += nsl_coresight.swd
+deps += nsl_coresight.memap_mapper
+deps += nsl_coresight.ap
+deps += nsl_coresight.dp
+deps += nsl_coresight.transactor
+deps += nsl_coresight.testing
+deps += nsl_simulation.driver
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.testing
+deps += nsl_bnoc.routed
+deps += nsl_clocking.async
+deps += nsl_axi.axi4_lite
+deps += nsl_axi.bram
+deps += nsl_segger.rtt
+deps += nsl_math.arith
+deps += nsl_axi.testing
+deps += nsl_data.prbs
+deps += nsl_segger.testing
+
