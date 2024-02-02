@@ -80,6 +80,7 @@ package bytestream is
   procedure write(s: inout byte_stream; d: inout byte_stream);
 
   function std_match(a, b: in byte_string) return boolean;
+  function to_01(x: in byte_string; xmap: std_ulogic := '0') return byte_string;
   
 end package bytestream;
 
@@ -399,5 +400,15 @@ package body bytestream is
     return true;
   end function;
       
+  function to_01(x: in byte_string; xmap: std_ulogic := '0') return byte_string
+  is
+    variable ret: byte_string(x'range);
+  begin
+    for i in x'range
+    loop
+      ret(i) := std_ulogic_vector(to_01(unsigned(x(i)), xmap));
+    end loop;
+    return ret;
+  end function;
 
 end package body bytestream;
