@@ -84,6 +84,32 @@ package testing is
       );
   end component;
 
+  procedure pipe_flit_get(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                          signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                          signal clock: in std_ulogic;
+                          data : out byte);
+
+  procedure pipe_read(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                      signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                      signal clock: in std_ulogic;
+                      data : out byte_string);
+
+  procedure pipe_read(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                      signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                      signal clock: in std_ulogic;
+                      data : inout byte_stream;
+                      constant stop_at: in byte);
+
+  procedure pipe_flit_put(signal req: out nsl_bnoc.pipe.pipe_req_t;
+                          signal ack: in nsl_bnoc.pipe.pipe_ack_t;
+                          signal clock: in std_ulogic;
+                          constant data : in byte);
+
+  procedure pipe_write(signal req: out nsl_bnoc.pipe.pipe_req_t;
+                       signal ack: in nsl_bnoc.pipe.pipe_ack_t;
+                       signal clock: in std_ulogic;
+                       constant data : in byte_string);
+
   procedure framed_flit_get(signal req: in nsl_bnoc.framed.framed_req;
                             signal ack: out nsl_bnoc.framed.framed_ack;
                             signal clock: in std_ulogic;
@@ -264,6 +290,14 @@ package testing is
     data : in byte_string;
     level : log_level_t := LOG_LEVEL_WARNING);
 
+  procedure framed_txn(
+    constant log_context: string;
+    variable cmd_root: inout framed_queue_root;
+    variable rsp_root: inout framed_queue_root;
+    constant cmd : in byte_string;
+    variable rsp : out byte_string;
+    constant level : log_level_t := LOG_LEVEL_WARNING);
+
   procedure framed_txn_check(
     constant log_context: string;
     variable cmd_root: inout framed_queue_root;
@@ -271,10 +305,110 @@ package testing is
     constant cmd : in byte_string;
     constant rsp : in byte_string;
     constant level : log_level_t := LOG_LEVEL_WARNING);
+
+  procedure framed_snooper(constant prefix: string;
+                           signal b: in nsl_bnoc.framed.framed_bus_t;
+                           signal clock: in std_ulogic;
+                           constant partial_timeout: natural := 32;
+                           constant clock_period: time);
   
 end package testing;
 
 package body testing is
+
+  procedure pipe_flit_get(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                          signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                          signal clock: in std_ulogic;
+                          data : out byte)
+  is
+  begin
+    while true
+    loop
+      ack.ready <= '1';
+
+      wait until rising_edge(clock);
+
+      if req.valid = '1' then
+        data := req.data;
+        wait until falling_edge(clock);
+        ack.ready <= '0';
+        return;
+      end if;
+    end loop;
+  end procedure;
+
+  procedure pipe_read(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                      signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                      signal clock: in std_ulogic;
+                      data : out byte_string)
+  is
+    variable ret: byte_string(data'range);
+    variable item: byte;
+  begin
+    for i in ret'range
+    loop
+      pipe_flit_get(req, ack, clock, item);
+      ret(i) := item;
+    end loop;
+
+    data := ret;
+  end procedure;
+
+  procedure pipe_read(signal req: in nsl_bnoc.pipe.pipe_req_t;
+                      signal ack: out nsl_bnoc.pipe.pipe_ack_t;
+                      signal clock: in std_ulogic;
+                      data : inout byte_stream;
+                      constant stop_at: in byte)
+  is
+    variable ret: byte_stream;
+    variable item: byte;
+  begin
+    ret := new byte_string(1 to 0);
+
+    while true
+    loop
+      pipe_flit_get(req, ack, clock, item);
+      write(ret, item);
+      if item = stop_at then
+        data := ret;
+        return;
+      end if;
+    end loop;
+  end procedure;
+
+  procedure pipe_flit_put(signal req: out nsl_bnoc.pipe.pipe_req_t;
+                          signal ack: in nsl_bnoc.pipe.pipe_ack_t;
+                          signal clock: in std_ulogic;
+                          constant data : in byte)
+  is
+  begin
+    while true
+    loop
+      req.valid <= '1';
+      req.data <= data;
+
+      wait until rising_edge(clock);
+
+      if ack.ready = '1' then
+        wait until falling_edge(clock);
+        req.valid <= '0';
+        return;
+      end if;
+    end loop;
+  end procedure;
+
+  procedure pipe_write(signal req: out nsl_bnoc.pipe.pipe_req_t;
+                       signal ack: in nsl_bnoc.pipe.pipe_ack_t;
+                       signal clock: in std_ulogic;
+                       constant data : in byte_string)
+  is
+    variable item: byte;
+  begin
+    for i in data'range
+    loop
+      pipe_flit_put(req, ack, clock, data(i));
+    end loop;
+  end procedure;
 
   procedure framed_flit_get(signal req: in nsl_bnoc.framed.framed_req;
                             signal ack: out nsl_bnoc.framed.framed_ack;
@@ -439,11 +573,6 @@ package body testing is
           & " *** Expected");
       return;
     end if;
-
-    log_info(log_context & ": " &
-             " > " & to_string(rx_data.all)
-             & " OK");
-
   end procedure;
 
   procedure committed_put(signal req: out nsl_bnoc.committed.committed_req;
@@ -759,10 +888,29 @@ package body testing is
           & " *** Expected");
       return;
     end if;
+  end procedure;
 
-    log_info(log_context & ": " &
-             " > " & to_string(rx_data)
-             & " OK");
+  procedure framed_txn(
+    constant log_context: string;
+    variable cmd_root: inout framed_queue_root;
+    variable rsp_root: inout framed_queue_root;
+    constant cmd : in byte_string;
+    variable rsp : out byte_string;
+    constant level : log_level_t := LOG_LEVEL_WARNING)
+  is
+    variable rx_data: byte_stream;
+  begin
+    framed_queue_put(cmd_root, cmd);
+    framed_queue_get(rsp_root, rx_data);
+
+    if rx_data'length /= rsp'length then
+      log(level, log_context & " unexpected response size "
+          & "(expected" & to_string(rsp'length) & ", got "& to_string (rx_data.all'length) &") ");
+    else
+      rsp := rx_data.all;
+    end if;
+
+    deallocate(rx_data);
   end procedure;
 
   procedure framed_txn_check(
@@ -773,10 +921,50 @@ package body testing is
     constant rsp : in byte_string;
     constant level : log_level_t := LOG_LEVEL_WARNING)
   is
+    variable rx_data: byte_string(rsp'range);
   begin
-    log(LOG_LEVEL_INFO, log_context & ": " & " < " & to_string(cmd));
-    framed_queue_put(cmd_root, cmd);
-    framed_queue_check(log_context, rsp_root, rsp, level);
+    framed_txn(log_context, cmd_root, rsp_root, cmd, rx_data, level);
+    framed_assert(log_context, rx_data, rsp, level);
+  end procedure;
+
+  procedure framed_snooper(constant prefix: string;
+                           signal b: in nsl_bnoc.framed.framed_bus_t;
+                           signal clock: in std_ulogic;
+                           constant partial_timeout: natural := 32;
+                           constant clock_period: time)
+  is
+    variable payload: byte_stream;
+    variable timeout: natural;
+  begin
+    payload := new byte_string(1 to 0);
+
+    while true
+    loop
+      wait until rising_edge(clock);
+      wait for clock_period * 9 / 10;
+
+      if b.req.valid = '1' and b.ack.ready = '1' then
+        timeout := partial_timeout;
+        write(payload, b.req.data);
+
+        if b.req.last = '1' then
+          log_info(prefix & " < " & to_string(payload.all));
+          clear(payload);
+        end if;
+      end if;
+
+      if timeout /= 0 then
+        timeout := timeout - 1;
+      elsif payload.all'length /= 0 then
+        timeout := partial_timeout;
+        if b.ack.ready = '0' then
+          log_info(prefix & " < " & to_string(payload.all) & "... (slave not ready)");
+        else
+          log_info(prefix & " < " & to_string(payload.all) & "... (master not ready)");
+        end if;
+        clear(payload);
+      end if;
+    end loop;
   end procedure;
 
 end package body;
