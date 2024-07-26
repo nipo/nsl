@@ -74,8 +74,8 @@ begin
 
   sck_sync: nsl_clocking.async.async_input
     generic map(
-      sample_count_c => 1,
-      debounce_count_c => 0
+      sample_count_c => 0,
+      debounce_count_c => 2
       )
     port map(
       clock_i => clock_i,
