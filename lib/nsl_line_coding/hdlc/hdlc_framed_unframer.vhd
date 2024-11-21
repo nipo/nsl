@@ -26,7 +26,7 @@ end entity;
 
 architecture beh of hdlc_framed_unframer is
 
-  signal comm_s: committed_bus;
+  signal comm_s, filt_s: committed_bus;
   
 begin
 
@@ -42,6 +42,18 @@ begin
       frame_i => comm_s.ack
       );
 
+  filter: nsl_bnoc.committed.committed_filter
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i => clock_i,
+
+      in_i => comm_s.req,
+      in_o => comm_s.ack,
+
+      out_o => filt_s.req,
+      out_i => filt_s.ack
+      );
+  
   unpack: nsl_bnoc.packetizer.committed_unpacketizer
     generic map(
       header_length_c => 2
@@ -50,8 +62,8 @@ begin
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
-      packet_i => comm_s.req,
-      packet_o => comm_s.ack,
+      packet_i => filt_s.req,
+      packet_o => filt_s.ack,
       frame_o => framed_o,
       frame_i => framed_i
       );
