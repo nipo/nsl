@@ -313,6 +313,20 @@ package axi4_mm is
   function to_string(cfg: config_t; w: write_data_t) return string;
   function to_string(cfg: config_t; w: write_response_t) return string;
   function to_string(cfg: config_t; r: read_data_t) return string;
+
+  component axi4_mm_ram is
+    generic(
+      config_c : config_t;
+      word_count_l2_c : positive
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      axi_i : in master_t;
+      axi_o : out slave_t
+      );
+  end component;
   
 end package;
 
