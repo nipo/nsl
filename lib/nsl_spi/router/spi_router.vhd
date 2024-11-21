@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_spi, nsl_io;
+use nsl_io.io.all;
 
 entity spi_router is
   generic(
@@ -32,7 +33,7 @@ architecture beh of spi_router is
 
   signal rx_data : std_ulogic_vector(7 downto 0);
   signal rx_strobe : std_ulogic;
-  signal selector_miso : std_ulogic;
+  signal selector_miso : nsl_io.io.tristated;
   
 begin
 
@@ -80,7 +81,7 @@ begin
     spi_o.miso <= selector_miso;
 
     if r.selected and r.valid then
-      spi_o.miso <= miso_i(r.target);
+      spi_o.miso <= to_tristated(miso_i(r.target));
     end if;
   end process;
 
