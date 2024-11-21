@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library work;
+library nsl_io;
 
 entity clock_output_se_divided is
   generic(
@@ -67,11 +67,11 @@ begin
 
   needs_ddr: if (divisor_c mod 2) = 1
   generate
-    signal clock_diff_s : work.diff.diff_pair;
+    signal clock_diff_s : nsl_io.diff.diff_pair;
   begin
-    clock_diff_s <= work.diff.to_diff(clock_i);
+    clock_diff_s <= nsl_io.diff.to_diff(clock_i);
     
-    output: work.ddr.ddr_output
+    output: nsl_io.ddr.ddr_output
       port map(
         clock_i => clock_diff_s,
         d_i(0) => pattern_s(0),
