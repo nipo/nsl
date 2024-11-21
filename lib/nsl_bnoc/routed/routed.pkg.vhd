@@ -207,7 +207,8 @@ package routed is
   -- here.
   component routed_framed_gateway is
     generic(
-      source_id_c : component_id
+      source_id_c : component_id;
+      add_tag_c : boolean := true
       );
     port(
       reset_n_i   : in  std_ulogic;

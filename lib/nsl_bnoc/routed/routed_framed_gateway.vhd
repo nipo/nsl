@@ -6,7 +6,8 @@ library nsl_bnoc;
 
 entity routed_framed_gateway is
   generic(
-      source_id_c : nsl_bnoc.routed.component_id
+      source_id_c : nsl_bnoc.routed.component_id;
+      add_tag_c : boolean := true
     );
   port(
     reset_n_i : in std_ulogic;
@@ -71,10 +72,11 @@ begin
 
       when ST_ROUTE =>
         if routed_in_i.valid = '1' then
-
           -- ignore short frames
           if routed_in_i.last = '1' then
             rin.r2f_state <= ST_IDLE;
+          elsif not add_tag_c then
+            rin.r2f_state <= ST_FORWARD;
           else
             rin.r2f_state <= ST_TAG;
           end if;
@@ -109,7 +111,11 @@ begin
 
       when ST_ROUTE =>
         if routed_out_i.ready = '1' then
-          rin.f2r_state <= ST_TAG;
+          if not add_tag_c then
+            rin.f2r_state <= ST_FORWARD;
+          else
+            rin.f2r_state <= ST_TAG;
+          end if;
         end if;
         
       when ST_TAG =>
