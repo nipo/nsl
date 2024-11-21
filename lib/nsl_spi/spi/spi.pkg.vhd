@@ -55,6 +55,11 @@ package spi is
     i: spi_master_i;
   end record;    
 
+  type spi_slave_i_vector is array (integer range <>) of spi_slave_i;
+  type spi_slave_o_vector is array (integer range <>) of spi_slave_o;
+  type spi_master_i_vector is array (integer range <>) of spi_master_i;
+  type spi_master_o_vector is array (integer range <>) of spi_master_o;
+
   function to_slave(m: spi_master_o) return spi_slave_i;
   function to_master(s: spi_slave_o) return spi_master_i;
   
