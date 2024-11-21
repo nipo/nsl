@@ -88,8 +88,8 @@ package delay is
       is_ddr_c: boolean := true
       );
     port(
-      data_i : in std_ulogic_vector(0 to width_c);
-      data_o : out std_ulogic_vector(0 to width_c)
+      data_i : in std_ulogic_vector(0 to width_c-1);
+      data_o : out std_ulogic_vector(0 to width_c-1)
       );
   end component;
 
@@ -100,8 +100,8 @@ package delay is
       is_ddr_c: boolean := true
       );
     port(
-      data_i : in std_ulogic_vector(0 to width_c);
-      data_o : out std_ulogic_vector(0 to width_c)
+      data_i : in std_ulogic_vector(0 to width_c-1);
+      data_o : out std_ulogic_vector(0 to width_c-1)
       );
   end component;
 
