@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_data;
+library nsl_spdif, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use work.blocker.all;
+use nsl_spdif.blocker.all;
 
 entity spdif_tx is
   port(
@@ -36,10 +36,10 @@ architecture beh of spdif_tx is
 
   signal s_framer_block_start : std_ulogic;
   signal s_framer_channel : std_ulogic;
-  signal s_framer_frame : work.framer.frame_t;
+  signal s_framer_frame : nsl_spdif.framer.frame_t;
   signal s_framer_ready : std_ulogic;
 
-  signal s_ser_symbol : work.serdes.spdif_symbol_t;
+  signal s_ser_symbol : nsl_spdif.serdes.spdif_symbol_t;
   signal s_ser_ready : std_ulogic;
   signal block_user_s, block_channel_status_s: std_ulogic_vector(0 to 191);
 
@@ -48,7 +48,7 @@ begin
   block_user_s <= bitswap(std_ulogic_vector(from_be(block_user_i)));
   block_channel_status_s <= bitswap(std_ulogic_vector(from_be(block_channel_status_i)));
   
-  blocker: work.blocker.block_tx
+  blocker: nsl_spdif.blocker.block_tx
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -70,7 +70,7 @@ begin
       ready_i => s_framer_ready
       );
 
-  framer: work.framer.spdif_framer
+  framer: nsl_spdif.framer.spdif_framer
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -84,7 +84,7 @@ begin
       ready_i => s_ser_ready
       );
   
-  serdes: work.serdes.spdif_serializer
+  serdes: nsl_spdif.serdes.spdif_serializer
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,

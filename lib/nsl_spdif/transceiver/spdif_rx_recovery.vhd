@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_data;
-use work.blocker.all;
+library nsl_spdif, nsl_data;
+use nsl_spdif.blocker.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 
@@ -39,14 +39,14 @@ end entity;
 
 architecture beh of spdif_rx_recovery is
 
-  signal s_des_symbol : work.serdes.spdif_symbol_t;
+  signal s_des_symbol : nsl_spdif.serdes.spdif_symbol_t;
   signal s_des_synced : std_ulogic;
   signal s_des_valid : std_ulogic;
 
   signal s_unf_synced : std_ulogic;
   signal s_unf_block_start : std_ulogic;
   signal s_unf_channel : std_ulogic;
-  signal s_unf_frame : work.framer.frame_t;
+  signal s_unf_frame : nsl_spdif.framer.frame_t;
   signal s_unf_parity_ok : std_ulogic;
   signal s_unf_valid : std_ulogic;
   signal block_user_s, block_channel_status_s: std_ulogic_vector(0 to 191);
@@ -56,7 +56,7 @@ begin
   block_user_o <= to_be(unsigned(bitswap(block_user_s)));
   block_channel_status_o <= to_be(unsigned(bitswap(block_channel_status_s)));
   
-  serdes: work.serdes.spdif_deserializer
+  serdes: nsl_spdif.serdes.spdif_deserializer
     generic map(
       clock_i_hz_c => clock_i_hz_c,
       data_rate_c => data_rate_c
@@ -74,7 +74,7 @@ begin
       valid_o => s_des_valid
       );
 
-  framer: work.framer.spdif_unframer
+  framer: nsl_spdif.framer.spdif_unframer
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -91,7 +91,7 @@ begin
       valid_o => s_unf_valid
       );
 
-  blocker: work.blocker.block_rx
+  blocker: nsl_spdif.blocker.block_rx
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
