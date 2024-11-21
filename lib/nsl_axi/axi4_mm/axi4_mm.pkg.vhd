@@ -6,6 +6,7 @@ library nsl_logic, nsl_math, nsl_data;
 use nsl_logic.bool.all;
 use nsl_logic.logic.all;
 use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 use nsl_data.text.all;
 
 package axi4_mm is
@@ -23,11 +24,13 @@ package axi4_mm is
   constant cache_width_c: natural := 4;
   constant prot_width_c: natural := 3;
   constant qos_width_c: natural := 4;
+
+  constant max_data_byte_count_l2_c : natural := 2**max_data_bus_width_l2_l2_c-1;
   
-  subtype address_t is unsigned(max_address_width_c - 1 downto 0);
+  subtype addr_t is unsigned(max_address_width_c - 1 downto 0);
   subtype user_t is std_ulogic_vector(max_user_width_c - 1 downto 0);
-  subtype strobe_t is std_ulogic_vector(2**max_data_bus_width_l2_l2_c - 1 downto 0);
-  subtype data_t is byte_string(2**max_data_bus_width_l2_l2_c-1 downto 0);
+  subtype strobe_t is std_ulogic_vector(0 to 2**max_data_byte_count_l2_c - 1);
+  subtype data_t is byte_string(0 to 2**max_data_byte_count_l2_c-1);
   subtype region_t is std_ulogic_vector(region_width_c - 1 downto 0);
   subtype id_t is std_ulogic_vector(max_id_width_c - 1 downto 0);
   subtype len_t is unsigned(max_len_width_c - 1 downto 0);
@@ -90,15 +93,15 @@ package axi4_mm is
   function to_resp(cfg: config_t; r: resp_t) return resp_enum_t;
   function to_logic(cfg: config_t; r: resp_enum_t) return resp_t;
 
-  type ack_t is
+  type handshake_t is
   record
     ready: std_ulogic;
   end record;
 
-  type address_m_t is
+  type address_t is
   record
     id: id_t;
-    addr: address_t;
+    addr: addr_t;
     len_m1: len_t;
     size_l2: size_t;
     burst: burst_t;
@@ -111,12 +114,12 @@ package axi4_mm is
     valid: std_ulogic;
   end record;
 
-  function address_defaults(cfg: config_t) return address_m_t;
+  function address_defaults(cfg: config_t) return address_t;
   
   type transaction_t is
   record
     id: id_t;
-    addr, saturation, const_mask: address_t;
+    addr, saturation, const_mask: addr_t;
     len_m1: len_t;
     size_l2: size_t;
     burst: burst_enum_t;
@@ -128,7 +131,7 @@ package axi4_mm is
     user: user_t;
     valid: std_ulogic;
   end record;
-  function transaction(cfg: config_t; addr: address_m_t) return transaction_t;
+  function transaction(cfg: config_t; addr: address_t) return transaction_t;
   function step(cfg: config_t; txn: transaction_t) return transaction_t;
 
   function id(cfg: config_t; txn: transaction_t) return std_ulogic_vector;
@@ -144,10 +147,12 @@ package axi4_mm is
   function is_valid(cfg: config_t; txn: transaction_t) return boolean;
   function is_last(cfg: config_t; txn: transaction_t) return boolean;
   function length_m1(cfg: config_t; txn: transaction_t) return unsigned;
-  
-  subtype address_s_t is ack_t;
 
-  type write_data_m_t is
+  function handshake_defaults(cfg: config_t) return handshake_t;
+
+  function accept(cfg: config_t; ready: boolean) return handshake_t;
+
+  type write_data_t is
   record
     data: data_t;
     strb: strobe_t;
@@ -156,11 +161,9 @@ package axi4_mm is
     valid: std_ulogic;
   end record;
 
-  function write_data_defaults(cfg: config_t) return write_data_m_t;
+  function write_data_defaults(cfg: config_t) return write_data_t;
 
-  subtype write_data_s_t is ack_t;
-
-  type write_response_s_t is
+  type write_response_t is
   record
     id: id_t;
     resp: resp_t;
@@ -168,11 +171,9 @@ package axi4_mm is
     valid: std_ulogic;
   end record;
 
-  function write_response_defaults(cfg: config_t) return write_response_s_t;
+  function write_response_defaults(cfg: config_t) return write_response_t;
 
-  subtype write_response_m_t is ack_t;
-
-  type read_data_s_t is
+  type read_data_t is
   record
     id: id_t;
     data: data_t;
@@ -182,56 +183,54 @@ package axi4_mm is
     valid: std_ulogic;
   end record;
 
-  function read_data_defaults(cfg: config_t) return read_data_s_t;
+  function read_data_defaults(cfg: config_t) return read_data_t;
 
-  subtype read_data_m_t is ack_t;
-
-  type m_t is
+  type master_t is
   record
-    aw: address_m_t;
-    w: write_data_m_t;
-    b: write_response_m_t;
-    ar: address_m_t;
-    r: read_data_m_t;
+    aw: address_t;
+    w: write_data_t;
+    b: handshake_t;
+    ar: address_t;
+    r: handshake_t;
   end record;
 
-  type s_t is
+  type slave_t is
   record
-    aw: address_s_t;
-    w: write_data_s_t;
-    b: write_response_s_t;
-    ar: address_s_t;
-    r: read_data_s_t;
+    aw: handshake_t;
+    w: handshake_t;
+    b: write_response_t;
+    ar: handshake_t;
+    r: read_data_t;
   end record;
 
   type bus_t is
   record
-    m: m_t;
-    s: s_t;
+    m: master_t;
+    s: slave_t;
   end record;
 
-  type m_vector is array (natural range <>) of m_t;
-  type s_vector is array (natural range <>) of s_t;
+  type m_vector is array (natural range <>) of master_t;
+  type s_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
 
   constant na_suv: std_ulogic_vector := (1 to 0 => '-');
   constant na_u: unsigned := (1 to 0 => '-');
 
-  function is_ready(cfg: config_t; ack: ack_t) return boolean;
+  function is_ready(cfg: config_t; ack: handshake_t) return boolean;
 
-  function id(cfg: config_t; addr: address_m_t) return std_ulogic_vector;
-  function address(cfg: config_t; addr: address_m_t;
+  function id(cfg: config_t; addr: address_t) return std_ulogic_vector;
+  function address(cfg: config_t; addr: address_t;
                    lsb: natural := 0) return unsigned;
-  function length_m1(cfg: config_t; addr: address_m_t; w: natural) return unsigned;
-  function size_l2(cfg: config_t; addr: address_m_t) return unsigned;
-  function burst(cfg: config_t; addr: address_m_t) return burst_enum_t;
-  function lock(cfg: config_t; addr: address_m_t) return lock_enum_t;
-  function cache(cfg: config_t; addr: address_m_t) return cache_t;
-  function prot(cfg: config_t; addr: address_m_t) return prot_t;
-  function qos(cfg: config_t; addr: address_m_t) return qos_t;
-  function region(cfg: config_t; addr: address_m_t) return region_t;
-  function user(cfg: config_t; addr: address_m_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; addr: address_m_t) return boolean;
+  function length_m1(cfg: config_t; addr: address_t; w: natural) return unsigned;
+  function size_l2(cfg: config_t; addr: address_t) return unsigned;
+  function burst(cfg: config_t; addr: address_t) return burst_enum_t;
+  function lock(cfg: config_t; addr: address_t) return lock_enum_t;
+  function cache(cfg: config_t; addr: address_t) return cache_t;
+  function prot(cfg: config_t; addr: address_t) return prot_t;
+  function qos(cfg: config_t; addr: address_t) return qos_t;
+  function region(cfg: config_t; addr: address_t) return region_t;
+  function user(cfg: config_t; addr: address_t) return std_ulogic_vector;
+  function is_valid(cfg: config_t; addr: address_t) return boolean;
 
   function address(cfg: config_t;
                    id: std_ulogic_vector := na_suv;
@@ -245,56 +244,75 @@ package axi4_mm is
                    qos: std_ulogic_vector := na_suv;
                    region: std_ulogic_vector := na_suv;
                    user: std_ulogic_vector := na_suv;
-                   valid: boolean := true) return address_m_t;
+                   valid: boolean := true) return address_t;
                      
-  function data(cfg: config_t; write_data: write_data_m_t) return byte_string;
-  function strb(cfg: config_t; write_data: write_data_m_t) return std_ulogic_vector;
-  function is_last(cfg: config_t; write_data: write_data_m_t) return boolean;
-  function user(cfg: config_t; write_data: write_data_m_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; write_data: write_data_m_t) return boolean;
+  function bytes(cfg: config_t; write_data: write_data_t) return byte_string;
+  function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
+  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
+  function is_last(cfg: config_t; write_data: write_data_t) return boolean;
+  function user(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
+  function is_valid(cfg: config_t; write_data: write_data_t) return boolean;
 
   function write_data(cfg: config_t;
-                      data: byte_string;
+                      bytes: byte_string;
                       strb: std_ulogic_vector := na_suv;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
-                      valid: boolean := true) return write_data_m_t;
+                      valid: boolean := true) return write_data_t;
 
-  function id(cfg: config_t; write_response: write_response_s_t) return std_ulogic_vector;
-  function resp(cfg: config_t; write_response: write_response_s_t) return resp_enum_t;
-  function user(cfg: config_t; write_response: write_response_s_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; write_response: write_response_s_t) return boolean;
+  function write_data(cfg: config_t;
+                      value: unsigned := na_u;
+                      endian: endian_t := ENDIAN_LITTLE;
+                      strb: std_ulogic_vector := na_suv;
+                      user: std_ulogic_vector := na_suv;
+                      last: boolean := false;
+                      valid: boolean := true) return write_data_t;
+
+  function id(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
+  function resp(cfg: config_t; write_response: write_response_t) return resp_enum_t;
+  function user(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
+  function is_valid(cfg: config_t; write_response: write_response_t) return boolean;
 
   function write_response(cfg: config_t;
                           id: std_ulogic_vector := na_suv;
                           resp: resp_enum_t := RESP_OKAY;
                           user: std_ulogic_vector := na_suv;
-                          valid: boolean := true) return write_response_s_t;
+                          valid: boolean := true) return write_response_t;
 
-  function id(cfg: config_t; read_data: read_data_s_t) return std_ulogic_vector;
-  function data(cfg: config_t; read_data: read_data_s_t) return byte_string;
-  function resp(cfg: config_t; read_data: read_data_s_t) return resp_enum_t;
-  function is_last(cfg: config_t; read_data: read_data_s_t) return boolean;
-  function user(cfg: config_t; read_data: read_data_s_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; read_data: read_data_s_t) return boolean;
+  function id(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
+  function bytes(cfg: config_t; read_data: read_data_t) return byte_string;
+  function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
+  function resp(cfg: config_t; read_data: read_data_t) return resp_enum_t;
+  function is_last(cfg: config_t; read_data: read_data_t) return boolean;
+  function user(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
+  function is_valid(cfg: config_t; read_data: read_data_t) return boolean;
 
   function read_data(cfg: config_t;
                      id: std_ulogic_vector := na_suv;
-                     data: byte_string := null_byte_string;
+                     bytes: byte_string := null_byte_string;
                      resp: resp_enum_t := RESP_OKAY;
                      user: std_ulogic_vector := na_suv;
                      last: boolean := false;
-                     valid: boolean := true) return read_data_s_t;
+                     valid: boolean := true) return read_data_t;
+
+  function read_data(cfg: config_t;
+                     id: std_ulogic_vector := na_suv;
+                     value: unsigned := na_u;
+                     endian: endian_t := ENDIAN_LITTLE;
+                     resp: resp_enum_t := RESP_OKAY;
+                     user: std_ulogic_vector := na_suv;
+                     last: boolean := false;
+                     valid: boolean := true) return read_data_t;
 
   function to_string(b: burst_enum_t) return string;
   function to_string(l: lock_enum_t) return string;
   function to_string(r: resp_enum_t) return string;
   function to_string(cfg: config_t) return string;
-  function to_string(cfg: config_t; a: address_m_t) return string;
+  function to_string(cfg: config_t; a: address_t) return string;
   function to_string(cfg: config_t; t: transaction_t) return string;
-  function to_string(cfg: config_t; w: write_data_m_t) return string;
-  function to_string(cfg: config_t; w: write_response_s_t) return string;
-  function to_string(cfg: config_t; r: read_data_s_t) return string;
+  function to_string(cfg: config_t; w: write_data_t) return string;
+  function to_string(cfg: config_t; w: write_response_t) return string;
+  function to_string(cfg: config_t; r: read_data_t) return string;
   
 end package;
 
@@ -376,20 +394,20 @@ package body axi4_mm is
     end case;
   end function;
 
-  function id(cfg: config_t; addr: address_m_t) return std_ulogic_vector
+  function id(cfg: config_t; addr: address_t) return std_ulogic_vector
   is
   begin
     return addr.id(cfg.id_width-1 downto 0);
   end function;
 
-  function address(cfg: config_t; addr: address_m_t;
+  function address(cfg: config_t; addr: address_t;
                    lsb: natural := 0) return unsigned
   is
   begin
     return addr.addr(cfg.address_width-1 downto lsb);
   end function;
 
-  function length_m1(cfg: config_t; addr: address_m_t; w: natural) return unsigned
+  function length_m1(cfg: config_t; addr: address_t; w: natural) return unsigned
   is
   begin
     if cfg.len_width = 0 then
@@ -399,7 +417,7 @@ package body axi4_mm is
     end if;
   end function;
 
-  function size_l2(cfg: config_t; addr: address_m_t) return unsigned
+  function size_l2(cfg: config_t; addr: address_t) return unsigned
   is
   begin
     if cfg.has_size then
@@ -409,7 +427,7 @@ package body axi4_mm is
     end if;
   end function;
 
-  function burst(cfg: config_t; addr: address_m_t) return burst_enum_t
+  function burst(cfg: config_t; addr: address_t) return burst_enum_t
   is
   begin
     if cfg.has_burst then
@@ -419,13 +437,13 @@ package body axi4_mm is
     end if;
   end function;
 
-  function lock(cfg: config_t; addr: address_m_t) return lock_enum_t
+  function lock(cfg: config_t; addr: address_t) return lock_enum_t
   is
   begin
     return to_lock(cfg, addr.lock);
   end function;
 
-  function cache(cfg: config_t; addr: address_m_t) return cache_t
+  function cache(cfg: config_t; addr: address_t) return cache_t
   is
   begin
     if cfg.has_cache then
@@ -435,13 +453,13 @@ package body axi4_mm is
     end if;
   end function;
 
-  function prot(cfg: config_t; addr: address_m_t) return prot_t
+  function prot(cfg: config_t; addr: address_t) return prot_t
   is
   begin
     return addr.prot;
   end function;
 
-  function qos(cfg: config_t; addr: address_m_t) return qos_t
+  function qos(cfg: config_t; addr: address_t) return qos_t
   is
   begin
     if cfg.has_qos then
@@ -451,7 +469,7 @@ package body axi4_mm is
     end if;
   end function;
 
-  function region(cfg: config_t; addr: address_m_t) return region_t
+  function region(cfg: config_t; addr: address_t) return region_t
   is
   begin
     if cfg.has_region then
@@ -461,117 +479,146 @@ package body axi4_mm is
     end if;
   end function;
 
-  function user(cfg: config_t; addr: address_m_t) return std_ulogic_vector
+  function user(cfg: config_t; addr: address_t) return std_ulogic_vector
   is
   begin
     return addr.user(cfg.user_width-1 downto 0);
   end function;
 
-  function is_valid(cfg: config_t; addr: address_m_t) return boolean
+  function is_valid(cfg: config_t; addr: address_t) return boolean
   is
   begin
     return addr.valid = '1';
   end function;
 
-  function is_ready(cfg: config_t; ack: ack_t) return boolean
+  function is_ready(cfg: config_t; ack: handshake_t) return boolean
   is
   begin
     return ack.ready = '1';
   end function;
 
-  function data(cfg: config_t; write_data: write_data_m_t) return byte_string
+  function handshake_defaults(cfg: config_t) return handshake_t
   is
   begin
-    return write_data.data(2**cfg.data_bus_width_l2-1 downto 0);
-  end function;
+    return handshake_t'(ready => '0');
+  end function; 
 
-  function strb(cfg: config_t; write_data: write_data_m_t) return std_ulogic_vector
+  function accept(cfg: config_t; ready: boolean) return handshake_t
+  is
+    variable ret: handshake_t := handshake_defaults(cfg);
+  begin
+    if ready then
+      ret.ready := '1';
+    end if;
+
+    return ret;
+  end function; 
+       
+  function bytes(cfg: config_t; write_data: write_data_t) return byte_string
   is
   begin
-    return write_data.strb(2**cfg.data_bus_width_l2-1 downto 0);
+    return write_data.data(0 to 2**cfg.data_bus_width_l2-1);
   end function;
 
-  function is_last(cfg: config_t; write_data: write_data_m_t) return boolean
+  function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
+  is
+  begin
+    return from_endian(bytes(cfg, write_data), endian);
+  end function;
+
+  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector
+  is
+  begin
+    return write_data.strb(0 to 2**cfg.data_bus_width_l2-1);
+  end function;
+
+  function is_last(cfg: config_t; write_data: write_data_t) return boolean
   is
   begin
     return write_data.last = '1';
   end function;
 
-  function user(cfg: config_t; write_data: write_data_m_t) return std_ulogic_vector
+  function user(cfg: config_t; write_data: write_data_t) return std_ulogic_vector
   is
   begin
     return write_data.user(cfg.user_width-1 downto 0);
   end function;
 
-  function is_valid(cfg: config_t; write_data: write_data_m_t) return boolean
+  function is_valid(cfg: config_t; write_data: write_data_t) return boolean
   is
   begin
     return write_data.valid = '1';
   end function;
 
-  function id(cfg: config_t; write_response: write_response_s_t) return std_ulogic_vector
+  function id(cfg: config_t; write_response: write_response_t) return std_ulogic_vector
   is
   begin
     return write_response.id(cfg.id_width-1 downto 0);
   end function;
 
-  function resp(cfg: config_t; write_response: write_response_s_t) return resp_enum_t
+  function resp(cfg: config_t; write_response: write_response_t) return resp_enum_t
   is
   begin
     return to_resp(cfg, write_response.resp);
   end function;
 
-  function user(cfg: config_t; write_response: write_response_s_t) return std_ulogic_vector
+  function user(cfg: config_t; write_response: write_response_t) return std_ulogic_vector
   is
   begin
     return write_response.user(cfg.user_width-1 downto 0);
   end function;
 
-  function is_valid(cfg: config_t; write_response: write_response_s_t) return boolean
+  function is_valid(cfg: config_t; write_response: write_response_t) return boolean
   is
   begin
     return write_response.valid = '1';
   end function;
 
-  function id(cfg: config_t; read_data: read_data_s_t) return std_ulogic_vector
+  function id(cfg: config_t; read_data: read_data_t) return std_ulogic_vector
   is
   begin
     return read_data.id(cfg.id_width-1 downto 0);
   end function;
 
-  function data(cfg: config_t; read_data: read_data_s_t) return byte_string
+  function bytes(cfg: config_t; read_data: read_data_t) return byte_string
   is
   begin
-    return read_data.data(2**cfg.data_bus_width_l2-1 downto 0);
+    return read_data.data(0 to 2**cfg.data_bus_width_l2-1);
   end function;
 
-  function resp(cfg: config_t; read_data: read_data_s_t) return resp_enum_t
+  function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
+  is
+  begin
+    return from_endian(bytes(cfg, read_data), endian);
+  end function;
+
+  function resp(cfg: config_t; read_data: read_data_t) return resp_enum_t
   is
   begin
     return to_resp(cfg, read_data.resp);
   end function;
 
-  function is_last(cfg: config_t; read_data: read_data_s_t) return boolean
+  function is_last(cfg: config_t; read_data: read_data_t) return boolean
   is
   begin
     return read_data.last = '1';
   end function;
 
-  function user(cfg: config_t; read_data: read_data_s_t) return std_ulogic_vector
+  function user(cfg: config_t; read_data: read_data_t) return std_ulogic_vector
   is
   begin
     return read_data.user(cfg.user_width-1 downto 0);
   end function;
 
-  function is_valid(cfg: config_t; read_data: read_data_s_t) return boolean
+  function is_valid(cfg: config_t; read_data: read_data_t) return boolean
   is
   begin
     return read_data.valid = '1';
   end function;
 
-  function address_defaults(cfg: config_t) return address_m_t
+  function address_defaults(cfg: config_t) return address_t
   is
-    variable ret: address_m_t;
+    variable ret: address_t;
   begin
     ret.id := (others => '0');
     ret.addr := (others => '-');
@@ -589,9 +636,9 @@ package body axi4_mm is
     return ret;
   end function;
     
-  function write_data_defaults(cfg: config_t) return write_data_m_t
+  function write_data_defaults(cfg: config_t) return write_data_t
   is
-    variable ret: write_data_m_t;
+    variable ret: write_data_t;
   begin
     ret.data := (others => (dontcare_byte_c));
     ret.strb := (others => '1');
@@ -602,9 +649,9 @@ package body axi4_mm is
     return ret;
   end function;
 
-  function write_response_defaults(cfg: config_t) return write_response_s_t
+  function write_response_defaults(cfg: config_t) return write_response_t
   is
-    variable ret: write_response_s_t;
+    variable ret: write_response_t;
   begin
     ret.id := (others => '0');
     ret.resp := "00";
@@ -614,9 +661,9 @@ package body axi4_mm is
     return ret;
   end function;
 
-  function read_data_defaults(cfg: config_t) return read_data_s_t
+  function read_data_defaults(cfg: config_t) return read_data_t
   is
-    variable ret: read_data_s_t;
+    variable ret: read_data_t;
   begin
     ret.id := (others => '0');
     ret.data := (others => (dontcare_byte_c));
@@ -641,9 +688,9 @@ package body axi4_mm is
                    qos: std_ulogic_vector := na_suv;
                    region: std_ulogic_vector := na_suv;
                    user: std_ulogic_vector := na_suv;
-                   valid: boolean := true) return address_m_t
+                   valid: boolean := true) return address_t
   is
-    variable ret : address_m_t := address_defaults(cfg);
+    variable ret : address_t := address_defaults(cfg);
   begin
     if cfg.id_width /= 0 and id'length /= 0 then
       assert cfg.id_width = id'length
@@ -722,26 +769,26 @@ package body axi4_mm is
   end function;
 
   function write_data(cfg: config_t;
-                      data: byte_string;
+                      bytes: byte_string;
                       strb: std_ulogic_vector := na_suv;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
-                      valid: boolean := true) return write_data_m_t
+                      valid: boolean := true) return write_data_t
   is
-    variable ret: write_data_m_t := write_data_defaults(cfg);
+    variable ret: write_data_t := write_data_defaults(cfg);
   begin
-    if data'length /= 0 then
-      assert 2**cfg.data_bus_width_l2 = data'length
+    if bytes'length /= 0 then
+      assert 2**cfg.data_bus_width_l2 = bytes'length
         report "Bad data vector passed"
         severity failure;
-      ret.data(data'length-1 downto 0) := data;
+      ret.data(0 to bytes'length-1) := bytes;
     end if;
 
     if strb'length /= 0 then
       assert 2**cfg.data_bus_width_l2 = strb'length
         report "Bad strobe vector passed"
         severity failure;
-      ret.strb(strb'length-1 downto 0) := strb;
+      ret.strb(0 to strb'length-1) := strb;
     end if;
 
     if cfg.user_width /= 0 and user'length /= 0 then
@@ -757,13 +804,26 @@ package body axi4_mm is
     return ret;
   end function;
 
+ 
+  function write_data(cfg: config_t;
+                      value: unsigned := na_u;
+                      endian: endian_t := ENDIAN_LITTLE;
+                      strb: std_ulogic_vector := na_suv;
+                      user: std_ulogic_vector := na_suv;
+                      last: boolean := false;
+                      valid: boolean := true) return write_data_t
+  is
+  begin
+    return write_data(cfg, to_endian(value, endian), strb, user, last, valid);
+  end function;
+  
   function write_response(cfg: config_t;
                           id: std_ulogic_vector := na_suv;
                           resp: resp_enum_t := RESP_OKAY;
                           user: std_ulogic_vector := na_suv;
-                          valid: boolean := true) return write_response_s_t
+                          valid: boolean := true) return write_response_t
   is
-    variable ret: write_response_s_t := write_response_defaults(cfg);
+    variable ret: write_response_t := write_response_defaults(cfg);
   begin
     ret.resp := to_logic(cfg, resp);
 
@@ -781,19 +841,19 @@ package body axi4_mm is
 
   function read_data(cfg: config_t;
                      id: std_ulogic_vector := na_suv;
-                     data: byte_string := null_byte_string;
+                     bytes: byte_string := null_byte_string;
                      resp: resp_enum_t := RESP_OKAY;
                      user: std_ulogic_vector := na_suv;
                      last: boolean := false;
-                     valid: boolean := true) return read_data_s_t
+                     valid: boolean := true) return read_data_t
   is
-    variable ret: read_data_s_t := read_data_defaults(cfg);
+    variable ret: read_data_t := read_data_defaults(cfg);
   begin
-    if data'length /= 0 then
-      assert 2**cfg.data_bus_width_l2 = data'length
+    if bytes'length /= 0 then
+      assert 2**cfg.data_bus_width_l2 = bytes'length
         report "Bad data vector passed"
         severity failure;
-      ret.data(data'length-1 downto 0) := data;
+      ret.data(0 to bytes'length-1) := bytes;
     end if;
 
     ret.resp := to_logic(cfg, resp);
@@ -811,9 +871,22 @@ package body axi4_mm is
     return ret;
   end function;
 
-  function address_const_mask(cfg: config_t; addr: address_m_t) return address_t
+  function read_data(cfg: config_t;
+                     id: std_ulogic_vector := na_suv;
+                     value: unsigned := na_u;
+                     endian: endian_t := ENDIAN_LITTLE;
+                     resp: resp_enum_t := RESP_OKAY;
+                     user: std_ulogic_vector := na_suv;
+                     last: boolean := false;
+                     valid: boolean := true) return read_data_t
   is
-    variable ret: address_t := (others => '0');
+  begin
+    return read_data(cfg, id, to_endian(value, endian), resp, user, last, valid);
+  end function;
+
+  function address_const_mask(cfg: config_t; addr: address_t) return addr_t
+  is
+    variable ret: addr_t := (others => '0');
     constant sl2 : integer range 0 to 2**size_width_c-1 := to_integer(size_l2(cfg, addr));
     constant l: unsigned(3 downto 0) := length_m1(cfg, addr, 4);
   begin
@@ -842,9 +915,9 @@ package body axi4_mm is
     return ret;
   end function;
 
-  function address_saturation_mask(cfg: config_t; addr: address_m_t) return address_t
+  function address_saturation_mask(cfg: config_t; addr: address_t) return addr_t
   is
-    variable ret: address_t := (others => '0');
+    variable ret: addr_t := (others => '0');
     variable sl2 : integer range 0 to 2**size_width_c-1 := to_integer(size_l2(cfg, addr));
   begin
     for i in 0 to sl2-1
@@ -861,7 +934,7 @@ package body axi4_mm is
     return txn.len_m1(cfg.len_width-1 downto 0);
   end function;
 
-  function transaction(cfg: config_t; addr: address_m_t) return transaction_t
+  function transaction(cfg: config_t; addr: address_t) return transaction_t
   is
     variable ret: transaction_t;
   begin
@@ -891,7 +964,7 @@ package body axi4_mm is
     constant cur_addr: unsigned(cfg.address_width-1 downto 0) := address(cfg, txn);
     constant sat: unsigned(cur_addr'range) := txn.saturation(cur_addr'range);
     constant cmask: unsigned(cur_addr'range) := txn.const_mask(cur_addr'range);
-    constant addr1: address_t := (others => '1');
+    constant addr1: addr_t := (others => '1');
 
     variable next_addr: unsigned(cur_addr'range);
   begin
@@ -1036,7 +1109,7 @@ package body axi4_mm is
     ret.has_lock := lock;
     return ret;
   end function;
-
+  
   function to_string(b: burst_enum_t) return string
   is
   begin
@@ -1084,7 +1157,7 @@ package body axi4_mm is
       &">";
   end;
 
-  function to_string(cfg: config_t; a: address_m_t) return string
+  function to_string(cfg: config_t; a: address_t) return string
   is
   begin
     if is_valid(cfg, a) then
@@ -1127,12 +1200,12 @@ package body axi4_mm is
     end if;
   end;
 
-  function to_string(cfg: config_t; w: write_data_m_t) return string
+  function to_string(cfg: config_t; w: write_data_t) return string
   is
   begin
     if is_valid(cfg, w) then
       return "<WData"
-        &" "&to_string(data(cfg, w))
+        &" "&to_string(bytes(cfg, w))
         &" S:"&to_string(strb(cfg, w))
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, w)), "")
         &if_else(w.last = '1', " last", "")
@@ -1142,7 +1215,7 @@ package body axi4_mm is
     end if;
   end;
 
-  function to_string(cfg: config_t; w: write_response_s_t) return string
+  function to_string(cfg: config_t; w: write_response_t) return string
   is
   begin
     if is_valid(cfg, w) then
@@ -1156,11 +1229,12 @@ package body axi4_mm is
     end if;
   end;
 
-  function to_string(cfg: config_t; r: read_data_s_t) return string
+  function to_string(cfg: config_t; r: read_data_t) return string
   is
   begin
     if is_valid(cfg, r) then
       return "<RRsp"
+        &" "&to_string(bytes(cfg, r))
         &" "&to_string(resp(cfg, r))
         &if_else(cfg.id_width>0, " I:"&to_string(id(cfg, r)), "")
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, r)), "")

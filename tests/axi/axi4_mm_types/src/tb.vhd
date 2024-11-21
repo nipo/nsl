@@ -21,7 +21,7 @@ begin
     constant context: log_context := "AXI4 MM 4 burst";
 
     constant c: config_t := config(32, 32, max_length => 16);
-    constant a: address_m_t := address(c, addr => x"00000000", len_m1 => x"3");
+    constant a: address_t := address(c, addr => x"00000000", len_m1 => x"3");
     variable t: transaction_t;
   begin
     log_info(context, to_string(c));
@@ -73,7 +73,7 @@ begin
     constant context: log_context := "AXI4 MM 4 wrap burst";
 
     constant c: config_t := config(32, 32, max_length => 16, burst => true);
-    constant a: address_m_t := address(c, addr => x"00000004", len_m1 => x"3", burst => BURST_WRAP);
+    constant a: address_t := address(c, addr => x"00000004", len_m1 => x"3", burst => BURST_WRAP);
     variable t: transaction_t;
   begin
     log_info(context, to_string(c));
@@ -125,7 +125,7 @@ begin
     constant context: log_context := "AXI4 MM 4 wrap32 burst";
 
     constant c: config_t := config(32, 64, max_length => 16, burst => true, size => true);
-    constant a: address_m_t := address(c, addr => x"deadbee8", len_m1 => x"f", burst => BURST_WRAP, size_l2 => "010");
+    constant a: address_t := address(c, addr => x"deadbee8", len_m1 => x"f", burst => BURST_WRAP, size_l2 => "010");
     variable t: transaction_t;
   begin
     log_info(context, to_string(c));
@@ -273,7 +273,7 @@ begin
     constant context: log_context := "AXI4 MM 2 wrap32 burst";
 
     constant c: config_t := config(32, 64, max_length => 16, burst => true, size => true);
-    constant a: address_m_t := address(c, addr => x"deadbee8", len_m1 => x"f", burst => BURST_WRAP, size_l2 => "001");
+    constant a: address_t := address(c, addr => x"deadbee8", len_m1 => x"f", burst => BURST_WRAP, size_l2 => "001");
     variable t: transaction_t;
   begin
     log_info(context, to_string(c));
