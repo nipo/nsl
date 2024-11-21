@@ -173,16 +173,47 @@ package body text is
     end loop;
 
     return ret;
-  end function to_hex_string;
+  end function;
 
   function to_hex_string(v: in std_ulogic_vector) return string is
+    variable ret: string(1 to (v'length + 3) / 4);
+    constant pad : std_ulogic_vector(1 to ret'length*4 - v'length) := (others => '0');
+    constant t : std_ulogic_vector(4  to ret'length*4+3) := pad & v;
+    variable nibble : std_ulogic_vector(3 downto 0);
+    variable c : character;
   begin
-    return to_hex_string(to_bitvector(v));
-  end function;
+    for i in ret'range loop
+      nibble := t(4 * i to 4 * i + 3);
+      case nibble is
+        when "0000" => c := '0';
+        when "0001" => c := '1';
+        when "0010" => c := '2';
+        when "0011" => c := '3';
+        when "0100" => c := '4';
+        when "0101" => c := '5';
+        when "0110" => c := '6';
+        when "0111" => c := '7';
+        when "1000" => c := '8';
+        when "1001" => c := '9';
+        when "1010" => c := 'a';
+        when "1011" => c := 'b';
+        when "1100" => c := 'c';
+        when "1101" => c := 'd';
+        when "1110" => c := 'e';
+        when "1111" => c := 'f';
+        when "----" => c := '-';
+        when "UUUU" => c := 'U';
+        when others => c := 'X';
+      end case;
+      ret(i) := c;
+    end loop;
+
+    return ret;
+  end function to_hex_string;
 
   function to_hex_string(v: in std_logic_vector) return string is
   begin
-    return to_hex_string(to_bitvector(v));
+    return to_hex_string(std_ulogic_vector(v));
   end function;
 
   function to_string(v: in boolean) return string
@@ -199,14 +230,15 @@ package body text is
                   needle : character;
                   start_index : integer := 0) return integer
   is
+    alias h: string(0 to haystack'length-1) is haystack;
   begin
-    if start_index >= haystack'length or start_index < 0 then
+    if start_index >= h'length or start_index < 0 then
       return -1;
     end if;
 
-    for offset in haystack'left + start_index to haystack'right
+    for offset in h'left + start_index to h'right
     loop
-      if haystack(offset) = needle then
+      if h(offset) = needle then
         return offset;
       end if;
     end loop;
@@ -217,14 +249,16 @@ package body text is
   function strstr(haystack, needle : string;
                   start_index : integer := 0) return integer
   is
+    alias h: string(0 to haystack'length-1) is haystack;
+    alias n: string(0 to needle'length-1) is needle;
   begin
-    if needle'length > haystack'length then
+    if n'length > h'length then
       return -1;
     end if;
 
-    for offset in haystack'left to haystack'right - needle'length + 1
+    for offset in h'left to h'right - n'length + 1
     loop
-      if haystack(offset to offset + needle'length - 1) = needle then
+      if h(offset to offset + n'length - 1) = n then
         return offset;
       end if;
     end loop;
