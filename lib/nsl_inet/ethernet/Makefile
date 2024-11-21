@@ -2,6 +2,7 @@ vhdl-sources += ethernet.pkg.vhd
 vhdl-sources += ethernet_transmitter.vhd
 vhdl-sources += ethernet_receiver.vhd
 vhdl-sources += ethernet_layer.vhd
+vhdl-sources += ethernet_router.vhd
 
 deps += nsl_logic.bool
 deps += nsl_data.bytestream

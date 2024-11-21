@@ -22,6 +22,7 @@ package ethernet is
 
   -- For mac48 literal, use nsl_data.bytestream.from_hex
   subtype mac48_t is byte_string(0 to 5);
+  type mac48_vector is array(integer range <>) of mac48_t;
   constant ethernet_broadcast_addr_c : mac48_t := from_hex("ffffffffffff");
 
   function is_broadcast(mac: mac48_t) return boolean;
@@ -145,6 +146,31 @@ package ethernet is
       to_l1_i : in nsl_bnoc.committed.committed_ack;
       from_l1_i : in nsl_bnoc.committed.committed_req;
       from_l1_o : out nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
+  -- An ethernet router based on destination address to select output port.
+  component ethernet_router is
+    generic(
+      destination_count_c : natural;
+      -- Flit count to pass through at the start of a frame
+      l1_header_length_c : integer := 0
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      -- Address to lookup
+      destination_address_o : out mac48_t;
+      -- Request strobe, response MUST appear on destination_port_i on next cycle.
+      destination_lookup_o : out std_ulogic;
+      destination_port_i : in natural range 0 to destination_count_c - 1;
+
+      in_i : in nsl_bnoc.committed.committed_req;
+      in_o : out nsl_bnoc.committed.committed_ack;
+
+      out_o : out nsl_bnoc.committed.committed_req_array(0 to destination_count_c-1);
+      out_i : in nsl_bnoc.committed.committed_ack_array(0 to destination_count_c-1)
       );
   end component;
 
