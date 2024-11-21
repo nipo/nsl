@@ -115,7 +115,7 @@ begin
         end if;
 
       when IN_COMMIT =>
-        if r.out_state = OUT_COMMIT and frame_i.ready = '1' then
+        if r.fifo_fillness = 0 then
           rin.in_state <= IN_RESET;
         end if;
     end case;
@@ -126,15 +126,17 @@ begin
           fifo_pop := true;
         end if;
 
-        if r.in_state = IN_COMMIT
-          and (r.fifo_fillness = 1
-               or (r.fifo_fillness = 2 and frame_i.ready = '1')) then
+        if r.in_state = IN_COMMIT then
           rin.out_state <= OUT_COMMIT;
         end if;
 
       when OUT_COMMIT =>
-        if frame_i.ready = '1' then
+        if r.fifo_fillness > 0 and frame_i.ready = '1' then
           fifo_pop := true;
+        end if;
+
+        if (r.fifo_fillness = 1 and frame_i.ready = '1')
+          or r.fifo_fillness = 0 then
           rin.out_state <= OUT_DATA;
         end if;
     end case;
@@ -162,7 +164,7 @@ begin
       when OUT_COMMIT =>
         frame_o.data <= r.fifo(0);
         frame_o.valid <= to_logic(r.fifo_fillness > 0);
-        frame_o.last <= '1';
+        frame_o.last <= to_logic(r.fifo_fillness = 1);
     end case;
 
     case r.in_state is
