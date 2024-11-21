@@ -31,9 +31,9 @@ begin
   process (clock_i)
     variable addr : natural range 0 to 2**addr_size_c-1;
   begin
-    addr := to_integer(to_01(address_i, '0'));
-
     if rising_edge(clock_i) then
+      addr := to_integer(to_01(address_i, '0'));
+
       if enable_i = '1' then
         if write_en_i = '1' then
           r_mem(addr) := write_data_i;
