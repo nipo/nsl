@@ -39,6 +39,8 @@ package io is
   function to_logic(x : directed) return std_logic;
   function to_logic(x : tristated) return std_logic;
   function to_logic(v : std_ulogic; en : std_ulogic := '1') return std_logic;
+  function "not"(v : tristated) return tristated;
+  function "not"(v : directed) return directed;
 
   constant tristated_z : tristated := (en => '0', v => '-');
   constant directed_z : directed := (output => '0', v => '-');
@@ -204,6 +206,24 @@ package body io is
     else
       return directed'(v => '-', output => '0');
     end if;
+  end function;
+
+  function "not"(v : tristated) return tristated
+  is
+    variable r: tristated;
+  begin
+    r.en := v.en;
+    r.v := not v.v;
+    return r;
+  end function;
+  
+  function "not"(v : directed) return directed
+  is
+    variable r: directed;
+  begin
+    r.output := v.output;
+    r.v := not v.v;
+    return r;
   end function;
 
 end package body io;
