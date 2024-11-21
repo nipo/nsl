@@ -12,9 +12,9 @@ library nsl_bnoc;
 -- (size field of 0x0000 denotes a 1-byte frame).
 package sized is
 
-  alias sized_data is nsl_bnoc.pipe.pipe_data_t;
-  alias sized_req is nsl_bnoc.pipe.pipe_req_t;
-  alias sized_ack is nsl_bnoc.pipe.pipe_ack_t;
+  subtype sized_data is nsl_bnoc.pipe.pipe_data_t;
+  subtype sized_req is nsl_bnoc.pipe.pipe_req_t;
+  subtype sized_ack is nsl_bnoc.pipe.pipe_ack_t;
 
   type sized_bus is record
     req: sized_req;
