@@ -236,6 +236,47 @@ package committed is
       );
   end component;
 
+  -- A module asserting valid_o exactly during one cycle at end of
+  -- every frame.  Gives out statistic about past frame when valid_o
+  -- is asserted.
+  --
+  -- Counter saturation is not handled on intraframe counters,
+  -- optional on interframe counter. All counters roll over silently.
+  --
+  -- Every time valid_o is asserted, there should be exactly
+  -- interframe_count_o + flit_count_o + pause_count_o +
+  -- backpressure_count_o + 1 cycles passed since last assertion,
+  -- unless some counter rolled over.
+  component committed_statistics is
+    generic(
+      interframe_saturate_c : boolean := false
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      req_i : in committed_req_t;
+      ack_i : in committed_ack_t;
+
+      -- Whether frame is valid
+      frame_ok_o : out std_ulogic;
+      -- Count of cycles between previous frame and first cycle of
+      -- current one
+      interframe_count_o : out unsigned;
+      -- Count of data flits in the frame (status excluded)
+      flit_count_o : out unsigned;
+      -- Count of cycles when no data was exchanged because of request
+      -- valid not asserted
+      pause_count_o : out unsigned;
+      -- Count of cycles when no data was exchanged because of
+      -- acknowledge ready not asserted
+      backpressure_count_o : out unsigned;
+
+      -- Strobe signal for all statistics
+      valid_o : out std_ulogic
+      );
+  end component;
+
 end package committed;
 
 package body committed is
