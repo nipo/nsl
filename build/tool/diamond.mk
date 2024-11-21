@@ -168,6 +168,12 @@ $(build-dir)/$(target).jed: $(build-dir)/par/$(target).ncd $(build-dir)/$(target
 		-w par/$(target).ncd -f $(target).t2b \
 		-jedec $(target).jed
 
+$(build-dir)/$(target).twr: $(build-dir)/par/$(target).ncd
+	cd $(build-dir) && $(ISPFPGA_BIN)/trce \
+		-v 10 -sp 5 -sethld \
+		-o $@ \
+		$<  $(build-dir)/$(target).prf
+
 $(target).bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress off \
@@ -177,6 +183,9 @@ $(target)-compressed.bit: $(build-dir)/$(target).jed
 	cd $(build-dir) && $(DIAMOND_BIN)/ddtcmd -oft \
 		-bit -if $(target).jed -compress on \
 		-header -of ../$@ -dev $(subst _,-,$(target_part))
+
+%.twr: $(build-dir)/%.twr
+	cp $< $@
 
 %-ram.svf: %.bit
 	$(DIAMOND_BIN)/ddtcmd -oft -svf \
