@@ -34,6 +34,8 @@ architecture byte_wr_ram_rf of ram_2p_homogeneous is
   signal a_out_reg, b_out_reg: word_t;
   type ram_type is array (0 to word_count - 1) of word_t;
   shared variable dpram_reg : ram_type;
+  attribute syn_ramstyle : string;
+  attribute syn_ramstyle of dpram_reg : variable is "no_rw_check";
 
 begin
 
