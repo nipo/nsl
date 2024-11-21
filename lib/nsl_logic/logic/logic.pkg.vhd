@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 package logic is
 
@@ -8,6 +9,8 @@ package logic is
   function and_reduce(x : std_ulogic_vector) return std_ulogic;
   function or_reduce(x : std_ulogic_vector) return std_ulogic;
   function mask_merge(for0, for1, sel : std_ulogic_vector) return std_ulogic_vector;
+  function mask_merge(for0, for1: unsigned; sel : std_ulogic_vector) return unsigned;
+  function mask_merge(for0, for1, sel: unsigned) return unsigned;
   function mask_range(width, lsb, msb : natural;
                       range_bit: std_ulogic := '1') return std_ulogic_vector;
 
@@ -71,7 +74,10 @@ package body logic is
   end or_reduce;
 
   function mask_merge(for0, for1, sel : std_ulogic_vector) return std_ulogic_vector is
-    variable ret: std_ulogic_vector(sel'range);
+    alias f0: std_ulogic_vector(0 to for0'length-1) is for0;
+    alias f1: std_ulogic_vector(0 to for1'length-1) is for1;
+    alias s: std_ulogic_vector(0 to sel'length-1) is sel;
+    variable ret: std_ulogic_vector(s'range);
   begin
     assert for0'length = for1'length
       report "Input vectors must have the same length"
@@ -80,10 +86,34 @@ package body logic is
       report "Input vectors and selector must have the same length"
       severity failure;
 
-    ret := (for0 and not sel) or (for1 and sel);
+    for i in ret'range
+    loop
+      case s(i) is
+        when '1' | 'H' =>
+          ret(i) := f1(i);
+        when '0' | 'L' =>
+          ret(i) := f0(i);
+        when '-' =>
+          ret(i) := '-';
+        when others =>
+          ret(i) := 'X';
+      end case;
+    end loop;
 
     return ret;
   end mask_merge;
+
+  function mask_merge(for0, for1: unsigned; sel : std_ulogic_vector) return unsigned
+  is
+  begin
+    return unsigned(mask_merge(std_ulogic_vector(for0), std_ulogic_vector(for1), sel));
+  end function;
+    
+  function mask_merge(for0, for1, sel: unsigned) return unsigned
+  is
+  begin
+    return unsigned(mask_merge(for0, for1, std_ulogic_vector(sel)));
+  end function;
 
   function mask_range(width, lsb, msb : natural;
                       range_bit: std_ulogic := '1') return std_ulogic_vector is
