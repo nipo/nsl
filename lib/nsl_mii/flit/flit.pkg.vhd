@@ -16,6 +16,7 @@ package flit is
   component mii_flit_from_committed is
     generic(
       ipg_c : natural := 96; -- bits
+      pre_count_c : natural := 8; -- flits, not including SFD
       handle_underrun_c: boolean := true
       );
     port(
@@ -24,6 +25,8 @@ package flit is
 
       committed_i : in nsl_bnoc.committed.committed_req;
       committed_o : out nsl_bnoc.committed.committed_ack;
+
+      underrun_o : out std_ulogic;
 
       -- Whether we are currently in a packet
       -- When implementing a Phy, this can be mapped to CRS.

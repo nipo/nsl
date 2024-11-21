@@ -9,6 +9,7 @@ use nsl_data.bytestream.all;
 entity mii_flit_from_committed is
   generic(
     ipg_c : natural := 96; -- bits
+    pre_count_c : natural := 8; -- flits, not including SFD
     handle_underrun_c: boolean := true
     );
   port(
@@ -18,6 +19,7 @@ entity mii_flit_from_committed is
     committed_i : in nsl_bnoc.committed.committed_req;
     committed_o : out nsl_bnoc.committed.committed_ack;
 
+    underrun_o : out std_ulogic;
     packet_o : out std_ulogic;
     flit_o : out mii_flit_t;
     ready_i : in std_ulogic
@@ -44,7 +46,6 @@ architecture beh of mii_flit_from_committed is
     OUT_ERROR
     );
 
-  constant pre_count_c : integer := 8;
   constant out_ctr_max_c : integer := nsl_math.arith.max(ipg_c/8, pre_count_c);
   constant fifo_depth_c : integer := 2;
   
@@ -100,12 +101,9 @@ begin
         if r.fifo_fillness < fifo_depth_c and committed_i.valid = '1' then
           if committed_i.last = '0' then
             fifo_push := true;
-          elsif committed_i.data(0) = '1' then
+          elsif committed_i.data(0) = '1' and not r.fifo_underrun then
             rin.in_state <= IN_COMMIT;
           else
-            -- This should not go out, but avoid underrun to have
-            -- error signaled within the packet
-            fifo_push := true;
             rin.in_state <= IN_CANCEL;
           end if;
         end if;
@@ -162,7 +160,6 @@ begin
           or r.fifo_fillness = 0 then
           if r.in_state = IN_CANCEL then
             rin.out_state <= OUT_ERROR;
-            rin.out_counter <= ipg_c / 8 - 1;
           elsif r.in_state = IN_COMMIT then
             rin.out_state <= OUT_IPG;
             rin.out_counter <= ipg_c / 8 - 1;
@@ -171,12 +168,8 @@ begin
 
       when OUT_ERROR =>
         if ready_i = '1' then
-          if r.out_counter /= 0 then
-            rin.out_counter <= r.out_counter - 1;
-          else
-            rin.out_state <= OUT_IPG;
-            rin.out_counter <= ipg_c / 8 - 1;
-          end if;
+          rin.out_state <= OUT_IPG;
+          rin.out_counter <= ipg_c / 8 - 1;
         end if;
     end case;
 
@@ -198,6 +191,8 @@ begin
   
   moore: process(r)
   begin
+    underrun_o <= '0';
+
     case r.in_state is
       when IN_RESET | IN_COMMIT | IN_CANCEL =>
         committed_o.ready <= '0';
@@ -216,11 +211,13 @@ begin
       when OUT_DATA =>
         if r.fifo_underrun and handle_underrun_c then
           flit_o.error <= '1';
+          flit_o.data <= x"1f";
+          flit_o.valid <= '0';
         else
           flit_o.error <= '0';
+          flit_o.data <= r.fifo(0);
+          flit_o.valid <= to_logic(r.fifo_fillness /= 0);
         end if;
-        flit_o.valid <= to_logic(r.fifo_fillness /= 0);
-        flit_o.data <= r.fifo(0);
         packet_o <= '1';
 
       when OUT_PRE =>
@@ -236,10 +233,11 @@ begin
         packet_o <= '1';
 
       when OUT_ERROR =>
-        flit_o.valid <= '1';
+        flit_o.valid <= '0';
         flit_o.error <= '1';
-        flit_o.data <= x"00";
+        flit_o.data <= x"1f";
         packet_o <= '1';
+        underrun_o <= to_logic(r.fifo_underrun);
     end case;
   end process;
   

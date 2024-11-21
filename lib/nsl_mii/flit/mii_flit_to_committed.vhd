@@ -107,16 +107,21 @@ begin
           if flit_i.valid = '1' and flit_i.error = '0' then
             fifo_push := true;
           elsif flit_i.valid = '0' and flit_i.error = '1' then
-            rin.in_state <= IN_CANCEL;
-          elsif flit_i.valid = '1' and flit_i.error = '1' then
-            rin.in_error_seen <= true;
-            fifo_push := true;
             -- GMII / RGMII:
             -- - 00-0d, 10-1e, 20-fe: reserved
-            -- - 0e: false carrier
+            -- - 0e: false carrier (should not happen here)
             -- - 0f: carrier extend
             -- - 1f: carrier error extend
             -- - ff: carrier sense
+            if flit_i.data = x"0f" then
+              -- Carrier extension
+              null;
+            elsif flit_i.data = x"1f" then
+              -- Carrier extension w/ error
+              rin.in_error_seen <= true;
+            end if;
+          elsif flit_i.valid = '1' and flit_i.error = '1' then
+            rin.in_error_seen <= true;
           else -- valid = '0', error = '0'
             rin.in_state <= IN_COMMIT;
           end if;
@@ -128,7 +133,8 @@ begin
         end if;
 
       when IN_CANCEL =>
-        if valid_i = '1' and flit_i.valid = '0' and flit_i.error = '0' then
+        if valid_i = '1' and flit_i.valid = '0' and flit_i.error = '0'
+          and r.out_state = OUT_IDLE and r.fifo_fillness = 0 then
           rin.in_state <= IN_IDLE;
         end if;
     end case;
@@ -162,6 +168,7 @@ begin
       when OUT_COMMIT | OUT_CANCEL =>
         if committed_i.ready = '1' then
           rin.out_state <= OUT_IDLE;
+          rin.fifo_fillness <= 0;
         end if;
     end case;
 
