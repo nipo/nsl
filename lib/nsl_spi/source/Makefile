@@ -1,5 +1,6 @@
 vhdl-sources += source.pkg.vhd
 vhdl-sources += spi_committed_source.vhd
+vhdl-sources += spi_pipe_source.vhd
 
 deps += nsl_math.arith
 deps += nsl_data.bytestream
