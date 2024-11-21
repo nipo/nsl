@@ -145,5 +145,21 @@ package interdomain is
       rate_index_o: out unsigned
       );
   end component;
-  
+
+  -- Measures a clock against another clock. Updates 2 ** update_hz_l2_c times
+  -- per second. It is up to the user to supply a rate_hz_o signal big enough
+  -- not to have overflow on the measured value.
+  component clock_rate_measurer is
+    generic(
+      clock_i_hz_c : integer;
+      update_hz_l2_c : integer := 0
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+      measured_clock_i: in std_ulogic;
+      rate_hz_o: out unsigned
+      );
+  end component;
+
 end package interdomain;
