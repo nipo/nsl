@@ -191,32 +191,18 @@ begin
     wait;
   end process;
 
-  dumper: process is
-  begin
-    wait until rising_edge(clock_s);
+  dumper: nsl_axi.axi4_mm.axi4_mm_dumper
+    generic map(
+      config_c => config_c,
+      prefix_c => "RAM"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
 
-    if reset_n_s /= '0' then
-      if is_valid(config_c, bus_s.m.aw) and is_ready(config_c, bus_s.s.aw) then
-        log_info("AW < " & to_string(config_c, bus_s.m.aw));
-      end if;
-
-      if is_valid(config_c, bus_s.m.w) and is_ready(config_c, bus_s.s.w) then
-        log_info(" W < " & to_string(config_c, bus_s.m.w));
-      end if;
-
-      if is_valid(config_c, bus_s.s.b) and is_ready(config_c, bus_s.m.b) then
-        log_info(" B > " & to_string(config_c, bus_s.s.b));
-      end if;
-
-      if is_valid(config_c, bus_s.m.ar) and is_ready(config_c, bus_s.s.ar) then
-        log_info("AR < " & to_string(config_c, bus_s.m.ar));
-      end if;
-      
-      if is_valid(config_c, bus_s.s.r) and is_ready(config_c, bus_s.m.r) then
-        log_info(" R > " & to_string(config_c, bus_s.s.r));
-      end if;
-    end if;
-  end process;
+      master_i => bus_s.m,
+      slave_i => bus_s.s
+      );
   
   dut: nsl_axi.axi4_mm.axi4_mm_ram
     generic map(

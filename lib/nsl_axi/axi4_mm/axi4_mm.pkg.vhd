@@ -209,9 +209,10 @@ package axi4_mm is
     s: slave_t;
   end record;
 
-  type m_vector is array (natural range <>) of master_t;
-  type s_vector is array (natural range <>) of slave_t;
+  type master_vector is array (natural range <>) of master_t;
+  type slave_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
+  type address_vector is array (natural range <>) of addr_t;
 
   constant na_suv: std_ulogic_vector := (1 to 0 => '-');
   constant na_u: unsigned := (1 to 0 => '-');
@@ -325,6 +326,20 @@ package axi4_mm is
 
       axi_i : in master_t;
       axi_o : out slave_t
+      );
+  end component;
+
+  component axi4_mm_dumper is
+    generic(
+      config_c : config_t;
+      prefix_c : string := "AXI4MM"
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      master_i : in master_t;
+      slave_i : in slave_t
       );
   end component;
   

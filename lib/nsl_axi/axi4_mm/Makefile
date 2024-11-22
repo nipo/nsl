@@ -8,3 +8,10 @@ deps += nsl_data.endian
 deps += nsl_data.text
 deps += nsl_math.arith
 deps += nsl_memory.ram
+
+ifeq (simulation,$(target-usage))
+vhdl-sources += axi4_mm_dumper.vhd
+deps += nsl_simulation.logging
+else
+vhdl-sources += axi4_mm_dumper_null.vhd
+endif
