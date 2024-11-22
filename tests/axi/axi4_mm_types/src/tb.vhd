@@ -415,5 +415,33 @@ begin
     log_info(context, "done");
     wait;
   end process;
+
+  addr: process
+    use nsl_axi.axi4_mm.all;
+    constant context: log_context := "AXI4 Addr Parsing";
+
+    constant c: config_t := config(32, 32, max_length => 16);
+
+    procedure check_addr(a: string; value: unsigned)
+    is
+    begin
+      assert_equal(context & " " & a, address_parse(c, a), value, FAILURE);
+    end procedure;
+
+  begin
+    log_info(context, to_string(c));
+
+    check_addr("x/0",          "--------------------------------"&"--------------------------------");
+    check_addr("0/1",          "--------------------------------"&"0-------------------------------");
+    check_addr("xe7777777/3",  "--------------------------------"&"111-----------------------------");
+    check_addr("xdeadbeef/8",  "--------------------------------"&x"de"&"------------------------");
+    check_addr("xde------",    "--------------------------------"&x"de"&"------------------------");
+    check_addr("xdeadbeef/32", "--------------------------------"&x"deadbeef");
+    check_addr(x"deadbeef",    "--------------------------------"&x"deadbeef");
+    check_addr("xdead_0000",   "--------------------------------"&x"dead0000");
+    check_addr(x"dead_0000",   "--------------------------------"&x"dead0000");
+    check_addr("x--ad_0000/16",   "----------------------------------------"&x"ad"&"----------------");
+    wait;
+  end process;
   
 end;
