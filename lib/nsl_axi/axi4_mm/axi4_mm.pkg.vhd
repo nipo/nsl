@@ -67,6 +67,8 @@ package axi4_mm is
                   cache: boolean := false;
                   burst: boolean := false;
                   lock: boolean := false) return config_t;
+
+  function is_lite(cfg: config_t) return boolean;
   
   type burst_enum_t is (
     BURST_FIXED,
@@ -220,8 +222,8 @@ package axi4_mm is
                          d1, d2, d3, d4, d5, d6, d7,
                          d8, d9, d10, d11, d12, d13, d14, d15: string := "") return address_vector;
   
-  constant na_suv: std_ulogic_vector := (1 to 0 => '-');
-  constant na_u: unsigned := (1 to 0 => '-');
+  constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
+  constant na_u: unsigned(1 to 0) := (others => '-');
 
   function is_ready(cfg: config_t; ack: handshake_t) return boolean;
 
@@ -321,10 +323,29 @@ package axi4_mm is
   function to_string(cfg: config_t; w: write_response_t) return string;
   function to_string(cfg: config_t; r: read_data_t) return string;
 
+  procedure lite_write(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant addr: unsigned;
+                       constant val: unsigned;
+                       rsp: out resp_enum_t;
+                       constant endian: endian_t := ENDIAN_LITTLE;
+                       constant mask: std_ulogic_vector := "");
+  procedure lite_read(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant addr: unsigned;
+                      val: out unsigned;
+                      rsp: out resp_enum_t;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant mask: std_ulogic_vector := "");
+
   component axi4_mm_ram is
     generic(
       config_c : config_t;
-      word_count_l2_c : positive
+      byte_size_l2_c : positive
       );
     port(
       clock_i : in std_ulogic;
@@ -346,6 +367,44 @@ package axi4_mm is
 
       master_i : in master_t;
       slave_i : in slave_t
+      );
+  end component;
+
+  component axi4_mm_lite_slave is
+    generic (
+      config_c: config_t
+      );
+    port (
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic := '1';
+
+      axi_i: in master_t;
+      axi_o: out slave_t;
+
+      address_o : out unsigned(config_c.address_width-1 downto config_c.data_bus_width_l2);
+
+      w_data_o : out byte_string(0 to 2**config_c.data_bus_width_l2-1);
+      w_mask_o : out std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
+      w_ready_i : in std_ulogic := '1';
+      w_valid_o : out std_ulogic;
+
+      r_data_i : in byte_string(0 to 2**config_c.data_bus_width_l2-1);
+      r_ready_o : out std_ulogic;
+      r_valid_i : in std_ulogic := '1'
+      );
+  end component;
+
+  component axi4_mm_lite_ram is
+    generic (
+      config_c: config_t;
+      byte_size_l2_c: natural := 12
+      );
+    port (
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic := '1';
+
+      axi_i: in master_t;
+      axi_o: out slave_t
       );
   end component;
   
@@ -710,7 +769,11 @@ package body axi4_mm is
   function is_last(cfg: config_t; write_data: write_data_t) return boolean
   is
   begin
-    return write_data.last = '1';
+    if cfg.len_width = 0 then
+      return true;
+    else
+      return write_data.last = '1';
+    end if;
   end function;
 
   function user(cfg: config_t; write_data: write_data_t) return std_ulogic_vector
@@ -776,7 +839,11 @@ package body axi4_mm is
   function is_last(cfg: config_t; read_data: read_data_t) return boolean
   is
   begin
-    return read_data.last = '1';
+    if cfg.len_width = 0 then
+      return true;
+    else
+      return read_data.last = '1';
+    end if;
   end function;
 
   function user(cfg: config_t; read_data: read_data_t) return std_ulogic_vector
@@ -817,7 +884,11 @@ package body axi4_mm is
   begin
     ret.data := (others => (dontcare_byte_c));
     ret.strb := (others => '1');
-    ret.last := '0';
+    if cfg.len_width = 0 then
+      ret.last := '1';
+    else
+      ret.last := '0';
+    end if;
     ret.user := (others => '-');
     ret.valid := '0';
 
@@ -843,7 +914,11 @@ package body axi4_mm is
     ret.id := (others => '0');
     ret.data := (others => (dontcare_byte_c));
     ret.resp := "00";
-    ret.last := '0';
+    if cfg.len_width = 0 then
+      ret.last := '1';
+    else
+      ret.last := '0';
+    end if;
     ret.user := (others => '-');
     ret.valid := '0';
 
@@ -974,7 +1049,7 @@ package body axi4_mm is
     end if;
 
     ret.valid := to_logic(valid);
-    ret.last := to_logic(last);
+    ret.last := to_logic(last or cfg.len_width = 0);
 
     return ret;
   end function;
@@ -1040,7 +1115,7 @@ package body axi4_mm is
       ret.user(user'length-1 downto 0) := user;
     end if;
 
-    ret.last := to_logic(last);
+    ret.last := to_logic(last or cfg.len_width = 0);
     ret.valid := to_logic(valid);
 
     return ret;
@@ -1284,6 +1359,20 @@ package body axi4_mm is
     ret.has_lock := lock;
     return ret;
   end function;
+
+  function is_lite(cfg: config_t) return boolean
+  is
+  begin
+    return (cfg.data_bus_width_l2 = 2 or cfg.data_bus_width_l2 = 3)
+      and cfg.len_width = 0
+      and cfg.id_width = 0
+      and not cfg.has_size
+      and not cfg.has_region
+      and not cfg.has_cache
+      and not cfg.has_burst
+      and not cfg.has_lock;
+  end function;
+
   
   function to_string(b: burst_enum_t) return string
   is
@@ -1368,7 +1457,7 @@ package body axi4_mm is
         &if_else(cfg.has_region, " R:"&to_string(region(cfg, t)), "")
         &if_else(cfg.id_width>0, " I:"&to_string(id(cfg, t)), "")
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, t)), "")
-        &if_else(is_last(cfg, t), " last", "")
+        &if_else(cfg.len_width>0 and is_last(cfg, t), " last", "")
         &">";
     else
       return "<Txn ->";
@@ -1383,7 +1472,7 @@ package body axi4_mm is
         &" "&to_string(bytes(cfg, w))
         &" S:"&to_string(strb(cfg, w))
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, w)), "")
-        &if_else(w.last = '1', " last", "")
+        &if_else(cfg.len_width>0 and is_last(cfg, w), " last", "")
         &">";
     else
       return "<WData ->";
@@ -1413,11 +1502,106 @@ package body axi4_mm is
         &" "&to_string(resp(cfg, r))
         &if_else(cfg.id_width>0, " I:"&to_string(id(cfg, r)), "")
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, r)), "")
-        &if_else(r.last = '1', " last", "")
+        &if_else(cfg.len_width>0 and is_last(cfg, r), " last", "")
         &">";
     else
       return "<WRsp ->";
     end if;
   end;
+
+  procedure lite_write(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant addr: unsigned;
+                       constant val: unsigned;
+                       rsp: out resp_enum_t;
+                       constant endian: endian_t := ENDIAN_LITTLE;
+                       constant mask: std_ulogic_vector := "")
+  is
+    variable aw_done, w_done, b_done: boolean := false;
+  begin
+    assert is_lite(cfg)
+      report "configuration is not lite"
+      severity failure;
+ 
+    axi_o.ar <= address_defaults(cfg);
+    axi_o.r <= handshake_defaults(cfg);
+    axi_o.aw <= address(cfg, addr => addr);
+    axi_o.w <= write_data(cfg, value => val, endian => endian, strb => mask);
+    axi_o.b <= accept(cfg, true);
+    
+    while not (aw_done and w_done and b_done)
+    loop
+      wait until rising_edge(clock);
+      if is_ready(cfg, axi_i.aw) then
+        aw_done := true;
+      end if;
+      if is_ready(cfg, axi_i.w) then
+        w_done := true;
+      end if;
+      if is_valid(cfg, axi_i.b) then
+        b_done := true;
+        rsp := resp(cfg, axi_i.b);
+      end if;
+
+      wait until falling_edge(clock);
+
+      if aw_done then
+        axi_o.aw <= address_defaults(cfg);
+      end if;
+      if w_done then
+        axi_o.w <= write_data_defaults(cfg);
+      end if;
+      if b_done then
+        axi_o.b <= handshake_defaults(cfg);
+      end if;
+    end loop;
+  end procedure;
+
+  procedure lite_read(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant addr: unsigned;
+                      val: out unsigned;
+                      rsp: out resp_enum_t;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant mask: std_ulogic_vector := "")
+  is
+    variable ar_done, r_done: boolean := false;
+  begin
+    assert is_lite(cfg)
+      report "configuration is not lite"
+      severity failure;
+
+    axi_o.aw <= address_defaults(cfg);
+    axi_o.b <= handshake_defaults(cfg);
+    axi_o.w <= write_data_defaults(cfg);
+    axi_o.ar <= address(cfg, addr => addr);
+    axi_o.r <= accept(cfg, true);
+    
+    while not (ar_done and r_done)
+    loop
+      wait until rising_edge(clock);
+      if is_ready(cfg, axi_i.ar) then
+        ar_done := true;
+      end if;
+      if is_valid(cfg, axi_i.r) then
+        r_done := true;
+        val := value(cfg, axi_i.r, endian => endian);
+        rsp := resp(cfg, axi_i.b);
+      end if;
+
+      wait until falling_edge(clock);
+
+      if ar_done then
+        axi_o.ar <= address_defaults(cfg);
+      end if;
+      if r_done then
+        axi_o.r <= handshake_defaults(cfg);
+      end if;
+    end loop;
+  end procedure;
   
 end package body axi4_mm;

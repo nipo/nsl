@@ -11,7 +11,7 @@ use nsl_data.endian.all;
 entity axi4_mm_ram is
   generic(
     config_c : config_t;
-    word_count_l2_c : positive
+    byte_size_l2_c : positive
     );
   port(
     clock_i : in std_ulogic;
@@ -24,7 +24,7 @@ end entity;
 
 architecture beh of axi4_mm_ram is
 
-  subtype ram_addr_t is unsigned(word_count_l2_c-1 downto 0);
+  subtype ram_addr_t is unsigned(byte_size_l2_c-config_c.data_bus_width_l2-1 downto 0);
   subtype ram_strobe_t is std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
   subtype ram_data_t is std_ulogic_vector(0 to 8*ram_strobe_t'length-1);
 
@@ -240,7 +240,7 @@ begin
   
   fifo: nsl_memory.ram.ram_2p_homogeneous
     generic map(
-      addr_size_c => word_count_l2_c,
+      addr_size_c => ram_addr_t'length,
       word_size_c => 8,
       data_word_count_c => ram_strobe_t'length,
       registered_output_c => true,

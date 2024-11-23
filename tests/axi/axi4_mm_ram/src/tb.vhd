@@ -207,7 +207,7 @@ begin
   dut: nsl_axi.axi4_mm.axi4_mm_ram
     generic map(
       config_c => config_c,
-      word_count_l2_c => 8
+      byte_size_l2_c => 10
       )
     port map(
       clock_i => clock_s,
