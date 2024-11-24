@@ -9,6 +9,13 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
 
+-- This package defines AXI4-MM configuration, signals and accessor
+-- functions.  Signals are defined as records where all members are of
+-- fixed width of the worst-case size.  Accessor functions will ensure
+-- meaningless signals are never set to other value than "-" (dont
+-- care) and all reads ignore signals that are not used by
+-- configuration.  Any useful synthesis tools should propagate
+-- constants and ignore useless parts.
 package axi4_mm is
 
   -- Arbitrary
@@ -16,6 +23,7 @@ package axi4_mm is
   constant max_data_bus_width_l2_l2_c: natural := 3;
   constant max_user_width_c: natural := 64;
 
+  -- Elementary data types
   constant region_width_c: natural := 4;
   constant max_id_width_c: natural := 64;
   constant max_len_width_c: natural := 8;
@@ -41,35 +49,6 @@ package axi4_mm is
   subtype burst_t is std_ulogic_vector(1 downto 0);
   subtype resp_t is std_ulogic_vector(1 downto 0);
   
-  type config_t is
-  record
-    address_width: natural range 1 to max_address_width_c;
-    -- 0 to 7 maps to 1 to 128 bytes wide
-    data_bus_width_l2: natural range 0 to 2**max_data_bus_width_l2_l2_c-1;
-    user_width: natural range 0 to max_user_width_c;
-    id_width: natural range 0 to max_id_width_c;
-    len_width: natural range 0 to max_len_width_c;
-    has_size: boolean;
-    has_region: boolean;
-    has_qos: boolean;
-    has_cache: boolean;
-    has_burst: boolean;
-    has_lock: boolean;
-  end record;
-
-  function config(address_width: natural;
-                  data_bus_width: natural; -- bits
-                  user_width: natural := 0;
-                  id_width: natural := 0;
-                  max_length: natural := 1;
-                  size: boolean := false;
-                  region: boolean := false;
-                  cache: boolean := false;
-                  burst: boolean := false;
-                  lock: boolean := false) return config_t;
-
-  function is_lite(cfg: config_t) return boolean;
-  
   type burst_enum_t is (
     BURST_FIXED,
     BURST_INCR,
@@ -88,18 +67,57 @@ package axi4_mm is
     RESP_DECERR
   );
 
-  function to_burst(cfg: config_t; b: burst_t) return burst_enum_t;
-  function to_logic(cfg: config_t; b: burst_enum_t) return burst_t;
-  function to_lock(cfg: config_t; l: std_ulogic) return lock_enum_t;
-  function to_logic(cfg: config_t; l: lock_enum_t) return std_ulogic;
-  function to_resp(cfg: config_t; r: resp_t) return resp_enum_t;
-  function to_logic(cfg: config_t; r: resp_enum_t) return resp_t;
+  -- AXI4 Configuration. This can be spawned by config() function below.
+  type config_t is
+  record
+    address_width: natural range 1 to max_address_width_c;
+    -- 0 to 7 maps to 1 to 128 bytes wide
+    data_bus_width_l2: natural range 0 to 2**max_data_bus_width_l2_l2_c-1;
+    user_width: natural range 0 to max_user_width_c;
+    id_width: natural range 0 to max_id_width_c;
+    len_width: natural range 0 to max_len_width_c;
+    has_size: boolean;
+    has_region: boolean;
+    has_qos: boolean;
+    has_cache: boolean;
+    has_burst: boolean;
+    has_lock: boolean;
+  end record;
 
+  -- Generates a configuration.  data_bus_width should be a multiple
+  -- of 8, matching a power-of-two number of bytes.  Bus will be
+  -- AXI4-Lite if no burst is possible (max_length = 1), and id,
+  -- region, burst, cache and lock are disabled.
+  function config(address_width: natural;
+                  data_bus_width: natural; -- bits
+                  user_width: natural := 0;
+                  id_width: natural := 0;
+                  max_length: natural := 1;
+                  size: boolean := false;
+                  region: boolean := false;
+                  cache: boolean := false;
+                  burst: boolean := false;
+                  lock: boolean := false) return config_t;
+
+  function is_lite(cfg: config_t) return boolean;
+
+  -- Signal data types.
+
+  -- Response used for every backpressure channel (either AW, W, B,
+  -- RW, R channel).
   type handshake_t is
   record
     ready: std_ulogic;
   end record;
 
+  -- Default idle handshake
+  function handshake_defaults(cfg: config_t) return handshake_t;
+  -- Set whether we accept a beat on matching channel
+  function accept(cfg: config_t; ready: boolean) return handshake_t;
+  -- Whethet handshake is ready
+  function is_ready(cfg: config_t; ack: handshake_t) return boolean;
+
+  -- Address command record, used for AW and AR channels from master.
   type address_t is
   record
     id: id_t;
@@ -116,8 +134,234 @@ package axi4_mm is
     valid: std_ulogic;
   end record;
 
+  -- Default idle address channel
   function address_defaults(cfg: config_t) return address_t;
-  
+
+  -- Spawn an address channel beat.  If any item enabled in
+  -- configuration is not passed, default value is used.
+  function address(cfg: config_t;
+                   id: std_ulogic_vector := na_suv;
+                   addr: unsigned := na_u;
+                   len_m1: unsigned := na_u;
+                   size_l2: unsigned := na_u;
+                   burst: burst_enum_t := BURST_INCR;
+                   lock: lock_enum_t := LOCK_NORMAL;
+                   cache: std_ulogic_vector := na_suv;
+                   prot: std_ulogic_vector := na_suv;
+                   qos: std_ulogic_vector := na_suv;
+                   region: std_ulogic_vector := na_suv;
+                   user: std_ulogic_vector := na_suv;
+                   valid: boolean := true) return address_t;
+
+  -- Retrieve ID from address beat
+  function id(cfg: config_t; addr: address_t) return std_ulogic_vector;
+  -- Retrieve address from address beat, returned value has the length
+  -- defined in configuration. Caller may restrict the returned
+  -- address to use fewer bits by removing LSBs.
+  function address(cfg: config_t; addr: address_t;
+                   lsb: natural := 0) return unsigned;
+  -- Retrieve length field of the address beat
+  function length_m1(cfg: config_t; addr: address_t; w: natural) return unsigned;
+  -- Retrieve size field of the address beat, encoded as in spec.
+  function size_l2(cfg: config_t; addr: address_t) return unsigned;
+  -- Retrieve burst field of the address beat or default value
+  function burst(cfg: config_t; addr: address_t) return burst_enum_t;
+  -- Retrieve lock field of the address beat or default value
+  function lock(cfg: config_t; addr: address_t) return lock_enum_t;
+  -- Retrieve cache field of the address beat or default value
+  function cache(cfg: config_t; addr: address_t) return cache_t;
+  -- Retrieve prot field of the address beat, or default value
+  function prot(cfg: config_t; addr: address_t) return prot_t;
+  -- Retrieve QoS field of the address beat, or default value
+  function qos(cfg: config_t; addr: address_t) return qos_t;
+  -- Retrieve region field of the address beat, or default value
+  function region(cfg: config_t; addr: address_t) return region_t;
+  -- Retrieve user field of the address beat
+  function user(cfg: config_t; addr: address_t) return std_ulogic_vector;
+  -- Tells whether beat is asserting valid
+  function is_valid(cfg: config_t; addr: address_t) return boolean;
+
+  -- Write data channel
+  type write_data_t is
+  record
+    data: data_t;
+    strb: strobe_t;
+    last: std_ulogic;
+    user: user_t;
+    valid: std_ulogic;
+  end record;
+
+  -- Write data channel idle
+  function write_data_defaults(cfg: config_t) return write_data_t;
+
+  -- Write data beat using bytes as data vector.
+  -- bytes and strb are in ascending order (as memory should be).
+  function write_data(cfg: config_t;
+                      bytes: byte_string;
+                      strb: std_ulogic_vector := na_suv;
+                      user: std_ulogic_vector := na_suv;
+                      last: boolean := false;
+                      valid: boolean := true) return write_data_t;
+
+  -- Write data beat using unsigned as data vector.  Uses passed
+  -- endianness for value, strb always uses ascending order.
+  function write_data(cfg: config_t;
+                      value: unsigned := na_u;
+                      endian: endian_t := ENDIAN_LITTLE;
+                      strb: std_ulogic_vector := na_suv;
+                      user: std_ulogic_vector := na_suv;
+                      last: boolean := false;
+                      valid: boolean := true) return write_data_t;
+
+  -- Retrieve the bytes of the write data beat. Returned byte_string
+  -- is in ascending order
+  function bytes(cfg: config_t; write_data: write_data_t) return byte_string;
+  -- Retrieve the binary value as if the bus was carrying a numeric
+  -- value.  Parse the bus as of endian passed.
+  function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
+  -- Retrieve the mask of the write data beat. Returned vector is in
+  -- ascending order
+  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
+  -- Retrieve whether beat is last in burst. Last is meaningless if
+  -- bus configuration has no length field. In such case, last is
+  -- ignored and implied to be true by this function.
+  function is_last(cfg: config_t; write_data: write_data_t) return boolean;
+  -- Retrieves user part of the write data beat. Returned vector has
+  -- size defined in configuration
+  function user(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
+  -- Tells whether beat is asserting valid
+  function is_valid(cfg: config_t; write_data: write_data_t) return boolean;
+
+  -- Write response channel
+  type write_response_t is
+  record
+    id: id_t;
+    resp: resp_t;
+    user: user_t;
+    valid: std_ulogic;
+  end record;
+
+  -- Write response idle
+  function write_response_defaults(cfg: config_t) return write_response_t;
+
+  -- Spawns a write response beat.
+  function write_response(cfg: config_t;
+                          id: std_ulogic_vector := na_suv;
+                          resp: resp_enum_t := RESP_OKAY;
+                          user: std_ulogic_vector := na_suv;
+                          valid: boolean := true) return write_response_t;
+
+  -- Retrieve ID from write response beat
+  function id(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
+  -- Retrieve response from write response beat
+  function resp(cfg: config_t; write_response: write_response_t) return resp_enum_t;
+  -- Retrieves user part of the write response beat. Returned vector has
+  -- size defined in configuration
+  function user(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
+  -- Tells whether beat is asserting valid
+  function is_valid(cfg: config_t; write_response: write_response_t) return boolean;
+
+  -- Read data channel.
+  type read_data_t is
+  record
+    id: id_t;
+    data: data_t;
+    resp: resp_t;
+    last: std_ulogic;
+    user: user_t;
+    valid: std_ulogic;
+  end record;
+
+  -- Read data idle
+  function read_data_defaults(cfg: config_t) return read_data_t;
+
+  -- Spawns a write response beat.  Use byte_string to carry
+  -- data, in ascending order.
+  function read_data(cfg: config_t;
+                     id: std_ulogic_vector := na_suv;
+                     bytes: byte_string := null_byte_string;
+                     resp: resp_enum_t := RESP_OKAY;
+                     user: std_ulogic_vector := na_suv;
+                     last: boolean := false;
+                     valid: boolean := true) return read_data_t;
+
+  -- Spawns a write response beat.  Value is passed as an unsigned
+  -- value, passed endianness is used to serialize the value to bytes.
+  function read_data(cfg: config_t;
+                     id: std_ulogic_vector := na_suv;
+                     value: unsigned := na_u;
+                     endian: endian_t := ENDIAN_LITTLE;
+                     resp: resp_enum_t := RESP_OKAY;
+                     user: std_ulogic_vector := na_suv;
+                     last: boolean := false;
+                     valid: boolean := true) return read_data_t;
+
+  -- Retrieve ID from read response beat
+  function id(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
+  -- Retrieve the bytes of the read response data beat. Returned
+  -- byte_string is in ascending order
+  function bytes(cfg: config_t; read_data: read_data_t) return byte_string;
+  -- Retrieve the binary value as if the bus was carrying a numeric
+  -- value.  Parse the bus as of endian passed.
+  function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
+  -- Retrieve response from read response beat
+  function resp(cfg: config_t; read_data: read_data_t) return resp_enum_t;
+  -- Retrieve whether beat is last in burst. Last is meaningless if
+  -- bus configuration has no length field. In such case, last is
+  -- ignored and implied to be true by this function.
+  function is_last(cfg: config_t; read_data: read_data_t) return boolean;
+  -- Retrieves user part of the read data beat. Returned vector has
+  -- size defined in configuration
+  function user(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
+  -- Tells whether beat is asserting valid
+  function is_valid(cfg: config_t; read_data: read_data_t) return boolean;
+
+  -- Master-driven meta-record. Can typically be used as port.
+  type master_t is
+  record
+    aw: address_t;
+    w: write_data_t;
+    b: handshake_t;
+    ar: address_t;
+    r: handshake_t;
+  end record;
+
+  -- Slave-driven meta-record. Can typically be used as port.
+  type slave_t is
+  record
+    aw: handshake_t;
+    w: handshake_t;
+    b: write_response_t;
+    ar: handshake_t;
+    r: read_data_t;
+  end record;
+
+  -- Bus meta-record, typically used for a signal.
+  type bus_t is
+  record
+    m: master_t;
+    s: slave_t;
+  end record;
+
+  -- Vectors
+  type master_vector is array (natural range <>) of master_t;
+  type slave_vector is array (natural range <>) of slave_t;
+  type bus_vector is array (natural range <>) of bus_t;
+  type address_vector is array (natural range <>) of addr_t;
+
+
+  -- Convertors between semantic enums and bit encoding
+  function to_burst(cfg: config_t; b: burst_t) return burst_enum_t;
+  function to_logic(cfg: config_t; b: burst_enum_t) return burst_t;
+  function to_lock(cfg: config_t; l: std_ulogic) return lock_enum_t;
+  function to_logic(cfg: config_t; l: lock_enum_t) return std_ulogic;
+  function to_resp(cfg: config_t; r: resp_t) return resp_enum_t;
+  function to_logic(cfg: config_t; r: resp_enum_t) return resp_t;
+
+  -- Transaction state record.  This is a helper typically used in a
+  -- slave implementation. It tracks the burst state and gives the
+  -- relevant address, following burst wrapping mode as defined in
+  -- spec.
   type transaction_t is
   record
     id: id_t;
@@ -133,186 +377,76 @@ package axi4_mm is
     user: user_t;
     valid: std_ulogic;
   end record;
+  -- Initialize a transaction from an address beat (either read or write).
   function transaction(cfg: config_t; addr: address_t) return transaction_t;
+  -- Iterate one step over a transaction.
   function step(cfg: config_t; txn: transaction_t) return transaction_t;
 
+  -- Retrieve current ID from the transaction. Returned vector has the
+  -- size defined in configuration.
   function id(cfg: config_t; txn: transaction_t) return std_ulogic_vector;
+  -- Retrieve beat address from the transaction's current
+  -- state. Returned vector has the size defined in configuration.
+  -- Caller may override returned LSB position.
   function address(cfg: config_t; txn: transaction_t;
                    lsb: natural := 0) return unsigned;
+  -- Retrieve size (beat word size).
   function size_l2(cfg: config_t; txn: transaction_t) return unsigned;
+  -- Retrieve locking scheme of transaction.
   function lock(cfg: config_t; txn: transaction_t) return lock_enum_t;
+  -- Retrieve cache mode of transaction.
   function cache(cfg: config_t; txn: transaction_t) return cache_t;
+  -- Retrieve protection mode of transaction.
   function prot(cfg: config_t; txn: transaction_t) return prot_t;
+  -- Retrieve qos mode of transaction.
   function qos(cfg: config_t; txn: transaction_t) return qos_t;
+  -- Retrieve region info of transaction.
   function region(cfg: config_t; txn: transaction_t) return region_t;
+  -- Retrieve user data of transaction (from address beat). Returned
+  -- value has length defined in configuration.
   function user(cfg: config_t; txn: transaction_t) return std_ulogic_vector;
+  -- Tells whether the transaction is currently running
   function is_valid(cfg: config_t; txn: transaction_t) return boolean;
+  -- Tells whether the beat in transaction is the last one
   function is_last(cfg: config_t; txn: transaction_t) return boolean;
+  -- Retrieves count of beats left to run in current transaction.
   function length_m1(cfg: config_t; txn: transaction_t) return unsigned;
 
-  function handshake_defaults(cfg: config_t) return handshake_t;
-
-  function accept(cfg: config_t; ready: boolean) return handshake_t;
-
-  type write_data_t is
-  record
-    data: data_t;
-    strb: strobe_t;
-    last: std_ulogic;
-    user: user_t;
-    valid: std_ulogic;
-  end record;
-
-  function write_data_defaults(cfg: config_t) return write_data_t;
-
-  type write_response_t is
-  record
-    id: id_t;
-    resp: resp_t;
-    user: user_t;
-    valid: std_ulogic;
-  end record;
-
-  function write_response_defaults(cfg: config_t) return write_response_t;
-
-  type read_data_t is
-  record
-    id: id_t;
-    data: data_t;
-    resp: resp_t;
-    last: std_ulogic;
-    user: user_t;
-    valid: std_ulogic;
-  end record;
-
-  function read_data_defaults(cfg: config_t) return read_data_t;
-
-  type master_t is
-  record
-    aw: address_t;
-    w: write_data_t;
-    b: handshake_t;
-    ar: address_t;
-    r: handshake_t;
-  end record;
-
-  type slave_t is
-  record
-    aw: handshake_t;
-    w: handshake_t;
-    b: write_response_t;
-    ar: handshake_t;
-    r: read_data_t;
-  end record;
-
-  type bus_t is
-  record
-    m: master_t;
-    s: slave_t;
-  end record;
-
-  type master_vector is array (natural range <>) of master_t;
-  type slave_vector is array (natural range <>) of slave_t;
-  type bus_vector is array (natural range <>) of bus_t;
-  type address_vector is array (natural range <>) of addr_t;
-
+  -- Parse an address. Address may contain don't care bits ('-').
+  -- Moreover, a mask may be added after the address to ignore LSBs
+  -- (by specifying count of useful bits).
+  --
+  -- Address may be either:
+  -- - a binary string, it can be either a bit value (MSB first) or a
+  --   VHDL hex value (e.g. x"1234", in such case, this helper will
+  --   receive binary string). Bit literal may contain '-'.
+  -- - a hex string, prefixed by x like "x1234". In such case, '-' in
+  --   the string marks a full nibble as don't care.
+  --
+  -- After address, a mask in the form "/n" with n a number of bits
+  -- can be added.
+  --
+  -- Examples:
+  -- - x"dead0000" is x"dead0000"
+  -- - "xdead0000" is x"dead0000"
+  -- - "xdead00--" is x"dead00"&"--------"
+  -- - "xdead0000/24" is x"dead00"&"--------"
   function address_parse(cfg:config_t; addr:string) return addr_t;
+
+  -- Create an array of addresses from 1 to 16 items in length.
+  -- First null string in arguments d1 to d15 marks the end of the
+  -- array.
   function routing_table(cfg: config_t;
                          d0:string;
                          d1, d2, d3, d4, d5, d6, d7,
                          d8, d9, d10, d11, d12, d13, d14, d15: string := "") return address_vector;
-  
+
+  -- Internal
   constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
   constant na_u: unsigned(1 to 0) := (others => '-');
 
-  function is_ready(cfg: config_t; ack: handshake_t) return boolean;
 
-  function id(cfg: config_t; addr: address_t) return std_ulogic_vector;
-  function address(cfg: config_t; addr: address_t;
-                   lsb: natural := 0) return unsigned;
-  function length_m1(cfg: config_t; addr: address_t; w: natural) return unsigned;
-  function size_l2(cfg: config_t; addr: address_t) return unsigned;
-  function burst(cfg: config_t; addr: address_t) return burst_enum_t;
-  function lock(cfg: config_t; addr: address_t) return lock_enum_t;
-  function cache(cfg: config_t; addr: address_t) return cache_t;
-  function prot(cfg: config_t; addr: address_t) return prot_t;
-  function qos(cfg: config_t; addr: address_t) return qos_t;
-  function region(cfg: config_t; addr: address_t) return region_t;
-  function user(cfg: config_t; addr: address_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; addr: address_t) return boolean;
-
-  function address(cfg: config_t;
-                   id: std_ulogic_vector := na_suv;
-                   addr: unsigned := na_u;
-                   len_m1: unsigned := na_u;
-                   size_l2: unsigned := na_u;
-                   burst: burst_enum_t := BURST_INCR;
-                   lock: lock_enum_t := LOCK_NORMAL;
-                   cache: std_ulogic_vector := na_suv;
-                   prot: std_ulogic_vector := na_suv;
-                   qos: std_ulogic_vector := na_suv;
-                   region: std_ulogic_vector := na_suv;
-                   user: std_ulogic_vector := na_suv;
-                   valid: boolean := true) return address_t;
-                     
-  function bytes(cfg: config_t; write_data: write_data_t) return byte_string;
-  function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
-  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
-  function is_last(cfg: config_t; write_data: write_data_t) return boolean;
-  function user(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; write_data: write_data_t) return boolean;
-
-  function write_data(cfg: config_t;
-                      bytes: byte_string;
-                      strb: std_ulogic_vector := na_suv;
-                      user: std_ulogic_vector := na_suv;
-                      last: boolean := false;
-                      valid: boolean := true) return write_data_t;
-
-  function write_data(cfg: config_t;
-                      value: unsigned := na_u;
-                      endian: endian_t := ENDIAN_LITTLE;
-                      strb: std_ulogic_vector := na_suv;
-                      user: std_ulogic_vector := na_suv;
-                      last: boolean := false;
-                      valid: boolean := true) return write_data_t;
-
-  function id(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
-  function resp(cfg: config_t; write_response: write_response_t) return resp_enum_t;
-  function user(cfg: config_t; write_response: write_response_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; write_response: write_response_t) return boolean;
-
-  function write_response(cfg: config_t;
-                          id: std_ulogic_vector := na_suv;
-                          resp: resp_enum_t := RESP_OKAY;
-                          user: std_ulogic_vector := na_suv;
-                          valid: boolean := true) return write_response_t;
-
-  function id(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
-  function bytes(cfg: config_t; read_data: read_data_t) return byte_string;
-  function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
-  function resp(cfg: config_t; read_data: read_data_t) return resp_enum_t;
-  function is_last(cfg: config_t; read_data: read_data_t) return boolean;
-  function user(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
-  function is_valid(cfg: config_t; read_data: read_data_t) return boolean;
-
-  function read_data(cfg: config_t;
-                     id: std_ulogic_vector := na_suv;
-                     bytes: byte_string := null_byte_string;
-                     resp: resp_enum_t := RESP_OKAY;
-                     user: std_ulogic_vector := na_suv;
-                     last: boolean := false;
-                     valid: boolean := true) return read_data_t;
-
-  function read_data(cfg: config_t;
-                     id: std_ulogic_vector := na_suv;
-                     value: unsigned := na_u;
-                     endian: endian_t := ENDIAN_LITTLE;
-                     resp: resp_enum_t := RESP_OKAY;
-                     user: std_ulogic_vector := na_suv;
-                     last: boolean := false;
-                     valid: boolean := true) return read_data_t;
-
+  -- Pretty printers for bus records, useful for debugging test-benches
   function to_string(b: burst_enum_t) return string;
   function to_string(l: lock_enum_t) return string;
   function to_string(r: resp_enum_t) return string;
@@ -323,6 +457,8 @@ package axi4_mm is
   function to_string(cfg: config_t; w: write_response_t) return string;
   function to_string(cfg: config_t; r: read_data_t) return string;
 
+  -- Simulation helper function to issue a write transaction to an
+  -- AXI4-Lite bus.
   procedure lite_write(constant cfg: config_t;
                        signal clock: in std_ulogic;
                        signal axi_i: in slave_t;
@@ -332,6 +468,8 @@ package axi4_mm is
                        rsp: out resp_enum_t;
                        constant endian: endian_t := ENDIAN_LITTLE;
                        constant mask: std_ulogic_vector := "");
+  -- Simulation helper function to issue a read transaction to an
+  -- AXI4-Lite bus.
   procedure lite_read(constant cfg: config_t;
                       signal clock: in std_ulogic;
                       signal axi_i: in slave_t;
@@ -342,6 +480,8 @@ package axi4_mm is
                       constant endian: endian_t := ENDIAN_LITTLE;
                       constant mask: std_ulogic_vector := "");
 
+  -- AXI4-MM RAM with concurrent read and write channels.  It supports
+  -- bursting and requires a dual-port block RAM
   component axi4_mm_ram is
     generic(
       config_c : config_t;
@@ -356,6 +496,7 @@ package axi4_mm is
       );
   end component;
 
+  -- AXI4-MM transaction dumper.
   component axi4_mm_dumper is
     generic(
       config_c : config_t;
@@ -370,6 +511,8 @@ package axi4_mm is
       );
   end component;
 
+  -- AXI4-Lite slave abstraction. It hides all the handshake to the
+  -- bus.
   component axi4_mm_lite_slave is
     generic (
       config_c: config_t
@@ -381,19 +524,28 @@ package axi4_mm is
       axi_i: in master_t;
       axi_o: out slave_t;
 
+      -- Address of either write or read.
       address_o : out unsigned(config_c.address_width-1 downto config_c.data_bus_width_l2);
 
+      -- Write data value
       w_data_o : out byte_string(0 to 2**config_c.data_bus_width_l2-1);
+      -- Write data mask
       w_mask_o : out std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
+      -- Write data acceptance from user
       w_ready_i : in std_ulogic := '1';
+      -- Asserted when write beat happens
       w_valid_o : out std_ulogic;
 
+      -- Read data value
       r_data_i : in byte_string(0 to 2**config_c.data_bus_width_l2-1);
+      -- Read is required
       r_ready_o : out std_ulogic;
+      -- Read got served
       r_valid_i : in std_ulogic := '1'
       );
   end component;
 
+  -- AXI4-Lite RAM, using a one-port block RAM.
   component axi4_mm_lite_ram is
     generic (
       config_c: config_t;
