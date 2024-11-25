@@ -18,6 +18,10 @@ use nsl_data.text.all;
 -- constants and ignore useless parts.
 package axi4_mm is
 
+  -- Internal
+  constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
+  constant na_u: unsigned(1 to 0) := (others => '-');
+
   -- Arbitrary
   constant max_address_width_c: natural := 64;
   constant max_data_bus_width_l2_l2_c: natural := 3;
@@ -440,10 +444,6 @@ package axi4_mm is
                          d0:string;
                          d1, d2, d3, d4, d5, d6, d7,
                          d8, d9, d10, d11, d12, d13, d14, d15: string := "") return address_vector;
-
-  -- Internal
-  constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
-  constant na_u: unsigned(1 to 0) := (others => '-');
 
 
   -- Pretty printers for bus records, useful for debugging test-benches
