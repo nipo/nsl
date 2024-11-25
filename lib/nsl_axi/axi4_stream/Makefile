@@ -1,5 +1,6 @@
 vhdl-sources += axi4_stream.pkg.vhd
 vhdl-sources += axi4_stream_fifo.vhd
+vhdl-sources += axi4_stream_flusher.vhd
 
 deps += nsl_math.arith
 deps += nsl_logic.bool

@@ -168,6 +168,32 @@ package axi4_stream is
       out_i : in slave_t
       );
   end component;
+
+  -- Input configuration must not have "last", output configuration
+  -- must have "last". Input and output configuration should have all
+  -- other parameters equal.
+  --
+  -- This component will flush packet after either max_packet_length_c
+  -- count of transfers or when input is idle more than max_idle_c
+  -- clock cycles.
+  component axi4_stream_flusher is
+    generic(
+      in_config_c : config_t;
+      out_config_c : config_t;
+      max_packet_length_c : natural;
+      max_idle_c : natural
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
   
   component axi4_stream_dumper is
     generic(
