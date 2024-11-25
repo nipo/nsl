@@ -61,7 +61,7 @@ package axi4_stream is
     last: boolean := false) return config_t;
 
   -- Master-driven interface
-  type transfer_t is
+  type master_t is
   record
     id: id_t;
     data: data_t;
@@ -74,7 +74,7 @@ package axi4_stream is
   end record;
 
   -- Slave-driven interface
-  type handshake_t is
+  type slave_t is
   record
     ready: std_ulogic;
   end record;
@@ -82,49 +82,52 @@ package axi4_stream is
   -- Bus
   type bus_t is
   record
-    m: transfer_t;
-    s: handshake_t;
+    m: master_t;
+    s: slave_t;
   end record;
 
-  type m_vector is array (natural range <>) of transfer_t;
-  type s_vector is array (natural range <>) of handshake_t;
+  type m_vector is array (natural range <>) of master_t;
+  type s_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
 
   constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
 
-  function is_valid(cfg: config_t; m: transfer_t) return boolean;
-  function is_last(cfg: config_t; m: transfer_t) return boolean;
-  function is_ready(cfg: config_t; s: handshake_t) return boolean;
-  function bytes(cfg: config_t; m: transfer_t) return byte_string;
-  function data(cfg: config_t; m: transfer_t) return std_ulogic_vector;
-  function strobe(cfg: config_t; m: transfer_t) return std_ulogic_vector;
-  function keep(cfg: config_t; m: transfer_t) return std_ulogic_vector;
-  function user(cfg: config_t; m: transfer_t) return std_ulogic_vector;
-  function id(cfg: config_t; m: transfer_t) return std_ulogic_vector;
-  function dest(cfg: config_t; m: transfer_t) return std_ulogic_vector;
+  function is_valid(cfg: config_t; m: master_t) return boolean;
+  function is_last(cfg: config_t; m: master_t) return boolean;
+  function is_ready(cfg: config_t; s: slave_t) return boolean;
+  function bytes(cfg: config_t; m: master_t) return byte_string;
+  function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
+  function strobe(cfg: config_t; m: master_t) return std_ulogic_vector;
+  function keep(cfg: config_t; m: master_t) return std_ulogic_vector;
+  function user(cfg: config_t; m: master_t) return std_ulogic_vector;
+  function id(cfg: config_t; m: master_t) return std_ulogic_vector;
+  function dest(cfg: config_t; m: master_t) return std_ulogic_vector;
+
+  function transfer_defaults(cfg: config_t) return master_t;
 
   function transfer(cfg: config_t;
-                    data: byte_string;
+                    bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
-                    valid : boolean := false;
-                    last : boolean := false) return transfer_t;
+                    valid : boolean := true;
+                    last : boolean := false) return master_t;
 
   function transfer(cfg: config_t;
-                    data: std_ulogic_vector;
+                    value: unsigned;
+                    endian: endian_t := ENDIAN_LITTLE;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
-                    valid : boolean := false;
-                    last : boolean := false) return transfer_t;
+                    valid : boolean := true;
+                    last : boolean := false) return master_t;
 
   function accept(cfg: config_t;
-                  ready : boolean := false) return handshake_t;
+                  ready : boolean := false) return slave_t;
 
   -- AXI-Stream packing tools
   --
@@ -141,12 +144,12 @@ package axi4_stream is
   -- Pack an AXI-Stream mater interface using items given in elements.
   function vector_pack(cfg: config_t;
                        elements: string;
-                       m: transfer_t) return std_ulogic_vector;
+                       m: master_t) return std_ulogic_vector;
 
   -- Unpack an AXI-Stream mater interface using items given in elements.
   function vector_unpack(cfg: config_t;
                          elements: string;
-                         v: std_ulogic_vector) return transfer_t;
+                         v: std_ulogic_vector) return master_t;
   
   component axi4_stream_fifo is
     generic(
@@ -158,11 +161,11 @@ package axi4_stream is
       clock_i : in std_ulogic_vector(0 to clock_count_c-1);
       reset_n_i : in std_ulogic;
 
-      in_i : in transfer_t;
-      in_o : out handshake_t;
+      in_i : in master_t;
+      in_o : out slave_t;
 
-      out_o : out transfer_t;
-      out_i : in handshake_t
+      out_o : out master_t;
+      out_i : in slave_t
       );
   end component;
   
@@ -175,26 +178,25 @@ package axi4_stream is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      transfer_i : in transfer_t;
-      handshake_i: in handshake_t
+      bus_i : in bus_t
       );
   end component;
 
   function to_string(cfg: config_t) return string;
-  function to_string(cfg: config_t; a: transfer_t) return string;
-  function to_string(cfg: config_t; a: handshake_t) return string;
+  function to_string(cfg: config_t; a: master_t) return string;
+  function to_string(cfg: config_t; a: slave_t) return string;
 
 end package;
 
 package body axi4_stream is
 
-  function is_valid(cfg: config_t; m: transfer_t) return boolean
+  function is_valid(cfg: config_t; m: master_t) return boolean
   is
   begin
     return m.valid = '1';
   end function;
 
-  function is_last(cfg: config_t; m: transfer_t) return boolean
+  function is_last(cfg: config_t; m: master_t) return boolean
   is
   begin
     if cfg.has_last then
@@ -204,7 +206,7 @@ package body axi4_stream is
     end if;
   end function;
 
-  function is_ready(cfg: config_t; s: handshake_t) return boolean
+  function is_ready(cfg: config_t; s: slave_t) return boolean
   is
   begin
     if cfg.has_ready then
@@ -214,19 +216,19 @@ package body axi4_stream is
     end if;
   end function;
 
-  function bytes(cfg: config_t; m: transfer_t) return byte_string
+  function bytes(cfg: config_t; m: master_t) return byte_string
   is
   begin
     return m.data(cfg.data_width-1 downto 0);
   end function;
 
-  function data(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
   is
   begin
-    return std_ulogic_vector(from_be(bytes(cfg, m)));
+    return from_endian(bytes(cfg, m), endian);
   end function;
 
-  function strobe(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function strobe(cfg: config_t; m: master_t) return std_ulogic_vector
   is
   begin
     if cfg.has_strobe then
@@ -236,7 +238,7 @@ package body axi4_stream is
     end if;        
   end function;
 
-  function keep(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function keep(cfg: config_t; m: master_t) return std_ulogic_vector
   is
     constant default: std_ulogic_vector(cfg.data_width-1 downto 0) := (others => '1');
   begin
@@ -247,35 +249,58 @@ package body axi4_stream is
     end if;
   end function;
 
-  function user(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function user(cfg: config_t; m: master_t) return std_ulogic_vector
   is
   begin
     return m.user(cfg.user_width-1 downto 0);
   end function;
 
-  function id(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function id(cfg: config_t; m: master_t) return std_ulogic_vector
   is
   begin
     return m.id(cfg.id_width-1 downto 0);
   end function;
 
-  function dest(cfg: config_t; m: transfer_t) return std_ulogic_vector
+  function dest(cfg: config_t; m: master_t) return std_ulogic_vector
   is
   begin
     return m.dest(cfg.dest_width-1 downto 0);
   end function;
 
+  function transfer_defaults(cfg: config_t) return master_t
+  is
+    variable ret: master_t;
+  begin
+    ret.keep := (others => '-');
+    ret.keep(cfg.data_width-1 downto 0) := (others => '1');
+    ret.strobe := (others => '-');
+    ret.strobe(cfg.data_width-1 downto 0) := (others => '1');
+    ret.data := (others => (others => '-'));
+    ret.user := (others => '-');
+    ret.dest := (others => '-');
+    ret.id := (others => '-');
+    ret.valid := '0';
+
+    if not cfg.has_last then
+      ret.last := '-';
+    else
+      ret.last := '1';
+    end if;
+
+    return ret;
+  end function;
+
   function transfer(cfg: config_t;
-                    data: byte_string;
+                    bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
-                    valid : boolean := false;
-                    last : boolean := false) return transfer_t
+                    valid : boolean := true;
+                    last : boolean := false) return master_t
   is
-    variable ret: transfer_t;
+    variable ret: master_t;
   begin
     if not cfg.has_keep or cfg.data_width = 0 then
       ret.keep := (others => '-');
@@ -302,10 +327,10 @@ package body axi4_stream is
     if cfg.data_width = 0 then
       ret.data := (others => (others => '-'));
     else
-      assert data'length = cfg.data_width
+      assert bytes'length = cfg.data_width
         report "Bad data length"
         severity failure;
-      ret.data(cfg.data_width-1 downto 0) := data;
+      ret.data(cfg.data_width-1 downto 0) := bytes;
     end if;
 
     if cfg.user_width = 0 then
@@ -353,18 +378,19 @@ package body axi4_stream is
   end function;
 
   function transfer(cfg: config_t;
-                    data: std_ulogic_vector;
+                    value: unsigned;
+                    endian: endian_t := ENDIAN_LITTLE;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
-                    valid : boolean := false;
-                    last : boolean := false) return transfer_t
+                    valid : boolean := true;
+                    last : boolean := false) return master_t
   is
   begin
     return transfer(cfg => cfg,
-                    data => to_be(unsigned(data)),
+                    bytes => to_endian(value, endian),
                     strobe => strobe,
                     keep => keep,
                     id => id,
@@ -375,9 +401,9 @@ package body axi4_stream is
   end function; 
 
   function accept(cfg: config_t;
-                  ready : boolean := false) return handshake_t
+                  ready : boolean := false) return slave_t
   is
-    variable ret : handshake_t;
+    variable ret : slave_t;
   begin
     if not cfg.has_ready then
       ret.ready := '-';
@@ -431,7 +457,7 @@ package body axi4_stream is
   
   function vector_pack(cfg: config_t;
                        elements: string;
-                       m: transfer_t) return std_ulogic_vector
+                       m: master_t) return std_ulogic_vector
   is
     constant s: natural := vector_length(cfg, elements);
     variable ret : std_ulogic_vector(0 to s-1);
@@ -444,7 +470,7 @@ package body axi4_stream is
           ret(point to point+cfg.id_width-1) := id(cfg, m);
           point := point + cfg.id_width;
         when 'd' =>
-          ret(point to point+cfg.data_width*8-1) := std_ulogic_vector(data(cfg, m));
+          ret(point to point+cfg.data_width*8-1) := std_ulogic_vector(value(cfg, m, ENDIAN_BIG));
           point := point + cfg.data_width * 8;
         when 's' =>
           ret(point to point+cfg.data_width-1) := strobe(cfg, m);
@@ -480,22 +506,13 @@ package body axi4_stream is
 
   function vector_unpack(cfg: config_t;
                          elements: string;
-                         v: std_ulogic_vector) return transfer_t
+                         v: std_ulogic_vector) return master_t
   is
     constant s: natural := vector_length(cfg, elements);
     alias vv : std_ulogic_vector(0 to s-1) is v;
     variable point : natural range 0 to s := 0;
-    variable ret : transfer_t;
+    variable ret : master_t := transfer_defaults(cfg);
   begin
-    ret.id := (others => '-');
-    ret.data := (others => (others => '-'));
-    ret.strobe := (others => '-');
-    ret.keep := (others => '-');
-    ret.dest := (others => '-');
-    ret.user := (others => '-');
-    ret.valid := '-';
-    ret.last := '-';
-
     assert vv'length = s
       report "Bad vector length for packing elements"
       severity failure;
@@ -556,7 +573,7 @@ package body axi4_stream is
       &">";
   end function;
   
-  function to_string(cfg: config_t; a: transfer_t) return string
+  function to_string(cfg: config_t; a: master_t) return string
   is
   begin
     return "<AXISm"
@@ -570,7 +587,7 @@ package body axi4_stream is
       &">";
   end function;
 
-  function to_string(cfg: config_t; a: handshake_t) return string
+  function to_string(cfg: config_t; a: slave_t) return string
   is
   begin
     return "<AXISs"

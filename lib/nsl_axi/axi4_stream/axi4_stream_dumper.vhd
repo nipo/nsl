@@ -15,8 +15,7 @@ entity axi4_stream_dumper is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    transfer_i : in transfer_t;
-    handshake_i: in handshake_t
+    bus_i : in bus_t
     );
 end entity;
 
@@ -29,8 +28,8 @@ begin
     if reset_n_i = '0' then
       null;
     elsif rising_edge(clock_i) then
-      if is_ready(config_c, handshake_i) and is_valid(config_c, transfer_i) then
-        log_info(prefix_c & " - " & to_string(config_c, transfer_i));
+      if is_ready(config_c, bus_i.s) and is_valid(config_c, bus_i.m) then
+        log_info(prefix_c & " - " & to_string(config_c, bus_i.m));
       end if;
     end if;
   end process;        

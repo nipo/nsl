@@ -21,7 +21,7 @@ begin
     constant context: log_context := "AXIS";
 
     constant c: config_t := config(4, last => true);
-    variable t: transfer_t;
+    variable t: master_t;
   begin
     log_info(context, to_string(c));
 
@@ -37,7 +37,7 @@ begin
     constant context: log_context := "AXISwK";
 
     constant c: config_t := config(4, last => true, keep => true);
-    variable t: transfer_t;
+    variable t: master_t;
   begin
     log_info(context, to_string(c));
 

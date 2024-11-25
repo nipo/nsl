@@ -16,11 +16,11 @@ entity axi4_stream_fifo is
     clock_i : in std_ulogic_vector(0 to clock_count_c-1);
     reset_n_i : in std_ulogic;
 
-    in_i : in transfer_t;
-    in_o : out handshake_t;
+    in_i : in master_t;
+    in_o : out slave_t;
 
-    out_o : out transfer_t;
-    out_i : in handshake_t
+    out_o : out master_t;
+    out_i : in slave_t
     );
 end entity;
 

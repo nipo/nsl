@@ -14,8 +14,7 @@ entity axi4_stream_dumper is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    transfer_i : in transfer_t;
-    handshake_i: in handshake_t
+    bus_i : in bus_t
     );
 end entity;
 
