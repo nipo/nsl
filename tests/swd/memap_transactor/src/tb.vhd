@@ -150,7 +150,8 @@ begin
   
   dut: block is
     signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-    signal mem_s : nsl_axi.axi4_lite.a32_d32;
+    signal axi_s : nsl_axi.axi4_mm.bus_t;
+    constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
     signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
     signal slave_swd_s : nsl_coresight.swd.swd_slave_bus;
   begin
@@ -196,9 +197,10 @@ begin
         m_o(0) => dapbus_memap.ms
         );
 
-    mem_ap: nsl_coresight.ap.axi4_lite_a32_d32_ap
+    mem_ap: nsl_coresight.ap.ap_axi4_lite
       generic map(
         rom_base => x"dead0001",
+        config_c => config_c,
         idr => x"01234e11"
         )
       port map(
@@ -211,20 +213,21 @@ begin
         dap_i => dapbus_memap.ms,
         dap_o => dapbus_memap.sm,
 
-        mem_o => mem_s.ms,
-        mem_i => mem_s.sm
+        axi_o => axi_s.m,
+        axi_i => axi_s.s
         );
 
-    mem: nsl_axi.bram.axi4_lite_a32_d32_ram
+    mem: nsl_axi.axi4_mm.axi4_mm_lite_ram
       generic map (
-        mem_size_log2_c => 12
+        byte_size_l2_c => 12,
+        config_c => config_c
         )
       port map (
         clock_i => dut_clock_s,
         reset_n_i => dut_reset_n_s,
 
-        axi_i => mem_s.ms,
-        axi_o => mem_s.sm
+        axi_i => axi_s.m,
+        axi_o => axi_s.s
         );
   end block;
 

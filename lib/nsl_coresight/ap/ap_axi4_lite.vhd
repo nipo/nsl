@@ -2,11 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_coresight, nsl_axi;
+library nsl_coresight, nsl_axi, nsl_data;
+use nsl_axi.axi4_mm.all;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
-entity axi4_lite_a32_d32_ap is
+entity ap_axi4_lite is
   generic(
     idr : unsigned(31 downto 0) := X"03000004";
+    config_c : nsl_axi.axi4_mm.config_t;
     rom_base : unsigned(31 downto 0)
     );
   port(
@@ -19,12 +23,21 @@ entity axi4_lite_a32_d32_ap is
     dap_i : in nsl_coresight.dapbus.dapbus_m_o;
     dap_o : out nsl_coresight.dapbus.dapbus_m_i;
 
-    mem_o : out nsl_axi.axi4_lite.a32_d32_ms;
-    mem_i : in  nsl_axi.axi4_lite.a32_d32_sm
+    axi_o : out nsl_axi.axi4_mm.master_t;
+    axi_i : in  nsl_axi.axi4_mm.slave_t
     );
+begin
+  
+  assert is_lite(config_c)
+    report "configuration is not an AXI4-Lite subset"
+    severity failure;
+  assert config_c.address_width = 32 and config_c.data_bus_width_l2 = 2
+    report "configuration is not A32 D32, not supported"
+    severity failure;
+
 end entity;
 
-architecture beh of axi4_lite_a32_d32_ap is
+architecture beh of ap_axi4_lite is
 
   type state_t is (
     ST_RESET,
@@ -42,7 +55,7 @@ architecture beh of axi4_lite_a32_d32_ap is
     aw_pending, w_pending : boolean;
     error_pending, tar_autoinc : boolean;
     last_enable: std_ulogic;
-    addr : std_ulogic_vector(31 downto 0);
+    addr : unsigned(config_c.address_width-1 downto 0);
     tar  : std_ulogic_vector(31 downto 0);
     data : std_ulogic_vector(31 downto 0);
     csw_size : std_ulogic_vector(2 downto 0);
@@ -75,6 +88,15 @@ begin
 
   regs: process(clk_i, reset_n_i)
   begin
+    -- Double assertion here, most vendor VHDL implementations do not handle
+    -- assertions in entity
+    assert is_lite(config_c)
+      report "configuration is not an AXI4-Lite subset"
+      severity failure;
+    assert config_c.address_width = 32 and config_c.data_bus_width_l2 = 2
+      report "configuration is not A32 D32, not supported"
+      severity failure;
+
     if rising_edge(clk_i) then
       r <= rin;
     end if;
@@ -100,7 +122,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, dbgen_i, spiden_i, dap_i, mem_i, drw_increment)
+  transition: process(r, dbgen_i, spiden_i, dap_i, axi_i, drw_increment)
   begin
     rin <= r;
 
@@ -123,11 +145,11 @@ begin
             elsif std_match(dap_i.addr(7 downto 2), reg_drw) then
               rin.data <= dap_i.wdata;
               rin.state <= ST_WRITE_PREPARE;
-              rin.addr <= r.tar;
+              rin.addr <= unsigned(r.tar);
               rin.tar_autoinc <= true;
             elsif std_match(dap_i.addr(7 downto 2), reg_bd) then
               rin.data <= dap_i.wdata;
-              rin.addr <= r.tar(31 downto 4) & dap_i.addr(3 downto 2) & "00";
+              rin.addr <= unsigned(r.tar(31 downto 4)) & unsigned(dap_i.addr(3 downto 2)) & "00";
               rin.state <= ST_WRITE_PREPARE;
               rin.tar_autoinc <= false;
             end if;
@@ -143,10 +165,10 @@ begin
             elsif std_match(dap_i.addr(7 downto 2), reg_drw) then
               rin.data <= (others => '-');
               rin.state <= ST_READ_CMD;
-              rin.addr <= r.tar;
+              rin.addr <= unsigned(r.tar);
               rin.tar_autoinc <= true;
             elsif std_match(dap_i.addr(7 downto 2), reg_bd) then
-              rin.addr <= r.tar(31 downto 4) & dap_i.addr(3 downto 2) & "00";
+              rin.addr <= unsigned(r.tar(31 downto 4)) & unsigned(dap_i.addr(3 downto 2)) & "00";
               rin.data <= (others => '-');
               rin.state <= ST_READ_CMD;
               rin.tar_autoinc <= false;
@@ -168,10 +190,10 @@ begin
         rin.state <= ST_WRITE_CMD;
 
       when ST_WRITE_CMD =>
-        if mem_i.awready = '1' then
+        if is_ready(config_c, axi_i.aw) then
           rin.aw_pending <= false;
         end if;
-        if mem_i.wready = '1' then
+        if is_ready(config_c, axi_i.w) then
           rin.w_pending <= false;
         end if;
         if not r.w_pending and not r.aw_pending then
@@ -179,9 +201,9 @@ begin
         end if;
 
       when ST_WRITE_RSP =>
-        if mem_i.bvalid = '1' then
+        if is_valid(config_c, axi_i.b) then
           rin.state <= ST_IDLE;
-          if mem_i.bresp /= "00" then
+          if resp(config_c, axi_i.b) /= RESP_OKAY then
             rin.error_pending <= true;
           elsif r.tar_autoinc then
             rin.tar <= std_ulogic_vector(unsigned(r.addr) + drw_increment);
@@ -189,19 +211,19 @@ begin
         end if;
         
       when ST_READ_CMD =>
-        if mem_i.arready = '1' then
+        if is_ready(config_c, axi_i.ar) then
           rin.state <= ST_READ_RSP;
         end if;
 
       when ST_READ_RSP =>
-        if mem_i.rvalid = '1' then
+        if is_valid(config_c, axi_i.r) then
           rin.state <= ST_IDLE;
-          if mem_i.rresp /= "00" then
+          if resp(config_c, axi_i.r) /= RESP_OKAY then
             rin.error_pending <= true;
           elsif r.tar_autoinc then
             rin.tar <= std_ulogic_vector(unsigned(r.addr) + drw_increment);
           end if;
-          rin.data <= mem_i.rdata;
+          rin.data <= std_ulogic_vector(value(config_c, axi_i.r, endian => ENDIAN_LITTLE));
         end if;
 
     end case;
@@ -209,6 +231,7 @@ begin
   end process;
 
   moore: process(r)
+    variable strb : std_ulogic_vector(3 downto 0);
   begin
     dap_o <= nsl_coresight.dapbus.dapbus_m_i_idle;
     if r.error_pending then
@@ -221,43 +244,49 @@ begin
       dap_o.rdata <= r.data;
     end if;
 
-    mem_o <= nsl_axi.axi4_lite.a32_d32_ms_idle;
+    axi_o.aw <= address_defaults(config_c);
+    axi_o.ar <= address_defaults(config_c);
+    axi_o.w <= write_data_defaults(config_c);
+    axi_o.r <= handshake_defaults(config_c);
+    axi_o.b <= handshake_defaults(config_c);
     case r.state is
       when ST_WRITE_CMD =>
         if r.aw_pending then
-          mem_o.awvalid <= '1';
-          mem_o.awaddr <= r.addr;
+          axi_o.aw <= address(config_c, addr => r.addr, valid => true);
         end if;
         
         if r.w_pending then
-          mem_o.wvalid <= '1';
           case r.csw_size is
             when "000" =>
-              mem_o.wstrb <= (others => '0');
-              mem_o.wstrb(to_integer(unsigned(r.addr(1 downto 0)))) <= '1';
+              strb := (others => '0');
+              strb(to_integer(unsigned(r.addr(1 downto 0)))) := '1';
             when "001" =>
               if r.tar(1) = '0' then
-                mem_o.wstrb <= "0011";
+                strb := "0011";
               else
-                mem_o.wstrb <= "1100";
+                strb := "1100";
               end if;
             when "010" =>
-              mem_o.wstrb <= "1111";
+              strb := "1111";
             when others =>
-              mem_o.wstrb <= "0000";
+              strb := "0000";
           end case;
-          mem_o.wdata <= r.data;
+          axi_o.w <= write_data(config_c,
+                                value => unsigned(r.data),
+                                endian => ENDIAN_LITTLE,
+                                strb => strb,
+                                last => true,
+                                valid => true);
         end if;
 
       when ST_WRITE_RSP =>
-        mem_o.bready <= '1';
+        axi_o.b <= accept(config_c, true);
 
       when ST_READ_CMD =>
-        mem_o.arvalid <= '1';
-        mem_o.araddr <= r.addr;
+        axi_o.aw <= address(config_c, addr => r.addr, valid => true);
 
       when ST_READ_RSP =>
-        mem_o.rready <= '1';
+        axi_o.r <= accept(config_c, true);
 
       when others =>
         null;

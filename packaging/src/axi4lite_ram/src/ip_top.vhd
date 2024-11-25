@@ -2,7 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi;
+library nsl_axi, nsl_data;
+use nsl_axi.axi4_mm.all;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
+
 
 entity ip_top is
   generic(
@@ -63,44 +67,50 @@ architecture rtl of ip_top is
 
   attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_axi, ASSOCIATED_RESET aresetn";
   attribute X_INTERFACE_PARAMETER of aresetn : signal is "POLARITY ACTIVE_LOW";
-
-  signal bresp, rresp : std_ulogic_vector(1 downto 0);
-  signal rdata : std_ulogic_vector(31 downto 0);
   
+  constant config_c : config_t := config(address_width => addr_size,
+                                         data_bus_width => 32);
+  signal axi_master_s : master_t;
+  signal axi_slave_s : slave_t;
+
 begin
   
-  mem: nsl_axi.bram.axi4_lite_a32_d32_ram
-    generic map (
-      mem_size_log2_c => addr_size
+  axi_master_s.aw <= address(config_c,
+                             addr => unsigned(s_axi_awaddr),
+                             valid => s_axi_awvalid = '1');
+  axi_master_s.w <= write_data(config_c,
+                               value => unsigned(s_axi_wdata),
+                               strb => std_ulogic_vector(s_axi_wstrb),
+                               endian => ENDIAN_BIG,
+                               valid => s_axi_wvalid = '1');
+  axi_master_s.b <= accept(config_c,
+                           ready => s_axi_bready = '1');
+  axi_master_s.ar <= address(config_c,
+                             addr => unsigned(s_axi_araddr),
+                             valid => s_axi_arvalid = '1');
+  axi_master_s.r <= accept(config_c,
+                           ready => s_axi_rready = '1');
+  
+  s_axi_awready <= '1' when is_ready(config_c, axi_slave_s.aw) else '0';
+  s_axi_wready <= '1' when is_ready(config_c, axi_slave_s.w) else '0';
+  s_axi_bvalid <= '1' when is_valid(config_c, axi_slave_s.b) else '0';
+  s_axi_bresp <= std_logic_vector(to_logic(config_c, resp(config_c, axi_slave_s.b)));
+  s_axi_arready <= '1' when is_ready(config_c, axi_slave_s.ar) else '0';
+  s_axi_rvalid <= '1' when is_valid(config_c, axi_slave_s.r) else '0';
+  s_axi_rdata <= std_logic_vector(value(config_c, axi_slave_s.r));
+  s_axi_rresp <= std_logic_vector(to_logic(config_c, resp(config_c, axi_slave_s.r)));
+
+  impl: nsl_axi.axi4_mm.axi4_mm_lite_ram
+    generic map(
+      config_c => config_c,
+      byte_size_l2_c => addr_size
       )
     port map (
       clock_i => aclk,
       reset_n_i => aresetn,
 
-      axi_i.awaddr(31 downto addr_size) => (others => '0'),
-      axi_i.awaddr(addr_size-1 downto 0) => std_ulogic_vector(s_axi_awaddr),
-      axi_i.awvalid => s_axi_awvalid,
-      axi_i.wdata => std_ulogic_vector(s_axi_wdata),
-      axi_i.wstrb => std_ulogic_vector(s_axi_wstrb),
-      axi_i.wvalid => s_axi_wvalid,
-      axi_i.bready => s_axi_bready,
-      axi_i.araddr(31 downto addr_size) => (others => '0'),
-      axi_i.araddr(addr_size-1 downto 0) => std_ulogic_vector(s_axi_araddr),
-      axi_i.arvalid => s_axi_arvalid,
-      axi_i.rready => s_axi_rready,
-
-      axi_o.awready => s_axi_awready,
-      axi_o.wready => s_axi_wready,
-      axi_o.bvalid => s_axi_bvalid,
-      axi_o.bresp => bresp,
-      axi_o.arready => s_axi_arready,
-      axi_o.rvalid => s_axi_rvalid,
-      axi_o.rresp => rresp,
-      axi_o.rdata => rdata
+      axi_i => axi_master_s,
+      axi_o => axi_slave_s
       );
 
-  s_axi_bresp <= std_logic_vector(bresp);
-  s_axi_rresp <= std_logic_vector(rresp);
-  s_axi_rdata <= std_logic_vector(rdata);
-  
 end;

@@ -23,7 +23,8 @@ architecture arch of swd_main is
 
   signal swd_bus : nsl_coresight.swd.swd_slave_bus;
   signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-  signal mem : nsl_axi.axi4_lite.a32_d32;
+  signal axi_s : nsl_axi.axi4_mm.bus_t;
+  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
 
 begin
@@ -87,6 +88,7 @@ begin
   mem_ap: nsl_coresight.ap.axi4_lite_a32_d32_ap
     generic map(
       rom_base => rom_base,
+      config_c => config_c,
       idr => ap_idr
       )
     port map(
@@ -99,20 +101,21 @@ begin
       dap_i => dapbus_memap.ms,
       dap_o => dapbus_memap.sm,
 
-      mem_o => mem.ms,
-      mem_i => mem.sm
+      axi_o => axi_s.m,
+      axi_i => axi_s.s
       );
-  
-  bram: nsl_axi.bram.axi4_lite_a32_d32_ram
+
+  bram: nsl_axi.axi4_mm.axi4_mm_lite_ram
     generic map(
-      mem_size_log2_c => 12
+      byte_size_l2_c => 12,
+      config_c => config_c
       )
     port map(
-      clock_i  => clock,
+      clock_i => clock,
       reset_n_i => reset_n,
-      
-      axi_i => mem.ms,
-      axi_o => mem.sm
+
+      axi_i => axi_s.m,
+      axi_o => axi_s.s
       );
 
   activity: nsl_indication.activity.activity_monitor
