@@ -239,6 +239,25 @@ package axi4_stream is
                     signal stream_o: out slave_t;
                     variable beat: out master_t);
 
+  -- Beat manipulation functions
+  --
+  -- Shift data vector low, inserting bytes / strobe / keep in the
+  -- high-order
+  function shift_low(cfg: config_t;
+                     beat: master_t;
+                     count: natural;
+                     bytes: byte_string := null_byte_string;
+                     strobe: std_ulogic_vector := na_suv;
+                     keep: std_ulogic_vector := na_suv) return master_t;
+  -- Shift data vector high, inserting bytes / strobe / keep in the
+  -- low-order
+  function shift_high(cfg: config_t;
+                      beat: master_t;
+                      count: natural;
+                      bytes: byte_string := null_byte_string;
+                      strobe: std_ulogic_vector := na_suv;
+                      keep: std_ulogic_vector := na_suv) return master_t;
+  
 end package;
 
 package body axi4_stream is
@@ -755,4 +774,124 @@ package body axi4_stream is
     end loop;
   end procedure;
 
+  function shift_low(cfg: config_t;
+                     beat: master_t;
+                     count: natural;
+                     bytes: byte_string := null_byte_string;
+                     strobe: std_ulogic_vector := na_suv;
+                     keep: std_ulogic_vector := na_suv) return master_t
+  is
+    constant data_dontcare_c : byte_string(0 to count-1) := (others => dontcare_byte_c);
+    constant en_dontcare_c : std_ulogic_vector(0 to count-1) := (others => '-');
+    constant en_ones_c : std_ulogic_vector(0 to count-1) := (others => '1');
+    variable d : byte_string(0 to cfg.data_width-1) := (others => dontcare_byte_c);
+    variable k : std_ulogic_vector(0 to cfg.data_width-1);
+    variable s : std_ulogic_vector(0 to cfg.data_width-1);
+  begin
+    d := work.axi4_stream.bytes(cfg, beat);
+    k := work.axi4_stream.keep(cfg, beat);
+    s := work.axi4_stream.strobe(cfg, beat);
+
+    if bytes'length /= 0 then
+      assert bytes'length = count
+        report "Bad data vector passed"
+        severity failure;
+      d := d(count to d'right) & bytes;
+    else
+      d := d(count to d'right) & data_dontcare_c;
+    end if;
+
+    if not cfg.has_keep then
+      k := k(count to k'right) & en_dontcare_c;
+    elsif keep'length /= 0 then
+      assert keep'length = count
+        report "Bad keep vector passed"
+        severity failure;
+      k := k(count to k'right) & keep;
+    else
+      k := k(count to k'right) & en_ones_c;
+    end if;
+
+    if not cfg.has_strobe then
+      s := s(count to s'right) & en_dontcare_c;
+    elsif strobe'length /= 0 then
+      assert strobe'length = count
+        report "Bad strobe vector passed"
+        severity failure;
+      s := s(count to s'right) & strobe;
+    else
+      s := s(count to s'right) & en_ones_c;
+    end if;
+
+    return transfer(cfg,
+                    bytes => d,
+                    strobe => s,
+                    keep => k,
+                    id => id(cfg, beat),
+                    user => user(cfg, beat),
+                    dest => dest(cfg, beat),
+                    valid => is_valid(cfg, beat),
+                    last => is_last(cfg, beat));
+  end function;
+  
+  function shift_high(cfg: config_t;
+                      beat: master_t;
+                      count: natural;
+                      bytes: byte_string := null_byte_string;
+                      strobe: std_ulogic_vector := na_suv;
+                      keep: std_ulogic_vector := na_suv) return master_t
+  is
+    constant data_dontcare_c : byte_string(0 to count-1) := (others => dontcare_byte_c);
+    constant en_dontcare_c : std_ulogic_vector(0 to count-1) := (others => '-');
+    constant en_ones_c : std_ulogic_vector(0 to count-1) := (others => '1');
+    variable d : byte_string(0 to cfg.data_width-1);
+    variable k : std_ulogic_vector(0 to cfg.data_width-1);
+    variable s : std_ulogic_vector(0 to cfg.data_width-1);
+  begin
+    d := work.axi4_stream.bytes(cfg, beat);
+    k := work.axi4_stream.keep(cfg, beat);
+    s := work.axi4_stream.strobe(cfg, beat);
+
+    if bytes'length /= 0 then
+      assert bytes'length = count
+        report "Bad data vector passed"
+        severity failure;
+      d := bytes & d(0 to d'right-count);
+    else
+      d := data_dontcare_c & d(0 to d'right-count);
+    end if;
+
+    if not cfg.has_keep then
+      k := en_dontcare_c & k(0 to k'right-count);
+    elsif keep'length /= 0 then
+      assert keep'length = count
+        report "Bad keep vector passed"
+        severity failure;
+      k := keep & k(0 to k'right-count);
+    else
+      k := en_ones_c & k(0 to k'right-count);
+    end if;
+
+    if not cfg.has_strobe then
+      s := s(0 to s'right-count) & en_dontcare_c;
+    elsif strobe'length /= 0 then
+      assert strobe'length = count
+        report "Bad strobe vector passed"
+        severity failure;
+      s := strobe & s(0 to s'right-count);
+    else
+      s := en_ones_c & s(0 to s'right-count);
+    end if;
+
+    return transfer(cfg,
+                    bytes => d,
+                    strobe => s,
+                    keep => k,
+                    id => id(cfg, beat),
+                    user => user(cfg, beat),
+                    dest => dest(cfg, beat),
+                    valid => is_valid(cfg, beat),
+                    last => is_last(cfg, beat));
+  end function;
+  
 end package body axi4_stream;
