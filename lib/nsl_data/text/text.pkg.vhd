@@ -18,6 +18,9 @@ package text is
   function to_string(v: in boolean) return string;
   function to_string(v: in unsigned) return string;
   function to_string(data : byte_string) return string;
+  function to_string(data : byte_string;
+                     mask: std_ulogic_vector;
+                     masked_out_value: string(1 to 2)) return string;
   function to_string(value: time) return string;
 
   -- Hex stringifiers
@@ -117,6 +120,37 @@ package body text is
     loop
       ret(i*3-2) := ' ';
       ret(i*3-1 to i*3) := to_hex_string(xdata(i));
+    end loop;
+    ret(ret'left) := '[';
+    ret(ret'right) := ']';
+
+    return ret;
+  end function;
+
+  function to_string(data : byte_string;
+                     mask: std_ulogic_vector;
+                     masked_out_value: string(1 to 2)) return string
+  is
+    alias xdata: byte_string(1 to data'length) is data;
+    alias xmask: std_ulogic_vector(1 to mask'length) is mask;
+    variable ret: string(1 to data'length * 3 + 1);
+  begin
+    if data'length = 0 then
+      return "[]";
+    end if;
+
+    assert xdata'length = xmask'length
+      report "Both arguments must have the same length"
+      severity failure;
+
+    for i in xdata'range
+    loop
+      ret(i*3-2) := ' ';
+      if xmask(i) = '1' then
+        ret(i*3-1 to i*3) := to_hex_string(xdata(i));
+      else
+        ret(i*3-1 to i*3) := masked_out_value;
+      end if;
     end loop;
     ret(ret'left) := '[';
     ret(ret'right) := ']';

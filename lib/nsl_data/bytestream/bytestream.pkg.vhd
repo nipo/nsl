@@ -72,6 +72,9 @@ package bytestream is
   -- in the empty position.
   function rot_right(s: byte_string) return byte_string;
 
+  function reverse(s : byte_string) return byte_string;
+  function masked(v : byte_string; m: std_ulogic_vector) return byte_string;
+  
   -- Byte stream (dynamically sized byte string) helper.
   type byte_stream is access byte_string;
   procedure clear(s: inout byte_stream);
@@ -407,6 +410,37 @@ package body bytestream is
     for i in x'range
     loop
       ret(i) := std_ulogic_vector(to_01(unsigned(x(i)), xmap));
+    end loop;
+    return ret;
+  end function;
+
+  function reverse(s : byte_string) return byte_string
+  is
+    alias xx: byte_string(0 to s'length - 1) is s;
+    variable rx: byte_string(s'length - 1 downto 0);
+  begin
+    for i in xx'range
+    loop
+      rx(i) := xx(i);
+    end loop;
+    return rx;
+  end function;
+
+  function masked(v : byte_string; m: std_ulogic_vector) return byte_string
+  is
+    alias xv: byte_string(0 to v'length - 1) is v;
+    alias xm: std_ulogic_vector(0 to m'length - 1) is m;
+    variable ret: byte_string(0 to v'length - 1) := (others => dontcare_byte_c);
+  begin
+    assert xv'length = xm'length
+      report "Both arguments must have the same length"
+      severity failure;
+    
+    for i in xv'range
+    loop
+      if xm(i) = '1' then
+        ret(i) := xv(i);
+      end if;
     end loop;
     return ret;
   end function;
