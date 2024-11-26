@@ -30,8 +30,8 @@ package axi4_stream is
   constant max_dest_width_c: natural := 64;
   constant max_user_width_c: natural := 64;
   
-  subtype strobe_t is std_ulogic_vector(max_data_width_c - 1 downto 0);
-  subtype data_t is byte_string(max_data_width_c - 1 downto 0);
+  subtype strobe_t is std_ulogic_vector(0 to max_data_width_c - 1);
+  subtype data_t is byte_string(0 to max_data_width_c - 1);
   subtype user_t is std_ulogic_vector(max_user_width_c - 1 downto 0);
   subtype id_t is std_ulogic_vector(max_id_width_c - 1 downto 0);
   subtype dest_t is std_ulogic_vector(max_dest_width_c - 1 downto 0);
@@ -95,10 +95,10 @@ package axi4_stream is
   function is_valid(cfg: config_t; m: master_t) return boolean;
   function is_last(cfg: config_t; m: master_t) return boolean;
   function is_ready(cfg: config_t; s: slave_t) return boolean;
-  function bytes(cfg: config_t; m: master_t) return byte_string;
+  function bytes(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return byte_string;
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
-  function strobe(cfg: config_t; m: master_t) return std_ulogic_vector;
-  function keep(cfg: config_t; m: master_t) return std_ulogic_vector;
+  function strobe(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector;
+  function keep(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector;
   function user(cfg: config_t; m: master_t) return std_ulogic_vector;
   function id(cfg: config_t; m: master_t) return std_ulogic_vector;
   function dest(cfg: config_t; m: master_t) return std_ulogic_vector;
@@ -109,6 +109,7 @@ package axi4_stream is
                     bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
+                    endian: endian_t := ENDIAN_LITTLE;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -118,8 +119,6 @@ package axi4_stream is
   function transfer(cfg: config_t;
                     value: unsigned;
                     endian: endian_t := ENDIAN_LITTLE;
-                    strobe: std_ulogic_vector := na_suv;
-                    keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -242,10 +241,14 @@ package body axi4_stream is
     end if;
   end function;
 
-  function bytes(cfg: config_t; m: master_t) return byte_string
+  function bytes(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return byte_string
   is
   begin
-    return m.data(cfg.data_width-1 downto 0);
+    if endian = ENDIAN_LITTLE then
+      return m.data(0 to cfg.data_width-1);
+    else
+      return reverse(m.data(0 to cfg.data_width-1));
+    end if;
   end function;
 
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
@@ -254,25 +257,45 @@ package body axi4_stream is
     return from_endian(bytes(cfg, m), endian);
   end function;
 
-  function strobe(cfg: config_t; m: master_t) return std_ulogic_vector
+  function strobe(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector
   is
+    variable ret : std_ulogic_vector(cfg.data_width-1 downto 0);
   begin
-    if cfg.has_strobe then
-      return m.strobe(cfg.data_width-1 downto 0);
-    else
+    if not cfg.has_strobe then
       return keep(cfg, m);
+    end if;
+
+    if endian = ENDIAN_LITTLE then
+      return m.strobe(0 to cfg.data_width-1);
     end if;        
+
+    for i in 0 to cfg.data_width-1
+    loop
+      ret(i) := m.strobe(i);
+    end loop;
+
+    return ret;
   end function;
 
-  function keep(cfg: config_t; m: master_t) return std_ulogic_vector
+  function keep(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector
   is
     constant default: std_ulogic_vector(cfg.data_width-1 downto 0) := (others => '1');
+    variable ret : std_ulogic_vector(cfg.data_width-1 downto 0);
   begin
-    if cfg.has_keep then
-      return m.keep(cfg.data_width-1 downto 0);
-    else
+    if not cfg.has_keep then
       return default;
     end if;
+
+    if endian = ENDIAN_LITTLE then
+      return m.keep(0 to cfg.data_width-1);
+    end if;
+
+    for i in 0 to cfg.data_width-1
+    loop
+      ret(i) := m.keep(i);
+    end loop;
+
+    return ret;
   end function;
 
   function user(cfg: config_t; m: master_t) return std_ulogic_vector
@@ -298,9 +321,9 @@ package body axi4_stream is
     variable ret: master_t;
   begin
     ret.keep := (others => '-');
-    ret.keep(cfg.data_width-1 downto 0) := (others => '1');
+    ret.keep(0 to cfg.data_width-1) := (others => '1');
     ret.strobe := (others => '-');
-    ret.strobe(cfg.data_width-1 downto 0) := (others => '1');
+    ret.strobe(0 to cfg.data_width-1) := (others => '1');
     ret.data := (others => (others => '-'));
     ret.user := (others => '-');
     ret.dest := (others => '-');
@@ -320,6 +343,7 @@ package body axi4_stream is
                     bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
+                    endian: endian_t := ENDIAN_LITTLE;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -334,9 +358,13 @@ package body axi4_stream is
       assert keep'length = cfg.data_width
         report "Bad keep length"
         severity failure;
-      ret.keep(cfg.data_width-1 downto 0) := keep;
+      if endian = ENDIAN_BIG then
+        ret.keep(0 to cfg.data_width-1) := bitswap(keep);
+      else
+        ret.keep(0 to cfg.data_width-1) := keep;
+      end if;
     else
-      ret.keep(cfg.data_width-1 downto 0) := (others => '1');
+      ret.keep(0 to cfg.data_width-1) := (others => '1');
     end if;
 
     if not cfg.has_strobe or cfg.data_width = 0 then
@@ -345,9 +373,13 @@ package body axi4_stream is
       assert strobe'length = cfg.data_width
         report "Bad strobe length"
         severity failure;
-      ret.strobe(strobe'length-1 downto 0) := strobe;
+      if endian = ENDIAN_BIG then
+        ret.strobe(0 to cfg.data_width-1) := bitswap(strobe);
+      else
+        ret.strobe(0 to cfg.data_width-1) := strobe;
+      end if;
     else
-      ret.strobe(cfg.data_width-1 downto 0) := (others => '1');
+      ret.strobe(0 to cfg.data_width-1) := (others => '1');
     end if;
 
     if cfg.data_width = 0 then
@@ -356,7 +388,11 @@ package body axi4_stream is
       assert bytes'length = cfg.data_width
         report "Bad data length"
         severity failure;
-      ret.data(cfg.data_width-1 downto 0) := bytes;
+      if endian = ENDIAN_BIG then
+        ret.data(0 to cfg.data_width-1) := reverse(bytes);
+      else
+        ret.data(0 to cfg.data_width-1) := bytes;
+      end if;
     end if;
 
     if cfg.user_width = 0 then
@@ -406,8 +442,6 @@ package body axi4_stream is
   function transfer(cfg: config_t;
                     value: unsigned;
                     endian: endian_t := ENDIAN_LITTLE;
-                    strobe: std_ulogic_vector := na_suv;
-                    keep: std_ulogic_vector := na_suv;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -417,8 +451,6 @@ package body axi4_stream is
   begin
     return transfer(cfg => cfg,
                     bytes => to_endian(value, endian),
-                    strobe => strobe,
-                    keep => keep,
                     id => id,
                     user => user,
                     dest => dest,
@@ -550,13 +582,13 @@ package body axi4_stream is
           ret.id(cfg.id_width-1 downto 0) := vv(point to point+cfg.id_width-1);
           point := point + cfg.id_width;
         when 'd' =>
-          ret.data(cfg.data_width*8-1 downto 0) := to_be(unsigned(vv(0 to cfg.data_width*8-1)));
+          ret.data(0 to cfg.data_width*8-1) := to_be(unsigned(vv(0 to cfg.data_width*8-1)));
           point := point + cfg.data_width * 8;
         when 's' =>
-          ret.strobe(cfg.data_width-1 downto 0) := vv(point to point+cfg.data_width-1);
+          ret.strobe(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
           point := point + cfg.data_width;
         when 'k' =>
-          ret.keep(cfg.data_width-1 downto 0) := vv(point to point+cfg.data_width-1);
+          ret.keep(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
           point := point + cfg.data_width;
         when 'o' =>
           ret.dest(cfg.dest_width-1 downto 0) := vv(point to point+cfg.dest_width-1);
@@ -603,9 +635,7 @@ package body axi4_stream is
   is
   begin
     return "<AXISm"
-      &" "&to_string(bytes(cfg, a))
-      &if_else(cfg.has_strobe, "/"&to_string(strobe(cfg, a)), "")
-      &if_else(cfg.has_keep, "+"&to_string(keep(cfg, a)), "")
+      &" "&to_string(masked(bytes(cfg, a), strobe(cfg, a)), mask => keep(cfg, a), masked_out_value => "==")
       &if_else(cfg.id_width>0, " I:"&to_string(id(cfg, a)), "")
       &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, a)), "")
       &if_else(cfg.dest_width>0, " O:"&to_string(dest(cfg, a)), "")
