@@ -193,6 +193,26 @@ package axi4_stream is
       out_i : in slave_t
       );
   end component;
+
+  -- In and out configs shall be identical apart from data width.
+  -- There should be an integer factor from in to out, either by
+  -- division or multiplication.
+  component axi4_stream_width_adapter is
+    generic(
+      in_config_c : config_t;
+      out_config_c : config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
   
   component axi4_stream_dumper is
     generic(
