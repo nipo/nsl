@@ -40,23 +40,23 @@ begin
     bus_s.m.ar <= address_defaults(config_c);
     wait for 30 ns;
     wait until falling_edge(clock_s);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000000", x"00010203", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000004", x"04050607", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000008", x"08090a0b", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"0000000c", x"0c0d0e0f", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000010", x"10111213", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000014", x"14151617", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000018", x"18191a1b", rsp);
-    lite_write(config_c, clock_s, bus_s.s, bus_s.m, x"0000001c", x"1c1d1e1f", rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000000", val => x"00010203", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000004", val => x"04050607", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000008", val => x"08090a0b", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"0000000c", val => x"0c0d0e0f", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000010", val => x"10111213", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000014", val => x"14151617", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000018", val => x"18191a1b", rsp => rsp);
+    lite_write(config_c, clock_s, bus_s.s, bus_s.m, addr => x"0000001c", val => x"1c1d1e1f", rsp => rsp);
 
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"0000001c", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000004", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000008", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"0000000c", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000010", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000018", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000014", value, rsp);
-    lite_read(config_c, clock_s, bus_s.s, bus_s.m, x"00000000", value, rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"0000001c", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000004", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000008", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"0000000c", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000010", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000018", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000014", val => value, rsp => rsp);
+    lite_read(config_c, clock_s, bus_s.s, bus_s.m, addr => x"00000000", val => value, rsp => rsp);
 
     
     done_s(0) <= '1';

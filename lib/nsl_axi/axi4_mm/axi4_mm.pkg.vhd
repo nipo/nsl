@@ -28,28 +28,22 @@ package axi4_mm is
   constant max_user_width_c: natural := 64;
 
   -- Elementary data types
-  constant region_width_c: natural := 4;
   constant max_id_width_c: natural := 64;
   constant max_len_width_c: natural := 8;
-
-  constant size_width_c: natural := 3;
-  constant cache_width_c: natural := 4;
-  constant prot_width_c: natural := 3;
-  constant qos_width_c: natural := 4;
-
   constant max_data_byte_count_l2_c : natural := 2**max_data_bus_width_l2_l2_c-1;
   
   subtype addr_t is unsigned(max_address_width_c - 1 downto 0);
   subtype user_t is std_ulogic_vector(max_user_width_c - 1 downto 0);
   subtype strobe_t is std_ulogic_vector(0 to 2**max_data_byte_count_l2_c - 1);
   subtype data_t is byte_string(0 to 2**max_data_byte_count_l2_c-1);
-  subtype region_t is std_ulogic_vector(region_width_c - 1 downto 0);
+  subtype region_t is std_ulogic_vector(4 - 1 downto 0);
   subtype id_t is std_ulogic_vector(max_id_width_c - 1 downto 0);
   subtype len_t is unsigned(max_len_width_c - 1 downto 0);
-  subtype size_t is unsigned(size_width_c - 1 downto 0);
-  subtype cache_t is std_ulogic_vector(cache_width_c - 1 downto 0);
-  subtype prot_t is std_ulogic_vector(prot_width_c - 1 downto 0);
-  subtype qos_t is std_ulogic_vector(qos_width_c - 1 downto 0);
+  subtype size_t is unsigned(3 - 1 downto 0);
+  subtype cache_t is std_ulogic_vector(4 - 1 downto 0);
+  subtype prot_t is std_ulogic_vector(4 - 1 downto 0);
+  subtype qos_t is std_ulogic_vector(4 - 1 downto 0);
+  subtype lock_t is std_ulogic_vector(0 downto 0);
   subtype burst_t is std_ulogic_vector(1 downto 0);
   subtype resp_t is std_ulogic_vector(1 downto 0);
   
@@ -99,6 +93,7 @@ package axi4_mm is
                   max_length: natural := 1;
                   size: boolean := false;
                   region: boolean := false;
+                  qos: boolean := false;
                   cache: boolean := false;
                   burst: boolean := false;
                   lock: boolean := false) return config_t;
@@ -129,7 +124,7 @@ package axi4_mm is
     len_m1: len_t;
     size_l2: size_t;
     burst: burst_t;
-    lock: std_ulogic;
+    lock: lock_t;
     cache: cache_t;
     prot: prot_t;
     qos: qos_t;
@@ -203,29 +198,34 @@ package axi4_mm is
   function write_data(cfg: config_t;
                       bytes: byte_string;
                       strb: std_ulogic_vector := na_suv;
+                      order: byte_order_t := BYTE_ORDER_INCREASING;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
                       valid: boolean := true) return write_data_t;
 
   -- Write data beat using unsigned as data vector.  Uses passed
-  -- endianness for value, strb always uses ascending order.
+  -- endianness for value serialization as bytes.  strb is in the same
+  -- order as the value (strb bit matching the MSB is on the left).
   function write_data(cfg: config_t;
                       value: unsigned := na_u;
-                      endian: endian_t := ENDIAN_LITTLE;
                       strb: std_ulogic_vector := na_suv;
+                      endian: endian_t := ENDIAN_LITTLE;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
                       valid: boolean := true) return write_data_t;
 
   -- Retrieve the bytes of the write data beat. Returned byte_string
-  -- is in ascending order
-  function bytes(cfg: config_t; write_data: write_data_t) return byte_string;
+  -- is in given order
+  function bytes(cfg: config_t; write_data: write_data_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+  -- Retrieve the mask of the write data beat. Returned vector is in
+  -- given byte order
+  function strb(cfg: config_t; write_data: write_data_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
   -- Retrieve the binary value as if the bus was carrying a numeric
   -- value.  Parse the bus as of endian passed.
   function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
-  -- Retrieve the mask of the write data beat. Returned vector is in
-  -- ascending order
-  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector;
+  -- Retrieve the mask of the write data beat (equivalent to strb
+  -- expanded as a byte mask). Returned vector is in given endianness
+  function mask(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
   -- Retrieve whether beat is last in burst. Last is meaningless if
   -- bus configuration has no length field. In such case, last is
   -- ignored and implied to be true by this function.
@@ -284,6 +284,7 @@ package axi4_mm is
   function read_data(cfg: config_t;
                      id: std_ulogic_vector := na_suv;
                      bytes: byte_string := null_byte_string;
+                     order: byte_order_t := BYTE_ORDER_INCREASING;
                      resp: resp_enum_t := RESP_OKAY;
                      user: std_ulogic_vector := na_suv;
                      last: boolean := false;
@@ -304,7 +305,7 @@ package axi4_mm is
   function id(cfg: config_t; read_data: read_data_t) return std_ulogic_vector;
   -- Retrieve the bytes of the read response data beat. Returned
   -- byte_string is in ascending order
-  function bytes(cfg: config_t; read_data: read_data_t) return byte_string;
+  function bytes(cfg: config_t; read_data: read_data_t; order: byte_order_t:= BYTE_ORDER_INCREASING) return byte_string;
   -- Retrieve the binary value as if the bus was carrying a numeric
   -- value.  Parse the bus as of endian passed.
   function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
@@ -357,8 +358,8 @@ package axi4_mm is
   -- Convertors between semantic enums and bit encoding
   function to_burst(cfg: config_t; b: burst_t) return burst_enum_t;
   function to_logic(cfg: config_t; b: burst_enum_t) return burst_t;
-  function to_lock(cfg: config_t; l: std_ulogic) return lock_enum_t;
-  function to_logic(cfg: config_t; l: lock_enum_t) return std_ulogic;
+  function to_lock(cfg: config_t; l: lock_t) return lock_enum_t;
+  function to_logic(cfg: config_t; l: lock_enum_t) return lock_t;
   function to_resp(cfg: config_t; r: resp_t) return resp_enum_t;
   function to_logic(cfg: config_t; r: resp_enum_t) return resp_t;
 
@@ -373,7 +374,7 @@ package axi4_mm is
     len_m1: len_t;
     size_l2: size_t;
     burst: burst_enum_t;
-    lock: std_ulogic;
+    lock: lock_enum_t;
     cache: cache_t;
     prot: prot_t;
     qos: qos_t;
@@ -465,9 +466,9 @@ package axi4_mm is
                        signal axi_o: out master_t;
                        constant addr: unsigned;
                        constant val: unsigned;
-                       rsp: out resp_enum_t;
+                       constant strb: std_ulogic_vector := "";
                        constant endian: endian_t := ENDIAN_LITTLE;
-                       constant mask: std_ulogic_vector := "");
+                       rsp: out resp_enum_t);
   -- Simulation helper function to issue a read transaction to an
   -- AXI4-Lite bus.
   procedure lite_read(constant cfg: config_t;
@@ -477,8 +478,8 @@ package axi4_mm is
                       constant addr: unsigned;
                       val: out unsigned;
                       rsp: out resp_enum_t;
-                      constant endian: endian_t := ENDIAN_LITTLE;
-                      constant mask: std_ulogic_vector := "");
+                      constant endian: endian_t := ENDIAN_LITTLE);
+
 
   -- AXI4-MM RAM with concurrent read and write channels.  It supports
   -- bursting and requires a dual-port block RAM
@@ -616,7 +617,7 @@ package body axi4_mm is
 
   function hex_address_parse(cfg:config_t; addr:string) return addr_t
   is
-    alias nibbles: string(addr'length-1 downto 0) is addr;
+    alias nibbles: string(addr'length downto 1) is addr;
     variable nibble: character;
     variable ret : addr_t := (others => '0');
   begin
@@ -637,21 +638,21 @@ package body axi4_mm is
     variable ret : addr_t := (others => '-');
     variable slash_index : integer := -1;
     variable start : integer := 0;
-    variable stop : integer := addr'length-1;
+    variable stop : integer := addr'length;
     variable hex_mode : boolean := false;
     variable ignored_lsbs : integer := 0;
-    alias a : string(0 to addr'length-1) is addr;
+    alias a : string(1 to addr'length) is addr;
   begin
     slash_index := strchr(addr, '/');
     if slash_index >= 0 then
-      stop := slash_index-1;
-      ignored_lsbs := cfg.address_width - integer'value(a(slash_index+1 to a'right));
+      stop := slash_index;
+      ignored_lsbs := cfg.address_width - integer'value(a(slash_index+2 to a'right));
     end if;
     
-    if a(0) = 'x' then
-      ret := hex_address_parse(cfg, a(1 to stop));
+    if a(1) = 'x' then
+      ret := hex_address_parse(cfg, a(2 to stop));
     else
-      ret := bin_address_parse(cfg, a(0 to stop));
+      ret := bin_address_parse(cfg, a(1 to stop));
     end if;
 
     if ignored_lsbs /= 0 then
@@ -707,7 +708,7 @@ package body axi4_mm is
   function to_burst(cfg: config_t; b: burst_t) return burst_enum_t
   is
   begin
-    if cfg.has_burst then
+    if cfg.has_burst and cfg.len_width /= 0 then
       case b is
         when "00" => return BURST_FIXED;
         when "10" => return BURST_WRAP;
@@ -721,7 +722,7 @@ package body axi4_mm is
   function to_logic(cfg: config_t; b: burst_enum_t) return burst_t
   is
   begin
-    if cfg.has_burst then
+    if cfg.has_burst and cfg.len_width /= 0 then
       case b is
         when BURST_FIXED => return "00";
         when BURST_WRAP => return "10";
@@ -732,11 +733,11 @@ package body axi4_mm is
     end if;
   end function;
 
-  function to_lock(cfg: config_t; l: std_ulogic) return lock_enum_t
+  function to_lock(cfg: config_t; l: lock_t) return lock_enum_t
   is
   begin
     if cfg.has_lock then
-      case l is
+      case l(l'left) is
         when '0' => return LOCK_NORMAL;
         when others => return LOCK_EXCLUSIVE;
       end case;
@@ -745,16 +746,16 @@ package body axi4_mm is
     end if;
   end function;
 
-  function to_logic(cfg: config_t; l: lock_enum_t) return std_ulogic
+  function to_logic(cfg: config_t; l: lock_enum_t) return lock_t
   is
   begin
     if cfg.has_lock then
       case l is
-        when LOCK_NORMAL => return '0';
-        when LOCK_EXCLUSIVE => return '1';
+        when LOCK_NORMAL => return "0";
+        when LOCK_EXCLUSIVE => return "1";
       end case;
     else
-      return '0';
+      return "0";
     end if;
   end function;
 
@@ -807,16 +808,16 @@ package body axi4_mm is
   is
   begin
     if cfg.has_size then
-      return addr.size_l2(size_width_c-1 downto 0);
+      return addr.size_l2;
     else
-      return to_unsigned(cfg.data_bus_width_l2, size_width_c);
+      return to_unsigned(cfg.data_bus_width_l2, size_t'length);
     end if;
   end function;
 
   function burst(cfg: config_t; addr: address_t) return burst_enum_t
   is
   begin
-    if cfg.has_burst then
+    if cfg.has_burst and cfg.len_width /= 0 then
       return to_burst(cfg, addr.burst);
     else
       return BURST_INCR;
@@ -900,10 +901,16 @@ package body axi4_mm is
     return ret;
   end function; 
        
-  function bytes(cfg: config_t; write_data: write_data_t) return byte_string
+  function bytes(cfg: config_t; write_data: write_data_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string
   is
   begin
-    return write_data.data(0 to 2**cfg.data_bus_width_l2-1);
+    return reorder(write_data.data(0 to 2**cfg.data_bus_width_l2-1), order);
+  end function;
+
+  function strb(cfg: config_t; write_data: write_data_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector
+  is
+  begin
+    return reorder_mask(write_data.strb(0 to 2**cfg.data_bus_width_l2-1), order);
   end function;
 
   function value(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
@@ -912,10 +919,17 @@ package body axi4_mm is
     return from_endian(bytes(cfg, write_data), endian);
   end function;
 
-  function strb(cfg: config_t; write_data: write_data_t) return std_ulogic_vector
+  function mask(cfg: config_t; write_data: write_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
   is
+    variable strb: std_ulogic_vector(0 to 2**cfg.data_bus_width_l2-1) := strb(cfg, write_data);
+    variable ret: byte_string(0 to 2**cfg.data_bus_width_l2-1) := (others => x"00");
   begin
-    return write_data.strb(0 to 2**cfg.data_bus_width_l2-1);
+    -- Expand strb to mask
+    for i in strb'range
+    loop
+      ret(i) := strb(i) & strb(i) & strb(i) & strb(i) & strb(i) & strb(i) & strb(i) & strb(i);
+    end loop;
+    return from_endian(ret, endian);
   end function;
 
   function is_last(cfg: config_t; write_data: write_data_t) return boolean
@@ -970,10 +984,10 @@ package body axi4_mm is
     return read_data.id(cfg.id_width-1 downto 0);
   end function;
 
-  function bytes(cfg: config_t; read_data: read_data_t) return byte_string
+  function bytes(cfg: config_t; read_data: read_data_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string
   is
   begin
-    return read_data.data(0 to 2**cfg.data_bus_width_l2-1);
+    return reorder(read_data.data(0 to 2**cfg.data_bus_width_l2-1), order);
   end function;
 
   function value(cfg: config_t; read_data: read_data_t; endian: endian_t := ENDIAN_LITTLE) return unsigned
@@ -1017,9 +1031,9 @@ package body axi4_mm is
     ret.id := (others => '0');
     ret.addr := (others => '-');
     ret.len_m1 := (others => '0'); -- 1 actual beat
-    ret.size_l2 := to_unsigned(cfg.data_bus_width_l2, size_width_c);
+    ret.size_l2 := to_unsigned(cfg.data_bus_width_l2, size_t'length);
     ret.burst := to_logic(cfg, BURST_INCR);
-    ret.lock := '0';
+    ret.lock := "0";
     ret.cache := (others => '0');
     ret.prot := (others => '-');
     ret.qos := (others => '0');
@@ -1116,13 +1130,13 @@ package body axi4_mm is
     end if;
     
     if cfg.has_size and size_l2'length /= 0 then
-      assert size_l2'length = size_width_c
+      assert size_l2'length = size_t'length
         report "Bad Size value passed"
         severity failure;
       ret.size_l2 := size_l2;
     end if;
     
-    if cfg.has_burst then
+    if cfg.has_burst and cfg.len_width /= 0 then
       ret.burst := to_logic(cfg, burst);
     end if;
 
@@ -1131,28 +1145,28 @@ package body axi4_mm is
     end if;
 
     if cfg.has_cache and cache'length /= 0 then
-      assert cache'length = cache_width_c
+      assert cache'length = cache_t'length
         report "Bad Cache vector passed"
         severity failure;
       ret.cache := cache;
     end if;
 
     if prot'length /= 0 then
-      assert prot'length = prot_width_c
+      assert prot'length = prot_t'length
         report "Bad Prot vector passed"
         severity failure;
       ret.prot := prot;
     end if;
 
     if cfg.has_qos and qos'length /= 0 then
-      assert qos'length = qos_width_c
+      assert qos'length = qos_t'length
         report "Bad Qos vector passed"
         severity failure;
       ret.qos := qos;
     end if;
 
     if cfg.has_region and region'length /= 0 then
-      assert region'length = region_width_c
+      assert region'length = region_t'length
         report "Bad Region vector passed"
         severity failure;
       ret.region := region;
@@ -1173,6 +1187,7 @@ package body axi4_mm is
   function write_data(cfg: config_t;
                       bytes: byte_string;
                       strb: std_ulogic_vector := na_suv;
+                      order: byte_order_t := BYTE_ORDER_INCREASING;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
                       valid: boolean := true) return write_data_t
@@ -1183,14 +1198,14 @@ package body axi4_mm is
       assert 2**cfg.data_bus_width_l2 = bytes'length
         report "Bad data vector passed"
         severity failure;
-      ret.data(0 to bytes'length-1) := bytes;
+      ret.data(0 to bytes'length-1) := reorder(bytes, order);
     end if;
 
     if strb'length /= 0 then
       assert 2**cfg.data_bus_width_l2 = strb'length
         report "Bad strobe vector passed"
         severity failure;
-      ret.strb(0 to strb'length-1) := strb;
+      ret.strb(0 to strb'length-1) := reorder_mask(strb, order);
     end if;
 
     if cfg.user_width /= 0 and user'length /= 0 then
@@ -1209,14 +1224,30 @@ package body axi4_mm is
  
   function write_data(cfg: config_t;
                       value: unsigned := na_u;
-                      endian: endian_t := ENDIAN_LITTLE;
                       strb: std_ulogic_vector := na_suv;
+                      endian: endian_t := ENDIAN_LITTLE;
                       user: std_ulogic_vector := na_suv;
                       last: boolean := false;
                       valid: boolean := true) return write_data_t
   is
   begin
-    return write_data(cfg, to_endian(value, endian), strb, user, last, valid);
+    if endian = ENDIAN_LITTLE then
+      return write_data(cfg,
+                        bytes => to_le(value),
+                        strb => bitswap(strb),
+                        order => BYTE_ORDER_INCREASING,
+                        user => user,
+                        last => last,
+                        valid => valid);
+    else
+      return write_data(cfg,
+                        bytes => to_be(value),
+                        strb => strb,
+                        order => BYTE_ORDER_INCREASING,
+                        user => user,
+                        last => last,
+                        valid => valid);
+    end if;
   end function;
   
   function write_response(cfg: config_t;
@@ -1228,6 +1259,13 @@ package body axi4_mm is
     variable ret: write_response_t := write_response_defaults(cfg);
   begin
     ret.resp := to_logic(cfg, resp);
+
+    if cfg.id_width /= 0 and id'length /= 0 then
+      assert cfg.id_width = id'length
+        report "Bad ID vector passed"
+        severity failure;
+      ret.id(id'length-1 downto 0) := id;
+    end if;
 
     if cfg.user_width /= 0 and user'length /= 0 then
       assert cfg.user_width = user'length
@@ -1244,6 +1282,7 @@ package body axi4_mm is
   function read_data(cfg: config_t;
                      id: std_ulogic_vector := na_suv;
                      bytes: byte_string := null_byte_string;
+                     order: byte_order_t := BYTE_ORDER_INCREASING;
                      resp: resp_enum_t := RESP_OKAY;
                      user: std_ulogic_vector := na_suv;
                      last: boolean := false;
@@ -1255,7 +1294,14 @@ package body axi4_mm is
       assert 2**cfg.data_bus_width_l2 = bytes'length
         report "Bad data vector passed"
         severity failure;
-      ret.data(0 to bytes'length-1) := bytes;
+      ret.data(0 to bytes'length-1) := reorder(bytes, order);
+    end if;
+
+    if cfg.id_width /= 0 and id'length /= 0 then
+      assert cfg.id_width = id'length
+        report "Bad ID vector passed"
+        severity failure;
+      ret.id(id'length-1 downto 0) := id;
     end if;
 
     ret.resp := to_logic(cfg, resp);
@@ -1283,13 +1329,20 @@ package body axi4_mm is
                      valid: boolean := true) return read_data_t
   is
   begin
-    return read_data(cfg, id, to_endian(value, endian), resp, user, last, valid);
+    return read_data(cfg,
+                     id => id,
+                     bytes => to_endian(value, endian),
+                     order => BYTE_ORDER_INCREASING,
+                     resp => resp,
+                     user => user,
+                     last => last,
+                     valid => valid);
   end function;
 
   function address_const_mask(cfg: config_t; addr: address_t) return addr_t
   is
     variable ret: addr_t := (others => '0');
-    constant sl2 : integer range 0 to 2**size_width_c-1 := to_integer(size_l2(cfg, addr));
+    constant sl2 : integer range 0 to 2**size_t'length-1 := to_integer(size_l2(cfg, addr));
     constant l: unsigned(3 downto 0) := length_m1(cfg, addr, 4);
   begin
     if burst(cfg, addr) = BURST_WRAP then
@@ -1320,7 +1373,7 @@ package body axi4_mm is
   function address_saturation_mask(cfg: config_t; addr: address_t) return addr_t
   is
     variable ret: addr_t := (others => '0');
-    variable sl2 : integer range 0 to 2**size_width_c-1 := to_integer(size_l2(cfg, addr));
+    variable sl2 : integer range 0 to 2**size_t'length-1 := to_integer(size_l2(cfg, addr));
   begin
     for i in 0 to sl2-1
     loop
@@ -1345,7 +1398,7 @@ package body axi4_mm is
     ret.len_m1 := addr.len_m1;
     ret.size_l2 := addr.size_l2;
     ret.burst := burst(cfg, addr);
-    ret.lock := addr.lock;
+    ret.lock := lock(cfg, addr);
     ret.cache := addr.cache;
     ret.prot := addr.prot;
     ret.qos := addr.qos;
@@ -1415,16 +1468,16 @@ package body axi4_mm is
   is
   begin
     if cfg.has_size then
-      return txn.size_l2(size_width_c-1 downto 0);
+      return txn.size_l2;
     else
-      return to_unsigned(cfg.data_bus_width_l2, size_width_c);
+      return to_unsigned(cfg.data_bus_width_l2, size_t'length);
     end if;
   end function;
 
   function lock(cfg: config_t; txn: transaction_t) return lock_enum_t
   is
   begin
-    return to_lock(cfg, txn.lock);
+    return txn.lock;
   end function;
 
   function cache(cfg: config_t; txn: transaction_t) return cache_t
@@ -1493,6 +1546,7 @@ package body axi4_mm is
                   max_length: natural := 1;
                   size: boolean := false;
                   region: boolean := false;
+                  qos: boolean := false;
                   cache: boolean := false;
                   burst: boolean := false;
                   lock: boolean := false) return config_t
@@ -1507,7 +1561,8 @@ package body axi4_mm is
     ret.has_size := size;
     ret.has_region := region;
     ret.has_cache := cache;
-    ret.has_burst := burst;
+    ret.has_qos := qos;
+    ret.has_burst := burst and ret.len_width /= 0;
     ret.has_lock := lock;
     return ret;
   end function;
@@ -1565,11 +1620,13 @@ package body axi4_mm is
       &if_else(cfg.len_width>0, " L"&to_string(cfg.len_width), "")
       &if_else(cfg.user_width>0, " U"&to_string(cfg.user_width), "")
       &if_else(cfg.id_width>0, " I"&to_string(cfg.id_width), "")
-      &if_else(cfg.has_size, " S", "")
-      &if_else(cfg.has_region, " R", "")
-      &if_else(cfg.has_cache, " C", "")
-      &if_else(cfg.has_burst, " B", "")
-      &if_else(cfg.has_lock, " X", "")
+      &" "
+      &if_else(cfg.has_size, "S", "")
+      &if_else(cfg.has_region, "R", "")
+      &if_else(cfg.has_cache, "C", "")
+      &if_else(cfg.has_burst and cfg.len_width /= 0, "B", "")
+      &if_else(cfg.has_qos, "Q", "")
+      &if_else(cfg.has_lock, "X", "")
       &">";
   end;
 
@@ -1667,9 +1724,9 @@ package body axi4_mm is
                        signal axi_o: out master_t;
                        constant addr: unsigned;
                        constant val: unsigned;
-                       rsp: out resp_enum_t;
+                       constant strb: std_ulogic_vector := "";
                        constant endian: endian_t := ENDIAN_LITTLE;
-                       constant mask: std_ulogic_vector := "")
+                       rsp: out resp_enum_t)
   is
     variable aw_done, w_done, b_done: boolean := false;
   begin
@@ -1680,7 +1737,7 @@ package body axi4_mm is
     axi_o.ar <= address_defaults(cfg);
     axi_o.r <= handshake_defaults(cfg);
     axi_o.aw <= address(cfg, addr => addr);
-    axi_o.w <= write_data(cfg, value => val, endian => endian, strb => mask);
+    axi_o.w <= write_data(cfg, value => val, strb => strb, endian => endian);
     axi_o.b <= accept(cfg, true);
     
     while not (aw_done and w_done and b_done)
@@ -1718,8 +1775,7 @@ package body axi4_mm is
                       constant addr: unsigned;
                       val: out unsigned;
                       rsp: out resp_enum_t;
-                      constant endian: endian_t := ENDIAN_LITTLE;
-                      constant mask: std_ulogic_vector := "")
+                      constant endian: endian_t := ENDIAN_LITTLE)
   is
     variable ar_done, r_done: boolean := false;
   begin
