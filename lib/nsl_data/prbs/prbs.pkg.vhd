@@ -28,6 +28,8 @@ package prbs is
   -- polynom
   function prbs_byte_string(init, poly : prbs_state;
                             length : integer) return byte_string;
+  function prbs_bit_string(init, poly : prbs_state;
+                           length : integer) return std_ulogic_vector;
 
   -- Generates subsequent bytes for a given PRBS and state. Updates
   -- state.
@@ -150,6 +152,24 @@ package body prbs is
         ret(i)(j) := tmp(tmp'left);
         tmp := prbs_forward(tmp, poly, 1);
       end loop;
+    end loop;
+
+    return ret;
+  end function;
+
+  function prbs_bit_string(init, poly : prbs_state;
+                           length : integer) return std_ulogic_vector
+  is
+    alias xinit : prbs_state(init'length-1 downto 0) is init;
+    variable ret : std_ulogic_vector(0 to length-1);
+    variable tmp : prbs_state(init'length-1 downto 0);
+  begin
+    tmp := init;
+
+    for i in ret'range
+    loop
+      ret(i) := tmp(tmp'left);
+      tmp := prbs_forward(tmp, poly, 1);
     end loop;
 
     return ret;
