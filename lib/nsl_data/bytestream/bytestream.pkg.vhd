@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 -- Byte, byte string and dynamic byte string buffer abstraction.
 package bytestream is
-
+  
   -- Pair of hex nibbles that can represent a byte
   subtype byte_hex_string is string(1 to 2);
   -- A byte
@@ -74,7 +74,22 @@ package bytestream is
 
   function reverse(s : byte_string) return byte_string;
   function masked(v : byte_string; m: std_ulogic_vector) return byte_string;
-  
+
+  -- Byte order in byte_string.
+  -- Usually, byte strings are in increasing order (where lower address is on
+  -- the left). Sometimes, user wants data in decreasing order (where lower
+  -- address is on the right). This is just an helper to designate byte order
+  -- in the array.
+  type byte_order_t is (
+    BYTE_ORDER_INCREASING,
+    BYTE_ORDER_DECREASING
+    );
+
+  -- Assune s is in increasing order, return order designated in o.
+  function reorder(s : byte_string; o: byte_order_t) return byte_string;
+  -- Sister function of reorder for byte masks
+  function reorder_mask(s : std_ulogic_vector; o: byte_order_t) return std_ulogic_vector;
+
   -- Byte stream (dynamically sized byte string) helper.
   type byte_stream is access byte_string;
   procedure clear(s: inout byte_stream);
@@ -445,4 +460,35 @@ package body bytestream is
     return ret;
   end function;
 
+  function reorder(s : byte_string; o: byte_order_t) return byte_string
+  is
+  begin
+    if o = BYTE_ORDER_INCREASING then
+      return s;
+    else
+      return reverse(s);
+    end if;
+  end function;
+
+  function bitswap(x:std_ulogic_vector) return std_ulogic_vector is
+    alias xx: std_ulogic_vector(0 to x'length - 1) is x;
+    variable rx: std_ulogic_vector(x'length - 1 downto 0);
+  begin
+    for i in xx'range
+    loop
+      rx(i) := xx(i);
+    end loop;
+    return rx;
+  end function;
+
+  function reorder_mask(s : std_ulogic_vector; o: byte_order_t) return std_ulogic_vector
+  is
+  begin
+    if o = BYTE_ORDER_INCREASING then
+      return s;
+    else
+      return bitswap(s);
+    end if;
+  end function;
+  
 end package body bytestream;
