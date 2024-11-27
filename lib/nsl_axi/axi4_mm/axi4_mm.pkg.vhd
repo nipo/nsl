@@ -41,7 +41,7 @@ package axi4_mm is
   subtype len_t is unsigned(max_len_width_c - 1 downto 0);
   subtype size_t is unsigned(3 - 1 downto 0);
   subtype cache_t is std_ulogic_vector(4 - 1 downto 0);
-  subtype prot_t is std_ulogic_vector(4 - 1 downto 0);
+  subtype prot_t is std_ulogic_vector(3 - 1 downto 0);
   subtype qos_t is std_ulogic_vector(4 - 1 downto 0);
   subtype lock_t is std_ulogic_vector(0 downto 0);
   subtype burst_t is std_ulogic_vector(1 downto 0);
