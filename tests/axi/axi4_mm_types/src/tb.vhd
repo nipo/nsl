@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data, nsl_simulation, nsl_axi;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use nsl_data.prbs.all;
 use nsl_data.crc.all;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
@@ -441,6 +442,137 @@ begin
     check_addr("xdead_0000",   "--------------------------------"&x"dead0000");
     check_addr(x"dead_0000",   "--------------------------------"&x"dead0000");
     check_addr("x--ad_0000/16",   "----------------------------------------"&x"ad"&"----------------");
+    wait;
+  end process;
+
+  address_serializer: process
+    use nsl_axi.axi4_mm.all;
+    procedure address_serializer_torture(cfg: config_t; loops: integer)
+    is
+      variable serin_v, serout_v, ser_incr_v, ser_wrap_v, ser_inval_v: std_ulogic_vector(address_vector_length(cfg)-1 downto 0);
+      variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+      variable incr_pos, wrap_pos : integer := -1;
+      variable has_burst: boolean := false;
+    begin
+      -- Serialize all-zero vectors where burst is incr and wrap, this
+      -- should expose the position of these two bits in encoded vector,
+      -- in a way we can skip when the PRBS gives us an invalid value
+      -- where burst = "11".
+      ser_incr_v := vector_pack(cfg, address(cfg, burst => BURST_INCR, valid => false, size_l2 => "000"));
+      ser_wrap_v := vector_pack(cfg, address(cfg, burst => BURST_WRAP, valid => false, size_l2 => "000"));
+
+      for i in ser_incr_v'range
+      loop
+        if ser_incr_v(i) = '1' then incr_pos := i; has_burst := true; end if;
+        if ser_wrap_v(i) = '1' then wrap_pos := i; end if;
+      end loop;
+
+      if has_burst then
+        ser_inval_v := (others => '-');
+        ser_inval_v(incr_pos) := '1';
+        ser_inval_v(wrap_pos) := '1';
+      else
+        ser_inval_v := (others => '0');
+      end if;
+
+--      log_info(to_string(cfg), "Inval vector: " & to_string(ser_inval_v));
+
+      for i in 0 to loops-1
+      loop
+        serin_v := prbs_bit_string(state_v, prbs31, serin_v'length);
+
+        if std_match(serin_v, ser_inval_v) then
+          -- Ensure invalid burst value is not used.
+          serin_v(incr_pos) := '0';
+        end if;
+
+        serout_v := vector_pack(cfg, address_vector_unpack(cfg, serin_v));
+        if serin_v /= serout_v then
+          log_info("Hint: "&to_string(serin_v xor serout_v)&" "&to_string(cfg, address_vector_unpack(cfg, serin_v xor serout_v)));
+        end if;
+        assert_equal(to_string(cfg)&" A", serin_v, serout_v, failure);
+
+        state_v := prbs_forward(state_v, prbs31, serin_v'length);
+      end loop;
+
+      log_info(to_string(cfg) & " address torture OK");
+    end procedure;
+
+    procedure write_data_serializer_torture(cfg: config_t; loops: integer)
+    is
+      variable serin_v, serout_v: std_ulogic_vector(write_data_vector_length(cfg)-1 downto 0);
+      variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    begin
+      for i in 0 to loops-1
+      loop
+        serin_v := prbs_bit_string(state_v, prbs31, serin_v'length);
+        serout_v := vector_pack(cfg, write_data_vector_unpack(cfg, serin_v));
+        if serin_v /= serout_v then
+          log_info("Hint: "&to_string(serin_v xor serout_v)&" "&to_string(cfg, write_data_vector_unpack(cfg, serin_v xor serout_v)));
+        end if;
+        assert_equal(to_string(cfg)&" W", serin_v, serout_v, failure);
+
+        state_v := prbs_forward(state_v, prbs31, serin_v'length);
+      end loop;
+
+      log_info(to_string(cfg) & " write data torture OK");
+    end procedure;
+
+    procedure write_response_serializer_torture(cfg: config_t; loops: integer)
+    is
+      variable serin_v, serout_v: std_ulogic_vector(write_response_vector_length(cfg)-1 downto 0);
+      variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    begin
+      for i in 0 to loops-1
+      loop
+        serin_v := prbs_bit_string(state_v, prbs31, serin_v'length);
+        serout_v := vector_pack(cfg, write_response_vector_unpack(cfg, serin_v));
+        if serin_v /= serout_v then
+          log_info("Hint: "&to_string(serin_v xor serout_v)&" "&to_string(cfg, write_response_vector_unpack(cfg, serin_v xor serout_v)));
+        end if;
+        assert_equal(to_string(cfg)&" B", serin_v, serout_v, failure);
+
+        state_v := prbs_forward(state_v, prbs31, serin_v'length);
+      end loop;
+
+      log_info(to_string(cfg) & " write response torture OK");
+    end procedure;
+
+    procedure read_data_serializer_torture(cfg: config_t; loops: integer)
+    is
+      variable serin_v, serout_v: std_ulogic_vector(read_data_vector_length(cfg)-1 downto 0);
+      variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    begin
+      for i in 0 to loops-1
+      loop
+        serin_v := prbs_bit_string(state_v, prbs31, serin_v'length);
+        serout_v := vector_pack(cfg, read_data_vector_unpack(cfg, serin_v));
+        if serin_v /= serout_v then
+          log_info("Hint: "&to_string(serin_v xor serout_v)&" "&to_string(cfg, read_data_vector_unpack(cfg, serin_v xor serout_v)));
+        end if;
+        assert_equal(to_string(cfg)&" R", serin_v, serout_v, failure);
+
+        state_v := prbs_forward(state_v, prbs31, serin_v'length);
+      end loop;
+
+      log_info(to_string(cfg) & " read data torture OK");
+    end procedure;
+
+    procedure serializer_torture(cfg: config_t; loops: integer)
+    is
+    begin
+      address_serializer_torture(cfg, loops);
+      write_data_serializer_torture(cfg, loops);
+      write_response_serializer_torture(cfg, loops);
+      read_data_serializer_torture(cfg, loops);
+    end procedure;
+  begin
+    serializer_torture(config(40, 32, max_length => 16, cache => true), 128);
+    serializer_torture(config(16, 32, max_length => 16, id_width => 2, user_width => 3, burst => true), 128);
+    serializer_torture(config(16, 32, max_length => 16, region => true, user_width => 3), 128);
+    serializer_torture(config(16, 32, qos => true, lock => true, user_width => 3, burst => true), 128);
+    serializer_torture(config(16, 64, size => true, max_length => 128, user_width => 3, burst => true), 128);
+
     wait;
   end process;
   

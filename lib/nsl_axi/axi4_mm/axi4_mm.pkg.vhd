@@ -481,6 +481,32 @@ package axi4_mm is
                       constant endian: endian_t := ENDIAN_LITTLE);
 
 
+  -- Packing tools
+  --
+  -- These are helpers to pack each component of an AXI4-MM to a vector
+  -- This calculates the needed vector size for storing all the selected
+  -- elements of the master signals.
+  function address_vector_length(cfg: config_t) return natural;
+  function write_data_vector_length(cfg: config_t) return natural;
+  function write_response_vector_length(cfg: config_t) return natural;
+  function read_data_vector_length(cfg: config_t) return natural;
+
+  -- Packs an AXI4-MM beat (without the valid bit) to a bit vector
+  function vector_pack(cfg: config_t; a: address_t) return std_ulogic_vector;
+  function vector_pack(cfg: config_t; w: write_data_t) return std_ulogic_vector;
+  function vector_pack(cfg: config_t; b: write_response_t) return std_ulogic_vector;
+  function vector_pack(cfg: config_t; r: read_data_t) return std_ulogic_vector;
+
+  -- Unpack an AXI-Stream mater interface using items given in elements.
+  function address_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                 valid: boolean := true) return address_t;
+  function write_data_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                   valid : boolean := true; last : boolean := false) return write_data_t;
+  function write_response_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                        valid: boolean := true) return write_response_t;
+  function read_data_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                   valid : boolean := true; last : boolean := false) return read_data_t;
+  
   -- AXI4-MM RAM with concurrent read and write channels.  It supports
   -- bursting and requires a dual-port block RAM
   component axi4_mm_ram is
@@ -1811,5 +1837,290 @@ package body axi4_mm is
       end if;
     end loop;
   end procedure;
+
+  function address_vector_length(cfg: config_t) return natural
+  is
+  begin
+    return cfg.address_width
+      + prot_t'length
+      + if_else(cfg.has_size, size_t'length, 0)
+      + if_else(cfg.has_burst and cfg.len_width /= 0, burst_t'length, 0)
+      + if_else(cfg.has_cache, cache_t'length, 0)
+      + cfg.len_width
+      + if_else(cfg.has_lock, lock_t'length, 0)
+      + cfg.id_width
+      + if_else(cfg.has_qos, qos_t'length, 0)
+      + if_else(cfg.has_region, region_t'length, 0)
+      + cfg.user_width
+      ;
+  end function;
+
+  function write_data_vector_length(cfg: config_t) return natural
+  is
+  begin
+    return 8 * (2**cfg.data_bus_width_l2)
+      + (2**cfg.data_bus_width_l2)
+      + cfg.user_width
+      ;
+  end function;
+
+  function write_response_vector_length(cfg: config_t) return natural
+  is
+  begin
+    return resp_t'length
+      + cfg.id_width
+      + cfg.user_width
+      ;
+  end function;
+
+  function read_data_vector_length(cfg: config_t) return natural
+  is
+  begin
+    return 8 * (2**cfg.data_bus_width_l2)
+      + resp_t'length
+      + cfg.id_width
+      + cfg.user_width
+      ;
+  end function;
+
+  function vector_pack(cfg: config_t; a: address_t) return std_ulogic_vector
+  is
+    constant len_c : natural := address_vector_length(cfg);
+    variable ret: std_ulogic_vector(len_c-1 downto 0);
+  begin
+    ret := ""
+           & user(cfg, a)
+           & if_else(cfg.has_region, region(cfg, a), "")
+           & if_else(cfg.has_qos, qos(cfg, a), "")
+           & id(cfg, a)
+           & if_else(cfg.has_lock, to_logic(cfg, lock(cfg, a)), "")
+           & std_ulogic_vector(length_m1(cfg, a, cfg.len_width))
+           & if_else(cfg.has_cache, cache(cfg, a), "")
+           & if_else(cfg.has_burst and cfg.len_width /= 0, to_logic(cfg, burst(cfg, a)), "")
+           & if_else(cfg.has_size, std_ulogic_vector(size_l2(cfg, a)), "")
+           & prot(cfg, a)
+           & std_ulogic_vector(address(cfg, a))
+           ;
+
+    return ret;
+  end function;
+
+  function vector_pack(cfg: config_t; w: write_data_t) return std_ulogic_vector
+  is
+    constant len_c : natural := write_data_vector_length(cfg);
+    variable ret: std_ulogic_vector(len_c-1 downto 0);
+  begin
+    ret := ""
+           & user(cfg, w)
+           & bitswap(strb(cfg, w))
+           & std_ulogic_vector(value(cfg, w, ENDIAN_LITTLE))
+           ;
+
+    return ret;
+  end function;
+  
+  function vector_pack(cfg: config_t; b: write_response_t) return std_ulogic_vector
+  is
+    constant len_c : natural := write_response_vector_length(cfg);
+    variable ret: std_ulogic_vector(len_c-1 downto 0);
+  begin
+    ret := ""
+           & user(cfg, b)
+           & id(cfg, b)
+           & to_logic(cfg, resp(cfg, b))
+           ;
+
+    return ret;
+  end function;
+  
+  function vector_pack(cfg: config_t; r: read_data_t) return std_ulogic_vector
+  is
+    constant len_c : natural := read_data_vector_length(cfg);
+    variable ret: std_ulogic_vector(len_c-1 downto 0);
+  begin
+    ret := ""
+           & user(cfg, r)
+           & id(cfg, r)
+           & to_logic(cfg, resp(cfg, r))
+           & std_ulogic_vector(value(cfg, r, ENDIAN_LITTLE))
+           ;
+
+    return ret;
+  end function;
+
+  function address_vector_unpack(cfg: config_t; v: std_ulogic_vector; valid: boolean := true) return address_t
+  is
+    constant len_c : natural := address_vector_length(cfg);
+    alias vv : std_ulogic_vector(len_c-1 downto 0) is v;
+    variable point: natural := 0;
+    variable ret: address_t := address_defaults(cfg);
+    variable id: std_ulogic_vector(cfg.id_width-1 downto 0);
+    variable addr: unsigned(cfg.address_width-1 downto 0);
+    variable len_m1: unsigned(cfg.len_width-1 downto 0);
+    variable size_l2: unsigned(if_else(cfg.has_size, size_t'length, 0)-1 downto 0);
+    variable burst: burst_enum_t := BURST_INCR;
+    variable lock: lock_enum_t := LOCK_NORMAL;
+    variable cache: std_ulogic_vector(if_else(cfg.has_cache, cache_t'length, 0)-1 downto 0);
+    variable prot: prot_t;
+    variable qos: std_ulogic_vector(if_else(cfg.has_qos, qos_t'length, 0)-1 downto 0);
+    variable region: std_ulogic_vector(if_else(cfg.has_region, region_t'length, 0)-1 downto 0);
+    variable user: std_ulogic_vector(cfg.user_width-1 downto 0);
+  begin
+    assert vv'length = len_c
+      report "Bad vector length"
+      severity failure;
+
+    addr := unsigned(vv(point + addr'length - 1 downto point));
+    point := point + addr'length;
+    prot := vv(point + prot'length - 1 downto point);
+    point := point + prot'length;
+    size_l2 := unsigned(vv(point + size_l2'length - 1 downto point));
+    point := point + size_l2'length;
+
+    if cfg.has_burst and cfg.len_width /= 0 then
+      burst := to_burst(cfg, vv(point + burst_t'length - 1 downto point));
+      point := point + burst_t'length;
+    end if;
+
+    cache := vv(point + cache'length - 1 downto point);
+    point := point + cache'length;
+    len_m1 := unsigned(vv(point + len_m1'length - 1 downto point));
+    point := point + len_m1'length;
+
+    if cfg.has_lock then
+      lock := to_lock(cfg, vv(point + lock_t'length - 1 downto point));
+      point := point + lock_t'length;
+    end if;
+
+    id := vv(point + id'length - 1 downto point);
+    point := point + id'length;
+    qos := vv(point + qos'length - 1 downto point);
+    point := point + qos'length;
+    region := vv(point + region'length - 1 downto point);
+    point := point + region'length;
+    user := vv(point + user'length - 1 downto point);
+    point := point + user'length;
+
+    assert point = len_c
+      report "Internal error"
+      severity failure;
+
+    return address(cfg,
+                   id => id,
+                   addr => addr,
+                   len_m1 => len_m1,
+                   size_l2 => size_l2,
+                   burst => burst,
+                   lock => lock,
+                   cache => cache,
+                   prot => prot,
+                   qos => qos,
+                   region => region,
+                   user => user,
+                   valid => valid);
+  end function;
+
+  function write_data_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                   valid : boolean := true; last : boolean := false) return write_data_t
+  is
+    constant len_c : natural := write_data_vector_length(cfg);
+    alias vv : std_ulogic_vector(len_c-1 downto 0) is v;
+    variable point: natural := 0;
+    variable value: unsigned(8*(2**cfg.data_bus_width_l2)-1 downto 0);
+    variable strb: std_ulogic_vector(2**cfg.data_bus_width_l2-1 downto 0);
+    variable user: std_ulogic_vector(cfg.user_width-1 downto 0);
+  begin
+    assert vv'length = len_c
+      report "Bad vector length"
+      severity failure;
+
+    value := unsigned(vv(point + 8 * (2**cfg.data_bus_width_l2) - 1 downto point));
+    point := point + value'length;
+    strb := vv(point + (2**cfg.data_bus_width_l2) - 1 downto point);
+    point := point + strb'length;
+    user := vv(point + cfg.user_width - 1 downto point);
+    point := point + user'length;
+
+    assert point = len_c
+      report "Internal error"
+      severity failure;
+
+    return write_data(cfg,
+                      value => value,
+                      strb => strb,
+                      endian => ENDIAN_LITTLE,
+                      user => user,
+                      last => last,
+                      valid => valid);
+  end function;
+
+  function write_response_vector_unpack(cfg: config_t; v: std_ulogic_vector; valid: boolean := true) return write_response_t
+  is
+    constant len_c : natural := write_response_vector_length(cfg);
+    alias vv : std_ulogic_vector(len_c-1 downto 0) is v;
+    variable point: natural := 0;
+    variable resp: resp_enum_t;
+    variable id: std_ulogic_vector(cfg.id_width-1 downto 0);
+    variable user: std_ulogic_vector(cfg.user_width-1 downto 0);
+  begin
+    assert vv'length = len_c
+      report "Bad vector length"
+      severity failure;
+
+    resp := to_resp(cfg, vv(point + resp_t'length - 1 downto point));
+    point := point + resp_t'length;
+    id := vv(point + cfg.id_width - 1 downto point);
+    point := point + id'length;
+    user := vv(point + cfg.user_width - 1 downto point);
+    point := point + user'length;
+
+    assert point = len_c
+      report "Internal error"
+      severity failure;
+
+    return write_response(cfg,
+                          id => id,
+                          resp => resp,
+                          user => user,
+                          valid => valid);
+  end function;
+
+  function read_data_vector_unpack(cfg: config_t; v: std_ulogic_vector;
+                                   valid : boolean := true; last : boolean := false) return read_data_t
+  is
+    constant len_c : natural := read_data_vector_length(cfg);
+    alias vv : std_ulogic_vector(len_c-1 downto 0) is v;
+    variable point: natural := 0;
+    variable value: unsigned(8*(2**cfg.data_bus_width_l2)-1 downto 0);
+    variable resp: resp_enum_t;
+    variable id: std_ulogic_vector(cfg.id_width-1 downto 0);
+    variable user: std_ulogic_vector(cfg.user_width-1 downto 0);
+  begin
+    assert vv'length = len_c
+      report "Bad vector length"
+      severity failure;
+
+    value := unsigned(vv(point + 8 * (2**cfg.data_bus_width_l2) - 1 downto point));
+    point := point + value'length;
+    resp := to_resp(cfg, vv(point + resp_t'length - 1 downto point));
+    point := point + resp_t'length;
+    id := vv(point + cfg.id_width - 1 downto point);
+    point := point + id'length;
+    user := vv(point + cfg.user_width - 1 downto point);
+    point := point + user'length;
+
+    assert point = len_c
+      report "Internal error"
+      severity failure;
+
+    return read_data(cfg,
+                     id => id,
+                     value => value,
+                     endian => ENDIAN_LITTLE,
+                     resp => resp,
+                     user => user,
+                     last => last,
+                     valid => valid);
+  end function;
   
 end package body axi4_mm;
