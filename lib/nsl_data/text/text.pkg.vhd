@@ -264,7 +264,7 @@ package body text is
                   needle : character;
                   start_index : integer := 0) return integer
   is
-    alias h: string(0 to haystack'length-1) is haystack;
+    alias h: string(1 to haystack'length) is haystack;
   begin
     if start_index >= h'length or start_index < 0 then
       return -1;
@@ -273,7 +273,7 @@ package body text is
     for offset in h'left + start_index to h'right
     loop
       if h(offset) = needle then
-        return offset;
+        return offset-1;
       end if;
     end loop;
 
@@ -283,8 +283,8 @@ package body text is
   function strstr(haystack, needle : string;
                   start_index : integer := 0) return integer
   is
-    alias h: string(0 to haystack'length-1) is haystack;
-    alias n: string(0 to needle'length-1) is needle;
+    alias h: string(1 to haystack'length) is haystack;
+    alias n: string(1 to needle'length) is needle;
   begin
     if n'length > h'length then
       return -1;
@@ -293,7 +293,7 @@ package body text is
     for offset in h'left to h'right - n'length + 1
     loop
       if h(offset to offset + n'length - 1) = n then
-        return offset;
+        return offset-1;
       end if;
     end loop;
 
@@ -335,7 +335,7 @@ package body text is
       return "";
     end if;
 
-    return tmp(start + key'length + 2 to stop - 1);
+    return tmp(start + key'length + 3 to stop);
   end function;
 
   function if_else(v: boolean; a,b: string) return string is

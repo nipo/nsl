@@ -20,7 +20,7 @@ begin
     constant v_asc_short : bit_vector(0 to 12) := "0001001000110";
     constant v_desc_short : bit_vector(12 downto 0) := "1101111010101";
   begin
-    -- LRM: Hex strings are equal to 4-bit string expandedx in lexical
+    -- LRM: Hex strings are equal to 4-bit string expanded in lexical
     -- order.
     assert_equal("Literals", v_asc_b, v_asc_x, failure);
     assert_equal("Literals", v_desc_b, v_desc_x, failure);
@@ -36,6 +36,11 @@ begin
                  str_param_extract("something(something_params) other(other_params)",
                                    "something"), "something_params",
                  failure);
+    assert_equal("strstr 4", strstr("something", "thing"), 4, failure);
+    assert_equal("strstr -1", strstr("something", "lol"), -1, failure);
+    assert_equal("strchr 4", strchr("abcdef", 'e'), 4, failure);
+    assert_equal("strchr -1", strchr("abcdef", 'g'), -1, failure);
+    assert_equal("str *", "abcdef" * 3, string'("abcdefabcdefabcdef"), failure);
     assert_equal("str_param_extract",
                  str_param_extract("something(something_params) other(other_params)",
                                    "lol"), "",
