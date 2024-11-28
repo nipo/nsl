@@ -2198,8 +2198,8 @@ package body axi4_mm is
                        burst: burst_enum_t := BURST_INCR)
   is
     constant start_offset: integer := to_integer(addr) mod (2**cfg.data_bus_width_l2);
-    constant stop_offset: integer := (start_offset + rdata'length) mod (2**cfg.data_bus_width_l2);
-    constant actual_data_length : integer := start_offset + rdata'length + stop_offset;
+    constant stop_pad: integer := (- (start_offset + rdata'length)) mod (2**cfg.data_bus_width_l2);
+    constant actual_data_length : integer := start_offset + rdata'length + stop_pad;
 
     variable actual_data: byte_string(0 to actual_data_length-1);
     

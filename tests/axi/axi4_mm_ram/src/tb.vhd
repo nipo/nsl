@@ -57,6 +57,14 @@ begin
     burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 32),
                 burst => BURST_WRAP, rsp => rsp);
 
+    burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000040", from_hex("00"*32),
+                rsp => rsp);
+    burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000043", from_hex("ff"*4),
+                rsp => rsp);
+    burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000047", from_hex("ee"*7),
+                rsp => rsp);
+
+    
     state_v := init_v;
 
     burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000000", prbs_byte_string(state_v, prbs31, 32));
@@ -69,14 +77,11 @@ begin
     -- Read again, linear
     
     state_v := prbs_forward(init_v, prbs31, 32*8);
-
-    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 24),
-                burst => BURST_INCR);
-
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 24));
     state_v := prbs_forward(state_v, prbs31, 24*8);
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000020", prbs_byte_string(state_v, prbs31, 8));
 
-    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000020", prbs_byte_string(state_v, prbs31, 8),
-                burst => BURST_INCR);
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000041", from_hex("0000" & "ff"*4 & "ee"*7 & "00"));
     
     done_s(0) <= '1';
     wait;
