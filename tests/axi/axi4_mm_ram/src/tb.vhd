@@ -18,7 +18,7 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 1);
+  signal done_s : std_ulogic_vector(0 to 0);
 
   signal bus_s: bus_t;
 
@@ -30,164 +30,55 @@ architecture arch of tb is
 begin
 
   writer: process is
-    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    constant init_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    variable state_v : prbs_state(30 downto 0) := init_v;
     variable i: integer;
+    variable rsp: resp_enum_t;
+
+    variable pushback_v : prbs_state(30 downto 0) := x"5555555"&"101";
+    variable do_accept: boolean;
+    variable rdata, expected: byte_string(0 to 2**config_c.data_bus_width_l2-1);
   begin
     done_s(0) <= '0';
     
+    bus_s.m.ar <= address_defaults(config_c);
+    bus_s.m.r <= handshake_defaults(config_c);
     bus_s.m.aw <= address_defaults(config_c);
     bus_s.m.w <= write_data_defaults(config_c);
     bus_s.m.b <= accept(config_c, true);
     wait for 30 ns;
     wait until falling_edge(clock_s);
 
-    while true
-    loop
-      bus_s.m.aw <= address(config_c, addr => x"00000000", len_m1 => x"7");
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.aw) then
-        wait until falling_edge(clock_s);
-        bus_s.m.aw <= address_defaults(config_c);
-        exit;
-      end if;
-    end loop;
+    burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000000", prbs_byte_string(state_v, prbs31, 32),
+                rsp => rsp);
+    
+    state_v := prbs_forward(state_v, prbs31, 32*8);
 
-    i := 0;
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      bus_s.m.w <= write_data(config_c, bytes => prbs_byte_string(state_v, prbs31, 4), last => i = 7);
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.w) then
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if i /= 7 then
-          i := i + 1;
-        else
-          wait until falling_edge(clock_s);
-          bus_s.m.w <= write_data_defaults(config_c);
-          exit;
-        end if;
-      end if;
-    end loop;
+    burst_write(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 32),
+                burst => BURST_WRAP, rsp => rsp);
 
-    while true
-    loop
-      bus_s.m.aw <= address(config_c, addr => x"00000028", len_m1 => x"7", burst => BURST_WRAP);
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.aw) then
-        wait until falling_edge(clock_s);
-        bus_s.m.aw <= address_defaults(config_c);
-        exit;
-      end if;
-    end loop;
+    state_v := init_v;
 
-    i := 0;
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      bus_s.m.w <= write_data(config_c, bytes => prbs_byte_string(state_v, prbs31, 4), last => i = 7);
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.w) then
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if i /= 7 then
-          i := i + 1;
-        else
-          wait until falling_edge(clock_s);
-          bus_s.m.w <= write_data_defaults(config_c);
-          exit;
-        end if;
-      end if;
-    end loop;
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000000", prbs_byte_string(state_v, prbs31, 32));
+
+    state_v := prbs_forward(state_v, prbs31, 32*8);
+
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 32),
+                burst => BURST_WRAP);
+
+    -- Read again, linear
+    
+    state_v := prbs_forward(init_v, prbs31, 32*8);
+
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000028", prbs_byte_string(state_v, prbs31, 24),
+                burst => BURST_INCR);
+
+    state_v := prbs_forward(state_v, prbs31, 24*8);
+
+    burst_check(config_c, clock_s, bus_s.s, bus_s.m, x"00000020", prbs_byte_string(state_v, prbs31, 8),
+                burst => BURST_INCR);
     
     done_s(0) <= '1';
-    wait;
-  end process;
-  
-  reader: process is
-    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable pushback_v : prbs_state(30 downto 0) := x"5555555"&"101";
-    variable do_accept: boolean;
-    variable rdata, expected: byte_string(0 to 2**config_c.data_bus_width_l2-1);
-  begin
-    done_s(1) <= '0';
-
-    pushback_v := prbs_forward(pushback_v, prbs31, 49);
-
-    bus_s.m.ar <= address_defaults(config_c);
-    bus_s.m.r <= handshake_defaults(config_c);
-
-    wait until rising_edge(clock_s);
-    wait until done_s(0) = '1';
-
-    while true
-    loop
-      bus_s.m.ar <= address(config_c, addr => x"00000000", len_m1 => x"7");
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.ar) then
-        wait until falling_edge(clock_s);
-        bus_s.m.ar <= address_defaults(config_c);
-        exit;
-      end if;
-    end loop;
-
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      do_accept := pushback_v(30) = '1';
-      pushback_v := prbs_forward(pushback_v, prbs31, 1);
-      bus_s.m.r <= accept(config_c, do_accept);
-      wait until rising_edge(clock_s);
-      if is_valid(config_c, bus_s.s.r) and do_accept then
-        rdata := bytes(config_c, bus_s.s.r);
-        expected := prbs_byte_string(state_v, prbs31, 4);
-
-        assert_equal("Rdata1", rdata, expected, FAILURE);
-
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if is_last(config_c, bus_s.s.r)then
-          wait until falling_edge(clock_s);
-          bus_s.m.r <= handshake_defaults(config_c);
-          exit;
-        end if;
-      end if;
-    end loop;
-
-    while true
-    loop
-      bus_s.m.ar <= address(config_c, addr => x"00000028", len_m1 => x"7", burst => BURST_WRAP);
-      wait until rising_edge(clock_s);
-      if is_ready(config_c, bus_s.s.ar) then
-        wait until falling_edge(clock_s);
-        bus_s.m.ar <= address_defaults(config_c);
-        exit;
-      end if;
-    end loop;
-
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      do_accept := pushback_v(30) = '1';
-      pushback_v := prbs_forward(pushback_v, prbs31, 1);
-      bus_s.m.r <= accept(config_c, do_accept);
-      wait until rising_edge(clock_s);
-      if is_valid(config_c, bus_s.s.r) and do_accept then
-        rdata := bytes(config_c, bus_s.s.r);
-        expected := prbs_byte_string(state_v, prbs31, 4);
-
-        assert_equal("Rdata1", rdata, expected, FAILURE);
-
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if is_last(config_c, bus_s.s.r)then
-          wait until falling_edge(clock_s);
-          bus_s.m.r <= handshake_defaults(config_c);
-          exit;
-        end if;
-      end if;
-    end loop;
-    
-    wait for 150 ns;
-    
-    done_s(1) <= '1';
     wait;
   end process;
 

@@ -525,6 +525,32 @@ package axi4_mm is
                       constant endian: endian_t := ENDIAN_LITTLE;
                       constant sev: severity_level := failure);
 
+  procedure burst_write(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal axi_i: in slave_t;
+                        signal axi_o: out master_t;
+                        constant addr: unsigned;
+                        constant bytes: byte_string;
+                        rsp: out resp_enum_t;
+                        burst: burst_enum_t := BURST_INCR);
+  procedure burst_read(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant addr: unsigned;
+                       variable rdata: out byte_string;
+                       rsp: out resp_enum_t;
+                       burst: burst_enum_t := BURST_INCR);
+  procedure burst_check(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal axi_i: in slave_t;
+                        signal axi_o: out master_t;
+                        constant addr: unsigned;
+                        constant data: byte_string;
+                        constant rsp: resp_enum_t := RESP_OKAY;
+                        constant burst: burst_enum_t := BURST_INCR;
+                        constant sev: severity_level := failure);
+
   -- Packing tools
   --
   -- These are helpers to pack each component of an AXI4-MM to a vector
@@ -674,6 +700,41 @@ package axi4_mm is
       axi_o: out slave_t
       );
   end component;
+
+--  component axi4_mm_converter is
+--    generic(
+--      slave_config_c : config_t;
+--      master_config_c : config_t
+--      );
+--    port(
+--      clock_i : in std_ulogic;
+--      reset_n_i : in std_ulogic;
+--
+--      slave_i : in master_t;
+--      slave_o : out slave_t;
+--
+--      master_o : out master_t;
+--      master_i : in slave_t
+--      );
+--  end component;
+--
+--  component axi4_mm_router is
+--    generic(
+--      config_c : config_t;
+--      slave_count_c : positive;
+--      destination_addresses_c : address_vector
+--      );
+--    port(
+--      clock_i : in std_ulogic;
+--      reset_n_i : in std_ulogic;
+--
+--      slave_i : in master_vector(0 to slave_count_c);
+--      slave_o : out slave_vector(0 to slave_count_c);
+--
+--      master_o : out master_vector(0 to destination_addresses_c'length-1);
+--      master_i : in slave_vector(0 to destination_addresses_c'length-1)
+--      );
+--  end component;
   
 end package;
 
@@ -2040,6 +2101,196 @@ package body axi4_mm is
       + cfg.user_width
       ;
   end function;
+
+  procedure burst_write(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant addr: unsigned;
+                       constant bytes: byte_string;
+                       rsp: out resp_enum_t;
+                       burst: burst_enum_t := BURST_INCR)
+  is
+    constant start_offset: integer := to_integer(addr) mod (2**cfg.data_bus_width_l2);
+    constant stop_offset: integer := (start_offset + bytes'length) mod (2**cfg.data_bus_width_l2);
+    constant pad_pre: byte_string(1 to start_offset) := (others => dontcare_byte_c);
+    constant pad_post: byte_string(if_else(stop_offset = 0, 2**cfg.data_bus_width_l2, stop_offset)
+                                   to 2**cfg.data_bus_width_l2-1) := (others => dontcare_byte_c);
+
+    constant mask_pre: std_ulogic_vector(0 to pad_pre'length-1) := (others => '0');
+    constant mask: std_ulogic_vector(0 to bytes'length-1) := (others => '1');
+    constant mask_post: std_ulogic_vector(0 to pad_post'length-1) := (others => '0');
+
+    constant actual_data_tmp: byte_string := pad_pre & bytes & pad_post;
+    constant actual_mask_tmp: std_ulogic_vector := mask_pre & mask & mask_post;
+
+    alias actual_data: byte_string(0 to actual_data_tmp'length-1) is actual_data_tmp;
+    alias actual_mask: std_ulogic_vector(0 to actual_mask_tmp'length-1) is actual_mask_tmp;
+
+    constant aligned_address : unsigned := resize(addr, cfg.address_width) and to_unsigned(2**cfg.data_bus_width_l2-1, cfg.address_width);
+
+    constant w_count: natural := actual_data'length / (2**cfg.data_bus_width_l2);
+    variable len_m1 : unsigned(cfg.len_width-1 downto 0) := to_unsigned(w_count - 1, cfg.len_width);
+
+    variable aw_done, b_done, w_pending: boolean := false;
+    variable w_index: natural := 0;
+  begin
+    assert cfg.has_burst
+      report "Configuration has no burst capability"
+      severity failure;
+    
+    assert actual_data'length mod (2**cfg.data_bus_width_l2) = 0
+      report "Internal error, bad padding calculation"
+      severity failure;
+
+    assert actual_data'length <= 2 ** (cfg.len_width + cfg.data_bus_width_l2)
+      report "Actual burst is too big for the bus length encoding"
+      severity failure;
+    
+    axi_o.ar <= address_defaults(cfg);
+    axi_o.r <= handshake_defaults(cfg);
+    axi_o.aw <= address(cfg, addr => addr, len_m1 => len_m1, burst => burst);
+    axi_o.b <= accept(cfg, true);
+
+    while not (aw_done and w_index = w_count and b_done)
+    loop
+      if w_index < w_count and not w_pending then
+        axi_o.w <= write_data(cfg,
+                              bytes => actual_data(w_index * 2**cfg.data_bus_width_l2 to (w_index+1) * 2**cfg.data_bus_width_l2 - 1),
+                              strb => actual_mask(w_index * 2**cfg.data_bus_width_l2 to (w_index+1) * 2**cfg.data_bus_width_l2 - 1),
+                              last => w_index = w_count - 1);
+        w_pending := true;
+      end if;
+
+      wait until rising_edge(clock);
+      if is_ready(cfg, axi_i.aw) then
+        aw_done := true;
+      end if;
+      if is_ready(cfg, axi_i.w) and w_pending then
+        w_pending := false;
+        w_index := w_index + 1;
+      end if;
+      if is_valid(cfg, axi_i.b) then
+        b_done := true;
+        rsp := resp(cfg, axi_i.b);
+      end if;
+
+      wait until falling_edge(clock);
+
+      if aw_done then
+        axi_o.aw <= address_defaults(cfg);
+      end if;
+      if not w_pending then
+        axi_o.w <= write_data_defaults(cfg);
+      end if;
+      if b_done then
+        axi_o.b <= handshake_defaults(cfg);
+      end if;
+    end loop;
+  end procedure;
+
+  procedure burst_read(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant addr: unsigned;
+                       variable rdata: out byte_string;
+                       rsp: out resp_enum_t;
+                       burst: burst_enum_t := BURST_INCR)
+  is
+    constant start_offset: integer := to_integer(addr) mod (2**cfg.data_bus_width_l2);
+    constant stop_offset: integer := (start_offset + rdata'length) mod (2**cfg.data_bus_width_l2);
+    constant actual_data_length : integer := start_offset + rdata'length + stop_offset;
+
+    variable actual_data: byte_string(0 to actual_data_length-1);
+    
+    constant aligned_address : unsigned := resize(addr, cfg.address_width) and to_unsigned(2**cfg.data_bus_width_l2-1, cfg.address_width);
+
+    constant r_count: natural := actual_data'length / (2**cfg.data_bus_width_l2);
+    variable len_m1 : unsigned(cfg.len_width-1 downto 0) := to_unsigned(r_count - 1, cfg.len_width);
+
+    variable ar_done, r_pending: boolean := false;
+    variable r_index: natural := 0;
+  begin
+    assert cfg.has_burst
+      report "Configuration has no burst capability"
+      severity failure;
+    
+    assert actual_data'length mod (2**cfg.data_bus_width_l2) = 0
+      report "Internal error, bad padding calculation"
+      severity failure;
+
+    assert actual_data'length <= 2 ** (cfg.len_width + cfg.data_bus_width_l2)
+      report "Actual burst is too big for the bus length encoding"
+      severity failure;
+    
+    axi_o.aw <= address_defaults(cfg);
+    axi_o.b <= handshake_defaults(cfg);
+    axi_o.w <= write_data_defaults(cfg);
+
+    axi_o.ar <= address(cfg, addr => addr, len_m1 => len_m1, burst => burst);
+    axi_o.r <= handshake_defaults(cfg);
+
+    while not (ar_done and r_index = r_count)
+    loop
+      if r_index < r_count and not r_pending then
+        axi_o.r <= accept(cfg, true);
+        r_pending := true;
+      end if;
+
+      wait until rising_edge(clock);
+      if is_ready(cfg, axi_i.ar) then
+        ar_done := true;
+      end if;
+      if is_valid(cfg, axi_i.r) and r_pending then
+        r_pending := false;
+
+        actual_data(r_index * 2**cfg.data_bus_width_l2 to (r_index+1) * 2**cfg.data_bus_width_l2 - 1)
+          := bytes(cfg, axi_i.r);
+        rsp := resp(cfg, axi_i.r);
+        
+        r_index := r_index + 1;
+      end if;
+
+      wait until falling_edge(clock);
+
+      if ar_done then
+        axi_o.ar <= address_defaults(cfg);
+      end if;
+      if not r_pending then
+        axi_o.r <= handshake_defaults(cfg);
+      end if;
+    end loop;
+
+    rdata := actual_data(start_offset to start_offset + rdata'length-1);
+  end procedure;
+
+  procedure burst_check(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal axi_i: in slave_t;
+                        signal axi_o: out master_t;
+                        constant addr: unsigned;
+                        constant data: byte_string;
+                        constant rsp: resp_enum_t := RESP_OKAY;
+                        constant burst: burst_enum_t := BURST_INCR;
+                        constant sev: severity_level := failure)
+  is
+    alias expected:byte_string(0 to data'length-1) is data;
+    variable rdata: byte_string(0 to data'length-1);
+    variable rrsp: resp_enum_t;
+  begin
+    burst_read(cfg, clock, axi_i, axi_o, addr, rdata, rrsp, burst);
+
+    assert rsp = rrsp
+      report "Response "&to_string(rrsp)&" does not match expected "&to_string(rsp)
+      severity sev;
+
+    if rsp = RESP_OKAY then
+      assert rdata = expected
+        report "Response data "&to_string(rdata)&" does not match expected "&to_string(expected)
+        severity sev;
+    end if;
+  end procedure;
 
   function write_data_vector_length(cfg: config_t) return natural
   is
