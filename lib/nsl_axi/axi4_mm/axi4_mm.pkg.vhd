@@ -618,6 +618,48 @@ package axi4_mm is
       );
   end component;
 
+  -- AXI4-Lite register map helper. It hides all details of AXI4-lite
+  -- and only exposes a bunch of register designated by indexes. The
+  -- whole register map has one endianness on the bus. Only writes of
+  -- a full data bus width are permitted. Shorter writes will signal a
+  -- SLVERR.
+  component axi4_mm_lite_regmap is
+    generic (
+      config_c: config_t;
+      -- Default to 4kB block of 32-bit registers, which is defaults
+      -- for typical CMSIS register block. Note final memory block
+      -- byte size also depends on the bus width.
+      reg_count_l2_c : natural := 10;
+      endianness_c: endian_t := ENDIAN_LITTLE
+      );
+    port (
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic := '1';
+
+      axi_i: in master_t;
+      axi_o: out slave_t;
+
+      -- Register number, i.e. aligned address divided by bus width.
+      -- This output is stable during all the read/write cycle.
+      -- - During write, reg_no_o is stable at least during the
+      --   w_strobe_o assertion cycle.
+      -- - During read, reg_no_o is stable at least during the
+      --   r_strobe_o assertion cycle and the one after.
+      reg_no_o : out integer range 0 to 2**reg_count_l2_c-1;
+      -- Value, with all bits meaningful and no mask, extracted from the bus
+      -- using the relevant endianness
+      w_value_o : out unsigned(8*(2**config_c.data_bus_width_l2)-1 downto 0);
+      -- Strobe is asserted when data on bus is significant.
+      w_strobe_o : out std_ulogic;
+      -- Value, with all bits meaningful and no mask, will be
+      -- serialized to the bus using the relevant endianness
+      r_value_i : in unsigned(8*(2**config_c.data_bus_width_l2)-1 downto 0);
+      -- r_value_i must be asserted on the interface the cycle after r_strobe_o
+      -- is asserted.
+      r_strobe_o : out std_ulogic
+      );
+  end component;
+
   -- AXI4-Lite RAM, using a one-port block RAM.
   component axi4_mm_lite_ram is
     generic (

@@ -2,6 +2,7 @@ vhdl-sources += axi4_mm.pkg.vhd
 vhdl-sources += axi4_mm_ram.vhd
 vhdl-sources += axi4_mm_lite_slave.vhd
 vhdl-sources += axi4_mm_lite_ram.vhd
+vhdl-sources += axi4_mm_lite_regmap.vhd
 
 deps += nsl_logic.bool
 deps += nsl_logic.logic
