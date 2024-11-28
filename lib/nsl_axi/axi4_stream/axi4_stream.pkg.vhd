@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_logic, nsl_math, nsl_data;
+library nsl_logic, nsl_math, nsl_data, work;
 use nsl_logic.bool.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
@@ -258,6 +258,26 @@ package axi4_stream is
                     signal stream_i: in master_t;
                     signal stream_o: out slave_t;
                     variable beat: out master_t);
+
+  procedure packet_send(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: byte_string;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant user: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv);
+
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet : out byte_stream;
+                           variable id : out std_ulogic_vector;
+                           variable user : out std_ulogic_vector;
+                           variable dest : out std_ulogic_vector);
 
   -- Beat manipulation functions
   --
@@ -893,5 +913,103 @@ package body axi4_stream is
                     valid => is_valid(cfg, beat),
                     last => is_last(cfg, beat));
   end function;
+
+  procedure packet_send(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: byte_string;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant user: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv)
+  is
+    constant padding_len: integer := (-packet'length) mod cfg.data_width;
+    constant padding: byte_string(1 to padding_len) := (others => dontcare_byte_c);
+    constant data: byte_string(0 to packet'length+padding_len-1) := packet & padding;
+    variable data_strobe: std_ulogic_vector(0 to data'length-1) := (others => '0');
+    variable data_keep: std_ulogic_vector(0 to data'length-1) := (others => '0');
+    variable index : natural;
+  begin
+    if strobe'length /= 0 then
+      data_strobe(0 to strobe'length-1) := strobe;
+    else
+      data_strobe(0 to packet'length-1) := (others => '1');
+    end if;
+
+    if keep'length /= 0 then
+      data_keep(0 to keep'length-1) := keep;
+    else
+      data_keep(0 to packet'length-1) := (others => '1');
+    end if;
+
+    index := 0;
+    while index < data'length
+    loop
+      send(cfg, clock, stream_i, stream_o,
+           bytes => data(index to index + cfg.data_width - 1),
+           strobe => data_strobe(index to index + cfg.data_width - 1),
+           keep => data_keep(index to index + cfg.data_width - 1),
+           id => id,
+           user => user,
+           dest => dest,
+           valid => true,
+           last => index >= data'length - cfg.data_width);
+      index := index + cfg.data_width;
+    end loop;
+  end procedure;
+
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet : out byte_stream;
+                           variable id : out std_ulogic_vector;
+                           variable user : out std_ulogic_vector;
+                           variable dest : out std_ulogic_vector)
+  is
+    variable r: byte_stream;
+    variable beat: master_t;
+    variable d: byte_string(0 to cfg.data_width-1);
+    variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
+    variable first: boolean := false;
+  begin
+    clear(r);
+
+    while true
+    loop
+      receive(cfg, clock, stream_i, stream_o, beat);
+
+      d := bytes(cfg, beat);
+      s := strobe(cfg, beat);
+      k := keep(cfg, beat);
+
+      for i in d'range
+      loop
+        if k(i) = '1' then
+          if s(i) = '1' then
+            write(r, d(i));
+          else
+            write(r, dontcare_byte_c);
+          end if;
+        end if;
+      end loop;
+      
+      if first then
+        first := false;
+
+        id := work.axi4_stream.id(cfg, beat)(0 to id'length-1);
+        user := work.axi4_stream.user(cfg, beat)(0 to user'length-1);
+        dest := work.axi4_stream.dest(cfg, beat)(0 to dest'length-1);
+      end if;
+
+      if is_last(cfg, beat) then
+        exit;
+      end if;
+    end loop;
+
+    packet := r;
+  end procedure;
   
 end package body axi4_stream;
