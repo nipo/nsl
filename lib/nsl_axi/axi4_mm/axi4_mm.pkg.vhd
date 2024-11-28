@@ -479,7 +479,51 @@ package axi4_mm is
                       val: out unsigned;
                       rsp: out resp_enum_t;
                       constant endian: endian_t := ENDIAN_LITTLE);
+  -- Simulation helper function to issue a read transaction to an
+  -- AXI4-Lite bus and check return value matches (will use std_match
+  -- to check return value). Checks response before value, if response
+  -- is an expected error, value is meaningless.
+  procedure lite_check(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant addr: unsigned;
+                      constant val: unsigned := na_u;
+                      constant rsp: resp_enum_t := RESP_OKAY;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant sev: severity_level := failure);
 
+  -- Same as previous using integer (register) addresses
+  procedure lite_write(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant reg: integer;
+                       constant reg_lsb: integer := 0;
+                       constant val: unsigned;
+                       constant strb: std_ulogic_vector := "";
+                       constant endian: endian_t := ENDIAN_LITTLE;
+                       constant rsp: resp_enum_t := RESP_OKAY;
+                      constant sev: severity_level := failure);
+  procedure lite_read(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant reg: integer;
+                      constant reg_lsb: integer := 0;
+                      val: out unsigned;
+                      rsp: out resp_enum_t;
+                      constant endian: endian_t := ENDIAN_LITTLE);
+  procedure lite_check(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant reg: integer;
+                      constant reg_lsb: integer := 0;
+                      constant val: unsigned := na_u;
+                      constant rsp: resp_enum_t := RESP_OKAY;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant sev: severity_level := failure);
 
   -- Packing tools
   --
@@ -1838,6 +1882,104 @@ package body axi4_mm is
         axi_o.r <= handshake_defaults(cfg);
       end if;
     end loop;
+  end procedure;
+
+  procedure lite_write(constant cfg: config_t;
+                       signal clock: in std_ulogic;
+                       signal axi_i: in slave_t;
+                       signal axi_o: out master_t;
+                       constant reg: integer;
+                       constant reg_lsb: integer := 0;
+                       constant val: unsigned;
+                       constant strb: std_ulogic_vector := "";
+                       constant endian: endian_t := ENDIAN_LITTLE;
+                       constant rsp: resp_enum_t := RESP_OKAY;
+                       constant sev: severity_level := failure)
+  is
+    variable rrsp: resp_enum_t;
+  begin
+    lite_write(cfg => cfg,
+               clock => clock, axi_i => axi_i, axi_o => axi_o,
+               addr => to_unsigned(reg * (2 ** reg_lsb), cfg.address_width),
+               val => val,
+               strb => strb,
+               endian => endian,
+               rsp => rrsp);
+
+    assert rsp = rrsp
+      report "Response "&to_string(rrsp)&" does not match expected value "&to_string(rsp)
+      severity sev;
+  end procedure;
+  
+  procedure lite_read(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant reg: integer;
+                      constant reg_lsb: integer := 0;
+                      val: out unsigned;
+                      rsp: out resp_enum_t;
+                      constant endian: endian_t := ENDIAN_LITTLE)
+  is
+  begin
+    lite_read(cfg => cfg,
+              clock => clock, axi_i => axi_i, axi_o => axi_o,
+              addr => to_unsigned(reg * (2 ** reg_lsb), cfg.address_width),
+              val => val,
+              endian => endian,
+              rsp => rsp);
+  end procedure;
+
+  procedure lite_check(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant addr: unsigned;
+                      constant val: unsigned := na_u;
+                      constant rsp: resp_enum_t := RESP_OKAY;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant sev: severity_level := failure)
+  is
+    variable rvalue: unsigned(8 * (2**cfg.data_bus_width_l2) - 1 downto 0);
+    variable rrsp: resp_enum_t;
+  begin
+    lite_read(cfg => cfg,
+              clock => clock, axi_i => axi_i, axi_o => axi_o,
+              addr => addr,
+              val => rvalue,
+              endian => endian,
+              rsp => rrsp);
+
+    assert rsp = rrsp
+      report "Response "&to_string(rrsp)&" does not match expected value "&to_string(rsp)
+      severity sev;
+
+    if rsp = RESP_OKAY then
+      assert std_match(val, rvalue)
+        report "Response "&to_string(rvalue)&" does not match expected value "&to_string(val)
+        severity sev;
+    end if;
+  end procedure;
+
+  procedure lite_check(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal axi_i: in slave_t;
+                      signal axi_o: out master_t;
+                      constant reg: integer;
+                      constant reg_lsb: integer := 0;
+                      constant val: unsigned := na_u;
+                      constant rsp: resp_enum_t := RESP_OKAY;
+                      constant endian: endian_t := ENDIAN_LITTLE;
+                      constant sev: severity_level := failure)
+  is
+  begin
+    lite_check(cfg => cfg,
+               clock => clock, axi_i => axi_i, axi_o => axi_o,
+               addr => to_unsigned(reg * (2 ** reg_lsb), cfg.address_width),
+               val => val,
+               rsp => rsp,
+               endian => endian,
+               sev => sev);
   end procedure;
 
   function address_vector_length(cfg: config_t) return natural
