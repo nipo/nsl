@@ -1061,7 +1061,7 @@ package body axi4_mm is
     ret.burst := to_logic(cfg, BURST_INCR);
     ret.lock := "0";
     ret.cache := (others => '0');
-    ret.prot := (others => '-');
+    ret.prot := (others => '0');
     ret.qos := (others => '0');
     ret.region := (others => '0');
     ret.user := (others => '-');
