@@ -22,12 +22,13 @@ architecture arch of tb is
 
   signal input_s, output_s: bus_t;
 
-  constant in_cfg_c: config_t := config(4, last => true);
-  constant out_cfg_c: config_t := config(12, last => true);
+  constant in_cfg_c: config_t := config(4, last => true, keep => true);
+  constant out_cfg_c: config_t := config(12, last => true, keep => true);
 begin
 
   tx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    variable frame_byte_count: integer;
   begin
     done_s(0) <= '0';
 
@@ -35,16 +36,14 @@ begin
 
     wait for 50 ns;
 
-    for s in 1 to 16
+    for stream_beat_count in 1 to 16
     loop
-      for i in 0 to s-1
-      loop
-        send(in_cfg_c, clock_s, input_s.s, input_s.m,
-             bytes => prbs_byte_string(state_v, prbs31, in_cfg_c.data_width),
-             valid => true,
-             last => i = s-1);
-        state_v := prbs_forward(state_v, prbs31, in_cfg_c.data_width * 8);
-      end loop;
+      frame_byte_count := stream_beat_count * in_cfg_c.data_width;
+
+      packet_send(in_cfg_c, clock_s, input_s.s, input_s.m,
+                  packet => prbs_byte_string(state_v, prbs31, frame_byte_count));
+
+      state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
     wait for 500 ns;
@@ -55,8 +54,9 @@ begin
 
   rx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable beat_v: master_t;
-    variable frame_byte_count, output_beat_count, beat_byte_count: integer;
+    variable rx_data : byte_stream;
+    variable frame_byte_count: integer;
+    variable id, user, dest : std_ulogic_vector(1 to 0);
   begin
     done_s(1) <= '0';
 
@@ -64,22 +64,18 @@ begin
 
     wait for 50 ns;
 
-    for s in 1 to 16
+    for stream_beat_count in 1 to 16
     loop
-      frame_byte_count := s * in_cfg_c.data_width;
-      output_beat_count := (frame_byte_count + out_cfg_c.data_width - 1) / out_cfg_c.data_width;
-      for beat_index in 0 to output_beat_count-1
-      loop
-        beat_byte_count := frame_byte_count - beat_index * out_cfg_c.data_width;
-        if beat_byte_count > out_cfg_c.data_width then
-          beat_byte_count := out_cfg_c.data_width;
-        end if;
+      frame_byte_count := stream_beat_count * in_cfg_c.data_width;
 
-        receive(out_cfg_c, clock_s, output_s.m, output_s.s, beat_v);
-        assert_equal("data", bytes(out_cfg_c, beat_v)(0 to beat_byte_count-1), prbs_byte_string(state_v, prbs31, beat_byte_count), failure);
-        assert_equal("last", is_last(out_cfg_c, beat_v), beat_index = output_beat_count-1, failure);
-        state_v := prbs_forward(state_v, prbs31, beat_byte_count * 8);
-      end loop;
+      packet_receive(out_cfg_c, clock_s, output_s.m, output_s.s,
+                     packet => rx_data,
+                     id => id,
+                     user => user,
+                     dest => dest);
+
+      assert_equal("data", rx_data.all(0 to frame_byte_count-1), prbs_byte_string(state_v, prbs31, frame_byte_count), failure);
+      state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
     wait for 500 ns;

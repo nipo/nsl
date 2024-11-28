@@ -84,14 +84,14 @@ begin
 
   dumper: nsl_axi.axi4_stream.axi4_stream_dumper
     generic map(
-      config_c => in_cfg_c,
-      prefix_c => "RAM"
+      config_c => out_cfg_c,
+      prefix_c => "OUT"
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      bus_i => input_s
+      bus_i => output_s
       );
   
   dut: nsl_axi.axi4_stream.axi4_stream_flusher

@@ -23,14 +23,12 @@ architecture arch of tb is
   signal input_s, output_s: bus_t;
 
   constant in_cfg_c: config_t := config(12, last => true);
-  constant out_cfg_c: config_t := config(4, last => true, keep => true);
+  constant out_cfg_c: config_t := config(4, last => true);
 begin
 
   tx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable d : byte_string(0 to in_cfg_c.data_width-1) := (others => dontcare_byte_c);
-    variable k, s : std_ulogic_vector(0 to in_cfg_c.data_width-1) := (others => '0');
-    variable frame_byte_count, output_beat_count, beat_byte_count: integer;
+    variable frame_byte_count: integer;
   begin
     done_s(0) <= '0';
 
@@ -41,30 +39,11 @@ begin
     for stream_beat_count in 1 to 16
     loop
       frame_byte_count := stream_beat_count * out_cfg_c.data_width;
-      output_beat_count := (frame_byte_count + in_cfg_c.data_width - 1) / in_cfg_c.data_width;
-      for beat_index in 0 to output_beat_count-1
-      loop
-        beat_byte_count := frame_byte_count - beat_index * in_cfg_c.data_width;
-        if beat_byte_count > in_cfg_c.data_width then
-          beat_byte_count := in_cfg_c.data_width;
-        end if;
 
-        d := (others => dontcare_byte_c);
-        k := (others => '0');
-        s := (others => '0');
+      packet_send(in_cfg_c, clock_s, input_s.s, input_s.m,
+                  packet => prbs_byte_string(state_v, prbs31, frame_byte_count));
 
-        d(0 to beat_byte_count-1) := prbs_byte_string(state_v, prbs31, beat_byte_count);
-        k(0 to beat_byte_count-1) := (others => '1');
-        s(0 to beat_byte_count-1) := (others => '1');
-        state_v := prbs_forward(state_v, prbs31, beat_byte_count * 8);
-
-        send(in_cfg_c, clock_s, input_s.s, input_s.m,
-             bytes => d,
-             keep => k,
-             strobe => s,
-             valid => true,
-             last => beat_index = output_beat_count-1);
-      end loop;
+      state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
     wait for 500 ns;
@@ -75,10 +54,9 @@ begin
 
   rx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable beat_v: master_t;
-    variable k : std_ulogic_vector(0 to out_cfg_c.data_width-1);
-    variable beat_count: natural;
-    constant ratio : integer := in_cfg_c.data_width / out_cfg_c.data_width;
+    variable rx_data : byte_stream;
+    variable frame_byte_count: integer;
+    variable id, user, dest : std_ulogic_vector(1 to 0);
   begin
     done_s(1) <= '0';
 
@@ -86,23 +64,18 @@ begin
 
     wait for 50 ns;
 
-    for s in 1 to 16
+    for stream_beat_count in 1 to 16
     loop
-      beat_count := s;
-      if not in_cfg_c.has_keep then
-        beat_count := ((s + ratio - 1) / ratio) * ratio;
-      end if;
+      frame_byte_count := stream_beat_count * out_cfg_c.data_width;
 
-      for i in 0 to beat_count-1
-      loop
-        receive(out_cfg_c, clock_s, output_s.m, output_s.s, beat_v);
-        k := keep(out_cfg_c, beat_v);
-        if i < s then
-          assert_equal("data", bytes(out_cfg_c, beat_v), prbs_byte_string(state_v, prbs31, out_cfg_c.data_width), failure);
-          state_v := prbs_forward(state_v, prbs31, out_cfg_c.data_width * 8);
-        end if;
-        assert_equal("last", is_last(out_cfg_c, beat_v), i = beat_count-1, failure);
-      end loop;
+      packet_receive(out_cfg_c, clock_s, output_s.m, output_s.s,
+                     packet => rx_data,
+                     id => id,
+                     user => user,
+                     dest => dest);
+
+      assert_equal("data", rx_data.all(0 to frame_byte_count-1), prbs_byte_string(state_v, prbs31, frame_byte_count), failure);
+      state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
     wait for 500 ns;
