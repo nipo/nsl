@@ -23,6 +23,7 @@ entity axi4_mm_lite_slave is
     w_data_o : out byte_string(0 to 2**config_c.data_bus_width_l2-1);
     w_mask_o : out std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
     w_ready_i : in std_ulogic := '1';
+    w_error_i : in std_ulogic := '0';
     w_valid_o : out std_ulogic;
 
     r_data_i : in byte_string(0 to 2**config_c.data_bus_width_l2-1);
@@ -45,6 +46,7 @@ architecture rtl of axi4_mm_lite_slave is
     ST_WCMD,
     ST_WEXEC,
     ST_WRSP,
+    ST_WERR,
     ST_RCMD,
     ST_REXEC,
     ST_RRSP
@@ -105,10 +107,14 @@ begin
 
       when ST_WEXEC =>
         if w_ready_i = '1' then
-          rin.state <= ST_WRSP;
+          if w_error_i = '1' then
+            rin.state <= ST_WERR;
+          else
+            rin.state <= ST_WRSP;
+          end if;
         end if;
 
-      when ST_WRSP =>
+      when ST_WRSP | ST_WERR =>
         if is_ready(config_c, axi_i.b) then
           rin.state <= ST_IDLE;
         end if;
@@ -135,7 +141,7 @@ begin
 
   moore: process(r)
   begin
-    address_o <= (others => '-');
+    address_o <= r.addr;
     w_data_o <= (others => dontcare_byte_c);
     w_mask_o <= (others => '-');
     w_valid_o <= '0';
@@ -153,7 +159,6 @@ begin
         axi_o.w <= accept(config_c, true);
 
       when ST_WEXEC =>
-        address_o <= r.addr;
         w_valid_o <= '1';
         w_data_o <= r.data;
         w_mask_o <= r.mask;
@@ -161,11 +166,13 @@ begin
       when ST_WRSP =>
         axi_o.b <= write_response(config_c, valid => true, user => r.user);
 
+      when ST_WERR =>
+        axi_o.b <= write_response(config_c, valid => true, resp => RESP_SLVERR, user => r.user);
+
       when ST_RCMD =>
         axi_o.ar <= accept(config_c, true);
 
       when ST_REXEC =>
-        address_o <= r.addr;
         r_ready_o <= '1';
 
       when ST_RRSP =>

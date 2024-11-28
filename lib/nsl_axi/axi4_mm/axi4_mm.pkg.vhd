@@ -558,8 +558,10 @@ package axi4_mm is
       w_data_o : out byte_string(0 to 2**config_c.data_bus_width_l2-1);
       -- Write data mask
       w_mask_o : out std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
-      -- Write data acceptance from user
+      -- Write data acceptance from user (or signaling or error)
       w_ready_i : in std_ulogic := '1';
+      -- Write error response (SLVERR)
+      w_error_i : in std_ulogic := '0';
       -- Asserted when write beat happens
       w_valid_o : out std_ulogic;
 
