@@ -1853,8 +1853,7 @@ package body axi4_mm is
   begin
     if is_valid(cfg, w) then
       return "<WData"
-        &" "&to_string(bytes(cfg, w))
-        &" S:"&to_string(strb(cfg, w))
+        &" "&to_string(bytes(cfg, w), mask => strb(cfg, w), masked_out_value => "==")
         &if_else(cfg.user_width>0, " U:"&to_string(user(cfg, w)), "")
         &if_else(cfg.len_width>0 and is_last(cfg, w), " last", "")
         &">";
