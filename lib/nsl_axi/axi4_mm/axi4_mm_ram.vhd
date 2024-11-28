@@ -94,6 +94,13 @@ begin
 
     write_address_s <= resize(address(config_c, r.transaction, config_c.data_bus_width_l2), write_address_s'length);
     write_enable_s <= to_logic(r.state = ST_WRITING and is_valid(config_c, axi_i.w));
+    -- Our memory block handles words of M * N-bit data with M enable
+    -- lines.  Strobe lines are in the same order as the data
+    -- word.
+    --
+    -- If we take output if strb() in increasing order, we need byte
+    -- from address 0 (modulo bus width) on the left of the data word,
+    -- which maps to big endian.
     write_strobe_s <= strb(config_c, axi_i.w);
     write_data_s <= std_ulogic_vector(value(config_c, axi_i.w, ENDIAN_BIG));
 
@@ -226,6 +233,8 @@ begin
           axi_o.r <= read_data_defaults(config_c);
           
         when RSP_SEND =>
+          -- As we did for write path above, we map our memory as
+          -- big-endian.
           axi_o.r <= read_data(config_c,
                                id => id(config_c, r.transaction),
                                value => unsigned(r.fifo(0)),
