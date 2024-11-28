@@ -95,10 +95,10 @@ package axi4_stream is
   function is_valid(cfg: config_t; m: master_t) return boolean;
   function is_last(cfg: config_t; m: master_t) return boolean;
   function is_ready(cfg: config_t; s: slave_t) return boolean;
-  function bytes(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return byte_string;
+  function bytes(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
-  function strobe(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector;
-  function keep(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector;
+  function strobe(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
+  function keep(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
   function user(cfg: config_t; m: master_t) return std_ulogic_vector;
   function id(cfg: config_t; m: master_t) return std_ulogic_vector;
   function dest(cfg: config_t; m: master_t) return std_ulogic_vector;
@@ -109,7 +109,7 @@ package axi4_stream is
                     bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
-                    endian: endian_t := ENDIAN_LITTLE;
+                    order: byte_order_t := BYTE_ORDER_INCREASING;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -246,7 +246,7 @@ package axi4_stream is
                  constant bytes: byte_string;
                  constant strobe: std_ulogic_vector := na_suv;
                  constant keep: std_ulogic_vector := na_suv;
-                 constant endian: endian_t := ENDIAN_LITTLE;
+                 constant order: byte_order_t := BYTE_ORDER_INCREASING;
                  constant id: std_ulogic_vector := na_suv;
                  constant user: std_ulogic_vector := na_suv;
                  constant dest: std_ulogic_vector := na_suv;
@@ -308,10 +308,10 @@ package body axi4_stream is
     end if;
   end function;
 
-  function bytes(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return byte_string
+  function bytes(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string
   is
   begin
-    if endian = ENDIAN_LITTLE then
+    if order = BYTE_ORDER_INCREASING then
       return m.data(0 to cfg.data_width-1);
     else
       return reverse(m.data(0 to cfg.data_width-1));
@@ -324,45 +324,25 @@ package body axi4_stream is
     return from_endian(bytes(cfg, m), endian);
   end function;
 
-  function strobe(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector
+  function strobe(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector
   is
-    variable ret : std_ulogic_vector(cfg.data_width-1 downto 0);
   begin
     if not cfg.has_strobe then
       return keep(cfg, m);
     end if;
 
-    if endian = ENDIAN_LITTLE then
-      return m.strobe(0 to cfg.data_width-1);
-    end if;        
-
-    for i in 0 to cfg.data_width-1
-    loop
-      ret(i) := m.strobe(i);
-    end loop;
-
-    return ret;
+    return reorder_mask(m.strobe(0 to cfg.data_width-1), order);
   end function;
 
-  function keep(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return std_ulogic_vector
+  function keep(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector
   is
     constant default: std_ulogic_vector(cfg.data_width-1 downto 0) := (others => '1');
-    variable ret : std_ulogic_vector(cfg.data_width-1 downto 0);
   begin
     if not cfg.has_keep then
       return default;
     end if;
 
-    if endian = ENDIAN_LITTLE then
-      return m.keep(0 to cfg.data_width-1);
-    end if;
-
-    for i in 0 to cfg.data_width-1
-    loop
-      ret(i) := m.keep(i);
-    end loop;
-
-    return ret;
+    return reorder_mask(m.keep(0 to cfg.data_width-1), order);
   end function;
 
   function user(cfg: config_t; m: master_t) return std_ulogic_vector
@@ -410,7 +390,7 @@ package body axi4_stream is
                     bytes: byte_string;
                     strobe: std_ulogic_vector := na_suv;
                     keep: std_ulogic_vector := na_suv;
-                    endian: endian_t := ENDIAN_LITTLE;
+                    order: byte_order_t := BYTE_ORDER_INCREASING;
                     id: std_ulogic_vector := na_suv;
                     user: std_ulogic_vector := na_suv;
                     dest: std_ulogic_vector := na_suv;
@@ -425,10 +405,10 @@ package body axi4_stream is
       assert keep'length = cfg.data_width
         report "Bad keep length"
         severity failure;
-      if endian = ENDIAN_BIG then
-        ret.keep(0 to cfg.data_width-1) := bitswap(keep);
-      else
+      if order = BYTE_ORDER_INCREASING then
         ret.keep(0 to cfg.data_width-1) := keep;
+      else
+        ret.keep(0 to cfg.data_width-1) := bitswap(keep);
       end if;
     else
       ret.keep(0 to cfg.data_width-1) := (others => '1');
@@ -440,10 +420,10 @@ package body axi4_stream is
       assert strobe'length = cfg.data_width
         report "Bad strobe length"
         severity failure;
-      if endian = ENDIAN_BIG then
-        ret.strobe(0 to cfg.data_width-1) := bitswap(strobe);
-      else
+      if order = BYTE_ORDER_INCREASING then
         ret.strobe(0 to cfg.data_width-1) := strobe;
+      else
+        ret.strobe(0 to cfg.data_width-1) := bitswap(strobe);
       end if;
     else
       ret.strobe(0 to cfg.data_width-1) := (others => '1');
@@ -455,10 +435,10 @@ package body axi4_stream is
       assert bytes'length = cfg.data_width
         report "Bad data length"
         severity failure;
-      if endian = ENDIAN_BIG then
-        ret.data(0 to cfg.data_width-1) := reverse(bytes);
-      else
+      if order = BYTE_ORDER_INCREASING then
         ret.data(0 to cfg.data_width-1) := bytes;
+      else
+        ret.data(0 to cfg.data_width-1) := reverse(bytes);
       end if;
     end if;
 
@@ -749,7 +729,7 @@ package body axi4_stream is
                  constant bytes: byte_string;
                  constant strobe: std_ulogic_vector := na_suv;
                  constant keep: std_ulogic_vector := na_suv;
-                 constant endian: endian_t := ENDIAN_LITTLE;
+                 constant order: byte_order_t := BYTE_ORDER_INCREASING;
                  constant id: std_ulogic_vector := na_suv;
                  constant user: std_ulogic_vector := na_suv;
                  constant dest: std_ulogic_vector := na_suv;
@@ -761,7 +741,7 @@ package body axi4_stream is
                                                   bytes => bytes,
                                                   strobe => strobe,
                                                   keep => keep,
-                                                  endian => endian,
+                                                  order => order,
                                                   id => id,
                                                   user => user,
                                                   dest => dest,
