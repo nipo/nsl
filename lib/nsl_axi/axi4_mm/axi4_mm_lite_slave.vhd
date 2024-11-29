@@ -43,11 +43,9 @@ architecture rtl of axi4_mm_lite_slave is
   type state_t is (
     ST_RESET,
     ST_IDLE,
-    ST_WCMD,
     ST_WEXEC,
     ST_WRSP,
     ST_WERR,
-    ST_RCMD,
     ST_REXEC,
     ST_RRSP
     );
@@ -59,6 +57,7 @@ architecture rtl of axi4_mm_lite_slave is
     mask : std_ulogic_vector(0 to 2**config_c.data_bus_width_l2-1);
     state: state_t;
     user : std_ulogic_vector(config_c.user_width-1 downto 0);
+    cmd_ack : boolean;
   end record;
 
   signal r, rin: regs_t;
@@ -81,7 +80,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, axi_i, r_data_i, r_valid_i, w_ready_i)
+  transition: process(r, axi_i, r_data_i, r_valid_i, w_ready_i, w_error_i)
   begin
     rin <= r;
 
@@ -91,21 +90,21 @@ begin
 
       when ST_IDLE =>
         if is_valid(config_c, axi_i.aw) and is_valid(config_c, axi_i.w) then
-          rin.state <= ST_WCMD;
-        elsif is_valid(config_c, axi_i.ar) then
-          rin.state <= ST_RCMD;
-        end if;
-
-      when ST_WCMD =>
-        if is_valid(config_c, axi_i.aw) and is_valid(config_c, axi_i.w) then
           rin.state <= ST_WEXEC;
           rin.addr <= address(config_c, axi_i.aw, lsb => config_c.data_bus_width_l2);
           rin.user <= user(config_c, axi_i.aw);
           rin.data <= bytes(config_c, axi_i.w);
           rin.mask <= strb(config_c, axi_i.w);
+          rin.cmd_ack <= true;
+        elsif is_valid(config_c, axi_i.ar) then
+          rin.addr <= address(config_c, axi_i.ar, lsb => config_c.data_bus_width_l2);
+          rin.state <= ST_REXEC;
+          rin.user <= user(config_c, axi_i.ar);
+          rin.cmd_ack <= true;
         end if;
 
       when ST_WEXEC =>
+        rin.cmd_ack <= false;
         if w_ready_i = '1' then
           if w_error_i = '1' then
             rin.state <= ST_WERR;
@@ -119,14 +118,8 @@ begin
           rin.state <= ST_IDLE;
         end if;
 
-      when ST_RCMD =>
-        if is_valid(config_c, axi_i.ar) then
-          rin.addr <= address(config_c, axi_i.ar, lsb => config_c.data_bus_width_l2);
-          rin.state <= ST_REXEC;
-          rin.user <= user(config_c, axi_i.ar);
-        end if;
-
       when ST_REXEC =>
+        rin.cmd_ack <= false;
         if r_valid_i = '1' then
           rin.state <= ST_RRSP;
           rin.data <= r_data_i;
@@ -141,7 +134,7 @@ begin
 
   moore: process(r)
   begin
-    address_o <= r.addr;
+    address_o <= (others => '-');
     w_data_o <= (others => dontcare_byte_c);
     w_mask_o <= (others => '-');
     w_valid_o <= '0';
@@ -154,14 +147,13 @@ begin
     axi_o.b <= write_response_defaults(config_c);
 
     case r.state is
-      when ST_WCMD =>
-        axi_o.aw <= accept(config_c, true);
-        axi_o.w <= accept(config_c, true);
-
       when ST_WEXEC =>
+        axi_o.aw <= accept(config_c, r.cmd_ack);
+        axi_o.w <= accept(config_c, r.cmd_ack);
         w_valid_o <= '1';
         w_data_o <= r.data;
         w_mask_o <= r.mask;
+        address_o <= r.addr;
 
       when ST_WRSP =>
         axi_o.b <= write_response(config_c, valid => true, user => r.user);
@@ -169,11 +161,10 @@ begin
       when ST_WERR =>
         axi_o.b <= write_response(config_c, valid => true, resp => RESP_SLVERR, user => r.user);
 
-      when ST_RCMD =>
-        axi_o.ar <= accept(config_c, true);
-
       when ST_REXEC =>
+        axi_o.ar <= accept(config_c, r.cmd_ack);
         r_ready_o <= '1';
+        address_o <= r.addr;
 
       when ST_RRSP =>
         axi_o.r <= read_data(config_c, valid => true, user => r.user, bytes => r.data);
