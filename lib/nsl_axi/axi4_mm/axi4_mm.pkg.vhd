@@ -1908,8 +1908,6 @@ package body axi4_mm is
       report "configuration is not lite"
       severity failure;
  
-    axi_o.ar <= address_defaults(cfg);
-    axi_o.r <= handshake_defaults(cfg);
     axi_o.aw <= address(cfg, addr => addr);
     axi_o.w <= write_data(cfg, value => val, strb => strb, endian => endian);
     axi_o.b <= accept(cfg, true);
@@ -1957,9 +1955,6 @@ package body axi4_mm is
       report "configuration is not lite"
       severity failure;
 
-    axi_o.aw <= address_defaults(cfg);
-    axi_o.b <= handshake_defaults(cfg);
-    axi_o.w <= write_data_defaults(cfg);
     axi_o.ar <= address(cfg, addr => addr);
     axi_o.r <= accept(cfg, true);
     
@@ -2146,8 +2141,6 @@ package body axi4_mm is
       report "Actual burst is too big for the bus length encoding"
       severity failure;
     
-    axi_o.ar <= address_defaults(cfg);
-    axi_o.r <= handshake_defaults(cfg);
     axi_o.aw <= address(cfg, addr => addr, len_m1 => len_m1, burst => burst);
     axi_o.b <= accept(cfg, true);
 
@@ -2223,10 +2216,6 @@ package body axi4_mm is
       report "Actual burst is too big for the bus length encoding"
       severity failure;
     
-    axi_o.aw <= address_defaults(cfg);
-    axi_o.b <= handshake_defaults(cfg);
-    axi_o.w <= write_data_defaults(cfg);
-
     axi_o.ar <= address(cfg, addr => addr, len_m1 => len_m1, burst => burst);
     axi_o.r <= handshake_defaults(cfg);
 
