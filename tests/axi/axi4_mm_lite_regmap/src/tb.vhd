@@ -86,7 +86,7 @@ begin
       reg0        when 0,
       x"ebadf00d" when 1,
       reg1        when 2,
-      x"--------" when others;
+      x"deadbeef" when others;
 
     dut: nsl_axi.axi4_mm.axi4_mm_lite_regmap
       generic map(
