@@ -162,9 +162,11 @@ package axi4_stream is
 
       in_i : in master_t;
       in_o : out slave_t;
+      in_free_o : out integer range 0 to depth_c;
 
       out_o : out master_t;
-      out_i : in slave_t
+      out_i : in slave_t;
+      out_available_o : out integer range 0 to depth_c + 1
       );
   end component;
 

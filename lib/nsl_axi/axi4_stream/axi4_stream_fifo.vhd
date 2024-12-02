@@ -18,9 +18,11 @@ entity axi4_stream_fifo is
 
     in_i : in master_t;
     in_o : out slave_t;
+    in_free_o : out integer range 0 to depth_c;
 
     out_o : out master_t;
-    out_i : in slave_t
+    out_i : in slave_t;
+    out_available_o : out integer range 0 to depth_c + 1
     );
 end entity;
 
@@ -40,7 +42,8 @@ begin
     generic map(
       word_count_c => depth_c,
       data_width_c => in_data_s'length,
-      clock_count_c => clock_count_c
+      clock_count_c => clock_count_c,
+      register_counters_c => false
       )
     port map(
       reset_n_i => reset_n_i,
@@ -51,7 +54,9 @@ begin
       out_valid_o => out_data_valid_s,
       in_data_i => in_data_s,
       in_valid_i => in_data_valid_s,
-      in_ready_o => in_data_ready_s
+      in_ready_o => in_data_ready_s,
+      out_available_o => out_available_o,
+      in_free_o => in_free_o
       );
 
   in_data_s <= vector_pack(config_c, fifo_elements_c, in_i);
