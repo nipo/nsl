@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_memory, nsl_logic, work, nsl_data;
+library nsl_logic, work, nsl_data;
 use work.axi4_stream.all;
 use nsl_logic.bool.all;
 use nsl_data.endian.all;

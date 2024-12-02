@@ -10,11 +10,11 @@ use nsl_data.bytestream.all;
 entity axi4_mm_lite_ram is
   generic (
     config_c: config_t;
-    byte_size_l2_c: natural := 12
+    byte_size_l2_c: positive
     );
   port (
     clock_i: in std_ulogic;
-    reset_n_i: in std_ulogic := '1';
+    reset_n_i: in std_ulogic;
 
     axi_i: in master_t;
     axi_o: out slave_t

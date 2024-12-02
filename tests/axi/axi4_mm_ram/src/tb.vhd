@@ -100,7 +100,7 @@ begin
       slave_i => bus_s.s
       );
   
-  dut: nsl_axi.axi4_mm.axi4_mm_ram
+  dut: nsl_axi.ram.axi4_mm_ram
     generic map(
       config_c => config_c,
       byte_size_l2_c => 10

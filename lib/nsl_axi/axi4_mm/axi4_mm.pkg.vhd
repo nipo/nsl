@@ -580,22 +580,6 @@ package axi4_mm is
   function read_data_vector_unpack(cfg: config_t; v: std_ulogic_vector;
                                    valid : boolean := true; last : boolean := false) return read_data_t;
   
-  -- AXI4-MM RAM with concurrent read and write channels.  It supports
-  -- bursting and requires a dual-port block RAM
-  component axi4_mm_ram is
-    generic(
-      config_c : config_t;
-      byte_size_l2_c : positive
-      );
-    port(
-      clock_i : in std_ulogic;
-      reset_n_i : in std_ulogic;
-
-      axi_i : in master_t;
-      axi_o : out slave_t
-      );
-  end component;
-
   -- AXI4-MM transaction dumper.
   component axi4_mm_dumper is
     generic(
@@ -686,21 +670,6 @@ package axi4_mm is
       -- r_value_i must be asserted on the interface the cycle after r_strobe_o
       -- is asserted.
       r_strobe_o : out std_ulogic
-      );
-  end component;
-
-  -- AXI4-Lite RAM, using a one-port block RAM.
-  component axi4_mm_lite_ram is
-    generic (
-      config_c: config_t;
-      byte_size_l2_c: natural := 12
-      );
-    port (
-      clock_i: in std_ulogic;
-      reset_n_i: in std_ulogic := '1';
-
-      axi_i: in master_t;
-      axi_o: out slave_t
       );
   end component;
 

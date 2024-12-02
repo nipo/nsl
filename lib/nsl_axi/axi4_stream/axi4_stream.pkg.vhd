@@ -150,26 +150,6 @@ package axi4_stream is
                          elements: string;
                          v: std_ulogic_vector) return master_t;
   
-  component axi4_stream_fifo is
-    generic(
-      config_c : config_t;
-      depth_c : positive;
-      clock_count_c : integer range 1 to 2 := 1
-      );
-    port(
-      clock_i : in std_ulogic_vector(0 to clock_count_c-1);
-      reset_n_i : in std_ulogic;
-
-      in_i : in master_t;
-      in_o : out slave_t;
-      in_free_o : out integer range 0 to depth_c;
-
-      out_o : out master_t;
-      out_i : in slave_t;
-      out_available_o : out integer range 0 to depth_c + 1
-      );
-  end component;
-
   -- Input configuration must not have "last", output configuration
   -- must have "last". Input and output configuration should have all
   -- other parameters equal.

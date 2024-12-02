@@ -154,7 +154,7 @@ begin
       r_strobe_o => r_strobe_s
       );
 
-  out_buffer: nsl_axi.axi4_stream.axi4_stream_fifo
+  out_buffer: nsl_axi.fifo.axi4_stream_fifo
     generic map(
       config_c => stream_config_c,
       depth_c => out_buffer_depth_c,
@@ -172,7 +172,7 @@ begin
       out_i => tx_i
       );
 
-  in_buffer: nsl_axi.axi4_stream.axi4_stream_fifo
+  in_buffer: nsl_axi.fifo.axi4_stream_fifo
     generic map(
       config_c => stream_config_c,
       depth_c => in_buffer_depth_c,

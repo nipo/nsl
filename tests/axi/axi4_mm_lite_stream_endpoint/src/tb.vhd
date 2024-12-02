@@ -74,6 +74,19 @@ begin
     wait;
   end process;
 
+  dumper: nsl_axi.axi4_mm.axi4_mm_dumper
+    generic map(
+      config_c => mm_config_c,
+      prefix_c => "EP"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      master_i => bus_s.m,
+      slave_i => bus_s.s
+      );
+
   ep: nsl_axi.stream_endpoint.axi4_stream_endpoint_lite
     generic map(
       mm_config_c => mm_config_c,
