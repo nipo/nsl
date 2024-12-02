@@ -26,4 +26,20 @@ package fifo is
       );
   end component;
 
+  component axi4_stream_slice is
+    generic(
+      config_c : nsl_axi.axi4_stream.config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in nsl_axi.axi4_stream.master_t;
+      in_o : out nsl_axi.axi4_stream.slave_t;
+
+      out_o : out nsl_axi.axi4_stream.master_t;
+      out_i : in nsl_axi.axi4_stream.slave_t
+      );
+  end component;
+
 end package fifo;
