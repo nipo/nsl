@@ -1,10 +1,4 @@
-packages += axi4
-packages += axi4_lite
 packages += axi4_stream
 packages += axi4_mm
-packages += stream
-packages += bram
-packages += testing
-packages += axi_fifo16
 packages += stream_endpoint
 nsl_axi-ghdl-flags += -Wno-hide
