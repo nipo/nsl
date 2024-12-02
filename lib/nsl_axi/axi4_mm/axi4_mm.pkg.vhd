@@ -445,7 +445,10 @@ package axi4_mm is
                          d0:string;
                          d1, d2, d3, d4, d5, d6, d7,
                          d8, d9, d10, d11, d12, d13, d14, d15: string := "") return address_vector;
-
+  function routing_table_lookup(cfg: config_t;
+                                rt: address_vector;
+                                address: addr_t;
+                                default: natural := 0) return natural;
 
   -- Pretty printers for bus records, useful for debugging test-benches
   function to_string(b: burst_enum_t) return string;
@@ -878,6 +881,23 @@ package body axi4_mm is
     if d15'length = 0 then return ret(0 to 14); end if;
     ret(15) := address_parse(cfg, d15);
     return ret(0 to 15);
+  end function;
+
+  function routing_table_lookup(cfg: config_t;
+                                rt: address_vector;
+                                address: addr_t;
+                                default: natural := 0) return natural
+  is
+    alias rtx: address_vector(0 to rt'length-1) is rt;
+  begin
+    for i in rtx'range
+    loop
+      if std_match(rtx(i), address) then
+        return i;
+      end if;
+    end loop;
+
+    return default;
   end function;
 
   function to_burst(cfg: config_t; b: burst_t) return burst_enum_t
