@@ -8,6 +8,8 @@ package logic is
   function xor_reduce(x : std_ulogic_vector) return std_ulogic;
   function and_reduce(x : std_ulogic_vector) return std_ulogic;
   function or_reduce(x : std_ulogic_vector) return std_ulogic;
+  function all_set(x : std_ulogic_vector) return boolean;
+  function any_set(x : std_ulogic_vector) return boolean;
   function mask_merge(for0, for1, sel : std_ulogic_vector) return std_ulogic_vector;
   function mask_merge(for0, for1: unsigned; sel : std_ulogic_vector) return unsigned;
   function mask_merge(for0, for1, sel: unsigned) return unsigned;
@@ -139,6 +141,18 @@ package body logic is
     end loop;
 
     return ret;
+  end function;
+
+  function all_set(x : std_ulogic_vector) return boolean
+  is
+  begin
+    return and_reduce(x) = '1';
+  end function;
+
+  function any_set(x : std_ulogic_vector) return boolean
+  is
+  begin
+    return or_reduce(x) = '1';
   end function;
 
 end package body logic;
