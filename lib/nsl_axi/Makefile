@@ -6,4 +6,5 @@ packages += stream
 packages += bram
 packages += testing
 packages += axi_fifo16
+packages += stream_endpoint
 nsl_axi-ghdl-flags += -Wno-hide
