@@ -667,8 +667,8 @@ package axi4_mm is
       -- Value, with all bits meaningful and no mask, will be
       -- serialized to the bus using the relevant endianness
       r_value_i : in unsigned(8*(2**config_c.data_bus_width_l2)-1 downto 0);
-      -- r_value_i must be asserted on the interface the cycle after r_strobe_o
-      -- is asserted.
+      -- r_value_i must be asserted on the interface the cycle
+      -- r_strobe_o is asserted.
       r_strobe_o : out std_ulogic
       );
   end component;
