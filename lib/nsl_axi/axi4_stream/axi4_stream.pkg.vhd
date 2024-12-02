@@ -571,14 +571,14 @@ package body axi4_stream is
   is
     variable ret : natural := 0;
   begin
-    ret := if_else(strchr(elements, 'i') = -1, 0, cfg.id_width);
-    ret := if_else(strchr(elements, 'd') = -1, 0, cfg.data_width * 8);
-    ret := if_else(strchr(elements, 's') = -1, 0, cfg.data_width);
-    ret := if_else(strchr(elements, 'k') = -1, 0, cfg.data_width);
-    ret := if_else(strchr(elements, 'o') = -1, 0, cfg.dest_width);
-    ret := if_else(strchr(elements, 'u') = -1, 0, cfg.user_width);
-    ret := if_else(strchr(elements, 'v') = -1, 0, 1);
-    ret := if_else(strchr(elements, 'l') = -1, 0, 1);
+    ret := ret + if_else(strchr(elements, 'i') = -1, 0, cfg.id_width);
+    ret := ret + if_else(strchr(elements, 'd') = -1, 0, cfg.data_width * 8);
+    ret := ret + if_else(strchr(elements, 's') = -1, 0, cfg.data_width);
+    ret := ret + if_else(strchr(elements, 'k') = -1, 0, cfg.data_width);
+    ret := ret + if_else(strchr(elements, 'o') = -1, 0, cfg.dest_width);
+    ret := ret + if_else(strchr(elements, 'u') = -1, 0, cfg.user_width);
+    ret := ret + if_else(strchr(elements, 'v') = -1, 0, 1);
+    ret := ret + if_else(strchr(elements, 'l') = -1, 0, 1);
     return ret;
   end function;
   
@@ -651,7 +651,7 @@ package body axi4_stream is
           ret.id(cfg.id_width-1 downto 0) := vv(point to point+cfg.id_width-1);
           point := point + cfg.id_width;
         when 'd' =>
-          ret.data(0 to cfg.data_width*8-1) := to_be(unsigned(vv(0 to cfg.data_width*8-1)));
+          ret.data(0 to cfg.data_width-1) := to_be(unsigned(vv(point to point+cfg.data_width*8-1)));
           point := point + cfg.data_width * 8;
         when 's' =>
           ret.strobe(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
