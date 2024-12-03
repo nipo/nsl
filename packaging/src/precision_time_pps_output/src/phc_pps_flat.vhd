@@ -44,8 +44,8 @@ architecture rtl of phc_pps_flat is
                                               + 1 -- tick_pulse
                                               ;
   constant clock_rate_mhz : real := real(clock_rate_hz) / 1.0e6;
-  constant corrected_offset_ns: integer := offset_ns - integer(pipeline_delay_cycles * 1.0e3 / clock_rate_mhz);
-  constant corrected_offset_ns_signed : nsl_time.timestamp_t.timestamp_nanosecond_offset_t := to_signed(corrected_offset_ns, nsl_time.timestamp_t.timestamp_nanosecond_offset_t'length);
+  constant corrected_offset_ns: integer := offset_ns - integer(real(pipeline_delay_cycles) * 1.0e3 / clock_rate_mhz);
+  constant corrected_offset_ns_signed : nsl_time.timestamp.timestamp_nanosecond_offset_t := to_signed(corrected_offset_ns, nsl_time.timestamp.timestamp_nanosecond_offset_t'length);
   signal tick: std_ulogic;
   
 begin
@@ -62,7 +62,7 @@ begin
         reference_i => ts,
         offset_i => corrected_offset_ns_signed,
 
-        skew_o => ts_offsetted
+        skewed_o => ts_offsetted
         );
   end generate;
 

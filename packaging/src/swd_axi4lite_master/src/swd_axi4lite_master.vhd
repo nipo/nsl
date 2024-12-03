@@ -75,14 +75,10 @@ architecture rtl of swd_axi4lite_master is
   attribute X_INTERFACE_INFO of swdio_i : signal is "nsl:interface:swd:1.0 swd dio_i";
 
   signal swd_bus : nsl_coresight.swd.swd_slave_bus;
+  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
   signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-  signal mem_bus : nsl_axi.axi4_lite.a32_d32;
+  signal bus_s : nsl_axi.axi4_mm.bus_t;
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
-
-  signal awaddr : std_ulogic_vector(31 downto 0);
-  signal wdata : std_ulogic_vector(31 downto 0);
-  signal wstrb : std_ulogic_vector(3 downto 0);
-  signal araddr : std_ulogic_vector(31 downto 0);
 
 begin
 
@@ -132,9 +128,10 @@ begin
       m_o(0) => dapbus_memap.ms
       );
 
-  mem_ap: nsl_coresight.ap.axi4_lite_a32_d32_ap
+  mem_ap: nsl_coresight.ap.ap_axi4_lite
     generic map(
       rom_base => rom_base,
+      config_c => config_c,
       idr => ap_idr
       )
     port map(
@@ -147,29 +144,35 @@ begin
       dap_i => dapbus_memap.ms,
       dap_o => dapbus_memap.sm,
 
-      mem_o.awaddr(31 downto 0) => awaddr,
-      mem_o.awvalid => m_axi_awvalid,
-      mem_o.wdata => wdata,
-      mem_o.wstrb => wstrb,
-      mem_o.wvalid => m_axi_wvalid,
-      mem_o.bready => m_axi_bready,
-      mem_o.araddr(31 downto 0) => araddr,
-      mem_o.arvalid => m_axi_arvalid,
-      mem_o.rready => m_axi_rready,
-
-      mem_i.awready => m_axi_awready,
-      mem_i.wready => m_axi_wready,
-      mem_i.bvalid => m_axi_bvalid,
-      mem_i.bresp => std_ulogic_vector(m_axi_bresp),
-      mem_i.arready => m_axi_arready,
-      mem_i.rvalid => m_axi_rvalid,
-      mem_i.rresp => std_ulogic_vector(m_axi_rresp),
-      mem_i.rdata => std_ulogic_vector(m_axi_rdata)
+      axi_o => bus_s.m,
+      axi_i => bus_s.s
       );
 
-  m_axi_awaddr <= std_logic_vector(awaddr);
-  m_axi_araddr <= std_logic_vector(araddr);
-  m_axi_wdata <= std_logic_vector(wdata);
-  m_axi_wstrb <= std_logic_vector(wstrb);
-  
+  packer: nsl_axi.packer.axi4_mm_lite_master_packer
+    generic map(
+      config_c => config_c
+      )
+    port map(
+      awaddr => m_axi_awaddr,
+      awvalid => m_axi_awvalid,
+      awready => m_axi_awready,
+      wdata => m_axi_wdata,
+      wstrb => m_axi_wstrb,
+      wvalid => m_axi_wvalid,
+      wready => m_axi_wready,
+      bready => m_axi_bready,
+      bvalid => m_axi_bvalid,
+      bresp => m_axi_bresp,
+      araddr => m_axi_araddr,
+      arvalid => m_axi_arvalid,
+      arready => m_axi_arready,
+      rready => m_axi_rready,
+      rvalid => m_axi_rvalid,
+      rresp => m_axi_rresp,
+      rdata => m_axi_rdata,
+
+      axi_o => bus_s.s,
+      axi_i => bus_s.m
+      );
+
 end;

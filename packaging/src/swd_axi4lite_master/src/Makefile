@@ -6,4 +6,5 @@ deps += nsl_coresight.swd
 deps += nsl_coresight.ap
 deps += nsl_coresight.dapbus
 deps += nsl_coresight.dp
-deps += nsl_axi.axi4_lite
+deps += nsl_axi.axi4_mm
+deps += nsl_axi.packer

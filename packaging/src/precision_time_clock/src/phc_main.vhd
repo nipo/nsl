@@ -3,20 +3,22 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_axi, nsl_time, nsl_math, work;
+use nsl_axi.axi4_mm.all;
 use nsl_time.timestamp.all;
 use nsl_math.fixed.all;
 
 entity phc_main is
   generic(
     increment_msb: integer := 7;
-    increment_lsb: integer := -15
+    increment_lsb: integer := -15;
+    config_c : config_t
     );
   port(
-    aclk : in std_ulogic;
-    aresetn : in std_ulogic;
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
 
-    config_i : in nsl_axi.axi4_lite.a32_d32_ms;
-    config_o : out nsl_axi.axi4_lite.a32_d32_sm;
+    axi_i : in master_t;
+    axi_o : out slave_t;
 
     timestamp_o : out timestamp_t
     );
@@ -29,16 +31,11 @@ architecture rtl of phc_main is
   constant reg_timestamp_sec_c : integer := 2;
   constant reg_timestamp_ns_c : integer := 3;
   
-  signal config_addr_s : unsigned(4 downto 2);
-  signal config_w_data_s : std_ulogic_vector(31 downto 0);
-  signal config_w_mask_s : std_ulogic_vector(3 downto 0);
-  signal config_w_ready_s : std_ulogic;
-  signal config_w_valid_s : std_ulogic;
-  signal config_r_data_s : std_ulogic_vector(31 downto 0);
-  signal config_r_ready_s : std_ulogic;
-  signal config_r_valid_s : std_ulogic;
-
   signal timestamp_s : timestamp_t;
+
+  signal reg_no_s: natural range 0 to 3;
+  signal w_value_s, r_value_s : unsigned(31 downto 0);
+  signal w_strobe_s, r_strobe_s : std_ulogic;
 
   type regs_t is
   record
@@ -53,27 +50,23 @@ architecture rtl of phc_main is
   
 begin
 
-  config_slave: nsl_axi.axi4_lite.axi4_lite_a32_d32_slave
+  regmap: nsl_axi.axi4_mm.axi4_mm_lite_regmap
     generic map(
-      addr_size => config_addr_s'length+2
+      config_c => config_c,
+      reg_count_l2_c => 2
       )
     port map(
-      aclk => aclk,
-      aresetn => aresetn,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      p_axi_ms => config_i,
-      p_axi_sm => config_o,
-
-      p_addr => config_addr_s,
-
-      p_w_data => config_w_data_s,
-      p_w_mask => config_w_mask_s,
-      p_w_ready => config_w_ready_s,
-      p_w_valid => config_w_valid_s,
-
-      p_r_data => config_r_data_s,
-      p_r_ready => config_r_ready_s,
-      p_r_valid => config_r_valid_s
+      axi_i => axi_i,
+      axi_o => axi_o,
+      
+      reg_no_o => reg_no_s,
+      w_value_o => w_value_s,
+      w_strobe_o => w_strobe_s,
+      r_value_i => r_value_s,
+      r_strobe_o => r_strobe_s
       );
 
   regs: process(aclk, aresetn) is
@@ -93,30 +86,27 @@ begin
     end if;
   end process;
 
-  transition: process(r, config_addr_s, config_w_data_s, config_w_mask_s, config_w_valid_s, config_r_ready_s) is
-    variable reg_index: integer range 0 to (2**config_addr_s'length) - 1;
+  transition: process(r, reg_no_s, w_value_s, w_strobe_s, r_strobe_s) is
   begin
     rin <= r;
-
-    reg_index := to_integer(config_addr_s);
 
     rin.ns_adj_strobe <= '0';
     rin.axi_timestamp_strobe <= '0';
     
-    if config_w_valid_s = '1' then
-      case reg_index is
+    if w_strobe_s = '1' then
+      case reg_no_s is
         when reg_sub_ns_inc_c =>
-          rin.sub_ns_inc <= ufixed(config_w_data_s(rin.sub_ns_inc'left+16 downto rin.sub_ns_inc'right+16));
+          rin.sub_ns_inc <= ufixed(w_value_s(rin.sub_ns_inc'left+16 downto rin.sub_ns_inc'right+16));
 
         when reg_ns_adj_c =>
-          rin.ns_adj <= signed(config_w_data_s(rin.ns_adj'range));
+          rin.ns_adj <= signed(w_value_s(rin.ns_adj'range));
           rin.ns_adj_strobe <= '1';
 
         when reg_timestamp_sec_c =>
-          rin.axi_timestamp.second <= unsigned(config_w_data_s(rin.axi_timestamp.second'range));
+          rin.axi_timestamp.second <= w_value_s(rin.axi_timestamp.second'range);
 
         when reg_timestamp_ns_c =>
-          rin.axi_timestamp.nanosecond <= unsigned(config_w_data_s(rin.axi_timestamp.nanosecond'range));
+          rin.axi_timestamp.nanosecond <= w_value_s(rin.axi_timestamp.nanosecond'range);
           rin.axi_timestamp_strobe <= '1';
 
         when others =>
@@ -124,34 +114,29 @@ begin
       end case;
     end if;
 
-    if config_r_ready_s = '1' and reg_index = reg_timestamp_sec_c then
+    if r_strobe_s = '1' and reg_no_s = reg_timestamp_sec_c then
       rin.read_ns_cap <= timestamp_s.nanosecond;
     end if;
   end process;
 
-  mealy: process(r, timestamp_s) is
-    variable reg_index: integer range 0 to (2**config_addr_s'length) - 1;
+  mealy: process(r, timestamp_s, reg_no_s) is
   begin
     rin <= r;
 
-    config_w_ready_s <= '1';
-    config_r_data_s <= (others => '0');
-    config_r_valid_s <= '1';
-
-    reg_index := to_integer(config_addr_s);
+    r_value_s <= (others => '0');
     
-    case reg_index is
+    case reg_no_s is
       when reg_sub_ns_inc_c =>
-        config_r_data_s(rin.sub_ns_inc'left+16 downto rin.sub_ns_inc'right+16) <= to_suv(r.sub_ns_inc);
+        r_value_s(rin.sub_ns_inc'left+16 downto rin.sub_ns_inc'right+16) <= to_unsigned(r.sub_ns_inc);
 
       when reg_ns_adj_c =>
         null;
 
       when reg_timestamp_sec_c =>
-        config_r_data_s(timestamp_s.second'range) <= std_ulogic_vector(timestamp_s.second);
+        r_value_s(timestamp_s.second'range) <= unsigned(timestamp_s.second);
 
       when reg_timestamp_ns_c =>
-        config_r_data_s(timestamp_s.nanosecond'range) <= std_ulogic_vector(r.read_ns_cap);
+        r_value_s(timestamp_s.nanosecond'range) <= unsigned(r.read_ns_cap);
 
       when others =>
         null;

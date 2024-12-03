@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_jtag;
+library nsl_axi, nsl_jtag, nsl_logic, nsl_io;
 
 entity ip_top is
   generic(
@@ -76,53 +76,63 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_INFO of jtag_tdi : signal is "xilinx.com:interface:jtag:2.0 jtag TDI";
   attribute X_INTERFACE_INFO of jtag_tdo : signal is "xilinx.com:interface:jtag:2.0 jtag TDO";
 
-  signal bresp, rresp : std_ulogic_vector(1 downto 0);
-  signal rdata : std_ulogic_vector(31 downto 0);
-  signal tck, trst : std_ulogic;
+  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => s_axi_araddr'length,
+                                                                         data_bus_width => s_axi_wdata'length);
+  signal axi_s : nsl_axi.axi4_mm.bus_t;
   
+  signal tck, trst : std_ulogic;
+  signal tdi: nsl_io.io.tristated;
+
 begin
+
+  packer: nsl_axi.packer.axi4_mm_lite_slave_packer
+    generic map(
+      config_c => config_c
+      )
+    port map(
+      awaddr => s_axi_awaddr,
+      awvalid => s_axi_awvalid,
+      awready => s_axi_awready,
+      wdata => s_axi_wdata,
+      wstrb => s_axi_wstrb,
+      wvalid => s_axi_wvalid,
+      wready => s_axi_wready,
+      bready => s_axi_bready,
+      bvalid => s_axi_bvalid,
+      bresp => s_axi_bresp,
+      araddr => s_axi_araddr,
+      arvalid => s_axi_arvalid,
+      arready => s_axi_arready,
+      rready => s_axi_rready,
+      rvalid => s_axi_rvalid,
+      rresp => s_axi_rresp,
+      rdata => s_axi_rdata,
+
+      axi_o => axi_s.m,
+      axi_i => axi_s.s
+      );
   
   mem: nsl_jtag.axi4lite_transactor.axi4lite_jtag_transactor
     generic map (
+      config_c => config_c,
       prescaler_width_c => prescaler_width
       )
     port map (
       clock_i => aclk,
       reset_n_i => aresetn,
 
-      axi_i.awaddr(31 downto addr_size) => (others => '0'),
-      axi_i.awaddr(addr_size-1 downto 0) => std_ulogic_vector(s_axi_awaddr),
-      axi_i.awvalid => s_axi_awvalid,
-      axi_i.wdata => std_ulogic_vector(s_axi_wdata),
-      axi_i.wstrb => std_ulogic_vector(s_axi_wstrb),
-      axi_i.wvalid => s_axi_wvalid,
-      axi_i.bready => s_axi_bready,
-      axi_i.araddr(31 downto addr_size) => (others => '0'),
-      axi_i.araddr(addr_size-1 downto 0) => std_ulogic_vector(s_axi_araddr),
-      axi_i.arvalid => s_axi_arvalid,
-      axi_i.rready => s_axi_rready,
-
-      axi_o.awready => s_axi_awready,
-      axi_o.wready => s_axi_wready,
-      axi_o.bvalid => s_axi_bvalid,
-      axi_o.bresp => bresp,
-      axi_o.arready => s_axi_arready,
-      axi_o.rvalid => s_axi_rvalid,
-      axi_o.rresp => rresp,
-      axi_o.rdata => rdata,
+      axi_i => axi_s.m,
+      axi_o => axi_s.s,
 
       jtag_o.tck => tck,
       jtag_o.tms => jtag_tms,
-      jtag_o.tdi => jtag_tdi,
+      jtag_o.tdi => tdi,
       jtag_o.trst => trst,
       jtag_i.tdo => jtag_tdo,
       jtag_i.rtck => tck
       );
 
+  jtag_tdi <= tdi.v;
   jtag_tck <= tck;
-
-  s_axi_bresp <= std_logic_vector(bresp);
-  s_axi_rresp <= std_logic_vector(rresp);
-  s_axi_rdata <= std_logic_vector(rdata);
   
 end;
