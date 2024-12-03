@@ -17,14 +17,15 @@ package axi4lite_transactor is
 
   component axi4lite_jtag_transactor is
     generic (
-      prescaler_width_c : natural := 18
+      prescaler_width_c : natural := 18;
+      config_c : nsl_axi.axi4_mm.config_t
       );
     port (
       clock_i: in std_ulogic;
       reset_n_i: in std_ulogic := '1';
       
-      axi_i: in nsl_axi.axi4_lite.a32_d32_ms;
-      axi_o: out nsl_axi.axi4_lite.a32_d32_sm;
+      axi_i: in nsl_axi.axi4_mm.master_t;
+      axi_o: out nsl_axi.axi4_mm.slave_t;
 
       jtag_o : out nsl_jtag.jtag.jtag_ate_o;
       jtag_i : in nsl_jtag.jtag.jtag_ate_i

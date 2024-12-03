@@ -2,20 +2,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_jtag;
+library nsl_axi, nsl_jtag, nsl_data;
 use nsl_jtag.ate.all;
 use nsl_jtag.axi4lite_transactor.all;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
 entity axi4lite_jtag_transactor is
   generic (
-    prescaler_width_c : natural := 18
+    prescaler_width_c : natural := 18;
+    config_c : nsl_axi.axi4_mm.config_t
     );
   port (
     clock_i: in std_ulogic;
     reset_n_i: in std_ulogic := '1';
     
-    axi_i: in nsl_axi.axi4_lite.a32_d32_ms;
-    axi_o: out nsl_axi.axi4_lite.a32_d32_sm;
+    axi_i: in nsl_axi.axi4_mm.master_t;
+    axi_o: out nsl_axi.axi4_mm.slave_t;
 
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
     jtag_i : in nsl_jtag.jtag.jtag_ate_i
@@ -25,8 +28,9 @@ end entity;
 architecture rtl of axi4lite_jtag_transactor is
 
   signal s_axi_write, s_axi_read, s_axi_read_done, s_axi_write_ready : std_ulogic;
-  signal s_axi_addr : unsigned(8-1 downto 2);
+  signal s_axi_addr : unsigned(config_c.address_width-1 downto config_c.data_bus_width_l2);
   signal s_axi_wdata : std_ulogic_vector(31 downto 0);
+  signal s_axi_wbytes, s_axi_rbytes : byte_string(0 to 3);
 
   type state_e is (
     ST_RESET,
@@ -54,27 +58,30 @@ architecture rtl of axi4lite_jtag_transactor is
   
 begin
 
-  axi_slave: nsl_axi.axi4_lite.axi4_lite_a32_d32_slave
+  axi_slave: nsl_axi.axi4_mm.axi4_mm_lite_slave
     generic map(
-      addr_size => 8
+      config_c => config_c
       )
     port map(
-      aclk => clock_i,
-      aresetn => reset_n_i,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      p_axi_ms => axi_i,
-      p_axi_sm => axi_o,
+      axi_i => axi_i,
+      axi_o => axi_o,
 
-      p_addr => s_axi_addr,
+      address_o => s_axi_addr,
 
-      p_w_data => s_axi_wdata,
-      p_w_ready => s_axi_write_ready,
-      p_w_valid => s_axi_write,
+      w_data_o => s_axi_wbytes,
+      w_ready_i => s_axi_write_ready,
+      w_valid_o => s_axi_write,
 
-      p_r_data => r.data,
-      p_r_ready => s_axi_read,
-      p_r_valid => s_axi_read_done
+      r_data_i => s_axi_rbytes,
+      r_ready_o => s_axi_read,
+      r_valid_i => s_axi_read_done
       );
+
+  s_axi_wdata <= std_ulogic_vector(from_le(s_axi_wbytes));
+  s_axi_rbytes <= to_le(unsigned(r.data));
 
   regs: process(clock_i, reset_n_i)
   begin
@@ -109,6 +116,7 @@ begin
               null;
           end case;
           rin.state <= ST_READ_RSP;
+
         elsif s_axi_write = '1' then
           case to_integer(unsigned(s_axi_addr(7 downto 2))) is
             when JTAG_TRANSACTOR_REG_DIVISOR =>
@@ -217,5 +225,5 @@ begin
       jtag_o => jtag_o,
       jtag_i => jtag_i
       );
-  
+
 end architecture;
