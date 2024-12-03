@@ -243,14 +243,14 @@ Then an entity can use the records for ports::
       );
     port (
       [...]
-      axi_ms_i   : in  nsl_axi.axi4_lite.a32_d32_ms;
-      axi_sm_o   : out nsl_axi.axi4_lite.a32_d32_sm
+      axi_i   : in  nsl_axi.axi4_mm.master_t;
+      axi_o   : out nsl_axi.axi4_mm.slave_t
       );
   end entity;
 
 Then instantiation is reduced to::
 
-  signal axi_mem : nsl_axi.axi4_lite.a32_d32;
+  signal axi_mem : nsl_axi.axi4_mm.bus_t;
 
   [...]
 
@@ -258,7 +258,7 @@ Then instantiation is reduced to::
     [...]
     port map(
       [...]
-      axi_ms_i => axi_mem.ms,
-      axi_sm_o => axi_mem.sm,
+      axi_i => axi_mem.m,
+      axi_o => axi_mem.s,
       [...]
       );
