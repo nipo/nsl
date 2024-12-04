@@ -128,6 +128,10 @@ package axi4_stream is
   function accept(cfg: config_t;
                   ready : boolean := false) return slave_t;
 
+  function transfer(cfg: config_t;
+                    src_cfg: config_t;
+                    src: master_t) return master_t;
+
   -- AXI-Stream packing tools
   --
   -- These are helpers to pack a subset of the AXI-Stream master
@@ -506,6 +510,43 @@ package body axi4_stream is
                     valid => valid,
                     last => last);
   end function; 
+
+  function transfer(cfg: config_t;
+                    src_cfg: config_t;
+                    src: master_t) return master_t
+  is
+    variable ret: master_t := transfer_defaults(cfg);
+    constant id_w : integer := nsl_math.arith.min(cfg.id_width, src_cfg.id_width);
+    constant user_w : integer := nsl_math.arith.min(cfg.user_width, src_cfg.user_width);
+    constant dest_w : integer := nsl_math.arith.min(cfg.dest_width, src_cfg.dest_width);
+  begin
+    assert src_cfg.data_width <= cfg.data_width
+      report "Can only copy transfer to larger width"
+      severity failure;
+
+    if cfg.has_keep then
+      ret.keep(0 to cfg.data_width-1) := (others => '0');
+      ret.keep(0 to src_cfg.data_width-1) := keep(src_cfg, src);
+    end if;
+    if cfg.has_strobe then
+      ret.strobe(0 to cfg.data_width-1) := (others => '0');
+      ret.strobe(0 to src_cfg.data_width-1) := strobe(src_cfg, src);
+    end if;
+    ret.data(0 to src_cfg.data_width-1) := bytes(src_cfg, src);
+
+    ret.id(cfg.id_width-1 downto 0) := (others => '0');
+    ret.id(id_w-1 downto 0) := src.id(id_w-1 downto 0);
+    ret.user(cfg.user_width-1 downto 0) := (others => '0');
+    ret.user(user_w-1 downto 0) := src.user(user_w-1 downto 0);
+    ret.dest(cfg.dest_width-1 downto 0) := (others => '0');
+    ret.dest(dest_w-1 downto 0) := src.dest(dest_w-1 downto 0);
+    ret.valid := src.valid;
+    if cfg.has_last then
+      ret.last := to_logic(is_last(src_cfg, src));
+    end if;
+
+    return ret;
+  end function;
 
   function accept(cfg: config_t;
                   ready : boolean := false) return slave_t
