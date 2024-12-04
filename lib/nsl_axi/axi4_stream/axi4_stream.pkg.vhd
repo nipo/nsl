@@ -684,7 +684,7 @@ package body axi4_stream is
           ret.dest(cfg.dest_width-1 downto 0) := vv(point to point+cfg.dest_width-1);
           point := point + cfg.dest_width;
         when 'u' =>
-          ret.dest(cfg.user_width-1 downto 0) := vv(point to point+cfg.user_width-1);
+          ret.user(cfg.user_width-1 downto 0) := vv(point to point+cfg.user_width-1);
           point := point + cfg.user_width;
         when 'v' =>
           ret.valid := vv(point);

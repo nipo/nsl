@@ -3,6 +3,7 @@ tb += axi4_mm_lite_regmap
 tb += axi4_mm_lite_stream_endpoint
 tb += axi4_mm_ram
 tb += axi4_mm_types
+tb += axi4_stream_types
 tb += axi4_stream_fifo
 tb += axi4_stream_flusher
 tb += axi4_stream_narrower
