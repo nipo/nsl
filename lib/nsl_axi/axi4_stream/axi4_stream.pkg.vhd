@@ -86,8 +86,8 @@ package axi4_stream is
     s: slave_t;
   end record;
 
-  type m_vector is array (natural range <>) of master_t;
-  type s_vector is array (natural range <>) of slave_t;
+  type master_vector is array (natural range <>) of master_t;
+  type slave_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
 
   constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
