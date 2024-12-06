@@ -22,6 +22,9 @@ package arith is
   -- Return 1 if x is 0.
   function align_up(x: natural) return natural;
 
+  -- Round x up to next multiple of b
+  function mod_up(x: natural; b: positive) return natural;
+
   -- Returns the unsigned constant that has the right size to express
   -- x as unsigned.
   function to_unsigned_auto(value : natural) return unsigned;
@@ -148,6 +151,17 @@ package body arith is
   is
   begin
     return 2 ** log2(x);
+  end function;
+
+  function mod_up(x: natural; b: positive) return natural
+  is
+    constant part: natural := x mod b;
+  begin
+    if part /= 0 then
+      return x + b - part;
+    else
+      return x;
+    end if;
   end function;
 
   function gcd(x, y : integer) return integer is
