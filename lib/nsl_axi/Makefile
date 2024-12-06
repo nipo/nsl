@@ -5,4 +5,5 @@ packages += fifo
 packages += stream_endpoint
 packages += packer
 packages += stream_routing
+packages += mm_fifo
 nsl_axi-ghdl-flags += -Wno-hide
