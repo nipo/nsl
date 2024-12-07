@@ -1,14 +1,15 @@
 tb += axi4_mm_lite_ram
 tb += axi4_mm_lite_regmap
 tb += axi4_mm_lite_stream_endpoint
+tb += axi4_mm_on_stream
 tb += axi4_mm_ram
 tb += axi4_mm_types
-tb += axi4_stream_types
+tb += axi4_stream_cdc
 tb += axi4_stream_fifo
 tb += axi4_stream_flusher
 tb += axi4_stream_narrower
+tb += axi4_stream_types
 tb += axi4_stream_widener
-tb += axi4_mm_on_stream
 
 all: simulate
 

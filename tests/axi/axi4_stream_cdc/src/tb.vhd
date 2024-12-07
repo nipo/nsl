@@ -109,11 +109,9 @@ begin
       bus_i => output_s
       );
   
-  dut: nsl_axi.stream_fifo.axi4_stream_fifo
+  dut: nsl_axi.stream_fifo.axi4_stream_cdc
     generic map(
-      depth_c => 16,
-      config_c => cfg_c,
-      clock_count_c => 2
+      config_c => cfg_c
       )
     port map(
       clock_i(0) => in_clock_s,
