@@ -23,6 +23,11 @@ $1/simulate: $1/Makefile FORCE
 
 simulate: $1/simulate
 
+$1/clean: $1/Makefile FORCE
+	make -C $1 clean
+
+clean: $1/clean
+
 endef
 
 $(eval $(foreach i,$(tb),$(call tb_declare,$(i))))
