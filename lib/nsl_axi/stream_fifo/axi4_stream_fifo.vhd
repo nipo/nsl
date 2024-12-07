@@ -9,7 +9,7 @@ use nsl_data.endian.all;
 entity axi4_stream_fifo is
   generic(
     config_c : config_t;
-    depth_c : positive;
+    depth_c : positive range 4 to positive'high;
     clock_count_c : integer range 1 to 2 := 1
     );
   port(

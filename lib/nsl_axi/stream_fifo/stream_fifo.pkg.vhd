@@ -6,10 +6,11 @@ library nsl_axi;
 
 package stream_fifo is
 
+  -- Single or dual-clock stream fifo
   component axi4_stream_fifo is
     generic(
       config_c : nsl_axi.axi4_stream.config_t;
-      depth_c : positive;
+      depth_c : positive range 4 to positive'high;
       clock_count_c : integer range 1 to 2 := 1
       );
     port(
@@ -26,6 +27,9 @@ package stream_fifo is
       );
   end component;
 
+  -- Single-clock register slice (i.e. a 3-depth fifo).
+  -- Totally decouples input clocking constraints from output ones.
+  -- Has at least one cycle latency.
   component axi4_stream_slice is
     generic(
       config_c : nsl_axi.axi4_stream.config_t
