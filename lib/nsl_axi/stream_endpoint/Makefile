@@ -8,4 +8,4 @@ deps += nsl_data.bytestream
 deps += nsl_data.endian
 deps += nsl_axi.axi4_mm
 deps += nsl_axi.axi4_stream
-deps += nsl_axi.fifo
+deps += nsl_axi.stream_fifo

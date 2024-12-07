@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_axi;
 
-package fifo is
+package stream_fifo is
 
   component axi4_stream_fifo is
     generic(
@@ -42,4 +42,4 @@ package fifo is
       );
   end component;
 
-end package fifo;
+end package stream_fifo;
