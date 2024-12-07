@@ -8,11 +8,11 @@ use nsl_math.arith.all;
 entity axi4_mm_fifo is
   generic(
     config_c : work.axi4_mm.config_t;
-    aw_depth_c : positive range 4 to positive'high;
-    w_depth_c : positive range 4 to positive'high;
-    b_depth_c : positive range 4 to positive'high;
-    ar_depth_c : positive range 4 to positive'high;
-    r_depth_c : positive range 4 to positive'high;
+    aw_depth_c : positive;
+    w_depth_c : positive;
+    b_depth_c : positive;
+    ar_depth_c : positive;
+    r_depth_c : positive;
     clock_count_c : integer range 1 to 2 := 1
     );
   port(
@@ -44,89 +44,284 @@ begin
     rclk_s <= clock_i;
   end generate;
 
-  aw: work.mm_fifo.axi4_mm_a_fifo
-    generic map(
-      config_c => config_c,
-      depth_c => max(4, aw_depth_c),
-      clock_count_c => clock_count_c
-      )
-    port map(
-      clock_i => clock_i,
-      reset_n_i => reset_n_i,
+  aw_fifo: if aw_depth_c >= 4
+  generate
+    aw: work.mm_fifo.axi4_mm_a_fifo
+      generic map(
+        config_c => config_c,
+        depth_c => aw_depth_c,
+        clock_count_c => clock_count_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
 
-      in_i => slave_i.aw,
-      in_o => slave_o.aw,
+        in_i => slave_i.aw,
+        in_o => slave_o.aw,
 
-      out_o => master_o.aw,
-      out_i => master_i.aw
-      );
+        out_o => master_o.aw,
+        out_i => master_i.aw
+        );
+  end generate;
 
-  w: work.mm_fifo.axi4_mm_w_fifo
-    generic map(
-      config_c => config_c,
-      depth_c => max(4, w_depth_c),
-      clock_count_c => clock_count_c
-      )
-    port map(
-      clock_i => clock_i,
-      reset_n_i => reset_n_i,
+  aw_cdc: if aw_depth_c < 4 and clock_count_c = 2
+  generate
+    aw: work.mm_fifo.axi4_mm_a_cdc
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
 
-      in_i => slave_i.w,
-      in_o => slave_o.w,
+        in_i => slave_i.aw,
+        in_o => slave_o.aw,
 
-      out_o => master_o.w,
-      out_i => master_i.w
-      );
+        out_o => master_o.aw,
+        out_i => master_i.aw
+        );
+  end generate;
 
-  b: work.mm_fifo.axi4_mm_b_fifo
-    generic map(
-      config_c => config_c,
-      depth_c => max(4, b_depth_c),
-      clock_count_c => clock_count_c
-      )
-    port map(
-      clock_i => rclk_s,
-      reset_n_i => reset_n_i,
+  aw_slice: if aw_depth_c < 4 and clock_count_c = 1
+  generate
+    aw: work.mm_fifo.axi4_mm_a_slice
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i(0),
+        reset_n_i => reset_n_i,
 
-      in_i => master_i.b,
-      in_o => master_o.b,
+        in_i => slave_i.aw,
+        in_o => slave_o.aw,
 
-      out_o => slave_o.b,
-      out_i => slave_i.b
-      );
+        out_o => master_o.aw,
+        out_i => master_i.aw
+        );
+  end generate;
 
-  ar: work.mm_fifo.axi4_mm_a_fifo
-    generic map(
-      config_c => config_c,
-      depth_c => max(4, ar_depth_c),
-      clock_count_c => clock_count_c
-      )
-    port map(
-      clock_i => clock_i,
-      reset_n_i => reset_n_i,
+  w_fifo: if w_depth_c >= 4
+  generate
+    w: work.mm_fifo.axi4_mm_w_fifo
+      generic map(
+        config_c => config_c,
+        depth_c => w_depth_c,
+        clock_count_c => clock_count_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
 
-      in_i => slave_i.ar,
-      in_o => slave_o.ar,
+        in_i => slave_i.w,
+        in_o => slave_o.w,
 
-      out_o => master_o.ar,
-      out_i => master_i.ar
-      );
+        out_o => master_o.w,
+        out_i => master_i.w
+        );
+  end generate;
 
-  r: work.mm_fifo.axi4_mm_r_fifo
-    generic map(
-      config_c => config_c,
-      depth_c => max(4, r_depth_c),
-      clock_count_c => clock_count_c
-      )
-    port map(
-      clock_i => rclk_s,
-      reset_n_i => reset_n_i,
+  w_cdc: if w_depth_c < 4 and clock_count_c = 2
+  generate
+    w: work.mm_fifo.axi4_mm_w_cdc
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
 
-      in_i => master_i.r,
-      in_o => master_o.r,
+        in_i => slave_i.w,
+        in_o => slave_o.w,
 
-      out_o => slave_o.r,
-      out_i => slave_i.r
-      );
+        out_o => master_o.w,
+        out_i => master_i.w
+        );
+  end generate;
+
+  w_slice: if w_depth_c < 4 and clock_count_c = 1
+  generate
+    w: work.mm_fifo.axi4_mm_w_slice
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i(0),
+        reset_n_i => reset_n_i,
+
+        in_i => slave_i.w,
+        in_o => slave_o.w,
+
+        out_o => master_o.w,
+        out_i => master_i.w
+        );
+  end generate;
+
+  b_fifo: if b_depth_c >= 4
+  generate
+    b: work.mm_fifo.axi4_mm_b_fifo
+      generic map(
+        config_c => config_c,
+        depth_c => b_depth_c,
+        clock_count_c => clock_count_c
+        )
+      port map(
+        clock_i => rclk_s,
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.b,
+        in_o => master_o.b,
+
+        out_o => slave_o.b,
+        out_i => slave_i.b
+        );
+  end generate;
+
+  b_cdc: if b_depth_c < 4 and clock_count_c = 2
+  generate
+    b: work.mm_fifo.axi4_mm_b_cdc
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => rclk_s,
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.b,
+        in_o => master_o.b,
+
+        out_o => slave_o.b,
+        out_i => slave_i.b
+        );
+  end generate;
+
+  b_slice: if b_depth_c < 4 and clock_count_c = 1
+  generate
+    b: work.mm_fifo.axi4_mm_b_slice
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => rclk_s(0),
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.b,
+        in_o => master_o.b,
+
+        out_o => slave_o.b,
+        out_i => slave_i.b
+        );
+  end generate;
+
+  ar_fifo: if ar_depth_c >= 4
+  generate
+    ar: work.mm_fifo.axi4_mm_a_fifo
+      generic map(
+        config_c => config_c,
+        depth_c => ar_depth_c,
+        clock_count_c => clock_count_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+
+        in_i => slave_i.ar,
+        in_o => slave_o.ar,
+
+        out_o => master_o.ar,
+        out_i => master_i.ar
+        );
+  end generate;
+
+  ar_cdc: if ar_depth_c < 4 and clock_count_c = 2
+  generate
+    ar: work.mm_fifo.axi4_mm_a_cdc
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+
+        in_i => slave_i.ar,
+        in_o => slave_o.ar,
+
+        out_o => master_o.ar,
+        out_i => master_i.ar
+        );
+  end generate;
+
+  ar_slice: if ar_depth_c < 4 and clock_count_c = 1
+  generate
+    ar: work.mm_fifo.axi4_mm_a_slice
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => clock_i(0),
+        reset_n_i => reset_n_i,
+
+        in_i => slave_i.ar,
+        in_o => slave_o.ar,
+
+        out_o => master_o.ar,
+        out_i => master_i.ar
+        );
+  end generate;
+
+  r_fifo: if r_depth_c >= 4
+  generate
+    r: work.mm_fifo.axi4_mm_r_fifo
+      generic map(
+        config_c => config_c,
+        depth_c => r_depth_c,
+        clock_count_c => clock_count_c
+        )
+      port map(
+        clock_i => rclk_s,
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.r,
+        in_o => master_o.r,
+
+        out_o => slave_o.r,
+        out_i => slave_i.r
+        );
+  end generate;
+
+  r_cdc: if r_depth_c < 4 and clock_count_c = 2
+  generate
+    r: work.mm_fifo.axi4_mm_r_cdc
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => rclk_s,
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.r,
+        in_o => master_o.r,
+
+        out_o => slave_o.r,
+        out_i => slave_i.r
+        );
+  end generate;
+
+  r_slice: if r_depth_c < 4 and clock_count_c = 1
+  generate
+    r: work.mm_fifo.axi4_mm_r_slice
+      generic map(
+        config_c => config_c
+        )
+      port map(
+        clock_i => rclk_s(0),
+        reset_n_i => reset_n_i,
+
+        in_i => master_i.r,
+        in_o => master_o.r,
+
+        out_o => slave_o.r,
+        out_i => slave_i.r
+        );
+  end generate;
   
 end architecture;
