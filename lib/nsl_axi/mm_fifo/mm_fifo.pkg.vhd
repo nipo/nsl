@@ -191,4 +191,89 @@ package mm_fifo is
       );
   end component;
 
+  -- An address channel (either aw or ar) cdc
+  component axi4_mm_a_cdc is
+    generic(
+      config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic_vector(0 to 1);
+      reset_n_i : in std_ulogic;
+
+      in_i : in work.axi4_mm.address_t;
+      in_o : out work.axi4_mm.handshake_t;
+
+      out_o : out work.axi4_mm.address_t;
+      out_i : in work.axi4_mm.handshake_t
+      );
+  end component;
+
+  -- A write data channel cdc
+  component axi4_mm_w_cdc is
+    generic(
+      config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic_vector(0 to 1);
+      reset_n_i : in std_ulogic;
+
+      in_i : in work.axi4_mm.write_data_t;
+      in_o : out work.axi4_mm.handshake_t;
+
+      out_o : out work.axi4_mm.write_data_t;
+      out_i : in work.axi4_mm.handshake_t
+      );
+  end component;
+
+  -- A write response channel cdc
+  component axi4_mm_b_cdc is
+    generic(
+      config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic_vector(0 to 1);
+      reset_n_i : in std_ulogic;
+
+      in_i : in work.axi4_mm.write_response_t;
+      in_o : out work.axi4_mm.handshake_t;
+
+      out_o : out work.axi4_mm.write_response_t;
+      out_i : in work.axi4_mm.handshake_t
+      );
+  end component;
+
+  -- A read data channel cdc
+  component axi4_mm_r_cdc is
+    generic(
+      config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic_vector(0 to 1);
+      reset_n_i : in std_ulogic;
+
+      in_i : in work.axi4_mm.read_data_t;
+      in_o : out work.axi4_mm.handshake_t;
+
+      out_o : out work.axi4_mm.read_data_t;
+      out_i : in work.axi4_mm.handshake_t
+      );
+  end component;
+
+  -- A full AXI4-MM cdc
+  component axi4_mm_cdc is
+    generic(
+      config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic_vector(0 to 1);
+      reset_n_i : in std_ulogic;
+
+      slave_i : in work.axi4_mm.master_t;
+      slave_o : out work.axi4_mm.slave_t;
+
+      master_o : out work.axi4_mm.master_t;
+      master_i : in work.axi4_mm.slave_t
+      );
+  end component;
+
 end package mm_fifo;

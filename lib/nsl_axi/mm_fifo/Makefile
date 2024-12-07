@@ -9,7 +9,13 @@ vhdl-sources += axi4_mm_w_slice.vhd
 vhdl-sources += axi4_mm_b_slice.vhd
 vhdl-sources += axi4_mm_r_slice.vhd
 vhdl-sources += axi4_mm_slice.vhd
+vhdl-sources += axi4_mm_a_cdc.vhd
+vhdl-sources += axi4_mm_w_cdc.vhd
+vhdl-sources += axi4_mm_b_cdc.vhd
+vhdl-sources += axi4_mm_r_cdc.vhd
+vhdl-sources += axi4_mm_cdc.vhd
 
 deps += nsl_axi.axi4_mm
 deps += nsl_memory.fifo
 deps += nsl_logic.bool
+deps += nsl_clocking.interdomain
