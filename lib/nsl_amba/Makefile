@@ -1,4 +1,5 @@
 packages += address
+packages += apb
 packages += axi4_stream
 packages += axi4_mm
 packages += ram
