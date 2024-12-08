@@ -1,3 +1,4 @@
+tb += address
 tb += axi4_mm_cdc
 tb += axi4_mm_lite_ram
 tb += axi4_mm_lite_regmap

@@ -8,6 +8,7 @@ deps += nsl_data.bytestream
 deps += nsl_data.endian
 deps += nsl_data.text
 deps += nsl_math.arith
+deps += nsl_amba.address
 
 ifeq (simulation,$(target-usage))
 vhdl-sources += axi4_mm_dumper.vhd
