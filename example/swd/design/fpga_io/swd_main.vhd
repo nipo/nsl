@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_coresight, nsl_indication, nsl_axi;
+library nsl_hwdep, nsl_coresight, nsl_indication, nsl_amba;
 
 entity swd_main is
   generic(
@@ -23,8 +23,8 @@ architecture arch of swd_main is
 
   signal swd_bus : nsl_coresight.swd.swd_slave_bus;
   signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => 32, data_bus_width => 32);
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
 
 begin
@@ -105,7 +105,7 @@ begin
       axi_i => axi_s.s
       );
 
-  bram: nsl_axi.ram.axi4_mm_lite_ram
+  bram: nsl_amba.ram.axi4_mm_lite_ram
     generic map(
       byte_size_l2_c => 12,
       config_c => config_c

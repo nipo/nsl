@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -10,8 +10,8 @@ use nsl_data.text.all;
 use nsl_data.prbs.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
-use nsl_axi.axi4_mm.all;
-use nsl_axi.mm_fifo.all;
+use nsl_amba.axi4_mm.all;
+use nsl_amba.mm_fifo.all;
 
 entity tb is
 end tb;
@@ -88,7 +88,7 @@ begin
     wait;
   end process;
 
-  cdc: nsl_axi.mm_fifo.axi4_mm_cdc
+  cdc: nsl_amba.mm_fifo.axi4_mm_cdc
     generic map(
       config_c => config_c
       )
@@ -105,7 +105,7 @@ begin
       );
       
   
-  dut: nsl_axi.ram.axi4_mm_ram
+  dut: nsl_amba.ram.axi4_mm_ram
     generic map(
       config_c => config_c,
       byte_size_l2_c => 10

@@ -2,15 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_coresight, nsl_axi, nsl_data;
-use nsl_axi.axi4_mm.all;
+library nsl_coresight, nsl_amba, nsl_data;
+use nsl_amba.axi4_mm.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 
 entity ap_axi4_lite is
   generic(
     idr : unsigned(31 downto 0) := X"03000004";
-    config_c : nsl_axi.axi4_mm.config_t;
+    config_c : nsl_amba.axi4_mm.config_t;
     rom_base : unsigned(31 downto 0)
     );
   port(
@@ -23,8 +23,8 @@ entity ap_axi4_lite is
     dap_i : in nsl_coresight.dapbus.dapbus_m_o;
     dap_o : out nsl_coresight.dapbus.dapbus_m_i;
 
-    axi_o : out nsl_axi.axi4_mm.master_t;
-    axi_i : in  nsl_axi.axi4_mm.slave_t
+    axi_o : out nsl_amba.axi4_mm.master_t;
+    axi_i : in  nsl_amba.axi4_mm.slave_t
     );
 begin
   

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_time, work;
+library nsl_amba, nsl_time, work;
 use nsl_time.timestamp.all;
 
 entity phc_main_flat is
@@ -67,8 +67,8 @@ architecture rtl of phc_main_flat is
   attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_config:m_worker, ASSOCIATED_RESET aresetn";
   attribute X_INTERFACE_PARAMETER of aresetn : signal is "POLARITY ACTIVE_LOW";
 
-  signal s_config_i: nsl_axi.axi4_lite.a32_d32_ms;
-  signal s_config_o: nsl_axi.axi4_lite.a32_d32_sm;
+  signal s_config_i: nsl_amba.axi4_lite.a32_d32_ms;
+  signal s_config_o: nsl_amba.axi4_lite.a32_d32_sm;
   signal s_timestamp_o: nsl_time.timestamp.timestamp_t;
   
 begin

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_coresight, nsl_axi, nsl_clocking, nsl_hwdep;
+library nsl_coresight, nsl_amba, nsl_clocking, nsl_hwdep;
 
 entity swd_axi4lite_master is
   generic(
@@ -75,9 +75,9 @@ architecture rtl of swd_axi4lite_master is
   attribute X_INTERFACE_INFO of swdio_i : signal is "nsl:interface:swd:1.0 swd dio_i";
 
   signal swd_bus : nsl_coresight.swd.swd_slave_bus;
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => 32, data_bus_width => 32);
   signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-  signal bus_s : nsl_axi.axi4_mm.bus_t;
+  signal bus_s : nsl_amba.axi4_mm.bus_t;
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
 
 begin
@@ -148,7 +148,7 @@ begin
       axi_i => bus_s.s
       );
 
-  packer: nsl_axi.packer.axi4_mm_lite_master_packer
+  packer: nsl_amba.packer.axi4_mm_lite_master_packer
     generic map(
       config_c => config_c
       )

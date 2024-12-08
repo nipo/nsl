@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_data, nsl_logic;
+library nsl_amba, nsl_data, nsl_logic;
 use nsl_logic.bool.all;
-use nsl_axi.axi4_mm.all;
-use nsl_axi.axi4_stream.all;
+use nsl_amba.axi4_mm.all;
+use nsl_amba.axi4_stream.all;
 
 entity ip_top is
   generic(
@@ -95,18 +95,18 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_axi,s_axis,m_axis ASSOCIATED_RESET aresetn";
   attribute X_INTERFACE_PARAMETER of aresetn : signal is "POLARITY ACTIVE_LOW";
   
-  constant mm_config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => s_axi_araddr'length,
+  constant mm_config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => s_axi_araddr'length,
                                                                          data_bus_width => s_axi_wdata'length);
-  constant stream_config_c : nsl_axi.axi4_stream.config_t := nsl_axi.axi4_stream.config(bytes => stream_byte_count);
+  constant stream_config_c : nsl_amba.axi4_stream.config_t := nsl_amba.axi4_stream.config(bytes => stream_byte_count);
 
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
-  signal tx_s, rx_s: nsl_axi.axi4_stream.bus_t;
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
+  signal tx_s, rx_s: nsl_amba.axi4_stream.bus_t;
 
   signal irq_n_s : std_ulogic;
   
 begin
 
-  packer: nsl_axi.packer.axi4_mm_lite_slave_packer
+  packer: nsl_amba.packer.axi4_mm_lite_slave_packer
     generic map(
       config_c => mm_config_c
       )
@@ -133,7 +133,7 @@ begin
       axi_i => axi_s.s
       );
 
-  impl: nsl_axi.stream_endpoint.axi4_stream_endpoint_lite
+  impl: nsl_amba.stream_endpoint.axi4_stream_endpoint_lite
     generic map(
       mm_config_c => mm_config_c,
       stream_config_c => stream_config_c,

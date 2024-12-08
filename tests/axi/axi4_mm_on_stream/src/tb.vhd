@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -10,7 +10,7 @@ use nsl_data.text.all;
 use nsl_data.prbs.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
-use nsl_axi.axi4_mm.all;
+use nsl_amba.axi4_mm.all;
 
 entity tb is
 end tb;
@@ -20,17 +20,17 @@ architecture arch of tb is
   signal clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to 0);
 
-  signal bus_s, fifo_bus_s, ram_bus_s: nsl_axi.axi4_mm.bus_t;
-  signal au_s, bu_s: nsl_axi.axi4_mm.bus_t;
-  signal a2b_s, b2a_s: nsl_axi.axi4_stream.bus_t;
+  signal bus_s, fifo_bus_s, ram_bus_s: nsl_amba.axi4_mm.bus_t;
+  signal au_s, bu_s: nsl_amba.axi4_mm.bus_t;
+  signal a2b_s, b2a_s: nsl_amba.axi4_stream.bus_t;
 
-  constant config_c : nsl_axi.axi4_mm.config_t
-    := nsl_axi.axi4_mm.config(address_width => 32,
+  constant config_c : nsl_amba.axi4_mm.config_t
+    := nsl_amba.axi4_mm.config(address_width => 32,
                               data_bus_width => 32,
                               max_length => 16,
                               burst => true);
-  constant stream_config_c : nsl_axi.axi4_stream.config_t
-    := nsl_axi.axi4_stream.config(bytes => 5,
+  constant stream_config_c : nsl_amba.axi4_stream.config_t
+    := nsl_amba.axi4_stream.config(bytes => 5,
                                   id => 3,
                                   last => true);
 
@@ -106,7 +106,7 @@ begin
     wait;
   end process;
 
-  pre_dumper: nsl_axi.axi4_mm.axi4_mm_dumper
+  pre_dumper: nsl_amba.axi4_mm.axi4_mm_dumper
     generic map(
       config_c => config_c,
       prefix_c => "pre"
@@ -119,7 +119,7 @@ begin
       slave_i => bus_s.s
       );
 
-  dut_enc: nsl_axi.mm_stream_adapter.axi4_mm_on_stream
+  dut_enc: nsl_amba.mm_stream_adapter.axi4_mm_on_stream
     generic map(
       mm_config_c => config_c,
       stream_config_c => stream_config_c
@@ -141,7 +141,7 @@ begin
       rx_o => b2a_s.s
       );
 
-  a2b_dumper: nsl_axi.axi4_stream.axi4_stream_dumper
+  a2b_dumper: nsl_amba.axi4_stream.axi4_stream_dumper
     generic map(
       config_c => stream_config_c,
       prefix_c => "a2b"
@@ -153,7 +153,7 @@ begin
       bus_i => a2b_s
       );
 
-  b2a_dumper: nsl_axi.axi4_stream.axi4_stream_dumper
+  b2a_dumper: nsl_amba.axi4_stream.axi4_stream_dumper
     generic map(
       config_c => stream_config_c,
       prefix_c => "b2a"
@@ -165,7 +165,7 @@ begin
       bus_i => b2a_s
       );
 
-  dut_dec: nsl_axi.mm_stream_adapter.axi4_mm_on_stream
+  dut_dec: nsl_amba.mm_stream_adapter.axi4_mm_on_stream
     generic map(
       mm_config_c => config_c,
       stream_config_c => stream_config_c
@@ -187,7 +187,7 @@ begin
       rx_o => a2b_s.s
       );
 
-  fifo: nsl_axi.mm_fifo.axi4_mm_fifo
+  fifo: nsl_amba.mm_fifo.axi4_mm_fifo
     generic map(
       config_c => config_c,
       aw_depth_c => 4,
@@ -208,7 +208,7 @@ begin
       master_i => ram_bus_s.s
       );
   
-  post_dumper: nsl_axi.axi4_mm.axi4_mm_dumper
+  post_dumper: nsl_amba.axi4_mm.axi4_mm_dumper
     generic map(
       config_c => config_c,
       prefix_c => "post"
@@ -221,7 +221,7 @@ begin
       slave_i => ram_bus_s.s
       );
   
-  ram: nsl_axi.ram.axi4_mm_ram
+  ram: nsl_amba.ram.axi4_mm_ram
     generic map(
       config_c => config_c,
       byte_size_l2_c => 10

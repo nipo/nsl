@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_clocking;
+library nsl_amba, nsl_clocking;
 
 entity ip_top is
   generic(
@@ -103,9 +103,9 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_INFO of measured_clock_14 : signal is "xilinx.com:signal:clock:1.0 measured_clock_14 CLK";
   attribute X_INTERFACE_INFO of measured_clock_15 : signal is "xilinx.com:signal:clock:1.0 measured_clock_15 CLK";
 
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => s_axi_araddr'length,
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => s_axi_araddr'length,
                                                                          data_bus_width => s_axi_wdata'length);
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
   
   subtype rate_t is unsigned(max_hz_l2-1 downto 0);
   type rate_vector is array(integer range <>) of rate_t;
@@ -118,7 +118,7 @@ architecture rtl of ip_top is
 
 begin
 
-  packer: nsl_axi.packer.axi4_mm_lite_slave_packer
+  packer: nsl_amba.packer.axi4_mm_lite_slave_packer
     generic map(
       config_c => config_c
       )
@@ -145,7 +145,7 @@ begin
       axi_i => axi_s.s
       );
   
-  mem: nsl_axi.axi4_mm.axi4_mm_lite_regmap
+  mem: nsl_amba.axi4_mm.axi4_mm_lite_regmap
     generic map (
       config_c => config_c,
       reg_count_l2_c => 4

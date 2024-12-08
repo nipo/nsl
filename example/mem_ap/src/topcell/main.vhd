@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.all;
 
-library nsl_hwdep, nsl_io, nsl_coresight, nsl_axi, nsl_clocking, nsl_color, nsl_indication, nsl_ws;
+library nsl_hwdep, nsl_io, nsl_coresight, nsl_amba, nsl_clocking, nsl_color, nsl_indication, nsl_ws;
 
 entity top is
   port (
@@ -20,9 +20,9 @@ architecture arch of top is
 
   signal swd_slave : nsl_coresight.swd.swd_slave_bus;
   signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
 
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => 32, data_bus_width => 32);
   
   signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
   signal act: std_ulogic;
@@ -138,7 +138,7 @@ begin
       axi_i => axi_s.s
       );
 
-  axi_slave: nsl_axi.axi4_mm.axi4_mm_lite_ram
+  axi_slave: nsl_amba.axi4_mm.axi4_mm_lite_ram
     generic map(
       byte_size_l2_c => mem_size_log2_c,
       config_c => config_c

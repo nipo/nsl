@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_data;
+library nsl_amba, nsl_data;
 
 entity ip_top is
   generic(
@@ -64,14 +64,14 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_axi, ASSOCIATED_RESET aresetn";
   attribute X_INTERFACE_PARAMETER of aresetn : signal is "POLARITY ACTIVE_LOW";
   
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => s_axi_araddr'length,
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => s_axi_araddr'length,
                                                                          data_bus_width => s_axi_wdata'length);
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
   
 
 begin
 
-  packer: nsl_axi.packer.axi4_mm_lite_slave_packer
+  packer: nsl_amba.packer.axi4_mm_lite_slave_packer
     generic map(
       config_c => config_c
       )
@@ -98,7 +98,7 @@ begin
       axi_i => axi_s.s
       );
 
-  impl: nsl_axi.ram.axi4_mm_lite_ram
+  impl: nsl_amba.ram.axi4_mm_lite_ram
     generic map(
       config_c => config_c,
       byte_size_l2_c => addr_size

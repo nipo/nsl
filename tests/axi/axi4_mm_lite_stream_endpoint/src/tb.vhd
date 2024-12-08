@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -10,9 +10,9 @@ use nsl_data.text.all;
 use nsl_data.prbs.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
-use nsl_axi.axi4_mm.all;
-use nsl_axi.axi4_stream.all;
-use nsl_axi.stream_endpoint.all;
+use nsl_amba.axi4_mm.all;
+use nsl_amba.axi4_stream.all;
+use nsl_amba.stream_endpoint.all;
 
 entity tb is
 end tb;
@@ -22,14 +22,14 @@ architecture arch of tb is
   signal clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to 0);
 
-  signal bus_s: nsl_axi.axi4_mm.bus_t;
-  signal stream_s: nsl_axi.axi4_stream.bus_t;
+  signal bus_s: nsl_amba.axi4_mm.bus_t;
+  signal stream_s: nsl_amba.axi4_stream.bus_t;
   signal irq_n_s: std_ulogic;
 
-  constant mm_config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32,
+  constant mm_config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => 32,
                                                                             data_bus_width => 32);
 
-  constant stream_config_c : nsl_axi.axi4_stream.config_t := nsl_axi.axi4_stream.config(bytes => 2,
+  constant stream_config_c : nsl_amba.axi4_stream.config_t := nsl_amba.axi4_stream.config(bytes => 2,
                                                                                         last => true);
 
 begin
@@ -74,7 +74,7 @@ begin
     wait;
   end process;
 
-  dumper: nsl_axi.axi4_mm.axi4_mm_dumper
+  dumper: nsl_amba.axi4_mm.axi4_mm_dumper
     generic map(
       config_c => mm_config_c,
       prefix_c => "EP"
@@ -87,7 +87,7 @@ begin
       slave_i => bus_s.s
       );
 
-  ep: nsl_axi.stream_endpoint.axi4_stream_endpoint_lite
+  ep: nsl_amba.stream_endpoint.axi4_stream_endpoint_lite
     generic map(
       mm_config_c => mm_config_c,
       stream_config_c => stream_config_c,

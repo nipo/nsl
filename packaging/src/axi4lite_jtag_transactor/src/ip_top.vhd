@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_jtag, nsl_logic, nsl_io;
+library nsl_amba, nsl_jtag, nsl_logic, nsl_io;
 
 entity ip_top is
   generic(
@@ -76,16 +76,16 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_INFO of jtag_tdi : signal is "xilinx.com:interface:jtag:2.0 jtag TDI";
   attribute X_INTERFACE_INFO of jtag_tdo : signal is "xilinx.com:interface:jtag:2.0 jtag TDO";
 
-  constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => s_axi_araddr'length,
+  constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => s_axi_araddr'length,
                                                                          data_bus_width => s_axi_wdata'length);
-  signal axi_s : nsl_axi.axi4_mm.bus_t;
+  signal axi_s : nsl_amba.axi4_mm.bus_t;
   
   signal tck, trst : std_ulogic;
   signal tdi: nsl_io.io.tristated;
 
 begin
 
-  packer: nsl_axi.packer.axi4_mm_lite_slave_packer
+  packer: nsl_amba.packer.axi4_mm_lite_slave_packer
     generic map(
       config_c => config_c
       )

@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, nsl_data, nsl_axi;
+library nsl_clocking, nsl_bnoc, nsl_coresight, nsl_simulation, nsl_data, nsl_amba;
 use nsl_coresight.testing.all;
 use nsl_bnoc.testing.all;
 use nsl_data.bytestream.all;
@@ -150,8 +150,8 @@ begin
   
   dut: block is
     signal dapbus_gen, dapbus_memap : nsl_coresight.dapbus.dapbus_bus;
-    signal axi_s : nsl_axi.axi4_mm.bus_t;
-    constant config_c : nsl_axi.axi4_mm.config_t := nsl_axi.axi4_mm.config(address_width => 32, data_bus_width => 32);
+    signal axi_s : nsl_amba.axi4_mm.bus_t;
+    constant config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => 32, data_bus_width => 32);
     signal ctrl, ctrl_w, stat :std_ulogic_vector(31 downto 0);
     signal slave_swd_s : nsl_coresight.swd.swd_slave_bus;
   begin
@@ -217,7 +217,7 @@ begin
         axi_i => axi_s.s
         );
 
-    mem: nsl_axi.axi4_mm.axi4_mm_lite_ram
+    mem: nsl_amba.axi4_mm.axi4_mm_lite_ram
       generic map (
         byte_size_l2_c => 12,
         config_c => config_c

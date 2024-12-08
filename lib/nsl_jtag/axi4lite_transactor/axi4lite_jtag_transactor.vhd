@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_jtag, nsl_data;
+library nsl_amba, nsl_jtag, nsl_data;
 use nsl_jtag.ate.all;
 use nsl_jtag.axi4lite_transactor.all;
 use nsl_data.bytestream.all;
@@ -11,14 +11,14 @@ use nsl_data.endian.all;
 entity axi4lite_jtag_transactor is
   generic (
     prescaler_width_c : natural := 18;
-    config_c : nsl_axi.axi4_mm.config_t
+    config_c : nsl_amba.axi4_mm.config_t
     );
   port (
     clock_i: in std_ulogic;
     reset_n_i: in std_ulogic := '1';
     
-    axi_i: in nsl_axi.axi4_mm.master_t;
-    axi_o: out nsl_axi.axi4_mm.slave_t;
+    axi_i: in nsl_amba.axi4_mm.master_t;
+    axi_o: out nsl_amba.axi4_mm.slave_t;
 
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
     jtag_i : in nsl_jtag.jtag.jtag_ate_i
@@ -58,7 +58,7 @@ architecture rtl of axi4lite_jtag_transactor is
   
 begin
 
-  axi_slave: nsl_axi.axi4_mm.axi4_mm_lite_slave
+  axi_slave: nsl_amba.axi4_mm.axi4_mm_lite_slave
     generic map(
       config_c => config_c
       )

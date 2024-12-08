@@ -7,4 +7,4 @@ deps += nsl_data.prbs
 deps += nsl_simulation.assertions
 deps += nsl_simulation.logging
 
-deps += nsl_axi.axi4_mm
+deps += nsl_amba.axi4_mm

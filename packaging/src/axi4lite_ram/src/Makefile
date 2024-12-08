@@ -1,6 +1,6 @@
 vhdl-sources += ip_top.vhd
-deps += nsl_axi.axi4_mm
-deps += nsl_axi.packer
-deps += nsl_axi.ram
+deps += nsl_amba.axi4_mm
+deps += nsl_amba.packer
+deps += nsl_amba.ram
 
 

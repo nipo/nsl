@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.prbs.all;
@@ -18,7 +18,7 @@ architecture arch of tb is
 begin
 
   b: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     constant context: log_context := "AXI4 MM 4 burst";
 
     constant c: config_t := config(32, 32, max_length => 16);
@@ -70,7 +70,7 @@ begin
   end process;
 
   w: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     constant context: log_context := "AXI4 MM 4 wrap burst";
 
     constant c: config_t := config(32, 32, max_length => 16, burst => true);
@@ -122,7 +122,7 @@ begin
   end process;
 
   w32: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     constant context: log_context := "AXI4 MM 4 wrap32 burst";
 
     constant c: config_t := config(32, 64, max_length => 16, burst => true, size => true);
@@ -270,7 +270,7 @@ begin
   end process;
 
   w16: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     constant context: log_context := "AXI4 MM 2 wrap32 burst";
 
     constant c: config_t := config(32, 64, max_length => 16, burst => true, size => true);
@@ -418,7 +418,7 @@ begin
   end process;
 
   addr: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     constant context: log_context := "AXI4 Addr Parsing";
 
     constant c: config_t := config(32, 32, max_length => 16);
@@ -446,7 +446,7 @@ begin
   end process;
 
   address_serializer: process
-    use nsl_axi.axi4_mm.all;
+    use nsl_amba.axi4_mm.all;
     procedure address_serializer_torture(cfg: config_t; loops: integer)
     is
       variable serin_v, serout_v, ser_incr_v, ser_wrap_v, ser_inval_v: std_ulogic_vector(address_vector_length(cfg)-1 downto 0);

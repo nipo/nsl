@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.prbs.all;
@@ -18,7 +18,7 @@ architecture arch of tb is
 begin
 
   transfer_serializer: process
-    use nsl_axi.axi4_stream.all;
+    use nsl_amba.axi4_stream.all;
 
     procedure serializer_torture(cfg: config_t;
                                  elements: string;

@@ -8,4 +8,4 @@ deps += nsl_simulation.assertions
 deps += nsl_simulation.logging
 deps += nsl_simulation.driver
 
-deps += nsl_axi.axi4_stream
+deps += nsl_amba.axi4_stream

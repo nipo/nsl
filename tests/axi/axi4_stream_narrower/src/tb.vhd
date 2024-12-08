@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_axi;
+library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -10,7 +10,7 @@ use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
 use nsl_data.prbs.all;
-use nsl_axi.axi4_stream.all;
+use nsl_amba.axi4_stream.all;
 
 entity tb is
 end tb;
@@ -84,7 +84,7 @@ begin
     wait;
   end process;
 
-  dumper_in: nsl_axi.axi4_stream.axi4_stream_dumper
+  dumper_in: nsl_amba.axi4_stream.axi4_stream_dumper
     generic map(
       config_c => in_cfg_c,
       prefix_c => "IN"
@@ -96,7 +96,7 @@ begin
       bus_i => input_s
       );
 
-  dumper_out: nsl_axi.axi4_stream.axi4_stream_dumper
+  dumper_out: nsl_amba.axi4_stream.axi4_stream_dumper
     generic map(
       config_c => out_cfg_c,
       prefix_c => "OUT"
@@ -108,7 +108,7 @@ begin
       bus_i => output_s
       );
   
-  dut: nsl_axi.axi4_stream.axi4_stream_width_adapter
+  dut: nsl_amba.axi4_stream.axi4_stream_width_adapter
     generic map(
       in_config_c => in_cfg_c,
       out_config_c => out_cfg_c

@@ -10,10 +10,10 @@ deps += nsl_bnoc.framed
 deps += nsl_bnoc.testing
 deps += nsl_bnoc.routed
 deps += nsl_clocking.async
-deps += nsl_axi.axi4_mm
+deps += nsl_amba.axi4_mm
 deps += nsl_segger.rtt
 deps += nsl_math.arith
-deps += nsl_axi.testing
+deps += nsl_amba.testing
 deps += nsl_data.prbs
 deps += nsl_segger.testing
 

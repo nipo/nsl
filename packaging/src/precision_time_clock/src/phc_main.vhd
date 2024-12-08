@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_axi, nsl_time, nsl_math, work;
-use nsl_axi.axi4_mm.all;
+library nsl_amba, nsl_time, nsl_math, work;
+use nsl_amba.axi4_mm.all;
 use nsl_time.timestamp.all;
 use nsl_math.fixed.all;
 
@@ -50,7 +50,7 @@ architecture rtl of phc_main is
   
 begin
 
-  regmap: nsl_axi.axi4_mm.axi4_mm_lite_regmap
+  regmap: nsl_amba.axi4_mm.axi4_mm_lite_regmap
     generic map(
       config_c => config_c,
       reg_count_l2_c => 2

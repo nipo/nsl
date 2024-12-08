@@ -1,0 +1,10 @@
+packages += axi4_stream
+packages += axi4_mm
+packages += ram
+packages += stream_fifo
+packages += stream_endpoint
+packages += packer
+packages += stream_routing
+packages += mm_stream_adapter
+packages += mm_fifo
+nsl_amba-ghdl-flags += -Wno-hide
