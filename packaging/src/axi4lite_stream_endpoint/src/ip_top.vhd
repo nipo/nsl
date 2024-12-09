@@ -92,12 +92,13 @@ architecture rtl of ip_top is
   attribute X_INTERFACE_INFO of s_axi_rresp : signal is "xilinx.com:interface:aximm:1.0 s_axi RRESP";
   attribute X_INTERFACE_INFO of s_axi_rdata : signal is "xilinx.com:interface:aximm:1.0 s_axi RDATA";
 
-  attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_axi,s_axis,m_axis ASSOCIATED_RESET aresetn";
+  attribute X_INTERFACE_PARAMETER of aclk : signal is "ASSOCIATED_BUSIF s_axi:s_axis:m_axis, ASSOCIATED_RESET aresetn";
   attribute X_INTERFACE_PARAMETER of aresetn : signal is "POLARITY ACTIVE_LOW";
   
   constant mm_config_c : nsl_amba.axi4_mm.config_t := nsl_amba.axi4_mm.config(address_width => s_axi_araddr'length,
-                                                                         data_bus_width => s_axi_wdata'length);
-  constant stream_config_c : nsl_amba.axi4_stream.config_t := nsl_amba.axi4_stream.config(bytes => stream_byte_count);
+                                                                            data_bus_width => s_axi_wdata'length);
+  constant stream_config_c : nsl_amba.axi4_stream.config_t := nsl_amba.axi4_stream.config(bytes => stream_byte_count,
+                                                                                        last => true);
 
   signal axi_s : nsl_amba.axi4_mm.bus_t;
   signal tx_s, rx_s: nsl_amba.axi4_stream.bus_t;

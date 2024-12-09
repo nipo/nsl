@@ -13,6 +13,8 @@ ip += axi4lite_ram
 ip += swd_axi4lite_master
 ip += precision_time_clock
 ip += precision_time_pps_output
+ip += axi4lite_stream_endpoint
+ip += axis_uart_trx
 
 all:
 
