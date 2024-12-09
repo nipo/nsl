@@ -53,7 +53,7 @@ architecture rtl of framed_uart_trx is
   attribute X_INTERFACE_INFO of uart_rx : signal is "xilinx.com:interface:uart:1.0 uart RxD";
   attribute X_INTERFACE_INFO of uart_tx : signal is "xilinx.com:interface:uart:1.0 uart TxD";
 
-  constant divisor_edge_c : unsigned := nsl_math.arith.to_unsigned_auto(clock_hz / baudrate);
+  constant divisor_edge_c : unsigned := nsl_math.arith.to_unsigned_auto(clock_hz / baudrate - 1);
   signal uart_rx_s, uart_tx_s: nsl_bnoc.pipe.pipe_bus_t;
   signal uart_hs_rx_s, uart_hs_tx_s: nsl_bnoc.pipe.pipe_bus_t;
   signal hdlc_rx_s, hdlc_tx_s: nsl_bnoc.committed.committed_bus_t;
