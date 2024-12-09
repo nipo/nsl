@@ -1,5 +1,6 @@
 vhdl-sources += axi_apb.pkg.vhd
 vhdl-sources += axi4_apb_bridge.vhd
+vhdl-sources += axi4_apb_bridge_dispatch.vhd
 
 deps += nsl_math.arith
 deps += nsl_logic.bool
