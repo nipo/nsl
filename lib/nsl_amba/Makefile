@@ -10,4 +10,5 @@ packages += stream_routing
 packages += apb_routing
 packages += mm_stream_adapter
 packages += mm_fifo
+packages += axi_apb
 nsl_amba-ghdl-flags += -Wno-hide
