@@ -70,6 +70,11 @@ architecture beh of axi4_stream_endpoint_lite is
   end record;
   
   signal r, rin: regs_t;
+
+  constant config_word : unsigned(31 downto 0)
+    := to_unsigned(stream_config_c.data_width, 2)
+    & to_unsigned(out_buffer_depth_c, 15)
+    & to_unsigned(in_buffer_depth_c, 15);
   
 begin
 
@@ -133,6 +138,7 @@ begin
     out_status                     when AXI4_STREAM_ENDPOINT_LITE_OUT_STATUS,
     irq_pad & unsigned(irq_state)  when AXI4_STREAM_ENDPOINT_LITE_IRQ_STATE,
     irq_pad & unsigned(r.irq_mask) when AXI4_STREAM_ENDPOINT_LITE_IRQ_MASK,
+    config_word                    when AXI4_STREAM_ENDPOINT_LITE_CONFIG,
     x"00000000"                    when others;
 
   regmap: nsl_amba.axi4_mm.axi4_mm_lite_regmap

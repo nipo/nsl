@@ -12,6 +12,7 @@ package stream_endpoint is
   constant AXI4_STREAM_ENDPOINT_LITE_OUT_STATUS : integer := 3;
   constant AXI4_STREAM_ENDPOINT_LITE_IRQ_STATE  : integer := 4;
   constant AXI4_STREAM_ENDPOINT_LITE_IRQ_MASK   : integer := 5;
+  constant AXI4_STREAM_ENDPOINT_LITE_CONFIG     : integer := 6;
   
   component axi4_stream_endpoint_lite is
     generic (
