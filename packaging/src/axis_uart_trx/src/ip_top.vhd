@@ -95,6 +95,9 @@ begin
       );
 
   tx_hs: nsl_uart.flow_control.xonxoff_tx
+    generic map(
+      refresh_every_c => clock_hz
+      )
     port map(
       reset_n_i => aresetn,
       clock_i => aclk,
@@ -109,7 +112,7 @@ begin
       serdes_i => uart_tx_s.ack
       );
 
-  hdlc_unframer: nsl_line_coding.hdlc.hdlc_unframer
+  hdlc_unframer: nsl_line_coding.hdlc.hdlc_framed_unframer
     port map(
       reset_n_i => aresetn,
       clock_i => aclk,
@@ -117,22 +120,22 @@ begin
       hdlc_i => uart_hs_rx_s.req,
       hdlc_o => uart_hs_rx_s.ack,
 
-      frame_o.valid => axis_m_tvalid,
-      frame_o.last => axis_m_tlast,
-      frame_o.data => m_tdata,
-      frame_i.ready => axis_m_tready
+      framed_o.valid => axis_m_tvalid,
+      framed_o.last => axis_m_tlast,
+      framed_o.data => m_tdata,
+      framed_i.ready => axis_m_tready
       );
   axis_m_tdata <= std_logic_vector(m_tdata);
 
-  hdlc_framer: nsl_line_coding.hdlc.hdlc_framer
+  hdlc_framer: nsl_line_coding.hdlc.hdlc_framed_framer
     port map(
       reset_n_i => aresetn,
       clock_i => aclk,
 
-      frame_i.valid => axis_s_tvalid,
-      frame_i.last => axis_s_tlast,
-      frame_i.data => s_tdata,
-      frame_o.ready => axis_s_tready,
+      framed_i.valid => axis_s_tvalid,
+      framed_i.last => axis_s_tlast,
+      framed_i.data => s_tdata,
+      framed_o.ready => axis_s_tready,
 
       hdlc_o => uart_hs_tx_s.req,
       hdlc_i => uart_hs_tx_s.ack
