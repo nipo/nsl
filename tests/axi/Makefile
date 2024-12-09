@@ -1,6 +1,7 @@
 tb += address
 tb += apb_ram
 tb += apb_regmap
+tb += apb_dispatch
 tb += axi4_mm_cdc
 tb += axi4_mm_lite_ram
 tb += axi4_mm_lite_regmap
