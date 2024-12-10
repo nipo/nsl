@@ -284,6 +284,56 @@ package axi4_stream is
                       strobe: std_ulogic_vector := na_suv;
                       keep: std_ulogic_vector := na_suv) return master_t;
   
+
+  -- Helper for receiving/sending multi-beat buffers in an abstract way
+  type buffer_config_t is
+  record
+    stream_config: config_t;
+    data_width: natural range 1 to data_t'length;
+    part_count: natural range 1 to data_t'length;
+  end record;    
+
+  type buffer_t is
+  record
+    data: data_t;
+    to_go: integer range 0 to data_t'length;
+  end record;
+
+  function to_string(cfg: buffer_config_t) return string;
+  function to_string(cfg: buffer_config_t; b: buffer_t) return string;
+
+  -- This spawns a buffer configuration from a stream configuration and buffer
+  -- width. It is an error if byte count is not a multiple of stream data width.
+  function buffer_config(cfg: config_t; byte_count: natural) return buffer_config_t;
+  -- Tells whether buffer will be complete after one shift operation is performed
+  function is_last(cfg: buffer_config_t; b: buffer_t) return boolean;
+  -- Yields an buffer context with (optional data) and a reset counter of shifts
+  -- This can be used before either sending or receiving.
+  function reset(cfg: buffer_config_t;
+                 b: byte_string := null_byte_string;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t;
+  -- Shifts one step of the buffer by ingressing (optional) data
+  -- vector. Counts one step less to do. If not given, dontcares are
+  -- used. This can be used for either sending or receiving.
+  function shift(cfg: buffer_config_t;
+                 b: buffer_t;
+                 data: byte_string := null_byte_string) return buffer_t;
+  -- Ingresses one beat from master interface to the buffer. Returns future
+  -- buffer value.
+  function shift(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t;
+  -- Yields next data chunk from current buffer state.
+  function next_bytes(cfg: buffer_config_t; b: buffer_t) return byte_string;
+  -- Yields next strb mask from current buffer state.
+  function next_strb(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector;
+  -- Yields master interface from current buffer contents.
+  function next_beat(cfg: buffer_config_t; b: buffer_t;
+                     id: std_ulogic_vector := na_suv;
+                     user: std_ulogic_vector := na_suv;
+                     dest: std_ulogic_vector := na_suv;
+                     last : boolean := false) return master_t;
+  -- Retrieves the full buffer
+  function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+
 end package;
 
 package body axi4_stream is
@@ -1034,5 +1084,120 @@ package body axi4_stream is
 
     packet := r;
   end procedure;
+
+  function to_string(cfg: buffer_config_t) return string
+  is
+  begin
+    return "<Buffer for "&to_string(cfg.stream_config) &" by " & to_string(cfg.data_width) & ">";
+  end function;
+
+  function to_string(cfg: buffer_config_t; b: buffer_t) return string
+  is
+  begin
+    return "<Buffer "
+      &" "&to_string(bytes(cfg, b))
+      &" to go: " & to_string(b.to_go)
+      &if_else(is_last(cfg, b), " last", "")
+      &">";
+  end function;
   
+  function buffer_config(cfg: config_t; byte_count: natural) return buffer_config_t
+  is
+  begin
+    return buffer_config_t'(
+      stream_config => cfg,
+      data_width => byte_count,
+      part_count => (byte_count + cfg.data_width - 1) / cfg.data_width
+      );
+  end function;
+  
+  function is_last(cfg: buffer_config_t; b: buffer_t) return boolean
+  is
+  begin
+    assert b.to_go < cfg.part_count severity failure;
+    return b.to_go = 0;
+  end function;
+
+  function reset(cfg: buffer_config_t;
+                 b: byte_string := null_byte_string;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t
+  is
+    constant dc_pad: byte_string(b'length to data_t'length - 1) := (others => dontcare_byte_c);
+  begin
+    return buffer_t'(
+      data => reorder(b, order) & dc_pad,
+      to_go => cfg.part_count - 1
+      );
+  end function;
+
+  function shift(cfg: buffer_config_t;
+                 b: buffer_t;
+                 data: byte_string := null_byte_string) return buffer_t
+  is
+    variable ret: buffer_t;
+    constant pad: byte_string(0 to cfg.stream_config.data_width-1) := (others => dontcare_byte_c);
+  begin
+    if data'length = 0 then
+      ret.data(0 to cfg.part_count * cfg.stream_config.data_width - 1)
+        := b.data(cfg.stream_config.data_width to cfg.part_count * cfg.stream_config.data_width - 1) & pad;
+    else
+      ret.data(0 to cfg.part_count * cfg.stream_config.data_width - 1)
+        := b.data(cfg.stream_config.data_width to cfg.part_count * cfg.stream_config.data_width - 1) & data;
+    end if;
+    if b.to_go /= 0 then
+      ret.to_go := b.to_go - 1;
+    else
+      ret.to_go := cfg.part_count - 1;
+    end if;
+    return ret;
+  end function;
+
+  function shift(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t
+  is
+  begin
+    return shift(cfg, b, bytes(cfg.stream_config, beat));
+  end function;
+
+  function next_bytes(cfg: buffer_config_t; b: buffer_t) return byte_string
+  is
+  begin
+    return b.data(0 to cfg.stream_config.data_width-1);
+  end function;
+
+  function next_strb(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector
+  is
+    constant full: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '1');
+    constant partial_off: std_ulogic_vector(cfg.data_width to cfg.part_count * cfg.stream_config.data_width-1) := (others => '0');
+    constant partial_on: std_ulogic_vector(partial_off'length to full'length-1) := (others => '1');
+  begin
+    if cfg.stream_config.has_strobe and is_last(cfg, b) then
+      return partial_on & partial_off;
+    end if;
+
+    return full;
+  end function;
+
+  function next_beat(cfg: buffer_config_t; b: buffer_t;
+                     id: std_ulogic_vector := na_suv;
+                     user: std_ulogic_vector := na_suv;
+                     dest: std_ulogic_vector := na_suv;
+                     last : boolean := false) return master_t
+  is
+  begin
+    return transfer(cfg.stream_config,
+                    bytes => next_bytes(cfg, b),
+                    strobe => next_strb(cfg, b),
+                    id => id,
+                    user => user,
+                    dest => dest,
+                    valid => true,
+                    last => last);
+  end function;
+
+  function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string
+  is
+  begin
+    return reorder(b.data(0 to cfg.data_width-1), order);
+  end function;
+
 end package body axi4_stream;
