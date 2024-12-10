@@ -87,8 +87,9 @@ package bytestream is
 
   -- Assune s is in increasing order, return order designated in o.
   function reorder(s : byte_string; o: byte_order_t) return byte_string;
-  -- Sister function of reorder for byte masks
-  function reorder_mask(s : std_ulogic_vector; o: byte_order_t) return std_ulogic_vector;
+  -- Sister function of reorder for byte masks, allow masks to be more than one
+  -- bit wide.
+  function reorder_mask(s : std_ulogic_vector; o: byte_order_t; mask_size: natural := 1) return std_ulogic_vector;
 
   -- Byte stream (dynamically sized byte string) helper.
   type byte_stream is access byte_string;
@@ -481,14 +482,23 @@ package body bytestream is
     return rx;
   end function;
 
-  function reorder_mask(s : std_ulogic_vector; o: byte_order_t) return std_ulogic_vector
+  function reorder_mask(s : std_ulogic_vector; o: byte_order_t; mask_size: natural := 1) return std_ulogic_vector
   is
+    -- Use indices in opposite orders to ease loop index calculation.
+    alias xs: std_ulogic_vector(0 to s'length-1) is s;
+    variable ret: std_ulogic_vector(s'length-1 downto 0);
   begin
     if o = BYTE_ORDER_INCREASING then
       return s;
-    else
-      return bitswap(s);
     end if;
+
+    for index in 0 to s'length / mask_size - 1
+    loop
+      ret(mask_size * (index + 1) - 1 downto mask_size * index)
+        := xs(mask_size * index to mask_size * (index + 1) - 1);
+    end loop;
+
+    return ret;
   end function;
-  
+
 end package body bytestream;
