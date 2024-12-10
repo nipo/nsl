@@ -637,41 +637,6 @@ package axi4_mm is
       r_strobe_o : out std_ulogic
       );
   end component;
-
---  component axi4_mm_converter is
---    generic(
---      slave_config_c : config_t;
---      master_config_c : config_t
---      );
---    port(
---      clock_i : in std_ulogic;
---      reset_n_i : in std_ulogic;
---
---      slave_i : in master_t;
---      slave_o : out slave_t;
---
---      master_o : out master_t;
---      master_i : in slave_t
---      );
---  end component;
---
---  component axi4_mm_router is
---    generic(
---      config_c : config_t;
---      slave_count_c : positive;
---      destination_addresses_c : address_vector
---      );
---    port(
---      clock_i : in std_ulogic;
---      reset_n_i : in std_ulogic;
---
---      slave_i : in master_vector(0 to slave_count_c);
---      slave_o : out slave_vector(0 to slave_count_c);
---
---      master_o : out master_vector(0 to destination_addresses_c'length-1);
---      master_i : in slave_vector(0 to destination_addresses_c'length-1)
---      );
---  end component;
   
 end package;
 
