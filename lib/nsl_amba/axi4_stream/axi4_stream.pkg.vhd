@@ -472,7 +472,7 @@ package body axi4_stream is
       assert id'length = cfg.id_width
         report "Bad id length"
         severity failure;
-      ret.id(cfg.dest_width-1 downto 0) := id;
+      ret.id(cfg.id_width-1 downto 0) := id;
     end if;
 
     if valid then
