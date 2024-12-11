@@ -130,7 +130,7 @@ begin
     end case;
   end process;
 
-  mux: process(routed_in_i, framed_out_i, framed_in_i, routed_out_i, r)
+  mux: process(routed_in_i, framed_out_i, framed_in_i, routed_out_i, r, target_id_i)
   begin
     framed_out_o.valid <= '0';
     framed_out_o.data <= (others => '-');
