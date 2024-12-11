@@ -2,9 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_simulation;
+library work;
 use work.apb.all;
-use nsl_simulation.logging.all;
 
 entity apb_dumper is
   generic(
