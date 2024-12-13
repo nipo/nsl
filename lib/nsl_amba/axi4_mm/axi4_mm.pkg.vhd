@@ -1289,7 +1289,7 @@ package body axi4_mm is
 
     if strb'length /= 0 then
       assert 2**cfg.data_bus_width_l2 = strb'length
-        report "Bad strobe vector passed"
+        report "Bad strb vector passed"
         severity failure;
       ret.strb(0 to strb'length-1) := reorder_mask(strb, order);
     end if;
