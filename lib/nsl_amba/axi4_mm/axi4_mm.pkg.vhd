@@ -426,6 +426,7 @@ package axi4_mm is
   function to_string(cfg: config_t; w: write_data_t) return string;
   function to_string(cfg: config_t; w: write_response_t) return string;
   function to_string(cfg: config_t; r: read_data_t) return string;
+  function to_string(cfg: config_t; r: handshake_t) return string;
 
   -- Simulation helper function to issue a write transaction to an
   -- AXI4-Lite bus.
@@ -1654,6 +1655,12 @@ package body axi4_mm is
       return "<WRsp ->";
     end if;
   end;
+
+  function to_string(cfg: config_t; r: handshake_t) return string
+  is
+  begin
+    return "<Hs "&if_else(is_ready(cfg, r), "OK", "Wait")&">";
+  end function;
 
   procedure lite_write(constant cfg: config_t;
                        signal clock: in std_ulogic;
