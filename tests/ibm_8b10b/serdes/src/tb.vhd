@@ -111,7 +111,6 @@ begin
   
   rx: nsl_line_coding.ibm_8b10b.ibm_8b10b_decoder
     generic map(
-      strict_c => false,
       implementation_c => "logic"
       )
     port map(

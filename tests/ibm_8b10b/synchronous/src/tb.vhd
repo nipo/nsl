@@ -20,7 +20,6 @@ architecture arch of tb is
   constant enc_impl : string := "logic";
   constant dec_impl : string := "logic";
   constant inject_errors : boolean := true;
-  constant strict : boolean := true;
   
   function latency(e, d: string) return integer
   is
@@ -151,8 +150,7 @@ begin
   
   decoder: nsl_line_coding.ibm_8b10b.ibm_8b10b_decoder
     generic map(
-      implementation_c => dec_impl,
-      strict_c => strict
+      implementation_c => dec_impl
       )
     port map(
       clock_i => clock,
