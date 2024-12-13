@@ -639,6 +639,153 @@ package axi4_mm is
       r_strobe_o : out std_ulogic
       );
   end component;
+
+  -- Helper for receiving/sending multi-beat buffers in an abstract way.
+  --
+  -- Configuration should be created as a constant. It will be used
+  -- throughout the calls related to transactor.
+  --
+  -- Same transactor can be used for reading and writing.
+  -- - In either case, transactor state should be reset with reset().
+  -- - During write
+  --   - every cycle to aw, w and b channels should use output of
+  --     address(), write_data() and write_response().
+  --   - all cycles should give aw, w and b channels to write_step().
+  --   - after is_write_last() returns true, no more call to
+  --     write_step should be performed.
+  -- - During read
+  --   - every cycle to ar and r channels should use output of
+  --     address(), read_data().
+  --   - all cycles should give ar r channels to read_step().
+  --   - after is_read_last() returns true, no more call to
+  --     read_step should be performed.
+  type transactor_config_t is
+  record
+    axi: config_t;
+    byte_count: natural range 1 to data_t'length;
+    strb: std_ulogic_vector(0 to data_t'length-1);
+  end record;    
+
+  type transactor_t is
+  record
+    addr: addr_t;
+    data: data_t;
+    strb: std_ulogic_vector(0 to data_t'length-1);
+    burst_addr_pending: boolean;
+    burst_data_pending: boolean;
+    burst_resp_pending: boolean;
+    beat_left: integer range 0 to data_t'length;
+  end record;
+
+  function to_string(cfg: transactor_config_t)
+    return string;
+  function to_string(cfg: transactor_config_t; txn: transactor_t)
+    return string;
+
+  -- Create a transactor configuration.  This should be used to
+  -- initialize a constant.
+  --
+  -- Byte count is the actual data size of the buffer to read or
+  -- write.
+  --
+  -- On write, only some byte may be strobed. When passing strb bits
+  -- here, undefined bits default to '1'.
+  function transactor_config(cfg: config_t;
+                             byte_count: natural;
+                             strb: std_ulogic_vector := na_suv)
+    return transactor_config_t;
+
+  -- Retrieve current address of transactor
+  function addr(cfg: transactor_config_t; txn: transactor_t)
+    return unsigned;
+
+  -- Prepares transactor to perform a read or a write.
+  --
+  -- After completion of a transaction, address is updated to aligned
+  -- address after the buffer size unless you have address_rollback
+  -- set while executing last step.
+  function reset(cfg: transactor_config_t;
+                 txn: transactor_t;
+                 addr: unsigned := na_u;
+                 bytes: byte_string := null_byte_string;
+                 order: byte_order_t := BYTE_ORDER_INCREASING)
+    return transactor_t;
+  
+  -- Tells whether write transaction is complete after this cycle
+  function is_write_last(cfg: transactor_config_t;
+                         txn: transactor_t;
+                         wa: handshake_t;
+                         w: handshake_t;
+                         b: write_response_t)
+    return boolean;
+
+  -- Tells whether read transaction is complete after this cycle
+  function is_read_last(cfg: transactor_config_t;
+                        txn: transactor_t;
+                        ra: handshake_t;
+                        r: read_data_t)
+    return boolean;
+
+  -- This transitions one step depending on the state of the responses
+  -- for a read transaction.
+  function read_step(cfg: transactor_config_t; txn: transactor_t;
+                     ra: handshake_t;
+                     r: read_data_t;
+                     address_rollback : boolean := false)
+    return transactor_t;
+
+  -- This transitions one step depending on the state of the responses
+  -- for a write transaction.
+  function write_step(cfg: transactor_config_t; txn: transactor_t;
+                      wa: handshake_t;
+                      w: handshake_t;
+                      b: write_response_t;
+                      address_rollback : boolean := false)
+    return transactor_t;
+
+  -- This yields the address command suitable for next iteration.
+  -- This should be set on relevant port (either ar or aw) as long as
+  -- transaction is not complete.
+  function address(cfg: transactor_config_t;
+                   txn: transactor_t;
+                   id: std_ulogic_vector := na_suv;
+                   cache: std_ulogic_vector := na_suv;
+                   prot: std_ulogic_vector := na_suv;
+                   qos: std_ulogic_vector := na_suv;
+                   region: std_ulogic_vector := na_suv;
+                   user: std_ulogic_vector := na_suv)
+    return address_t;
+
+  -- This yields the read data handshake suitable for next iteration
+  -- of read transaction.  This should be set on r port as long as
+  -- transaction is not complete.  If transaction is a write, this
+  -- should not be used.
+  function read_data(cfg: transactor_config_t;
+                     txn: transactor_t)
+    return handshake_t;
+
+  -- This yields the write data command suitable for next iteration of
+  -- write transaction.  This should be set on w port as long as
+  -- transaction is not complete.  If transaction is a read, this
+  -- should not be used.
+  function write_data(cfg: transactor_config_t;
+                      txn: transactor_t;
+                      user: std_ulogic_vector := na_suv)
+    return write_data_t;
+
+  -- This yields the write response handshake suitable for next
+  -- iteration of write transaction.  This should be set on b port as
+  -- long as transaction is not complete.  If transaction is a read,
+  -- this should not be used.
+  function write_response(cfg: transactor_config_t;
+                          txn: transactor_t)
+    return handshake_t;
+
+  -- Retrieve the whole significant data of the transactor.
+  function bytes(cfg: transactor_config_t;
+                 txn: transactor_t;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+  
   
 end package;
 
@@ -2317,5 +2464,298 @@ package body axi4_mm is
                      last => last,
                      valid => valid);
   end function;
+
+
+  function to_string(cfg: transactor_config_t)
+    return string
+  is
+
+  begin
+    return "<Trx "
+      & to_string(cfg.axi)
+      & " " & to_string(cfg.byte_count) & " bytes, strb="
+      & to_string(cfg.strb(0 to cfg.byte_count-1))
+      & ">";
+  end function;
+  
+  function to_string(cfg: transactor_config_t; txn: transactor_t)
+    return string
+  is
+    constant bytes_per_beat: natural := 2**cfg.axi.data_bus_width_l2;
+    constant max_beat_per_burst: natural := 2**cfg.axi.len_width;
+    constant total_beat_count : natural := (cfg.byte_count + bytes_per_beat - 1) / bytes_per_beat;
+    constant beat_index : natural := total_beat_count - txn.beat_left;
+  begin
+    return "<Txn beat "&to_string(beat_index)
+      & "/" & to_string(total_beat_count)
+      & " Pending: "
+      & if_else(txn.burst_addr_pending, "@", "")
+      & if_else(txn.burst_data_pending, "D", "")
+      & if_else(txn.burst_resp_pending, "R", "")
+      & ">";
+  end function;
+
+  function transactor_config(cfg: config_t;
+                             byte_count: natural;
+                             strb: std_ulogic_vector := na_suv)
+    return transactor_config_t
+  is
+    constant strb_pad : strobe_t := (others => '1');
+    constant strb_all : std_ulogic_vector(0 to strb_pad'length+strb'length-1) := strb & strb_pad;
+  begin
+    return transactor_config_t'(
+      axi => cfg,
+      byte_count => byte_count,
+      strb => strb_all(0 to strobe_t'length-1)
+      );
+  end function;
+
+  function addr(cfg: transactor_config_t; txn: transactor_t)
+    return unsigned
+  is
+  begin
+    return txn.addr(cfg.axi.address_width-1 downto 0);
+  end function;
+
+  function reset(cfg: transactor_config_t;
+                 txn: transactor_t;
+                 addr: unsigned := na_u;
+                 bytes: byte_string := null_byte_string;
+                 order: byte_order_t := BYTE_ORDER_INCREASING)
+    return transactor_t
+  is
+    constant bytes_per_beat: natural := 2**cfg.axi.data_bus_width_l2;
+    constant total_byte_count : natural := mod_up(cfg.byte_count, bytes_per_beat);
+    constant total_beat_count : natural := total_byte_count / bytes_per_beat;
+
+    variable ret : transactor_t := txn;
+
+    constant data_pad : data_t := (others => dontcare_byte_c);
+    constant data_all : byte_string(0 to data_pad'length+bytes'length-1) := bytes & data_pad;
+  begin
+    if addr'length /= 0 then
+      ret.addr := (others => '-');
+      ret.addr(cfg.axi.address_width-1 downto 0)
+        := resize(addr, cfg.axi.address_width);
+      ret.addr(cfg.axi.data_bus_width_l2-1 downto 0) := (others => '0');
+    end if;
+
+    if bytes'length /= 0 then
+      ret.data := (others => dontcare_byte_c);
+      ret.data(0 to total_byte_count - 1) := data_all(0 to total_byte_count - 1);
+    end if;
+
+    ret.strb := cfg.strb;
+    ret.burst_addr_pending := true;
+    ret.burst_data_pending := false;
+    ret.burst_resp_pending := false;
+    ret.beat_left := total_beat_count - 1;
+
+    return ret;
+  end function;
+
+  function is_write_last(cfg: transactor_config_t;
+                         txn: transactor_t;
+                         wa: handshake_t;
+                         w: handshake_t;
+                         b: write_response_t)
+    return boolean
+  is
+  begin
+    return (not txn.burst_addr_pending or is_ready(cfg.axi, wa))
+      and (not txn.burst_data_pending or is_ready(cfg.axi, w))
+      and (not txn.burst_resp_pending or is_valid(cfg.axi, b))
+      and txn.beat_left = 0;
+  end function;
+
+  function is_read_last(cfg: transactor_config_t;
+                        txn: transactor_t;
+                        ra: handshake_t;
+                        r: read_data_t)
+    return boolean
+  is
+  begin
+    return (not txn.burst_addr_pending or is_ready(cfg.axi, ra))
+      and (not txn.burst_data_pending or is_valid(cfg.axi, r))
+      and txn.beat_left = 0;
+  end function;
+
+  function read_step(cfg: transactor_config_t; txn: transactor_t;
+                     ra: handshake_t;
+                     r: read_data_t;
+                     address_rollback: boolean := false)
+    return transactor_t
+  is
+    constant bytes_per_beat: natural := 2**cfg.axi.data_bus_width_l2;
+    constant total_beat_count : natural := (cfg.byte_count + bytes_per_beat - 1) / bytes_per_beat;
+    constant total_byte_count : natural := total_beat_count * bytes_per_beat;
+    constant strb_pad: std_ulogic_vector(0 to bytes_per_beat-1) := (others => '-');
+    constant burst_last : boolean := is_last(cfg.axi, r);
+
+    variable rin : transactor_t := txn;
+  begin
+    if txn.burst_addr_pending and is_ready(cfg.axi, ra) then
+      rin.burst_addr_pending := false;
+      rin.burst_data_pending := true;
+    end if;
+
+    if txn.burst_data_pending and is_valid(cfg.axi, r) then
+      assert not txn.burst_addr_pending
+        severity failure;
+
+      rin.data(0 to total_byte_count-1) := txn.data(bytes_per_beat to total_byte_count-1) & bytes(cfg.axi, r);
+      rin.strb(0 to total_byte_count-1) := txn.strb(bytes_per_beat to total_byte_count-1) & strb_pad;
+      rin.addr(cfg.axi.address_width-1 downto 0) := addr(cfg, txn) + bytes_per_beat;
+      
+      if txn.beat_left /= 0 then
+        rin.beat_left := txn.beat_left - 1;
+      end if;
+
+      if burst_last then
+        rin.burst_data_pending := false;
+        if txn.beat_left /= 0 then
+          rin.burst_addr_pending := true;
+        elsif address_rollback then
+          rin.addr(cfg.axi.address_width-1 downto 0)
+            := addr(cfg, txn) + bytes_per_beat - total_byte_count;
+          rin.strb := cfg.strb;
+          rin.burst_addr_pending := true;
+          rin.beat_left := total_beat_count - 1;
+        end if;
+      end if;
+    end if;
+
+    return rin;
+  end function;
+
+  -- This transitions one step depending on the state of the responses
+  -- for a write transaction.
+  function write_step(cfg: transactor_config_t; txn: transactor_t;
+                      wa: handshake_t;
+                      w: handshake_t;
+                      b: write_response_t;
+                      address_rollback: boolean := false)
+    return transactor_t
+  is
+    constant bytes_per_beat: natural := 2**cfg.axi.data_bus_width_l2;
+    constant total_beat_count : natural := (cfg.byte_count + bytes_per_beat - 1) / bytes_per_beat;
+    constant total_byte_count : natural := total_beat_count * bytes_per_beat;
+    constant max_beat_per_burst: natural := 2**cfg.axi.len_width;
+
+    constant data_pad: byte_string(0 to bytes_per_beat-1) := (others => dontcare_byte_c);
+    constant strb_pad: std_ulogic_vector(0 to bytes_per_beat-1) := (others => '-');
+    constant burst_last : boolean := (txn.beat_left mod max_beat_per_burst) = 0;
+
+    variable rin : transactor_t := txn;
+  begin
+    if txn.burst_addr_pending and is_ready(cfg.axi, wa) then
+      rin.burst_addr_pending := false;
+      rin.burst_data_pending := true;
+      rin.burst_resp_pending := true;
+    end if;
+
+    if txn.burst_data_pending and is_ready(cfg.axi, w) then
+      rin.data(0 to total_byte_count-1) := txn.data(bytes_per_beat to total_byte_count-1) & data_pad;
+      rin.strb(0 to total_byte_count-1) := txn.strb(bytes_per_beat to total_byte_count-1) & strb_pad;
+      rin.addr(cfg.axi.address_width-1 downto 0) := addr(cfg, txn) + bytes_per_beat;
+
+      if txn.beat_left /= 0 then
+        rin.beat_left := txn.beat_left - 1;
+      end if;
+
+      if burst_last then
+        rin.burst_data_pending := false;
+      end if;
+    end if;
+
+    if txn.burst_resp_pending and is_valid(cfg.axi, b) then
+      assert not txn.burst_addr_pending
+        severity failure;
+      assert not txn.burst_data_pending
+        severity failure;
+
+      rin.burst_resp_pending := false;
+
+      if txn.beat_left /= 0 then
+        rin.burst_addr_pending := true;
+      elsif address_rollback then
+        rin.addr(cfg.axi.address_width-1 downto 0)
+          := addr(cfg, txn) - total_byte_count;
+        rin.strb := cfg.strb;
+        rin.burst_addr_pending := true;
+        rin.beat_left := total_beat_count - 1;
+      end if;
+    end if;
+
+    return rin;
+  end function;
+
+  function address(cfg: transactor_config_t;
+                   txn: transactor_t;
+                   id: std_ulogic_vector := na_suv;
+                   cache: std_ulogic_vector := na_suv;
+                   prot: std_ulogic_vector := na_suv;
+                   qos: std_ulogic_vector := na_suv;
+                   region: std_ulogic_vector := na_suv;
+                   user: std_ulogic_vector := na_suv)
+    return address_t
+  is
+  begin
+    return address(
+      cfg.axi,
+      addr => addr(cfg, txn),
+      -- Hack: This automagically gives the right value because of
+      -- truncation.
+      len_m1 => to_unsigned(txn.beat_left, cfg.axi.len_width),
+      cache => cache,
+      prot => prot,
+      qos => qos,
+      region => region,
+      user => user,
+      valid => txn.burst_addr_pending);
+  end function;
+
+  function read_data(cfg: transactor_config_t;
+                     txn: transactor_t)
+    return handshake_t
+  is
+  begin
+    return accept(cfg.axi, ready => txn.burst_data_pending);
+  end function;
+
+  function write_data(cfg: transactor_config_t;
+                      txn: transactor_t;
+                      user: std_ulogic_vector := na_suv)
+    return write_data_t
+  is
+    constant bytes_per_beat: natural := 2**cfg.axi.data_bus_width_l2;
+    constant max_beat_per_burst: natural := 2**cfg.axi.len_width;
+    constant burst_last : boolean := (txn.beat_left mod max_beat_per_burst) = 0;
+  begin
+    return write_data(cfg.axi,
+                      bytes => txn.data(0 to bytes_per_beat-1),
+                      strb => txn.strb(0 to bytes_per_beat-1),
+                      user => user,
+                      valid => txn.burst_data_pending,
+                      last => burst_last);
+  end function;
+
+  function write_response(cfg: transactor_config_t;
+                          txn: transactor_t)
+    return handshake_t
+  is
+  begin
+    return accept(cfg.axi, ready => txn.burst_resp_pending);
+  end function;
+
+  function bytes(cfg: transactor_config_t;
+                 txn: transactor_t;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string
+  is
+  begin
+    return reorder(txn.data(0 to cfg.byte_count-1), order);
+  end function;
+  
+
   
 end package body axi4_mm;
