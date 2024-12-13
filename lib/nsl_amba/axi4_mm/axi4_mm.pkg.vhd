@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_logic, nsl_math, nsl_data, nsl_amba;
+use nsl_math.arith.all;
 use nsl_logic.bool.all;
 use nsl_logic.logic.all;
 use nsl_data.bytestream.all;
@@ -1491,9 +1492,9 @@ package body axi4_mm is
     variable ret: config_t;
   begin
     ret.address_width := address_width;
-    ret.data_bus_width_l2 := nsl_math.arith.log2(data_bus_width / 8);
+    ret.data_bus_width_l2 := log2(data_bus_width / 8);
     ret.user_width := user_width;
-    ret.len_width := nsl_math.arith.log2(max_length);
+    ret.len_width := log2(max_length);
     ret.id_width := id_width;
     ret.has_size := size;
     ret.has_region := region;
