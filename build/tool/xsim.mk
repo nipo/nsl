@@ -89,16 +89,13 @@ $(build-dir)/xsim.ini: $(sources) $(MAKEFILE_LIST)
 $(build-dir)/glbl.v: $(BUILD_ROOT)/support/xsim_glbl.v
 	$(SILENT)cp $< $@
 
-$(build-dir)/cmd.tcl: $(BUILD_ROOT)/support/xsim_cmd.tcl
-	$(SILENT)cp $< $@
-
 $(build-dir)/elaborate.log: $(VIVADO_SETTINGS) $(build-dir)/vhdl.prj $(build-dir)/vlog.prj $(build-dir)/xsim.ini
 	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xvlog --relax -prj vlog.prj
 	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xvhdl --relax -prj vhdl.prj
 	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xelab --relax --debug typical --mt auto $(foreach l,$(libraries),-L $l) $(top-lib).$(top-entity) -log elaborate.log
 
-simulate: $(VIVADO_SETTINGS) $(build-dir)/elaborate.log $(build-dir)/cmd.tcl
-	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}" -tclbatch cmd.tcl -log simulate.log
+simulate: $(VIVADO_SETTINGS) $(build-dir)/elaborate.log
+	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}"  -onerror quit -runall
 
-gui: $(VIVADO_SETTINGS)$(build-dir)/elaborate.log $(build-dir)/cmd.tcl
-	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}" -g -log simulate.log
+gui: $(VIVADO_SETTINGS)$(build-dir)/elaborate.log
+	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}" -g
