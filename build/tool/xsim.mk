@@ -1,5 +1,5 @@
 VIVADO = /opt/Xilinx/Vivado/2019.2
-VIVADO_SETTINGS = /opt/Xilinx/Vivado/2019.2/settings64.sh
+VIVADO_SETTINGS = $(VIVADO)/settings64.sh
 VIVADO_PREPARE = source $(VIVADO_SETTINGS) > /dev/null
 target ?= $(top)
 
