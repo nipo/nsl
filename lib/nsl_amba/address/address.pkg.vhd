@@ -81,11 +81,11 @@ package body address is
 
   function bin_address_parse(width: natural; addr:string) return address_t
   is
-    alias bits: string(addr'length-1 downto 0) is addr;
+    alias bits: string(2 to addr'length+1) is addr;
     variable b: character;
     variable ret : address_t := (others => '0');
   begin
-    for i in bits'left downto bits'right
+    for i in bits'range
     loop
       b := bits(i);
 
@@ -106,11 +106,11 @@ package body address is
 
   function hex_address_parse(width: natural; addr:string) return address_t
   is
-    alias nibbles: string(addr'length downto 1) is addr;
+    alias nibbles: string(2 to addr'length+1) is addr;
     variable nibble: character;
     variable ret : address_t := (others => '0');
   begin
-    for i in nibbles'left downto nibbles'right
+    for i in nibbles'range
     loop
       nibble := nibbles(i);
       if nibble = '_' or nibble = ' ' then
@@ -126,22 +126,21 @@ package body address is
   is
     variable ret : address_t := (others => '-');
     variable slash_index : integer := -1;
-    variable start : integer := 0;
     variable stop : integer := addr'length;
     variable hex_mode : boolean := false;
     variable ignored_lsbs : integer := 0;
-    alias a : string(1 to addr'length) is addr;
+    alias a : string(2 to addr'length+1) is addr;
   begin
     slash_index := strchr(addr, '/');
     if slash_index >= 0 then
       stop := slash_index;
-      ignored_lsbs := width - integer'value(a(slash_index+2 to a'right));
+      ignored_lsbs := width - integer'value(a(slash_index+3 to a'right));
     end if;
     
-    if a(1) = 'x' then
-      ret := hex_address_parse(width, a(2 to stop));
+    if a(2) = 'x' then
+      ret := hex_address_parse(width, a(3 to stop+1));
     else
-      ret := bin_address_parse(width, a(1 to stop));
+      ret := bin_address_parse(width, a(2 to stop+1));
     end if;
 
     if ignored_lsbs /= 0 then

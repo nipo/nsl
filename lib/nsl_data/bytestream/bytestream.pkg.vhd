@@ -147,15 +147,15 @@ package body bytestream is
   end function;
 
   function byte_from_hex(blob: byte_hex_string) return byte is
-    alias xblob : string(1 to blob'length) is blob;
+    alias xblob : string(2 to blob'length+1) is blob;
     variable ret : byte;
   begin
-    ret := nibble_to_suv(xblob(1)) & nibble_to_suv(xblob(2));
+    ret := nibble_to_suv(xblob(2)) & nibble_to_suv(xblob(3));
     return ret;
   end function;
 
   function from_hex(blob: string) return byte_string is
-    alias xblob : string(1 to blob'length) is blob;
+    alias xblob : string(2 to blob'length+1) is blob;
     variable ret : byte_string(0 to blob'length / 2 -1);
   begin
     assert
@@ -165,7 +165,7 @@ package body bytestream is
 
     for i in ret'range
     loop
-      ret(i) := byte_from_hex(xblob(i * 2 + 1 to i * 2 + 2));
+      ret(i) := byte_from_hex(xblob(i * 2 + 2 to i * 2 + 3));
     end loop;
 
     return ret;
@@ -219,8 +219,8 @@ package body bytestream is
   end function;
 
   function to_byte_string(s : string) return byte_string is
-    alias ss : string(1 to s'length) is s;
-    variable ret : byte_string(1 to s'length);
+    alias ss : string(2 to s'length+1) is s;
+    variable ret : byte_string(2 to s'length+1);
   begin
     for i in ss'range
     loop

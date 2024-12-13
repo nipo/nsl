@@ -78,8 +78,8 @@ package body text is
   end function;    
 
   function to_string(v: in std_ulogic_vector) return string is
-    alias xv: std_ulogic_vector(1 to v'length) is v;
-    variable ret: string(1 to v'length);
+    alias xv: std_ulogic_vector(2 to v'length+1) is v;
+    variable ret: string(2 to v'length+1);
   begin
     for i in xv'range loop
       ret(i to i) := to_string(xv(i));
@@ -110,7 +110,7 @@ package body text is
 
   function to_string(data : byte_string) return string is
     alias xdata: byte_string(1 to data'length) is data;
-    variable ret: string(1 to data'length * 3 + 1);
+    variable ret: string(2 to data'length * 3 + 2);
   begin
     if data'length = 0 then
       return "[]";
@@ -118,8 +118,8 @@ package body text is
 
     for i in xdata'range
     loop
-      ret(i*3-2) := ' ';
-      ret(i*3-1 to i*3) := to_hex_string(xdata(i));
+      ret(i*3-1) := ' ';
+      ret(i*3 to i*3+1) := to_hex_string(xdata(i));
     end loop;
     ret(ret'left) := '[';
     ret(ret'right) := ']';
@@ -133,7 +133,7 @@ package body text is
   is
     alias xdata: byte_string(1 to data'length) is data;
     alias xmask: std_ulogic_vector(1 to mask'length) is mask;
-    variable ret: string(1 to data'length * 3 + 1);
+    variable ret: string(2 to data'length * 3 + 2);
   begin
     if data'length = 0 then
       return "[]";
@@ -145,11 +145,11 @@ package body text is
 
     for i in xdata'range
     loop
-      ret(i*3-2) := ' ';
+      ret(i*3-1) := ' ';
       if xmask(i) = '1' then
-        ret(i*3-1 to i*3) := to_hex_string(xdata(i));
+        ret(i*3 to i*3+1) := to_hex_string(xdata(i));
       else
-        ret(i*3-1 to i*3) := masked_out_value;
+        ret(i*3 to i*3+1) := masked_out_value;
       end if;
     end loop;
     ret(ret'left) := '[';
@@ -166,20 +166,20 @@ package body text is
 
   function to_hex_string(data : byte_string) return string is
     alias din : byte_string(0 to data'length-1) is data;
-    variable ret : string(1 to data'length*2);
+    variable ret : string(2 to data'length*2+1);
   begin
     for i in din'range
     loop
-      ret(i*2+1 to i*2+2) := to_hex_string(std_ulogic_vector(din(i)));
+      ret(i*2+2 to i*2+3) := to_hex_string(std_ulogic_vector(din(i)));
     end loop;
 
     return ret;
   end function;
 
   function to_hex_string(v: in bit_vector) return string is
-    variable ret: string(1 to (v'length + 3) / 4);
+    variable ret: string(2 to (v'length + 3) / 4 + 1);
     constant pad : bit_vector(1 to ret'length*4 - v'length) := (others => '0');
-    constant t : bit_vector(4  to ret'length*4+3) := pad & v;
+    constant t : bit_vector(8  to ret'length*4+7) := pad & v;
     variable nibble : bit_vector(3 downto 0);
     variable c : character;
   begin
@@ -210,9 +210,9 @@ package body text is
   end function;
 
   function to_hex_string(v: in std_ulogic_vector) return string is
-    variable ret: string(1 to (v'length + 3) / 4);
+    variable ret: string(2 to (v'length + 3) / 4 + 1);
     constant pad : std_ulogic_vector(1 to ret'length*4 - v'length) := (others => '0');
-    constant t : std_ulogic_vector(4  to ret'length*4+3) := pad & v;
+    constant t : std_ulogic_vector(8  to ret'length*4+7) := pad & v;
     variable nibble : std_ulogic_vector(3 downto 0);
     variable c : character;
   begin
@@ -264,7 +264,7 @@ package body text is
                   needle : character;
                   start_index : integer := 0) return integer
   is
-    alias h: string(1 to haystack'length) is haystack;
+    alias h: string(2 to haystack'length+1) is haystack;
   begin
     if start_index >= h'length or start_index < 0 then
       return -1;
@@ -273,7 +273,7 @@ package body text is
     for offset in h'left + start_index to h'right
     loop
       if h(offset) = needle then
-        return offset-1;
+        return offset-h'left;
       end if;
     end loop;
 
@@ -283,8 +283,8 @@ package body text is
   function strstr(haystack, needle : string;
                   start_index : integer := 0) return integer
   is
-    alias h: string(1 to haystack'length) is haystack;
-    alias n: string(1 to needle'length) is needle;
+    alias h: string(2 to haystack'length-1) is haystack;
+    alias n: string(2 to needle'length-1) is needle;
   begin
     if n'length > h'length then
       return -1;
@@ -293,7 +293,7 @@ package body text is
     for offset in h'left to h'right - n'length + 1
     loop
       if h(offset to offset + n'length - 1) = n then
-        return offset-1;
+        return offset - h'left;
       end if;
     end loop;
 
@@ -348,12 +348,12 @@ package body text is
   end function;
 
   function "*"(s: string; n: natural) return string is
-    alias xs: string(1 to s'length) is s;
-    variable ret : string(1 to xs'length*n);
+    alias xs: string(2 to s'length+1) is s;
+    variable ret : string(2 to xs'length*n+1);
   begin
     for i in 0 to n-1
     loop
-      ret(i * xs'length + 1 to xs'length * (i + 1)) := xs;
+      ret(i * xs'length + 2 to xs'length * (i + 1) + 1) := xs;
     end loop;
     return ret;
   end function;
