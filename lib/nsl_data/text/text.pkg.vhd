@@ -166,11 +166,11 @@ package body text is
 
   function to_hex_string(data : byte_string) return string is
     alias din : byte_string(0 to data'length-1) is data;
-    variable ret : string(0 to data'length*2-1);
+    variable ret : string(1 to data'length*2);
   begin
     for i in din'range
     loop
-      ret(i*2 to i*2+1) := to_hex_string(std_ulogic_vector(din(i)));
+      ret(i*2+1 to i*2+2) := to_hex_string(std_ulogic_vector(din(i)));
     end loop;
 
     return ret;
