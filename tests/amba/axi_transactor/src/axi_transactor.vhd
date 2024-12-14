@@ -77,6 +77,7 @@ begin
 
       when ST_WRITE =>
         rin.txn <= write_step(txn_cfg_c, r.txn, axi_i.aw, axi_i.w, axi_i.b,
+                              restart => true,
                               address_rollback => true);
         if is_write_last(txn_cfg_c, r.txn, axi_i.aw, axi_i.w, axi_i.b) then
           rin.state <= ST_READ;
@@ -84,13 +85,13 @@ begin
 
       when ST_READ =>
         rin.txn <= read_step(txn_cfg_c, r.txn, axi_i.ar, axi_i.r,
-                             address_rollback => true);
+                             restart => true);
         if is_read_last(txn_cfg_c, r.txn, axi_i.ar, axi_i.r) then
           if r.left /= 0 then
             rin.left <= r.left - 1;
             rin.state <= ST_WRITE;
           else
-            rin.state <= ST_DONE;
+            rin.state <= ST_CHECK;
           end if;
         end if;
 

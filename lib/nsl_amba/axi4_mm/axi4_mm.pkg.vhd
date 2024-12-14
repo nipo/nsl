@@ -675,6 +675,7 @@ package axi4_mm is
     burst_data_pending: boolean;
     burst_resp_pending: boolean;
     beat_left: integer range 0 to data_t'length;
+    resp: resp_enum_t;
   end record;
 
   function to_string(cfg: transactor_config_t)
@@ -728,18 +729,44 @@ package axi4_mm is
 
   -- This transitions one step depending on the state of the responses
   -- for a read transaction.
+  --
+  -- If we are at the last cycle of the transaction (i.e. receiving
+  -- the last beat of data in the last burst), restart parameter will
+  -- tell whether we should prepare the transactor for the next
+  -- transaction.
+  --
+  -- If address_rollback is set, total size of transacted data is
+  -- substracted back from address in a way we'll transact to the same
+  -- address.
+  --
+  -- If transaction ended with an error, address rollback may not
+  -- compute correct value. A full transactor reset should be done.
   function read_step(cfg: transactor_config_t; txn: transactor_t;
                      ra: handshake_t;
                      r: read_data_t;
+                     restart : boolean := false;
                      address_rollback : boolean := false)
     return transactor_t;
 
   -- This transitions one step depending on the state of the responses
   -- for a write transaction.
+  --
+  -- If we are at the last cycle of the transaction (i.e. receiving
+  -- the write response in the last burst), restart parameter will
+  -- tell whether we should prepare the transactor for the next
+  -- transaction.
+  --
+  -- If address_rollback is set, total size of transacted data is
+  -- substracted back from address in a way we'll transact to the same
+  -- address.
+  --
+  -- If transaction ended with an error, address rollback may not
+  -- compute correct value. A full transactor reset should be done.
   function write_step(cfg: transactor_config_t; txn: transactor_t;
                       wa: handshake_t;
                       w: handshake_t;
                       b: write_response_t;
+                      restart : boolean := false;
                       address_rollback : boolean := false)
     return transactor_t;
 
@@ -785,6 +812,10 @@ package axi4_mm is
   function bytes(cfg: transactor_config_t;
                  txn: transactor_t;
                  order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+
+  -- Retrieve the whole transaction error level.
+  function resp(cfg: transactor_config_t;
+                txn: transactor_t) return resp_enum_t;
   
   
 end package;
@@ -2550,6 +2581,7 @@ package body axi4_mm is
     ret.burst_data_pending := false;
     ret.burst_resp_pending := false;
     ret.beat_left := total_beat_count - 1;
+    ret.resp := RESP_OKAY;
 
     return ret;
   end function;
@@ -2565,7 +2597,7 @@ package body axi4_mm is
     return (not txn.burst_addr_pending or is_ready(cfg.axi, wa))
       and (not txn.burst_data_pending or is_ready(cfg.axi, w))
       and (not txn.burst_resp_pending or is_valid(cfg.axi, b))
-      and txn.beat_left = 0;
+      and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 
   function is_read_last(cfg: transactor_config_t;
@@ -2576,13 +2608,14 @@ package body axi4_mm is
   is
   begin
     return (not txn.burst_addr_pending or is_ready(cfg.axi, ra))
-      and (not txn.burst_data_pending or is_valid(cfg.axi, r))
-      and txn.beat_left = 0;
+      and (not txn.burst_data_pending or (is_valid(cfg.axi, r) and is_last(cfg.axi, r)))
+      and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 
   function read_step(cfg: transactor_config_t; txn: transactor_t;
                      ra: handshake_t;
                      r: read_data_t;
+                     restart : boolean := false;
                      address_rollback: boolean := false)
     return transactor_t
   is
@@ -2606,18 +2639,27 @@ package body axi4_mm is
       rin.data(0 to total_byte_count-1) := txn.data(bytes_per_beat to total_byte_count-1) & bytes(cfg.axi, r);
       rin.strb(0 to total_byte_count-1) := txn.strb(bytes_per_beat to total_byte_count-1) & strb_pad;
       rin.addr(cfg.axi.address_width-1 downto 0) := addr(cfg, txn) + bytes_per_beat;
-      
+
+      if txn.resp = RESP_OKAY then
+        rin.resp := resp(cfg.axi, r);
+      end if;
+
       if txn.beat_left /= 0 then
         rin.beat_left := txn.beat_left - 1;
       end if;
 
       if burst_last then
         rin.burst_data_pending := false;
-        if txn.beat_left /= 0 then
+        if txn.resp /= RESP_OKAY or resp(cfg.axi, r) /= RESP_OKAY then
+          -- Dont restart, kill pending words
+          rin.beat_left := 0;
+        elsif txn.beat_left /= 0 then
           rin.burst_addr_pending := true;
-        elsif address_rollback then
-          rin.addr(cfg.axi.address_width-1 downto 0)
-            := addr(cfg, txn) + bytes_per_beat - total_byte_count;
+        elsif restart then
+          if address_rollback then
+            rin.addr(cfg.axi.address_width-1 downto 0)
+              := addr(cfg, txn) + bytes_per_beat - total_byte_count;
+          end if;
           rin.strb := cfg.strb;
           rin.burst_addr_pending := true;
           rin.beat_left := total_beat_count - 1;
@@ -2634,6 +2676,7 @@ package body axi4_mm is
                       wa: handshake_t;
                       w: handshake_t;
                       b: write_response_t;
+                      restart : boolean := false;
                       address_rollback: boolean := false)
     return transactor_t
   is
@@ -2675,12 +2718,18 @@ package body axi4_mm is
         severity failure;
 
       rin.burst_resp_pending := false;
+      rin.resp := resp(cfg.axi, b);
 
-      if txn.beat_left /= 0 then
+      if resp(cfg.axi, b) /= RESP_OKAY then
+        -- Dont restart, kill pending words
+        rin.beat_left := 0;
+      elsif txn.beat_left /= 0 then
         rin.burst_addr_pending := true;
-      elsif address_rollback then
-        rin.addr(cfg.axi.address_width-1 downto 0)
-          := addr(cfg, txn) - total_byte_count;
+      elsif restart then
+        if address_rollback then
+          rin.addr(cfg.axi.address_width-1 downto 0)
+            := addr(cfg, txn) - total_byte_count;
+        end if;
         rin.strb := cfg.strb;
         rin.burst_addr_pending := true;
         rin.beat_left := total_beat_count - 1;
@@ -2754,6 +2803,13 @@ package body axi4_mm is
   is
   begin
     return reorder(txn.data(0 to cfg.byte_count-1), order);
+  end function;
+
+  function resp(cfg: transactor_config_t;
+                txn: transactor_t) return resp_enum_t
+  is
+  begin
+    return txn.resp;
   end function;
   
 
