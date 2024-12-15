@@ -69,7 +69,7 @@ a package starts with only one declaration inside.
 
 Some relevant examples:
 
-* axi4_lite, axis
+* axi4_mm, ax4_stream
 * pwm_generator
 
 Names not expressive enough:

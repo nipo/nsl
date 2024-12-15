@@ -26,7 +26,7 @@ Supported build toolsuites
 This library build system targets major vendor's tool suites among
 which:
 
-* Vivado (Synthesis/PNR/Bitstream, IP-Xact Packaging, stable),
+* Vivado (Synthesis/PNR/Bitstream, IP-Xact Packaging, stable), Xsim (simulation),
 
 * Gowin (Synthesis/PNR/Bitstream, stable),
 
@@ -77,7 +77,7 @@ Components currently available in the HDL library include:
 
 * Communication networks:
 
-  * AXI4-Lite, AXI4-Stream, message-queue,
+  * AXI4-MM, AXI4-Stream, APB, message-queue,
 
   * Message routers,
 
@@ -89,7 +89,7 @@ Components currently available in the HDL library include:
 
   * FTDI "synchronous serial" to fifo bridge,
 
-  * (R)MII to fifo bridge, RGMII,
+  * (R)(G)MII to fifo bridge,
 
   * SPI slave to fifo bridge,
 
