@@ -77,9 +77,13 @@ configuration. NSL abstracts the details and gives the opportunity to
 have generic implementation for a given protocol.
 
 * `AMBA <nsl_amba>`_ family of protocols:
+
   * `AXI4-MM <nsl_amba.axi4_stream>`_ (lite and full featured),
+
   * `AXI4-Stream <nsl_amba.axi4_stream>`_,
+
   * `APB <nsl_amba.apb>`_ (version 2 to 4).
+
 * `Wishbone <nsl_wishbone>`_.
 
 Custom On-chip communication framework
@@ -93,8 +97,7 @@ Serial protocol adapters
 
 * `JTAG <nsl_jtag>`_, `SWD <nsl_coresight.swd>`_, `I2C <nsl_i2c>`_,
   `SPI <nsl_spi>`_, `ChipCon <nsl_cc>`_ debug protocol, `WS2812
-  <nsl_ws>`_, `UART <nsl_uart>`_, `SMI <nsl_smi>`_ (MDIO), `one-wire
-  <nsl_one_wire>`_.
+  <nsl_ws>`_, `UART <nsl_uart>`_, `SMI <nsl_smi>`_ (MDIO).
 
 * I2C chip drivers for abstract usage
 
@@ -142,7 +145,7 @@ Simulation library contains either helpers for test-benches:
 
 * feeding a fifo from a file,
 * comparing fifo contents with a file,
-* driving reset and clocks in a test-bench context.
+  * driving reset and clocks in a test-bench context.
 
 .. _nsl_clocking: nsl_clocking/index.rst
 .. _nsl_io: nsl_io/index.rst
@@ -174,7 +177,6 @@ Simulation library contains either helpers for test-benches:
 .. _nsl_ws: nsl_ws/index.rst
 .. _nsl_uart: nsl_uart/index.rst
 .. _nsl_smi: nsl_smi/index.rst
-.. _nsl_one_wire: nsl_one_wire/index.rst
 .. _nsl_mii: nsl_mii/index.rst
 .. _nsl_ftdi: nsl_ftdi/index.rst
 .. _nsl_line_coding.ibm_8b10b: nsl_line_coding/ibm_8b10b/index.rst
