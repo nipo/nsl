@@ -97,5 +97,5 @@ $(build-dir)/elaborate.log: $(VIVADO_SETTINGS) $(build-dir)/vhdl.prj $(build-dir
 simulate: $(VIVADO_SETTINGS) $(build-dir)/elaborate.log
 	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}"  -onerror quit -runall
 
-gui: $(VIVADO_SETTINGS)$(build-dir)/elaborate.log
+gui: $(VIVADO_SETTINGS) $(build-dir)/elaborate.log
 	$(SILENT)$(VIVADO_PREPARE) ; cd $(build-dir) ; xsim $(top-entity) -key "{Behavioral:sim_1:Functional:$(top-entity)}" -g
