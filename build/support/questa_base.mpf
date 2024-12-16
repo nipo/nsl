@@ -1,0 +1,112 @@
+[Version]
+INIVersion = "QA Baseline: 2021.1 Beta - 4536908"
+
+[Library]
+others = modelsim.ini
+work = work
+
+[DefineOptionset]
+UVMDEBUG = -uvmcontrol=all -msgmode both -displaymsgmode both -classdebug -onfinish stop
+VOPTDEBUG = +acc -debugdb
+
+[encryption]
+Stats = cmd,msg
+
+[vcom]
+VHDL93 = 2002
+Explicit = 1
+
+[vlog]
+LibrarySearchPath = mtiAvm mtiRnm mtiOvm mtiUvm mtiUPF infact
+
+[sccom]
+
+[vopt]
+
+[vsim]
+VoptFlow = 1
+Resolution = ns
+UserTimeUnit = default
+RunLength = 100
+IterationLimit = 10000000
+BreakOnAssertion = 3
+ShowFunctions = 1
+DefaultRadix = hexadecimal
+DefaultRadixFlags = showbase
+TranscriptFile = transcript
+PathSeparator = /
+DatasetSeparator = :
+UnbufferedOutput = 0
+ConcurrentFileLimit = 40
+WildcardFilter = Variable Constant Generic Parameter SpecParam Memory Assertion Cover Endpoint ScVariable CellInternal ImmediateAssert VHDLFile
+WildcardSizeThreshold = 8192
+WildcardSizeThresholdVerbose = 0
+ScTimeUnit = ns
+ScMainStackSize = 10 Mb
+ScMainFinishOnQuit = 1
+ScvPhaseRelationName = mti_phase
+OnFinish = ask
+DumpportsCollapse = 1
+MvcHome = $QUESTA_MVC_HOME
+
+[lmc]
+libsm = $MODEL_TECH/libsm.sl
+libhm = $MODEL_TECH/libhm.sl
+
+[msg_system]
+suppress = 8780 
+
+[utils]
+
+[Project]
+Project_Version = 6
+Project_SortMethod = unused
+Project_Sim_Count = 0
+Project_Folder_Count = 0
+Echo_Compile_Output = 0
+Save_Compile_Report = 1
+Project_Opt_Count = 0
+ForceSoftPaths = 0
+ProjectStatusDelay = 5000
+VERILOG_DoubleClick = Edit
+VERILOG_CustomDoubleClick = 
+SYSTEMVERILOG_DoubleClick = Edit
+SYSTEMVERILOG_CustomDoubleClick = 
+VHDL_DoubleClick = Edit
+VHDL_CustomDoubleClick = 
+PSL_DoubleClick = Edit
+PSL_CustomDoubleClick = 
+TEXT_DoubleClick = Edit
+TEXT_CustomDoubleClick = 
+SYSTEMC_DoubleClick = Edit
+SYSTEMC_CustomDoubleClick = 
+TCL_DoubleClick = Edit
+TCL_CustomDoubleClick = 
+MACRO_DoubleClick = Edit
+MACRO_CustomDoubleClick = 
+VCD_DoubleClick = Edit
+VCD_CustomDoubleClick = 
+SDF_DoubleClick = Edit
+SDF_CustomDoubleClick = 
+XML_DoubleClick = Edit
+XML_CustomDoubleClick = 
+LOGFILE_DoubleClick = Edit
+LOGFILE_CustomDoubleClick = 
+UCDB_DoubleClick = Edit
+UCDB_CustomDoubleClick = 
+TDB_DoubleClick = Edit
+TDB_CustomDoubleClick = 
+UPF_DoubleClick = Edit
+UPF_CustomDoubleClick = 
+PCF_DoubleClick = Edit
+PCF_CustomDoubleClick = 
+PROJECT_DoubleClick = Edit
+PROJECT_CustomDoubleClick = 
+VRM_DoubleClick = Edit
+VRM_CustomDoubleClick = 
+DEBUGDATABASE_DoubleClick = Edit
+DEBUGDATABASE_CustomDoubleClick = 
+DEBUGARCHIVE_DoubleClick = Edit
+DEBUGARCHIVE_CustomDoubleClick = 
+Project_Major_Version = 2024
+Project_Minor_Version = 1
