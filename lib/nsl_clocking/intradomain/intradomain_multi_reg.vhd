@@ -29,8 +29,7 @@ begin
   clock: process (clock_i)
   begin
     if rising_edge(clock_i) then
-      r_regs(r_regs'left to r_regs'right-1) <= r_regs(r_regs'left+1 to r_regs'right);
-      r_regs(r_regs'right) <= data_i;
+      r_regs <= r_regs(r_regs'left+1 to r_regs'right) & data_i;
     end if;
   end process clock;
 
