@@ -50,11 +50,13 @@ architecture arch of tb is
     return ret;
   end function;
 
+  constant latency_c : natural := latency(enc_impl, dec_impl);
   signal done : std_ulogic_vector(0 to 0);
   signal reset_n, reset_n_async, clock : std_ulogic;
   signal coded_tx, coded_err, coded_rx : code_word_t;
   signal input_data, delayed_data, output_data : data_t;
   signal ok, dec_err, disp_err, err_inj : std_ulogic;
+  signal err_permitted : natural range 0 to latency_c+4;
   signal stim_gen: prbs_state(30 downto 0);
   signal err_gen: prbs_state(22 downto 0);
 
@@ -83,6 +85,10 @@ begin
       stim_gen <= (others => '1');
       err_gen <= (others => '1');
     elsif rising_edge(clock) then
+      if err_permitted /= 0 then
+        err_permitted <= err_permitted - 1;
+      end if;
+
       coded_err <= (others => '0');
       err_inj <= '0';
       stim_gen <= prbs_forward(stim_gen, prbs31, 15);
@@ -95,6 +101,7 @@ begin
       if err_gen(7 downto 0) = x"00" and inject_errors then
         err_inj <= '1';
         coded_err(to_integer(unsigned(err_gen(13 downto 8))) mod 10) <= '1';
+        err_permitted <= latency_c+4;
       end if;
     end if;
   end process;
@@ -107,14 +114,17 @@ begin
       if reset_n = '0' then
         since_reset := 0;
       elsif since_reset > 10 then
-        ok <= to_logic((delayed_data = output_data)
+        ok <= to_logic(((delayed_data = output_data)
                        and dec_err = '0'
-                       and disp_err = '0');
+                       and disp_err = '0')
+                       or err_permitted /= 0);
 
-        nsl_simulation.assertions.assert_equal(
-          "data",
-          to_string(delayed_data), to_string(output_data),
-          note);
+        if ok = '0' then
+          nsl_simulation.assertions.assert_equal(
+            "data",
+            to_string(delayed_data), to_string(output_data),
+            failure);
+        end if;
       else
         since_reset := since_reset + 1;
       end if;
@@ -123,7 +133,7 @@ begin
 
   pipe: nsl_clocking.intradomain.intradomain_multi_reg
     generic map(
-      cycle_count_c => latency(enc_impl, dec_impl),
+      cycle_count_c => latency_c,
       data_width_c => delayed_data.data'length+1
       )
     port map(
