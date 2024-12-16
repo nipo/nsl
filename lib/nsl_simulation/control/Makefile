@@ -1,14 +1,12 @@
 vhdl-sources += control.pkg.vhd
-ifeq ($(tool)$(GHDL_LLVM),ghdl)
-vhdl-sources += control_ghdl.vhd
+
+ifeq ($(GHDL_LLVM),)
+control-ghdl := control_ghdl.vhd
 else
-ifeq ($(tool),ghdl)
-vhdl-sources += control_vhpidirect.vhd
-else
-ifeq ($(tool),xsim)
-vhdl-sources += control_xsim.vhd
-else
-vhdl-sources += control_generic.vhd
+control-ghdl := control_vhpidirect.vhd
 endif
-endif
-endif
+control-xsim := control_xsim.vhd
+control-generic := control_generic.vhd
+control-questa := control_finish.vhd
+
+vhdl-sources += $(if $(control-$(tool)),$(control-$(tool)),$(control-generic))
