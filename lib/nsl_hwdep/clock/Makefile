@@ -19,6 +19,12 @@ ifeq ($(tool),efinity)
 vhdl-sources += clock_internal_efinix.vhd
 endif
 
+ifneq ($(filter altera,$(hwdep)),)
+ifneq ($(filter A5E%,$(target_part)),)
+vhdl-sources += clock_internal_altera_14nm.vhd
+endif
+endif
+
 ifneq ($(filter lattice-machxo2,$(hwdep)),)
 vhdl-sources += clock_internal_mxo2.vhd
 vhdl-sources += clock_buffer_machxo2.vhd
