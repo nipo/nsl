@@ -81,6 +81,8 @@ and generic.
 Available modules
 =================
 
+* `Generic address <address/>`_ handling,
+
 * `AXI4-MM <axi4_mm/>`_
 
   * `dumper <axi4_mm/axi4_mm_dumper.vhd>`_ (for debug),

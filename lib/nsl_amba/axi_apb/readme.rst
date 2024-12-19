@@ -10,4 +10,4 @@ functionally equivalent to passing `axi4_apb_bridge` to
 `apb_dispatch`, but will have better timing closure results.
 
 Address lookup is handled the same way as the rest of the amba
-library, see `../address`_ for more info.
+library, see `address <../address/>`_ for more info.
