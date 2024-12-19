@@ -9,16 +9,19 @@ Overview
 `nsl_bnoc` is a set of 8-bit wide data streaming infrastructure
 models, with variants features depending on the needs:
 
-* `pipe`_, an unidirectional 8-bit fifo interface (typically used to
-  interface a wire protocol transceiver, like an UART),
+* `pipe <pipe/>`_, an unidirectional 8-bit fifo interface (typically
+  used to interface a wire protocol transceiver, like an UART),
 
-* `framed`_, a `pipe`_ with added framing information (typically used to
-  interface a wire protocol with framing info),
+* `framed <framed/>`_, a `pipe <pipe/>`_ with added framing
+  information (typically used to interface a wire protocol with
+  framing info),
 
-* `committed`_, a `framed`_ with late validity of packet (typically used
-  to convey frames with a CRC check at the end),
+* `committed <committed/>`_, a `framed <framed/>`_ with late validity
+  of packet (typically used to convey frames with a CRC check at the
+  end),
 
-* `routed`_, a `framed`_ with routing information header,
+* `routed <routed/>`_, a `framed <framed/>`_ with routing information
+  header,
 
 * converters, FIFOs, CRC checkers, router, buffers around these
   protocols.
