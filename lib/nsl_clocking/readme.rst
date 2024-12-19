@@ -12,9 +12,9 @@ Clocking utilities are split by function:
   buffers,
 * pll_ for simple PLL usage.
 
-.. _asynchronous: asynchronous/index.rst
-.. _interdomain: interdomain/index.rst
-.. _intradomain: intradomain/index.rst
-.. _distribution: distribution/index.rst
-.. _pll: pll/index.rst
+.. _asynchronous: asynchronous/
+.. _interdomain: interdomain/
+.. _intradomain: intradomain/
+.. _distribution: distribution/
+.. _pll: pll/
 

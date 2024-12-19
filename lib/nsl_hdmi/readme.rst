@@ -9,5 +9,5 @@ on NSL's `DVI library`_.
 `HDMI-specific`_ part also handles data island encoding.
 
 
-.. _DVI library: ../nsl_dvi/index.rst
-.. _HDMI-specific: hdmi/index.rst
+.. _DVI library: ../nsl_dvi/
+.. _HDMI-specific: hdmi/

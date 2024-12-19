@@ -19,4 +19,4 @@ License
 
 NSL Uses the MIT license.
 
-.. _library doc root: lib/index.rst
+.. _library doc root: lib/

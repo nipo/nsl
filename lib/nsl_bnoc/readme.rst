@@ -37,7 +37,7 @@ arbitration points.
 bnoc model still holds today on higher-end FPGAs to do basic control
 infrastructure.
 
-.. _pipe: pipe/index.rst
-.. _framed: framed/index.rst
-.. _committed: committed/index.rst
-.. _routed: routed/index.rst
+.. _pipe: pipe/
+.. _framed: framed/
+.. _committed: committed/
+.. _routed: routed/

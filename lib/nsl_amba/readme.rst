@@ -7,18 +7,19 @@ Supported interfaces
 
 AMBA is a set of on-chip protocols. NSL chose a subset, among which:
 
-* AXI4-MM, used to model a generic memory bus infrastructure. It is
-  flexible in terms of address and data width, has support for
-  optional bursts, various platform-specific side-band signaling, etc.
+* `AXI4-MM <axi4_mm/>`_, used to model a generic memory bus
+  infrastructure. It is flexible in terms of address and data width,
+  has support for optional bursts, various platform-specific side-band
+  signaling, etc.
 
   A minimal subset of AXI4-MM is called AXI4-Lite.
 
-* AXI4-Stream, used to model streams of data. It is flexible in terms
-  of data width, sideband data, routing information. Even backpressure
-  is optional.
+* `AXI4-Stream <axi4_stream/>`_, used to model streams of data. It is
+  flexible in terms of data width, sideband data, routing
+  information. Even backpressure is optional.
 
-* APB, used to access low-performance register maps, mostly used for
-  low-bandwidth peripherals.
+* `APB <apb/>`_, used to access low-performance register maps, mostly
+  used for low-bandwidth peripherals.
 
 Genericity
 ==========
@@ -76,9 +77,48 @@ optimized out. Moreover, proper constant propagation will also
 optimize state machines and data types.  Still, code can be kept clean
 and generic.
 
-.. toctree::
 
-   axi4_mm
-   axi4_stream
-   apb
+Available modules
+=================
 
+* `AXI4-MM <axi4_mm/>`_
+
+  * `dumper <axi4_mm/axi4_mm_dumper.vhd>`_ (for debug),
+
+  * `AXI4-Lite slave <axi4_mm/axi4_mm_lite_slave.vhd>`_ helper,
+
+  * `AXI4-Lite register map <axi4_mm/axi4_mm_lite_regmap.vhd>`_ helper,
+
+  * `fifos, clock-domain crossing and register slices <mm_fifo/>`_,
+
+  * `MM-over-Stream encapsulation framework <mm_stream_adapter/>`_
+    (transports a full AXI-MM over a Stream interface),
+
+  * `MM-Stream endpoint <stream_endpoint/>`_, a MM device that allows
+    pushing to stream and reading from stream,
+
+  * `RAMs <ram/>`_.
+
+* `AXI4-Stream <axi4_stream/>`_
+
+  * `dumper <axi4_stream/axi4_stream_dumper.vhd>`_ (for debug),
+
+  * `width adapter <axi4_stream/axi4_stream_width_adapter.vhd>`_ to
+    resize data vector of a stream,
+
+  * `flusher <axi4_stream/axi4_stream_flusher.vhd>`_ to insert beats
+    with a TLAST either after a max frame size of after a timeout,
+
+  * `FIFOs <stream_fifo/>`_,
+
+  * `Funnel and dispatcher <stream_routing/>`_.
+
+* `APB <apb/>`_
+
+  * `dumper <apb/apb_dumper.vhd>`_ (for debug),
+
+  * `slave <apb/apb_slave.vhd>`_ helper,
+
+  * `register map <apb/apb_regmap.vhd>`_ helper,
+
+  * `RAM <ram/>`_.
