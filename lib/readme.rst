@@ -144,5 +144,7 @@ Simulation helpers library
 Simulation library contains either helpers for test-benches:
 
 * feeding a fifo from a file,
+
 * comparing fifo contents with a file,
+
   * driving reset and clocks in a test-bench context.

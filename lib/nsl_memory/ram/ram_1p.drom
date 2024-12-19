@@ -1,0 +1,16 @@
+{ signal: [
+  {name: 'clk',          wave: 'p........'},
+  {name: 'enable_i',     wave: '01.01...0'},
+  {name: 'address_i',    wave: 'x34x36.x.', data: ["A0", "A1", "A0", "A3"]},
+  {name: 'write_en_i',   wave: '010..10..'},
+  {name: 'write_data_i', wave: 'x3x..6x..', data: ["D0", "D3"]},
+  {name: 'read_data_o',  wave: 'x23x4366x', data: ["?", "D0(old)", "D1", "D0", "D3(old)", "D3"]},
+],
+  head:{
+    tick:0,
+  },
+  foot:{
+    tock:0,
+  },
+  config: { hscale: 2 }
+}
