@@ -14,6 +14,23 @@ entity tb is
 end tb;
 
 architecture arch of tb is
+
+  procedure assert_equal(context: string;
+                         prefix: string;
+                         params: crc_params_t;
+                         a, b : crc_state_t;
+                         sev: severity_level)
+  is
+    constant as: std_ulogic_vector := crc_spill_vector(params, a);
+    constant bs: std_ulogic_vector := crc_spill_vector(params, b);
+  begin
+    if as /= bs then
+      log_info(context&" "&to_string(params, a));
+      log_info(context&" "&to_string(params, b));
+    end if;
+    assert_equal(context, prefix, as, bs, sev);
+  end procedure;
+
 begin
 
   ieee_802_3: process
@@ -25,14 +42,44 @@ begin
                                             &"0000000000000a2a2a02000000000000"
                                             &"00000000000000000000000022b72660");
   begin
+    report to_string(params_c);
+    assert_equal(context, "spill reload",
+                 crc_spill(params_c, crc_load(params_c, from_hex("8def02d2"))),
+                 from_hex("8def02d2"),
+                 failure);
+
+    assert_equal(context, "spill reload",
+                 crc_spill_vector(params_c, crc_load(params_c, from_hex("1bdf05a5"))),
+                 x"a505df1b",
+                 failure);
+
+    assert_equal(context, "00",
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), from_hex("00")),
+                 crc_load(params_c, from_hex("8def02d2")),
+                 failure);
+
+    assert_equal(context, "ff",
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), from_hex("ff")),
+                 crc_load(params_c, from_hex("000000ff")),
+                 failure);
+
+    assert_equal(context, "01",
+                 crc_spill(params_c, crc_update(params_c, crc_init(params_c), from_hex("01"))),
+                 from_hex("1bdf05a5"),
+                 failure);
+
+
     assert_equal(context, "compare",
                  crc_spill(params_c, crc_update(params_c, crc_init(params_c), data(0 to 59))),
                  data(60 to 63),
                  failure);
 
     assert_equal(context, "check constant",
-                 unsigned(crc_update(params_c, crc_init(params_c), data)),
-                 unsigned(crc_check(params_c)),
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), data),
+                 crc_check(params_c),
                  failure);
 
     log_info(context, "done");
@@ -54,8 +101,9 @@ begin
                  failure);
 
     assert_equal(context, "check constant",
-                 unsigned(crc_update(params_c, crc_init(params_c), data)),
-                 unsigned(crc_check(params_c)),
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), data),
+                 crc_check(params_c),
                  failure);
 
     assert_equal(context, "compare",
@@ -64,8 +112,9 @@ begin
                  failure);
 
     assert_equal(context, "check constant",
-                 unsigned(crc_update(params_c, crc_init(params_c), data2)),
-                 unsigned(crc_check(params_c)),
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), data2),
+                 crc_check(params_c),
                  failure);
 
     assert_equal(context, "compare",
@@ -74,8 +123,9 @@ begin
                  failure);
 
     assert_equal(context, "check constant",
-                 unsigned(crc_update(params_c, crc_init(params_c), data3)),
-                 unsigned(crc_check(params_c)),
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), data3),
+                 crc_check(params_c),
                  failure);
 
     log_info(context, "done");
@@ -178,8 +228,9 @@ begin
     wait;
   end process;
 
-  b: process
+  ble: process
     use nsl_ble.ble.all;
+    constant params_c : crc_params_t := nsl_ble.ble.crc_params_c;
     constant context: log_context := "BLE";
     constant pdu : byte_string := from_hex("27104a49aeadacabaaa9bcead60507090b0d");
     constant crc: byte_string := crc_spill(crc_params_c,
@@ -188,9 +239,16 @@ begin
 
   begin
 
-    log_info(context, "PDU: "&to_string(pdu));
-    log_info(context, "CRC: "&to_string(crc));
-    log_info(context, "WH: "&to_string(wh));
+    assert_equal(context, "Test packet",
+                 params_c,
+                 crc_update(params_c, crc_init(params_c), from_hex("461c6a90cddd54cd031900000201060e094e6f726469635f426c696e6b79")),
+                 crc_load(params_c, from_hex("a5d68b")),
+                 failure);
+
+    assert_equal(context, "whitened",
+                 wh,
+                 from_hex("187edef7a440959e2904376396b7bbca143a927c2b"),
+                 failure);
 
     log_info(context, "done");
     wait;

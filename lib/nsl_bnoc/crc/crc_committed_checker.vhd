@@ -44,16 +44,15 @@ architecture beh of crc_committed_checker is
     OUT_DONE
     );
 
-  constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
+  constant crc_byte_count_c : integer := crc_byte_length(params_c);
   constant max_step_c : integer := nsl_math.arith.max(crc_byte_count_c, header_length_c);
-  subtype crc_t is crc_state(params_c.length-1 downto 0);
   constant fifo_depth_c : integer := crc_byte_count_c+2;
   
   type regs_t is
   record
     in_state : in_state_t;
     in_left : integer range 0 to max_step_c-1;
-    crc : crc_t;
+    crc : crc_state_t;
 
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -115,7 +114,7 @@ begin
           if in_i.last = '1' then
             if in_i.data(0) /= '1' then
               rin.in_state <= IN_CANCEL;
-            elsif r.crc = crc_check(params_c) then
+            elsif crc_is_valid(params_c, r.crc) then
               rin.in_state <= IN_COMMIT;
             else
               rin.in_state <= IN_CANCEL;
@@ -218,5 +217,5 @@ begin
     end case;
   end process;
 
-  valid_o <= to_logic(r.crc = crc_check(params_c));
+  valid_o <= to_logic(crc_is_valid(params_c, r.crc));
 end architecture;

@@ -26,17 +26,14 @@ package hdlc is
   constant escape_byte_c : byte := x"7d";
   constant escape_mangle_c : byte := x"20";
 
-  subtype fcs_t is crc_state(15 downto 0);
-  constant fcs_params_c : crc_params_t := (
-    length           => 16,
-    init             => 16#0000#,
-    poly             => 16#8408#,
+  constant fcs_params_c : crc_params_t := crc_params(
+    init             => "",
+    poly             => x"11021",
     complement_input => false,
-    insert_msb       => true,
-    pop_lsb          => true,
     complement_state => true,
-    spill_bitswap    => false,
-    spill_lsb_first  => true
+    byte_bit_order   => BIT_ORDER_ASCENDING,
+    spill_order      => EXP_ORDER_DESCENDING,
+    byte_order       => BYTE_ORDER_INCREASING
     );
 
   subtype sequence_t is integer range 0 to 7;
@@ -283,8 +280,8 @@ package body hdlc is
     start_flag, end_flag: boolean := true) return byte_string
   is
     constant header: byte_string(0 to 1) := (0 => to_byte(address), 1 => cmd);
-    constant fcs_v: fcs_t := not crc_update(fcs_params_c, crc_init(fcs_params_c),
-                                            header&data);
+    constant fcs_v: crc_state_t := crc_update(fcs_params_c, crc_init(fcs_params_c),
+                                              header&data);
     constant fcs: byte_string(0 to 1) := crc_spill(fcs_params_c, fcs_v);
     constant escaped: byte_string := escape(header & data & fcs);
   begin

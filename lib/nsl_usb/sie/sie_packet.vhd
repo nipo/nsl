@@ -69,15 +69,15 @@ architecture beh of sie_packet is
     data_buffer : byte_string(0 to 2);
     data_buffer_valid : std_ulogic_vector(0 to 2);
     token_len_m1 : integer range 0 to 2;
-    token_crc_value : token_crc;
-    data_crc_value : data_crc;
+    token_crc : crc_state_t;
+    data_crc : crc_state_t;
 
     -- TXer FSM
     txer : txer_state_t;
 
     -- Filler FSM
     filler : filler_state_t;
-    filler_data_crc : data_crc;
+    filler_data_crc : crc_state_t;
     append_data_crc : boolean;
   end record;
 
@@ -130,8 +130,8 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_IDLE =>
-        rin.token_crc_value <= token_crc_init;
-        rin.data_crc_value <= data_crc_init;
+        rin.token_crc <= crc_init(token_crc_params_c);
+        rin.data_crc <= crc_init(data_crc_params_c);
 
         rin.data_buffer <= (others => (others => '-'));
         rin.data_buffer_valid <= (others => '0');
@@ -176,7 +176,7 @@ begin
         if r.phy_in.rx_active = '0' then
           if r.token_len_m1 = 0 then
             rin.state <= ST_RX_COMMIT;
-          elsif r.token_len_m1 = 2 and r.token_crc_value = token_crc_check then
+          elsif r.token_len_m1 = 2 and crc_is_valid(token_crc_params_c, r.token_crc) then
             rin.state <= ST_RX_COMMIT;
           else
             rin.state <= ST_IDLE;
@@ -189,14 +189,14 @@ begin
           rin.data_buffer_valid(0) <= '1';
           rin.data_buffer(0) <= r.phy_in.data;
           rin.token_len_m1 <= r.token_len_m1 + 1;
-          rin.token_crc_value <= token_crc_update(r.token_crc_value, r.phy_in.data);
+          rin.token_crc <= crc_update(token_crc_params_c, r.token_crc, r.phy_in.data);
         end if;
 
       when ST_RX_DATA =>
         rin.data_buffer_valid(0) <= '0';
 
         if r.phy_in.rx_active = '0' then
-          if r.data_crc_value = data_crc_check then
+          if crc_is_valid(data_crc_params_c, r.data_crc) then
             rin.state <= ST_RX_COMMIT;
           else
             rin.state <= ST_IDLE;
@@ -208,7 +208,7 @@ begin
         elsif r.phy_in.rx_valid = '1' then
           rin.data_buffer_valid <= r.data_buffer_valid(1 to 2) & '1';
           rin.data_buffer <= r.data_buffer(1 to 2) & r.phy_in.data;
-          rin.data_crc_value <= data_crc_update(r.data_crc_value, r.phy_in.data);
+          rin.data_crc <= crc_update(data_crc_params_c, r.data_crc, r.phy_in.data);
         end if;
 
       when ST_RX_COMMIT =>
@@ -232,7 +232,7 @@ begin
 
       when FILLER_IDLE =>
         if r.state = ST_TX_START then
-          rin.filler_data_crc <= data_crc_init;
+          rin.filler_data_crc <= crc_init(data_crc_params_c);
           rin.filler <= FILLER_PUSH_DATA;
 
           case pid_get(in_i.data) is
@@ -255,7 +255,7 @@ begin
 
       when FILLER_PUSH_DATA =>
         if tx_fifo_in_ready = '1' and in_i.valid = '1' then
-          rin.filler_data_crc <= data_crc_update(r.filler_data_crc, in_i.data);
+          rin.filler_data_crc <= crc_update(data_crc_params_c, r.filler_data_crc, in_i.data);
           if in_i.last = '1' then
             if r.append_data_crc then
               rin.filler <= FILLER_PUSH_CRC_1;
@@ -367,11 +367,11 @@ begin
 
       when FILLER_PUSH_CRC_1 =>
         tx_fifo_in_valid <= '1';
-        tx_fifo_in_data <= byte(r.filler_data_crc(7 downto 0));
+        tx_fifo_in_data <= crc_spill(data_crc_params_c, r.filler_data_crc)(0);
 
       when FILLER_PUSH_CRC_2 =>
         tx_fifo_in_valid <= '1';
-        tx_fifo_in_data <= byte(r.filler_data_crc(15 downto 8));
+        tx_fifo_in_data <= crc_spill(data_crc_params_c, r.filler_data_crc)(1);
 
       when others =>
         null;

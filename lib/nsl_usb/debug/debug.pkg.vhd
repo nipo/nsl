@@ -29,6 +29,7 @@ package body debug is
   is
     alias blob : byte_string(0 to data'length-1) is data;
     variable token : unsigned(15 downto 0);
+    variable crc_ok : boolean;
   begin
     if blob'length < 3 then
       return "Invalid short SOF: " & to_string(blob);
@@ -37,8 +38,11 @@ package body debug is
     end if;
 
     token := from_le(blob(1 to 2));
-
-    if token_crc_update(token_crc_init, blob(1 to 2)) = token_crc_check then
+    crc_ok := crc_is_valid(
+      token_crc_params_c,
+      crc_update(token_crc_params_c, crc_init(token_crc_params_c), blob(1 to 2)));
+    
+    if crc_ok then
       return "SOF #" & to_string(token(10 downto 0));
     else
       return "SOF #" & to_string(token(10 downto 0)) & " [BAD CRC]";
@@ -51,6 +55,7 @@ package body debug is
     alias blob : byte_string(0 to data'length-1) is data;
     variable pid : pid_t;
     variable token : unsigned(15 downto 0);
+    variable crc_ok : boolean;
   begin
     if blob'length < 3 then
       return "Invalid short token: " & to_string(blob);
@@ -60,8 +65,11 @@ package body debug is
 
     pid := pid_get(blob(0));
     token := from_le(blob(1 to 2));
+    crc_ok := crc_is_valid(
+      token_crc_params_c,
+      crc_update(token_crc_params_c, crc_init(token_crc_params_c), blob(1 to 2)));
 
-    if token_crc_update(token_crc_init, blob(1 to 2)) = token_crc_check then
+    if crc_ok then
       return to_string(pid)
         & " Dev@" & to_string(token(6 downto 0))
         & ", EP#" & to_string(to_integer(token(10 downto 7)));
@@ -85,7 +93,9 @@ package body debug is
     end if;
 
     pid := pid_get(blob(0));
-    crc_ok := data_crc_update(data_crc_init, blob(1 to blob'right)) = data_crc_check;
+    crc_ok := crc_is_valid(
+      data_crc_params_c,
+      crc_update(data_crc_params_c, crc_init(data_crc_params_c), blob(1 to blob'right)));
 
     if crc_ok then
       return to_string(pid)

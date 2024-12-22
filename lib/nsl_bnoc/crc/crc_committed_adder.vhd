@@ -44,9 +44,8 @@ architecture beh of crc_committed_adder is
     OUT_CANCEL
     );
 
-  constant crc_byte_count_c : integer := (params_c.length + 7) / 8;
+  constant crc_byte_count_c : integer := crc_byte_length(params_c);
   constant max_step_c : integer := nsl_math.arith.max(crc_byte_count_c, header_length_c);
-  subtype crc_t is crc_state(params_c.length-1 downto 0);
   constant fifo_depth_c : integer := 2;
   
   type regs_t is
@@ -58,31 +57,12 @@ architecture beh of crc_committed_adder is
     fifo_fillness: integer range 0 to fifo_depth_c;
     
     out_state : out_state_t;
-    crc : crc_t;
+    crc : crc_state_t;
+    check: byte_string(0 to crc_byte_count_c-1);
     out_left : integer range 0 to max_step_c-1;
   end record;
 
   signal r, rin: regs_t;
-
-  function crc_out_byte(crc: crc_t) return byte
-  is
-    variable tmp : byte_string(0 to (params_c.length-1)/8) := crc_spill(params_c, crc);
-  begin
-    return tmp(0);
-  end function;
-
-  function crc_shift(crc: crc_t) return crc_t
-  is
-    variable ret : crc_t := (others => '-');
-  begin
-    if params_c.spill_lsb_first then
-      ret(ret'left-8 downto 0) := crc(crc'left downto 8);
-    else
-      ret(ret'left downto 8) := crc(crc'left-8 downto 0);
-    end if;
-
-    return ret;
-  end function;
   
 begin
 
@@ -100,11 +80,13 @@ begin
 
   transition: process(r, in_i, out_i) is
     variable fifo_push, fifo_pop: boolean;
+    variable c : crc_state_t;
   begin
     rin <= r;
 
     fifo_pop := false;
     fifo_push := false;
+    c := r.crc;
 
     case r.in_state is
       when IN_RESET =>
@@ -169,7 +151,7 @@ begin
       when OUT_RESET =>
         if header_length_c = 0 then
           rin.out_state <= OUT_DATA;
-          rin.crc <= crc_init(params_c);
+          c := crc_init(params_c);
         else
           rin.out_state <= OUT_HEADER;
           rin.out_left <= header_length_c-1;
@@ -182,27 +164,28 @@ begin
             rin.out_left <= r.out_left - 1;
           else
             rin.out_state <= OUT_DATA;
-            rin.crc <= crc_init(params_c);
+            c := crc_init(params_c);
           end if;
         end if;
 
       when OUT_DATA =>
         if r.fifo_fillness > 0 and out_i.ready = '1' then
           fifo_pop := true;
-          rin.crc <= nsl_data.crc.crc_update(params_c, r.crc, r.fifo(0));
+          c := crc_update(params_c, c, r.fifo(0));
         end if;
 
         if (r.in_state = IN_COMMIT or r.in_state = IN_CANCEL or (in_i.valid = '1' and in_i.last = '1'))
           and (r.fifo_fillness = 0
                or (r.fifo_fillness = 1 and out_i.ready = '1')) then
           rin.out_state <= OUT_CRC;
+          rin.check <= crc_spill(params_c, c);
           rin.out_left <= crc_byte_count_c - 1;
         end if;
 
-        when OUT_CRC =>
+      when OUT_CRC =>
         if out_i.ready = '1' then
           if r.out_left /= 0 then
-            rin.crc <= crc_shift(r.crc);
+            rin.check <= shift_left(r.check);
             rin.out_left <= r.out_left - 1;
           elsif r.in_state = IN_COMMIT then
             rin.out_state <= OUT_COMMIT;
@@ -213,7 +196,7 @@ begin
 
       when OUT_COMMIT | OUT_CANCEL =>
         if out_i.ready = '1' then
-          rin.crc <= crc_init(params_c);
+          c := crc_init(params_c);
           rin.out_state <= OUT_DATA;
           if header_length_c /= 0 then
             rin.out_state <= OUT_HEADER;
@@ -224,6 +207,8 @@ begin
         end if;
     end case;
 
+    rin.crc <= c;
+    
     if fifo_push and fifo_pop then
       rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= in_i.data;
@@ -252,7 +237,7 @@ begin
       when OUT_CRC =>
         out_o.valid <= '1';
         out_o.last <= '0';
-        out_o.data <= crc_out_byte(r.crc);
+        out_o.data <= first_left(r.check);
 
       when OUT_COMMIT =>
         out_o.valid <= '1';

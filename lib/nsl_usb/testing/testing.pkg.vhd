@@ -423,8 +423,11 @@ package body testing is
 
   function packet_data_with_crc(data : byte_string) return byte_string
   is
+    constant s : crc_state_t := crc_update(data_crc_params_c,
+                                           crc_init(data_crc_params_c),
+                                           data);
   begin
-    return data & to_le(unsigned(data_crc_update(data_crc_init, data)));
+    return data & crc_spill(data_crc_params_c, s);
   end function;
 
   function packet_data_with_crc(hex_data : string) return byte_string

@@ -190,17 +190,14 @@ package ethernet is
   function frame_payload_get(frame : byte_string) return byte_string;
 
   -- CRC parameters
-  subtype fcs_t is nsl_data.crc.crc_state(31 downto 0);
-  constant fcs_params_c : crc_params_t := (
-    length           => 32,
-    init             => 16#00000000#,
-    poly             => -306674912, -- edb88320,
+  constant fcs_params_c : crc_params_t := crc_params(
+    init             => "",
+    poly             => x"104c11db7",
     complement_input => false,
-    insert_msb       => true,
-    pop_lsb          => true,
     complement_state => true,
-    spill_bitswap    => false,
-    spill_lsb_first  => true
+    byte_bit_order   => BIT_ORDER_ASCENDING,
+    spill_order      => EXP_ORDER_DESCENDING,
+    byte_order       => BYTE_ORDER_INCREASING
     );
   
 end package;
@@ -219,7 +216,7 @@ package body ethernet is
                       min_frame_size_c : natural := 0) return byte_string
   is
     variable hdr : byte_string(1 to 6+6+2);
-    variable fcs : fcs_t := crc_init(fcs_params_c);
+    variable fcs : crc_state_t := crc_init(fcs_params_c);
     variable pad : byte_string(payload'length to min_frame_size_c-6-6-2-4-1) := (others => x"00");
   begin
     hdr(1 to 6) := dest;
@@ -249,14 +246,14 @@ package body ethernet is
   function frame_is_fcs_valid(frame : byte_string) return boolean
   is
     alias xframe : byte_string(0 to frame'length-1) is frame;
-    variable fcs : fcs_t;
+    variable fcs : crc_state_t;
   begin
     if xframe'length < 6 + 6 + 2 + 4 then
       return false;
     end if;
 
     fcs := crc_update(fcs_params_c, crc_init(fcs_params_c), xframe(0 to xframe'right-4));
-    return to_le(unsigned(fcs)) = xframe(xframe'right-3 to xframe'right);
+    return crc_spill(fcs_params_c, fcs) = xframe(xframe'right-3 to xframe'right);
   end function;
   
   function frame_daddr_get(frame : byte_string) return mac48_t

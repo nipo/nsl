@@ -6,7 +6,6 @@ library nsl_data, nsl_logic, nsl_math;
 
 package usb is
 
-  use nsl_data.crc.crc16;
   use nsl_data.bytestream.byte;
   use nsl_data.bytestream.byte_string;
   
@@ -28,40 +27,31 @@ package usb is
   --
   -- Understanding USB spec, this means:
   --
-  -- - CRC state register has different bit order than data
-  --   bytes. This is silly as GF2 computation does not care about bit
-  --   order. Let's reverse the bit order for CRC register.
-  --
   -- - Initialization is all ones, but result is inverted. If we want CRC
   --   function to be composable, we should have inversion before and after,
   --   and have all zeros as initialization.
   --
-  -- - Token CRC Polynomial is x5 + x2 + 1, once we reverse bit order,
-  --   it gets to x5 + x3 + 1, and we drop LSB, to get "10100".
-  --
-  -- - Token CRC checking is supposed to give "01100", but this is
-  --   before inversion and bitswap. With inversion, it is "11001".
+  -- - Token CRC Polynomial is x5 + x2 + 1.
+  constant token_crc_params_c: nsl_data.crc.crc_params_t := nsl_data.crc.crc_params(
+    init => "",
+    poly => x"25",
+    complement_input => false,
+    complement_state => true,
+    byte_bit_order   => nsl_data.crc.BIT_ORDER_ASCENDING,
+    spill_order      => nsl_data.crc.EXP_ORDER_DESCENDING,
+    byte_order       => nsl_data.bytestream.BYTE_ORDER_INCREASING
+    );
   
-  subtype token_crc is nsl_data.crc.crc_state(4 downto 0);
-  constant token_crc_init  : token_crc := "00000";
-  constant token_crc_poly  : token_crc := "10100";
-  constant token_crc_check : token_crc := "11001";
-  function token_crc_update(init : token_crc; data : byte) return token_crc;
-  function token_crc_update(init : token_crc; data : byte_string) return token_crc;
-
-  -- - Data CRC Polynomial is x16 + x15 + x2 + 1, once we reverse bit
-  --   order, it gets to x16 + x14 + x1 + 1, and we drop LSB, to get
-  --   x"a001".
-  --
-  -- - Data CRC checking is supposed to give x"800d", but this is
-  --   before inversion and bitswap. With inversion, it is x"4ffe".
-
-  subtype data_crc is nsl_data.crc.crc_state(15 downto 0);
-  constant data_crc_init  : data_crc := x"0000";
-  constant data_crc_poly  : data_crc := x"a001";
-  constant data_crc_check : data_crc := x"4ffe";
-  function data_crc_update(init : data_crc; data : byte) return data_crc;
-  function data_crc_update(init : data_crc; data : byte_string) return data_crc;
+  -- - Data CRC Polynomial is x16 + x15 + x2 + 1.
+  constant data_crc_params_c: nsl_data.crc.crc_params_t := nsl_data.crc.crc_params(
+    init => "",
+    poly => x"18005",
+    complement_input => false,
+    complement_state => true,
+    byte_bit_order   => nsl_data.crc.BIT_ORDER_ASCENDING,
+    spill_order      => nsl_data.crc.EXP_ORDER_DESCENDING,
+    byte_order       => nsl_data.bytestream.BYTE_ORDER_INCREASING
+    );
 
   subtype device_address_t is unsigned(6 downto 0);
   subtype endpoint_no_t is unsigned(3 downto 0);
@@ -223,39 +213,20 @@ package body usb is
   use nsl_data.endian.all;
   use nsl_logic.bool.all;
   
-  function token_crc_update(init : token_crc; data : byte_string) return token_crc is
-  begin
-    return not crc_update(not init, token_crc_poly, true, true, data);
-  end function;
-
-  function token_crc_update(init : token_crc; data : byte) return token_crc is
-  begin
-    return not crc_update(not init, token_crc_poly, true, true, data);
-  end function;
-
-  function data_crc_update(init : data_crc; data : byte_string) return data_crc is
-  begin
-    return not crc_update(not init, data_crc_poly, true, true, data);
-  end function;
-
-  function data_crc_update(init : data_crc; data : byte) return data_crc is
-  begin
-    return not crc_update(not init, data_crc_poly, true, true, data);
-  end function;
-
   function token_data(addr : device_address_t;
                       endp : endpoint_no_t)
     return byte_string
   is
     variable ret : unsigned(10 downto 0);
     variable tmp : std_ulogic_vector(10 downto 0);
-    variable crc : token_crc;
+    variable crc : std_ulogic_vector(4 downto 0);
   begin
     ret(6 downto 0) := addr;
     ret(10 downto 7) := endp;
     tmp := std_ulogic_vector(ret);
-    crc := not crc_update(not token_crc_init, token_crc_poly,
-                          true, true, tmp);
+    crc := crc_spill_vector(token_crc_params_c,
+                            crc_update(token_crc_params_c, crc_init(token_crc_params_c),
+                                       tmp));
 
     return to_le(unsigned(crc) & ret);
   end function;
@@ -264,11 +235,12 @@ package body usb is
     return byte_string
   is
     variable tmp : std_ulogic_vector(10 downto 0);
-    variable crc : token_crc;
+    variable crc : std_ulogic_vector(4 downto 0);
   begin
     tmp := std_ulogic_vector(frame);
-    crc := not crc_update(not token_crc_init, token_crc_poly,
-                          true, true, tmp);
+    crc := crc_spill_vector(token_crc_params_c,
+                            crc_update(token_crc_params_c, crc_init(token_crc_params_c),
+                                       std_ulogic_vector(tmp)));
 
     return to_le(unsigned(crc) & frame);
   end function;

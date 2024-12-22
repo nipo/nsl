@@ -3,22 +3,20 @@ use ieee.std_logic_1164.all;
 
 library nsl_data;
 use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 use nsl_data.crc.all;
 
 package ble is
 
   -- CRC parameters
-  subtype crc_t is nsl_data.crc.crc_state(23 downto 0);
-  constant crc_params_c : crc_params_t := (
-    length           => 24,
-    init             => 16#555555#,
-    poly             => 16#00065b#,
+  constant crc_params_c : crc_params_t := crc_params(
+    init             => x"555555",
+    poly             => x"100065b",
     complement_input => false,
-    insert_msb       => false,
-    pop_lsb          => true,
     complement_state => false,
-    spill_bitswap    => true,
-    spill_lsb_first  => true
+    byte_bit_order   => BIT_ORDER_ASCENDING,
+    spill_order      => EXP_ORDER_DESCENDING,
+    byte_order       => BYTE_ORDER_INCREASING
     );
 
   constant preamble_c : byte_string := from_hex("aa");

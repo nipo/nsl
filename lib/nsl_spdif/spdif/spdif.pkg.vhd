@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 
 library nsl_data;
 use nsl_data.crc.all;
+use nsl_data.bytestream.all;
 
 package spdif is
 
@@ -15,17 +16,14 @@ package spdif is
   constant BIT_0 : std_ulogic_vector := "10";
   constant BIT_1 : std_ulogic_vector := "11";
 
-  subtype aesebu_crc_t is crc_state(7 downto 0);
-  constant aesebu_crc_params_c : crc_params_t := (
-    length           => 8,
-    init             => 16#00#,
-    poly             => 16#b8#,
+  constant aesebu_crc_params_c : crc_params_t := crc_params(
+    init             => "",
+    poly             => x"11d",
     complement_input => false,
-    insert_msb       => true,
-    pop_lsb          => true,
     complement_state => false,
-    spill_bitswap    => false,
-    spill_lsb_first  => false
+    byte_bit_order   => BIT_ORDER_ASCENDING,
+    spill_order      => EXP_ORDER_DESCENDING,
+    byte_order       => BYTE_ORDER_DECREASING
     );
 
 end package spdif;

@@ -6,6 +6,8 @@ library unisim;
 
 library nsl_data;
 use nsl_data.crc.all;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
 entity uid32_reader is
   port(
@@ -20,16 +22,14 @@ end entity;
 architecture xil of uid32_reader is
 
   subtype crc_t is nsl_data.crc.crc_state(31 downto 0);
-  constant crc_params_c : crc_params_t := (
-    length           => 32,
-    init             => 16#00000000#,
-    poly             => -306674912, -- edb88320,
+  constant crc_params_c : crc_params_t := crc_params(
+    init             => "",
+    poly             => x"104c11db7",
     complement_input => false,
-    insert_msb       => true,
-    pop_lsb          => true,
     complement_state => true,
-    spill_bitswap    => false,
-    spill_lsb_first  => true
+    byte_bit_order   => BIT_ORDER_ASCENDING,
+    spill_order      => EXP_ORDER_DESCENDING,
+    byte_order       => BYTE_ORDER_INCREASING
     );
 
   type state_t is (
