@@ -115,6 +115,22 @@ package crc is
   -- Initial value, as state, for given parameters
   function crc_init(params : crc_params_t) return crc_state_t;
 
+  -- Tells whether for any given blob with appended correct CRC
+  -- spilled as defined, the CRC over the whole blob will be constant
+  function crc_has_constant_check(params : crc_params_t) return boolean;
+  -- Tells whether zeros can be prepended to message without any
+  -- change in computed value
+  function crc_is_pre_zero_transparent(params : crc_params_t) return boolean;
+  -- Tells whether ones can be prepended to message without any change
+  -- in computed value
+  function crc_is_pre_ones_transparent(params : crc_params_t) return boolean;
+  -- Tells whether zeros can be appended to message without any change
+  -- in computed value
+  function crc_is_post_zero_transparent(params : crc_params_t) return boolean;
+  -- Tells whether ones can be appended to message without any change
+  -- in computed value
+  function crc_is_post_ones_transparent(params : crc_params_t) return boolean;
+
   -- Check value, as state, for given parameters.  This is the value
   -- you'll get for a message with its valid CRC appended to it.
   --
@@ -156,6 +172,16 @@ package crc is
   -- Verify CRC over a data stream
   function crc_is_valid(params : crc_params_t;
                         data : byte_string) return boolean;
+
+  -- Verify CRC value WRT a current state
+  function crc_is_valid(params : crc_params_t;
+                        state : crc_state_t;
+                        value : std_ulogic_vector) return boolean;
+
+  -- Verify CRC value WRT a current state
+  function crc_is_valid(params : crc_params_t;
+                        state : crc_state_t;
+                        value : byte_string) return boolean;
 
   -- Assert whether current state is for a valid checked data stream.
   function crc_is_valid(params : crc_params_t;
@@ -258,12 +284,59 @@ package body crc is
   
   function crc_init(params : crc_params_t) return crc_state_t
   is
-    variable s: std_ulogic_vector(0 to params.order-1) := params.init(0 to params.order-1);
-    variable pad: std_ulogic_vector(params.order to crc_word_t'length-1) := (others => '-');
+    constant s: std_ulogic_vector := params.init(0 to params.order-1);
+    constant pad: std_ulogic_vector(params.order to crc_word_t'length-1) := (others => '-');
   begin
     return crc_state_t'(
       remainder => s & pad
       );
+  end function;
+
+  function crc_has_constant_check(params : crc_params_t) return boolean
+  is
+    constant ta: byte_string := from_hex("313233343536373839");
+    constant ca: crc_state_t := crc_update(params, crc_init(params), ta);
+    constant va: byte_string := crc_spill(params, ca);
+    constant xa: crc_state_t := crc_update(params, ca, va);
+
+    constant tb: byte_string := from_hex("deadbeef");
+    constant cb: crc_state_t := crc_update(params, crc_init(params), tb);
+    constant vb: byte_string := crc_spill(params, cb);
+    constant xb: crc_state_t := crc_update(params, cb, vb);
+  begin
+    return crc_spill_vector(params, xa) = crc_spill_vector(params, xb);
+  end function;
+
+  function crc_is_pre_zero_transparent(params : crc_params_t) return boolean
+  is
+    constant i: std_ulogic_vector := params.init(0 to params.order-1);
+  begin
+    return ((i = (i'range => '0') and not params.complement_state)
+            or (i = (i'range => '1') and params.complement_state))
+      and not params.complement_input;
+  end function;
+
+  function crc_is_pre_ones_transparent(params : crc_params_t) return boolean
+  is
+    constant i: std_ulogic_vector := params.init(0 to params.order-1);
+  begin
+    return ((i = (i'range => '0') and not params.complement_state)
+            or (i = (i'range => '1') and params.complement_state))
+      and params.complement_input;
+  end function;
+
+  function crc_is_post_zero_transparent(params : crc_params_t) return boolean
+  is
+    constant c: std_ulogic_vector := crc_spill_vector(params, crc_check(params));
+  begin
+    return c = (c'range => '0') and not params.complement_input;
+  end function;
+
+  function crc_is_post_ones_transparent(params : crc_params_t) return boolean
+  is
+    constant c: std_ulogic_vector := crc_spill_vector(params, crc_check(params));
+  begin
+    return c = (c'range => '1') and params.complement_input;
   end function;
 
   function crc_check(params : crc_params_t) return crc_state_t
@@ -418,6 +491,22 @@ package body crc is
     constant state : crc_state_t := crc_check(params);
   begin
     return state = crc_update(params, crc_init(params), data);
+  end function;
+
+  function crc_is_valid(params : crc_params_t;
+                        state : crc_state_t;
+                        value : std_ulogic_vector) return boolean
+  is
+  begin
+    return crc_spill_vector(params, state) = value;
+  end function;
+
+  function crc_is_valid(params : crc_params_t;
+                        state : crc_state_t;
+                        value : byte_string) return boolean
+  is
+  begin
+    return crc_spill(params, state) = value;
   end function;
 
   function crc_is_valid(params : crc_params_t;
