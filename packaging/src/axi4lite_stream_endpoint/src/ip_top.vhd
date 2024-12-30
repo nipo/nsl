@@ -107,7 +107,7 @@ architecture rtl of ip_top is
   
 begin
 
-  packer: nsl_amba.packer.axi4_mm_lite_slave_packer
+  mm_packer: nsl_amba.packer.axi4_mm_lite_slave_packer
     generic map(
       config_c => mm_config_c
       )
@@ -158,16 +158,33 @@ begin
       );
 
   irq <= not irq_n_s;
-  
-  m_axis_tdata <= std_logic_vector(value(stream_config_c, tx_s.m));
-  m_axis_tvalid <= to_logic(is_valid(stream_config_c, tx_s.m));
-  m_axis_tlast <= to_logic(is_last(stream_config_c, tx_s.m));
-  tx_s.s <= accept(stream_config_c, ready => m_axis_tready = '1');
 
-  s_axis_tready <= to_logic(is_ready(stream_config_c, rx_s.s));
-  rx_s.m <= transfer(stream_config_c,
-                     value => unsigned(s_axis_tdata),
-                     valid => s_axis_tvalid = '1',
-                     last => s_axis_tlast = '1');
+  slave_packer: nsl_amba.packer.axi4_stream_slave_packer
+    generic map(
+      config_c => stream_config_c
+      )
+    port map(
+      tvalid => s_axis_tvalid,
+      tready => s_axis_tready,
+      tdata => s_axis_tdata,
+      tlast => s_axis_tlast
+
+      stream_i => rx_s.s,
+      stream_o => rx_s.m
+      );
+
+  master_packer: nsl_amba.packer.axi4_stream_master_packer
+    generic map(
+      config_c => stream_config_c
+      )
+    port map(
+      tvalid => m_axis_tvalid,
+      tready => m_axis_tready,
+      tdata => m_axis_tdata,
+      tlast => m_axis_tlast
+
+      stream_i => tx_s.m,
+      stream_o => tx_s.s
+      );
   
 end;
