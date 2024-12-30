@@ -14,7 +14,7 @@ Fixed-point ROM
 
 * `rom_ufixed_2p <rom_ufixed_2p.vhd>`_ is a dual-port ROM containing
   ufixed values.  Both ports read from the same backing storage.
-  Backing storage is tailored to feat port A, but port B values will
+  Backing storage is tailored to fit port A, but port B values will
   be resized to match B output value range.
 
 * `rom_sfixed_2p <rom_sfixed_2p.vhd>`_ is the same as previous with
