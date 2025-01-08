@@ -53,6 +53,8 @@ architecture beh of fifo_cancellable is
     -- to ask next data word from memory
     rptr_mem: ptr_t;
     rdata_valid : std_ulogic;
+
+    reset_done: boolean;
   end record;
 
   signal r, rin : regs_t;
@@ -74,6 +76,7 @@ begin
       r.rptr_mem <= to_ptr(0);
       r.wptr_sp <= to_ptr(0);
       r.rdata_valid <= '0';
+      r.reset_done <= false;
     end if;
   end process;
 
@@ -83,6 +86,8 @@ begin
                       s_do_read, s_do_write) is
   begin
     rin <= r;
+
+    rin.reset_done <= true;
 
     if out_ready_i = '1' then
       rin.rdata_valid <= '0';
@@ -121,7 +126,7 @@ begin
   s_do_read <= to_logic(r.rptr_mem /= r.wptr) and (out_ready_i or not r.rdata_valid);
   out_available_o <= r.wptr - r.rptr;
   in_free_o <= s_wptr_end - r.wptr;
-  in_ready_o <= to_logic(r.wptr_sp /= s_wptr_end);
+  in_ready_o <= to_logic(r.wptr_sp /= s_wptr_end and r.reset_done);
 
   storage: nsl_memory.ram.ram_2p_r_w
     generic map(
