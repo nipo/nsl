@@ -93,7 +93,7 @@ package axi4_stream is
   constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
 
   function is_valid(cfg: config_t; m: master_t) return boolean;
-  function is_last(cfg: config_t; m: master_t) return boolean;
+  function is_last(cfg: config_t; m: master_t; default: boolean := true) return boolean;
   function is_ready(cfg: config_t; s: slave_t) return boolean;
   function bytes(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
@@ -385,13 +385,13 @@ package body axi4_stream is
     return m.valid = '1';
   end function;
 
-  function is_last(cfg: config_t; m: master_t) return boolean
+  function is_last(cfg: config_t; m: master_t; default: boolean := true) return boolean
   is
   begin
     if cfg.has_last then
       return m.last = '1';
     else
-      return true;
+      return default;
     end if;
   end function;
 
