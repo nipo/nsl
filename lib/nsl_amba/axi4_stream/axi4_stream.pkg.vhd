@@ -213,6 +213,43 @@ package axi4_stream is
       );
   end component;
 
+  component axi4_stream_header_inserter is
+    generic(
+      config_c : config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      header_i : in byte_string;
+      header_strobe_o : out std_ulogic;
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
+  component axi4_stream_header_extractor is
+    generic(
+      config_c : config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      header_o : out byte_string;
+      header_strobe_o : out std_ulogic;
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
+  
   function to_string(cfg: config_t) return string;
   function to_string(cfg: config_t; a: master_t) return string;
   function to_string(cfg: config_t; a: slave_t) return string;

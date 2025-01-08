@@ -19,6 +19,7 @@ tb += axi4_stream_narrower
 tb += axi4_stream_types
 tb += axi4_stream_widener
 tb += axi4_stream_buffer
+tb += axi4_stream_buffer_io
 
 all: simulate
 
