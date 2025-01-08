@@ -46,3 +46,5 @@ _impact.cmd
 *.svf
 .DS_Store
 *~
+*.do
+vhdl_ls.toml
