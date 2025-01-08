@@ -494,41 +494,39 @@ package body axi4_stream is
                     valid : boolean := true;
                     last : boolean := false) return master_t
   is
-    variable ret: master_t;
+    variable ret: master_t := transfer_defaults(cfg);
   begin
-    if not cfg.has_keep or cfg.data_width = 0 then
-      ret.keep := (others => '-');
-    elsif keep'length /= 0 then
-      assert keep'length = cfg.data_width
-        report "Bad keep length"
-        severity failure;
-      if order = BYTE_ORDER_INCREASING then
-        ret.keep(0 to cfg.data_width-1) := keep;
+    if cfg.has_keep and cfg.data_width /= 0 then
+      if keep'length /= 0 then
+        assert keep'length = cfg.data_width
+          report "Bad keep length"
+          severity failure;
+        if order = BYTE_ORDER_INCREASING then
+          ret.keep(0 to cfg.data_width-1) := keep;
+        else
+          ret.keep(0 to cfg.data_width-1) := bitswap(keep);
+        end if;
       else
-        ret.keep(0 to cfg.data_width-1) := bitswap(keep);
+        ret.keep(0 to cfg.data_width-1) := (others => '1');
       end if;
-    else
-      ret.keep(0 to cfg.data_width-1) := (others => '1');
     end if;
 
-    if not cfg.has_strobe or cfg.data_width = 0 then
-      ret.strobe := (others => '-');
-    elsif strobe'length /= 0 then
-      assert strobe'length = cfg.data_width
-        report "Bad strobe length"
-        severity failure;
-      if order = BYTE_ORDER_INCREASING then
-        ret.strobe(0 to cfg.data_width-1) := strobe;
+    if cfg.has_strobe and cfg.data_width /= 0 then
+      if strobe'length /= 0 then
+        assert strobe'length = cfg.data_width
+          report "Bad strobe length"
+          severity failure;
+        if order = BYTE_ORDER_INCREASING then
+          ret.strobe(0 to cfg.data_width-1) := strobe;
+        else
+          ret.strobe(0 to cfg.data_width-1) := bitswap(strobe);
+        end if;
       else
-        ret.strobe(0 to cfg.data_width-1) := bitswap(strobe);
+        ret.strobe(0 to cfg.data_width-1) := (others => '1');
       end if;
-    else
-      ret.strobe(0 to cfg.data_width-1) := (others => '1');
     end if;
 
-    if cfg.data_width = 0 then
-      ret.data := (others => (others => '-'));
-    else
+    if cfg.data_width /= 0 then
       assert bytes'length = cfg.data_width
         report "Bad data length"
         severity failure;
@@ -539,27 +537,21 @@ package body axi4_stream is
       end if;
     end if;
 
-    if cfg.user_width = 0 then
-      ret.user := (others => '-');
-    else
+    if cfg.user_width /= 0 then
       assert user'length = cfg.user_width
         report "Bad user length"
         severity failure;
       ret.user(cfg.user_width-1 downto 0) := user;
     end if;
 
-    if cfg.dest_width = 0 then
-      ret.dest := (others => '-');
-    else
+    if cfg.dest_width /= 0 then
       assert dest'length = cfg.dest_width
         report "Bad dest length"
         severity failure;
       ret.dest(cfg.dest_width-1 downto 0) := dest;
     end if;
 
-    if cfg.id_width = 0 then
-      ret.id := (others => '-');
-    else
+    if cfg.id_width /= 0 then
       assert id'length = cfg.id_width
         report "Bad id length"
         severity failure;
@@ -568,16 +560,14 @@ package body axi4_stream is
 
     if valid then
       ret.valid := '1';
-    else
-      ret.valid := '0';
     end if;
 
-    if not cfg.has_last then
-      ret.last := '-';
-    elsif last then
-      ret.last := '1';
-    else
-      ret.last := '0';
+    if cfg.has_last then
+      if last then
+        ret.last := '1';
+      else
+        ret.last := '0';
+      end if;
     end if;
 
     return ret;
