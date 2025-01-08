@@ -325,12 +325,16 @@ package axi4_stream is
   function next_bytes(cfg: buffer_config_t; b: buffer_t) return byte_string;
   -- Yields next strb mask from current buffer state.
   function next_strb(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector;
-  -- Yields master interface from current buffer contents.
+  -- Yields master interface from current buffer contents.  Last is
+  -- only taken into account when beat is the last one of the buffer
+  -- sending / receiving, otherwise, it is forcibly set to false.
+  -- Semantically, this allows user to send extra data after the
+  -- buffer contents if needed.
   function next_beat(cfg: buffer_config_t; b: buffer_t;
                      id: std_ulogic_vector := na_suv;
                      user: std_ulogic_vector := na_suv;
                      dest: std_ulogic_vector := na_suv;
-                     last : boolean := false) return master_t;
+                     last : boolean := true) return master_t;
   -- Retrieves the full buffer
   function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
 
@@ -1181,7 +1185,7 @@ package body axi4_stream is
                      id: std_ulogic_vector := na_suv;
                      user: std_ulogic_vector := na_suv;
                      dest: std_ulogic_vector := na_suv;
-                     last : boolean := false) return master_t
+                     last : boolean := true) return master_t
   is
   begin
     return transfer(cfg.stream_config,
@@ -1191,7 +1195,7 @@ package body axi4_stream is
                     user => user,
                     dest => dest,
                     valid => true,
-                    last => last);
+                    last => last and is_last(cfg, b));
   end function;
 
   function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string

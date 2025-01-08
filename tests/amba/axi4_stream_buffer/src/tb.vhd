@@ -40,8 +40,7 @@ begin
 
     while not done
     loop
-      send(cfg_c, clock_s, bus_s.s, bus_s.m, next_beat(buffer_cfg_c, buf,
-                                                       last => is_last(buffer_cfg_c, buf)));
+      send(cfg_c, clock_s, bus_s.s, bus_s.m, next_beat(buffer_cfg_c, buf, last => true));
 
       done := is_last(buffer_cfg_c, buf);
       buf := shift(buffer_cfg_c, buf);
