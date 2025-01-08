@@ -675,12 +675,12 @@ package body axi4_stream is
   begin
     ret := ret + if_else(strchr(elements, 'i') = -1, 0, cfg.id_width);
     ret := ret + if_else(strchr(elements, 'd') = -1, 0, cfg.data_width * 8);
-    ret := ret + if_else(strchr(elements, 's') = -1, 0, cfg.data_width);
-    ret := ret + if_else(strchr(elements, 'k') = -1, 0, cfg.data_width);
+    ret := ret + if_else(strchr(elements, 's') /= -1 and cfg.has_strobe, cfg.data_width, 0);
+    ret := ret + if_else(strchr(elements, 'k') /= -1 and cfg.has_keep, cfg.data_width, 0);
     ret := ret + if_else(strchr(elements, 'o') = -1, 0, cfg.dest_width);
     ret := ret + if_else(strchr(elements, 'u') = -1, 0, cfg.user_width);
     ret := ret + if_else(strchr(elements, 'v') = -1, 0, 1);
-    ret := ret + if_else(strchr(elements, 'l') = -1, 0, 1);
+    ret := ret + if_else(strchr(elements, 'l') /= -1 and cfg.has_last, 1, 0);
     return ret;
   end function;
   
@@ -702,11 +702,15 @@ package body axi4_stream is
           ret(point to point+cfg.data_width*8-1) := std_ulogic_vector(value(cfg, m, ENDIAN_BIG));
           point := point + cfg.data_width * 8;
         when 's' =>
-          ret(point to point+cfg.data_width-1) := strobe(cfg, m);
-          point := point + cfg.data_width;
+          if cfg.has_strobe then
+            ret(point to point+cfg.data_width-1) := strobe(cfg, m);
+            point := point + cfg.data_width;
+          end if;
         when 'k' =>
-          ret(point to point+cfg.data_width-1) := keep(cfg, m);
-          point := point + cfg.data_width;
+          if cfg.has_keep then
+            ret(point to point+cfg.data_width-1) := keep(cfg, m);
+            point := point + cfg.data_width;
+          end if;
         when 'o' =>
           ret(point to point+cfg.dest_width-1) := dest(cfg, m);
           point := point + cfg.dest_width;
@@ -717,8 +721,10 @@ package body axi4_stream is
           ret(point) := to_logic(is_valid(cfg, m));
           point := point + 1;
         when 'l' =>
-          ret(point) := to_logic(is_last(cfg, m));
-          point := point + 1;
+          if cfg.has_last then
+            ret(point) := to_logic(is_last(cfg, m));
+            point := point + 1;
+          end if;
         when others =>
           assert false
             report "Bad key, must be one of [idskouvl]"
@@ -756,11 +762,15 @@ package body axi4_stream is
           ret.data(0 to cfg.data_width-1) := to_be(unsigned(vv(point to point+cfg.data_width*8-1)));
           point := point + cfg.data_width * 8;
         when 's' =>
-          ret.strobe(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
-          point := point + cfg.data_width;
+          if cfg.has_strobe then
+            ret.strobe(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
+            point := point + cfg.data_width;
+          end if;
         when 'k' =>
-          ret.keep(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
-          point := point + cfg.data_width;
+          if cfg.has_keep then
+            ret.keep(0 to cfg.data_width-1) := vv(point to point+cfg.data_width-1);
+            point := point + cfg.data_width;
+          end if;
         when 'o' =>
           ret.dest(cfg.dest_width-1 downto 0) := vv(point to point+cfg.dest_width-1);
           point := point + cfg.dest_width;
@@ -771,8 +781,10 @@ package body axi4_stream is
           ret.valid := vv(point);
           point := point + 1;
         when 'l' =>
-          ret.last := vv(point);
-          point := point + 1;
+          if cfg.has_last then
+            ret.last := vv(point);
+            point := point + 1;
+          end if;
         when others =>
           assert false
             report "Bad key, must be one of [idskouvl]"
