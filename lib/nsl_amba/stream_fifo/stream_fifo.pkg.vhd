@@ -64,4 +64,29 @@ package stream_fifo is
       );
   end component;
 
+  -- Cancellable fifo handling AXI4 stream, do not support
+  -- 2 differents clock
+  component axi4_stream_fifo_cancellable is
+    generic(
+      config_c : nsl_amba.axi4_stream.config_t;
+      word_count_l2_c : integer
+      );
+    port(
+      reset_n_i : in  std_ulogic;
+      clock_i : in  std_ulogic;
+  
+      out_o : out nsl_amba.axi4_stream.master_t;
+      out_i : in  nsl_amba.axi4_stream.slave_t;
+      out_commit_i : in std_ulogic := '1';
+      out_rollback_i : in std_ulogic := '0';
+      out_available_o : out unsigned(word_count_l2_c downto 0);
+  
+      in_i  : in  nsl_amba.axi4_stream.master_t;
+      in_o : out nsl_amba.axi4_stream.slave_t;
+      in_commit_i : in std_ulogic := '1';
+      in_rollback_i : in std_ulogic := '0';
+      in_free_o : out unsigned(word_count_l2_c downto 0)
+      );
+  end component;
+
 end package stream_fifo;
