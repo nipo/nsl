@@ -13,7 +13,7 @@ entity dut is
     utmi_system_o : out utmi_system_sie2phy;
     utmi_system_i : in utmi_system_phy2sie;
 
-    flush_i : std_ulogic
+    flush_i : in std_ulogic
     );
 end entity;
 
