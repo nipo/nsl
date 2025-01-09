@@ -47,7 +47,7 @@ architecture beh of block_tx is
     user: std_ulogic_vector(0 to 191);
     channel_status: std_ulogic_vector(0 to 191);
     do_crc: boolean;
-    channel_status_crc: aesebu_crc_t;
+    channel_status_crc: crc_state_t;
     frame_to_go: integer range 0 to 191;
 
     a, b: channel_data_t;
@@ -99,7 +99,7 @@ begin
                                                r.channel_status_crc,
                                                r.channel_status(0));
           if r.frame_to_go = 7 and r.do_crc then
-            rin.channel_status(0 to 7) <= nsl_data.endian.bitswap(std_ulogic_vector(r.channel_status_crc));
+            rin.channel_status(0 to 7) <= crc_spill_vector(aesebu_crc_params_c, r.channel_status_crc);
           end if;
         end if;
 

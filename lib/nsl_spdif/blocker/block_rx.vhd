@@ -52,7 +52,7 @@ architecture beh of block_rx is
     state: state_t;
     user: std_ulogic_vector(0 to 191);
     channel_status: std_ulogic_vector(0 to 191);
-    channel_status_crc: aesebu_crc_t;
+    channel_status_crc: crc_state_t;
     frame_to_go: integer range 0 to 191;
 
     a, b: channel_data_t;
