@@ -90,21 +90,6 @@ architecture beh of hdmi_13_encoder is
     DI_TRAIL_GB
     );
 
-  subtype di_bch_t is crc_state(0 to 7);
-  constant di_bch_poly: di_bch_t := bitswap(x"83");
-
-  function di_bch(state: di_bch_t;
-                  v: std_ulogic_vector) return di_bch_t
-  is
-    variable s : di_bch_t := state;
-  begin
-    for i in v'low to v'high
-    loop
-      s := crc_update(s, di_bch_poly, true, v(i));
-    end loop;
-    return s;
-  end function;
-
   type subpacket_t is
   record
     data: std_ulogic_vector(0 to 55);
