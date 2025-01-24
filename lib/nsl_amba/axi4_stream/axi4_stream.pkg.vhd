@@ -132,6 +132,13 @@ package axi4_stream is
                     src_cfg: config_t;
                     src: master_t) return master_t;
 
+  function transfer(cfg: config_t;
+                    src: master_t;
+                    force_valid : boolean := false;
+                    force_last : boolean := false;
+                    valid : boolean := false;
+                    last : boolean := false) return master_t;
+
   -- AXI-Stream packing tools
   --
   -- These are helpers to pack a subset of the AXI-Stream master
@@ -624,6 +631,26 @@ package body axi4_stream is
     ret.valid := src.valid;
     if cfg.has_last then
       ret.last := to_logic(is_last(src_cfg, src));
+    end if;
+
+    return ret;
+  end function;
+
+  function transfer(cfg: config_t;
+                    src: master_t;
+                    force_valid : boolean := false;
+                    force_last : boolean := false;
+                    valid : boolean := false;
+                    last : boolean := false) return master_t
+  is
+    variable ret: master_t := src;
+  begin
+    if force_valid then
+      ret.valid := to_logic(valid);
+    end if;
+
+    if force_last and cfg.has_last then
+      ret.last := to_logic(last);
     end if;
 
     return ret;
