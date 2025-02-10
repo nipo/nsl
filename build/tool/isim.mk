@@ -36,7 +36,7 @@ clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
 
 $(build-dir)/$(target).exe: $(build-dir)/$(target).prj $(MAKEFILE_LIST)
 	$(SILENT)$(ISE_PRE) \
-	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity)
+	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity) $(foreach x,$(topcell-generics),-generic_top $x)
 
 $(target).vcd: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)> $@.tmp
