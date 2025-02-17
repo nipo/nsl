@@ -14,7 +14,7 @@ package usb is
   -- "For CRC generation and checking, the shift registers in the
   -- generator and checker are seeded with an all-ones pattern. For
   -- each data bit sent or received, the high order bit of the current
-  -- remainder is XORed with the data bit and then the remainder is
+  -- remainder is XORed with the data bit and then the remainderis
   -- shifted left one bit and the low-order bit set to zero. If the
   -- result of that XOR is one, then the remainder is XORed with the
   -- generator polynomial.
