@@ -2,13 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_logic, nsl_math, nsl_data, work, nsl_simulation;
+library nsl_logic, nsl_math, nsl_data, work;
 use nsl_logic.bool.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
 use nsl_data.prbs.all;
-use nsl_simulation.logging.all;
 
 
 -- This package defines AXI4-Stream bus signals and accessors.

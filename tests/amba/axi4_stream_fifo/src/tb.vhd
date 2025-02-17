@@ -74,7 +74,7 @@ begin
                      id => id,
                      user => user,
                      dest => dest,
-	     	             ready_toggle => true);
+	     	     ready_toggle => true);
 
       assert_equal("data", rx_data.all(0 to frame_byte_count-1), prbs_byte_string(state_v, prbs31, frame_byte_count), failure);
       state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
