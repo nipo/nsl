@@ -43,8 +43,8 @@ define ghdl-compile-rules
 		$(sort $(foreach l,$(libraries),$($l-ghdl-flags))) \
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity) \
-		--ieee-asserts=disable --unbuffered $$*' >> $@ \
-		$(foreach x,$(topcell-generics),-g$x)
+		$(foreach x,$(topcell-generics),-g$x) \
+		--ieee-asserts=disable --unbuffered $$*' >> $@
 	chmod +x $@
 endef
 

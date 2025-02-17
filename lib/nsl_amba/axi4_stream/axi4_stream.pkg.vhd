@@ -2,11 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_logic, nsl_math, nsl_data, work;
+library nsl_logic, nsl_math, nsl_data, work, nsl_simulation;
 use nsl_logic.bool.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
+use nsl_data.prbs.all;
+use nsl_simulation.logging.all;
+
 
 -- This package defines AXI4-Stream bus signals and accessors.
 --
@@ -309,7 +312,8 @@ package axi4_stream is
                            variable packet : out byte_stream;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector);
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false);
 
   procedure packet_receive(constant cfg: config_t;
                            signal clock: in std_ulogic;
@@ -1130,28 +1134,37 @@ package body axi4_stream is
                            variable packet : out byte_stream;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector)
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false)
   is
     variable r: byte_stream;
     variable beat: master_t;
     variable d: byte_string(0 to cfg.data_width-1);
     variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
     variable first: boolean := false;
+    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
   begin
     assert cfg.has_last
       report "Packet_receive with a byte stream cannot support unframed interface"
       severity failure;
 
     clear(r);
+    stream_o <= accept(cfg, false);
     
     while true
     loop
+      state_v := prbs_forward(state_v, prbs31, cfg.data_width);
+      if ready_toggle and state_v(0) = '1' then
+        wait until rising_edge(clock);
+        wait until falling_edge(clock);
+        next;
+      end if;
+
       receive(cfg, clock, stream_i, stream_o, beat);
 
       d := bytes(cfg, beat);
       s := strobe(cfg, beat);
       k := keep(cfg, beat);
-
       for i in d'range
       loop
         if k(i) = '1' then
@@ -1175,7 +1188,6 @@ package body axi4_stream is
         exit;
       end if;
     end loop;
-
     packet := r;
   end procedure;
 
