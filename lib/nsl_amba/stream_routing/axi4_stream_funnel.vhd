@@ -43,7 +43,7 @@ architecture beh of axi4_stream_funnel is
   
 begin
 
-  assert route_width_c >= nsl_math.arith.log2(source_count_c)
+  assert route_width_c = 0 or 2 ** route_width_c <= source_count_c
     report "Output config should have additional ID bits to insert routing info"
     severity failure;
   
@@ -105,8 +105,10 @@ begin
     end loop;
 
     out_o <= transfer(out_config_c, in_config_c, in_i(r.elected));
-    out_o.id(out_config_c.id_width-1 downto in_config_c.id_width)
-      <= std_ulogic_vector(to_unsigned(r.elected, route_width_c));
+    if route_width_c /= 0 then
+      out_o.id(out_config_c.id_width-1 downto in_config_c.id_width)
+        <= std_ulogic_vector(to_unsigned(r.elected, route_width_c));
+    end if;
 
     if r.state /= ST_FORWARD then
       out_o.valid <= '0';
