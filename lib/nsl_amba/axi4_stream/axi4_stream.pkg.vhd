@@ -7,6 +7,8 @@ use nsl_logic.bool.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
+use nsl_data.prbs.all;
+
 
 -- This package defines AXI4-Stream bus signals and accessors.
 --
@@ -307,7 +309,8 @@ package axi4_stream is
                            variable packet : out byte_stream;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector);
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false);
 
   -- Beat manipulation functions
   --
@@ -1110,24 +1113,33 @@ package body axi4_stream is
                            variable packet : out byte_stream;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector)
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false)
   is
     variable r: byte_stream;
     variable beat: master_t;
     variable d: byte_string(0 to cfg.data_width-1);
     variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
     variable first: boolean := false;
+    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
   begin
     clear(r);
+    stream_o <= accept(cfg, false);
 
     while true
     loop
+      state_v := prbs_forward(state_v, prbs31, cfg.data_width);
+      if ready_toggle and state_v(0) = '1' then
+        wait until rising_edge(clock);
+        wait until falling_edge(clock);
+        next;
+      end if;
+
       receive(cfg, clock, stream_i, stream_o, beat);
 
       d := bytes(cfg, beat);
       s := strobe(cfg, beat);
       k := keep(cfg, beat);
-
       for i in d'range
       loop
         if k(i) = '1' then
@@ -1151,7 +1163,6 @@ package body axi4_stream is
         exit;
       end if;
     end loop;
-
     packet := r;
   end procedure;
 
