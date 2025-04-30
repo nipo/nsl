@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_simulation, nsl_amba;
+library nsl_data, nsl_simulation, nsl_amba, nsl_math;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -11,6 +11,7 @@ use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
 use nsl_data.prbs.all;
 use nsl_amba.axi4_stream.all;
+use nsl_math.arith.all;
 
 entity tb is
 end tb;
@@ -18,17 +19,20 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 0);
+  signal done_s : std_ulogic_vector(0 to 1);
 
   signal input_s, output_s: bus_t;
 
   constant in_cfg_c: config_t := config(4, last => false);
   constant out_cfg_c: config_t := config(4, last => true);
+  constant packet_length_c: integer := 42;
+  constant mps_c: integer := 10;
+  constant mps_u_c: unsigned := to_unsigned_auto(mps_c-1);
 begin
 
-  b: process
+  inject: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable i : integer;
+    variable v : byte_string(0 to out_cfg_c.data_width*packet_length_c-1);
   begin
     done_s(0) <= '0';
 
@@ -36,49 +40,60 @@ begin
 
     wait for 50 ns;
 
-    i := 0;
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      input_s.m <= transfer(in_cfg_c, bytes => prbs_byte_string(state_v, prbs31, 4), valid => true);
+    v := prbs_byte_string(state_v, prbs31, v'length);
+    state_v := prbs_forward(state_v, prbs31, v'length * 8);
 
-      wait until rising_edge(clock_s);
-      if is_ready(in_cfg_c, input_s.s) then
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if i /= 42 then
-          i := i + 1;
-        else
-          wait until falling_edge(clock_s);
-          input_s.m <= transfer_defaults(in_cfg_c);
-          exit;
-        end if;
-      end if;
-    end loop;
+    packet_send(in_cfg_c, clock_s, input_s.s, input_s.m, v);
 
     wait for 500 ns;
 
-    i := 0;
-    while true
-    loop
-      wait until falling_edge(clock_s);
-      input_s.m <= transfer(in_cfg_c, bytes => prbs_byte_string(state_v, prbs31, 4), valid => true);
+    v := prbs_byte_string(state_v, prbs31, v'length);
+    state_v := prbs_forward(state_v, prbs31, v'length * 8);
 
-      wait until rising_edge(clock_s);
-      if is_ready(in_cfg_c, input_s.s) then
-        state_v := prbs_forward(state_v, prbs31, 32);
-        if i /= 42 then
-          i := i + 1;
-        else
-          wait until falling_edge(clock_s);
-          input_s.m <= transfer_defaults(in_cfg_c);
-          exit;
-        end if;
-      end if;
-    end loop;
+    packet_send(in_cfg_c, clock_s, input_s.s, input_s.m, v);
 
     wait for 500 ns;
 
     done_s(0) <= '1';
+    wait;
+  end process;
+
+  check: process
+    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
+    variable v : byte_string(0 to out_cfg_c.data_width*packet_length_c-1);
+    variable offset, roffset: integer;
+  begin
+    done_s(1) <= '0';
+
+    output_s.s <= accept(out_cfg_c, false);
+
+    wait for 50 ns;
+
+    v := prbs_byte_string(state_v, prbs31, v'length);
+    state_v := prbs_forward(state_v, prbs31, v'length * 8);
+
+    offset := 0;
+    while offset < v'length loop
+      roffset := nsl_math.arith.min(v'length, offset + mps_c * out_cfg_c.data_width)-1;
+      packet_check(out_cfg_c, clock_s, output_s.m, output_s.s, v(offset to roffset));
+      offset := offset + mps_c * out_cfg_c.data_width;
+    end loop;
+
+    wait for 500 ns;
+
+    v := prbs_byte_string(state_v, prbs31, v'length);
+    state_v := prbs_forward(state_v, prbs31, v'length * 8);
+
+    offset := 0;
+    while offset < v'length loop
+      roffset := nsl_math.arith.min(v'length, offset + mps_c * out_cfg_c.data_width)-1;
+      packet_check(out_cfg_c, clock_s, output_s.m, output_s.s, v(offset to roffset));
+      offset := offset + mps_c * out_cfg_c.data_width;
+    end loop;
+
+    wait for 500 ns;
+
+    done_s(1) <= '1';
     wait;
   end process;
 
@@ -96,7 +111,7 @@ begin
   
   dut: nsl_amba.axi4_stream.axi4_stream_flusher
     generic map(
-      max_packet_length_c => 10,
+      max_packet_length_size_l2_c => mps_u_c'length,
       max_idle_c => 8,
       in_config_c => in_cfg_c,
       out_config_c => out_cfg_c
@@ -108,11 +123,11 @@ begin
       in_i => input_s.m,
       in_o => input_s.s,
 
+      max_packet_length_m1_i => mps_u_c,
+
       out_o => output_s.m,
       out_i => output_s.s
       );
-
-  output_s.s <= accept(out_cfg_c, true);
   
   simdrv: nsl_simulation.driver.simulation_driver
     generic map(

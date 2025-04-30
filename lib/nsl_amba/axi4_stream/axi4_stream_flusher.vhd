@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library nsl_logic, work, nsl_data;
 use work.axi4_stream.all;
@@ -10,7 +11,7 @@ entity axi4_stream_flusher is
   generic(
     in_config_c : config_t;
     out_config_c : config_t;
-    max_packet_length_c : natural;
+    max_packet_length_size_l2_c : natural;
     max_idle_c : natural
     );
   port(
@@ -19,6 +20,8 @@ entity axi4_stream_flusher is
 
     in_i : in master_t;
     in_o : out slave_t;
+
+    max_packet_length_m1_i : unsigned(max_packet_length_size_l2_c-1 downto 0) := (others => '1');
 
     out_o : out master_t;
     out_i : in slave_t
@@ -81,7 +84,7 @@ architecture beh of axi4_stream_flusher is
     out_state: out_state_t;
     fifo_fillness: natural range 0 to fifo_depth_c;
     fifo: fifo_t(0 to fifo_depth_c-1);
-    beats_to_go: integer range 0 to max_packet_length_c-1;
+    beats_to_go : unsigned(max_packet_length_size_l2_c-1 downto 0);
     timeout: integer range 0 to max_idle_c-1;
   end record;
 
@@ -101,7 +104,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, in_i, out_i) is
+  transition: process(r, in_i, out_i, max_packet_length_m1_i) is
     variable fifo_put, fifo_get : boolean;
   begin
     rin <= r;
@@ -112,17 +115,19 @@ begin
     case r.in_state is
       when IN_RESET =>
         rin.in_state <= IN_FORWARD;
-        rin.beats_to_go <= max_packet_length_c-1;
+        rin.beats_to_go <= max_packet_length_m1_i;
         rin.timeout <= max_idle_c-1;
 
       when IN_FORWARD =>
         if r.fifo_fillness < fifo_depth_c and is_valid(in_config_c, in_i) then
           fifo_put := true;
 
-          if r.beats_to_go /= 0 then
-            rin.beats_to_go <= r.beats_to_go - 1;
-          else
-            rin.in_state <= IN_END;
+          if max_packet_length_size_l2_c /= 0 then
+            if r.beats_to_go /= 0 then
+              rin.beats_to_go <= r.beats_to_go - 1;
+            else
+              rin.in_state <= IN_END;
+            end if;
           end if;
         end if;
 
@@ -140,7 +145,7 @@ begin
         if r.out_state = OUT_END
           and (r.fifo_fillness = 0 or (r.fifo_fillness = 1 and is_ready(out_config_c, out_i))) then
           rin.in_state <= IN_FORWARD;
-          rin.beats_to_go <= max_packet_length_c-1;
+          rin.beats_to_go <= max_packet_length_m1_i;
           rin.timeout <= max_idle_c-1;
         end if;
     end case;
