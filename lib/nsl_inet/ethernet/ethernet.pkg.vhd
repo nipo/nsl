@@ -27,6 +27,7 @@ package ethernet is
 
   function is_broadcast(mac: mac48_t) return boolean;
   function mac_to_string(mac: mac48_t) return string;
+  function to_mac48(s: string) return mac48_t;
   
   subtype ethertype_t is integer range 0 to 65535;
   type ethertype_vector is array(integer range <>) of ethertype_t;
@@ -297,6 +298,18 @@ package body ethernet is
       & ":" & to_hex_string(mac(3))
       & ":" & to_hex_string(mac(4))
       & ":" & to_hex_string(mac(5));
+  end function;
+
+  function to_mac48(s: string) return mac48_t
+  is
+    alias xs: string(1 to 17) is s;
+    variable r: mac48_t;
+  begin
+    for i in r'range
+    loop
+      r(i) := byte_from_hex(xs(1+i*3 to 2+i*3));
+    end loop;
+    return r;
   end function;
 
 end package body;
