@@ -126,7 +126,7 @@ ifneq ($(nsl-build-debug),)
 $$(info $1 **** packages: $$($1._bare-sub-packages))
 endif
 
-$1-vhdl-version := $$(if $$($1._bare-vhdl-version),$$($1._bare-vhdl-version),93)
+$1-vhdl-version := $$(if $$($1._bare-vhdl-version),$$($1._bare-vhdl-version),1993)
 $1._bare-vhdl-version :=
 $$(eval $$(foreach p,$$($1._bare-sub-packages),$$(call package-ingress,$1,$$p,$$(if $$($1-srcdir),$$($1-srcdir),$(LIB_ROOT)/$1)/$$p,$2)))
 $$(eval $$(call ensure-package-deps-parsed,$1._bare,$2))

@@ -128,9 +128,9 @@ Make will recurse down in the directory with package name, and
 interpret it as a package Makefile.
 
 Libraries can also set VHDL version used. Choose among
-93, 08. Defaults to 93. Setting is global for a library::
+1993, 2008. Defaults to 1993. Setting is global for a library::
 
-  vhdl-version = 08
+  vhdl-version = 2008
 
 Moreover, library root Makefiles may expose sources and dependencies
 as package makefiles do. See following paragraph.

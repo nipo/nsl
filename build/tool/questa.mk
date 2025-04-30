@@ -22,11 +22,11 @@ endef
 
 clean-dirs += $(build-dir)
 
-_QUESTA_VHDL_VERSION_87 := 87
-_QUESTA_VHDL_VERSION_93 := 93
-_QUESTA_VHDL_VERSION_02 := 2002
-_QUESTA_VHDL_VERSION_08 := 2008
-_QUESTA_VHDL_VERSION_19 := 2019
+_QUESTA_VHDL_VERSION_1987 := 87
+_QUESTA_VHDL_VERSION_1993 := 93
+_QUESTA_VHDL_VERSION_2002 := 2002
+_QUESTA_VHDL_VERSION_2008 := 2008
+_QUESTA_VHDL_VERSION_2019 := 2019
 
 define _questa-command-add-vhdl
 	$(call file-append,$1,vcom -quiet -nologo -work $($2-library) -$(_QUESTA_VHDL_VERSION_$($($2-library)-vhdl-version)) -noautoorderrefresh $2)

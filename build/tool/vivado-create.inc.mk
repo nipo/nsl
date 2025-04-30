@@ -18,8 +18,8 @@ define _vivado-add-bd-before
 
 endef
 
-_VIVADO_VHDL_VERSION_08 := VHDL 2008
-_VIVADO_VHDL_VERSION_93 := VHDL
+_VIVADO_VHDL_VERSION_2008 := VHDL 2008
+_VIVADO_VHDL_VERSION_1993 := VHDL
 
 generic-string = $1={\"$2\"}
 generic-integer = $1=$2

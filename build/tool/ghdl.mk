@@ -6,10 +6,10 @@ simulate: $(target).ghw
 
 .PHONY: FORCE
 
-_GHDL_STD_93=93c
-_GHDL_STD_08=08
-_GHDL_CF_SUFFIX_93=93
-_GHDL_CF_SUFFIX_08=08
+_GHDL_STD_1993=93c
+_GHDL_STD_2008=08
+_GHDL_CF_SUFFIX_1993=93
+_GHDL_CF_SUFFIX_2008=08
 
 lib_cf = $(call workdir,$1)/$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
