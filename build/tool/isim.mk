@@ -36,7 +36,7 @@ clean-dirs += $(build-dir) _xmsgs xlnx_auto_0_xdb
 
 $(build-dir)/$(target).exe: $(build-dir)/$(target).prj $(MAKEFILE_LIST)
 	$(SILENT)$(ISE_PRE) \
-	fuse $(INTF_STYLE) -incremental -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity) $(foreach x,$(topcell-generics),-generic_top $x)
+	fuse $(INTF_STYLE) -v 2 -lib secureip -o $@ -prj $< $(top-lib).$(top-entity) $(foreach x,$(topcell-generics),-generic_top $x)
 
 $(target).vcd: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)> $@.tmp
@@ -44,6 +44,13 @@ $(target).vcd: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
 	$(SILENT)echo 'vcd dumpfile "$@"' >> $@.tmp
 	$(SILENT)echo 'vcd dumpvars -m / -l 0' >> $@.tmp
 	$(SILENT)echo 'wave add /' >> $@.tmp
+	$(SILENT)echo 'run $(simulation-time)' >> $@.tmp
+	$(SILENT)echo 'quit -f' >> $@.tmp
+	$(SILENT)$(ISE_PRE) $< -tclbatch $@.tmp
+
+run: $(build-dir)/$(target).exe $(MAKEFILE_LIST)
+	$(SILENT)> $@.tmp
+	$(SILENT)echo 'onerror {resume}' >> $@.tmp
 	$(SILENT)echo 'run $(simulation-time)' >> $@.tmp
 	$(SILENT)echo 'quit -f' >> $@.tmp
 	$(SILENT)$(ISE_PRE) $< -tclbatch $@.tmp

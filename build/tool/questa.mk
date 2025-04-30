@@ -86,7 +86,7 @@ $(build-dir)/$(top-entity).mpf: $(build-dir)/project_files.mpf.part $(MAKEFILE_L
 	$(call file-append,$@,Project_Files_Count = '$$(grep -c Project_File_P_ $(build-dir)/project_files.mpf.part)')
 	$(SILENT)cat $(build-dir)/project_files.mpf.part >> $@
 
-simulate: $(build-dir)/simulate.do $(MAKEFILE_LIST)
+run: $(build-dir)/simulate.do $(MAKEFILE_LIST)
 	$(SILENT)cd $(build-dir) ; $(QUESTA_BIN) -batch -quiet -do $(build-dir)/simulate.do
 
 $(build-dir)/gui.do: $(MAKEFILE_LIST)
