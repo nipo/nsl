@@ -43,7 +43,7 @@ architecture beh of axi4_stream_funnel is
   
 begin
 
-  assert route_width_c = 0 or 2 ** route_width_c <= source_count_c
+  assert route_width_c = 0 or source_count_c <= 2 ** route_width_c
     report "Output config should have additional ID bits to insert routing info"
     severity failure;
   
