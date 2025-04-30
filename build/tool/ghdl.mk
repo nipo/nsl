@@ -64,6 +64,7 @@ define ghdl-compile-rules
 		--std=$(_GHDL_STD_$($(top-lib)-vhdl-version)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
 		$(foreach l,$(libraries),$($l-ghdl-flags)) \
+		$(foreach l,$(ghdl-plugin),-Wl,$(build-dir)/$l.so) \
 		--work=$(top-lib) -e $(top-entity)
 
 endef
@@ -100,7 +101,17 @@ $(call ghdl-library-analyze-rules,$1)
 
 endef
 
-$(target): $(sources) $(MAKEFILE_LIST)
+define ghdl-plugin-compile-rule
+
+$(build-dir)/$1.so: $($1-plugin-sources)
+	$(SILENT)mkdir -p $(build-dir)
+	gcc -shared -fPIC -o $$@ $$<
+
+endef
+
+$(eval $(foreach p,$(ghdl-plugin),$(call ghdl-plugin-compile-rule,$p)))
+
+$(target): $(sources) $(MAKEFILE_LIST) $(foreach l,$(ghdl-plugin),$(build-dir)/$l.so)
 	$(SILENT)echo "[GHDL] Backend: $(ghdl-backend)"
 	$(SILENT)mkdir -p $(build-dir)
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
