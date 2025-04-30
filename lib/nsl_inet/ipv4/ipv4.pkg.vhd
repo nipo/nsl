@@ -19,6 +19,7 @@ package ipv4 is
 
   subtype ipv4_nibble_t is integer range 0 to 255;
   function to_ipv4(a, b, c, d: ipv4_nibble_t) return ipv4_t;
+  function to_ipv4(s: string) return ipv4_t;
   function ip_to_string(ip: ipv4_t) return string;
 
   subtype ip_proto_t is integer range 0 to 255;
@@ -256,6 +257,13 @@ package ipv4 is
     data : byte_string := null_byte_string)
     return byte_string;
 
+  function ipv4_len_get(packet: byte_string) return integer;
+  function ipv4_source_get(packet: byte_string) return ipv4_t;
+  function ipv4_destination_get(packet: byte_string) return ipv4_t;
+  function ipv4_proto_get(packet: byte_string) return ip_proto_t;
+  function ipv4_ihl_bytes_get(packet: byte_string) return integer;
+  function ipv4_data_get(packet: byte_string) return byte_stream;
+  
 end package;
 
 package body ipv4 is
@@ -367,6 +375,79 @@ package body ipv4 is
       end if;
     end loop;
     return false;
+  end function;
+
+  function to_ipv4(s: string) return ipv4_t
+  is
+    alias xs: string(1 to s'length) is s;
+    variable r: ipv4_t;
+    variable start, stop: integer;
+  begin
+    start := 0;
+
+    for i in r'range
+    loop
+      stop := strchr(xs, '.', start);
+      if stop = -1 then
+        stop := xs'right;
+      end if;
+      r(i) := to_byte(strtoi(xs(1+start to stop)));
+      start := stop + 1;
+    end loop;
+
+    return r;
+  end function;
+
+  function ipv4_len_get(packet: byte_string) return integer
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+  begin
+    return to_integer(from_be(xp(ip_off_len_h to ip_off_len_l)));
+  end function;
+
+  function ipv4_source_get(packet: byte_string) return ipv4_t
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+  begin
+    return xp(ip_off_src0 to ip_off_src3);
+  end function;
+
+  function ipv4_destination_get(packet: byte_string) return ipv4_t
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+  begin
+    return xp(ip_off_dst0 to ip_off_dst3);
+  end function;
+
+  function ipv4_proto_get(packet: byte_string) return ip_proto_t
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+  begin
+    return to_integer(unsigned(xp(ip_off_proto)));
+  end function;
+
+  function ipv4_ihl_bytes_get(packet: byte_string) return integer
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+  begin
+    return to_integer(unsigned(xp(ip_off_type_len)(3 downto 0))) * 4;
+  end function;
+
+  function ipv4_data_get(packet: byte_string) return byte_stream
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+    variable len: integer := ipv4_len_get(packet);
+    variable off: integer := ipv4_ihl_bytes_get(packet);
+    variable ret: byte_stream;
+  begin
+    if len > xp'length then
+      report "Fragmented IPv4 Packet " & to_string(packet) & ", returning PDU start"
+        severity warning;
+      len := xp'length;
+    end if;
+    ret := new byte_string(0 to len-off-1);
+    ret.all := xp(off to len - 1);
+    return ret;
   end function;
 
 end package body;
