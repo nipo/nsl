@@ -309,6 +309,24 @@ package axi4_stream is
                            variable user : out std_ulogic_vector;
                            variable dest : out std_ulogic_vector);
 
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet : out byte_string;
+                           variable id : out std_ulogic_vector;
+                           variable user : out std_ulogic_vector;
+                           variable dest : out std_ulogic_vector);
+
+  procedure packet_check(constant cfg: config_t;
+                         signal clock: in std_ulogic;
+                         signal stream_i: in master_t;
+                         signal stream_o: out slave_t;
+                         constant packet : byte_string;
+                         constant id : std_ulogic_vector := na_suv;
+                         constant user : std_ulogic_vector := na_suv;
+                         constant dest : std_ulogic_vector := na_suv);
+
   -- Beat manipulation functions
   --
   -- Shift data vector low, inserting bytes / strobe / keep in the
@@ -1118,8 +1136,12 @@ package body axi4_stream is
     variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
     variable first: boolean := false;
   begin
-    clear(r);
+    assert cfg.has_last
+      report "Packet_receive with a byte stream cannot support unframed interface"
+      severity failure;
 
+    clear(r);
+    
     while true
     loop
       receive(cfg, clock, stream_i, stream_o, beat);
@@ -1153,6 +1175,111 @@ package body axi4_stream is
     end loop;
 
     packet := r;
+  end procedure;
+
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet : out byte_string;
+                           variable id : out std_ulogic_vector;
+                           variable user : out std_ulogic_vector;
+                           variable dest : out std_ulogic_vector)
+  is
+    variable r: byte_string(0 to packet'length-1);
+    variable beat: master_t;
+    variable d: byte_string(0 to cfg.data_width-1);
+    variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
+    variable first: boolean := false;
+    variable should_be_last: boolean;
+    variable offset: integer := 0;
+  begin
+    assert cfg.has_keep or (packet'length mod cfg.data_width = 0)
+      report "Testing for a short packet with no keep will always fail"
+      severity note;
+
+    while offset < r'length
+    loop
+      should_be_last := offset + d'length >= r'length;
+
+      receive(cfg, clock, stream_i, stream_o, beat);
+
+      d := bytes(cfg, beat);
+      s := strobe(cfg, beat);
+      k := keep(cfg, beat);
+
+      for i in d'range
+      loop
+        if k(i) = '1' then
+          assert offset + i < r'length
+            report "Extra data at end of packet"
+            severity failure;
+
+          if s(i) = '1' then
+            r(offset + i) := d(i);
+          else
+            r(offset + i) := dontcare_byte_c;
+          end if;
+        end if;
+      end loop;
+      
+      if first then
+        first := false;
+
+        id := work.axi4_stream.id(cfg, beat)(0 to id'length-1);
+        user := work.axi4_stream.user(cfg, beat)(0 to user'length-1);
+        dest := work.axi4_stream.dest(cfg, beat)(0 to dest'length-1);
+      end if;
+
+      if cfg.has_last then
+        assert should_be_last = is_last(cfg, beat)
+          report "At offset "&to_string(offset)&", last is "&if_else(should_be_last, "", "not ")&"expected, but was "&if_else(is_last(cfg, beat), "", "un")&"asserted. Expected payload length: "&to_string(r'length)
+          severity failure;
+      end if;
+
+      offset := offset + d'length;
+    end loop;
+
+    packet := r;
+  end procedure;
+
+  procedure packet_check(constant cfg: config_t;
+                         signal clock: in std_ulogic;
+                         signal stream_i: in master_t;
+                         signal stream_o: out slave_t;
+                         constant packet : byte_string;
+                         constant id : std_ulogic_vector := na_suv;
+                         constant user : std_ulogic_vector := na_suv;
+                         constant dest : std_ulogic_vector := na_suv)
+  is
+    variable rid : std_ulogic_vector(cfg.id_width-1 downto 0);
+    variable ruser : std_ulogic_vector(cfg.user_width-1 downto 0);
+    variable rdest : std_ulogic_vector(cfg.dest_width-1 downto 0);
+    variable rdata : byte_string(0 to packet'length-1);
+  begin
+    packet_receive(cfg, clock, stream_i, stream_o, rdata, rid, ruser, rdest);
+
+    if id'length /= 0 then
+      assert std_match(id, rid)
+        report "Bad ID, had "&to_string(rid)&", expected "&to_string(id)
+        severity failure;
+    end if;
+    
+    if user'length /= 0 then
+      assert std_match(user, ruser)
+        report "Bad USER, had "&to_string(ruser)&", expected "&to_string(user)
+        severity failure;
+    end if;
+
+    if dest'length /= 0 then
+      assert std_match(dest, rdest)
+        report "Bad DEST, had "&to_string(rdest)&", expected "&to_string(dest)
+        severity failure;
+    end if;
+
+    assert std_match(packet, rdata)
+        report "Bad data, had "&to_string(rdata)&", expected "&to_string(packet)
+        severity failure;
   end procedure;
 
   function to_string(cfg: buffer_config_t) return string
