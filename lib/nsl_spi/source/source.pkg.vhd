@@ -26,7 +26,7 @@ package source is
       cpol_i : in std_ulogic := '0';
       cpha_i : in std_ulogic := '0';
       slave_i : in unsigned(2 downto 0) := "000";
-      div_i : in unsigned(6 downto 0) := "00000";
+      div_i : in unsigned(6 downto 0) := "0000000";
 
       spi_cmd_o  : out nsl_bnoc.framed.framed_req;
       spi_cmd_i  : in nsl_bnoc.framed.framed_ack;
