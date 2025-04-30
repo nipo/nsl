@@ -6,6 +6,7 @@ library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use nsl_data.text.all;
 use work.ipv4.all;
 use work.checksum.all;
 
@@ -15,6 +16,7 @@ package udp is
   subtype udp_port_t is integer range 0 to 65535;
   type udp_port_vector is array(integer range <>) of udp_port_t;
   constant udp_port_vector_null_c: udp_port_vector(0 to -1) := (others => 0);
+  constant udp_layer_header_length_c: integer := 2;
   
   -- Frame structure from/to layer 3
   -- * Some fixed context, passed through [0..N] *
@@ -24,10 +26,18 @@ package udp is
   --   [0]   Validity bit
   --   [7:1] Reserved
   
-  -- Frame structure from/to layer 5
+  -- Frame structure from/to layer 5, after UDP receiver
   -- * Upper layer context, passed through [0..N] *
   -- * Remote port, MSB first [2]
-  -- * Local port, MSB first [2] (not in layer stream)
+  -- * Local port, MSB first [2]
+  -- * Layer 5 data [N]
+  -- * Status
+  --   [0]   Validity bit
+  --   [7:1] Reserved
+  
+  -- Frame structure from/to layer 5, after UDP layer
+  -- * Upper layer context, passed through [0..N] *
+  -- * Remote port, MSB first [2]
   -- * Layer 5 data [N]
   -- * Status
   --   [0]   Validity bit
@@ -114,6 +124,11 @@ package udp is
     data : byte_string;
     destination_ip, source_ip: ipv4_t := to_ipv4(0,0,0,0)) return byte_string;
 
+  function udp_dest_get(datagram: byte_string) return udp_port_t;
+  function udp_source_get(datagram: byte_string) return udp_port_t;
+  function udp_len_get(datagram: byte_string) return integer;
+  function udp_data_get(datagram: byte_string) return byte_stream;
+  
 end package;
 
 package body udp is
@@ -139,5 +154,43 @@ package body udp is
 
     return to_be(sp) & to_be(dp) & to_be(len) & checksum_spill(check, (data'length mod 2) = 1) & data;
   end function;
+
+  function udp_source_get(datagram: byte_string) return udp_port_t
+  is
+    alias xd: byte_string(0 to datagram'length-1) is datagram;
+  begin
+    return to_integer(from_be(xd(0 to 1)));
+  end function;
+
+  function udp_dest_get(datagram: byte_string) return udp_port_t
+  is
+    alias xd: byte_string(0 to datagram'length-1) is datagram;
+  begin
+    return to_integer(from_be(xd(2 to 3)));
+  end function;
+
+  function udp_len_get(datagram: byte_string) return integer
+  is
+    alias xd: byte_string(0 to datagram'length-1) is datagram;
+  begin
+    return to_integer(from_be(xd(4 to 5)));
+  end function;
+
+  function udp_data_get(datagram: byte_string) return byte_stream
+  is
+    alias xd: byte_string(0 to datagram'length-1) is datagram;
+    variable len: integer := udp_len_get(datagram);
+    variable ret: byte_stream;
+  begin
+    if len > xd'length then
+      report "Invalid short UDP datagram " & to_string(datagram) & ", returning PDU start"
+        severity warning;
+      len := xd'length;
+    end if;
+    ret := new byte_string(0 to len-8-1);
+    ret.all := xd(8 to len - 1);
+    return ret;
+  end function;
+  
 
 end package body;
