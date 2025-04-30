@@ -81,9 +81,7 @@ begin
     end if;
 
     if refresh_every_c /= 0 then
-      if tx_i.valid = '1' then
-        rin.can_receive_refresh <= refresh_every_c;
-      elsif r.can_receive_changed then
+      if r.can_receive_changed then
         rin.can_receive_refresh <= refresh_every_c;
       elsif r.can_receive_refresh /= 0 then
         rin.can_receive_refresh <= r.can_receive_refresh - 1;
@@ -95,7 +93,7 @@ begin
     if r.fifo_fillness < fifo_depth_c and tx_i.valid = '1' then
       fifo_push := true;
     end if;
-    
+
     if fifo_push and fifo_pop then
       rin.fifo <= shift_left(r.fifo);
       rin.fifo(r.fifo_fillness-1) <= tx_i.data;
@@ -131,8 +129,8 @@ begin
       else
         serdes_o <= pipe_flit(xoff_c);
       end if;
-    elsif r.fifo_fillness /= 0 and r.can_transmit then
-      serdes_o <= pipe_flit(r.fifo(0));
+    elsif r.can_transmit then
+      serdes_o <= pipe_flit(r.fifo(0), valid => r.fifo_fillness /= 0);
     end if;
   end process;
 

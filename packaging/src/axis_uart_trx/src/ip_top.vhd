@@ -24,7 +24,10 @@ entity framed_uart_trx is
     axis_s_tvalid : in std_logic;
 
     uart_tx : out std_logic;
-    uart_rx : in std_logic
+    uart_rx : in std_logic;
+
+    peer_ready: out std_logic;
+    local_ready: out std_logic
     );
 end entity;
 
@@ -61,6 +64,9 @@ architecture rtl of framed_uart_trx is
   signal m_tdata, s_tdata: std_ulogic_vector(7 downto 0);
   
 begin
+
+  peer_ready <= flow_peer_ready_s;
+  local_ready <= flow_local_ready_s;
   
   uart: nsl_uart.transactor.uart8
     port map(
@@ -80,6 +86,9 @@ begin
       );
 
   rx_hs: nsl_uart.flow_control.xonxoff_rx
+    generic map(
+      timeout_after_c => clock_hz / 4
+      )
     port map(
       reset_n_i => aresetn,
       clock_i => aclk,
@@ -96,7 +105,7 @@ begin
 
   tx_hs: nsl_uart.flow_control.xonxoff_tx
     generic map(
-      refresh_every_c => clock_hz
+      refresh_every_c => clock_hz / 8
       )
     port map(
       reset_n_i => aresetn,

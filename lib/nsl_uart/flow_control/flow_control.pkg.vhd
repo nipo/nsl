@@ -11,7 +11,8 @@ package flow_control is
     generic(
       xoff_c: byte := x"13";
       xon_c: byte := x"11";
-      extra_rx_depth_c : natural := 2
+      extra_rx_depth_c : natural := 2;
+      timeout_after_c : natural := 0
       );
     port(
       clock_i     : in std_ulogic;

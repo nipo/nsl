@@ -11,7 +11,8 @@ entity xonxoff_rx is
   generic(
     xoff_c: byte := x"13";
     xon_c: byte := x"11";
-    extra_rx_depth_c : natural := 2
+    extra_rx_depth_c : natural := 2;
+    timeout_after_c : natural := 0
     );
   port(
     clock_i     : in std_ulogic;
@@ -33,12 +34,14 @@ end entity;
 architecture beh of xonxoff_rx is
 
   constant fifo_depth_c : natural := 2 + extra_rx_depth_c;
+  constant timeout_after_real_c : natural := if_else(timeout_after_c > 0, timeout_after_c - 1, 0);
   
   type regs_t is
   record
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
     peer_ready: std_ulogic;
+    timeout: integer range 0 to timeout_after_real_c;
   end record;
 
   signal r, rin: regs_t;
@@ -53,6 +56,7 @@ begin
 
     if reset_n_i = '0' then
       r.fifo_fillness <= 0;
+      r.timeout <= 0;
       r.peer_ready <= '1';
     end if;
   end process;
@@ -69,11 +73,21 @@ begin
       fifo_pop := true;
     end if;
 
+    if timeout_after_c /= 0 then
+      if r.timeout /= 0 then
+        rin.timeout <= r.timeout - 1;
+      else
+        rin.peer_ready <= '0';
+      end if;
+    end if;
+
     if enable_i = '1' then
       if serdes_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
         if serdes_i.data = xon_c then
+          rin.timeout <= timeout_after_real_c;
           rin.peer_ready <= '1';
         elsif serdes_i.data = xoff_c then
+          rin.timeout <= timeout_after_real_c;
           rin.peer_ready <= '0';
         else
           fifo_push := true;
