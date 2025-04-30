@@ -347,14 +347,15 @@ package axi4_stream is
   function to_string(cfg: buffer_config_t; b: buffer_t) return string;
 
   -- This spawns a buffer configuration from a stream configuration and buffer
-  -- width. It is an error if byte count is not a multiple of stream data width.
+  -- width.
   function buffer_config(cfg: config_t; byte_count: natural) return buffer_config_t;
   -- Tells whether buffer will be complete after one shift operation is performed
   function is_last(cfg: buffer_config_t; b: buffer_t) return boolean;
-  -- Yields an buffer context with (optional data) and a reset counter of shifts
-  -- This can be used before either sending or receiving.
+  -- Yields an buffer context with (optional data) and a reset counter
+  -- of shifts This can be used before either sending or receiving.  data
+  -- must either be null or of exactly the byte count from the config.
   function reset(cfg: buffer_config_t;
-                 b: byte_string := null_byte_string;
+                 data: byte_string := null_byte_string;
                  order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t;
   -- Shifts one step of the buffer by ingressing (optional) data
   -- vector. Counts one step less to do. If not given, dontcares are
@@ -365,20 +366,19 @@ package axi4_stream is
   -- Ingresses one beat from master interface to the buffer. Returns future
   -- buffer value.
   function shift(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t;
-  -- Yields next data chunk from current buffer state.
-  function next_bytes(cfg: buffer_config_t; b: buffer_t) return byte_string;
-  -- Yields next strb mask from current buffer state.
-  function next_strb(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector;
   -- Yields master interface from current buffer contents.  Last is
   -- only taken into account when beat is the last one of the buffer
   -- sending / receiving, otherwise, it is forcibly set to false.
   -- Semantically, this allows user to send extra data after the
-  -- buffer contents if needed.
+  -- buffer contents if needed.  Can modulate strobe and/or keep bits if last
+  -- buffer beat is shorter than stream width.
   function next_beat(cfg: buffer_config_t; b: buffer_t;
                      id: std_ulogic_vector := na_suv;
                      user: std_ulogic_vector := na_suv;
                      dest: std_ulogic_vector := na_suv;
-                     last : boolean := true) return master_t;
+                     last : boolean := true;
+                     modulate_strb: boolean := true;
+                     modulate_keep: boolean := false) return master_t;
   -- Retrieves the full buffer
   function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
 
@@ -1189,13 +1189,13 @@ package body axi4_stream is
   end function;
 
   function reset(cfg: buffer_config_t;
-                 b: byte_string := null_byte_string;
+                 data: byte_string := null_byte_string;
                  order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t
   is
-    constant dc_pad: byte_string(b'length to data_t'length - 1) := (others => dontcare_byte_c);
+    constant dc_pad: byte_string(data'length to data_t'length - 1) := (others => dontcare_byte_c);
   begin
     return buffer_t'(
-      data => reorder(b, order) & dc_pad,
+      data => reorder(data, order) & dc_pad,
       to_go => cfg.part_count - 1
       );
   end function;
@@ -1234,7 +1234,7 @@ package body axi4_stream is
     return b.data(0 to cfg.stream_config.data_width-1);
   end function;
 
-  function next_strb(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector
+  function next_mask(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector
   is
     constant full: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '1');
     constant partial_off: std_ulogic_vector(cfg.data_width to cfg.part_count * cfg.stream_config.data_width-1) := (others => '0');
@@ -1251,12 +1251,15 @@ package body axi4_stream is
                      id: std_ulogic_vector := na_suv;
                      user: std_ulogic_vector := na_suv;
                      dest: std_ulogic_vector := na_suv;
-                     last : boolean := true) return master_t
+                     last : boolean := true;
+                     modulate_strb: boolean := true;
+                     modulate_keep: boolean := false) return master_t
   is
   begin
     return transfer(cfg.stream_config,
                     bytes => next_bytes(cfg, b),
-                    strobe => next_strb(cfg, b),
+                    strobe => if_else(modulate_strb, next_mask(cfg, b), ""),
+                    keep => if_else(modulate_keep, next_mask(cfg, b), ""),
                     id => id,
                     user => user,
                     dest => dest,
