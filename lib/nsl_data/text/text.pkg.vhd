@@ -47,6 +47,9 @@ package text is
                   start_index : integer := 0) return integer;
 
 
+  -- Return integer from string in base base
+  function strtoi(value: string; base: integer := 10) return integer;
+  
   -- Search for needle, either at begin/end of string, or separated by
   -- separator.
   function strfind(haystack, needle : string;
@@ -283,8 +286,8 @@ package body text is
   function strstr(haystack, needle : string;
                   start_index : integer := 0) return integer
   is
-    alias h: string(2 to haystack'length-1) is haystack;
-    alias n: string(2 to needle'length-1) is needle;
+    alias h: string(2 to haystack'length+1) is haystack;
+    alias n: string(2 to needle'length+1) is needle;
   begin
     if n'length > h'length then
       return -1;
@@ -357,7 +360,41 @@ package body text is
     end loop;
     return ret;
   end function;
-      
+
+  function ctoi(value: character) return integer
+  is
+  begin
+    case value is
+      when '0' => return 0;
+      when '1' => return 1;
+      when '2' => return 2;
+      when '3' => return 3;
+      when '4' => return 4;
+      when '5' => return 5;
+      when '6' => return 6;
+      when '7' => return 7;
+      when '8' => return 8;
+      when '9' => return 9;
+      when 'a'|'A' => return 10;
+      when 'b'|'B' => return 11;
+      when 'c'|'C' => return 12;
+      when 'd'|'D' => return 13;
+      when 'e'|'E' => return 14;
+      when 'f'|'F' => return 15;
+      when others => return 0;
+    end case;
+  end function;      
+
+  function strtoi(value: string; base: integer := 10) return integer
+  is
+    variable r: integer := 0;
+  begin
+    for ci in value'range
+    loop
+      r := r * base + ctoi(value(ci));
+    end loop;
+    return r;
+  end function;      
 
 end package body;
 

@@ -33,6 +33,8 @@ package bytestream is
   -- Converts a string of character to equivalent byte string of ASCII
   -- bytes.
   function to_byte_string(s : string) return byte_string;
+  -- Converts a byte string to a VHDL string
+  function to_character_string(s : byte_string) return string;
 
   function "="(l, r : byte_string) return boolean;
   function "/="(l, r : byte_string) return boolean;
@@ -100,6 +102,8 @@ package bytestream is
 
   function std_match(a, b: in byte_string) return boolean;
   function to_01(x: in byte_string; xmap: std_ulogic := '0') return byte_string;
+
+  function if_else(predicate: boolean; true_value, false_value: byte_string) return byte_string;
   
 end package bytestream;
 
@@ -499,6 +503,28 @@ package body bytestream is
     end loop;
 
     return ret;
+  end function;
+
+  function to_character_string(s : byte_string) return string
+  is
+    alias ss : byte_string(2 to s'length+1) is s;
+    variable ret : string(2 to s'length+1);
+  begin
+    for i in ss'range
+    loop
+      ret(i) := to_character(ss(i));
+    end loop;
+    return ret;
+  end function;
+
+  function if_else(predicate: boolean; true_value, false_value: byte_string) return byte_string
+  is
+  begin
+    if predicate then
+      return true_value;
+    else
+      return false_value;
+    end if;
   end function;
 
 end package body bytestream;
