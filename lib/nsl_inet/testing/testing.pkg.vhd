@@ -175,7 +175,7 @@ package body testing is
     constant proto: ip_proto_t := to_integer(xpacket(ip_off_proto));
     constant total_len : integer := to_integer(from_be(xpacket(ip_off_len_h to ip_off_len_l)));
     constant actual_len : integer := nsl_math.arith.min(packet'length, total_len);
-    alias payload : byte_string(0 to actual_len - header_len - 1) is xpacket(header_len to actual_len-1);
+    constant payload : byte_string(0 to actual_len - header_len - 1) := xpacket(header_len to actual_len-1);
   begin
     if xpacket(0)(7 downto 4) /= x"4" then
       log_error(prefix&"IP bad version");
