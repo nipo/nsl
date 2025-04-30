@@ -126,7 +126,7 @@ begin
               rin.filled <= 0;
             end if;
 
-            if r.filled = part_count_c - 1 or is_last(in_config_c, in_i) then  
+            if r.filled = part_count_c - 1 then  
               rin.post <= transfer(out_config_c,
                                    bytes => r.bytes(in_config_c.data_width to out_config_c.data_width-1) & bytes(in_config_c, in_i),
                                    strobe => r.strobe(in_config_c.data_width to out_config_c.data_width-1) & strobe(in_config_c, in_i),
