@@ -211,6 +211,7 @@ package axi4_stream is
       );
   end component;
   
+  -- This dumps a stream to console as it is probed.
   component axi4_stream_dumper is
     generic(
       config_c : config_t;
@@ -263,6 +264,9 @@ package axi4_stream is
       );
   end component;
 
+  -- This inserts a header of fixed size to the stream. Header is
+  -- inserted at every begin of packet. Module waits for at least one
+  -- packet beat to appear on input port before inserting a header.
   component axi4_stream_header_inserter is
     generic(
       config_c : config_t
@@ -281,6 +285,9 @@ package axi4_stream is
       );
   end component;
 
+  -- This extracts a header of fixed size from the stream. Header is
+  -- diverted to signals and extra data in a packet are forwarded to
+  -- the output.
   component axi4_stream_header_extractor is
     generic(
       config_c : config_t
