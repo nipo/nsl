@@ -57,13 +57,14 @@ For simulation purposes, there are `send()` and `receive()` procedures
 that can transfer one beat from/to a stream.
 
 For full packets, there are `packet_send()` and `packet_receive()`
-procedures.  For returned value, `packet_receive()` will dynamically
-allocate a `byte_stream`.
+procedures.  For read data, `packet_receive()` will dynamically
+allocate a `byte_stream` or may receive an output byte_string. In the
+latter case, frame should have exactly the expected length.
 
 For usage examples, see `test/amba/axi4_stream_*` test benches
 implementation.
 
-There is a protocols assertion tester in component
+There is a protocol assertion tester in component
 `axi4_stream_protocol_assertions`.  It implements all relevant checks
 from ARM's DUI 0534-B.
 
