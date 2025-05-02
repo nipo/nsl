@@ -26,8 +26,10 @@ package axi4_stream is
 
   -- Arbitrary
   constant max_data_width_c: natural := 64;
-  constant max_id_width_c: natural := 64;
-  constant max_dest_width_c: natural := 64;
+  -- ARM DUI-0534B defines ID_WIDTH + DEST_WIDTH <= 24, so each of then cannot
+  -- go above by itself.
+  constant max_id_width_c: natural := 24;
+  constant max_dest_width_c: natural := 24;
   constant max_user_width_c: natural := 64;
   
   subtype strobe_t is std_ulogic_vector(0 to max_data_width_c - 1);
@@ -213,6 +215,22 @@ package axi4_stream is
     generic(
       config_c : config_t;
       prefix_c : string := "AXIS"
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      bus_i : in bus_t
+      );
+  end component;
+
+  -- This implements AXI4-stream protocol assertions as defined in
+  -- ARM's DUI 0534-B.
+  component axi4_stream_protocol_assertions is
+    generic(
+      config_c : config_t;
+      prefix_c : string := "AXIS";
+      MAXWAITS : integer := 16
       );
     port(
       clock_i : in std_ulogic;
@@ -726,6 +744,10 @@ package body axi4_stream is
     last: boolean := false) return config_t
   is
   begin
+    assert id + dest <= 24
+      report "ID_WIDTH + DEST_WIDTH may not be above 24 per ARM DUI 0534B"
+      severity failure;
+
     return config_t'(
       data_width => bytes,
       user_width => user,

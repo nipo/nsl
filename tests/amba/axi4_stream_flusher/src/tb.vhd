@@ -108,6 +108,30 @@ begin
 
       bus_i => output_s
       );
+
+  in_protocol_assertions: nsl_amba.axi4_stream.axi4_stream_protocol_assertions
+    generic map(
+      config_c => out_cfg_c,
+      prefix_c => "IN"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      bus_i => input_s
+      );
+
+  out_protocol_assertions: nsl_amba.axi4_stream.axi4_stream_protocol_assertions
+    generic map(
+      config_c => out_cfg_c,
+      prefix_c => "OUT"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      bus_i => output_s
+      );
   
   dut: nsl_amba.axi4_stream.axi4_stream_flusher
     generic map(
