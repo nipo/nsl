@@ -58,6 +58,18 @@ allocate a `byte_stream`.
 For usage examples, see `test/amba/axi4_stream_*` test benches
 implementation.
 
+There is a protocols assertion tester in component
+`axi4_stream_protocol_assertions`.  It implements all relevant checks
+from ARM's DUI 0534-B.
+
+There is a text dumper in `axi4_stream_protocol_assertions`.  It dumps
+stream data to simulation log.
+
+`axi4_stream_pacer` can reduce pace of a stream by gating handshaking
+with a fixed probability.  It allows to debug handshaking logic
+errors.
+
+
 Buffer helper
 -------------
 
