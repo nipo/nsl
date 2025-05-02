@@ -28,12 +28,17 @@ Signals
 Signals are split in the following records:
 
 * Master output port (`master_t`) contains all master-driven signals:
+
   * ID,
+
   * data, strobe and keep,
+
   * user,
+
   * valid and last.
 
 * Slave output port (`slave_t`) contains slave-driven signal:
+
   * ready.
 
 A master transfer beat is encoded through calling `transfer()`
