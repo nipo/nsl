@@ -21,6 +21,7 @@ architecture arch of tb is
   signal done_s : std_ulogic_vector(0 to 1);
 
   signal input_s, output_s: bus_t;
+  signal input2_s, output2_s: bus_t;
 
   constant in_cfg_c: config_t := config(4, last => true, keep => true);
   constant out_cfg_c: config_t := config(12, last => true, keep => true);
@@ -108,6 +109,21 @@ begin
       bus_i => output_s
       );
   
+  input_pacer: nsl_amba.axi4_stream.axi4_stream_pacer
+    generic map(
+      config_c => in_cfg_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      in_i => input_s.m,
+      in_o => input_s.s,
+
+      out_o => input2_s.m,
+      out_i => input2_s.s
+      );
+  
   dut: nsl_amba.axi4_stream.axi4_stream_width_adapter
     generic map(
       in_config_c => in_cfg_c,
@@ -117,8 +133,23 @@ begin
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      in_i => input_s.m,
-      in_o => input_s.s,
+      in_i => input2_s.m,
+      in_o => input2_s.s,
+
+      out_o => output2_s.m,
+      out_i => output2_s.s
+      );
+  
+  output_pacer: nsl_amba.axi4_stream.axi4_stream_pacer
+    generic map(
+      config_c => out_cfg_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      in_i => output2_s.m,
+      in_o => output2_s.s,
 
       out_o => output_s.m,
       out_i => output_s.s

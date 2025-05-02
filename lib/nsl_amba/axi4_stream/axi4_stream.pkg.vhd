@@ -222,6 +222,29 @@ package axi4_stream is
       );
   end component;
 
+  -- This component gates the stream going through it to a lower pace
+  -- than line rate with a probability of going through of
+  -- probability_c.  Internally, it uses a PRBS to generate numbers of
+  -- width probability_denom_l2_c that are compared against
+  -- probability_c.
+  component axi4_stream_pacer is
+    generic(
+      config_c : config_t;
+      probability_denom_l2_c : natural range 1 to 31 := 7;
+      probability_c : real := 0.95
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
   component axi4_stream_header_inserter is
     generic(
       config_c : config_t
