@@ -397,40 +397,69 @@ package axi4_stream is
                       keep: std_ulogic_vector := na_suv) return master_t;
   
 
-  -- Helper for receiving/sending multi-beat buffers in an abstract way
+  -- Helper for receiving/sending multi-beat buffers in an abstract way.
+  -- See function buffer_config() below.
   type buffer_config_t is
   record
     stream_config: config_t;
     data_width: natural range 1 to data_t'length;
-    part_count: natural range 1 to data_t'length;
+    beat_count: natural range 1 to data_t'length;
   end record;    
 
   type buffer_t is
   record
     data: data_t;
-    to_go: integer range 0 to data_t'length;
+    strobe: strobe_t;
+    beats_to_go: integer range 0 to data_t'length;
+    beat_count: integer range 0 to data_t'length;
   end record;
 
   function to_string(cfg: buffer_config_t) return string;
   function to_string(cfg: buffer_config_t; b: buffer_t) return string;
 
-  -- This spawns a buffer configuration from a stream configuration and buffer
-  -- width.
+  -- This spawns a buffer configuration from a stream configuration
+  -- and buffer width.  cfg is backend stream configuration,
+  -- byte_count is the buffer byte size. If this is not a multiple of
+  -- stream's data byte count, stream will read/write using an integer
+  -- count of beats.  Reading will drop incoming data, writing will
+  -- send keep=false or strb=false bytes (or padding data if keep
+  -- and/or strb are not supported).
   function buffer_config(cfg: config_t; byte_count: natural) return buffer_config_t;
   -- Tells whether buffer will be complete after one shift operation is performed
   function is_last(cfg: buffer_config_t; b: buffer_t) return boolean;
-  -- Yields an buffer context with (optional data) and a reset counter
-  -- of shifts This can be used before either sending or receiving.  data
-  -- must either be null or of exactly the byte count from the config.
+  -- Tells whether buffer will be complete after one shift operation is
+  -- performed taking inputs into account
+  function is_last(cfg: buffer_config_t; b: buffer_t; beat: master_t) return boolean;
+  -- Tells whether we get a last condition from input stream but buffer is
+  -- incomplete, in such case, we need to realign buffer.
+  function should_align(cfg: buffer_config_t; b: buffer_t; beat: master_t) return boolean;
+  -- Yields a buffer context ready for receiving at most the config size.
+  function reset(cfg: buffer_config_t) return buffer_t;
+  -- Yields a buffer context ready to send data.
   function reset(cfg: buffer_config_t;
-                 data: byte_string := null_byte_string;
+                 data: byte_string;
                  order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t;
+  -- Yields a buffer context ready to send first (beat_count_m1+1) beats of
+  -- data in passed vector of arbitrary size. data argument must be at most as
+  -- big as cfg.data_width.
+  function reset(cfg: buffer_config_t;
+                 data: byte_string;
+                 beat_count_m1: natural;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t;
+  -- Yields a combination of resetting buffer and a shift using received beat.
+  -- This is useful to do a read/write buffer.
+  function reset(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t;
+  -- Iteratively realign a buffer to get first beat at the LSB of data vector.
+  function realign(cfg: buffer_config_t; b: buffer_t) return buffer_t;
+  -- Tell count of transmitted beats before realignment
+  function beat_count(cfg: buffer_config_t; b: buffer_t) return natural;
   -- Shifts one step of the buffer by ingressing (optional) data
   -- vector. Counts one step less to do. If not given, dontcares are
   -- used. This can be used for either sending or receiving.
   function shift(cfg: buffer_config_t;
                  b: buffer_t;
-                 data: byte_string := null_byte_string) return buffer_t;
+                 data: byte_string := null_byte_string;
+                 strobe: std_ulogic_vector := na_suv) return buffer_t;
   -- Ingresses one beat from master interface to the buffer. Returns future
   -- buffer value.
   function shift(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t;
@@ -449,7 +478,39 @@ package axi4_stream is
                      modulate_keep: boolean := false) return master_t;
   -- Retrieves the full buffer
   function bytes(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+  -- Retrieves the full strobe vector for the buffer (if relevant)
+  function strobe(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
 
+  -- Typical realigned rx path should be
+  --
+  -- case r.state is
+  -- ....
+  --   when ST_INIT =>
+  --     rin.buf <= reset(buffer_cfg_c);
+  --     rin.state <= ST_RX;
+  --
+  --   when ST_RX =>
+  --     if is_valid(stream_cfg_c, stream_i) then
+  --       rin.at_eos <= is_last(stream_cfg_c, stream_i);
+  --       rin.buf <= shift(buffer_cfg_c, r.buf, stream_i);
+  --       if should_align(buffer_cfg_c, r.buf, stream_i) then
+  --         rin.state <= ST_REALIGN;
+  --       elif is_last(buffer_cfg_c, r.buf) then
+  --         rin.state <= ST_USE_BUFFER;
+  --       end if;
+  --     end if;
+  --
+  --  when ST_REALIGN =>
+  --     rin.buf <= realign(buffer_cfg_c, r.buf);
+  --     if is_last(buffer_cfg_c, r.buf) then
+  --       rin.state <= ST_USE_BUFFER;
+  --     end if;
+  --
+  --  when ST_USE_BUFFER =>
+  --     size := beat_count(buffer_cfg_c, r.buf) * stream_cfg_c.data_width;
+  --     data := bytes(buffer_cfg_c, r.buf);
+  --     -- Do somehting with data(0 to size-1);
+  
 end package;
 
 package body axi4_stream is
@@ -1346,8 +1407,10 @@ package body axi4_stream is
   is
   begin
     return "<Buffer "
-      &" "&to_string(bytes(cfg, b))
-      &" to go: " & to_string(b.to_go)
+      &" "&to_string(b.data(0 to cfg.beat_count * cfg.stream_config.data_width -1))
+      &" trx: " & to_string(b.beat_count)
+      &" to go: " & to_string(b.beats_to_go)
+      &" strb: " & to_hex_string(b.strobe(0 to cfg.beat_count * cfg.stream_config.data_width -1))
       &if_else(is_last(cfg, b), " last", "")
       &">";
   end function;
@@ -1358,47 +1421,110 @@ package body axi4_stream is
     return buffer_config_t'(
       stream_config => cfg,
       data_width => byte_count,
-      part_count => (byte_count + cfg.data_width - 1) / cfg.data_width
+      beat_count => (byte_count + cfg.data_width - 1) / cfg.data_width
       );
   end function;
   
   function is_last(cfg: buffer_config_t; b: buffer_t) return boolean
   is
   begin
-    assert b.to_go < cfg.part_count severity failure;
-    return b.to_go = 0;
+    assert b.beats_to_go < cfg.beat_count severity failure;
+    return b.beats_to_go = 0;
+  end function;
+
+  function is_last(cfg: buffer_config_t; b: buffer_t; beat: master_t) return boolean
+  is
+  begin
+    return is_valid(cfg.stream_config, beat) and (is_last(cfg, b) or is_last(cfg.stream_config, beat));
+  end function;
+
+  function should_align(cfg: buffer_config_t; b: buffer_t; beat: master_t) return boolean
+  is
+  begin
+    return is_valid(cfg.stream_config, beat) and not is_last(cfg, b) and is_last(cfg.stream_config, beat);
   end function;
 
   function reset(cfg: buffer_config_t;
-                 data: byte_string := null_byte_string;
+                 data: byte_string;
+                 beat_count_m1: natural;
                  order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t
   is
     constant dc_pad: byte_string(data'length to data_t'length - 1) := (others => dontcare_byte_c);
+    constant strobe_val: std_ulogic_vector(0 to data'length - 1) := (others => '1');
+    constant strobe_pad: std_ulogic_vector(data'length to strobe_t'length - 1) := (others => '0');
   begin
+    assert data'length <= cfg.data_width
+      report "Passed buffer is too big"
+      severity failure;
     return buffer_t'(
       data => reorder(data, order) & dc_pad,
-      to_go => cfg.part_count - 1
+      strobe => strobe_val & strobe_pad,
+      beats_to_go => beat_count_m1,
+      beat_count => 0
       );
+  end function;
+
+  function reset(cfg: buffer_config_t;
+                 data: byte_string;
+                 order: byte_order_t := BYTE_ORDER_INCREASING) return buffer_t
+  is
+  begin
+    assert data'length /= 0
+      report "Cannot pass null data vector"
+      severity failure;
+    return reset(cfg, data, beat_count_m1 => (data'length - 1) / cfg.stream_config.data_width, order => order);
+  end function;
+
+  function reset(cfg: buffer_config_t) return buffer_t
+  is
+  begin
+    return reset(cfg, null_byte_string, beat_count_m1 => cfg.beat_count-1);
+  end function;
+
+  function reset(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t
+  is
+  begin
+    assert is_valid(cfg.stream_config, beat)
+      report "Beat must be valid"
+      severity failure;
+    assert is_last(cfg, b)
+      report "buffer must be in the last cycle"
+      severity failure;
+    return reset(cfg, bytes(cfg, shift(cfg, b, beat)));
   end function;
 
   function shift(cfg: buffer_config_t;
                  b: buffer_t;
-                 data: byte_string := null_byte_string) return buffer_t
+                 data: byte_string := null_byte_string;
+                 strobe: std_ulogic_vector := na_suv) return buffer_t
   is
     variable ret: buffer_t;
+    constant sval: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '1');
+    constant strb: std_ulogic_vector := if_else(strobe'length /= 0, strobe, sval);
     constant pad: byte_string(0 to cfg.stream_config.data_width-1) := (others => dontcare_byte_c);
+    constant spad: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '0');
   begin
+    assert data'length = strobe'length or strobe'length = 0
+      report "Must pass same length data/strobe vectors, or no strobe at all"
+      severity failure;
     if data'length = 0 then
-      ret.data(0 to cfg.part_count * cfg.stream_config.data_width - 1)
-        := b.data(cfg.stream_config.data_width to cfg.part_count * cfg.stream_config.data_width - 1) & pad;
+      ret.data(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+        := b.data(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & pad;
+      ret.strobe(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+        := b.strobe(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & spad;
     else
-      ret.data(0 to cfg.part_count * cfg.stream_config.data_width - 1)
-        := b.data(cfg.stream_config.data_width to cfg.part_count * cfg.stream_config.data_width - 1) & data;
+      ret.data(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+        := b.data(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & data;
+      ret.strobe(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+        := b.strobe(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & strb;
     end if;
-    if b.to_go /= 0 then
-      ret.to_go := b.to_go - 1;
+
+    if b.beats_to_go /= 0 then
+      ret.beats_to_go := b.beats_to_go - 1;
+      ret.beat_count := b.beat_count + 1;
     else
-      ret.to_go := cfg.part_count - 1;
+      ret.beats_to_go := cfg.beat_count - 1;
+      ret.beat_count := 0;
     end if;
     return ret;
   end function;
@@ -1406,7 +1532,7 @@ package body axi4_stream is
   function shift(cfg: buffer_config_t; b: buffer_t; beat: master_t) return buffer_t
   is
   begin
-    return shift(cfg, b, bytes(cfg.stream_config, beat));
+    return shift(cfg, b, bytes(cfg.stream_config, beat), strobe(cfg.stream_config, beat));
   end function;
 
   function next_bytes(cfg: buffer_config_t; b: buffer_t) return byte_string
@@ -1415,17 +1541,10 @@ package body axi4_stream is
     return b.data(0 to cfg.stream_config.data_width-1);
   end function;
 
-  function next_mask(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector
+  function next_strobes(cfg: buffer_config_t; b: buffer_t) return std_ulogic_vector
   is
-    constant full: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '1');
-    constant partial_off: std_ulogic_vector(cfg.data_width to cfg.part_count * cfg.stream_config.data_width-1) := (others => '0');
-    constant partial_on: std_ulogic_vector(partial_off'length to full'length-1) := (others => '1');
   begin
-    if cfg.stream_config.has_strobe and is_last(cfg, b) then
-      return partial_on & partial_off;
-    end if;
-
-    return full;
+    return b.strobe(0 to cfg.stream_config.data_width-1);
   end function;
 
   function next_beat(cfg: buffer_config_t; b: buffer_t;
@@ -1439,8 +1558,8 @@ package body axi4_stream is
   begin
     return transfer(cfg.stream_config,
                     bytes => next_bytes(cfg, b),
-                    strobe => if_else(modulate_strb, next_mask(cfg, b), ""),
-                    keep => if_else(modulate_keep, next_mask(cfg, b), ""),
+                    strobe => if_else(modulate_strb, next_strobes(cfg, b), ""),
+                    keep => if_else(modulate_keep, next_strobes(cfg, b), ""),
                     id => id,
                     user => user,
                     dest => dest,
@@ -1452,6 +1571,38 @@ package body axi4_stream is
   is
   begin
     return reorder(b.data(0 to cfg.data_width-1), order);
+  end function;
+
+  function strobe(cfg: buffer_config_t; b: buffer_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector
+  is
+  begin
+    return reorder_mask(b.strobe(0 to cfg.data_width-1), order);
+  end function;
+
+  function realign(cfg: buffer_config_t; b: buffer_t) return buffer_t
+  is
+    variable ret: buffer_t;
+    constant pad: byte_string(0 to cfg.stream_config.data_width-1) := (others => dontcare_byte_c);
+    constant spad: std_ulogic_vector(0 to cfg.stream_config.data_width-1) := (others => '0');
+  begin
+    ret.data(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+      := b.data(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & pad;
+    ret.strobe(0 to cfg.beat_count * cfg.stream_config.data_width - 1)
+      := b.strobe(cfg.stream_config.data_width to cfg.beat_count * cfg.stream_config.data_width - 1) & spad;
+    if b.beats_to_go /= 0 then
+      ret.beats_to_go := b.beats_to_go - 1;
+      ret.beat_count := b.beat_count;
+    else
+      ret.beats_to_go := b.beat_count - 1;
+      ret.beat_count := 0;
+    end if;
+    return ret;
+  end function;
+  
+  function beat_count(cfg: buffer_config_t; b: buffer_t) return natural
+  is
+  begin
+    return b.beat_count;
   end function;
 
 end package body axi4_stream;
