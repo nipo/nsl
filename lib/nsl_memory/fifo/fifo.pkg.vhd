@@ -166,4 +166,25 @@ package fifo is
       );
   end component;
 
+  -- A fifo that only counts for valid/ready. This is like a fifo with 0-bit
+  -- data words
+  component fifo_count
+    generic(
+      max_count_l2_c : natural;
+      clock_count_c : natural range 1 to 2
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic_vector(0 to clock_count_c-1);
+
+      out_ready_i : in  std_ulogic;
+      out_valid_o : out std_ulogic;
+      out_counter_o : out unsigned(max_count_l2_c-1 downto 0);
+
+      in_valid_i : in  std_ulogic;
+      in_ready_o : out std_ulogic;
+      in_counter_o : out unsigned(max_count_l2_c-1 downto 0)
+      );
+  end component;
+
 end package fifo;
