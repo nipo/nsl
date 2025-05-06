@@ -21,6 +21,7 @@ tb += axi4_stream_widener
 tb += axi4_stream_buffer
 tb += axi4_stream_buffer_io
 tb += axi4_stream_buffer_align
+tb += axi4_stream_buffer_short
 
 all: simulate
 
