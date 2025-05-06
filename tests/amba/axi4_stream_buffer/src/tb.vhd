@@ -30,7 +30,6 @@ begin
   tx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
     variable buf : buffer_t;
-    variable done: boolean := false;
   begin
     done_s(0) <= '0';
 
@@ -38,11 +37,13 @@ begin
 
     buf := reset(buffer_cfg_c, prbs_byte_string(state_v, prbs31, buffer_cfg_c.data_width));
 
-    while not done
     loop
       send(cfg_c, clock_s, bus_s.s, bus_s.m, next_beat(buffer_cfg_c, buf, last => true));
 
-      done := is_last(buffer_cfg_c, buf);
+      if is_last(buffer_cfg_c, buf) then
+        exit;
+      end if;
+
       buf := shift(buffer_cfg_c, buf);
     end loop;
 
