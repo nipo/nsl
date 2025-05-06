@@ -30,14 +30,19 @@ define tb_declare
 FORCE:
 
 $1/simulate: $1/Makefile FORCE
-	make -C $1 simulate
+	$(MAKE) -C $1 simulate
 
 simulate: $1/simulate
 
 $1/clean: $1/Makefile FORCE
-	make -C $1 clean
+	$(MAKE) -C $1 clean
 
 clean: $1/clean
+
+$1/run: $1/Makefile FORCE
+	$(MAKE) -C $1 run
+
+run: $1/run
 
 endef
 
