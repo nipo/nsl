@@ -68,9 +68,7 @@ begin
         severity error;
     end if;
 
-    if reset_n_i = '0' then
-      reset_was_low := true;
-    end if;
+    reset_was_low := reset_n_i = '0';
   end process;
 
   stable: process is
