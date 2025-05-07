@@ -12,6 +12,7 @@ deps += nsl_logic.logic
 deps += nsl_data.bytestream
 deps += nsl_data.endian
 deps += nsl_data.text
+deps += nsl_data.prbs
 
 ifeq (simulation,$(target-usage))
 vhdl-sources += axi4_stream_dumper.vhd
