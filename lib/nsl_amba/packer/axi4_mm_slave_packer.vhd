@@ -27,7 +27,7 @@ entity axi4_mm_slave_packer is
 
     wid: in std_logic_vector(config_c.id_width-1 downto 0) := (others => '0');
     wdata : in std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
-    wstrb : in std_logic_vector(3 downto 0) := (others => '1');
+    wstrb : in std_logic_vector((2 ** config_c.data_bus_width_l2) - 1 downto 0) := (others => '1');
     wlast : in std_logic := '1';
     wuser: in std_logic_vector(config_c.user_width-1 downto 0) := (others => '0');
     wvalid : in std_logic;

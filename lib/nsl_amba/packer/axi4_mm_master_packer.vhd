@@ -27,7 +27,7 @@ entity axi4_mm_master_packer is
 
     wid: out std_logic_vector(config_c.id_width-1 downto 0);
     wdata : out std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
-    wstrb : out std_logic_vector(3 downto 0);
+    wstrb : out std_logic_vector((2 ** config_c.data_bus_width_l2) - 1 downto 0);
     wlast : out std_logic;
     wuser: out std_logic_vector(config_c.user_width-1 downto 0);
     wvalid : out std_logic;
