@@ -915,7 +915,7 @@ package body axi4_mm is
   is
   begin
     if cfg.len_width = 0 then
-      return resize("1", w);
+      return resize("0", w);
     else
       return resize(addr.len_m1(cfg.len_width-1 downto 0), w);
     end if;
