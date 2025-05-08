@@ -561,7 +561,7 @@ package body axi4_stream is
   is
   begin
     if not cfg.has_strobe then
-      return keep(cfg, m);
+      return keep(cfg, m, order);
     end if;
 
     return reorder_mask(m.strobe(0 to cfg.data_width-1), order);
