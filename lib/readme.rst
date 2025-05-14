@@ -8,12 +8,16 @@ Clocking
 `Clocking <nsl_clocking/>`_ contains some comprehensive clock-related
 operations like:
 
-* Sampling asynchronous data,
-* Clock-domain crossing,
-* Intra-domain operations,
-* Clock distribution buffers,
-* Abstract PLL instantiation (one input / one output) with automatic
-  parameter calculation.
+* `Sampling asynchronous data <nsl_clocking/async>`_,
+
+* `Clock-domain crossing <nsl_clocking/interdomain>`_,
+
+* `Intra-domain operations <nsl_clocking/intradomain>`_,
+
+* `Clock distribution buffers <nsl_clocking/distribution>`_,
+
+* `Abstract PLL <nsl_clocking/pll>`_ instantiation (one input / one
+  output) with automatic parameter calculation.
 
 All these blocks come with proper timing constraints applied
 automatically to get the intended behavior.
@@ -21,10 +25,11 @@ automatically to get the intended behavior.
 I/O
 ---
 
-`Io <nsl_io/>`_ library is mostly constituted of packages defining explicit
-record datatypes of various IO modes (opendrain, directed, tri-stated,
-differential).  It also features usual IO blocks like DDR, some basic
-serdes (10 bit), IO delays.
+`Io <nsl_io/>`_ library is mostly constituted of packages defining
+explicit record datatypes of various IO modes (opendrain, directed,
+tri-stated, differential).  It also features usual IO blocks like `DDR
+<nsl_io/ddr>`_, some basic serdes `(10 bit) <nsl_io/serdes>`_, `IO
+delays <nsl_io/delay>`_.
 
 Hardware-dependent
 ------------------
@@ -33,9 +38,12 @@ Even if most models try to use inference and refrains using
 vendor-specific libraries, some parts are still vendor-specific.
 Hardware-dependant library contains:
 
-* Access to internal built-in oscillators of FPGAs,
-* Access to internal built-in reset of FPGAs,
-* Access to User-defined DRs of FPGAs JTAG TAPs.
+* Access to internal `built-in oscillators <nsl_hwdep/clock>`_ of
+  FPGAs,
+  
+* Access to internal `built-in reset <nsl_hwdep/reset>`_ of FPGAs,
+
+* Access to User-defined DRs of FPGAs `JTAG TAPs <nsl_hwdep/jtag>`_.
 
 NSL tries to model common abstract components above these.
 
@@ -52,8 +60,11 @@ Generic utilities
 * `Bytestream manipulation <nsl_data/bytestream/>`_ byte-based
   generic types: byte_string (vector of bytes), byte_stream
   (dynamically allocated byte_string),
-* `Generic PRBS <nsl_data/prbs/>`_ generation framework,
-* `Generic CRC <nsl_data/crc/>`_ calculation and checking framework,
+
+* `PRBS <nsl_data/prbs/>`_ generation framework,
+
+* `CRC <nsl_data/crc/>`_ calculation and checking framework,
+
 * `Endianness <nsl_data/endian/>`_ management and conversion
   functions.
 
@@ -63,10 +74,14 @@ Memory building blocks
 Memory blocks are all in `relevant library <nsl_memory/>`_
 
 * `RAMs <nsl_memory/ram/>`_ (One port, two ports, two ports with different aspect ratios),
+
 * `ROMs <nsl_memory/rom/>`_ (One port, two ports, specialized to hold
   fixed point constants),
+
 * `FIFOs <nsl_memory/fifo/>`_,
+
 * `LIFOs <nsl_memory/lifo/>`_,
+
 * `Look-up tables <nsl_memory/lut/>`_.
 
 Industry standard buses
@@ -101,24 +116,34 @@ Serial protocol adapters
 
 * I2C chip drivers for abstract usage
 
-  * GPIO extender transactors,
-  * PLL initializers,
-  * DAC drivers,
-  * LED drivers.
+  * GPIO extender transactors (`PCA8574 <nsl_i2c/pca8574>`_, `PCA9534A
+    <nsl_i2c/pca9534a>`_, `PCA9555 <nsl_i2c/pca9555>`_, `PCAL6524 <nsl_i2c/pcal6524>`_),
+
+  * PLL initializer (`SI5351 <nsl_silabs/si5351>`_),
+
+  * ADC drivers (`PCT2075 <nsl_i2c/pct2075>`_),
+
+  * DAC drivers (`MCP4726 <nsl_i2c/mcp4726>`_),
+
+  * LED drivers (`IS31FL3731 <nsl_i2c/is31fl3731>`_).
 
 Fast IO protocols
 -----------------
 
 * `MII/RMII/GMII <nsl_mii/>`_ to Fifo bridges,
+
 * `FT245 <nsl_ftdi/>`_ Synchronous Fifo interface transactor,
-* `8b/10b <nsl_line_coding/ibm_8b10b/>`_,
+
+* `IBM 8b/10b <nsl_line_coding/ibm_8b10b/>`_, `DVI TMDS 8b/10b <nsl_dvi/encoder>`_,
+
 * `10b serdeses <nsl_io/serdes/>`_ with automatic realignment.
 
 High level communication stacks
 -------------------------------
 
-* `USB2 <nsl_usb/>`_ Full/High-speed Device implementation,
-* `Ethernet/IPv4/UDP <nsl_inet/>`_ implementation.
+* `USB2 <nsl_usb/>`_ Full-speed/High-speed pure logic device,
+
+* `Ethernet/IPv4/UDP <nsl_inet/>`_ stack.
 
 Multimedia interfaces
 ---------------------
@@ -133,9 +158,12 @@ flexible clock source, clock recovery.
 User-interface infrastructure
 -----------------------------
 
-* Led management, `color <nsl_color/>`_ abstraction, PWM LED drivers, WS2812 drivers,
+* Led management, `color <nsl_color/>`_ abstraction, `PWM LED drivers
+  <nsl_indication/rgb_led>`_, `WS2812 drivers <nsl_ws/driver>`_,
   `RGB24 and RGB8 <nsl_color/rgb/>`_ abstractions.
+
 * Input button debouncers.
+
 * `Rotary/linear encoder <nsl_sensor/quadrature/>`_ input frameworks.
 
 Simulation helpers library
