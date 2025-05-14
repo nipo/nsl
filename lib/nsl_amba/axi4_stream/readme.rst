@@ -79,7 +79,7 @@ errors.
 Buffer helper
 -------------
 
-.. image:: ../../doc/img/axis_buffer2.svg
+.. image:: ../../../doc/img/axis_buffer2.svg
   :width: 400
   :alt: A AXI-Stream buffer
 
@@ -100,7 +100,7 @@ sending (can be left unspecified).
 Serialization tools
 -------------------
 
-.. image:: ../../doc/img/axis_packer.svg
+.. image:: ../../../doc/img/axis_packer.svg
   :width: 400
   :alt: AXI-Stream packer model
 
