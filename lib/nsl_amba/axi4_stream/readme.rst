@@ -79,6 +79,10 @@ errors.
 Buffer helper
 -------------
 
+.. image:: ../../doc/img/axis_buffer2.svg
+  :width: 400
+  :alt: A AXI-Stream buffer
+
 When sending/receiving long packets with a header of fixed size, it
 may be practical to send/receive the header independently of the bus
 data width.  `buffer_t` is such an helper.  It should be configured as
@@ -95,6 +99,10 @@ sending (can be left unspecified).
 
 Serialization tools
 -------------------
+
+.. image:: ../../doc/img/axis_packer.svg
+  :width: 400
+  :alt: AXI-Stream packer model
 
 For (un)packing a AXI4-Stream to a vector of bits, there are
 `vector_length()`, `vector_pack()` and `vector_unpack()`. All three
