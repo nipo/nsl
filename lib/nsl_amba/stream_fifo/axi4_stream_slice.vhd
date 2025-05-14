@@ -54,11 +54,9 @@ begin
   in_data_valid_s <= to_logic(is_valid(config_c, in_i));
   in_o <= accept(config_c, in_data_ready_s = '1');
 
-  unpack: process(out_data_s, out_data_valid_s) is
-  begin
-    out_o <= vector_unpack(config_c, fifo_elements_c, out_data_s);
-    out_o.valid <= out_data_valid_s;
-  end process;
-  out_data_ready_s <= out_i.ready;
+  out_o <= transfer(config_c,
+                    vector_unpack(config_c, fifo_elements_c, out_data_s),
+                    force_valid => true, valid => out_data_valid_s = '1');
+  out_data_ready_s <= to_logic(is_ready(config_c, out_i));
 
 end architecture;
