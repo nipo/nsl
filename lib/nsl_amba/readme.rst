@@ -105,6 +105,14 @@ Available modules
 
   * `dumper <axi4_stream/axi4_stream_dumper.vhd>`_ (for debug),
 
+  * `protocol assertions
+    <axi4_stream/axi4_stream_protocol_assertions.vhd>`_ as defined in
+    `ARM's DUI 0534-B <https://documentation-service.arm.com/static/5f106bd90daa596235e808ed>`_,
+
+  * `pacer <axi4_stream/axi4_stream_pacer.vhd>`_, a module that
+    artificially reduce a stream's bandwidth, mostly useful for
+    testing backpressure,
+
   * `width adapter <axi4_stream/axi4_stream_width_adapter.vhd>`_ to
     resize data vector of a stream,
 
