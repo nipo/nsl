@@ -7,7 +7,10 @@ end tb;
 
 library nsl_simulation, nsl_bnoc, nsl_mii, nsl_data;
 use nsl_mii.mii.all;
+use nsl_mii.rmii.all;
+use nsl_mii.link.all;
 use nsl_mii.testing.all;
+use nsl_simulation.logging.all;
 use nsl_data.bytestream.all;
 
 architecture arch of tb is
@@ -42,16 +45,24 @@ begin
 
   rmii_chk: process
     variable blob: nsl_data.bytestream.byte_stream;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := link_speed_100;
+
+    variable rx_data: byte_stream := new byte_string(1 to 0);
+    variable rx_valid: boolean;
   begin
     done_s(1) <= '0';
 
     for i in 0 to 2
     loop
-      rmii_frame_check("RMII", rmii_s.ref_clk, rmii_s.m2p, from_hex("40302010"), true);
+      rmii_frame_check("RMII", rmii_s.ref_clk, rmii_s.m2p, from_hex("40302010"), true, level => log_level_fatal);
     end loop;
-    rmii_frame_check("RMII", rmii_s.ref_clk, rmii_s.m2p, null_byte_string, false);
+    rmii_frame_get(rmii_s.ref_clk, rmii_s.m2p, rx_data, rx_valid, speed);
 
+    assert rx_data.all /= from_hex("40302010") or not rx_valid
+      report "Should have had bad data"
+      severity failure;
+
+    
     done_s(1) <= '1';
     wait;
   end process;
@@ -73,7 +84,7 @@ begin
       p_out_ack => lb_o_s.ack
       );
   
-  rmii_driver: nsl_mii.mii.rmii_driver_resync
+  rmii_driver: nsl_mii.rmii.rmii_driver_resync
     port map(
       reset_n_i => reset_n_s,
       clock_i => clock_s,

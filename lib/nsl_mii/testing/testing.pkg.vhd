@@ -4,7 +4,9 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 library nsl_mii, nsl_data, nsl_simulation, nsl_math, nsl_logic;
+use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
+use nsl_mii.rmii.all;
 use nsl_mii.mii.all;
 use nsl_data.crc.all;
 use nsl_simulation.logging.all;
@@ -19,26 +21,26 @@ package testing is
   procedure rgmii_put_init(signal rgmii: out rgmii_io_group_t);
   procedure rgmii_interframe_put(signal rgmii: out rgmii_io_group_t;
                                  constant ipg_time: natural := 96/8;
-                                 constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                                 constant speed: link_speed_t := LINK_SPEED_1000;
                                  constant link_up: boolean := true;
                                  constant full_duplex: boolean := true);
   procedure rgmii_frame_put(signal rgmii: out rgmii_io_group_t;
                             constant data : byte_string;
-                            constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                            constant speed: link_speed_t := LINK_SPEED_1000;
                             constant pre_count : natural := 8;
                             constant error_at_bit : integer := -1);
 
   procedure rgmii_frame_get(signal rgmii: in rgmii_io_group_t;
                             data : inout byte_stream;
                             valid : out boolean;
-                            constant mode: rgmii_mode_t := RGMII_MODE_1000);
+                            constant speed: link_speed_t := LINK_SPEED_1000);
 
   procedure rgmii_frame_check(
     log_context: string;
     signal rgmii: in rgmii_io_group_t;
     data : in byte_string;
     valid : in boolean;
-    constant mode: rgmii_mode_t := RGMII_MODE_1000;
+    constant speed: link_speed_t := LINK_SPEED_1000;
     level : log_level_t := LOG_LEVEL_WARNING);
 
   procedure mii_status_init(signal mii: out mii_status_p2m);
@@ -46,10 +48,10 @@ package testing is
   procedure mii_rx_init(signal mii: out mii_rx_p2m);
   procedure mii_interframe_put(signal mii: out mii_rx_p2m;
                                constant ipg_time: natural := 96/8;
-                               constant rate: natural := 100);
+                               constant speed: link_speed_t := LINK_SPEED_100);
   procedure mii_frame_put(signal mii: out mii_rx_p2m;
                             constant data : byte_string;
-                            constant rate: natural := 100;
+                            constant speed: link_speed_t := LINK_SPEED_100;
                             constant pre_count : natural := 8;
                             constant error_at_bit : integer := -1);
 
@@ -57,7 +59,7 @@ package testing is
                           signal i: in mii_tx_m2p;
                           data : inout byte_stream;
                           valid : out boolean;
-                          constant rate: natural := 100);
+                          constant speed: link_speed_t := LINK_SPEED_100);
 
   procedure mii_frame_check(
     log_context: string;
@@ -65,7 +67,7 @@ package testing is
     signal i: in mii_tx_m2p;
     data : in byte_string;
     valid : in boolean;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
     level : log_level_t := LOG_LEVEL_WARNING);
 
 
@@ -73,11 +75,11 @@ package testing is
   procedure rmii_interframe_put(signal ref_clock: in std_ulogic;
                                 signal rmii: out rmii_p2m;
                                 constant ipg_time: natural := 96/8;
-                                constant rate: natural := 100);
+                                constant speed: link_speed_t := LINK_SPEED_100);
   procedure rmii_frame_put(signal ref_clock: in std_ulogic;
                            signal rmii: out rmii_p2m;
                            constant data : byte_string;
-                           constant rate: natural := 100;
+                           constant speed: link_speed_t := LINK_SPEED_100;
                            constant pre_count : natural := 8;
                            constant error_at_bit : integer := -1);
 
@@ -85,7 +87,7 @@ package testing is
                            signal rmii: in rmii_m2p;
                            data : inout byte_stream;
                            valid : out boolean;
-                           constant rate: natural := 100);
+                           constant speed: link_speed_t := LINK_SPEED_100);
 
   procedure rmii_frame_check(
     log_context: string;
@@ -93,21 +95,32 @@ package testing is
     signal rmii: in rmii_m2p;
     data : in byte_string;
     valid : in boolean;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
     level : log_level_t := LOG_LEVEL_WARNING);
   
 end testing;
 
 package body testing is
 
+  function bit_time_ns(constant speed: link_speed_t) return integer
+  is
+  begin
+    case speed is
+      when LINK_SPEED_10 => return 100;
+      when LINK_SPEED_100 => return 10;
+      when LINK_SPEED_1000 => return 1;
+    end case;
+    return 0;
+  end function;
+  
   procedure rgmii_put_byte(signal rgmii: out rgmii_io_group_t;
                           constant rxd : byte;
                           constant dv, err : boolean;
-                          constant mode: rgmii_mode_t := RGMII_MODE_1000)
+                          constant speed: link_speed_t := LINK_SPEED_1000)
   is
   begin
-    case mode is
-      when RGMII_MODE_10 =>
+    case speed is
+      when LINK_SPEED_10 =>
         rgmii.d <= rxd(3 downto 0);
         rgmii.ctl <= to_logic(dv);
         wait for 2 ns;
@@ -124,7 +137,7 @@ package body testing is
         rgmii.c <= '0';
         wait for 198 ns;
 
-      when RGMII_MODE_100 =>
+      when LINK_SPEED_100 =>
         rgmii.d <= rxd(3 downto 0);
         rgmii.ctl <= to_logic(dv);
         wait for 2 ns;
@@ -141,7 +154,7 @@ package body testing is
         rgmii.c <= '0';
         wait for 18 ns;
 
-      when RGMII_MODE_1000 =>
+      when LINK_SPEED_1000 =>
         rgmii.d <= rxd(3 downto 0);
         rgmii.ctl <= to_logic(dv);
         wait for 2 ns;
@@ -168,7 +181,7 @@ package body testing is
 
   procedure rgmii_interframe_put(signal rgmii: out rgmii_io_group_t;
                                  constant ipg_time : natural := 96/8;
-                                 constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                                 constant speed: link_speed_t := LINK_SPEED_1000;
                                  constant link_up: boolean := true;
                                  constant full_duplex: boolean := true)
   is
@@ -177,25 +190,25 @@ package body testing is
     log_debug("* RGMII < wait " & to_string(ipg_time) & " bit time");
 
     inband_status(0) := to_logic(link_up);
-    inband_status(2 downto 1) := to_logic(mode);
+    inband_status(2 downto 1) := to_logic(speed);
     inband_status(3) := to_logic(full_duplex);
     inband_status(7 downto 4) := inband_status(3 downto 0);
     
     for i in 0 to ipg_time/8 - 1
     loop
-      rgmii_put_byte(rgmii, inband_status, false, false, mode);
+      rgmii_put_byte(rgmii, inband_status, false, false, speed);
     end loop;
   end procedure;
 
   procedure rgmii_frame_put(signal rgmii: out rgmii_io_group_t;
                             constant data : byte_string;
-                            constant mode: rgmii_mode_t := RGMII_MODE_1000;
+                            constant speed: link_speed_t := LINK_SPEED_1000;
                             constant pre_count : natural := 8;
                             constant error_at_bit : integer := -1)
   is
     variable error_at_byte : integer;
   begin
-    log_debug("* RGMII < " & to_string(data) & ", mode: " & to_string(mode));
+    log_debug("* RGMII < " & to_string(data) & ", speed: " & to_string(speed));
 
     error_at_byte := -1;
     if error_at_bit >= 0 then
@@ -206,22 +219,22 @@ package body testing is
     then
       for i in 0 to pre_count-2
       loop
-        rgmii_put_byte(rgmii, x"55", true, false, mode);
+        rgmii_put_byte(rgmii, x"55", true, false, speed);
       end loop;
 
-      rgmii_put_byte(rgmii, x"d5", true, false, mode);
+      rgmii_put_byte(rgmii, x"d5", true, false, speed);
     end if;
 
     for i in data'range
     loop
-      rgmii_put_byte(rgmii, data(i), error_at_byte /= i, error_at_byte = i, mode);
+      rgmii_put_byte(rgmii, data(i), error_at_byte /= i, error_at_byte = i, speed);
     end loop;
   end procedure;
 
   procedure rgmii_cycle_get(signal rgmii: in rgmii_io_group_t;
                             data : out byte;
                             ctlh, ctll : out boolean;
-                            constant mode: rgmii_mode_t := RGMII_MODE_100)
+                            constant speed: link_speed_t := LINK_SPEED_100)
   is
     variable v: boolean;
     variable d: byte;
@@ -238,22 +251,22 @@ package body testing is
                            data : out byte;
                            valid : out boolean;
                            error: out boolean;
-                           constant mode: rgmii_mode_t := RGMII_MODE_1000)
+                           constant speed: link_speed_t := LINK_SPEED_1000)
   is
     variable c0, c1, drop: boolean;
     variable d0, d1: byte;
   begin
-    case mode is
-      when RGMII_MODE_10 | RGMII_MODE_100 =>
-        rgmii_cycle_get(rgmii, d0, c0, drop, mode);
-        rgmii_cycle_get(rgmii, d1, c1, drop, mode);
+    case speed is
+      when LINK_SPEED_10 | LINK_SPEED_100 =>
+        rgmii_cycle_get(rgmii, d0, c0, drop, speed);
+        rgmii_cycle_get(rgmii, d1, c1, drop, speed);
 
         data := d1(3 downto 0) & d0(3 downto 0);
         valid := c0;
         error := c0 /= c1;
 
-      when RGMII_MODE_1000 =>
-        rgmii_cycle_get(rgmii, d0, c0, c1, mode);
+      when LINK_SPEED_1000 =>
+        rgmii_cycle_get(rgmii, d0, c0, c1, speed);
 
         data := d0;
         valid := c0;
@@ -264,7 +277,7 @@ package body testing is
   procedure rgmii_frame_get(signal rgmii: in rgmii_io_group_t;
                             data : inout byte_stream;
                             valid : out boolean;
-                            constant mode: rgmii_mode_t := RGMII_MODE_1000)
+                            constant speed: link_speed_t := LINK_SPEED_1000)
   is
     variable ret: byte_stream;
     variable v, e, c0, c1, frame_valid: boolean;
@@ -277,23 +290,23 @@ package body testing is
 
     while not v
     loop
-      rgmii_byte_get(rgmii, b, v, e, mode);
+      rgmii_byte_get(rgmii, b, v, e, speed);
     end loop;
 
-    rgmii_byte_get(rgmii, b, v, e, mode);
+    rgmii_byte_get(rgmii, b, v, e, speed);
 
     while b = x"55" and v
     loop
-      rgmii_byte_get(rgmii, b, v, e, mode);
+      rgmii_byte_get(rgmii, b, v, e, speed);
     end loop;
 
     if not v then
       return;
     end if;
 
-    if b(3 downto 0) = x"d" and (mode = RGMII_MODE_100 or mode = RGMII_MODE_10) then
+    if b(3 downto 0) = x"d" and (speed = LINK_SPEED_100 or speed = LINK_SPEED_10) then
       -- realignment hack for 10/100
-      rgmii_cycle_get(rgmii, tmp, c0, c1, mode);
+      rgmii_cycle_get(rgmii, tmp, c0, c1, speed);
       b := tmp(3 downto 0) & b(7 downto 4);
       v := v xor e;
       e := v xor c0;
@@ -307,7 +320,7 @@ package body testing is
     if b = x"d5" then
       while v
       loop
-        rgmii_byte_get(rgmii, b, v, e, mode);
+        rgmii_byte_get(rgmii, b, v, e, speed);
         if v then
           frame_valid := frame_valid and not e;
           write(ret, b);
@@ -317,7 +330,7 @@ package body testing is
       frame_valid := false;
       while v
       loop
-        rgmii_byte_get(rgmii, b, v, e, mode);
+        rgmii_byte_get(rgmii, b, v, e, speed);
       end loop;
     end if;
     
@@ -330,13 +343,13 @@ package body testing is
     signal rgmii: in rgmii_io_group_t;
     data : in byte_string;
     valid : in boolean;
-    constant mode: rgmii_mode_t := RGMII_MODE_1000;
+    constant speed: link_speed_t := LINK_SPEED_1000;
     level : log_level_t := LOG_LEVEL_WARNING)
   is
     variable rx_data: byte_stream;
     variable rx_valid: boolean;
   begin
-    rgmii_frame_get(rgmii, rx_data, rx_valid, mode);
+    rgmii_frame_get(rgmii, rx_data, rx_valid, speed);
     
     if valid /= rx_valid then
       log(level, log_context & ": " &
@@ -383,9 +396,9 @@ package body testing is
   procedure mii_put_byte(signal mii: out mii_rx_p2m;
                          constant rxd : byte;
                          constant dv, err : boolean;
-                         constant rate: integer)
+                         constant speed: link_speed_t)
   is
-    constant cycle_time: time := 4 * 1e6 ps / rate;
+    constant cycle_time : time := bit_time_ns(speed) * 4 ns;
   begin
     for off in 0 to 1
     loop
@@ -425,26 +438,26 @@ package body testing is
 
   procedure mii_interframe_put(signal mii: out mii_rx_p2m;
                                constant ipg_time: natural := 96/8;
-                               constant rate: natural := 100)
+                               constant speed: link_speed_t := LINK_SPEED_100)
   is
   begin
     log_debug("* MII < wait " & to_string(ipg_time) & " bit time");
     
     for i in 0 to ipg_time/8 - 1
     loop
-      mii_put_byte(mii, "--------", false, false, rate);
+      mii_put_byte(mii, "--------", false, false, speed);
     end loop;
   end procedure;
 
   procedure mii_frame_put(signal mii: out mii_rx_p2m;
                             constant data : byte_string;
-                            constant rate: natural := 100;
+                            constant speed: link_speed_t := LINK_SPEED_100;
                             constant pre_count : natural := 8;
                             constant error_at_bit : integer := -1)
   is
     variable error_at_byte : integer;
   begin
-    log_debug("* MII < " & to_string(data) & ", rate: " & to_string(rate));
+    log_debug("* MII < " & to_string(data) & ", speed: " & to_string(speed));
 
     error_at_byte := -1;
     if error_at_bit >= 0 then
@@ -455,15 +468,15 @@ package body testing is
     then
       for i in 0 to pre_count-2
       loop
-        mii_put_byte(mii, x"55", true, false, rate);
+        mii_put_byte(mii, x"55", true, false, speed);
       end loop;
 
-      mii_put_byte(mii, x"d5", true, false, rate);
+      mii_put_byte(mii, x"d5", true, false, speed);
     end if;
 
     for i in data'range
     loop
-      mii_put_byte(mii, data(i), error_at_byte /= i, error_at_byte = i, rate);
+      mii_put_byte(mii, data(i), error_at_byte /= i, error_at_byte = i, speed);
     end loop;
   end procedure;
 
@@ -472,9 +485,9 @@ package body testing is
                            data : out std_ulogic_vector(3 downto 0);
                            valid : out boolean;
                            error: out boolean;
-                           constant rate: natural)
+                           constant speed: link_speed_t)
   is
-    constant cycle_time: time := 4 * 1e6 ps / rate;
+    constant cycle_time : time := bit_time_ns(speed) * 4 ns;
   begin
       o.clk <= '1';
       data := i.d;
@@ -490,7 +503,7 @@ package body testing is
                           signal i: in mii_tx_m2p;
                           data : inout byte_stream;
                           valid : out boolean;
-                          constant rate: natural := 100)
+                          constant speed: link_speed_t := LINK_SPEED_100)
   is
     variable ret: byte_stream;
     variable nibble0, nibble1: std_ulogic_vector(3 downto 0);
@@ -507,12 +520,12 @@ package body testing is
     loop
       while not v0
       loop
-        mii_nibble_get(o, i, nibble0, v0, e0, rate);
+        mii_nibble_get(o, i, nibble0, v0, e0, speed);
       end loop;
 
       while nibble0 = x"5"
       loop
-        mii_nibble_get(o, i, nibble0, v0, e0, rate);
+        mii_nibble_get(o, i, nibble0, v0, e0, speed);
         if e0 then
           return;
         end if;
@@ -526,8 +539,8 @@ package body testing is
     if nibble0 = x"d" then
       while v0 and v1
       loop
-        mii_nibble_get(o, i, nibble0, v0, e0, rate);
-        mii_nibble_get(o, i, nibble1, v1, e1, rate);
+        mii_nibble_get(o, i, nibble0, v0, e0, speed);
+        mii_nibble_get(o, i, nibble1, v1, e1, speed);
         if v0 and v1 then
           frame_valid := frame_valid and not e0 and not e1;
           write(ret, byte'(nibble1 & nibble0));
@@ -545,13 +558,13 @@ package body testing is
     signal i: in mii_tx_m2p;
     data : in byte_string;
     valid : in boolean;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
     level : log_level_t := LOG_LEVEL_WARNING)
   is
     variable rx_data: byte_stream := new byte_string(1 to 0);
     variable rx_valid: boolean;
   begin
-    mii_frame_get(o, i, rx_data, rx_valid, rate);
+    mii_frame_get(o, i, rx_data, rx_valid, speed);
     
     if valid /= rx_valid then
       log(level, log_context & ": " &
@@ -600,9 +613,9 @@ package body testing is
                           signal rmii: out rmii_p2m;
                           constant rxd : byte;
                           constant dv, crs, err : boolean;
-                          constant rate: integer)
+                          constant speed: link_speed_t)
   is
-    constant cycle_time: time := 4 * 1e6 ps / rate;
+    constant cycle_time : time := bit_time_ns(speed) * 4 ns;
   begin
     for off in 0 to 3
     loop
@@ -629,27 +642,27 @@ package body testing is
   procedure rmii_interframe_put(signal ref_clock: in std_ulogic;
                                 signal rmii: out rmii_p2m;
                                 constant ipg_time: natural := 96/8;
-                                constant rate: natural := 100)
+                                constant speed: link_speed_t := LINK_SPEED_100)
   is
   begin
     log_debug("* RMII < wait " & to_string(ipg_time) & " bit time");
     
     for i in 0 to ipg_time/8 - 1
     loop
-      rmii_put_byte(ref_clock, rmii, "--------", false, false, false, rate);
+      rmii_put_byte(ref_clock, rmii, "--------", false, false, false, speed);
     end loop;
   end procedure;
 
   procedure rmii_frame_put(signal ref_clock: in std_ulogic;
                            signal rmii: out rmii_p2m;
                            constant data : byte_string;
-                           constant rate: natural := 100;
+                           constant speed: link_speed_t := LINK_SPEED_100;
                            constant pre_count : natural := 8;
                            constant error_at_bit : integer := -1)
   is
     variable error_at_byte : integer;
   begin
-    log_debug("* RMII < " & to_string(data) & ", rate: " & to_string(rate));
+    log_debug("* RMII < " & to_string(data) & ", speed: " & to_string(speed));
 
     error_at_byte := -1;
     if error_at_bit >= 0 then
@@ -660,16 +673,16 @@ package body testing is
     then
       for i in 0 to pre_count-2
       loop
-        rmii_put_byte(ref_clock, rmii, x"55", true, true, false, rate);
+        rmii_put_byte(ref_clock, rmii, x"55", true, true, false, speed);
       end loop;
 
-      rmii_put_byte(ref_clock, rmii, x"d5", true, true, false, rate);
+      rmii_put_byte(ref_clock, rmii, x"d5", true, true, false, speed);
     end if;
 
     for i in data'range
     loop
       rmii_put_byte(ref_clock, rmii, data(i),
-                    true, true, error_at_byte = i, rate);
+                    true, true, error_at_byte = i, speed);
     end loop;
   end procedure;
 
@@ -688,7 +701,7 @@ package body testing is
                            signal rmii: in rmii_m2p;
                            data : inout byte_stream;
                            valid : out boolean;
-                           constant rate: natural := 100)
+                           constant speed: link_speed_t := LINK_SPEED_100)
   is
     variable ret: byte_stream;
     variable word: std_ulogic_vector(7 downto 0);
@@ -763,13 +776,13 @@ package body testing is
     signal rmii: in rmii_m2p;
     data : in byte_string;
     valid : in boolean;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
     level : log_level_t := LOG_LEVEL_WARNING)
   is
     variable rx_data: byte_stream := new byte_string(1 to 0);
     variable rx_valid: boolean;
   begin
-    rmii_frame_get(ref_clock, rmii, rx_data, rx_valid, rate);
+    rmii_frame_get(ref_clock, rmii, rx_data, rx_valid, speed);
     
     if valid /= rx_valid then
       log(level, log_context & ": " &

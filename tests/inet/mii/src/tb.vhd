@@ -7,6 +7,7 @@ end tb;
 
 library nsl_simulation, nsl_bnoc, nsl_mii, nsl_data;
 use nsl_mii.rgmii.all;
+use nsl_mii.link.all;
 use nsl_mii.mii.all;
 use nsl_mii.testing.all;
 use nsl_data.bytestream.all;
@@ -23,18 +24,18 @@ architecture arch of tb is
 begin
 
   rgmii_gen: process
-    constant mode: rgmii_mode_t := RGMII_MODE_10;
+    constant speed: link_speed_t := LINK_SPEED_1000;
   begin
     done_s(0) <= '0';
 
     rgmii_put_init(rgmii_s.p2m);
-    rgmii_interframe_put(rgmii_s.p2m, 1024, mode);
+    rgmii_interframe_put(rgmii_s.p2m, 1024, speed);
 
     rgmii_frame_put(rgmii_s.p2m,
                     data => from_hex("40302010"),
-                    mode => mode);
+                    speed => speed);
 
-    rgmii_interframe_put(rgmii_s.p2m, 1024, mode);
+    rgmii_interframe_put(rgmii_s.p2m, 1024, speed);
 
     done_s(0) <= '1';
     wait;
@@ -42,12 +43,12 @@ begin
 
   mii_chk: process
     variable blob: nsl_data.bytestream.byte_stream;
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
   begin
     done_s(1) <= '0';
 
     mii_tx_init(mii_s.p2m.tx);
-    mii_frame_check("MII", mii_s.p2m.tx, mii_s.m2p.tx, from_hex("40302010"), true, rate);
+    mii_frame_check("MII", mii_s.p2m.tx, mii_s.m2p.tx, from_hex("40302010"), true, speed);
     wait for 1 us;
 
     done_s(1) <= '1';
@@ -55,17 +56,17 @@ begin
   end process;
 
   mii_gen: process
-    constant rate: natural := 100;
+    constant speed: link_speed_t := LINK_SPEED_100;
   begin
     done_s(2) <= '0';
 
     mii_rx_init(mii_s.p2m.rx);
-    mii_interframe_put(mii_s.p2m.rx, 512, rate);
+    mii_interframe_put(mii_s.p2m.rx, 512, speed);
     mii_frame_put(mii_s.p2m.rx,
                   data => from_hex("10203040"),
-                  rate => rate);
+                  speed => speed);
 
-    mii_interframe_put(mii_s.p2m.rx, 1024, rate);
+    mii_interframe_put(mii_s.p2m.rx, 1024, speed);
 
     done_s(2) <= '1';
     wait;
@@ -73,11 +74,11 @@ begin
 
   rgmii_chk: process
     variable blob: nsl_data.bytestream.byte_stream;
-    constant mode: rgmii_mode_t := RGMII_MODE_10;
+    constant speed: link_speed_t := LINK_SPEED_1000;
   begin
     done_s(3) <= '0';
 
-    rgmii_frame_check("RGMII", rgmii_s.m2p, from_hex("10203040"), true, mode);
+    rgmii_frame_check("RGMII", rgmii_s.m2p, from_hex("10203040"), true, speed);
     wait for 1 us;
 
     done_s(3) <= '1';
@@ -87,13 +88,14 @@ begin
   rgmii: nsl_mii.rgmii.rgmii_driver
     generic map(
       rx_clock_delay_ps_c => 0,
-      tx_clock_delay_ps_c => 0,
-      inband_status_c => false
+      tx_clock_delay_ps_c => 0
       )
     port map(
       reset_n_i => reset_n_s,
       clock_i => clock_s,
 
+      mode_i => LINK_SPEED_1000,
+      
       rgmii_o => rgmii_s.m2p,
       rgmii_i => rgmii_s.p2m,
 
