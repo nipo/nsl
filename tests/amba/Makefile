@@ -23,7 +23,7 @@ tb += axi4_stream_buffer_io
 tb += axi4_stream_buffer_align
 tb += axi4_stream_buffer_short
 
-all: simulate
+all: run
 
 define tb_declare
 
