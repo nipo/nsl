@@ -13,20 +13,25 @@ use nsl_simulation.logging.all;
 use nsl_amba.axi4_mm.all;
 
 entity tb is
+  generic(
+    beat_count_c : integer := 22
+    );
+  port(
+    clock_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
+    done_o : out std_ulogic
+    );
 end tb;
 
 architecture arch of tb is
 
-  signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 0);
-
-  signal bus_s: bus_t;
+  signal bus_s, bus2_s: bus_t;
 
   constant config_c : config_t := config(address_width => 32,
                                          data_bus_width => 32,
                                          max_length => 16,
                                          burst => true);
-  constant ctx_length_c : natural := 22*4;
+  constant ctx_length_c : natural := beat_count_c * (2 ** config_c.data_bus_width_l2);
 
 begin
   
@@ -36,10 +41,10 @@ begin
       ctx_length_c => ctx_length_c
       )
     port map(
-      clock_i => clock_s,
-      reset_n_i => reset_n_s,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      done_o => done_s(0),
+      done_o => done_o,
       
       axi_o => bus_s.m,
       axi_i => bus_s.s
@@ -48,14 +53,35 @@ begin
   dumper: nsl_amba.axi4_mm.axi4_mm_dumper
     generic map(
       config_c => config_c,
-      prefix_c => "RAM"
+      prefix_c => "RAMx"&to_string(beat_count_c)
       )
     port map(
-      clock_i => clock_s,
-      reset_n_i => reset_n_s,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
       master_i => bus_s.m,
       slave_i => bus_s.s
+      );
+
+  fifo: nsl_amba.mm_fifo.axi4_mm_fifo
+    generic map(
+      config_c => config_c,
+      clock_count_c => 1,
+      aw_depth_c => 8,
+      w_depth_c => 32,
+      b_depth_c => 8,
+      ar_depth_c => 8,
+      r_depth_c => 32
+      )
+    port map(
+      clock_i(0) => clock_i,
+      reset_n_i => reset_n_i,
+
+      slave_i => bus_s.m,
+      slave_o => bus_s.s,
+
+      master_o => bus2_s.m,
+      master_i => bus2_s.s
       );
   
   dut: nsl_amba.ram.axi4_mm_ram
@@ -64,25 +90,11 @@ begin
       byte_size_l2_c => 10
       )
     port map(
-      clock_i => clock_s,
-      reset_n_i => reset_n_s,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
 
-      axi_i => bus_s.m,
-      axi_o => bus_s.s
-      );
-  
-  simdrv: nsl_simulation.driver.simulation_driver
-    generic map(
-      clock_count => 1,
-      reset_count => 1,
-      done_count => done_s'length
-      )
-    port map(
-      clock_period(0) => 10 ns,
-      reset_duration => (others => 10 ns),
-      clock_o(0) => clock_s,
-      reset_n_o(0) => reset_n_s,
-      done_i => done_s
+      axi_i => bus2_s.m,
+      axi_o => bus2_s.s
       );
 
 end;

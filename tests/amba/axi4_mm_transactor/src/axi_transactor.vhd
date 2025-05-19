@@ -2,10 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_data;
+library nsl_amba, nsl_data, nsl_simulation;
 use nsl_amba.axi4_mm.all;
 use nsl_data.prbs.all;
 use nsl_data.bytestream.all;
+use nsl_data.text.all;
+use nsl_simulation.assertions.all;
 
 entity axi_transactor is
   generic (
@@ -96,15 +98,14 @@ begin
         end if;
 
       when ST_CHECK =>
-        assert bytes(txn_cfg_c, r.txn) = check_value_c
-          severity failure;
+        assert_equal(to_string(config_c) & "-" & to_string(ctx_length_c), bytes(txn_cfg_c, r.txn), check_value_c, failure);
         rin.state <= ST_DONE;
 
       when ST_DONE =>
         null;
     end case;
   end process;
-
+  
   moore: process(r) is
   begin
     done_o <= '0';

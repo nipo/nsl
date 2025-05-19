@@ -2595,8 +2595,9 @@ package body axi4_mm is
   is
   begin
     return (not txn.burst_addr_pending or is_ready(cfg.axi, wa))
-      and (not txn.burst_data_pending or is_ready(cfg.axi, w))
-      and (not txn.burst_resp_pending or is_valid(cfg.axi, b))
+      and (not txn.burst_addr_pending and (
+        (not txn.burst_data_pending or is_ready(cfg.axi, w))
+        and (not txn.burst_resp_pending or is_valid(cfg.axi, b))))
       and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 
@@ -2608,7 +2609,7 @@ package body axi4_mm is
   is
   begin
     return (not txn.burst_addr_pending or is_ready(cfg.axi, ra))
-      and (not txn.burst_data_pending or (is_valid(cfg.axi, r) and is_last(cfg.axi, r)))
+      and (not txn.burst_addr_pending and (not txn.burst_data_pending or (is_valid(cfg.axi, r) and is_last(cfg.axi, r))))
       and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 

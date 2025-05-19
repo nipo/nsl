@@ -1,4 +1,4 @@
-top = work.tb
+top = work.meta_tb
 work-srcdir = $(SRC_DIR)/src
 tool = ghdl
 hwdep = simulation

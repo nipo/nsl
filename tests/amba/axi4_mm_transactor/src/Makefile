@@ -1,6 +1,7 @@
 vhdl-sources += tester.pkg.vhd
 vhdl-sources += axi_transactor.vhd
 vhdl-sources += tb.vhd
+vhdl-sources += meta_tb.vhd
 deps += nsl_data.bytestream
 deps += nsl_data.endian
 deps += nsl_data.crc
@@ -11,3 +12,4 @@ deps += nsl_simulation.logging
 deps += nsl_simulation.driver
 deps += nsl_amba.axi4_mm
 deps += nsl_amba.ram
+deps += nsl_amba.mm_fifo

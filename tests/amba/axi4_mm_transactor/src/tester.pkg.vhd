@@ -7,6 +7,17 @@ use nsl_amba.axi4_mm.all;
 
 package tester is
 
+  component tb is
+    generic(
+      beat_count_c : integer := 22
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      done_o : out std_ulogic
+      );
+  end component;
+
   component axi_transactor is
     generic (
       config_c: config_t;
