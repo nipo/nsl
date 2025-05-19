@@ -20,6 +20,10 @@ deps += sb_ice
 endif
 
 ifeq ($(hwdep),gowin)
+ifneq ($(filter GW5A%,$(target_part_name)),)
+vhdl-sources += clock_buffer_gowin_5a.vhd
+else
 vhdl-sources += clock_buffer_gowin.vhd
+endif
 deps += gowin.components
 endif
