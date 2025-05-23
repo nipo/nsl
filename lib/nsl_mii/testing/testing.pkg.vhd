@@ -8,12 +8,10 @@ use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
 use nsl_mii.rmii.all;
 use nsl_mii.mii.all;
-use nsl_data.crc.all;
 use nsl_simulation.logging.all;
 use nsl_logic.bool.all;
 use nsl_data.text.all;
 use nsl_data.bytestream.all;
-use nsl_data.crc.all;
 use nsl_data.endian.all;
 
 package testing is

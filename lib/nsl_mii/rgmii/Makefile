@@ -12,7 +12,6 @@ deps += nsl_clocking.async
 deps += nsl_bnoc.committed
 deps += nsl_data.bytestream
 deps += nsl_data.endian
-deps += nsl_data.crc
 deps += nsl_io.diff
 deps += nsl_io.clock
 deps += nsl_io.ddr

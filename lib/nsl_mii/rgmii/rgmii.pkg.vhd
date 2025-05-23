@@ -11,10 +11,10 @@ use nsl_bnoc.framed.all;
 package rgmii is
 
   -- RGMII is a transport for Layer 1.  Frames in and out of RGMII
-  -- transceiver contain the whole ethernet frame, not including FCS,
-  -- but with a status byte instead.  Payload may be padded. Padding
-  -- is carried over.  There is no minimal size for frame TX, it is up
-  -- to transmitter to abide minimal size constraints.
+  -- transceiver contain the whole ethernet frame, including FCS.
+  -- Payload may be padded. Padding is carried over.  There is no
+  -- minimal size for frame TX, it is up to transmitter to abide
+  -- minimal size constraints.
   --
   -- Layer 1 <-> layer 2 frame components:
   -- * Destination MAC [6]
@@ -22,7 +22,7 @@ package rgmii is
   -- * Ethertype [2]
   -- * Payload [*]
   -- * Status
-  --   [0]   CRC valid / Frame complete
+  --   [0]   Frame complete
   --   [7:1] Reserved
 
   -- RGMII Base signaling, reference clock is external
