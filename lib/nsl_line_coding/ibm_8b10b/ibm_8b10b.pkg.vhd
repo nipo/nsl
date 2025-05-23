@@ -91,7 +91,7 @@ package ibm_8b10b is
   -- Triggers 0101010101 (transmit right to left)
   constant D21_5 : data_t := data(21, 5);
   -- Triggers 1010101010 (transmit right to left)
-  constant D10_2 : data_t := data(21, 5);
+  constant D10_2 : data_t := data(10, 2);
   
   -- 8B/10B streaming encoder. Disparity is internal, it is reset on
   -- block reset. Input to output latency is implementation specific.
