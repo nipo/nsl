@@ -176,9 +176,11 @@ begin
         rin.is_second <= not r.is_second;
         rin.flit_valid <= to_logic(r.is_second);
         -- Take first half cycle, for two consecutive cycles
-        rin.flit.data <= r.pipe(2).data & r.pipe(0).data;
-        rin.flit.dv <= r.pipe(0).ctl and r.pipe(2).ctl;
-        rin.flit.er <= r.pipe(2).ctl xor r.pipe(2).ctl;
+        if r.is_second then
+          rin.flit.data <= r.pipe(2).data & r.pipe(0).data;
+          rin.flit.dv <= r.pipe(0).ctl;
+          rin.flit.er <= r.pipe(0).ctl xor r.pipe(2).ctl;
+        end if;
 
         case r.state is
           when ST_UNSYNC =>
@@ -206,6 +208,9 @@ begin
               rin.state <= ST_FRAME;
               rin.is_second <= false;
               rin.flit_valid <= '1';
+              rin.flit.data <= r.pipe(2).data & r.pipe(0).data;
+              rin.flit.dv <= r.pipe(0).ctl;
+              rin.flit.er <= r.pipe(0).ctl xor r.pipe(2).ctl;
             end if;
 
           when ST_FRAME =>
