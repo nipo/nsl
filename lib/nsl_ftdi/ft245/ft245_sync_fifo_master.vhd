@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_ftdi, nsl_memory, nsl_hwdep, nsl_clocking;
+library nsl_ftdi, nsl_memory, nsl_clocking;
 
 entity ft245_sync_fifo_master is
   generic (
@@ -52,7 +52,7 @@ architecture arch of ft245_sync_fifo_master is
 
 begin
 
-  clock_buffer: nsl_hwdep.clock.clock_buffer
+  clock_buffer: nsl_clocking.distribution.clock_buffer
     port map(
       clock_i => bus_i.clk,
       clock_o => clock

@@ -5,5 +5,5 @@ vhdl-sources += ft245_sync_fifo_transport.vhd
 vhdl-sources += ft245_sync_fifo_master.vhd
 vhdl-sources += ft245_sync_fifo_slave.vhd
 deps += nsl_clocking.async
-deps += nsl_hwdep.clock
+deps += nsl_clocking.distribution
 deps += nsl_memory.fifo
