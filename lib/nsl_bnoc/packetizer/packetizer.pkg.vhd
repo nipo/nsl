@@ -56,4 +56,24 @@ package packetizer is
       );
   end component;
 
+  component committed_unpacketizer_filter is
+    generic(
+      header_length_c : natural := 0;
+      max_length_l2_c : natural := 12;
+      max_packet_count_l2_c : natural := 4;
+      clock_count_c : integer range 1 to 2 := 1;
+      handle_overflow_c : boolean := false
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic_vector(0 to clock_count_c-1);
+
+      packet_i  : in  committed_req;
+      packet_o  : out committed_ack;
+
+      frame_o   : out framed_req;
+      frame_i   : in framed_ack
+      );
+  end component;
+
 end package packetizer;
