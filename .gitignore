@@ -48,3 +48,5 @@ _impact.cmd
 *~
 *.do
 vhdl_ls.toml
+*.tmp
+work
