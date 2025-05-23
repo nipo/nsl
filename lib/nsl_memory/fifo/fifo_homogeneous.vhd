@@ -139,7 +139,6 @@ begin
     severity failure;
 
   async: if not is_synchronous generate
-  begin
     reset_sync: nsl_clocking.async.async_multi_reset
       generic map(
         debounce_count_c => 4,
@@ -247,16 +246,17 @@ begin
 
   registered_counters: if register_counters_c
   generate
-    in_counter: process(clock_i(0))
+  begin
+    in_counter: process(clock_i(0)) is
     begin
-      if not clock_i(0)'stable and clock_i(0) = '1' then
+      if rising_edge(clock_i(0)) then
         in_free_o <= to_integer(to_01(s_left.free));
       end if;
     end process;
 
-    out_counter: process(clock_i(clock_count_c-1))
+    out_counter: process(clock_i(clock_count_c-1)) is
     begin
-      if not clock_i(clock_count_c-1)'stable and clock_i(clock_count_c-1) = '1' then
+      if rising_edge(clock_i(clock_count_c-1)) then
         out_available_min_o <= to_integer(to_01(s_right.used));
         out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
       end if;
