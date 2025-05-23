@@ -41,4 +41,15 @@ package pwm is
       );
   end component;
 
+  component ss_pwm is
+    port (
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      pwm_o    : out std_ulogic;
+
+      duty_i : in unsigned(7 downto 0)
+      );
+  end component;
+
 end package pwm;
