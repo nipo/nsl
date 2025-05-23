@@ -163,10 +163,13 @@ begin
         end if;
 
         if ((r.in_state = IN_DATA and in_i.valid = '1' and in_i.last = '1')
-            or r.in_state = IN_COMMIT
-            or r.in_state = IN_CANCEL)
+            or r.in_state = IN_COMMIT)
           and (r.fifo_fillness = crc_byte_count_c
                or (r.fifo_fillness = crc_byte_count_c+1 and out_i.ready = '1')) then
+          rin.out_state <= OUT_DONE;
+        end if;
+
+        if r.in_state = IN_CANCEL then
           rin.out_state <= OUT_DONE;
         end if;
 
