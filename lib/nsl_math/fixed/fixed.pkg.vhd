@@ -685,7 +685,7 @@ package body fixed is
     variable ret : sfixed(a'left+1 downto a'right);
   begin
     if sign(a) = '1' then
-      ret := -a;
+      ret := -resize(a, ret'left, ret'right);
     else
       ret := "0" & a;
     end if;
