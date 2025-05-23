@@ -18,12 +18,14 @@ end tb;
 architecture beh of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal a_tx_s, a_to_b_s, b_rx_s : committed_bus;
+  signal a_tx_s, a_to_b_s, a_to_b_chk_s, b_rx_s : committed_bus;
   signal done_s : std_ulogic_vector(0 to 1);
 
   constant a_addr_c: ipv4_t := to_ipv4(10,0,1,1);
   constant b_addr_c: ipv4_t := to_ipv4(10,0,1,2);
   constant broadcast_addr_c: ipv4_t := to_ipv4(10,0,1,255);
+
+  constant broken: byte_string(0 to 40) := (others => x"ee");
   
 begin
 
@@ -38,34 +40,21 @@ begin
                   b_addr_c & from_hex("00") & to_byte(ip_proto_icmp)
                   & from_hex("000477778888"), true);
 
+    for i in 1 to 20
+    loop
+      committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
+                    broken(0 to i-1), true);
+      committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
+                    broken(0 to i-1), false);
+    end loop;
+      
     committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("df"), false);
+                  broadcast_addr_c & from_hex("00") & to_byte(ip_proto_icmp)
+                  & from_hex("000477778888"), false);
 
     committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("dfba"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("dfbada"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("dfbada55"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("dfbada5522"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("dfbada553355"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  from_hex("1111111111111111111111111111111111111111"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  to_byte(ip_proto_icmp) & broadcast_addr_c & from_hex("00")
-                  & from_hex("77778888"), false);
-
-    committed_put(a_tx_s.req, a_tx_s.ack, clock_s,
-                  to_byte(ip_proto_icmp) & broadcast_addr_c & from_hex("00")
-                  & from_hex("77778888"), true);
+                  broadcast_addr_c & from_hex("00") & to_byte(ip_proto_icmp)
+                  & from_hex("000477778888"), true);
     
     done_s(0) <= '1';
     wait;
@@ -81,19 +70,22 @@ begin
                     a_addr_c & from_hex("00") & to_byte(ip_proto_icmp)
                     & from_hex("000477778888"), true);
 
-    committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
-                    null_byte_string, false);
+    for i in 1 to 20
+    loop
+      committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
+                      null_byte_string, false);
+
+      committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
+                      null_byte_string, false);
+    end loop;
 
     committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
-                    null_byte_string, false);
+                    a_addr_c & from_hex("01") & to_byte(ip_proto_icmp)
+                    & from_hex("000477778888"), false);
 
     committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
-                    to_byte(ip_proto_icmp) & a_addr_c & from_hex("01")
-                    & from_hex("77778888"), false);
-
-    committed_check("chk", b_rx_s.req, b_rx_s.ack, clock_s,
-                    to_byte(ip_proto_icmp) & a_addr_c & from_hex("01")
-                    & from_hex("77778888"), true);
+                    a_addr_c & from_hex("01") & to_byte(ip_proto_icmp)
+                    & from_hex("000477778888"), true);
 
     wait for 150 ns;
 
@@ -118,6 +110,21 @@ begin
       l2_i => a_to_b_s.ack
       );
 
+  chk: nsl_inet.ipv4.ipv4_checksum_inserter
+    generic map(
+      header_length_c => 0
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      input_i => a_to_b_s.req,
+      input_o => a_to_b_s.ack,
+
+      output_o => a_to_b_chk_s.req,
+      output_i => a_to_b_chk_s.ack
+      );
+  
   b: nsl_inet.ipv4.ipv4_receiver
     generic map(
       header_length_c => 0
@@ -129,8 +136,8 @@ begin
       unicast_i => b_addr_c,
       broadcast_i => broadcast_addr_c,
 
-      l2_i => a_to_b_s.req,
-      l2_o => a_to_b_s.ack,
+      l2_i => a_to_b_chk_s.req,
+      l2_o => a_to_b_chk_s.ack,
       
       l4_o => b_rx_s.req,
       l4_i => b_rx_s.ack
