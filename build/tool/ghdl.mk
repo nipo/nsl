@@ -120,10 +120,19 @@ $(target): $(sources) $(MAKEFILE_LIST) $(foreach l,$(ghdl-plugin),$(build-dir)/$
 run: $(target)
 	$(call ghdl-run-rules,)
 
+headless_run: $(target).log
+
+$(target).log: $(target)
+	$(call ghdl-run-rules,) > $@.tmp
+	cp $@.tmp $@
+
 $(target).ghw: $(target)
 	$(call ghdl-run-rules,--wave=$@)
+
+$(target).fst: $(target)
+	$(call ghdl-run-rules,--fst=$@)
 
 $(target).vcd: $(target)
 	$(call ghdl-run-rules,--vcd=$@)
 
-clean-files += *.o $(target) $(target).ghw $(target).vcd $(target).vcd *.cf *.lst $(target)
+clean-files += *.o $(target) $(target).ghw $(target).vcd $(target).vcd *.cf *.lst $(target) $(target).log
