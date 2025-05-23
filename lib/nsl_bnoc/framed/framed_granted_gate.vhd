@@ -54,7 +54,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, in_cmd_i, in_rsp_i, out_cmd_i, out_rsp_i)
+  transition: process(r, in_cmd_i, in_rsp_i, out_cmd_i, out_rsp_i, grant_i)
   begin
     rin <= r;
 
