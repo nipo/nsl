@@ -45,18 +45,25 @@ begin
     if rising_edge(rx_clock_i) then
       r <= rin;
     end if;
+
+    if reset_n_i = '0' then
+      r.stable_count <= debounce_count_c-1;
+      r.last_ibs <= x"0";
+    end if;
   end process;
 
   rx_transition: process(r, rx_flit_i) is
   begin
     rin <= r;
 
-    if r.last_ibs /= rx_flit_i.data(3 downto 0)
-      or rx_flit_i.error = '1'
-      or rx_flit_i.valid = '1' then
-      rin.stable_count <= debounce_count_c - 1;
+    if rx_flit_i.error = '0' and rx_flit_i.valid = '0' then
+      if r.last_ibs /= rx_flit_i.data(3 downto 0) then
+        rin.stable_count <= debounce_count_c - 1;
+        rin.last_ibs <= rx_flit_i.data(3 downto 0);
+      elsif r.stable_count /= 0 then
+        rin.stable_count <= r.stable_count - 1;
+      end if;
     end if;
-    rin.last_ibs <= rx_flit_i.data(3 downto 0);
   end process;
 
   ibs_stable_s <= to_logic(r.stable_count = 0);
