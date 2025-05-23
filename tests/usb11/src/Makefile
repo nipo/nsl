@@ -6,6 +6,7 @@ vhdl-sources += usb_fs_master.vhd
 vhdl-sources += tb.vhd
 
 deps += nsl_hwdep.reset
+deps += nsl_simulation.control
 deps += nsl_clocking.async
 deps += nsl_memory.fifo
 deps += nsl_usb.usb

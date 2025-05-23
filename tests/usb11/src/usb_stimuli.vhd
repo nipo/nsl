@@ -23,6 +23,9 @@ library work, ieee;
 use ieee.std_logic_1164.all;
 use work.usb_commands.all;
 
+library nsl_simulation;
+use nsl_simulation.control.all;
+
 ENTITY USB_Stimuli IS PORT(
   -- Test Control Interface
   USB             : OUT usb_action;
@@ -435,7 +438,8 @@ BEGIN
  -- recv_D1   (usb, );
     send_ACK  (usb);
 
-    ASSERT FALSE REPORT"End of Test" SEVERITY FAILURE;
+    terminate(0);
+    wait;
   END PROCESS;
 
 END sim;

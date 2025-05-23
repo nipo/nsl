@@ -4,13 +4,13 @@ use ieee.std_logic_1164.all;
 entity tb is
 end tb;
 
-library nsl_clocking;
-use nsl_clocking.async.all;
+library nsl_clocking, nsl_event, nsl_math;
+use nsl_math.fixed.all;
 
 architecture arch of tb is
 
   constant internal_clock_freq : integer := 48000000;
-  constant internal_clock_off_ppm : integer := -100000;
+  constant internal_clock_off_ppm : integer := -100;
   constant reference_clock_freq : integer := 12000000;
   constant reference_clock_off_ppm : integer := 10;
   constant output_clock_freq : integer := 12000000;
@@ -24,6 +24,8 @@ architecture arch of tb is
   constant reference_clock_half_period : time := 1000 ps * (1000000 + reference_clock_off_ppm) / (reference_clock_freq / 1000) / 2;
   constant output_clock_half_period : time := 1000000000 ps / (output_clock_freq / 1000) / 2;
 
+  signal period_s : ufixed(3 downto -6);
+  
 begin
 
   internal_clock_gen: process
@@ -67,7 +69,7 @@ begin
       rising_o => reference_tick
       );
   
-  recoverer: nsl_clocking.async.async_recovery
+  recoverer: nsl_event.tick.tick_pll
     generic map(
       clock_i_hz_c => internal_clock_freq,
       tick_skip_max_c => 3,
@@ -80,7 +82,9 @@ begin
       reset_n_i => internal_reset_n,
 
       tick_i => reference_tick,
-      tick_o => output_tick
+      tick_o => output_tick,
+
+      tick_i_period_o => period_s
       );
 
   

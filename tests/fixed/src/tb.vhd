@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use std.textio.all;
 
-library nsl_math, nsl_simulation;
+library nsl_math, nsl_simulation, nsl_data;
 use nsl_math.fixed.all;
 use nsl_data.text.all;
 use nsl_simulation.logging.all;

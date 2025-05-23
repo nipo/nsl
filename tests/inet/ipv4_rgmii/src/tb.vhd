@@ -7,7 +7,7 @@ end tb;
 
 library nsl_simulation, nsl_bnoc, nsl_clocking, nsl_inet, nsl_data, nsl_mii;
 use nsl_simulation.logging.all;
-use nsl_mii.mii.all;
+use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
 use nsl_inet.ethernet.all;
 use nsl_inet.ipv4.all;
@@ -37,7 +37,7 @@ architecture arch of tb is
   constant gateway_c : ipv4_t := to_ipv4(10,0,0,254);
   constant broadcast_c : ipv4_t := to_ipv4(10,0,0,255);
 
-  constant mode_c: rgmii_mode_t := RGMII_MODE_1000;
+  constant mode_c: link_speed_t := LINK_SPEED_1000;
 
   constant a_udp_port_c: udp_port_t := 1234;
   constant b_udp_port_c: udp_port_t := 4567;

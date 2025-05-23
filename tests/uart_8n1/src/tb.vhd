@@ -43,7 +43,6 @@ begin
 
   u_in: nsl_uart.serdes.uart_tx
     generic map(
-      divisor_width => 6,
       bit_count_c => width,
       stop_count_c => 1,
       parity_c => parity
@@ -63,7 +62,6 @@ begin
 
   u_out: nsl_uart.serdes.uart_rx
     generic map(
-      divisor_width => 6,
       bit_count_c => width,
       stop_count_c => 1,
       parity_c => parity

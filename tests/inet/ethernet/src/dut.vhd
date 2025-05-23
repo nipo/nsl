@@ -4,7 +4,9 @@ use ieee.numeric_std.all;
 
 library nsl_mii, nsl_data, nsl_inet, nsl_bnoc, nsl_clocking;
 use nsl_data.text.all;
+use nsl_mii.link.all;
 use nsl_mii.mii.all;
+use nsl_mii.flit.all;
 use nsl_mii.rgmii.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
@@ -22,7 +24,7 @@ entity dut is
     phy_i : in rgmii_io_group_t;
     phy_o : out rgmii_io_group_t;
 
-    mode_o : out rgmii_mode_t;
+    speed_o : out link_speed_t;
     link_up_o : out std_ulogic;
     full_duplex_o : out std_ulogic;
 
@@ -41,8 +43,25 @@ architecture beh of dut is
   
   signal l1_l2_s, l2_l1_s : nsl_bnoc.committed.committed_bus;
 
+  signal ibs_s : link_status_t;
+  signal rx_clock_s: std_ulogic;
+  signal rx_flit_s: mii_flit_t;
+  
 begin
 
+  ibs: nsl_mii.link_monitor.link_monitor_inband_status
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      rx_clock_i => rx_clock_s,
+      rx_flit_i => rx_flit_s,
+      link_status_o => ibs_s
+      );
+
+  speed_o <= ibs_s.speed;
+  link_up_o <= '1' when ibs_s.up else '0';
+  full_duplex_o <= '1' when ibs_s.duplex = LINK_DUPLEX_FULL else '0';
+  
   reset_sync_clk: nsl_clocking.async.async_edge
     port map(
       data_i => reset_n_i,
@@ -51,19 +70,16 @@ begin
       );
 
   l1: nsl_mii.rgmii.rgmii_driver
-    generic map(
-      inband_status_c => false
-      )
     port map(
       reset_n_i => reset_n_s,
       clock_i => clock_i,
 
+      mode_i => ibs_s.speed,
       rgmii_o => phy_o,
       rgmii_i => phy_i,
 
-      mode_o => mode_o,
-      link_up_o => link_up_o,
-      full_duplex_o => full_duplex_o,
+      rx_clock_o => rx_clock_s,
+      rx_flit_o => rx_flit_s,
 
       rx_o => l1_l2_s.req,
       rx_i => l1_l2_s.ack,

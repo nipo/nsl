@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_spdif, nsl_logic, nsl_clocking, nsl_simulation, nsl_math, nsl_data;
+library nsl_spdif, nsl_logic, nsl_clocking, nsl_simulation, nsl_math, nsl_data, nsl_event;
 use nsl_spdif.serdes.all;
 use nsl_spdif.blocker.all;
 use nsl_logic.logic.xor_reduce;
@@ -73,7 +73,7 @@ begin
       clock_i => s_clk(1)
       );
 
-  freq_gen: nsl_clocking.tick.tick_generator
+  freq_gen: nsl_event.tick.tick_generator
     port map(
       reset_n_i => s_resetn_clk(0),
       clock_i => s_clk(0),
@@ -112,7 +112,7 @@ begin
       ui_tick_o => s_rx_tick
       );
 
-  measurer : nsl_clocking.tick.tick_measurer
+  measurer : nsl_event.tick.tick_measurer
     generic map(
       tau_c => 2**(1-s_period'right)-1
       )

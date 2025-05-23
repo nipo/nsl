@@ -10,7 +10,8 @@ end tb;
 architecture arch of tb is
 
   signal clock, reset_n : std_ulogic;
-  signal sck, mosi, miso : std_ulogic;
+  signal sck, miso : std_ulogic;
+  signal mosi : nsl_io.io.tristated;
   signal cs_n : nsl_io.io.opendrain;
   signal done : std_ulogic_vector(0 to 1);
 

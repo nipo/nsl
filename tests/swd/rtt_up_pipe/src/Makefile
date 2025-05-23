@@ -11,6 +11,7 @@ deps += nsl_bnoc.testing
 deps += nsl_bnoc.routed
 deps += nsl_clocking.async
 deps += nsl_amba.axi4_mm
+deps += nsl_amba.ram
 deps += nsl_segger.rtt
 deps += nsl_math.arith
 deps += nsl_amba.testing

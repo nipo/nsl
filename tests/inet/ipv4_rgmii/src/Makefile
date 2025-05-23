@@ -12,3 +12,6 @@ deps += nsl_inet.func
 deps += nsl_inet.udp
 deps += nsl_clocking.async
 deps += nsl_mii.rgmii
+deps += nsl_mii.link_monitor
+deps += nsl_mii.link
+deps += nsl_mii.flit

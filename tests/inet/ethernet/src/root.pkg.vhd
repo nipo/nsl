@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 library nsl_mii, nsl_inet, nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_bnoc.committed.all;
+use nsl_mii.link.all;
 use nsl_mii.mii.all;
 use nsl_mii.rgmii.all;
 use nsl_inet.ethernet.all;
@@ -22,7 +23,7 @@ package root is
       phy_i : in rgmii_io_group_t;
       phy_o : out rgmii_io_group_t;
 
-      mode_o : out rgmii_mode_t;
+      speed_o : out link_speed_t;
       link_up_o : out std_ulogic;
       full_duplex_o : out std_ulogic;
 

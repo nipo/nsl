@@ -1,14 +1,11 @@
 top = work.tb
 work-srcdir = $(SRC_DIR)/src
 tool = ghdl
-hwdep = xilinx
-target_part = xc6slx9
-target_package = csg324
-target_speed = -2
+hwdep = simulation
 
 include ../../build/build.mk
 
-$(target).vcd: ate_responses.txt ate_commands.txt
+$(target): ate_responses.txt ate_commands.txt
 
 ate_responses.txt ate_commands.txt: txn_gen
 	./$< $@

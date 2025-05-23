@@ -23,28 +23,4 @@ tb += axi4_stream_buffer_io
 tb += axi4_stream_buffer_align
 tb += axi4_stream_buffer_short
 
-all: run
-
-define tb_declare
-
-.PHONY: $1/simulate FORCE
-FORCE:
-
-$1/simulate: $1/Makefile FORCE
-	$(MAKE) -C $1 simulate
-
-simulate: $1/simulate
-
-$1/clean: $1/Makefile FORCE
-	$(MAKE) -C $1 clean
-
-clean: $1/clean
-
-$1/run: $1/Makefile FORCE
-	$(MAKE) -C $1 run
-
-run: $1/run
-
-endef
-
-$(eval $(foreach i,$(tb),$(call tb_declare,$(i))))
+include ../subdir.mk

@@ -1,27 +1,64 @@
-TESTS := analyzer cc ddr_io easyscale fifo fifo2 fifo3 	\
-fifo_delay flit ftdi gray i2c ioext mii rmii spi_bridge swd uart_8n1
+tb += amba
+tb += bnoc
+tb += bytestream
+tb += clock_div
+tb += clock_rate_estimator
+tb += color
+tb += console
+tb += cordic
+tb += crc
+tb += crc_gen
+tb += cuff
+tb += dacx0508
+tb += ddr_io
+tb += dsp
+tb += easyscale
+tb += encoder
+tb += fifo_atomic
+tb += fifo_count
+tb += fifo4
+tb += fixed
+tb += float
+tb += ftdi
+tb += gaussian
+tb += gray
+tb += gray_sync
+tb += hdlc
+tb += hdmi
+tb += i2c
+tb += i2c_clocked
+tb += i2s
+tb += ibm_8b10b
+tb += inet
+tb += jtag
+tb += lifo
+tb += mesochronous
+tb += nco
+tb += padded
+tb += pll
+tb += prbs
+tb += precise_clock
+tb += pwm
+#tb += recovery
+#tb += recovery_inv
+tb += sc202
+tb += smi
+tb += spdif
+tb += spi
+tb += spi_bridge
+tb += spi_slave
+tb += swd
+tb += swd_monitor
+tb += swd_multidrop
+tb += text
+tb += tick
+tb += tla202x
+tb += tmds
+tb += uart_8n1
+tb += usb11
+tb += usb2
+tb += usb2_framed
+tb += wishbone
+#tb += xadc
 
-all:
-
-clean:
-
-FORCE:
-	@
-
-define subtest
-
-$1/test: $1/Makefile
-	make -C $1
-
-$1/clean: FORCE
-	make -C $1 clean
-
-$1/Makefile:
-
-all: $1/test
-
-clean: $1/clean
-
-endef
-
-$(eval $(foreach t,$(TESTS),$(call subtest,$t)))
+include subdir.mk

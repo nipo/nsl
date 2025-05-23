@@ -3,6 +3,7 @@ vhdl-sources += tb.vhd
 vhdl-sources += dut.vhd
 
 deps += nsl_inet.ethernet
+deps += nsl_mii.link_monitor
 deps += nsl_mii.rgmii
 deps += nsl_mii.testing
 deps += nsl_data.text

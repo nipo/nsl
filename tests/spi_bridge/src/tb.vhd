@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_spi, nsl_clocking, nsl_simulation, nsl_io;
+use nsl_spi.spi.all;
 
 entity tb is
 end tb;
@@ -17,7 +18,8 @@ architecture arch of tb is
 
   signal s_done : std_ulogic_vector(0 to 3);
 
-  signal s_spi: nsl_spi.spi.spi_bus;
+  signal spi_master_s: nsl_spi.spi.spi_master_io;
+  signal spi_slave_s: nsl_spi.spi.spi_slave_io;
   signal s_cs_od : nsl_io.io.opendrain;
   signal s_master_cmd, s_master_rsp: nsl_bnoc.framed.framed_bus;
   signal s_slave_received, s_slave_transmitted: nsl_bnoc.framed.framed_bus;
@@ -62,10 +64,10 @@ begin
     port map(
       clock_i => s_clk_master,
       reset_n_i => s_resetn_master,
-      sck_o => s_spi.sck,
-      cs_n_o(0) => s_cs_od,
-      mosi_o => s_spi.mosi,
-      miso_i => s_spi.miso,
+      sck_o => spi_master_s.o.sck,
+      cs_n_o(0) => spi_master_s.o.cs_n,
+      mosi_o => spi_master_s.o.mosi,
+      miso_i => spi_master_s.i.miso,
       cmd_i => s_master_cmd.req,
       cmd_o => s_master_cmd.ack,
       rsp_o => s_master_rsp.req,
@@ -79,16 +81,17 @@ begin
       clock_i => s_clk_slave
       );
 
-  s_spi.cs_n <= '1' when s_cs_od.drain_n = '1' else '0';
+  spi_master_s.i <= to_master(spi_slave_s.o);
+  spi_slave_s.i <= to_slave(spi_master_s.o);
     
   slave: nsl_spi.slave.spi_framed_gateway
     port map(
       clock_i => s_clk_slave,
       reset_n_i => s_resetn_slave,
-      spi_i.sck => s_spi.sck,
-      spi_i.cs_n => s_spi.cs_n,
-      spi_i.mosi => s_spi.mosi,
-      spi_o.miso => s_spi.miso,
+      spi_i.sck => spi_slave_s.i.sck,
+      spi_i.cs_n => spi_slave_s.i.cs_n,
+      spi_i.mosi => spi_slave_s.i.mosi,
+      spi_o.miso => spi_slave_s.o.miso,
       outbound_o => s_slave_received.req,
       outbound_i => s_slave_received.ack,
       inbound_i => s_slave_transmitted.req,

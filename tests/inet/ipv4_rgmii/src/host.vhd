@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_inet, nsl_data, nsl_mii;
 use nsl_bnoc.committed.all;
-use nsl_mii.mii.all;
+use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
 use nsl_inet.func.all;
 use nsl_inet.ethernet.all;
@@ -33,7 +33,7 @@ entity host is
     udp_rx_o : out committed_req;
     udp_rx_i : in committed_ack;
     
-    mode_i : in rgmii_mode_t
+    mode_i : in link_speed_t
     );
 end entity;
 

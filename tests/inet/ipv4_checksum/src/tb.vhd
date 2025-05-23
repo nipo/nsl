@@ -10,7 +10,6 @@ use nsl_simulation.logging.all;
 use nsl_inet.ethernet.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
-use nsl_inet.tcp.all;
 use nsl_inet.testing.all;
 use nsl_bnoc.testing.all;
 use nsl_data.bytestream.all;

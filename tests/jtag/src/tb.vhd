@@ -6,6 +6,7 @@ entity tb is
 end tb;
 
 library nsl_clocking, nsl_bnoc, nsl_jtag, nsl_simulation;
+use nsl_jtag.jtag.all;
 
 architecture arch of tb is
 
@@ -23,6 +24,8 @@ architecture arch of tb is
     s_tap_dr_shift, s_tap_dr_update, s_tap_dr_in, s_tap_dr_out : std_ulogic;
   signal ate_o : nsl_jtag.jtag.jtag_ate_o;
   signal ate_i : nsl_jtag.jtag.jtag_ate_i;
+  signal tap_o : nsl_jtag.jtag.jtag_tap_o;
+  signal tap_i : nsl_jtag.jtag.jtag_tap_i;
 
   signal s_idcode_out, s_idcode_selected : std_ulogic;
   signal s_bypass_out, s_bypass_selected : std_ulogic;
@@ -68,13 +71,16 @@ begin
       jtag_i => ate_i
       );
 
+  ate_i <= to_ate(tap_o);
+  tap_i <= to_tap(ate_o);
+  
   tap: nsl_jtag.tap.tap_port
     generic map(
       ir_len => 4
       )
     port map(
-      jtag_i => ate_o,
-      jtag_o => ate_i,
+      jtag_i => tap_i,
+      jtag_o => tap_o,
 
       default_instruction_i => "0010",
 
@@ -95,7 +101,7 @@ begin
       dr_len => 32
       )
     port map(
-      tck_i => ate_o.tck.v,
+      tck_i => tap_i.tck,
       tdi_i => s_tap_dr_in,
       tdo_o => s_idcode_out,
 
@@ -115,7 +121,7 @@ begin
       dr_len => 1
       )
     port map(
-      tck_i => ate_o.tck.v,
+      tck_i => tap_i.tck,
       tdi_i => s_tap_dr_in,
       tdo_o => s_bypass_out,
 

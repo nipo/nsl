@@ -217,7 +217,7 @@ begin
         axi_i => axi_s.s
         );
 
-    mem: nsl_amba.axi4_mm.axi4_mm_lite_ram
+    mem: nsl_amba.ram.axi4_mm_lite_ram
       generic map (
         byte_size_l2_c => 12,
         config_c => config_c

@@ -52,7 +52,7 @@ architecture arch of tb is
           m.mosi <= shreg(shreg'left);
           wait for half_cycle;
           m.sck <= not cpol;
-          shreg := shreg(shreg'left-1 downto 0) & s.miso;
+          shreg := shreg(shreg'left-1 downto 0) & s.miso.v;
           wait for half_cycle;
           m.sck <= cpol;
         else
@@ -61,7 +61,7 @@ architecture arch of tb is
           m.mosi <= shreg(shreg'left);
           wait for half_cycle;
           m.sck <= cpol;
-          shreg := shreg(shreg'left-1 downto 0) & s.miso;
+          shreg := shreg(shreg'left-1 downto 0) & s.miso.v;
         end if;
       end loop;
 

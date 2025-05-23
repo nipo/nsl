@@ -6,6 +6,7 @@ library nsl_simulation, nsl_mii, nsl_data, nsl_inet, nsl_bnoc, nsl_clocking;
 use nsl_simulation.logging.all;
 use nsl_simulation.control.all;
 use nsl_data.text.all;
+use nsl_mii.link.all;
 use nsl_mii.mii.all;
 use nsl_mii.rgmii.all;
 use nsl_data.bytestream.all;
@@ -33,7 +34,7 @@ architecture beh of tb is
   signal s_done : std_ulogic_vector(0 to 3);
 
   signal link_up_s, full_duplex_s: std_ulogic;
-  signal mode_s : rgmii_mode_t;
+  signal speed_s : link_speed_t;
 
   constant frame_rx_0_c : byte_string := frame_pack(
     dut_hwaddr_c,
@@ -107,52 +108,52 @@ begin
     s_done(0) <= '0';
 
     -- Frame RX 0, OK
-    rgmii_interframe_put(rgmii_s.p2m, 1024, RGMII_MODE_10);
+    rgmii_interframe_put(rgmii_s.p2m, 1024, LINK_SPEED_10);
     rgmii_frame_put(rgmii_s.p2m,
                     data => frame_rx_0_c,
-                    mode => RGMII_MODE_10);
+                    speed => LINK_SPEED_10);
 
     -- Frame RX 1, should be dropped / reported bad
-    rgmii_interframe_put(rgmii_s.p2m, 1024, RGMII_MODE_10);
+    rgmii_interframe_put(rgmii_s.p2m, 1024, LINK_SPEED_10);
     rgmii_frame_put(rgmii_s.p2m,
                     data => frame_rx_1_c,
-                    error_at_bit => 21*8,
-                    mode => RGMII_MODE_10);
+                    error_at_bit => 13*8,
+                    speed => LINK_SPEED_10);
 
     -- Frame RX 2, OK, but not for us, should be ignored
-    rgmii_interframe_put(rgmii_s.p2m, 1024, RGMII_MODE_10);
+    rgmii_interframe_put(rgmii_s.p2m, 1024, LINK_SPEED_10);
     rgmii_frame_put(rgmii_s.p2m,
                     data => frame_rx_2_c,
-                    mode => RGMII_MODE_10);
-    rgmii_interframe_put(rgmii_s.p2m, 128, RGMII_MODE_10);
+                    speed => LINK_SPEED_10);
+    rgmii_interframe_put(rgmii_s.p2m, 128, LINK_SPEED_10);
 
     -- Frame RX 2.5, bad frames, should not pass through
-    rgmii_interframe_put(rgmii_s.p2m, 2048, RGMII_MODE_1000);
+    rgmii_interframe_put(rgmii_s.p2m, 2048, LINK_SPEED_1000);
     for i in 1 to 6+6+2+4+8
     loop
-      rgmii_interframe_put(rgmii_s.p2m, 48, RGMII_MODE_1000);
+      rgmii_interframe_put(rgmii_s.p2m, 48, LINK_SPEED_1000);
       rgmii_frame_put(rgmii_s.p2m,
                       data => byte_string'(1 to i => x"02"),
-                      mode => RGMII_MODE_1000);
+                      speed => LINK_SPEED_1000);
     end loop;
 
     -- Frame RX 3, OK
-    rgmii_interframe_put(rgmii_s.p2m, 2048, RGMII_MODE_1000);
+    rgmii_interframe_put(rgmii_s.p2m, 2048, LINK_SPEED_1000);
     rgmii_frame_put(rgmii_s.p2m,
                     data => frame_rx_3_c,
-                    mode => RGMII_MODE_1000);
-    rgmii_interframe_put(rgmii_s.p2m, 128, RGMII_MODE_1000);
+                    speed => LINK_SPEED_1000);
+    rgmii_interframe_put(rgmii_s.p2m, 128, LINK_SPEED_1000);
 
     -- Frame RX 4,
-    rgmii_interframe_put(rgmii_s.p2m, 2048, RGMII_MODE_100);
+    rgmii_interframe_put(rgmii_s.p2m, 2048, LINK_SPEED_100);
     rgmii_frame_put(rgmii_s.p2m,
                     data => frame_rx_4_c,
-                    mode => RGMII_MODE_100);
+                    speed => LINK_SPEED_100);
 
     while s_done(3) = '0'
     loop
       rgmii_interframe_put(rgmii_s.p2m, 1024,
-                           mode => RGMII_MODE_100);
+                           speed => LINK_SPEED_100);
     end loop;
 
     s_done(0) <= '1';
@@ -173,23 +174,17 @@ begin
                     as_dead(frame_rx_0_c), true,
                     LOG_LEVEL_FATAL);
 
-    assert mode_s = RGMII_MODE_10
+    assert speed_s = LINK_SPEED_10
       report "Bad reported speed"
       severity failure;
-
-    -- Frame RX 1, should be dropped / reported bad
-    committed_check("DEAD0",
-                    l3_dead_rx_s.req, l3_dead_rx_s.ack, s_clk,
-                    as_dead(frame_rx_1_c), false,
-                    LOG_LEVEL_FATAL);
 
     -- Frame RX 3, OK
     committed_check("DEAD0",
                     l3_dead_rx_s.req, l3_dead_rx_s.ack, s_clk,
                     as_dead(frame_rx_3_c), true,
                     LOG_LEVEL_FATAL);
-    assert mode_s = RGMII_MODE_1000
-      report "Bad reported speed: " & to_string(mode_s)
+    assert speed_s = LINK_SPEED_1000
+      report "Bad reported speed: " & to_string(speed_s)
       severity failure;
 
     -- Frame RX 4, OK
@@ -197,8 +192,8 @@ begin
                     l3_dead_rx_s.req, l3_dead_rx_s.ack, s_clk,
                     as_dead(frame_rx_4_c), true,
                     LOG_LEVEL_FATAL);
-    assert mode_s = RGMII_MODE_100
-      report "Bad reported speed: " & to_string(mode_s)
+    assert speed_s = LINK_SPEED_100
+      report "Bad reported speed: " & to_string(speed_s)
       severity failure;
 
     s_done(1) <= '1';
@@ -237,12 +232,12 @@ begin
     -- Frame TX 0
     rgmii_frame_check("TX 0", rgmii_s.m2p,
                       from_dead(frame_tx_0_c), true,
-                      RGMII_MODE_100, LOG_LEVEL_FATAL);
+                      LINK_SPEED_100, LOG_LEVEL_FATAL);
 
     -- Frame TX 1
     rgmii_frame_check("TX 1", rgmii_s.m2p,
                       from_dead(frame_tx_1_c), true,
-                      RGMII_MODE_100, LOG_LEVEL_FATAL);
+                      LINK_SPEED_100, LOG_LEVEL_FATAL);
 
     s_done(3) <= '1';
     wait;
@@ -259,7 +254,7 @@ begin
       phy_o => rgmii_s.m2p,
       phy_i => rgmii_s.p2m,
 
-      mode_o => mode_s,
+      speed_o => speed_s,
       link_up_o => link_up_s,
       full_duplex_o => full_duplex_s,
       

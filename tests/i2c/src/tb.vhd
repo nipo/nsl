@@ -47,6 +47,9 @@ begin
       );
 
   master: nsl_i2c.transactor.transactor_framed_controller
+    generic map(
+      clock_i_hz_c => 10e6
+      )
     port map(
       clock_i  => s_clk,
       reset_n_i => s_resetn_clk,
