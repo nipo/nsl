@@ -183,14 +183,21 @@ package body testing is
                                  constant link_up: boolean := true;
                                  constant full_duplex: boolean := true)
   is
+    variable status : link_status_t;
     variable inband_status: byte;
   begin
     log_debug("* RGMII < wait " & to_string(ipg_time) & " bit time");
 
-    inband_status(0) := to_logic(link_up);
-    inband_status(2 downto 1) := to_logic(speed);
-    inband_status(3) := to_logic(full_duplex);
-    inband_status(7 downto 4) := inband_status(3 downto 0);
+    status.up := link_up;
+    status.speed := speed;
+    if full_duplex then
+      status.duplex := LINK_DUPLEX_FULL;
+    else
+      status.duplex := LINK_DUPLEX_HALF;
+    end if;
+
+    inband_status(3 downto 0) := to_logic(status);
+    inband_status(7 downto 4) := to_logic(status);
     
     for i in 0 to ipg_time/8 - 1
     loop
