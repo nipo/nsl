@@ -263,6 +263,7 @@ package ipv4 is
   function ipv4_proto_get(packet: byte_string) return ip_proto_t;
   function ipv4_ihl_bytes_get(packet: byte_string) return integer;
   function ipv4_data_get(packet: byte_string) return byte_stream;
+  function ipv4_data_get(packet: byte_string) return byte_string;
   
 end package;
 
@@ -448,6 +449,20 @@ package body ipv4 is
     ret := new byte_string(0 to len-off-1);
     ret.all := xp(off to len - 1);
     return ret;
+  end function;
+
+  function ipv4_data_get(packet: byte_string) return byte_string
+  is
+    alias xp: byte_string(0 to packet'length-1) is packet;
+    variable len: integer := ipv4_len_get(packet);
+    variable off: integer := ipv4_ihl_bytes_get(packet);
+  begin
+    if len > xp'length then
+      report "Fragmented IPv4 Packet " & to_string(packet) & ", returning PDU start"
+        severity warning;
+      len := xp'length;
+    end if;
+    return xp(off to len - 1);
   end function;
 
 end package body;
