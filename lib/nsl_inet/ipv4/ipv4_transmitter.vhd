@@ -107,11 +107,19 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_state <= IN_HEADER;
-        rin.in_left <= header_length_c - 1;
-
+        if header_length_c /= 0 then
+          rin.in_state <= IN_HEADER;
+          rin.in_left <= header_length_c - 1;
+        else
+          rin.in_state <= IN_PEER_IP;
+          rin.in_left <= 3;
+        end if;
+        rin.src_addr <= unicast_i;
+        rin.dst_addr <= (others => dontcare_byte_c);
+          
       when IN_HEADER =>
         rin.src_addr <= unicast_i;
+        rin.dst_addr <= (others => dontcare_byte_c);
 
         if l4_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
           fifo_push := true;
@@ -129,8 +137,7 @@ begin
           if l4_i.last = '1' then
             rin.in_state <= IN_CANCEL;
           else
-            rin.dst_addr <= r.dst_addr(1 to 3) & l4_i.data;
-            rin.src_addr <= r.src_addr(1 to 3) & r.src_addr(0);
+            rin.dst_addr <= shift_left(r.dst_addr, l4_i.data);
             
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
@@ -284,7 +291,7 @@ begin
 
       when OUT_SRC_ADDR =>
         if l2_i.ready = '1' then
-          rin.src_addr <= r.src_addr(1 to 3) & r.src_addr(0);
+          rin.src_addr <= shift_left(r.src_addr);
           if r.out_left = 0 then
             rin.out_state <= OUT_DST_ADDR;
             rin.out_left <= 3;
