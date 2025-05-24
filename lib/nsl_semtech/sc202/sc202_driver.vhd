@@ -116,7 +116,7 @@ begin
   begin
     rin <= r;
 
-    idx := unsigned(voltage);
+    idx := to_unsigned(voltage);
     rin.vsel_next <= vsel_c(to_integer(idx));
     
     case r.state is
