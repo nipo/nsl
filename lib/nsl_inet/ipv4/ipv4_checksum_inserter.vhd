@@ -37,58 +37,35 @@ architecture beh of ipv4_checksum_inserter is
 
   constant offset_length_c: integer := nsl_math.arith.log2(mtu_c);
   subtype offset_t is unsigned(offset_length_c-1 downto 0);
-  
-  signal to_fifo_req_s, from_fifo_req_s : committed_req;
-  signal to_fifo_ack_s, from_fifo_ack_s : committed_ack;
+
+  signal to_fifo_en_s : std_ulogic;
+  signal to_fifo_s, from_fifo_s : committed_bus;
 
   signal patch_fifo_input_ready_s, patch_fifo_input_valid_s : std_ulogic;
-  signal patch_fifo_input_data_s : std_ulogic_vector(offset_length_c + 16 - 1 downto 0);
+  signal patch_fifo_input_data_s : std_ulogic_vector(offset_length_c + 16 downto 0);
   signal patch_fifo_output_ready_s, patch_fifo_output_valid_s : std_ulogic;
-  signal patch_fifo_output_data_s : std_ulogic_vector(offset_length_c + 16 - 1 downto 0);
+  signal patch_fifo_output_data_s : std_ulogic_vector(offset_length_c + 16 downto 0);
 
 begin
 
   checksummer: block
-    type in_state_t is (
-      IN_RESET,
-      IN_FORWARD,
-      IN_COMMIT,
-      IN_CANCEL,
-      IN_WAIT
+    type state_t is (
+      ST_RESET,
+      ST_HEADER,
+      ST_IP,
+      ST_UDP,
+      ST_TCP,
+      ST_ICMP,
+      ST_OTHER,
+      ST_NOT_IP,
+      ST_PUT_IP_INFO,
+      ST_PUT_PDU_INFO,
+      ST_PUT_DONE
       );
-
-    type out_state_t is (
-      OUT_RESET,
-      OUT_FORWARD,
-      OUT_COMMIT,
-      OUT_CANCEL
-      );
-
-    type chk_state_t is (
-      CHK_RESET,
-      CHK_HEADER,
-      CHK_IP,
-      CHK_UDP,
-      CHK_TCP,
-      CHK_ICMP,
-      CHK_OTHER,
-      CHK_NOT_IP,
-      CHK_PUT_IP_INFO,
-      CHK_PUT_PDU_INFO,
-      CHK_PUT_DONE
-      );
-
-    constant fifo_depth_c : integer := 2;
 
     type regs_t is
     record
-      in_state : in_state_t;
-      fifo: byte_string(0 to fifo_depth_c-1);
-      fifo_fillness: integer range 0 to fifo_depth_c;
-      out_state : out_state_t;
-
-      chk_valid: boolean;
-      chk_state : chk_state_t;
+      state : state_t;
       total_offset, offset, ipv4_last : offset_t;
       ipv4_checksum, pdu_checksum : checksum_acc_t;
       ip_header_size_correction: byte;
@@ -107,135 +84,72 @@ begin
       end if;
 
       if reset_n_i = '0' then
-        r.in_state <= IN_RESET;
-        r.out_state <= OUT_RESET;
-        r.chk_state <= CHK_RESET;
+        r.state <= ST_RESET;
       end if;
     end process;
 
-    transition: process(r, input_i, to_fifo_ack_s, patch_fifo_input_ready_s) is
-      variable fifo_push, fifo_pop: boolean;
+    to_fifo_s.req.data <= input_i.data;
+    to_fifo_s.req.valid <= input_i.valid and to_fifo_en_s;
+    to_fifo_s.req.last <= input_i.last;
+    input_o.ready <= to_fifo_s.ack.ready and to_fifo_en_s;
+    
+    transition: process(r, input_i, to_fifo_s.ack, patch_fifo_input_ready_s) is
+      variable valid, last: boolean;
+      variable data: byte;
     begin
       rin <= r;
 
-      fifo_pop := false;
-      fifo_push := false;
-
-      case r.in_state is
-        when IN_RESET =>
-          if r.chk_state = CHK_RESET then
-            rin.in_state <= IN_FORWARD;
-          end if;
-
-        when IN_FORWARD =>
-          if input_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-            if input_i.last = '0' then
-              fifo_push := true;
-            elsif input_i.data = x"01" then
-              rin.in_state <= IN_COMMIT;
-            else
-              rin.in_state <= IN_CANCEL;
-            end if;
-          end if;
-
-        when IN_COMMIT | IN_CANCEL =>
-          if r.out_state = OUT_COMMIT or r.out_state = OUT_CANCEL then
-            rin.in_state <= IN_WAIT;
-          end if;
-
-        when IN_WAIT =>
-          rin.in_state <= IN_RESET;
-      end case;
-
-      case r.out_state is
-        when OUT_RESET =>
-          rin.out_state <= OUT_FORWARD;
-
-        when OUT_FORWARD =>
-          if to_fifo_ack_s.ready = '1' and r.fifo_fillness /= 0 then
-            fifo_pop := true;
-          end if;
-
-          if r.fifo_fillness = 0
-            or (to_fifo_ack_s.ready = '1' and r.fifo_fillness = 1) then
-            if r.in_state = IN_COMMIT then
-              rin.out_state <= OUT_COMMIT;
-            elsif r.in_state = IN_CANCEL then
-              rin.out_state <= OUT_CANCEL;
-            end if;
-          end if;
-
-        when OUT_COMMIT | OUT_CANCEL =>
-          if to_fifo_ack_s.ready = '1' then
-            rin.out_state <= OUT_RESET;
-          end if;
-      end case;
-
-      rin.chk_valid <= false;
+      valid := input_i.valid = '1' and to_fifo_s.ack.ready = '1';
+      last := input_i.last = '1';
+      data := input_i.data;
       
-      if fifo_push and fifo_pop then
-        rin.chk_valid <= true;
-        rin.fifo <= shift_left(r.fifo);
-        rin.fifo(r.fifo_fillness-1) <= input_i.data;
-      elsif fifo_push then
-        rin.chk_valid <= true;
-        rin.fifo(r.fifo_fillness) <= input_i.data;
-        rin.fifo_fillness <= r.fifo_fillness + 1;
-      elsif fifo_pop then
-        rin.chk_valid <= r.fifo_fillness > 1;
-        rin.fifo <= shift_left(r.fifo);
-        rin.fifo_fillness <= r.fifo_fillness - 1;
-      end if;
-
-      case r.chk_state is
-        when CHK_RESET =>
+      case r.state is
+        when ST_RESET =>
           rin.ipv4_checksum <= checksum_acc_init_c;
           rin.pdu_checksum <= checksum_acc_init_c;
 
-          if r.in_state = IN_RESET then
-            rin.total_offset <= (others => '0');
-            rin.offset <= (others => '0');
-            if header_length_c = 0 then
-              rin.chk_state <= CHK_IP;
-            else
-              rin.chk_state <= CHK_HEADER;
-            end if;
+          rin.total_offset <= (others => '0');
+          rin.offset <= (others => '0');
+          if header_length_c = 0 then
+            rin.state <= ST_IP;
+          else
+            rin.state <= ST_HEADER;
           end if;
 
-        when CHK_HEADER =>
-          if r.chk_valid then
+        when ST_HEADER =>
+          if valid then
             rin.total_offset <= r.total_offset + 1;
             rin.offset <= r.offset + 1;
 
             if r.offset = header_length_c - 1 then
-              rin.chk_state <= CHK_IP;
+              rin.state <= ST_IP;
               rin.offset <= (others => '0');
             end if;
           end if;
 
-          if r.in_state = IN_WAIT then
-            rin.chk_state <= CHK_PUT_DONE;
+          if last then
+            rin.state <= ST_PUT_DONE;
           end if;
 
-        when CHK_IP =>
-          if r.chk_valid then
+        when ST_IP =>
+          if valid then
             rin.total_offset <= r.total_offset + 1;
             rin.offset <= r.offset + 1;
             
-            rin.ipv4_checksum <= checksum_update(r.ipv4_checksum, r.fifo(0));
+            rin.ipv4_checksum <= checksum_update(r.ipv4_checksum, data);
 
             case to_integer(r.offset) is
               when ip_off_type_len =>
-                if r.fifo(0)(7 downto 4) /= x"4" then
-                  rin.chk_state <= CHK_NOT_IP;
+                if data(7 downto 4) /= x"4" then
+                  rin.state <= ST_NOT_IP;
                 end if;
-                rin.ipv4_last <= to_unsigned(header_length_c - 1, rin.ipv4_last'length)
-                                 + resize(unsigned(r.fifo(0)(3 downto 0)) & "00", rin.ipv4_last'length);
+                rin.ipv4_last <= unsigned(to_signed(header_length_c - 1, rin.ipv4_last'length))
+                                 + resize(unsigned(data(3 downto 0)) & "00", rin.ipv4_last'length);
                 -- By adding total ip length to pseudo-header checksum,
                 -- we have a checksum off by ip header size. Correct
                 -- this by setting (not(header_size)) ==
                 -- (-header_size-1) to a correction factor.
-                rin.ip_header_size_correction <= "11" & (not r.fifo(0)(3 downto 0)) & "11";
+                rin.ip_header_size_correction <= "11" & (not data(3 downto 0)) & "11";
                 
               when ip_off_chk_h =>
                 rin.ipv4_checksum_offset <= r.total_offset;
@@ -256,14 +170,14 @@ begin
 
               when ip_off_proto =>
                 -- TCP/UDP a pseudo-header, protocol number (low)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, r.fifo(0));
-                rin.ip_proto <= to_integer(unsigned(r.fifo(0)));
+                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
+                rin.ip_proto <= to_integer(unsigned(data));
 
               when ip_off_len_h | ip_off_len_l
                 | ip_off_src0 | ip_off_src1 | ip_off_src2 | ip_off_src3
                 | ip_off_dst0 | ip_off_dst1 | ip_off_dst2 | ip_off_dst3 =>
                 -- TCP/UDP a pseudo-header (address, len)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, r.fifo(0));
+                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
 
               when others =>
                 null;
@@ -273,110 +187,100 @@ begin
               rin.offset <= (others => '0');
               case r.ip_proto is
                 when ip_proto_tcp =>
-                  rin.chk_state <= CHK_TCP;
+                  rin.state <= ST_TCP;
                   rin.pdu_checksum_offset <= r.ipv4_last + 1 + 16;
                 when ip_proto_udp =>
-                  rin.chk_state <= CHK_UDP;
+                  rin.state <= ST_UDP;
                   rin.pdu_checksum_offset <= r.ipv4_last + 1 + 6;
                 when ip_proto_icmp =>
-                  rin.chk_state <= CHK_ICMP;
+                  rin.state <= ST_ICMP;
                   rin.pdu_checksum_offset <= r.ipv4_last + 1 + 2;
                   -- ICMP does not have a pseudo-header
                   rin.pdu_checksum <= checksum_acc_init_c;
                 when others =>
-                  rin.chk_state <= CHK_OTHER;
+                  rin.state <= ST_OTHER;
               end case;
             end if;
           end if;
 
-          if r.in_state = IN_WAIT then
-            rin.chk_state <= CHK_PUT_DONE;
+          if last then
+            rin.state <= ST_PUT_DONE;
           end if;
 
-        when CHK_UDP | CHK_TCP | CHK_ICMP | CHK_OTHER =>
-          if r.chk_valid then
-            rin.total_offset <= r.total_offset + 1;
-            rin.offset <= r.offset + 1;
+        when ST_UDP | ST_TCP | ST_ICMP | ST_OTHER =>
+          if valid then
+            if last then
+              rin.state <= ST_PUT_IP_INFO;
+            else
+              rin.total_offset <= r.total_offset + 1;
+              rin.offset <= r.offset + 1;
 
-            if r.pdu_checksum_offset /= r.total_offset and r.pdu_checksum_offset + 1 /= r.total_offset then
-              rin.pdu_checksum <= checksum_update(r.pdu_checksum, r.fifo(0));
+              if r.pdu_checksum_offset /= r.total_offset and r.pdu_checksum_offset + 1 /= r.total_offset then
+                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
+              end if;
             end if;
-          elsif r.in_state = IN_COMMIT or r.in_state = IN_CANCEL or r.in_state = IN_WAIT then
-            rin.chk_state <= CHK_PUT_IP_INFO;
           end if;
 
-        when CHK_NOT_IP =>
-          if r.in_state = IN_COMMIT or r.in_state = IN_CANCEL or r.in_state = IN_WAIT then
-            rin.chk_state <= CHK_PUT_DONE;
+        when ST_NOT_IP =>
+          if valid and last then
+            rin.state <= ST_PUT_DONE;
           end if;
 
-        when CHK_PUT_IP_INFO =>
+        when ST_PUT_IP_INFO =>
           if patch_fifo_input_ready_s = '1' then
             case r.ip_proto is
               when ip_proto_tcp | ip_proto_udp | ip_proto_icmp =>
-                rin.chk_state <= CHK_PUT_PDU_INFO;
+                rin.state <= ST_PUT_PDU_INFO;
               when others =>
-                rin.chk_state <= CHK_PUT_DONE;
+                rin.state <= ST_RESET;
             end case;
           end if;
 
-        when CHK_PUT_PDU_INFO =>
+        when ST_PUT_PDU_INFO | ST_PUT_DONE =>
           if patch_fifo_input_ready_s = '1' then
-            rin.chk_state <= CHK_PUT_DONE;
-          end if;
-
-        when CHK_PUT_DONE =>
-          if patch_fifo_input_ready_s = '1' then
-            rin.chk_state <= CHK_RESET;
+            rin.state <= ST_RESET;
           end if;
       end case;
     end process;
 
     moore: process(r) is
     begin
-      case r.in_state is
-        when IN_RESET | IN_WAIT | IN_COMMIT | IN_CANCEL =>
-          input_o <= committed_accept(false);
+      to_fifo_en_s <= '0';
+      patch_fifo_input_valid_s <= '0';
+      patch_fifo_input_data_s <= (others => '-');
 
-        when IN_FORWARD =>
-          input_o <= committed_accept(r.fifo_fillness < fifo_depth_c);
-      end case;
-
-      case r.out_state is
-        when OUT_RESET =>
-          to_fifo_req_s <= committed_flit(data => "--------", valid => false);
-
-        when OUT_FORWARD =>
-          to_fifo_req_s <= committed_flit(data => r.fifo(0), valid => r.fifo_fillness /= 0, last => false);
-
-        when OUT_COMMIT =>
-          to_fifo_req_s <= committed_commit(true);
-
-        when OUT_CANCEL =>
-          to_fifo_req_s <= committed_commit(false);
-      end case;
-
-      case r.chk_state is
-        when CHK_RESET | CHK_HEADER | CHK_IP | CHK_UDP | CHK_TCP | CHK_ICMP | CHK_OTHER | CHK_NOT_IP =>
-          patch_fifo_input_valid_s <= '0';
-          patch_fifo_input_data_s <= (others => '-');
-
-        when CHK_PUT_IP_INFO =>
+      case r.state is
+        when ST_PUT_IP_INFO =>
           patch_fifo_input_valid_s <= '1';
-          patch_fifo_input_data_s <= std_ulogic_vector(r.ipv4_checksum_offset
+          patch_fifo_input_data_s <= std_ulogic_vector("0"
+                                                       & r.ipv4_checksum_offset
                                                        & from_be(checksum_spill(r.ipv4_checksum)));
 
-        when CHK_PUT_PDU_INFO =>
+          case r.ip_proto is
+            when ip_proto_tcp | ip_proto_udp | ip_proto_icmp =>
+              null;
+            when others =>
+              patch_fifo_input_data_s(patch_fifo_input_data_s'left) <= '1';
+          end case;
+
+        when ST_PUT_PDU_INFO =>
           patch_fifo_input_valid_s <= '1';
-          patch_fifo_input_data_s <= std_ulogic_vector(r.pdu_checksum_offset
+          patch_fifo_input_data_s <= std_ulogic_vector("1"
+                                                       & r.pdu_checksum_offset
                                                        & from_be(checksum_spill(r.pdu_checksum,
                                                                                 r.offset(0) = '1')));
 
-        when CHK_PUT_DONE =>
+        when ST_PUT_DONE =>
           patch_fifo_input_valid_s <= '1';
           patch_fifo_input_data_s <= (others => '0');
+          patch_fifo_input_data_s(patch_fifo_input_data_s'left) <= '1';
+
+        when ST_RESET =>
+          null;
+
+        when ST_HEADER | ST_IP | ST_UDP | ST_TCP | ST_ICMP | ST_OTHER | ST_NOT_IP =>
+          to_fifo_en_s <= '1';
       end case;
-      
     end process;
   end block;
 
@@ -407,6 +311,7 @@ begin
 
       offset, patch_offset : offset_t;
       patch_data : std_ulogic_vector(15 downto 0);
+      patch_done : boolean;
     end record;
 
     signal r, rin: regs_t;
@@ -425,7 +330,7 @@ begin
       end if;
     end process;
 
-    transition: process(r, output_i, from_fifo_req_s, patch_fifo_output_valid_s, patch_fifo_output_data_s) is
+    transition: process(r, output_i, from_fifo_s.req, patch_fifo_output_valid_s, patch_fifo_output_data_s) is
       variable fifo_push, fifo_pop: boolean;
       variable fifo_data: byte;
     begin
@@ -443,9 +348,11 @@ begin
 
         when IN_PATCH_GET =>
           if patch_fifo_output_valid_s = '1' then
+            rin.patch_done <= patch_fifo_output_data_s(patch_fifo_output_data_s'left) = '1';
             rin.patch_offset <= unsigned(patch_fifo_output_data_s(offset_length_c + 16 - 1 downto 16));
             rin.patch_data <= patch_fifo_output_data_s(15 downto 0);
-            if unsigned(patch_fifo_output_data_s(offset_length_c + 16 - 1 downto 16)) = 0 then
+            if unsigned(patch_fifo_output_data_s(offset_length_c + 16 - 1 downto 16)) = 0
+              and patch_fifo_output_data_s(patch_fifo_output_data_s'left) = '1' then
               rin.in_state <= IN_FLUSH;
             else
               rin.in_state <= IN_PATCH_H;
@@ -453,7 +360,7 @@ begin
           end if;
 
         when IN_PATCH_H =>
-          if from_fifo_req_s.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          if from_fifo_s.req.valid = '1' and r.fifo_fillness < fifo_depth_c then
             rin.offset <= r.offset + 1;
 
             fifo_push := true;
@@ -461,46 +368,40 @@ begin
               rin.in_state <= IN_PATCH_L;
               fifo_data := r.patch_data(15 downto 8);
             else
-              fifo_data := from_fifo_req_s.data;
+              fifo_data := from_fifo_s.req.data;
             end if;
 
-            assert from_fifo_req_s.last = '0'
+            assert from_fifo_s.req.last = '0'
               report "Short packet while we did not reach patch end"
               severity failure;
           end if;
 
         when IN_PATCH_L =>
-          if from_fifo_req_s.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          if from_fifo_s.req.valid = '1' and r.fifo_fillness < fifo_depth_c then
             rin.offset <= r.offset + 1;
 
             fifo_push := true;
             fifo_data := r.patch_data(7 downto 0);
 
-            if patch_fifo_output_valid_s = '1' then
-              rin.patch_offset <= unsigned(patch_fifo_output_data_s(offset_length_c + 16 - 1 downto 16));
-              rin.patch_data <= patch_fifo_output_data_s(15 downto 0);
-              if unsigned(patch_fifo_output_data_s(offset_length_c + 16 - 1 downto 16)) = 0 then
-                rin.in_state <= IN_FLUSH;
-              else
-                rin.in_state <= IN_PATCH_H;
-              end if;
+            if r.patch_done then
+              rin.in_state <= IN_FLUSH;
             else
               rin.in_state <= IN_PATCH_GET;
             end if;
 
-            assert from_fifo_req_s.last = '0'
+            assert from_fifo_s.req.last = '0'
               report "Short packet while we did not reach patch end"
               severity failure;
           end if;
           
         when IN_FLUSH =>
-          if from_fifo_req_s.valid = '1' and r.fifo_fillness < fifo_depth_c then
+          if from_fifo_s.req.valid = '1' and r.fifo_fillness < fifo_depth_c then
             rin.offset <= r.offset + 1;
 
             fifo_push := true;
-            fifo_data := from_fifo_req_s.data;
+            fifo_data := from_fifo_s.req.data;
 
-            if from_fifo_req_s.last = '1' then
+            if from_fifo_s.req.last = '1' then
               rin.in_state <= IN_DONE;
             end if;
           end if;
@@ -550,7 +451,7 @@ begin
     moore: process(r) is
     begin
       patch_fifo_output_ready_s <= '0';
-      from_fifo_ack_s <= committed_accept(false);
+      from_fifo_s.ack <= committed_accept(false);
 
       case r.in_state is
         when IN_RESET | IN_DONE =>
@@ -560,11 +461,10 @@ begin
           patch_fifo_output_ready_s <= '1';
 
         when IN_PATCH_H | IN_FLUSH =>
-          from_fifo_ack_s <= committed_accept(r.fifo_fillness < fifo_depth_c);
+          from_fifo_s.ack <= committed_accept(r.fifo_fillness < fifo_depth_c);
 
         when IN_PATCH_L =>
-          from_fifo_ack_s <= committed_accept(r.fifo_fillness < fifo_depth_c);
-          patch_fifo_output_ready_s <= '1';
+          from_fifo_s.ack <= committed_accept(r.fifo_fillness < fifo_depth_c);
       end case;
 
       case r.out_state is
@@ -611,11 +511,11 @@ begin
       reset_n_i => reset_n_i,
       clock_i(0) => clock_i,
 
-      in_i => to_fifo_req_s,
-      in_o => to_fifo_ack_s,
+      in_i => to_fifo_s.req,
+      in_o => to_fifo_s.ack,
 
-      out_o => from_fifo_req_s,
-      out_i => from_fifo_ack_s
+      out_o => from_fifo_s.req,
+      out_i => from_fifo_s.ack
       );
 
 end architecture;
