@@ -12,12 +12,11 @@ Ticker framework can
   <tick/tick_generator_frac.vhd>`_,
 
 * do sampling from an external (oversampled) `reference
-  <tick/tick_extractor>`_,
+  <tick/tick_extractor.vhd>`_,
 
-* do `division <tick/tick_divisor>`_, `power-of-two multiplication
-<tick/tick_scaler_l2>`_ or `general scaling <tick/tick_pll>`_,
+* do `division <tick/tick_divisor.vhd>`_, `power-of-two multiplication <tick/tick_scaler_l2.vhd>`_ or `general scaling <tick/tick_pll.vhd>`_,
 
-* `measure <tick/tick_measurer>`_ tick period.
+* `measure <tick/tick_measurer.vhd>`_ tick period.
 
 Making a tick cross a domain is performed by `interdomain_tick
 <../nsl_clocking/interdomain/interdomain_tick.vhd>`_ module in

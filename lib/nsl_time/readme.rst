@@ -12,4 +12,4 @@ In the library, there are:
 
 * A `skew <skew>`_ package that allows to do timestamp operations,
 
-* A `pps <pps>`_ package that allows to interoperate with PPS signals.
+* PPS interoperability, including `PPS generation <pps>`_ and `PPS extraction <clock>`_ blocks.
