@@ -114,6 +114,7 @@ begin
 
     case r.in_state is
       when IN_RESET =>
+        rin.fifo_fillness <= 0;
         rin.header_chk <= checksum_acc_init_c;
         if header_length_c /= 0 then
           rin.in_state <= IN_HEADER;
@@ -369,7 +370,9 @@ begin
         end if;
 
       when OUT_HEADER_PEER_IP =>
-        if l4_i.ready = '1' and r.fifo_fillness /= 0 then
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
+        elsif l4_i.ready = '1' and r.fifo_fillness /= 0 then
           fifo_pop := true;
 
           if r.out_left /= 0 then
@@ -382,24 +385,32 @@ begin
         end if;
 
       when OUT_CTX_WAIT =>
-        if r.in_state /= IN_DST_ADDR then
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
+        elsif r.in_state /= IN_DST_ADDR then
           rin.out_state <= OUT_CTX;
         end if;
 
       when OUT_CTX =>
-        if l4_i.ready = '1' then
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
+        elsif l4_i.ready = '1' then
           rin.out_state <= OUT_PROTO;
           rin.out_left <= 1;
         end if;
 
       when OUT_PROTO =>
-        if l4_i.ready = '1' then
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
+        elsif l4_i.ready = '1' then
           rin.out_state <= OUT_LEN;
           rin.out_left <= 1;
         end if;
 
       when OUT_LEN =>
-        if l4_i.ready = '1' then
+        if r.in_state = IN_CANCEL then
+          rin.out_state <= OUT_CANCEL;
+        elsif l4_i.ready = '1' then
           rin.pdu_len <= r.pdu_len(7 downto 0) & "--------";
           if r.out_left /= 0 then
             rin.out_left <= r.out_left - 1;
