@@ -101,14 +101,16 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        if header_length_c /= 0 then
-          rin.in_state <= IN_HEADER;
-          rin.in_left <= header_length_c - 1;
-        else
-          rin.in_state <= IN_REMOTE_PORT;
-          rin.in_left <= 1;
+        if r.out_state = OUT_RESET then
+          if header_length_c /= 0 then
+            rin.in_state <= IN_HEADER;
+            rin.in_left <= header_length_c - 1;
+          else
+            rin.in_state <= IN_REMOTE_PORT;
+            rin.in_left <= 1;
+          end if;
         end if;
-
+        
       when IN_HEADER =>
         if l5_s.req.valid = '1' then
           rin.header <= shift_left(r.header, l5_s.req.data);
@@ -197,7 +199,7 @@ begin
             rin.out_left <= 1;
           end if;
         end if;
-
+        
       when OUT_PDU_LEN =>
         if l3_i.ready = '1' then
           rin.total_len <= r.total_len(7 downto 0) & r.total_len(15 downto 8);

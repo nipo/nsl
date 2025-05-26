@@ -364,7 +364,7 @@ begin
     
     case r.out_state is
       when OUT_RESET =>
-        if r.in_state = IN_VER_LEN then
+        if r.in_state = IN_HEADER or r.in_state = IN_VER_LEN then
           rin.out_state <= OUT_HEADER_PEER_IP;
           rin.out_left <= header_length_c + 4 - 1;
         end if;

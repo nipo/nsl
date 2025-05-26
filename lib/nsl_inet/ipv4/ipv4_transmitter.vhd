@@ -200,12 +200,15 @@ begin
 
     case r.out_state is
       when OUT_RESET =>
-        if header_length_c /= 0 and r.in_state = IN_HEADER then
-          rin.out_state <= OUT_HEADER;
-          rin.out_left <= header_length_c - 1;
-        end if;
-        if header_length_c = 0 and r.in_state = IN_PEER_IP then
-          rin.out_state <= OUT_VER_LEN;
+        if header_length_c /= 0 then
+          if r.in_state = IN_HEADER then
+            rin.out_state <= OUT_HEADER;
+            rin.out_left <= header_length_c - 1;
+          end if;
+        else
+          if r.in_state = IN_PEER_IP then
+            rin.out_state <= OUT_VER_LEN;
+          end if;
         end if;
 
       when OUT_HEADER =>
