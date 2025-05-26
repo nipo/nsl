@@ -59,6 +59,7 @@ architecture beh of committed_sizer is
   record
     in_state: in_state_t;
     count: unsigned(max_size_l2_c-1 downto 0);
+    actual_size: unsigned(max_size_l2_c-1 downto 0);
 
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
@@ -99,6 +100,7 @@ begin
       when IN_RESET =>
         rin.in_state <= IN_FORWARD;
         rin.count <= offset_u_c;
+        rin.actual_size <= (others => '0');
 
       when IN_FORWARD =>
         if in_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
@@ -108,11 +110,12 @@ begin
             else
               rin.in_state <= IN_REPORT_BAD;
             end if;
-          elsif r.count = (r.count'range => '1') then
+          elsif r.actual_size = (r.count'range => '1') then
             rin.in_state <= IN_IGNORE;
           else
             fifo_push := true;
             rin.count <= r.count + 1;
+            rin.actual_size <= r.actual_size + 1;
           end if;
         end if;
 
@@ -137,6 +140,7 @@ begin
                (r.fifo_fillness = 1 and fifo_in_s.ack.ready = '1')) then
           rin.in_state <= IN_FORWARD;
           rin.count <= offset_u_c;
+          rin.actual_size <= (others => '0');
         end if;
     end case;
 
