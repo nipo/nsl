@@ -19,31 +19,28 @@ architecture arch of tb is
 
   signal in_clock_s, in_reset_n_s : std_ulogic;
   signal out_clock_s, out_reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 1);
+  signal done_s : std_ulogic_vector(0 to 0);
 
   signal input_s, output_s: bus_t;
+  shared variable master_q, slave_q: frame_queue_root_t;
 
   constant cfg_c: config_t := config(12, last => true);
 
 begin
 
-  tx: process
+  trx: process
     variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
     variable frame_byte_count: integer;
   begin
     done_s(0) <= '0';
 
-    input_s.m <= transfer_defaults(cfg_c);
-
-    wait for 100 ns;
+    wait for 40 ns;
 
     for stream_beat_count in 1 to 16
     loop
       frame_byte_count := stream_beat_count * cfg_c.data_width;
 
-      packet_send(cfg_c, in_clock_s, input_s.s, input_s.m,
-                  packet => prbs_byte_string(state_v, prbs31, frame_byte_count));
-
+      frame_queue_check_io(master_q, slave_q, prbs_byte_string(state_v, prbs31, frame_byte_count));
       state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
@@ -53,36 +50,20 @@ begin
     wait;
   end process;
 
-  rx: process
-    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
-    variable rx_data : byte_stream;
-    variable frame_byte_count: integer;
-    variable id, user, dest : std_ulogic_vector(1 to 0);
+  master_proc: process is
   begin
-    done_s(1) <= '0';
+    frame_queue_init(master_q);
+    input_s.m <= transfer_defaults(cfg_c);
+    wait for 40 ns;
+    frame_queue_master(cfg_c, master_q, in_clock_s, input_s.s, input_s.m);
+  end process;
 
+  slave_proc: process is
+  begin
+    frame_queue_init(slave_q);
     output_s.s <= accept(cfg_c, false);
-
-    wait for 100 ns;
-
-    for stream_beat_count in 1 to 16
-    loop
-      frame_byte_count := stream_beat_count * cfg_c.data_width;
-
-      packet_receive(cfg_c, out_clock_s, output_s.m, output_s.s,
-                     packet => rx_data,
-                     id => id,
-                     user => user,
-                     dest => dest);
-
-      assert_equal("data", rx_data.all(0 to frame_byte_count-1), prbs_byte_string(state_v, prbs31, frame_byte_count), failure);
-      state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
-    end loop;
-
-    wait for 500 ns;
-
-    done_s(1) <= '1';
-    wait;
+    wait for 40 ns;
+    frame_queue_slave(cfg_c, slave_q, out_clock_s, output_s.m, output_s.s);
   end process;
 
   dumper_in: nsl_amba.axi4_stream.axi4_stream_dumper

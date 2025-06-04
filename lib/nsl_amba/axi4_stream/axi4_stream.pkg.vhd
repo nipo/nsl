@@ -510,11 +510,158 @@ package axi4_stream is
   --     size := beat_count(buffer_cfg_c, r.buf) * stream_cfg_c.data_width;
   --     data := bytes(buffer_cfg_c, r.buf);
   --     -- Do somehting with data(0 to size-1);
+
+
+  -- A posted AXI4-Stream Frame
+  type frame_t is
+  record
+    id: id_t;
+    data: byte_stream;
+    dest: dest_t;
+    user: user_t;
+  end record;
+
+  -- Writes a frame to signals
+  procedure frame_put(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in slave_t;
+                      signal stream_o: out master_t;
+                      variable frm: frame_t);
+  
+  -- Reads a frame from signals
+  procedure frame_get(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in master_t;
+                      signal stream_o: out slave_t;
+                      variable frm: out frame_t);
+
+  -- Factory function for a frame
+  function frame(
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv)
+    return frame_t;
+
+  -- Frame queue for testbenches
+  type frame_queue_item_t;
+  type frame_queue_t is access frame_queue_item_t;
+  
+  type frame_queue_item_t is
+  record
+    chain: frame_queue_t;
+    frame: frame_t;
+  end record;
+  
+  type frame_queue_root_t is access frame_queue_t;
+
+  -- Initializes a frame queue
+  procedure frame_queue_init(
+    variable root: inout frame_queue_root_t);
+
+  -- Appends a frame to a queue
+  procedure frame_queue_put(
+    variable root: frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv);
+
+  -- Appends a frame to a queue
+  procedure frame_queue_put(
+    variable root: in frame_queue_root_t;
+    variable frm: in frame_t);
+
+  -- Waits for a frame to be present on a queue.
+  -- Polls for queue every dt. After timeout, raises a sev error
+  procedure frame_queue_get(
+    variable root: frame_queue_root_t;
+    variable frm: out frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure);
+
+  -- Waits for a frame to be present on a queue.
+  -- When it is present, asserts for equality with passed reference data.
+  -- Polls for queue every dt. After timeout, raises a sev error
+  procedure frame_queue_check(
+    variable root: frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure);
+
+  -- Waits for a frame to be present on a queue.
+  -- When it is present, asserts for equality with passed reference data.
+  -- Polls for queue every dt. After timeout, raises a sev error
+  procedure frame_queue_check(
+    variable root: in frame_queue_root_t;
+    variable frm: in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure);
+
+  -- Sends a frame on master queue and expects exactly matching frame on slave
+  -- queue.
+  procedure frame_queue_check_io(
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure);
+
+  -- Sends a frame on master queue and expects exactly matching frame on slave
+  -- queue.
+  procedure frame_queue_check_io(
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    variable frm: in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure);
+  
+  -- Master-side procedure. Takes frames from a queue and puts them to
+  -- signals.  Never returns
+  procedure frame_queue_master(constant cfg: config_t;
+                               variable root: in frame_queue_root_t;
+                               signal clock: in std_ulogic;
+                               signal stream_i: in slave_t;
+                               signal stream_o: out master_t;
+                               dt : in time := 10 ns);
+  
+  -- Slave-side procedure. Takes frames from signals and puts them to
+  -- a queue.  Never returns
+  procedure frame_queue_slave(constant cfg: config_t;
+                              variable root: in frame_queue_root_t;
+                              signal clock: in std_ulogic;
+                              signal stream_i: in master_t;
+                              signal stream_o: out slave_t;
+                               dt : in time := 10 ns);
   
 end package;
 
 package body axi4_stream is
 
+  function dontcare_pad(v: std_ulogic_vector;
+                        w: integer)
+    return std_ulogic_vector
+  is
+    alias xv: std_ulogic_vector(v'length-1 downto 0) is v;
+    constant v_s : integer := nsl_math.arith.min(v'length, w);
+    constant minxv: std_ulogic_vector(v_s-1 downto 0) := xv(v_s-1 downto 0);
+    variable ret: std_ulogic_vector(w-1 downto 0) := (others => '-');
+  begin
+    ret(minxv'length-1 downto 0) := minxv;
+    return ret;
+  end function;
+  
   function is_valid(cfg: config_t; m: master_t) return boolean
   is
   begin
@@ -1604,5 +1751,229 @@ package body axi4_stream is
   begin
     return b.beat_count;
   end function;
+
+  function frame(
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv)
+    return frame_t
+  is
+    variable ret: frame_t;
+  begin
+    ret.data := new byte_string(0 to data'length-1);
+    ret.data.all := data;
+    ret.id := dontcare_pad(id, max_id_width_c);
+    ret.user := dontcare_pad(user, max_user_width_c);
+    ret.dest := dontcare_pad(dest, max_dest_width_c);
+    return ret;
+  end function;
+
+  procedure frame_put(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in slave_t;
+                      signal stream_o: out master_t;
+                      variable frm: frame_t)
+  is
+  begin
+    packet_send(cfg, clock, stream_i, stream_o, frm.data.all,
+                dest => frm.dest(cfg.dest_width-1 downto 0),
+                user => frm.user(cfg.user_width-1 downto 0),
+                id => frm.id(cfg.id_width-1 downto 0));
+  end procedure;
+
+  procedure frame_get(constant cfg: config_t;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in master_t;
+                      signal stream_o: out slave_t;
+                      variable frm: out frame_t)
+  is
+    variable packet : byte_stream;
+    variable id : std_ulogic_vector(cfg.id_width-1 downto 0);
+    variable user : std_ulogic_vector(cfg.user_width-1 downto 0);
+    variable dest : std_ulogic_vector(cfg.dest_width-1 downto 0);
+  begin
+    packet_receive(cfg, clock, stream_i, stream_o, packet, id, user, dest);
+    frm := frame(packet.all, dest, id, user);
+    deallocate(packet);
+  end procedure;
+
+  procedure frame_queue_init(
+    variable root: inout frame_queue_root_t)
+  is
+    variable ret: frame_queue_root_t;
+  begin
+    root := new frame_queue_t;
+    root.all := null;
+  end procedure;
+
+  procedure frame_queue_put(
+    variable root: frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv)
+  is
+    variable frm : frame_t := frame(data, dest, id, user);
+  begin
+    frame_queue_put(root, frm);
+    deallocate(frm.data);
+  end procedure;
+
+  procedure frame_queue_put(
+    variable root: in frame_queue_root_t;
+    variable frm: in frame_t)
+  is
+    variable item, chain: frame_queue_t;
+  begin
+    item := new frame_queue_item_t;
+    item.all.frame.data := new byte_string(0 to frm.data'length-1);
+    item.all.frame.data.all := frm.data.all;
+    item.all.frame.id := frm.id;
+    item.all.frame.user := frm.user;
+    item.all.frame.dest := frm.dest;
+    item.all.chain := null;
+
+    if root.all = null then
+      root.all := item;
+    else
+      chain := root.all;
+      while chain.all.chain /= null
+      loop
+        chain := chain.all.chain;
+      end loop;
+      chain.all.chain := item;
+    end if;
+  end procedure;
+
+  procedure frame_queue_check(
+    variable root: frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure)
+  is
+    variable frm: frame_t := frame(data, dest, id, user);
+  begin
+    frame_queue_check(root, frm, dt, timeout, sev);
+    deallocate(frm.data);
+  end procedure;
+
+  procedure frame_queue_check(
+    variable root: in frame_queue_root_t;
+    variable frm: in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure)
+  is
+    variable rx_frm: frame_t;
+  begin
+    frame_queue_get(root, rx_frm, dt, timeout, sev);
+    assert rx_frm.data.all = frm.data.all
+      and rx_frm.id = frm.id
+      and rx_frm.user = frm.user
+      and rx_frm.dest = frm.dest
+      report "bad frame received, expected "&to_string(frm.data.all)&", received "&to_string(rx_frm.data.all)
+      severity sev;
+  end procedure;
+
+  procedure frame_queue_check_io(
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure)
+  is
+    variable frm: frame_t := frame(data, dest, id, user);
+  begin
+    frame_queue_check_io(root_master, root_slave, frm, dt, timeout, sev);
+    deallocate(frm.data);
+  end procedure;
+
+  procedure frame_queue_check_io(
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    variable frm: in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure)
+  is
+  begin
+    frame_queue_put(root_master, frm);
+    frame_queue_check(root_slave, frm, dt, timeout, sev);
+  end procedure;
+
+  procedure frame_queue_get(
+    variable root: frame_queue_root_t;
+    variable frm: out frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev: severity_level := failure)
+  is
+    variable item: frame_queue_t;
+    variable ret: frame_t;
+    variable time_left: time := timeout;
+  begin
+    while time_left > dt
+    loop
+      if root.all /= null then
+        item := root.all;
+        root.all := item.chain;
+        ret := item.frame;
+        deallocate(item);
+        frm := ret;
+        return;
+      end if;
+      wait for dt;
+      time_left := time_left - dt;
+    end loop;
+    assert false
+      report "Timeout while waiting for frame"
+      severity sev;
+  end procedure;
+
+  procedure frame_queue_master(constant cfg: config_t;
+                               variable root: in frame_queue_root_t;
+                               signal clock: in std_ulogic;
+                               signal stream_i: in slave_t;
+                               signal stream_o: out master_t;
+                               dt : in time := 10 ns)
+  is
+    variable frm: frame_t;
+  begin
+    stream_o <= transfer_defaults(cfg);
+
+    loop
+      frame_queue_get(root, frm, dt);
+      wait until falling_edge(clock);
+      frame_put(cfg, clock, stream_i, stream_o, frm);
+      deallocate(frm.data);
+    end loop;
+  end procedure;
+
+  procedure frame_queue_slave(constant cfg: config_t;
+                              variable root: in frame_queue_root_t;
+                              signal clock: in std_ulogic;
+                              signal stream_i: in master_t;
+                              signal stream_o: out slave_t;
+                               dt : in time := 10 ns)
+  is
+    variable frm: frame_t;
+  begin
+    stream_o <= accept(cfg, false);
+
+    loop
+      wait until falling_edge(clock);
+      frame_get(cfg, clock, stream_i, stream_o, frm);
+      frame_queue_put(root, frm);
+    end loop;
+  end procedure;
 
 end package body axi4_stream;
