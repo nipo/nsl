@@ -22,7 +22,7 @@ architecture arch of tb is
   signal done_s : std_ulogic_vector(0 to 0);
 
   signal input_s, output_s: bus_t;
-  shared variable master_q, slave_q: frame_queue_root_t;
+  shared variable master_q, slave_q, check_q: frame_queue_root_t;
 
   constant cfg_c: config_t := config(12, last => true);
 
@@ -33,6 +33,9 @@ begin
     variable frame_byte_count: integer;
   begin
     done_s(0) <= '0';
+    frame_queue_init(master_q);
+    frame_queue_init(slave_q);
+    frame_queue_init(check_q);
 
     wait for 40 ns;
 
@@ -40,11 +43,14 @@ begin
     loop
       frame_byte_count := stream_beat_count * cfg_c.data_width;
 
-      frame_queue_check_io(master_q, slave_q, prbs_byte_string(state_v, prbs31, frame_byte_count));
+      frame_queue_put2(master_q, check_q, prbs_byte_string(state_v, prbs31, frame_byte_count));
       state_v := prbs_forward(state_v, prbs31, frame_byte_count * 8);
     end loop;
 
-    wait for 500 ns;
+    frame_queue_drain(cfg_c, master_q, timeout => 1 ms);
+    wait for 10 us;
+
+    frame_queue_assert_equal(cfg_c, slave_q, check_q);
 
     done_s(0) <= '1';
     wait;
@@ -52,7 +58,6 @@ begin
 
   master_proc: process is
   begin
-    frame_queue_init(master_q);
     input_s.m <= transfer_defaults(cfg_c);
     wait for 40 ns;
     frame_queue_master(cfg_c, master_q, in_clock_s, input_s.s, input_s.m);
@@ -60,7 +65,6 @@ begin
 
   slave_proc: process is
   begin
-    frame_queue_init(slave_q);
     output_s.s <= accept(cfg_c, false);
     wait for 40 ns;
     frame_queue_slave(cfg_c, slave_q, out_clock_s, output_s.m, output_s.s);

@@ -519,9 +519,10 @@ package axi4_stream is
     data: byte_stream;
     dest: dest_t;
     user: user_t;
+    ts: time;
   end record;
 
-  -- Writes a frame to signals
+  -- Writes a frame to signals, takes ownership of frame buffer
   procedure frame_put(constant cfg: config_t;
                       signal clock: in std_ulogic;
                       signal stream_i: in slave_t;
@@ -553,7 +554,12 @@ package axi4_stream is
     frame: frame_t;
   end record;
   
-  type frame_queue_root_t is access frame_queue_t;
+  type frame_queue_root_item_t is
+  record
+    head: frame_queue_t;
+  end record;
+
+  type frame_queue_root_t is access frame_queue_root_item_t;
 
   -- Initializes a frame queue
   procedure frame_queue_init(
@@ -567,10 +573,21 @@ package axi4_stream is
     constant id:   std_ulogic_vector := na_suv;
     constant user: std_ulogic_vector := na_suv);
 
-  -- Appends a frame to a queue
+  -- Appends a frame to a queue, takes ownership of frame's buffer
   procedure frame_queue_put(
     variable root: in frame_queue_root_t;
     variable frm: in frame_t);
+
+  -- Appends a frame to two queues, takes ownership of frame's buffer
+  procedure frame_queue_put2(
+    variable a, b: in frame_queue_root_t;
+    variable frm: in frame_t);
+  procedure frame_queue_put2(
+    variable a, b: in frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv);
 
   -- Waits for a frame to be present on a queue.
   -- Polls for queue every dt. After timeout, raises a sev error
@@ -596,7 +613,8 @@ package axi4_stream is
 
   -- Waits for a frame to be present on a queue.
   -- When it is present, asserts for equality with passed reference data.
-  -- Polls for queue every dt. After timeout, raises a sev error
+  -- Polls for queue every dt. After timeout, raises a sev error.
+  -- Takes ownership of frame's data vector.
   procedure frame_queue_check(
     variable root: in frame_queue_root_t;
     variable frm: in frame_t;
@@ -635,6 +653,13 @@ package axi4_stream is
                                signal stream_i: in slave_t;
                                signal stream_o: out master_t;
                                dt : in time := 10 ns);
+
+  -- Waits for a queue to be empty
+  procedure frame_queue_drain(constant cfg: config_t;
+                              variable root: in frame_queue_root_t;
+                              dt : in time := 10 ns;
+                              timeout : in time := 100 us;
+                              sev: severity_level := failure);
   
   -- Slave-side procedure. Takes frames from signals and puts them to
   -- a queue.  Never returns
@@ -644,6 +669,11 @@ package axi4_stream is
                               signal stream_i: in master_t;
                               signal stream_o: out slave_t;
                                dt : in time := 10 ns);
+
+  -- A queue-only procedure that checks two queues for equality
+  procedure frame_queue_assert_equal(constant cfg: config_t;
+                                     variable a, b: in frame_queue_root_t;
+                                     sev: severity_level := failure);
   
 end package;
 
@@ -1766,8 +1796,24 @@ package body axi4_stream is
     ret.id := dontcare_pad(id, max_id_width_c);
     ret.user := dontcare_pad(user, max_user_width_c);
     ret.dest := dontcare_pad(dest, max_dest_width_c);
+    ret.ts := now;
     return ret;
   end function;
+
+  procedure frame_clone(
+    variable ret: out frame_t;
+    variable frm: in frame_t)
+  is
+    variable r : frame_t;
+  begin
+    r.data := new byte_string(0 to frm.data'length-1);
+    r.data.all := frm.data.all;
+    r.id := dontcare_pad(frm.id, max_id_width_c);
+    r.user := dontcare_pad(frm.user, max_user_width_c);
+    r.dest := dontcare_pad(frm.dest, max_dest_width_c);
+    r.ts := frm.ts;
+    ret := r;
+  end procedure;
 
   procedure frame_put(constant cfg: config_t;
                       signal clock: in std_ulogic;
@@ -1775,11 +1821,13 @@ package body axi4_stream is
                       signal stream_o: out master_t;
                       variable frm: frame_t)
   is
+    variable f : frame_t := frm;
   begin
-    packet_send(cfg, clock, stream_i, stream_o, frm.data.all,
-                dest => frm.dest(cfg.dest_width-1 downto 0),
-                user => frm.user(cfg.user_width-1 downto 0),
-                id => frm.id(cfg.id_width-1 downto 0));
+    packet_send(cfg, clock, stream_i, stream_o, f.data.all,
+                dest => f.dest(cfg.dest_width-1 downto 0),
+                user => f.user(cfg.user_width-1 downto 0),
+                id => f.id(cfg.id_width-1 downto 0));
+    deallocate(f.data);
   end procedure;
 
   procedure frame_get(constant cfg: config_t;
@@ -1794,8 +1842,10 @@ package body axi4_stream is
     variable dest : std_ulogic_vector(cfg.dest_width-1 downto 0);
   begin
     packet_receive(cfg, clock, stream_i, stream_o, packet, id, user, dest);
-    frm := frame(packet.all, dest, id, user);
-    deallocate(packet);
+    frm.data := packet;
+    frm.id := dontcare_pad(id, max_id_width_c);
+    frm.user := dontcare_pad(user, max_user_width_c);
+    frm.dest := dontcare_pad(dest, max_dest_width_c);
   end procedure;
 
   procedure frame_queue_init(
@@ -1803,8 +1853,8 @@ package body axi4_stream is
   is
     variable ret: frame_queue_root_t;
   begin
-    root := new frame_queue_t;
-    root.all := null;
+    root := new frame_queue_root_item_t;
+    root.head := null;
   end procedure;
 
   procedure frame_queue_put(
@@ -1817,32 +1867,54 @@ package body axi4_stream is
     variable frm : frame_t := frame(data, dest, id, user);
   begin
     frame_queue_put(root, frm);
-    deallocate(frm.data);
+  end procedure;
+
+  procedure frame_queue_put2(
+    variable a, b: in frame_queue_root_t;
+    constant data: byte_string := null_byte_string;
+    constant dest: std_ulogic_vector := na_suv;
+    constant id:   std_ulogic_vector := na_suv;
+    constant user: std_ulogic_vector := na_suv)
+  is
+    variable frm : frame_t := frame(data, dest, id, user);
+    variable c : frame_t;
+  begin
+    frame_clone(c, frm);
+    frame_queue_put(a, c);
+    frame_queue_put(b, frm);
+  end procedure;
+
+  procedure frame_queue_put2(
+    variable a, b: in frame_queue_root_t;
+    variable frm: in frame_t)
+  is
+    variable c : frame_t;
+  begin
+    frame_clone(c, frm);
+    frame_queue_put(a, c);
+    frame_queue_put(b, frm);
   end procedure;
 
   procedure frame_queue_put(
     variable root: in frame_queue_root_t;
     variable frm: in frame_t)
   is
-    variable item, chain: frame_queue_t;
+    variable item_a, chain_a: frame_queue_t;
+    variable root_v: frame_queue_root_t := root;
   begin
-    item := new frame_queue_item_t;
-    item.all.frame.data := new byte_string(0 to frm.data'length-1);
-    item.all.frame.data.all := frm.data.all;
-    item.all.frame.id := frm.id;
-    item.all.frame.user := frm.user;
-    item.all.frame.dest := frm.dest;
-    item.all.chain := null;
+    item_a := new frame_queue_item_t;
+    item_a.frame := frm;
+    item_a.chain := null;
 
-    if root.all = null then
-      root.all := item;
+    if root_v.head = null then
+      root_v.head := item_a;
     else
-      chain := root.all;
-      while chain.all.chain /= null
+      chain_a := root_v.head;
+      while chain_a.chain /= null
       loop
-        chain := chain.all.chain;
+        chain_a := chain_a.chain;
       end loop;
-      chain.all.chain := item;
+      chain_a.chain := item_a;
     end if;
   end procedure;
 
@@ -1859,7 +1931,6 @@ package body axi4_stream is
     variable frm: frame_t := frame(data, dest, id, user);
   begin
     frame_queue_check(root, frm, dt, timeout, sev);
-    deallocate(frm.data);
   end procedure;
 
   procedure frame_queue_check(
@@ -1870,14 +1941,17 @@ package body axi4_stream is
     sev: severity_level := failure)
   is
     variable rx_frm: frame_t;
+    variable ref_frm: frame_t := frm;
   begin
     frame_queue_get(root, rx_frm, dt, timeout, sev);
-    assert rx_frm.data.all = frm.data.all
-      and rx_frm.id = frm.id
-      and rx_frm.user = frm.user
-      and rx_frm.dest = frm.dest
-      report "bad frame received, expected "&to_string(frm.data.all)&", received "&to_string(rx_frm.data.all)
+    assert rx_frm.data.all = ref_frm.data.all
+      and rx_frm.id = ref_frm.id
+      and rx_frm.user = ref_frm.user
+      and rx_frm.dest = ref_frm.dest
+      report "Bad frame received, expected "&to_string(ref_frm.data.all)&", received "&to_string(rx_frm.data.all)
       severity sev;
+    deallocate(rx_frm.data);
+    deallocate(ref_frm.data);
   end procedure;
 
   procedure frame_queue_check_io(
@@ -1894,7 +1968,6 @@ package body axi4_stream is
     variable frm: frame_t := frame(data, dest, id, user);
   begin
     frame_queue_check_io(root_master, root_slave, frm, dt, timeout, sev);
-    deallocate(frm.data);
   end procedure;
 
   procedure frame_queue_check_io(
@@ -1905,8 +1978,10 @@ package body axi4_stream is
     timeout : in time := 100 us;
     sev: severity_level := failure)
   is
+    variable c : frame_t;
   begin
-    frame_queue_put(root_master, frm);
+    frame_clone(c, frm);
+    frame_queue_put(root_master, c);
     frame_queue_check(root_slave, frm, dt, timeout, sev);
   end procedure;
 
@@ -1917,17 +1992,18 @@ package body axi4_stream is
     timeout : in time := 100 us;
     sev: severity_level := failure)
   is
-    variable item: frame_queue_t;
+    variable root_v: frame_queue_root_t := root;
+    variable item_a: frame_queue_t;
     variable ret: frame_t;
     variable time_left: time := timeout;
   begin
     while time_left > dt
     loop
-      if root.all /= null then
-        item := root.all;
-        root.all := item.chain;
-        ret := item.frame;
-        deallocate(item);
+      if root_v.head /= null then
+        item_a := root_v.head;
+        root_v.head := item_a.chain;
+        ret := item_a.frame;
+        deallocate(item_a);
         frm := ret;
         return;
       end if;
@@ -1954,7 +2030,6 @@ package body axi4_stream is
       frame_queue_get(root, frm, dt);
       wait until falling_edge(clock);
       frame_put(cfg, clock, stream_i, stream_o, frm);
-      deallocate(frm.data);
     end loop;
   end procedure;
 
@@ -1974,6 +2049,59 @@ package body axi4_stream is
       frame_get(cfg, clock, stream_i, stream_o, frm);
       frame_queue_put(root, frm);
     end loop;
+  end procedure;
+
+  procedure frame_queue_drain(constant cfg: config_t;
+                              variable root: in frame_queue_root_t;
+                              dt : in time := 10 ns;
+                              timeout : in time := 100 us;
+                              sev: severity_level := failure)
+  is
+    variable time_left: time := timeout;
+  begin
+    while time_left > dt
+    loop
+      if root.head = null then
+        return;
+      end if;
+      wait for dt;
+      time_left := time_left - dt;
+    end loop;
+
+    assert false
+      report "Timeout while waiting for queue emptiness"
+      severity sev;
+  end procedure;
+
+  procedure frame_queue_assert_equal(constant cfg: config_t;
+                                     variable a, b: in frame_queue_root_t;
+                                     sev: severity_level := failure) 
+ is
+    variable a_frm, b_frm: frame_t;
+  begin
+    while a.head /= null
+    loop
+      frame_queue_get(a, a_frm);
+      assert b.head /= null
+        report "Right queue is shorter than left one"
+        severity sev;
+
+      frame_queue_get(b, b_frm);
+      
+      assert a_frm.data.all = b_frm.data.all
+        and a_frm.id(cfg.id_width-1 downto 0) = b_frm.id(cfg.id_width-1 downto 0)
+        and a_frm.user(cfg.user_width-1 downto 0) = b_frm.user(cfg.user_width-1 downto 0)
+        and a_frm.dest(cfg.dest_width-1 downto 0) = b_frm.dest(cfg.dest_width-1 downto 0)
+        report "Mismatch between frames, left from "&to_string(a_frm.ts)&" "&to_string(a_frm.data.all)&", right from "&to_string(b_frm.ts)&" "&to_string(b_frm.data.all)
+        severity sev;
+
+      deallocate(a_frm.data);
+      deallocate(b_frm.data);
+    end loop;
+
+    assert b.head = null
+      report "Left queue is shorter than right one"
+      severity sev;
   end procedure;
 
 end package body axi4_stream;
