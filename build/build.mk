@@ -9,7 +9,8 @@ SRC_DIR := $(shell cd $(shell pwd) ; cd $(dir $(firstword $(MAKEFILE_LIST))) ; p
 build-dir := $(SRC_DIR)/$(tool)-build
 
 BUILD_ROOT := $(shell cd $(shell pwd) ; cd $(dir $(lastword $(MAKEFILE_LIST))) ; pwd)
-LIB_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
+NSL_ROOT := $(shell cd $(BUILD_ROOT) ; cd ../lib ; pwd)
+HDL_LIBRARY_PATH += $(NSL_ROOT)
 TOOL_ROOT := $(BUILD_ROOT)/tool/
 
 PYTHONPATH=$(BUILD_ROOT)/../python
@@ -115,12 +116,12 @@ endef
 library-parse = $(if $(filter $1,$(all-libraries)),,$(call _library-parse,$1,$2))
 define _library-parse
 ifneq ($(nsl-build-debug),)
-$$(info Adding library $1 in $(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1))
+$$(info Adding library $1 in $($1-srcdir))
 endif
 
 all-libraries += $1
 
-$(call directory-ingress,$1,_bare,$(if $($1-srcdir),$($1-srcdir),$(LIB_ROOT)/$1),$2)
+$(call directory-ingress,$1,_bare,$($1-srcdir),$2)
 
 ifneq ($(nsl-build-debug),)
 $$(info $1 **** packages: $$($1._bare-sub-packages))
@@ -128,7 +129,7 @@ endif
 
 $1-vhdl-version := $$(if $$($1._bare-vhdl-version),$$($1._bare-vhdl-version),1993)
 $1._bare-vhdl-version :=
-$$(eval $$(foreach p,$$($1._bare-sub-packages),$$(call package-ingress,$1,$$p,$$(if $$($1-srcdir),$$($1-srcdir),$(LIB_ROOT)/$1)/$$p,$2)))
+$$(eval $$(foreach p,$$($1._bare-sub-packages),$$(call package-ingress,$1,$$p,$$($1-srcdir)/$$p,$2)))
 $$(eval $$(call ensure-package-deps-parsed,$1._bare,$2))
 
 endef
@@ -301,6 +302,13 @@ ifneq ($(nsl-build-debug),)
 $(info Starting from top library)
 endif
 
+# This is responsible for declaring all $(lib)-srcdir of one lib
+hdl-library-path-scan = $(if $(wildcard $2/Makefile),$(eval $1-srcdir := $2),)
+
+# This is responsible for declaring all $(lib)-srcdir of all libs
+hdl-library-path-scan-all = $(foreach l,$(shell find "$1" -maxdepth 1 -type d -printf "%f\n"),$(call hdl-library-path-scan,$l,$1/$l))
+
+$(eval $(foreach l,$(HDL_LIBRARY_PATH),$(call hdl-library-path-scan-all,$l)))
 $(eval $(call library-parse,$(top-lib),$(top-lib)))
 
 ifneq ($(nsl-build-debug),)
