@@ -226,7 +226,23 @@ package axi4_stream is
       );
   end component;
 
-  -- This implements AXI4-stream protocol assertions as defined in
+  -- This dumps a stream to console as it is probed 
+  -- using master/slave_t interface.
+  component axi4_stream_dumper_standard_io is
+    generic(
+      config_c : config_t;
+      prefix_c : string := "AXIS"
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+  
+      in_i : in master_t;
+      out_i : in slave_t
+      );
+    end component;
+
+    -- This implements AXI4-stream protocol assertions as defined in
   -- ARM's DUI 0534-B.
   component axi4_stream_protocol_assertions is
     generic(
