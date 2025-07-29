@@ -12,6 +12,7 @@ package bool is
   function if_else(i : boolean; a, b : std_logic_vector) return std_logic_vector;
   function if_else(i : boolean; a, b : std_ulogic_vector) return std_ulogic_vector;
   function if_else(i : boolean; a, b : unsigned) return unsigned;
+  function if_else(i : boolean; a, b : boolean) return boolean;
 
 end package bool;
 
@@ -68,6 +69,15 @@ package body bool is
   end function;
 
   function if_else(i : boolean; a, b : unsigned) return unsigned is
+  begin
+    if i then
+      return a;
+    else
+      return b;
+    end if;
+  end function;
+
+  function if_else(i : boolean; a, b : boolean) return boolean is
   begin
     if i then
       return a;
