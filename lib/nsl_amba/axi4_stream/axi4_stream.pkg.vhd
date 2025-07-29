@@ -226,22 +226,7 @@ package axi4_stream is
       );
   end component;
 
-  -- This dumps a stream to console as it is probed 
-  -- using master/slave_t interface.
-  component axi4_stream_dumper_standard_io is
-    generic(
-      config_c : config_t;
-      prefix_c : string := "AXIS"
-      );
-    port(
-      clock_i : in std_ulogic;
-      reset_n_i : in std_ulogic;
-  
-      in_i : in master_t;
-      out_i : in slave_t
-      );
-    end component;
-
+  -- This implements AXI4-stream protocol assertions as defined in
     -- This implements AXI4-stream protocol assertions as defined in
   -- ARM's DUI 0534-B.
   component axi4_stream_protocol_assertions is
@@ -384,7 +369,8 @@ package axi4_stream is
                            variable packet : out byte_string;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector);
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false);
 
   procedure packet_check(constant cfg: config_t;
                          signal clock: in std_ulogic;
@@ -555,7 +541,7 @@ package axi4_stream is
                       variable frm: out frame_t);
 
   -- Factory function for a frame
-  function frame(
+impure function frame(
     constant data: byte_string := null_byte_string;
     constant dest: std_ulogic_vector := na_suv;
     constant id:   std_ulogic_vector := na_suv;
@@ -670,6 +656,7 @@ package axi4_stream is
                                signal clock: in std_ulogic;
                                signal stream_i: in slave_t;
                                signal stream_o: out master_t;
+                               timeout : in time := 100 us;
                                dt : in time := 10 ns);
 
   -- Waits for a queue to be empty
@@ -1502,7 +1489,8 @@ package body axi4_stream is
                            variable packet : out byte_string;
                            variable id : out std_ulogic_vector;
                            variable user : out std_ulogic_vector;
-                           variable dest : out std_ulogic_vector)
+                           variable dest : out std_ulogic_vector;
+                           constant ready_toggle : boolean := false)
   is
     variable r: byte_string(0 to packet'length-1);
     variable beat: master_t;
@@ -1511,6 +1499,7 @@ package body axi4_stream is
     variable first: boolean := false;
     variable should_be_last: boolean;
     variable offset: integer := 0;
+    variable state_v : prbs_state(30 downto 0) := x"deadbee"&"111";
   begin
     assert cfg.has_keep or (packet'length mod cfg.data_width = 0)
       report "Testing for a short packet with no keep will always fail"
@@ -1518,6 +1507,13 @@ package body axi4_stream is
 
     while offset < r'length
     loop
+      state_v := prbs_forward(state_v, prbs31, cfg.data_width);
+      if ready_toggle and state_v(0) = '1' then
+        wait until rising_edge(clock);
+        wait until falling_edge(clock);
+        next;
+      end if;
+
       should_be_last := offset + d'length >= r'length;
 
       receive(cfg, clock, stream_i, stream_o, beat);
@@ -1808,7 +1804,7 @@ package body axi4_stream is
     return b.beat_count;
   end function;
 
-  function frame(
+impure function frame(
     constant data: byte_string := null_byte_string;
     constant dest: std_ulogic_vector := na_suv;
     constant id:   std_ulogic_vector := na_suv;
@@ -2046,6 +2042,7 @@ package body axi4_stream is
                                signal clock: in std_ulogic;
                                signal stream_i: in slave_t;
                                signal stream_o: out master_t;
+                               timeout : in time := 100 us;
                                dt : in time := 10 ns)
   is
     variable frm: frame_t;
@@ -2053,7 +2050,7 @@ package body axi4_stream is
     stream_o <= transfer_defaults(cfg);
 
     loop
-      frame_queue_get(root, frm, dt);
+      frame_queue_get(root, frm, dt, timeout);
       wait until falling_edge(clock);
       frame_put(cfg, clock, stream_i, stream_o, frm);
     end loop;
