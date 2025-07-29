@@ -21,7 +21,6 @@ end entity;
 
 architecture xil of uid32_reader is
 
-  subtype crc_t is nsl_data.crc.crc_state(31 downto 0);
   constant crc_params_c : crc_params_t := crc_params(
     init             => "",
     poly             => x"104c11db7",
@@ -43,7 +42,7 @@ architecture xil of uid32_reader is
     state : state_t;
 
     counter : integer range 36 downto 0;
-    crc32 : crc_t;
+    crc32 : crc_state_t;
   end record;
 
   signal r, rin: regs_t;
@@ -92,7 +91,7 @@ begin
     s_dna_read <= '0';
     s_dna_shift <= '0';
     done_o <= '0';
-    uid_o <= unsigned(r.crc32);
+    uid_o <= unsigned(crc_spill_vector(crc_params_c, r.crc32));
 
     case r.state is
       when ST_RESET =>
