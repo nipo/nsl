@@ -3,49 +3,49 @@ package body gowin_config is
   function iodelay_step_ps return real
   is
   begin
-    return 25;
+    return 12.5;
   end function;
 
   function device_name return string
   is
   begin
-    return "GW1N-1";
+    return "GW5A-15A";
   end function;
 
   function internal_osc return string
   is
   begin
-    return "osch";
+    return "osca";
   end function;
 
   function pll_type return string
   is
   begin
-    return "rpll";
+    return "pll";
   end function;
 
   function pll_vco_fmin return real
   is
   begin
-    return 400.0e6;
+    return 650.0e6;
   end function;
 
   function pll_vco_fmax return real
   is
   begin
-    return 900.0e6;
+    return 1300.0e6;
   end function;
 
   function pll_pfd_fmin return real
   is
   begin
-    return 3.0e6;
+    return 19.0e6;
   end function;
 
   function pll_pfd_fmax return real
   is
   begin
-    return 400.0e6;
+    return 81.25e6;
   end function;
 
 end package body;

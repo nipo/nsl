@@ -31,7 +31,11 @@ deps += nsl_data.text
 endif
 
 ifeq ($(hwdep),gowin)
+ifneq ($(filter GW5%,$(target_part)),)
+vhdl-sources += input_delay_fixed_gowin_gw5.vhd
+else
 vhdl-sources += input_delay_fixed_gowin.vhd
+endif
 vhdl-sources += output_delay_fixed_symmetrical.vhd
-deps += gowin.components
+deps += nsl_hwdep.gowin_config
 endif

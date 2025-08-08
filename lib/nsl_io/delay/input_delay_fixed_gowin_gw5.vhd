@@ -18,15 +18,19 @@ architecture gowin of input_delay_fixed is
 
   constant tap_count_i : integer := integer(real(delay_ps_c) / nsl_hwdep.gowin_config.iodelay_step_ps);
 
-  component IODELAY is
-    GENERIC (  C_STATIC_DLY : integer := 0);
-    PORT (
-      DI : IN std_logic;
-      SDTAP : IN std_logic;
-      SETN : IN std_logic;
-      VALUE : IN std_logic;
-      DO : OUT std_logic;
-      DF : OUT std_logic
+  component iodelay
+      generic (
+          c_static_dly:integer:=0;
+          dyn_dly_en:string:="false";
+          adapt_en:string:="false"
+      );
+      port(
+          do:out std_logic;
+          df:out std_logic;
+          di:in std_logic;
+          sdtap:in std_logic;
+          value:in std_logic;
+          dlystep:in std_logic_vector(7 downto 0)
       );
   end component;
 
@@ -41,7 +45,7 @@ begin
       port map(
         di => data_i,
         sdtap => '0',
-        setn => '0',
+        dlystep => (others => '0'),
         value => '0',
         df => open,
         do => data_o
