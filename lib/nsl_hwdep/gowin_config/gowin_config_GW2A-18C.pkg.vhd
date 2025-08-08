@@ -1,6 +1,6 @@
 package body gowin_config is
 
-  function iodelay_step_ps return integer
+  function iodelay_step_ps return real
   is
   begin
     return 25;
