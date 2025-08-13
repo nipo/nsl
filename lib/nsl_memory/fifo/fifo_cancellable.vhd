@@ -125,7 +125,7 @@ begin
   s_do_write <= to_logic(r.wptr_sp /= s_wptr_end) and in_valid_i;
   s_do_read <= to_logic(r.rptr_mem /= r.wptr) and (out_ready_i or not r.rdata_valid);
   out_available_o <= r.wptr - r.rptr;
-  in_free_o <= s_wptr_end - r.wptr;
+  in_free_o <= s_wptr_end - r.wptr  when reset_n_i = '1' else (others => '0');
   in_ready_o <= to_logic(r.wptr_sp /= s_wptr_end and r.reset_done);
 
   storage: nsl_memory.ram.ram_2p_r_w
