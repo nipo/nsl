@@ -2574,12 +2574,12 @@ package body axi4_mm is
     if bytes'length /= 0 then
       ret.data := (others => dontcare_byte_c);
       ret.data(0 to total_byte_count - 1) := data_all(0 to total_byte_count - 1);
+      ret.burst_resp_pending := true;
     end if;
 
     ret.strb := cfg.strb;
     ret.burst_addr_pending := true;
-    ret.burst_data_pending := false;
-    ret.burst_resp_pending := false;
+    ret.burst_data_pending := true;
     ret.beat_left := total_beat_count - 1;
     ret.resp := RESP_OKAY;
 
@@ -2595,9 +2595,8 @@ package body axi4_mm is
   is
   begin
     return (not txn.burst_addr_pending or is_ready(cfg.axi, wa))
-      and (not txn.burst_addr_pending and (
-        (not txn.burst_data_pending or is_ready(cfg.axi, w))
-        and (not txn.burst_resp_pending or is_valid(cfg.axi, b))))
+      and (not txn.burst_data_pending or is_ready(cfg.axi, w))
+      and (not txn.burst_resp_pending or is_valid(cfg.axi, b))
       and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 
@@ -2609,7 +2608,7 @@ package body axi4_mm is
   is
   begin
     return (not txn.burst_addr_pending or is_ready(cfg.axi, ra))
-      and (not txn.burst_addr_pending and (not txn.burst_data_pending or (is_valid(cfg.axi, r) and is_last(cfg.axi, r))))
+      and (not txn.burst_data_pending or (is_valid(cfg.axi, r) and is_last(cfg.axi, r)))
       and (txn.beat_left = 0 or txn.resp /= RESP_OKAY);
   end function;
 
@@ -2627,16 +2626,18 @@ package body axi4_mm is
     constant burst_last : boolean := is_last(cfg.axi, r);
 
     variable rin : transactor_t := txn;
+    variable addr_done, data_done : boolean := false;
   begin
-    if txn.burst_addr_pending and is_ready(cfg.axi, ra) then
+    if not txn.burst_addr_pending then
+      addr_done := true;
+    elsif is_ready(cfg.axi, ra) then
       rin.burst_addr_pending := false;
-      rin.burst_data_pending := true;
+      addr_done := true;
     end if;
 
-    if txn.burst_data_pending and is_valid(cfg.axi, r) then
-      assert not txn.burst_addr_pending
-        severity failure;
-
+    if not txn.burst_data_pending then
+      data_done := true;
+    elsif is_valid(cfg.axi, r) then
       rin.data(0 to total_byte_count-1) := txn.data(bytes_per_beat to total_byte_count-1) & bytes(cfg.axi, r);
       rin.strb(0 to total_byte_count-1) := txn.strb(bytes_per_beat to total_byte_count-1) & strb_pad;
       rin.addr(cfg.axi.address_width-1 downto 0) := addr(cfg, txn) + bytes_per_beat;
@@ -2650,21 +2651,26 @@ package body axi4_mm is
       end if;
 
       if burst_last then
+        data_done := true;
         rin.burst_data_pending := false;
-        if txn.resp /= RESP_OKAY or resp(cfg.axi, r) /= RESP_OKAY then
-          -- Dont restart, kill pending words
-          rin.beat_left := 0;
-        elsif txn.beat_left /= 0 then
-          rin.burst_addr_pending := true;
-        elsif restart then
-          if address_rollback then
-            rin.addr(cfg.axi.address_width-1 downto 0)
-              := addr(cfg, txn) + bytes_per_beat - total_byte_count;
-          end if;
-          rin.strb := cfg.strb;
-          rin.burst_addr_pending := true;
-          rin.beat_left := total_beat_count - 1;
+      end if;
+    end if;
+
+    if addr_done and data_done then
+      if txn.resp /= RESP_OKAY or resp(cfg.axi, r) /= RESP_OKAY then
+        -- Dont restart, kill pending words
+        rin.beat_left := 0;
+      elsif txn.beat_left /= 0 then
+        rin.burst_addr_pending := true;
+      elsif restart then
+        if address_rollback then
+          rin.addr(cfg.axi.address_width-1 downto 0)
+            := addr(cfg, txn) + bytes_per_beat - total_byte_count;
         end if;
+        rin.strb := cfg.strb;
+        rin.burst_addr_pending := true;
+        rin.burst_data_pending := true;
+        rin.beat_left := total_beat_count - 1;
       end if;
     end if;
 
@@ -2691,14 +2697,18 @@ package body axi4_mm is
     constant burst_last : boolean := (txn.beat_left mod max_beat_per_burst) = 0;
 
     variable rin : transactor_t := txn;
+    variable addr_done, resp_done, data_done : boolean := false;
   begin
-    if txn.burst_addr_pending and is_ready(cfg.axi, wa) then
+    if not txn.burst_addr_pending then
+      addr_done := true;
+    elsif is_ready(cfg.axi, wa) then
       rin.burst_addr_pending := false;
-      rin.burst_data_pending := true;
-      rin.burst_resp_pending := true;
+      addr_done := true;
     end if;
 
-    if txn.burst_data_pending and is_ready(cfg.axi, w) then
+    if not txn.burst_data_pending then
+      data_done := true;
+    elsif is_ready(cfg.axi, w) then
       rin.data(0 to total_byte_count-1) := txn.data(bytes_per_beat to total_byte_count-1) & data_pad;
       rin.strb(0 to total_byte_count-1) := txn.strb(bytes_per_beat to total_byte_count-1) & strb_pad;
       rin.addr(cfg.axi.address_width-1 downto 0) := addr(cfg, txn) + bytes_per_beat;
@@ -2708,24 +2718,27 @@ package body axi4_mm is
       end if;
 
       if burst_last then
+        data_done := true;
         rin.burst_data_pending := false;
       end if;
     end if;
 
-    if txn.burst_resp_pending and is_valid(cfg.axi, b) then
-      assert not txn.burst_addr_pending
-        severity failure;
-      assert not txn.burst_data_pending
-        severity failure;
-
+    if not txn.burst_resp_pending then
+      resp_done := true;
+    elsif is_valid(cfg.axi, b) then
+      resp_done := true;
       rin.burst_resp_pending := false;
       rin.resp := resp(cfg.axi, b);
+    end if;
 
+    if addr_done and data_done and resp_done then
       if resp(cfg.axi, b) /= RESP_OKAY then
         -- Dont restart, kill pending words
         rin.beat_left := 0;
       elsif txn.beat_left /= 0 then
         rin.burst_addr_pending := true;
+        rin.burst_data_pending := true;
+        rin.burst_resp_pending := true;
       elsif restart then
         if address_rollback then
           rin.addr(cfg.axi.address_width-1 downto 0)
@@ -2733,6 +2746,8 @@ package body axi4_mm is
         end if;
         rin.strb := cfg.strb;
         rin.burst_addr_pending := true;
+        rin.burst_data_pending := true;
+        rin.burst_resp_pending := true;
         rin.beat_left := total_beat_count - 1;
       end if;
     end if;
