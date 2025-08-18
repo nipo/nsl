@@ -184,7 +184,11 @@ begin
               when SMI_C45_ADDR | SMI_C45_WRITE | SMI_C22_WRITE =>
                 rin.shreg <= r.data;
               when SMI_C45_READINC | SMI_C45_READ | SMI_C22_READ =>
-                rin.error <= to_x01(smi_i.mdio);
+                if smi_i.mdio = '0' then
+                  rin.error <= '0';
+                else
+                  rin.error <= '1';
+                end if;
                 rin.shreg <= (others => '-');
             end case;
           end if;
