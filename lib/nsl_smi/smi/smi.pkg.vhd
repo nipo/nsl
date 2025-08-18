@@ -42,7 +42,7 @@ package smi is
       );
   end component;
   
-  component smi_smave_line_driver is
+  component smi_slave_line_driver is
     port(
       smi_io : inout smi_bus;
       slave_o  : out smi_slave_i;
@@ -50,4 +50,7 @@ package smi is
       );
   end component;
     
+  constant read_opcode_c: std_ulogic_vector(1 downto 0) := "10";
+  constant write_opcode_c: std_ulogic_vector(1 downto 0) := "01";
+
 end package smi;
