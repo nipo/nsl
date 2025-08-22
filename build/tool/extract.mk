@@ -35,25 +35,27 @@ export-languages-$1 := $(sort $(foreach s,$($1-sources),$(if $(export-language-e
 endef
 
 define lib_file_append
+
 	$(SILENT)echo "" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2) Original file: $(notdir $3)" >> $$@
 	$(SILENT)echo "" >> $$@
 	$(SILENT)cat "$3" >> $$@
-	
+
+
 endef
 
 define lib_lang_generate
 
 $(call lib_outname,$1,$2): $(foreach s,$($1-sources),$(if $(filter $2,$($s-language)),$s))
 	$(SILENT)echo "$(export-language-comment-$2) This is a partial extract from NSL" > $$@
-	$(SILENT)echo "$(export-language-comment-$2) https://code.ssji.net/git/nipo/nsl" >> $$@
+	$(SILENT)echo "$(export-language-comment-$2) https://github.com/nipo/nsl" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2) performed on `date`" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2)" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2) This file should be compiled as $2, in library $1" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2)" >> $$@
 	$(SILENT)cat $(BUILD_ROOT)/../license.rst | sed -e "s:^:$(export-language-comment-$2) :" >> $$@
 	$(SILENT)echo "$(export-language-comment-$2)" >> $$@
-$(foreach s,$($1-sources),$(if $(filter $2,$($s-language)),$(call lib_file_append,$1,$2,$s)))
+	$(foreach s,$($1-sources),$(if $(filter $2,$($s-language)),$(call lib_file_append,$1,$2,$s)))
 
 export-files += $(call lib_outname,$1,$2)
 clean-files += $(call lib_outname,$1,$2)
