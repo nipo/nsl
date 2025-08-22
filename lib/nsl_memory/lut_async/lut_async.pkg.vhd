@@ -8,8 +8,6 @@ package lut_async is
       contents_c : std_ulogic_vector
       );
     port (
-      clock_i : in std_ulogic;
-
       data_i : in std_ulogic_vector;
       data_o : out std_ulogic
       );
