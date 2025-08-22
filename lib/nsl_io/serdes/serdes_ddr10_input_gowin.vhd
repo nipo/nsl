@@ -48,7 +48,7 @@ begin
     end if;
   end process;
 
-  mark_o <= '1' if slip_count = 0 else '0';
+  mark_o <= '1' when slip_count = 0 else '0';
 
   ltr: if left_to_right_c
   generate
