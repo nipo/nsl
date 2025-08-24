@@ -44,7 +44,8 @@ package smi is
   
   component smi_slave_line_driver is
     port(
-      smi_io : inout smi_bus;
+      mdc_i : in std_logic;
+      mdio_io : inout std_logic;
       slave_o  : out smi_slave_i;
       slave_i  : in smi_slave_o
       );

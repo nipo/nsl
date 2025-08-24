@@ -86,8 +86,8 @@ begin
         config_c => config_c
         )
       port map(
-        ref_clock_i => clock_s,
-        ref_reset_n_i => reset_n_s,
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
 
         smi_i => smi_i_s,
         smi_o => smi_o_s,
