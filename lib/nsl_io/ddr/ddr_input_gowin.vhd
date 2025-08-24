@@ -17,6 +17,21 @@ end entity;
 architecture gw1n of ddr_input is
 
   signal clock_s: std_ulogic;
+  attribute syn_black_box: boolean ;
+
+  component IDDR is
+    GENERIC (
+      Q0_INIT : bit := '0';
+      Q1_INIT : bit := '0'
+      );
+    PORT (
+      Q0 : OUT std_logic;
+      Q1 : OUT std_logic;
+      D : IN std_logic;
+      CLK: IN std_logic
+      );
+  end component;
+  attribute syn_black_box of IDDR : Component is true;
 
 begin
 
@@ -42,7 +57,7 @@ begin
     clock_s <= clock_i.n;
   end generate;
   
-  inst: gowin.components.iddr
+  inst: IDDR
     port map (
       d => dd_i,
       clk => clock_s,

@@ -13,6 +13,24 @@ end entity;
 
 architecture gw1n of ddr_output is
 
+  attribute syn_black_box: boolean ;
+
+  component ODDR is
+    GENERIC (
+      TXCLK_POL : bit := '0';
+      CONSTANT INIT : std_logic := '0'
+      );
+    PORT (
+      Q0 : OUT std_logic;
+      Q1 : OUT std_logic;
+      D0 : IN std_logic;
+      D1 : IN std_logic;
+      TX : IN std_logic;
+      CLK : IN std_logic
+      );
+  end component;
+  attribute syn_black_box of ODDR : component is true;
+
 begin
 
   -- Gowin ODDR gate behavior:
@@ -37,7 +55,7 @@ begin
   --  Q1/tclkpol=0          X  M  X  N  X  O  X  P  X  Q  X  R  X
   --  Q1/tclkpol=1       X  M  X  N  X  O  X  P  X  Q  X  R  X
   
-  inst: gowin.components.oddr
+  inst: ODDR
     port map (
       q0 => dd_o,
       q1 => open,

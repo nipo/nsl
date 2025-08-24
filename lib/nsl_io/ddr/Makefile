@@ -28,7 +28,6 @@ endif
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += ddr_input_gowin.vhd
 vhdl-sources += ddr_output_gowin.vhd
-deps += gowin.components
 endif
 
 deps += nsl_io.diff
