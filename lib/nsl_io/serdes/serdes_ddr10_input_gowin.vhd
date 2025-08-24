@@ -27,6 +27,31 @@ architecture gw1n of serdes_ddr10_input is
   signal d_s: std_ulogic_vector(0 to 9);
   signal slip_count: integer range 0 to 9;
 
+  attribute syn_black_box: boolean ;
+
+  component IDES10 is
+    GENERIC (
+      GSREN : string := "false";
+      LSREN : string := "true"
+      );
+    PORT (
+      D,RESET : IN std_logic;
+      CALIB : IN std_logic;
+      FCLK,PCLK : IN std_logic;
+      Q0 : OUT std_logic;
+      Q1 : OUT std_logic;
+      Q2 : OUT std_logic;
+      Q3 : OUT std_logic;
+      Q4 : OUT std_logic;
+      Q5 : OUT std_logic;
+      Q6 : OUT std_logic;
+      Q7 : OUT std_logic;
+      Q8 : OUT std_logic;
+      Q9 : OUT std_logic
+      );
+  end component;
+  attribute syn_black_box of IDES10 : component is true;
+
 begin
 
   reset_s <= not reset_n_i;
@@ -65,7 +90,7 @@ begin
 
   bit_clock_n_s <= not bit_clock_i;
 
-  inst: gowin.components.ides10
+  inst: IDES10
     port map (
       q0 => d_s(0),
       q1 => d_s(1),

@@ -20,7 +20,33 @@ architecture gw1n of serdes_ddr10_output is
 
   signal d_s: std_ulogic_vector(0 to 9);
   signal reset_s: std_ulogic;
-  
+
+  attribute syn_black_box: boolean ;
+
+  component OSER10 is
+    GENERIC (
+      GSREN : string := "false";
+      LSREN : string := "true"
+      );
+    PORT (
+      D0 : in std_logic;
+      D1 : in std_logic;
+      D2 : in std_logic;
+      D3 : in std_logic;
+      D4 : in std_logic;
+      D5 : in std_logic;
+      D6 : in std_logic;
+      D7 : in std_logic;
+      D8 : in std_logic;
+      D9 : in std_logic;
+      PCLK : in std_logic;
+      RESET : in std_logic;
+      FCLK : in std_logic;
+      Q : OUT std_logic
+      );
+  end component;
+  attribute syn_black_box of OSER10 : component is true;
+
 begin
 
   reset_s <= not reset_n_i;
@@ -38,7 +64,7 @@ begin
     end generate;
   end generate;
 
-  inst: gowin.components.oser10
+  inst: OSER10
     port map(
       q => serial_o,
       d0 => d_s(0),

@@ -19,12 +19,39 @@ end entity;
 architecture gw1n of pad_diff_input is
 
   signal unbuffered_s, inverted_s : std_ulogic;
+  attribute syn_black_box: boolean ;
+
+  component TLVDS_IBUF is
+    PORT(
+      O : OUT std_logic;
+      I : IN std_logic;
+      IB : IN std_logic
+      );
+  end component;
+  attribute syn_black_box of TLVDS_IBUF : component is true;
+
+  component ELVDS_IBUF is
+    PORT(
+      O : OUT std_logic;
+      I : IN std_logic;
+      IB : IN std_logic
+      );
+  end component;
+  attribute syn_black_box of ELVDS_IBUF : component is true;
+
+  component BUFG is
+    PORT(
+      O : out std_logic;
+      I : in std_logic
+      );
+  end component;
+  attribute syn_black_box of BUFG : component is true;
 
 begin
 
   if_diff_term: if diff_term
   generate
-    iobuf_inst: gowin.components.tlvds_ibuf
+    iobuf_inst: TLVDS_IBUF
       port map(
         i => p_diff.p,
         ib => p_diff.n,
@@ -34,7 +61,7 @@ begin
   
   if_no_diff_term: if not diff_term
   generate
-    iobuf_inst: gowin.components.elvds_ibuf
+    iobuf_inst: ELVDS_IBUF
       port map(
         i => p_diff.p,
         ib => p_diff.n,
@@ -46,7 +73,7 @@ begin
 
   if_clk: if is_clock
   generate
-    ck_buf: gowin.components.bufg
+    ck_buf: BUFG
       port map(
         i => inverted_s,
         o => p_se

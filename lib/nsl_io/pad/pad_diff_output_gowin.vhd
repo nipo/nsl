@@ -16,9 +16,20 @@ end entity;
 
 architecture gw1n of pad_diff_output is
 
+  attribute syn_black_box: boolean ;
+
+  component TLVDS_OBUF is
+    PORT(
+      O : OUT std_logic;
+      OB : OUT std_logic;
+      I : IN std_logic
+      );
+  end component;
+  attribute syn_black_box of TLVDS_OBUF : component is true;
+
 begin
 
-  se2diff: gowin.components.tlvds_obuf
+  se2diff: TLVDS_OBUF
     port map(
       o => p_diff.p,
       ob => p_diff.n,
