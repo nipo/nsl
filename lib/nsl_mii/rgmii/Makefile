@@ -2,9 +2,12 @@ vhdl-sources += rgmii.pkg.vhd
 vhdl-sources += rgmii_driver.vhd
 vhdl-sources += rgmii_rx_driver.vhd
 vhdl-sources += rgmii_tx_driver.vhd
+vhdl-sources += rgmii_to_gmii.vhd
+vhdl-sources += gmii_to_rgmii.vhd
 
 deps += nsl_mii.flit
 deps += nsl_mii.link
+deps += nsl_mii.gmii
 deps += nsl_math.arith
 deps += nsl_clocking.distribution
 deps += nsl_clocking.intradomain
