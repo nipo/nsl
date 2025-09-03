@@ -12,4 +12,5 @@ packages += apb_routing
 packages += mm_stream_adapter
 packages += mm_fifo
 packages += axi_apb
+packages += random_pkt_checker
 nsl_amba-ghdl-flags += -Wno-hide
