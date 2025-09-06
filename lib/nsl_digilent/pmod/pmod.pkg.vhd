@@ -25,4 +25,36 @@ package pmod is
   -- NSL:                (4) (3) (2) (1)
   subtype pmod_double_t is std_logic_vector(1 to 8);
 
+  -- SPI master mapping Type2
+  component pmod_type2_driver is
+    port(
+      pmod_io: inout pmod_single_t;
+      spi_i: in nsl_spi.spi.spi_master_o;
+      spi_o: out nsl_spi.spi.spi_master_i
+      );
+  end component;
+
+  -- SPI master mapping Type2a
+  component pmod_type2a_driver is
+    port(
+      pmod_io: inout pmod_double_t;
+      spi_i: in nsl_spi.spi.spi_master_o;
+      spi_o: out nsl_spi.spi.spi_master_i;
+      cs_n_i: in nsl_io.io.opendrain_vector(2 to 3);
+      reset_i: in nsl_io.io.opendrain;
+      int_o: out std_ulogic
+      );
+  end component;
+
+  -- I2C master mapping Type6
+  component pmod_type6_driver is
+    port(
+      pmod_io: inout pmod_single_t;
+      i2c_i: in nsl_i2c.i2c.i2c_o;
+      i2c_o: out nsl_i2c.i2c.i2c_i;
+      reset_i: in nsl_io.io.opendrain;
+      int_o: out std_ulogic
+      );
+  end component;
+
 end package pmod;
