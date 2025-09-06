@@ -24,10 +24,6 @@ architecture gw1n of serdes_ddr10_output is
   attribute syn_black_box: boolean ;
 
   component OSER10 is
-    GENERIC (
-      GSREN : string := "false";
-      LSREN : string := "true"
-      );
     PORT (
       D0 : in std_logic;
       D1 : in std_logic;
@@ -53,14 +49,14 @@ begin
   
   ltr: if left_to_right_c
   generate
-    d <= parallel_i;
+    d_s <= parallel_i;
   end generate;
 
   rtl: if not left_to_right_c
   generate
     in_map: for i in 0 to 9
     generate
-      d(9-i) <= parallel_i(i);
+      d_s(9-i) <= parallel_i(i);
     end generate;
   end generate;
 
