@@ -13,7 +13,7 @@ package pmod_dvi is
       
       tmds_i : in nsl_dvi.dvi.symbol_vector_t;
 
-      pmod_io : inout nsl_digilent.pmod.pmod_io_t
+      pmod_io : inout nsl_digilent.pmod.pmod_double_t
       );
   end component;
 
