@@ -127,7 +127,7 @@ package body hdmi is
     data(1) := byte(to_unsigned(ct, 4) & "0" & to_unsigned(cc, 3));
     data(2) := byte("000" & to_unsigned(sf, 3) & to_unsigned(ss, 2));
     data(3) := byte("000" & to_unsigned(cxt, 5));
-    data(4) := byte(to_unsigned(ca, 5));
+    data(4) := byte(to_unsigned(ca, 8));
     data(5) := byte(to_unsigned(dm, 1) & to_unsigned(lsv, 4) & "0" & to_unsigned(lfepbl0, 2));
     data(6 to 10) := (others => x"00");
 
