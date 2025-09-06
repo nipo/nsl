@@ -1,0 +1,2 @@
+IO_LOC  "done_led_o" D7;
+IO_PORT "done_led_o" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
