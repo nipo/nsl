@@ -19,10 +19,10 @@ entity main is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    button_i : in std_ulogic_vector(0 to 1);
+    button_i : in std_ulogic_vector(0 to 3);
     led_o: out std_ulogic_vector(0 to 1);
 
-    pmod_dvi_io : inout pmod_io_t
+    pmod_dvi_io : inout pmod_double_t
     );
 end entity;
 
@@ -253,9 +253,13 @@ begin
       audio_phase_acc <= (others => '0');
     elsif rising_edge(hdmi_pixel_clock_s) then
       if audio_sample_tick_s = '1' then
-        if button_i(1) = '1' then
+        if button_i(0) = '1' then
+          audio_phase_acc <= audio_phase_acc + phase_inc(440.0 * (2.0 ** (0.0/12.0)));
+        elsif button_i(1) = '1' then
+          audio_phase_acc <= audio_phase_acc + phase_inc(440.0 * (2.0 ** (2.0/12.0)));
+        elsif button_i(2) = '1' then
           audio_phase_acc <= audio_phase_acc + phase_inc(440.0 * (2.0 ** (4.0/12.0)));
-        elsif button_i(0) = '1' then
+        elsif button_i(3) = '1' then
           audio_phase_acc <= audio_phase_acc + phase_inc(440.0 * (2.0 ** (5.0/12.0)));
         end if;
       end if;
@@ -266,8 +270,8 @@ begin
   begin
     if rising_edge(hdmi_pixel_clock_s) then
       if audio_sample_xy_valid_s = '1' then
-        audio_left_s <= unsigned(audio_sample_x_s);
-        audio_right_s <= unsigned(audio_sample_y_s);
+        audio_left_s <= shift_right(unsigned(audio_sample_x_s), 8);
+        audio_right_s <= shift_right(unsigned(audio_sample_y_s), 8);
       end if;
     end if;
   end process;

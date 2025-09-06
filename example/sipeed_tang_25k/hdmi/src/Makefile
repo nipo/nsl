@@ -11,7 +11,8 @@ vhdl-sources += main.vhd
 
 sdc-sources += ../../pinout/clk.sdc
 sdc-sources += clocks.sdc
-constraint-sources += io.cst
+constraint-sources += ../../pinout/j4_pmod_single_lvcmos33d.cst
+constraint-sources += ../../pinout/j5_pmod_double_lvcmos33_in.cst
 constraint-sources += ../../pinout/done_led.cst
 constraint-sources += ../../pinout/ready_led.cst
 constraint-sources += ../../pinout/buttons.cst
@@ -19,6 +20,7 @@ constraint-sources += ../../pinout/clk.cst
 
 deps += nsl_digilent.pmod
 deps += nsl_sipeed.pmod_dvi
+deps += nsl_sipeed.pmod_btn_4_4
 deps += nsl_clocking.async
 deps += nsl_clocking.distribution
 deps += nsl_event.tick

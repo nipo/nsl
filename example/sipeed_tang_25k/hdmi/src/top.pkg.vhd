@@ -16,10 +16,10 @@ package top is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      button_i : in std_ulogic_vector(0 to 1);
+      button_i : in std_ulogic_vector(0 to 3);
       led_o: out std_ulogic_vector(0 to 1);
 
-      pmod_dvi_io : inout pmod_io_t
+      pmod_dvi_io : inout pmod_double_t
       );
   end component;
 

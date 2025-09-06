@@ -11,7 +11,7 @@ entity pmod_dvi_output is
     
     tmds_i : in nsl_dvi.dvi.symbol_vector_t;
 
-    pmod_io : inout nsl_digilent.pmod.pmod_io_t
+    pmod_io : inout nsl_digilent.pmod.pmod_double_t
     );
 end entity;
 
@@ -26,14 +26,14 @@ begin
       serial_clock_i => serial_clock_i,
       tmds_i => tmds_i,
 
-      clock_o.p => pmod_io(7),
-      clock_o.n => pmod_io(6),
-      data_o(0).p => pmod_io(5),
-      data_o(0).n => pmod_io(4),
-      data_o(1).p => pmod_io(3),
+      clock_o.p => pmod_io(8),
+      clock_o.n => pmod_io(4),
+      data_o(0).p => pmod_io(7),
+      data_o(0).n => pmod_io(3),
+      data_o(1).p => pmod_io(6),
       data_o(1).n => pmod_io(2),
-      data_o(2).p => pmod_io(1),
-      data_o(2).n => pmod_io(0)
+      data_o(2).p => pmod_io(5),
+      data_o(2).n => pmod_io(1)
       );
   
 end architecture;
