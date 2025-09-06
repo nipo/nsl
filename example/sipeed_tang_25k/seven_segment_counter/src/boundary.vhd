@@ -8,6 +8,7 @@ entity boundary is
   port (
     clk_i: in std_logic;
     j4_io: inout nsl_digilent.pmod.pmod_double_t;
+    j5_io: inout nsl_digilent.pmod.pmod_double_t;
     s_i: in std_logic_vector(1 to 2)
   );
 end boundary;
@@ -86,6 +87,12 @@ begin
 
       value_i => r.counter,
       pmod_io => j4_io
+      );
+
+  led: nsl_sipeed.pmod_8xled.pmod_8xled_driver
+    port map(
+      led_i => std_ulogic_vector(r.counter),
+      pmod_io => j5_io
       );
   
 end arch;
