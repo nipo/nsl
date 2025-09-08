@@ -26,14 +26,14 @@ begin
       serial_clock_i => serial_clock_i,
       tmds_i => tmds_i,
 
-      clock_o.p => pmod_o(8),
-      clock_o.n => pmod_o(4),
-      data_o(0).p => pmod_o(7),
-      data_o(0).n => pmod_o(3),
-      data_o(1).p => pmod_o(6),
-      data_o(1).n => pmod_o(2),
-      data_o(2).p => pmod_o(5),
-      data_o(2).n => pmod_o(1)
+      clock_o.p => pmod_o(4),
+      clock_o.n => pmod_o(8),
+      data_o(0).p => pmod_o(3),
+      data_o(0).n => pmod_o(7),
+      data_o(1).p => pmod_o(2),
+      data_o(1).n => pmod_o(6),
+      data_o(2).p => pmod_o(1),
+      data_o(2).n => pmod_o(5)
       );
   
 end architecture;
