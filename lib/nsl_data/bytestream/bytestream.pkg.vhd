@@ -99,6 +99,8 @@ package bytestream is
   procedure write(s: inout byte_stream; constant d: byte);
   procedure write(s: inout byte_stream; constant d: byte_string);
   procedure write(s: inout byte_stream; d: inout byte_stream);
+  procedure read(s: inout byte_stream; d: out byte);
+  procedure read(s: inout byte_stream; d: out byte_string);
 
   function std_match(a, b: in byte_string) return boolean;
   function to_01(x: in byte_string; xmap: std_ulogic := '0') return byte_string;
@@ -276,6 +278,46 @@ package body bytestream is
   is
   begin
     write(s, d.all);
+  end procedure;
+
+  procedure read(s: inout byte_stream; d: out byte)
+  is
+    variable n: byte_stream;
+  begin
+    if s /= null then
+      if s'length >= 1 then
+        n := new byte_string(0 to s.all'length-2);
+        n.all := s.all(s.all'left+1 to s.all'right);
+        d := s.all(s.all'left);
+        deallocate(s);
+        s := n;
+        return;
+      end if;
+    end if;
+
+    assert false
+      report "Short read byte from empty byte_stream"
+      severity failure;
+  end procedure;
+
+  procedure read(s: inout byte_stream; d: out byte_string)
+  is
+    variable n: byte_stream;
+  begin
+    if s /= null then
+      if s'length >= d'length then
+        n := new byte_string(0 to s.all'length-1-d'length);
+        n.all := s.all(s.all'left+d'length to s.all'right);
+        d := s.all(s.all'left to s.all'left+d'length-1);
+        deallocate(s);
+        s := n;
+        return;
+      end if;
+    end if;
+
+    assert false
+      report "Short read from byte_stream"
+      severity failure;
   end procedure;
 
   function shift_left(s: byte_string;
