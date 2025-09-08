@@ -62,13 +62,13 @@ begin
     end if;
   end process;
 
-  pmod_io(1) <= not r.val(6);
-  pmod_io(2) <= not r.val(3);
-  pmod_io(3) <= not r.val(0);
-  pmod_io(4) <= not r.sel;
-  pmod_io(5) <= not r.val(5);
-  pmod_io(6) <= not r.val(4);
-  pmod_io(7) <= not r.val(1);
-  pmod_io(8) <= not r.val(2);
+  pmod_io(1) <= not r.val(5);
+  pmod_io(2) <= not r.val(4);
+  pmod_io(3) <= not r.val(1);
+  pmod_io(4) <= not r.val(2);
+  pmod_io(5) <= not r.val(6);
+  pmod_io(6) <= not r.val(3);
+  pmod_io(7) <= not r.val(0);
+  pmod_io(8) <= not r.sel;
 
 end architecture;
