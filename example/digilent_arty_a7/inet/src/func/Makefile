@@ -1,0 +1,18 @@
+vhdl-sources += func.pkg.vhd
+vhdl-sources += func_main.vhd
+
+deps += nsl_inet.func
+deps += nsl_bnoc.framed
+deps += nsl_bnoc.sized
+deps += nsl_bnoc.committed
+deps += nsl_bnoc.pipe
+deps += nsl_mii.mii
+deps += nsl_smi.smi
+deps += nsl_uart.serdes
+deps += nsl_uart.transactor
+deps += nsl_bnoc.packetizer
+deps += nsl_bnoc.routed
+deps += nsl_smi.transactor
+deps += nsl_bnoc.control_status
+deps += nsl_indication.activity
+deps += nsl_line_coding.hdlc
