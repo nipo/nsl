@@ -22,7 +22,7 @@ entity main is
     button_i : in std_ulogic_vector(0 to 3);
     led_o: out std_ulogic_vector(0 to 1);
 
-    pmod_dvi_io : inout pmod_double_t
+    pmod_dvi_o : out pmod_double_t
     );
 end entity;
 
@@ -169,7 +169,7 @@ begin
       pixel_clock_i => hdmi_pixel_clock_s,
       serial_clock_i => hdmi_serial_clock_s,
       tmds_i => tmds_s,
-      pmod_io => pmod_dvi_io
+      pmod_o => pmod_dvi_o
       );
   
   hdmi_audio_encoder: nsl_hdmi.audio.hdmi_spdif_di_encoder
