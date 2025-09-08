@@ -1,0 +1,12 @@
+set_property -dict { PACKAGE_PIN C5    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[0].n  }];
+set_property -dict { PACKAGE_PIN C6    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[0].n  }];
+set_property -dict { PACKAGE_PIN A5    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[1].n  }];
+set_property -dict { PACKAGE_PIN A6    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[1].n  }];
+set_property -dict { PACKAGE_PIN B4    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[2].n  }];
+set_property -dict { PACKAGE_PIN C4    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[2].n  }];
+set_property -dict { PACKAGE_PIN A1    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[3].n  }];
+set_property -dict { PACKAGE_PIN B1    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[3].n  }];
+set_property -dict { PACKAGE_PIN B2    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[4].n }];
+set_property -dict { PACKAGE_PIN B3    IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[4].n }];
+set_property -dict { PACKAGE_PIN C14   IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[5].n  }];
+set_property -dict { PACKAGE_PIN D14   IOSTANDARD LVCMOS33 } [get_ports { arduino_a_i[5].n  }];
