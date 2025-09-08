@@ -13,7 +13,7 @@ entity boundary is
     ready_led_o: out std_ulogic;
     s_i: in std_ulogic_vector(1 to 2);
 
-    j4_io: inout nsl_digilent.pmod.pmod_double_t;
+    j4_io: out nsl_digilent.pmod.pmod_double_t;
     j5_io: inout nsl_digilent.pmod.pmod_double_t
   );
 end boundary;
@@ -56,7 +56,7 @@ begin
       led_o(0) => done_led_o,
       led_o(1) => ready_led_o,
 
-      pmod_dvi_io => j4_io
+      pmod_dvi_o => j4_io
       );
 
 end architecture;
