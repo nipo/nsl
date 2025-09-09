@@ -52,30 +52,30 @@ mask counting the number of significant bits from MSBs.
 
 Examples:
 
-* `x"dead0000"` will be expanded to a binary string as the language
+* ``x"dead0000"`` will be expanded to a binary string as the language
   specifies (this is a language feature). This literal is equivalent
-  to `"11011110101011010000000000000000"` when it reaches the function
+  to ``"11011110101011010000000000000000"`` when it reaches the function
   code.
 
-* `"xdead0000"` will be interpreted as a hex string by the address
+* ``"xdead0000"`` will be interpreted as a hex string by the address
   handling function itself.
 
-* `"xdead----"` will be interpreted as a hex string, and dont-care
-  nibbles will expand as `"----"` (this is not covered by VHDL LRM).
+* ``"xdead----"`` will be interpreted as a hex string, and dont-care
+  nibbles will expand as ``"----"`` (this is not covered by VHDL LRM).
 
-* `"xdead0000/16"` will be interpreted as a hex string as well, but
+* ``"xdead0000/16"`` will be interpreted as a hex string as well, but
   here, 16 MSBs are used, and 16 LSBs are dont cares. It ends up being
   equivalent to previous item.
 
-* `"xde-d0000/16"` is equivalent to
-  `"11011110----1101----------------"`. This allows easy writing of
+* ``"xde-d0000/16"`` is equivalent to
+  ``"11011110----1101----------------"``. This allows easy writing of
   sparse masks.
 
 Address vectors
 ---------------
 
 Address vectors can be created manually, or by calling
-`routing_table()` function. It accepts from 1 to 16 address strings as
+``routing_table()`` function. It accepts from 1 to 16 address strings as
 argument and yields a vector of relevant length.
 
 Lookup
@@ -84,9 +84,9 @@ Lookup
 To ease lookup in an address vector, two functions can be
 used.
 
-* `routing_table_lookup()` gives the index of the entry matching the
+* ``routing_table_lookup()`` gives the index of the entry matching the
   address.  It may return a default value when passed address does not
   match any entry.
 
-* `routing_table_matches_entry()` tells whether given address matches
+* ``routing_table_matches_entry()`` tells whether given address matches
   a given index of a routing table.
