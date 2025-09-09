@@ -306,7 +306,7 @@ endif
 hdl-library-path-scan = $(if $(wildcard $2/Makefile),$(eval $1-srcdir := $2),)
 
 # This is responsible for declaring all $(lib)-srcdir of all libs
-hdl-library-path-scan-all = $(foreach l,$(shell find "$1" -maxdepth 1 -type d -printf "%f\n"),$(call hdl-library-path-scan,$l,$1/$l))
+hdl-library-path-scan-all = $(foreach l,$(shell find "$1" -maxdepth 1 -type d -print | sed "s,$1/,,"),$(call hdl-library-path-scan,$l,$1/$l))
 
 $(eval $(foreach l,$(HDL_LIBRARY_PATH),$(call hdl-library-path-scan-all,$l)))
 $(eval $(call library-parse,$(top-lib),$(top-lib)))
