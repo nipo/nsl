@@ -5,6 +5,7 @@ vhdl-sources += axi4_stream_header_extractor.vhd
 vhdl-sources += axi4_stream_header_inserter.vhd
 vhdl-sources += axi4_stream_protocol_assertions.vhd
 vhdl-sources += axi4_stream_pacer.vhd
+vhdl-sources += axi4_stream_error_inserter.vhd
 
 deps += nsl_math.arith
 deps += nsl_logic.bool

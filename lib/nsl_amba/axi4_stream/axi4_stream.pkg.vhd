@@ -89,6 +89,13 @@ package axi4_stream is
     s: slave_t;
   end record;
 
+  -- Error feedback
+  type error_feedback_t is
+  record
+    error : std_ulogic ; -- Error inserted or not
+    pkt_index_ko : unsigned(15 downto 0);
+  end record;
+
   type master_vector is array (natural range <>) of master_t;
   type slave_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
@@ -163,7 +170,7 @@ package axi4_stream is
   function vector_unpack(cfg: config_t;
                          elements: string;
                          v: std_ulogic_vector) return master_t;
-  
+ 
   -- Input configuration must not have "last", output configuration
   -- must have "last". Input and output configuration should have all
   -- other parameters equal.
@@ -307,6 +314,36 @@ package axi4_stream is
       out_i : in slave_t
       );
   end component;
+
+  -- This injects errors into the AXI stream, either randomly or in a
+  -- controlled way depending on mode_c.
+  -- It provides feedback with the error beat, the packet byte index,
+  -- and an error trigger signal.
+  component axi4_stream_error_inserter is
+    generic(
+      config_c : config_t;
+      probability_denom_l2_c : natural range 1 to 31 := 7;
+      probability_c : real := 0.95;
+      mode_c : string := "RANDOM";
+      mtu_c : integer := 1500
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+  
+      insert_error_i : in boolean := false;
+      byte_index_i : in integer range 0 to config_c.data_width := 0;
+  
+      in_i : in master_t;
+      in_o : out slave_t;
+  
+      out_o : out master_t;
+      out_i : in slave_t;
+  
+      feed_back_o : out error_feedback_t
+      );
+  end component;
+  
 
   
   function to_string(cfg: config_t) return string;
