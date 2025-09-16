@@ -67,7 +67,7 @@ begin
     end process;
 
       gen_cmd_process: process(r, out_i, enable_i)
-        variable pkt_size_v : unsigned(15 downto 0);
+        variable pkt_size_v : unsigned(15 downto 0) := (others => '0');
     begin
 
         rin <= r;
@@ -119,6 +119,21 @@ begin
                                   src => next_beat(cmd_buf_config, r.cmd_buf));
             when others => 
         end case;
+    end process;
+
+    assert_proc: process(r, out_i, enable_i) is
+        variable pkt_size_v : unsigned(15 downto 0) := (others => '0');
+    begin
+
+        pkt_size_v := resize(max(to_unsigned(1,mtu_l2),
+                unsigned(prbs_bit_string(
+                r.state_size_gen, 
+                header_prbs_poly,
+                mtu_l2-1))),pkt_size_v'length); 
+
+
+        assert to_integer(pkt_size_v) <= mtu_c report "ERROR: Size cannot be supp to mtu" severity failure;
+
     end process;
 
 end architecture;
