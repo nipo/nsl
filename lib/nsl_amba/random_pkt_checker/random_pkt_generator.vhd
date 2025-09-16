@@ -186,9 +186,15 @@ begin
                     rin.transaction_cycles_nbr <= r.transaction_cycles_nbr + 1;
 
                     rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
-                                                        data_prbs_poly,
-                                                        config_c.data_width);
+                                                      data_prbs_poly,
+                                                      config_c.data_width * 8);
                     if r.transaction_cycles_nbr = r.needed_data_cycles_m1 then
+
+                        if  r.data_remainder /= 0 then
+                            rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
+                                                                data_prbs_poly,
+                                                                r.data_remainder * 8);
+                        end if;
                         rin.state <= ST_CMD_DEC;
                     end if;
                 end if;
@@ -239,6 +245,8 @@ begin
         case r.state is
 
             when ST_SEND_HEADER => 
+                assert to_integer(r.pkt_size) <= mtu_c report "ERROR: Size cannot be supp to mtu" severity failure;
+
 
             when others =>
 
