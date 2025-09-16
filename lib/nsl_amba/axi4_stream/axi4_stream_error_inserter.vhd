@@ -49,7 +49,7 @@ architecture beh of axi4_stream_error_inserter is
             data_v(to_integer(index_error))(0) := 
                 not data(to_integer(index_error))(0);
             return data_v;
-        else
+        else -- Case data_width = 1
             data_v(0)(0) := 
                 not data(0)(0);
             return data_v;
@@ -92,29 +92,27 @@ begin
     begin
         rin <= r;
 
-        rin.insert_error <= false;
 
         error_beat_byte_index_v := probability_v(data_width_l2-1 downto 0);
 
         if is_valid(config_c, in_i) then
-            rin.pkt_byte_index <= r.pkt_byte_index + config_c.data_width;
-            if mode_c = "RANDOM" then
-                if is_ready(config_c, out_i) then 
-                    probability_v := unsigned(prbs_bit_string(r.prbs, prbs31, probability_v'length));
-                    rin.prbs <= prbs_forward(r.prbs, prbs31, probability_v'length);
-                    if probability_v <= probability_threshold_c then
-                        rin.error_beat_byte_index <= error_beat_byte_index_v;
-                        if not is_last(config_c, in_i) then -- Test if next cycle has data
-                            if keep(config_c, in_i)(to_integer(error_beat_byte_index_v)) = '1' then
+            if is_ready(config_c, out_i) then
+                rin.pkt_byte_index <= r.pkt_byte_index + config_c.data_width;
+                rin.insert_error <= false;
+                if mode_c = "RANDOM" then
+                    if is_ready(config_c, out_i) then 
+                        probability_v := unsigned(prbs_bit_string(r.prbs, prbs31, probability_v'length));
+                        rin.prbs <= prbs_forward(r.prbs, prbs31, probability_v'length);
+                        if probability_v <= probability_threshold_c then
+                            rin.error_beat_byte_index <= error_beat_byte_index_v;
+                            if not is_last(config_c, in_i) then -- Test if next cycle has data
                                 rin.error_pkt_byte_index <= r.pkt_byte_index + config_c.data_width + to_integer(error_beat_byte_index_v);
                                 rin.insert_error <= true;
                             end if;
                         end if;
                     end if;
-                end if;
-            else
-                if not is_last(config_c, in_i) then -- Test if next cycle has data
-                    if keep(config_c, in_i)(byte_index_i) = '1' then
+                else
+                    if not is_last(config_c, in_i) then -- Test if next cycle has data
                         rin.insert_error <= insert_error_i;
                         rin.error_pkt_byte_index <= r.pkt_byte_index + config_c.data_width + byte_index_i;
                         rin.error_beat_byte_index <= to_unsigned(byte_index_i, r.error_beat_byte_index'length);
@@ -124,10 +122,12 @@ begin
         end if;
         --
         if is_valid(config_c, in_i) then
-            if is_last(config_c, in_i) then
-                rin.error_pkt_byte_index <= 0;
-                rin.pkt_byte_index <= 0;
-                rin.frm_cnt <= r.frm_cnt + 1;
+            if is_ready(config_c, out_i) then
+                if is_last(config_c, in_i) then
+                    rin.error_pkt_byte_index <= 0;
+                    rin.pkt_byte_index <= 0;
+                    rin.frm_cnt <= r.frm_cnt + 1;
+                end if;
             end if;
         end if;
     end process;
@@ -159,7 +159,9 @@ begin
 
     in_o <= accept(config_c, is_ready(config_c, out_i));
 
-    feed_back_o.error <= to_logic(r.insert_error);
+    feed_back_o.error <= to_logic(r.insert_error) when is_valid(config_c, in_i) and 
+                                                       keep(config_c, in_i)(to_integer(r.error_beat_byte_index)) = '1' else'0';
+
     feed_back_o.pkt_index_ko <= to_unsigned(r.error_pkt_byte_index,feed_back_o.pkt_index_ko'length);
 
 end architecture;
