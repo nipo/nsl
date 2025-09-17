@@ -6,6 +6,8 @@ c:=,
 user_id := $(shell python3 -c 'import random ; print(f"{random.randint(0, 1<<32):x}")')
 gowin-use-as-gpio ?=
 
+target-klut := $(shell grep "$(target_part)" "$(DEVICE_INFO)" | head -n 1 | cut -d, -f4 | sed 'sxGW.*T-\([0-9]\+\).*x\1x')
+
 target ?= $(top)
 
 SHELL=/bin/bash
@@ -60,6 +62,7 @@ $(build-dir)/$(target).tcl: $(MAKEFILE_LIST)
 	$(foreach s,$(sources),$(call _gowin-project-add-$($s-language),$@,$s))
 	$(call file-append,$@,add_file -type cst $(build-dir)/all.cst)
 	$(call file-append,$@,add_file -type sdc $(build-dir)/all.sdc)
+	$(call file-append,$@,$(if $(all-serdes-config-sources),set_csr {$(build-dir)/computed.csr}))
 	$(call file-append,$@,set_option -top_module $(top-entity))
 	$(call file-append,$@,set_option -output_base_name $(target))
 	$(call file-append,$@,set_option -looplimit 0)
@@ -78,7 +81,10 @@ $(build-dir)/$(target).tcl: $(MAKEFILE_LIST)
 	$(foreach s,$(sources),$(call _gowin-project-sdc-$($s-language),$@,$s))
 	$(call file-append,$@,run pnr)
 
-$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl $(sources) $(build-dir)/all.cst
+$(build-dir)/computed.csr: $(all-serdes-config-sources) /dev/null
+	$(GOWIN_BIN)/serdes_toml_to_csr.dist/serdes_toml_to_csr_$(target-klut)k.bin "$<" -o "$@"
+
+$(build-dir)/impl/pnr/$(target).fs: $(build-dir)/$(target).tcl $(sources) $(build-dir)/all.cst $(if $(all-serdes-config-sources),$(build-dir)/computed.csr)
 	$(SILENT)cd $(build-dir) && $(GOWIN_BIN)/gw_sh $<
 
 $(target).fs: $(build-dir)/impl/pnr/$(target).fs
