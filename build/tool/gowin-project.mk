@@ -43,6 +43,11 @@ define _gowin-project-footer
 
 endef
 
+define _gowin-project-add-verilog
+	$(call file-append,$1,        <File path="$2" type="file.verilog" enable="1" library="$($2-library)"/>)
+
+endef
+
 define _gowin-project-add-vhdl
 	$(call file-append,$1,        <File path="$2" type="file.vhdl" enable="1" library="$($2-library)"/>)
 
