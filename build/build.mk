@@ -260,8 +260,8 @@ $(foreach l,$(libraries),$(call exclude-libs-lib,$l,$1))
 endef
 
 define exclude-libs-internal-3
-$(foreach t,$(source-types),$(call source_type_gather,$t))
 sources := $(foreach l,$(libraries),$($l-sources))
+$(foreach t,$(source-types),$(call source_type_gather,$t))
 
 endef
 
@@ -342,8 +342,6 @@ ifneq ($(nsl-build-debug),)
 $(info Done calculating build order)
 endif
 
-$(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
-
 ifneq ($(nsl-build-debug),)
 $(info Calculating lib order)
 endif
@@ -355,6 +353,7 @@ $(info Libraries in order: $(libraries))
 endif
 
 sources := $(foreach l,$(libraries),$($l-sources))
+$(eval $(foreach t,$(source-types),$(call source_type_gather,$t)))
 
 ifeq ($(V),)
 SILENT:=@
