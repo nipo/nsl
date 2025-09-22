@@ -35,12 +35,7 @@ architecture beh of random_pkt_generator is
 
     constant header_size : integer := 8;
     constant max_nbr_data_cycle_l2 : integer := nsl_math.arith.log2(mtu_c/config_c.data_width);
-    constant header_config_s8_c : buffer_config_t := buffer_config(config_c, header_size);
-    constant header_padding : integer := if_else(config_c.data_width > header_size,
-                                                 config_c.data_width - header_size,
-                                                 0);
-    constant header_size_with_padding : integer := header_size + header_padding;
-    constant padding_byte_string : byte_string(0 to config_c.data_width-1) := (others => (others =>'0'));
+    constant header_config_c : buffer_config_t := buffer_config(config_c, header_size);
     constant cmd_buf_config : buffer_config_t := buffer_config(config_c, CMD_SIZE);
     constant data_width_l2 : integer := nsl_math.arith.log2(config_c.data_width);
 
@@ -49,8 +44,7 @@ architecture beh of random_pkt_generator is
         ST_CMD_DEC,
         ST_BUILD_HEADER,
         ST_SEND_HEADER,
-        ST_SEND_PAYLOAD,
-        ST_IGNORE
+        ST_SEND_PAYLOAD
         );
 
     function keep_generator(config_c: config_t; data_remainder : integer; is_last_word : boolean) return std_ulogic_vector is
@@ -70,18 +64,12 @@ architecture beh of random_pkt_generator is
             state_pkt_gen : prbs_state(30 downto 0);
             pkt_size : unsigned(15 downto 0);
             seq_num : unsigned(15 downto 0);
-            header_config : buffer_config_t;
             header : buffer_t;
             cmd_buf : buffer_t;
             transaction_cycles_nbr : unsigned(max_nbr_data_cycle_l2-1 downto 0);
             filler_header_crc  : crc_state_t;
             data_remainder : integer range 0 to config_c.data_width;
             needed_data_cycles_m1 : unsigned(max_nbr_data_cycle_l2-1 downto 0);
-            header_keep : std_ulogic_vector(config_c.data_width-1 downto 0);
-            --
-            byte_debug : byte_string(0 to 3);
-            header_debug : header_t;
-            crc_byte_debug : byte_string(0 to 1);
         end record;
       
         signal r, rin: regs_t;
@@ -97,14 +85,11 @@ begin
         r.state_pkt_gen <= data_prbs_init;
         r.pkt_size <= (others => '0');
         r.seq_num <= x"0001";
-        r.header_config <= header_config_s8_c;
-        r.header <= reset(header_config_s8_c);
         r.transaction_cycles_nbr <=(others => '0');
+        r.header <= reset(header_config_c);
         r.filler_header_crc <= crc_init(header_crc_params_c);
         r.needed_data_cycles_m1 <= (others => '0');
-        r.header_keep <= (others => '1');
         r.cmd_buf <= reset(cmd_buf_config);
-        r.byte_debug <= (others => (others => '0'));
       end if;
     end process;
 
@@ -130,11 +115,9 @@ begin
                 if is_valid(config_c, in_i) then
                     rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, in_i);
                     if is_last(cmd_buf_config, r.cmd_buf) then
-                        rin.byte_debug <= bytes(cmd_buf_config, shift(cmd_buf_config, r.cmd_buf, in_i));
                         rin.seq_num <= cmd_v.cmd_seqnum;
                         rin.pkt_size <= cmd_v.cmd_pkt_size;
                         rin.data_remainder <= to_integer(cmd_v.cmd_pkt_size(data_width_l2 -1 downto 0));
-                        rin.header_config <= header_config_s8_c;
                         rin.transaction_cycles_nbr <= (others => '0');
                         rin.state <= ST_BUILD_HEADER;
                         rin.filler_header_crc <= crc_init(header_crc_params_c);
@@ -142,17 +125,11 @@ begin
                 end if;
 
             when ST_BUILD_HEADER => 
-                rin.header <= reset(r.header_config, 
+                rin.header <= reset(header_config_c, 
                                     header_pack(r.seq_num,
                                                 r.pkt_size,
                                                 crc_init(header_crc_params_c),
                                                 header_crc_params_c));
-                rin.header_debug <= header_unpack(
-                                        header_pack(r.seq_num,
-                                                  r.pkt_size,
-                                                  crc_init(header_crc_params_c),
-                                                  header_crc_params_c),
-                                        HEADER_SIZE);
 
                 if r.data_remainder /= 0 then
                     rin.needed_data_cycles_m1 <= resize((r.pkt_size srl data_width_l2), r.needed_data_cycles_m1'length);
@@ -163,8 +140,8 @@ begin
                                               
             when ST_SEND_HEADER =>   
                 if is_ready(config_c, out_i) then
-                    rin.header <= shift(r.header_config, r.header);
                     rin.transaction_cycles_nbr <= r.transaction_cycles_nbr + 1;
+                    rin.header <= shift(header_config_c, r.header);
                     rin.filler_header_crc <= crc_update(header_crc_params_c, 
                                                         r.filler_header_crc, 
                                                         bytes(config_c,in_i));
@@ -208,7 +185,7 @@ begin
         variable is_last_word : boolean := false;
     begin
 
-        is_last_word := (is_last(r.header_config, r.header) and
+        is_last_word := (is_last(header_config_c, r.header) and
                         r.pkt_size <= HEADER_SIZE) or
                         (r.transaction_cycles_nbr >= r.needed_data_cycles_m1);
 
@@ -238,19 +215,5 @@ begin
     end process;
     
     in_o <=  accept(config_c, r.state = ST_CMD_DEC);
-
-    assert_proc: process(r)
-    begin 
-
-        case r.state is
-
-            when ST_SEND_HEADER => 
-                assert to_integer(r.pkt_size) <= mtu_c report "ERROR: Size cannot be supp to mtu" severity failure;
-
-
-            when others =>
-
-        end case;
-    end process;
 
 end architecture;
