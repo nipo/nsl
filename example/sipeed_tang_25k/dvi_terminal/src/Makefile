@@ -1,0 +1,43 @@
+vhdl-sources += stage1_pll_mod.vhd
+vhdl-sources += stage1_pll.vhd
+verilog-sources += stage1_pll_init.v
+vhdl-sources += dvi_pll_mod.vhd
+vhdl-sources += dvi_pll.vhd
+verilog-sources += dvi_pll_init.v
+
+vhdl-sources += top.pkg.vhd
+vhdl-sources += boundary.vhd
+vhdl-sources += main.vhd
+
+sdc-sources += ../../pinout/clk.sdc
+sdc-sources += clocks.sdc
+constraint-sources += ../../pinout/j4_pmod_single_lvcmos33d.cst
+constraint-sources += ../../pinout/j5_pmod_double_lvcmos33_in.cst
+constraint-sources += ../../pinout/done_led.cst
+constraint-sources += ../../pinout/ready_led.cst
+constraint-sources += ../../pinout/buttons.cst
+constraint-sources += ../../pinout/clk.cst
+constraint-sources += ../../pinout/uart.cst
+
+deps += nsl_digilent.pmod
+deps += nsl_sipeed.pmod_dvi
+deps += nsl_sipeed.pmod_btn_4_4
+deps += nsl_clocking.async
+deps += nsl_clocking.distribution
+deps += nsl_event.tick
+deps += nsl_clocking.pll
+deps += nsl_dvi.driver
+deps += nsl_dvi.transceiver
+deps += nsl_dvi.pattern
+deps += nsl_dvi.encoder
+deps += nsl_dvi.terminal
+deps += nsl_indication.font_6x8
+deps += nsl_hwdep.clock
+deps += nsl_hwdep.reset
+deps += nsl_io.io
+deps += nsl_io.clock
+deps += nsl_io.diff
+deps += nsl_logic.bool
+deps += nsl_math.fixed
+deps += nsl_signal_generator.trigonometry
+deps += nsl_uart.serdes
