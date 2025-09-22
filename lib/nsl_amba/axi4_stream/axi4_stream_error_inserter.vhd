@@ -141,23 +141,25 @@ begin
         end if;
     end process;
 
-    assert_proc: process(r, in_i, out_i, insert_error_i, byte_index_i) is
+    assert_proc: process(clock_i) is
     begin
-        assert mode_c = "RANDOM" or mode_c = "MANUAL"
-        report "ERROR: Mode must be MANUAL or RANDOM."
-        severity failure;
-        --
-        assert mtu_c mod 2 = 0
-        report "ERROR: Bus must be a multiple of 2."
-        severity failure;
-        --
-        assert r.error_pkt_byte_index <= mtu_c 
-        report "ERROR: Error byte index cannot be supp to mtu."
-        severity failure;
-        --
-        assert r.pkt_byte_index <= mtu_c 
-        report "ERROR: Number of bytes cannot be supp to mtu."
-        severity failure;
+        if rising_edge(clock_i) then
+            assert mode_c = "RANDOM" or mode_c = "MANUAL"
+            report "ERROR: Mode must be MANUAL or RANDOM."
+            severity failure;
+            --
+            assert mtu_c mod 2 = 0
+            report "ERROR: Bus must be a multiple of 2."
+            severity failure;
+            --
+            assert r.error_pkt_byte_index <= mtu_c 
+            report "ERROR: byte index cannot be supp to mtu."
+            severity failure;
+            --
+            assert r.pkt_byte_index <= mtu_c 
+            report "ERROR: Number of bytes cannot be supp to mtu."
+            severity failure;
+        end if;
     end process;
 
     out_o <= transfer(cfg => config_c, 
