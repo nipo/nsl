@@ -68,16 +68,20 @@ begin
 
       gen_cmd_process: process(r, out_i, enable_i)
         variable pkt_size_v : unsigned(15 downto 0) := (others => '0');
+        variable prbs_val : unsigned(mtu_l2-1 downto 0);
+        variable tmp_val  : integer;
     begin
 
         rin <= r;
 
-        --pkt_size_v:= to_unsigned(3, pkt_size_v'length);
-        pkt_size_v := resize(max(to_unsigned(1,mtu_l2),
-                        unsigned(prbs_bit_string(
-                        r.state_size_gen, 
-                        header_prbs_poly,
-                        mtu_l2-1))),pkt_size_v'length); 
+        prbs_val := unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly, mtu_l2));
+        tmp_val  := to_integer(prbs_val) + 1;
+        
+        if tmp_val > mtu_c then
+            tmp_val := mtu_c;
+        end if;
+        
+        pkt_size_v := to_unsigned(tmp_val, pkt_size_v'length);
 
         case r.state is
 
@@ -123,14 +127,18 @@ begin
 
     assert_proc: process(r, out_i, enable_i) is
         variable pkt_size_v : unsigned(15 downto 0) := (others => '0');
+        variable prbs_val : unsigned(mtu_l2-1 downto 0);
+        variable tmp_val  : integer;
     begin
 
-        pkt_size_v := resize(max(to_unsigned(1,mtu_l2),
-                unsigned(prbs_bit_string(
-                r.state_size_gen, 
-                header_prbs_poly,
-                mtu_l2-1))),pkt_size_v'length); 
-
+        prbs_val := unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly, mtu_l2));
+        tmp_val  := to_integer(prbs_val) + 1;
+        
+        if tmp_val > mtu_c then
+            tmp_val := mtu_c;
+        end if;
+        
+        pkt_size_v := to_unsigned(tmp_val, pkt_size_v'length);
 
         assert to_integer(pkt_size_v) <= mtu_c report "ERROR: Size cannot be supp to mtu" severity failure;
 
