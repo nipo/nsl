@@ -58,6 +58,15 @@ architecture beh of axi4_stream_error_inserter is
     return data_v;
   end function;
 
+  function imin(a, b : integer) return integer is
+  begin
+      if a < b then
+          return a;
+      else
+          return b;
+      end if;
+  end function;
+
   type regs_t is
   record
     prbs : prbs_state(30 downto 0);
@@ -106,7 +115,7 @@ begin
                         if probability_v <= probability_threshold_c then
                             rin.error_beat_byte_index <= error_beat_byte_index_v;
                             if not is_last(config_c, in_i) then -- Test if next cycle has data
-                                rin.error_pkt_byte_index <= r.pkt_byte_index + config_c.data_width + to_integer(error_beat_byte_index_v);
+                                rin.error_pkt_byte_index <= imin(r.pkt_byte_index + config_c.data_width + to_integer(error_beat_byte_index_v), mtu_c);
                                 rin.insert_error <= true;
                             end if;
                         end if;
@@ -114,7 +123,7 @@ begin
                 else
                     if not is_last(config_c, in_i) then -- Test if next cycle has data
                         rin.insert_error <= insert_error_i;
-                        rin.error_pkt_byte_index <= r.pkt_byte_index + config_c.data_width + byte_index_i;
+                        rin.error_pkt_byte_index <= imin(r.pkt_byte_index + config_c.data_width + byte_index_i, mtu_c);
                         rin.error_beat_byte_index <= to_unsigned(byte_index_i, r.error_beat_byte_index'length);
                     end if;
                 end if;
