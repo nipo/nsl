@@ -20,13 +20,6 @@ package random_pkt_checker is
     constant CMD_SIZE : integer := 4;
     constant STATS_SIZE : integer := 8;
 
-    constant HEADER_SEQ_NUM_OFFSET : integer := 0;
-    constant HEADER_SIZE_OFFSET : integer := 2;
-    constant HEADER_RANDOM_DATA_OFFSET : integer := 4;
-    constant HEADER_CRC_OFFSET : integer := 6;
-
-    constant ZERO_BYTE : std_ulogic_vector(7 downto 0) := (others => '0');
-
     type header_t is 
         record
             seq_num : unsigned(15 downto 0);
@@ -52,16 +45,6 @@ package random_pkt_checker is
 
     function header_unpack(header : byte_string; valid_len : natural) return header_t;
     function cmd_unpack(cmd : byte_string) return cmd_t;
-    function is_valid_rand_data(header : header_t) return boolean;
-    function is_header_valid(rx_header_size : unsigned;
-                             header : header_t; 
-                             seq_num : unsigned(15 downto 0); 
-                             header_crc_params_c: crc_params_t) return boolean; 
-    function is_header_valid_vector(rx_header_size : unsigned;
-                                    header : header_t; 
-                                    seq_num : unsigned(15 downto 0); 
-                                    header_crc_params_c: crc_params_t) return std_ulogic_vector; 
-
     function ref_header(rx_header_size : unsigned;
                         header : header_t;
                         seq_num : unsigned(15 downto 0);
@@ -69,7 +52,6 @@ package random_pkt_checker is
     function to_prbs_state(u : unsigned) return prbs_state;
     function stats_unpack(b : byte_string) return stats_t;
     function stats_pack(s : stats_t) return byte_string;
-    function status_generator(stats : stats_t) return boolean;
     function max(a, b : unsigned) return unsigned;
     function header_pack(seq_num : unsigned;
                          pkt_size : unsigned;
@@ -278,101 +260,6 @@ package body random_pkt_checker is
         return result;
     end function;
 
-    function is_valid_rand_data(header : header_t) return boolean is
-        variable rand_data_v : byte_string(0 to 1) := prbs_byte_string(to_prbs_state(header.pkt_size(14 downto 0)), prbs15, 2);
-    begin 
-        return from_suv(std_ulogic_vector(header.rand_data)) = rand_data_v;
-    end function;
-
-    function is_header_valid(rx_header_size : unsigned;
-                             header : header_t;
-                             seq_num : unsigned(15 downto 0);
-                             header_crc_params_c: crc_params_t) return boolean 
-    is 
-        variable ret : std_ulogic_vector(3 downto 0) := (others => '1');
-        variable rand_data_v : byte_string(0 to 1) := prbs_byte_string(to_prbs_state(header.pkt_size(14 downto 0)), prbs15, 2);
-        variable header_byte_str_v : byte_string(0 to 5) := to_le(header.seq_num) & to_le(header.pkt_size) & rand_data_v(1) & rand_data_v(0);
-        variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(1);
-        variable crc_1_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(0);
-    begin        
-        -- SeqNum test
-        if rx_header_size = 1 then
-            ret(3) := to_logic(header.seq_num(7 downto 0) = seq_num(7 downto 0));
-        else
-            ret(3) := to_logic(header.seq_num = seq_num);
-        end if;
-
-        -- size test
-        if rx_header_size >= 3 and rx_header_size < HEADER_SIZE then
-            ret(2) := to_logic(header.pkt_size = rx_header_size);
-        end if;
-
-        -- Random data test
-        if rx_header_size = 5 then
-            ret(1) := to_logic(to_be(header.rand_data)(0) = rand_data_v(0));
-        elsif rx_header_size > 5 then
-            ret(1) := to_logic(is_valid_rand_data(header));
-        end if;
-
-        -- CRC test 
-        if rx_header_size = 7 then
-            ret(0) := to_logic(header.crc(15 downto 8) = unsigned(crc_0_v));
-        elsif rx_header_size > 7 then
-            ret(0) := to_logic(header.crc(15 downto 8) = unsigned(crc_0_v)) and 
-                      to_logic(header.crc(7 downto 0) = unsigned(crc_1_v));
-        end if;
-
-        return to_boolean(and_reduce(ret));
-    end function;
-
-    function is_header_valid_vector(rx_header_size : unsigned;
-                                    header : header_t;
-                                    seq_num : unsigned(15 downto 0);
-                                    header_crc_params_c: crc_params_t) return std_ulogic_vector 
-    is 
-        variable ret : std_ulogic_vector(3 downto 0) := (others => '1');
-        variable rand_data_v : byte_string(0 to 1) := prbs_byte_string(to_prbs_state(header.pkt_size(14 downto 0)), prbs15, 2);
-        variable header_byte_str_v : byte_string(0 to 5) := to_le(header.seq_num) & to_le(header.pkt_size) & rand_data_v(1) & rand_data_v(0);
-        variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(1);
-        variable crc_1_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(0);
-    begin 
-        -- SeqNum test
-        if rx_header_size = 1 then
-            ret(3) := to_logic(header.seq_num(7 downto 0) = seq_num(7 downto 0));
-        else
-            ret(3) := to_logic(header.seq_num = seq_num);
-        end if;
-
-        -- size test
-        if rx_header_size >= 2 and rx_header_size < HEADER_SIZE then
-            ret(2) := to_logic(header.pkt_size = rx_header_size);
-        end if;
-
-        -- Random data test
-        if rx_header_size = 4 then
-            ret(1) := to_logic(to_be(header.rand_data)(0) = rand_data_v(0));
-        elsif rx_header_size > 4 then
-            ret(1) := to_logic(is_valid_rand_data(header));
-        end if;
-
-        -- CRC test 
-        if rx_header_size = 6 then
-            ret(0) := to_logic(header.crc(15 downto 8) = unsigned(crc_0_v));
-        elsif rx_header_size > 6 then
-            ret(0) := to_logic(header.crc(15 downto 8) = unsigned(crc_0_v)) and 
-                        to_logic(header.crc(7 downto 0) = unsigned(crc_1_v));
-        end if;
-        return ret;
-    end function;
-
     function ref_header(rx_header_size : unsigned;
                         header : header_t;
                         seq_num : unsigned(15 downto 0);
@@ -390,12 +277,6 @@ package body random_pkt_checker is
     begin 
         ret(0 to 7) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(rx_header_size(7 downto 0)) & to_be(rx_header_size(15 downto 8)) & rand_data_v & crc_1_v & crc_0_v;
         return ret;
-    end function;
-
-    function status_generator(stats : stats_t) return boolean 
-    is
-    begin 
-        return stats.stats_header_valid and stats.stats_payload_valid;
     end function;
     
     function max(a, b : unsigned) return unsigned is
@@ -417,6 +298,5 @@ package body random_pkt_checker is
         end loop;
         return cnt;
     end function;
-    
 
 end package body;
