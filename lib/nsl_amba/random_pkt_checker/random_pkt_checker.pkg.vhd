@@ -379,8 +379,8 @@ package body random_pkt_checker is
                         header_crc_params_c: crc_params_t) return byte_string 
     is 
         variable ret : byte_string(0 to HEADER_SIZE-1) := (others => (others => '-'));
-        variable rand_data_v : byte_string(0 to 1) := reverse(prbs_byte_string(to_prbs_state(header.pkt_size(14 downto 0)), prbs15, 2));
-        variable header_byte_str_v : byte_string(0 to 5) := to_le(header.seq_num) & to_le(header.pkt_size) & rand_data_v(0) & rand_data_v(1);
+        variable rand_data_v : byte_string(0 to 1) := reverse(prbs_byte_string(to_prbs_state(rx_header_size(14 downto 0)), prbs15, 2));
+        variable header_byte_str_v : byte_string(0 to 5) := to_le(header.seq_num) & to_le(rx_header_size) & rand_data_v(0) & rand_data_v(1);
         variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
                                                                               crc_init(header_crc_params_c),
                                                                               header_byte_str_v))(1);
@@ -388,25 +388,7 @@ package body random_pkt_checker is
                                                                               crc_init(header_crc_params_c),
                                                                               header_byte_str_v))(0);
     begin 
-        case to_integer(rx_header_size) is
-            when 1 =>
-                ret(0) := to_be(seq_num(7 downto 0))(0);
-            when 2 => 
-                ret(0 to 1) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8));
-            when 3 => 
-                ret(0 to 2) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0));
-            when 4 => 
-                ret(0 to 3) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0)) & to_be(header.pkt_size(15 downto 8));
-            when 5 => 
-                ret(0 to 4) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0)) & to_be(header.pkt_size(15 downto 8)) & rand_data_v(0);
-            when 6 => 
-                ret(0 to 5) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0)) & to_be(header.pkt_size(15 downto 8)) & rand_data_v(0) & rand_data_v(1);
-            when 7 => 
-                ret(0 to 6) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0)) & to_be(header.pkt_size(15 downto 8)) & rand_data_v & crc_0_v;
-            when 8 => 
-                ret(0 to 7) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(header.pkt_size(7 downto 0)) & to_be(header.pkt_size(15 downto 8)) & rand_data_v & crc_1_v & crc_0_v;
-            when others =>
-        end case;
+        ret(0 to 7) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(rx_header_size(7 downto 0)) & to_be(rx_header_size(15 downto 8)) & rand_data_v & crc_1_v & crc_0_v;
         return ret;
     end function;
 
