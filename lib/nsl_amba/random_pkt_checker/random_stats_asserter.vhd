@@ -25,18 +25,11 @@ entity random_stats_asserter is
       in_o : out slave_t;
       --
       out_o : out master_t;
-      out_i : in slave_t;
-      -- 
-      status_available : out std_ulogic
+      out_i : in slave_t
       );
   end entity;
 
 architecture beh of random_stats_asserter is
-    type status_t is (
-        ST_PKT_OK,
-        ST_PKT_KO
-        );
-
     type state_t is (
         ST_RESET,
         ST_STATUS_DEC,
@@ -48,8 +41,8 @@ architecture beh of random_stats_asserter is
     type regs_t is
         record
             state : state_t;
-            status : status_t;
             stats_buf : buffer_t;
+            stats : stats_t;
             seq_num : unsigned(15 downto 0);
         end record;
         
@@ -63,19 +56,17 @@ begin
       end if;
       if reset_n_i = '0' then
         r.state <= ST_RESET;
-        r.status <= ST_PKT_OK;
         r.stats_buf <= reset(stats_config_c);
         r.seq_num <= (others => '0');
       end if;
     end process;
 
-    status_process: process(r, in_i)
-        variable stats : stats_t;
+    status_process: process(r, in_i, out_i)
+        variable next_stats : stats_t;
     begin
 
         rin <= r;
-
-        stats := stats_unpack(bytes(stats_config_c,r.stats_buf));
+        next_stats := stats_unpack(bytes(stats_config_c,shift(stats_config_c, r.stats_buf, in_i)));
 
         case r.state is
             when ST_RESET =>
@@ -85,6 +76,7 @@ begin
                 if is_valid(config_c, in_i) then
                     rin.stats_buf <= shift(stats_config_c, r.stats_buf, in_i);
                     if is_last(stats_config_c, r.stats_buf) then
+                        rin.stats <= next_stats;
                         rin.state <= ST_FORWARD_STATUS;
                     end if;
                 end if;
@@ -108,16 +100,12 @@ begin
     in_o <= accept(config_c, r.state /= ST_FORWARD_STATUS);
 
     proc_txer: process(r)
-        variable stats : stats_t;
     begin
-        stats := stats_unpack(bytes(stats_config_c,r.stats_buf));
-        status_available <= '0'; --to_logic(status_generator(stats));
 
         out_o <= transfer_defaults(config_c);
 
         case r.state is
             when ST_FORWARD_STATUS => 
-                status_available <= to_logic(status_generator(stats));
                 out_o <= transfer(config_c,
                                   src => next_beat(stats_config_c, r.stats_buf, last => false));
             when others =>
