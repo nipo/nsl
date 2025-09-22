@@ -34,7 +34,6 @@ end entity;
 architecture beh of random_pkt_generator is
 
     constant header_size : integer := 8;
-    constant max_nbr_data_cycle_l2 : integer := nsl_math.arith.log2(mtu_c/config_c.data_width);
     constant header_config_c : buffer_config_t := buffer_config(config_c, header_size);
     constant cmd_buf_config : buffer_config_t := buffer_config(config_c, CMD_SIZE);
     constant data_width_l2 : integer := nsl_math.arith.log2(config_c.data_width);
@@ -66,10 +65,9 @@ architecture beh of random_pkt_generator is
             seq_num : unsigned(15 downto 0);
             header : buffer_t;
             cmd_buf : buffer_t;
-            transaction_cycles_nbr : unsigned(max_nbr_data_cycle_l2-1 downto 0);
             filler_header_crc  : crc_state_t;
             data_remainder : integer range 0 to config_c.data_width;
-            needed_data_cycles_m1 : unsigned(max_nbr_data_cycle_l2-1 downto 0);
+            tx_bytes : integer range 0 to mtu_c + 2*config_c.data_width;
         end record;
       
         signal r, rin: regs_t;
@@ -85,11 +83,10 @@ begin
         r.state_pkt_gen <= data_prbs_init;
         r.pkt_size <= (others => '0');
         r.seq_num <= x"0001";
-        r.transaction_cycles_nbr <=(others => '0');
         r.header <= reset(header_config_c);
         r.filler_header_crc <= crc_init(header_crc_params_c);
-        r.needed_data_cycles_m1 <= (others => '0');
         r.cmd_buf <= reset(cmd_buf_config);
+        r.tx_bytes <= config_c.data_width;
       end if;
     end process;
 
@@ -114,11 +111,11 @@ begin
             when ST_CMD_DEC => 
                 if is_valid(config_c, in_i) then
                     rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, in_i);
+                    rin.tx_bytes <= config_c.data_width;
                     if is_last(cmd_buf_config, r.cmd_buf) then
                         rin.seq_num <= cmd_v.cmd_seqnum;
                         rin.pkt_size <= cmd_v.cmd_pkt_size;
                         rin.data_remainder <= to_integer(cmd_v.cmd_pkt_size(data_width_l2 -1 downto 0));
-                        rin.transaction_cycles_nbr <= (others => '0');
                         rin.state <= ST_BUILD_HEADER;
                         rin.filler_header_crc <= crc_init(header_crc_params_c);
                     end if;
@@ -130,23 +127,17 @@ begin
                                                 r.pkt_size,
                                                 crc_init(header_crc_params_c),
                                                 header_crc_params_c));
-
-                if r.data_remainder /= 0 then
-                    rin.needed_data_cycles_m1 <= resize((r.pkt_size srl data_width_l2), r.needed_data_cycles_m1'length);
-                else
-                    rin.needed_data_cycles_m1 <= resize((r.pkt_size srl data_width_l2) - 1, r.needed_data_cycles_m1'length);
-                end if;
                 rin.state <= ST_SEND_HEADER;
                                               
             when ST_SEND_HEADER =>   
                 if is_ready(config_c, out_i) then
-                    rin.transaction_cycles_nbr <= r.transaction_cycles_nbr + 1;
+                    rin.tx_bytes <= r.tx_bytes + config_c.data_width;
                     rin.header <= shift(header_config_c, r.header);
                     rin.filler_header_crc <= crc_update(header_crc_params_c, 
                                                         r.filler_header_crc, 
                                                         bytes(config_c,in_i));
 
-                    if is_last(r.header_config, r.header) or (r.transaction_cycles_nbr >= r.needed_data_cycles_m1) then
+                    if is_last(header_config_c, r.header) or r.tx_bytes >= r.pkt_size then
                         -- pkt size if random beetween 1 and mtu including the header.
                         -- pkt_size < HEADER_SIZE means we only send parts of header and
                         -- no data payload
@@ -160,12 +151,12 @@ begin
 
             when ST_SEND_PAYLOAD => 
                 if is_ready(config_c, out_i) then
-                    rin.transaction_cycles_nbr <= r.transaction_cycles_nbr + 1;
+                    rin.tx_bytes <= r.tx_bytes + config_c.data_width;
 
                     rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                                       data_prbs_poly,
                                                       config_c.data_width * 8);
-                    if r.transaction_cycles_nbr = r.needed_data_cycles_m1 then
+                    if r.tx_bytes >= r.pkt_size then
 
                         if  r.data_remainder /= 0 then
                             rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
@@ -187,7 +178,7 @@ begin
 
         is_last_word := (is_last(header_config_c, r.header) and
                         r.pkt_size <= HEADER_SIZE) or
-                        (r.transaction_cycles_nbr >= r.needed_data_cycles_m1);
+                        (r.tx_bytes >= r.pkt_size);
 
         out_o <= transfer_defaults(config_c);
 
