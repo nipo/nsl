@@ -33,11 +33,7 @@ end entity;
 architecture beh of random_pkt_validator is
 
     constant header_config_c : buffer_config_t := buffer_config(config_c, HEADER_SIZE);
-    constant max_nbr_data_cycle_l2 : integer := nsl_math.arith.log2(mtu_c/config_c.data_width);
-    constant data_width_l2 : integer := nsl_math.arith.log2(config_c.data_width);
     constant stats_buf_config : buffer_config_t := buffer_config(config_c, STATS_SIZE);
-    constant header_size_m1 : integer := HEADER_SIZE - 1;
-    constant header_size_m_data_width : integer := HEADER_SIZE - config_c.data_width;
     constant stats_reset : stats_t := (
                                         stats_seqnum        => to_unsigned(0, 16),
                                         stats_pkt_size      => to_unsigned(0, 16),
@@ -45,22 +41,6 @@ architecture beh of random_pkt_validator is
                                         stats_payload_valid => true,
                                         stats_index_data_ko => to_unsigned(0, 16)
                                     );
-
-    function compare_with_keep(
-        expected : byte_string;
-        actual   : byte_string;
-        keep     : std_ulogic_vector
-      ) return boolean is
-      begin
-        for i in expected'range loop
-          if keep(i) = '1' then
-            if expected(i) /= actual(i) then
-              return false;
-            end if;
-          end if;
-        end loop;
-        return true;
-      end function;
       
     type state_t is (
         ST_RESET,
@@ -88,14 +68,8 @@ architecture beh of random_pkt_validator is
             stats : stats_t;
             stats_buf : buffer_t;
             header : header_t;
-            header_index_ko : integer range 0 to HEADER_SIZE - 1;
             seq_num : unsigned(15 downto 0);
             realign_cnt : integer range 0 to header_config_c.data_width;
-            -- 
-            header_valid_vector_debug : std_ulogic_vector(3 downto 0);
-            payload_ref_debug : byte_string(0 to config_c.data_width -1);
-            header_byte_debug : byte_string(0 to HEADER_SIZE-1);
-            header_ref_byte_debug : byte_string(0 to HEADER_SIZE-1);
             was_last_beat : boolean;
         end record;
 
@@ -119,17 +93,14 @@ begin
         r.stats.stats_pkt_size <= (others => '0');
         r.stats.stats_header_valid <= true;
         r.stats.stats_payload_valid <= true;
-        r.header_index_ko <= 0;
         r.stats.stats_index_data_ko <= (others => '0');
         r.realign_cnt <= 0;
         r.was_last_beat <= false;
       end if;
     end process;
 
-    rx_process: process(r, in_i, out_i, rin, clock_i)
+    rx_process: process(r, in_i, out_i)
         variable header : header_t;
-        variable next_header_byte_string,header_byte_string : byte_string(0 to HEADER_SIZE-1);
-        variable header_valid_v : boolean;
         variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
         variable header_byte_ref_v, rx_header_v : byte_string(0 to HEADER_SIZE-1);
         variable send_stats_trigger_v : boolean;
@@ -139,17 +110,10 @@ begin
         header := header_unpack(bytes(header_config_c,r.header_buf), to_integer(r.rx_bytes));
         rx_header_v := bytes(header_config_c,r.header_buf);
 
-        next_header_byte_string := bytes(header_config_c,shift(header_config_c, r.header_buf, in_i));
-        header_byte_string := bytes(header_config_c,r.header_buf);
         header_byte_ref_v := ref_header(if_else(r.was_last_beat, r.rx_bytes, header.pkt_size),
                                         header,
                                         r.seq_num,
                                         header_crc_params_c);
-
-        header_valid_v := is_header_valid(r.rx_bytes,
-                                          header,
-                                          r.seq_num,
-                                          header_crc_params_c);
 
         payload_byte_ref_v := prbs_byte_string(r.state_pkt_gen, 
                                            data_prbs_poly,
@@ -215,18 +179,10 @@ begin
                     rin.header <= header;
                     rin.stats.stats_seqnum <= header.seq_num;
                     rin.stats.stats_pkt_size <= header.pkt_size;
-                    --
-                    rin.header_byte_debug <= rx_header_v;
-                    rin.header_ref_byte_debug <= header_byte_ref_v;
-                    rin.header_valid_vector_debug <= is_header_valid_vector(r.rx_bytes,
-                                                                           header,
-                                                                           r.seq_num,
-                                                                           header_crc_params_c);
                     
                 when ST_DATA => 
                     if is_valid(config_c, in_i) then
                         rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
-                        rin.payload_ref_debug <= payload_byte_ref_v;
                         rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                                         data_prbs_poly,
                                                         count_valid_bytes(keep(config_c, in_i)) * 8);
@@ -323,35 +279,4 @@ begin
             when others => 
         end case;
     end process;
-
-    assert_proc: process(r,in_i, clock_i)
-        variable header_buf, next_header : header_t;
-        variable next_header_byte_string,header_byte_sring : byte_string(0 to HEADER_SIZE-1);
-    begin 
-
-        header_buf := header_unpack(bytes(header_config_c,r.header_buf), to_integer(r.rx_bytes));
-
-        next_header_byte_string := bytes(header_config_c,shift(header_config_c, r.header_buf, in_i));
-        header_byte_sring := bytes(header_config_c,r.header_buf);
-
-        case r.state is
-
-            when ST_HEADER_DEC => 
-           
-
-            when ST_HEADER_STATS | ST_REALIGN_BUF =>
-                assert to_integer(r.header.pkt_size) <= mtu_c report "ERROR: Size cannot be supp to mtu" severity failure;
-
-
-
-            when ST_SEND_STATS_EOP => 
-                -- assert r.stats.stats_header_valid and r.stats.stats_payload_valid
-                -- report "Error detected"
-                -- severity WARNING;
-
-            when others =>
-
-        end case;
-    end process;
-
 end architecture;
