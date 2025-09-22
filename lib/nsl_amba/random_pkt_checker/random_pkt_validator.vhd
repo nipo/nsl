@@ -96,6 +96,7 @@ architecture beh of random_pkt_validator is
             payload_ref_debug : byte_string(0 to config_c.data_width -1);
             header_byte_debug : byte_string(0 to HEADER_SIZE-1);
             header_ref_byte_debug : byte_string(0 to HEADER_SIZE-1);
+            was_last_beat : boolean;
         end record;
 
     signal r, rin: regs_t;
@@ -121,6 +122,7 @@ begin
         r.header_index_ko <= 0;
         r.stats.stats_index_data_ko <= (others => '0');
         r.realign_cnt <= 0;
+        r.was_last_beat <= false;
       end if;
     end process;
 
@@ -139,8 +141,7 @@ begin
 
         next_header_byte_string := bytes(header_config_c,shift(header_config_c, r.header_buf, in_i));
         header_byte_string := bytes(header_config_c,r.header_buf);
-
-        header_byte_ref_v := ref_header(r.rx_bytes,
+        header_byte_ref_v := ref_header(if_else(r.was_last_beat, r.rx_bytes, header.pkt_size),
                                         header,
                                         r.seq_num,
                                         header_crc_params_c);
@@ -168,6 +169,7 @@ begin
                     rin.stats.stats_payload_valid <= true;
                     if is_last(header_config_c, r.header_buf) or is_last(config_c, in_i) then
                         rin.seq_num <= r.seq_num + 1;
+                        rin.was_last_beat <= is_last(config_c, in_i);
                         if should_align(header_config_c, r.header_buf,in_i) then
                             rin.realign_cnt <= header_config_c.beat_count - beat_count(header_config_c, shift(header_config_c, r.header_buf, in_i));
                             rin.state <= ST_REALIGN_BUF;
@@ -186,26 +188,30 @@ begin
                     end if;
 
                 when ST_HEADER_STATS =>
-                    if header.pkt_size <= HEADER_SIZE then
+                    if r.was_last_beat then
                         rin.state <= ST_RESET_STATS;
                     else
                         rin.state <= ST_DATA;
                     end if;
                     --
                     for i in 0 to to_integer(r.rx_bytes) - 1 loop
-                        if header_byte_ref_v(i) /= rx_header_v(i) then
-                            rin.stats.stats_header_valid <= false;
-                            rin.stats.stats_index_data_ko <= to_unsigned(i,r.stats.stats_index_data_ko'length);
-                            rin.header_index_ko <= i;              
-                            if header.pkt_size <= HEADER_SIZE then
-                                rin.state <= ST_SEND_STATS_EOP;
-                            else
-                                rin.state <= ST_SEND_STATS_NO_EOP;
+                            if header_byte_ref_v(i) /= rx_header_v(i) then
+                                send_stats_trigger_v := true;
+                                rin.stats.stats_index_data_ko <= to_unsigned(i,r.stats.stats_index_data_ko'length);
+                                --
+                                exit;
                             end if;
-                            --
-                            exit;
-                        end if;
                     end loop;
+                    -- 
+                    if send_stats_trigger_v then
+                        rin.stats.stats_header_valid <= false;
+                        if r.was_last_beat then
+                            rin.state <= ST_SEND_STATS_EOP;
+                        else
+                            rin.state <= ST_SEND_STATS_NO_EOP;
+                        end if;
+                    end if;
+                    rin.was_last_beat <= false;
                     rin.header <= header;
                     rin.stats.stats_seqnum <= header.seq_num;
                     rin.stats.stats_pkt_size <= header.pkt_size;
@@ -216,7 +222,7 @@ begin
                                                                            header,
                                                                            r.seq_num,
                                                                            header_crc_params_c);
-
+                    
                 when ST_DATA => 
                     if is_valid(config_c, in_i) then
                         rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
@@ -237,17 +243,10 @@ begin
                         --
                         if is_last(config_c, in_i) then
                             rin.state <= ST_RESET_STATS;
-                            --
-                            -- This distinction is necessary in the case of an inserted error in the 
-                            -- packet size. Since we use the received packet size field to generate 
-                            -- a reference header, an error inserted in this field will be detected 
-                            -- in the random data and not directly in the size field.
-                            --
-                            if not (r.header_index_ko = 4 or r.header_index_ko = 5) then -- Test if error is in rand filed so in size field
-                                if r.rx_bytes + count_valid_bytes(keep(config_c, in_i)) /= header.pkt_size then
-                                    rin.stats.stats_payload_valid <= false;
-                                    send_stats_trigger_v := true;                           
-                                end if;
+                            if header.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, in_i)) then
+                                rin.stats.stats_payload_valid <= false;
+                                rin.stats.stats_index_data_ko <= to_unsigned(10, r.stats.stats_index_data_ko'length); -- size header field
+                                send_stats_trigger_v := true;                           
                             end if;
                         end if;
                         --
