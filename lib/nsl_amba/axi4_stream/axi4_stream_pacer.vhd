@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_data;
+library work, nsl_data, nsl_math;
 use work.axi4_stream.all;
 use nsl_data.prbs.all;
 
@@ -27,7 +27,12 @@ end entity;
 architecture beh of axi4_stream_pacer is
 
   subtype probability_t is unsigned(probability_denom_l2_c-1 downto 0);
-  constant probability_threshold_c : probability_t := to_unsigned(integer(probability_c * 2.0 ** probability_denom_l2_c), probability_t'length);
+  constant probability_threshold_i_c: integer
+    := integer(probability_c * 2.0 ** probability_denom_l2_c);
+  constant probability_threshold_il_c: integer
+    := nsl_math.arith.min(2**probability_denom_l2_c-1, probability_threshold_i_c);
+  constant probability_threshold_c : probability_t
+    := to_unsigned(probability_threshold_il_c, probability_t'length);
 
   type regs_t is
   record
