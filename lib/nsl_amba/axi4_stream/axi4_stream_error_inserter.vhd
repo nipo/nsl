@@ -74,6 +74,7 @@ architecture beh of axi4_stream_error_inserter is
     error_beat_byte_index : error_byte_index_t;
     pkt_byte_index, error_pkt_byte_index : integer range 0 to mtu_c+5;
     frm_cnt : integer;
+    pkt_toggle : std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -92,6 +93,7 @@ begin
             r.pkt_byte_index <= 0;
             r.error_pkt_byte_index <= 0;
             r.frm_cnt <= 0;
+            r.pkt_toggle <= '0';
         end if;
     end process;
     
@@ -101,7 +103,7 @@ begin
     begin
         rin <= r;
 
-
+        probability_v := unsigned(prbs_bit_string(r.prbs, prbs31, probability_v'length));
         error_beat_byte_index_v := probability_v(data_width_l2-1 downto 0);
 
         if is_valid(config_c, in_i) then
@@ -110,7 +112,6 @@ begin
                 rin.insert_error <= false;
                 if mode_c = "RANDOM" then
                     if is_ready(config_c, out_i) then 
-                        probability_v := unsigned(prbs_bit_string(r.prbs, prbs31, probability_v'length));
                         rin.prbs <= prbs_forward(r.prbs, prbs31, probability_v'length);
                         if probability_v <= probability_threshold_c then
                             rin.error_beat_byte_index <= error_beat_byte_index_v;
@@ -136,6 +137,7 @@ begin
                     rin.error_pkt_byte_index <= 0;
                     rin.pkt_byte_index <= 0;
                     rin.frm_cnt <= r.frm_cnt + 1;
+                    rin.pkt_toggle <= not r.pkt_toggle;
                 end if;
             end if;
         end if;
@@ -169,6 +171,8 @@ begin
                       valid => is_valid(config_c, in_i));
 
     in_o <= accept(config_c, is_ready(config_c, out_i));
+
+    feed_back_o.pkt_toggle <= r.pkt_toggle;
 
     feed_back_o.error <= to_logic(r.insert_error) when is_valid(config_c, in_i) and 
                                                        keep(config_c, in_i)(to_integer(r.error_beat_byte_index)) = '1' else'0';
