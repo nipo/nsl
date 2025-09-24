@@ -66,7 +66,7 @@ architecture beh of random_pkt_generator is
             header : buffer_t;
             cmd_buf : buffer_t;
             filler_header_crc  : crc_state_t;
-            data_remainder : integer range 0 to config_c.data_width;
+            data_remainder : integer range 0 to config_c.data_width - 1;
             tx_bytes : integer range 0 to mtu_c + 2*config_c.data_width;
         end record;
       
@@ -93,11 +93,13 @@ begin
     gen_process: process(r, in_i, out_i)
         variable payload_byte_v : byte_string(0 to config_c.data_width -1);
         variable cmd_v : cmd_t;
+        variable cmd_byte_v : byte_string(0 to CMD_SIZE - 1);
     begin
 
         rin <= r;
 
         cmd_v := cmd_unpack(bytes(cmd_buf_config, shift(cmd_buf_config, r.cmd_buf, in_i)));
+        cmd_byte_v := bytes(cmd_buf_config, shift(cmd_buf_config, r.cmd_buf, in_i));
 
         payload_byte_v := prbs_byte_string(
                             r.state_pkt_gen, 
@@ -113,6 +115,7 @@ begin
                     rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, in_i);
                     rin.tx_bytes <= config_c.data_width;
                     if is_last(cmd_buf_config, r.cmd_buf) then
+                        rin.state_pkt_gen <= prbs_state(to_slv(cmd_byte_v)(r.state_pkt_gen'length - 1 downto 0));
                         rin.seq_num <= cmd_v.cmd_seqnum;
                         rin.pkt_size <= cmd_v.cmd_pkt_size;
                         rin.data_remainder <= to_integer(cmd_v.cmd_pkt_size(data_width_l2 -1 downto 0));
@@ -158,16 +161,17 @@ begin
                                                       config_c.data_width * 8);
                     if r.tx_bytes >= r.pkt_size then
 
-                        if  r.data_remainder /= 0 then
-                            rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
-                                                                data_prbs_poly,
-                                                                r.data_remainder * 8);
-                        end if;
+                        -- if r.data_remainder /= 0 then
+                        --     rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
+                        --                                         data_prbs_poly,
+                        --                                         r.data_remainder * 8);
+                        -- end if;
                         rin.state <= ST_CMD_DEC;
                     end if;
                 end if;
 
             when others => 
+                null;
         end case;
     end process;
 

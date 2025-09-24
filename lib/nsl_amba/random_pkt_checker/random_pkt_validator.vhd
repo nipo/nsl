@@ -50,7 +50,8 @@ architecture beh of random_pkt_validator is
         ST_DATA,
         ST_SEND_STATS_NO_EOP,
         ST_SEND_STATS_EOP,        
-        ST_RESET_STATS
+        ST_RESET_STATS,
+        ST_IGNORE
         );
 
     type txer_stats_t is (
@@ -71,10 +72,10 @@ architecture beh of random_pkt_validator is
             seq_num : unsigned(15 downto 0);
             realign_cnt : integer range 0 to header_config_c.data_width;
             was_last_beat : boolean;
+            last_was_seq_num_err : boolean;
         end record;
 
     signal r, rin: regs_t;
-
 begin
     regs: process(reset_n_i, clock_i) is
     begin
@@ -96,10 +97,11 @@ begin
         r.stats.stats_index_data_ko <= (others => '0');
         r.realign_cnt <= 0;
         r.was_last_beat <= false;
+        r.last_was_seq_num_err <= false;
       end if;
     end process;
 
-    rx_process: process(r, in_i, out_i)
+    rx_process: process(r, in_i, out_i, rin)
         variable header : header_t;
         variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
         variable header_byte_ref_v, rx_header_v : byte_string(0 to HEADER_SIZE-1);
@@ -156,13 +158,18 @@ begin
                         rin.state <= ST_RESET_STATS;
                     else
                         rin.state <= ST_DATA;
+                        rin.state_pkt_gen <= prbs_state(to_slv(header_byte_ref_v)(r.state_pkt_gen'length - 1 downto 0));
                     end if;
                     --
-                    for i in 0 to to_integer(r.rx_bytes) - 1 loop
-                            if header_byte_ref_v(i) /= rx_header_v(i) then
-                                send_stats_trigger_v := true;
-                                rin.stats.stats_index_data_ko <= to_unsigned(i,r.stats.stats_index_data_ko'length);
-                                --
+                    for i in 0 to HEADER_SIZE - 1 loop
+                            if i < to_integer(r.rx_bytes) then
+                                if header_byte_ref_v(i) /= rx_header_v(i) then
+                                    send_stats_trigger_v := true;
+                                    rin.stats.stats_index_data_ko <= to_unsigned(i,r.stats.stats_index_data_ko'length);
+                                    --
+                                    exit;
+                                end if;
+                            else
                                 exit;
                             end if;
                     end loop;
@@ -175,6 +182,15 @@ begin
                             rin.state <= ST_SEND_STATS_NO_EOP;
                         end if;
                     end if;
+                    --
+                    if r.last_was_seq_num_err then
+                        if not (rin.stats.stats_index_data_ko = 0 or rin.stats.stats_index_data_ko = 1) then
+                            rin.last_was_seq_num_err <= false;
+                            if r.seq_num /= header.seq_num then
+                                rin.seq_num <= header.seq_num;
+                            end if;
+                        end if;
+                    end if;
                     rin.was_last_beat <= false;
                     rin.header <= header;
                     rin.stats.stats_seqnum <= header.seq_num;
@@ -185,7 +201,7 @@ begin
                         rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
                         rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                                         data_prbs_poly,
-                                                        count_valid_bytes(keep(config_c, in_i)) * 8);
+                                                        config_c.data_width * 8);
                         --
                         for i in payload_byte_ref_v'range loop
                             if keep(config_c, in_i)(i) = '1' then
@@ -226,9 +242,15 @@ begin
                 when ST_SEND_STATS_NO_EOP => 
                     if r.txer = TXER_IDLE then
                         rin.stats_buf <= reset(stats_buf_config,stats_pack(r.stats));
-                        if r.txer = TXER_IDLE then
-                            rin.stats.stats_payload_valid <= true;
-                            rin.state <= ST_DATA;
+                        rin.stats.stats_payload_valid <= true;
+                        rin.state <= ST_DATA;
+                        -- error in seqnum: could be a bitswap or pkt loss
+                        if is_seqnum_corrupted(r.stats.stats_index_data_ko) then 
+                            rin.last_was_seq_num_err <= true;
+                        end if;
+                        --
+                        if is_seqnum_corrupted(r.stats.stats_index_data_ko) or is_rand_data_corrupted(r.stats.stats_index_data_ko) then
+                            rin.state <= ST_IGNORE;
                         end if;
                     end if;         
      
@@ -239,7 +261,18 @@ begin
                         rin.rx_bytes <= (others => '0');
                         rin.stats <= stats_reset;
                         rin.state <= ST_HEADER_DEC;
-                    end if;               
+                        -- error in seqnum: could be a bitswap or pkt loss
+                        if r.stats.stats_index_data_ko = 0 or r.stats.stats_index_data_ko = 1 then 
+                            rin.last_was_seq_num_err <= true;
+                        end if;
+                    end if;      
+                    
+                when ST_IGNORE => 
+                    if is_valid(config_c, in_i) then
+                        if is_last(config_c, in_i) then
+                            rin.state <= ST_RESET_STATS;
+                        end if;
+                    end if;
 
             when others => 
         end case;
