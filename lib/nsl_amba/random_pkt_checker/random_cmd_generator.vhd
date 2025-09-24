@@ -98,7 +98,10 @@ begin
                                                            header_prbs_poly,
                                                            config_c.data_width);
                         rin.cmd_buf <= reset(cmd_buf_config, 
-                                             to_le(r.seq_num & pkt_size_v));
+                                             to_be(r.seq_num(7 downto 0) & 
+                                                   r.seq_num(15 downto 8) & 
+                                                   pkt_size_v(7 downto 0) & 
+                                                   pkt_size_v(15 downto 8)));
                     end if;
                 end if;
 
