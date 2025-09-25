@@ -6,3 +6,4 @@ packages += text
 packages += binary_io
 packages += fifo
 packages += cbor
+packages += scrambler
