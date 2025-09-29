@@ -185,13 +185,9 @@ begin
                         end if;
                     end if;
                     --
-                    if r.last_was_seq_num_err then
-                        if not (rin.stats.stats_index_data_ko = 0 or rin.stats.stats_index_data_ko = 1) then
-                            rin.last_was_seq_num_err <= false;
-                            if r.seq_num /= header.seq_num then
-                                rin.seq_num <= header.seq_num;
-                            end if;
-                        end if;
+                    if is_seqnum_corrupted(rin.stats.stats_index_data_ko) then
+                        rin.last_was_seq_num_err <= false;
+                        rin.seq_num <= header.seq_num;
                     end if;
                     rin.was_last_beat <= false;
                     rin.header <= header;
@@ -262,9 +258,9 @@ begin
                         rin.header_buf <= reset(header_config_c);
                         rin.rx_bytes <= (others => '0');
                         rin.stats <= stats_reset;
-                        rin.state <= ST_HEADER_DEC;
+                        rin.state <= ST_RESET_STATS;
                         -- error in seqnum: could be a bitswap or pkt loss
-                        if r.stats.stats_index_data_ko = 0 or r.stats.stats_index_data_ko = 1 then 
+                        if is_seqnum_corrupted(r.stats.stats_index_data_ko) then 
                             rin.last_was_seq_num_err <= true;
                         end if;
                     end if;      
