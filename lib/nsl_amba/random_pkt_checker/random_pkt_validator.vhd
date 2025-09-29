@@ -26,7 +26,9 @@ entity random_pkt_validator is
     in_o : out slave_t;
     --
     out_o : out master_t;
-    out_i : in slave_t
+    out_i : in slave_t;
+    -- 
+    toggle_o : out std_ulogic
     );
 end entity;
 
@@ -299,6 +301,8 @@ begin
                              r.state /= ST_REALIGN_BUF and 
                              r.state /= ST_HEADER_STATS and 
                              r.state /= ST_RESET_STATS);
+
+    toggle_o <= to_logic(r.state = ST_RESET_STATS and r.txer = TXER_IDLE and is_ready(config_c, out_i));
 
     proc_txer: process(r, in_i)
     begin
