@@ -333,7 +333,7 @@ package axi4_stream is
   
       insert_error_i : in boolean := false;
       byte_index_i : in integer range 0 to config_c.data_width := 0;
-  
+    
       in_i : in master_t;
       in_o : out slave_t;
   
