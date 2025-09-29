@@ -66,6 +66,7 @@ package random_pkt_checker is
     function is_seqnum_corrupted(index_ko : unsigned) return boolean;
     function is_size_corrupted(index_ko : unsigned) return boolean;
     function is_rand_data_corrupted(index_ko : unsigned) return boolean;
+    function is_header_corrupted(index_ko : unsigned) return boolean;
     -- ================================================================
     -- Random Packet Generation & Validation Pipeline
     -- ================================================================
@@ -405,6 +406,11 @@ package body random_pkt_checker is
       function is_rand_data_corrupted(index_ko : unsigned) return boolean is
       begin
         return index_ko = 4 or index_ko = 5;
+      end function;
+
+      function is_header_corrupted(index_ko : unsigned) return boolean is
+      begin 
+        return index_ko = 0 or index_ko = 1 or index_ko = 2 or index_ko = 3 or index_ko = 4 or index_ko = 5 or index_ko = 6 or index_ko = 7;
       end function;
 
 end package body;
