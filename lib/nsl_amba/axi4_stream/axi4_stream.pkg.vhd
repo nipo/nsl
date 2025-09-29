@@ -93,7 +93,6 @@ package axi4_stream is
   type error_feedback_t is
   record
     error : std_ulogic ; -- Error inserted or not
-    pkt_toggle : std_ulogic; -- toggle when new pkt
     pkt_index_ko : unsigned(15 downto 0);
   end record;
 
