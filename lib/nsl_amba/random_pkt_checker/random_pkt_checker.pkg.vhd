@@ -201,7 +201,9 @@ package random_pkt_checker is
             in_o : out slave_t;
             --
             out_o : out master_t;
-            out_i : in slave_t
+            out_i : in slave_t;
+            --
+            toggle_o : out std_ulogic
             );
         end component;
     -- Generate a std_ulogic error signal by comparing feedback with status
@@ -216,6 +218,8 @@ package random_pkt_checker is
             --
             in_i : in master_t;
             in_o : out slave_t;
+            --
+            toggle_i : in std_ulogic;
             --
             feedback_i : in error_feedback_t;
             assert_error_o : out std_ulogic
