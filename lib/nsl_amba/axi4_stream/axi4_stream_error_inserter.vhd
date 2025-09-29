@@ -170,6 +170,7 @@ begin
     in_o <= accept(config_c, is_ready(config_c, out_i));
 
     feed_back_o.error <= to_logic(r.insert_error) when is_valid(config_c, in_i) and 
+                                                       is_ready(config_c, out_i) and
                                                        keep(config_c, in_i)(to_integer(r.error_beat_byte_index)) = '1' else'0';
 
     feed_back_o.pkt_index_ko <= to_unsigned(r.error_pkt_byte_index,feed_back_o.pkt_index_ko'length);
