@@ -115,8 +115,7 @@ begin
         rx_header_v := bytes(header_config_c,r.header_buf);
 
         header_byte_ref_v := ref_header(if_else(r.was_last_beat, r.rx_bytes, header.pkt_size),
-                                        header,
-                                        r.seq_num,
+                                        if_else(r.state = ST_REF_AGAIN, header.seq_num, r.seq_num),
                                         header_crc_params_c);
 
         payload_byte_ref_v := prbs_byte_string(r.state_pkt_gen, 
@@ -235,6 +234,14 @@ begin
                         rin.rx_bytes <= (others => '0');
                         rin.stats <= stats_reset;
                         rin.state <= ST_HEADER_DEC;
+                    if is_ready(config_c, out_i) then
+                        if r.txer = TXER_IDLE then
+                            rin.stats_buf <= reset(stats_buf_config);
+                            rin.header_buf <= reset(header_config_c);
+                            rin.rx_bytes <= (others => '0');
+                            rin.stats <= stats_reset;
+                            rin.state <= ST_HEADER_DEC;
+                        end if;
                     end if;
 
                 when ST_SEND_STATS_NO_EOP => 
