@@ -64,6 +64,11 @@ package assertions is
                          b : in byte_string;
                          sev : in severity_level);
 
+  procedure assert_different(what: in string;
+                             a : in byte_string;
+                             b : in byte_string;
+                             sev : in severity_level);
+
   procedure assert_equal(context: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
@@ -130,6 +135,12 @@ package assertions is
                          b : in byte_string;
                          sev : in severity_level);
 
+  procedure assert_different(context: in log_context;
+                             what: in string;
+                             a : in byte_string;
+                             b : in byte_string;
+                             sev : in severity_level);
+
 end package;
 
 package body assertions is
@@ -141,6 +152,18 @@ package body assertions is
                                  sev : in severity_level) is
   begin
     log_error(context, "while " & what & ", " & a & " /= " & b);
+    if sev = FAILURE then
+      nsl_simulation.control.terminate(1);
+    end if;
+  end procedure;
+
+  procedure assert_different_failure(context: in log_context;
+                                 what: in string;
+                                 a : in string;
+                                 b : in string;
+                                 sev : in severity_level) is
+  begin
+    log_error(context, "while " & what & ", " & a & " = " & b);
     if sev = FAILURE then
       nsl_simulation.control.terminate(1);
     end if;
@@ -255,6 +278,19 @@ package body assertions is
   begin
     if a /= b then
       assert_equal_failure("UNK", what,
+                           to_string(a),
+                           to_string(b),
+                           sev);
+    end if;
+  end procedure;
+
+  procedure assert_different(what: in string;
+                             a : in byte_string;
+                             b : in byte_string;
+                             sev : in severity_level) is
+  begin
+    if a = b then
+      assert_different_failure("UNK", what,
                            to_string(a),
                            to_string(b),
                            sev);
@@ -396,6 +432,17 @@ package body assertions is
   begin
     if a /= b then
       assert_equal_failure(context, what, a, b, sev);
+    end if;
+  end procedure;
+
+  procedure assert_different(context: in log_context;
+                             what: in string;
+                             a : in byte_string;
+                             b : in byte_string;
+                             sev : in severity_level) is
+  begin
+    if a = b then
+      assert_different_failure(context, what, to_string(a), to_string(b), sev);
     end if;
   end procedure;
 
