@@ -16,4 +16,5 @@ endif
 
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += jtag_user_tap_gowin.vhd
+deps += nsl_clocking.distribution
 endif
