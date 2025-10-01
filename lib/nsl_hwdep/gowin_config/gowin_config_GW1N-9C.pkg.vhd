@@ -3,7 +3,7 @@ package body gowin_config is
   function iodelay_step_ps return real
   is
   begin
-    return 25;
+    return 25.0;
   end function;
 
   function device_name return string
