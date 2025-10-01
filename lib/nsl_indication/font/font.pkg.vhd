@@ -285,24 +285,31 @@ package body font is
   is
     alias xfnt: byte_string(0 to fnt'length-1) is fnt;
     constant glyph_width_c : positive := font_width(fnt);
-    constant glyph_line_bytes_c : positive := (font_width(fnt) + 7) / 8;
-    constant glyph_line_count_c : positive := font_height(fnt);
+    constant glyph_height_c : positive := font_height(fnt);
     constant glyph_index_width_c : positive := font_glyph_index_l2(fnt);
     constant glyph_line_index_width_c : positive := font_glyph_line_index_l2(fnt);
-    constant addr_width_c : positive := glyph_line_count_c + glyph_line_index_width_c;
-    constant font_data_c : byte_string(0 to fnt'length-3) := xfnt(2 to xfnt'right);
-    constant font_pad_c: byte_string(font_data_c'length to 2**addr_width_c-1)
-      := (others => x"00");
-  begin
-    report "font "&integer'image(glyph_width_c)
-      &"x"&integer'image(font_height(fnt))
-      &", "&integer'image(font_glyph_count(fnt))&" glyphs"
-      &" ci:"&integer'image(font_glyph_column_index_l2(fnt))
-      &" ri:"&integer'image(font_glyph_line_index_l2(fnt))
-      &" gi:"&integer'image(font_glyph_index_l2(fnt))
-      &" dl:"&integer'image(font_data_c'length + font_pad_c'length);
 
-    return font_data_c & font_pad_c;
+    constant line_stride_c : positive := (glyph_width_c + 7) / 8;
+    constant glyph_stride_c : positive := (2**glyph_line_index_width_c) * line_stride_c;
+
+    constant addr_width_c : positive := glyph_index_width_c + glyph_line_index_width_c;
+
+    variable ret: byte_string(0 to line_stride_c * (2**addr_width_c) - 1)
+      := (others => to_byte(0));
+
+    constant font_data_c : byte_string(0 to fnt'length-3) := xfnt(2 to xfnt'right);
+    variable glyph_data_v : byte_string(0 to line_stride_c * glyph_height_c-1);
+  begin
+    for glyph in 0 to font_glyph_count(fnt) - 1
+    loop
+      glyph_data_v := font_data_c(glyph * glyph_height_c * line_stride_c
+                                  to (glyph+1) * glyph_height_c * line_stride_c - 1);
+      ret(glyph * glyph_stride_c
+          to glyph * glyph_stride_c + line_stride_c * glyph_height_c - 1)
+        := glyph_data_v;
+    end loop;
+    
+    return ret;
   end function;
 
 end package body;
