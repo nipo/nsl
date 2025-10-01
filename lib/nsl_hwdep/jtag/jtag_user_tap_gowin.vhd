@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library nsl_clocking;
+
 entity jtag_user_tap is
   generic(
     user_port_count_c : integer := 1
@@ -119,10 +121,10 @@ begin
       enable_er2_o => enable_s(1)
       );
 
-  tck_buf: gowin.components.bufg
+  tck_buf: nsl_clocking.distribution.clock_buffer
     port map(
-      i => tck_unbuf_s,
-      o => tck_s
+      clock_i => tck_unbuf_s,
+      clock_o => tck_s
       );
 
 end architecture;
