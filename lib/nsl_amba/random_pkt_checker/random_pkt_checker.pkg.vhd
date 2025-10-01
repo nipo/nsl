@@ -49,7 +49,6 @@ package random_pkt_checker is
     function header_unpack(header : byte_string; valid_len : natural) return header_t;
     function cmd_unpack(cmd : byte_string) return cmd_t;
     function ref_header(rx_header_size : unsigned;
-                        header : header_t;
                         seq_num : unsigned(15 downto 0);
                         header_crc_params_c: crc_params_t) return byte_string;
     function to_prbs_state(u : unsigned) return prbs_state;
@@ -66,6 +65,7 @@ package random_pkt_checker is
     function is_seqnum_corrupted(index_ko : unsigned) return boolean;
     function is_size_corrupted(index_ko : unsigned) return boolean;
     function is_rand_data_corrupted(index_ko : unsigned) return boolean;
+    function is_crc_corrupted(index_ko : unsigned) return boolean;
     function is_header_corrupted(index_ko : unsigned) return boolean;
     -- ================================================================
     -- Random Packet Generation & Validation Pipeline
@@ -111,6 +111,7 @@ package random_pkt_checker is
     --   |  random_stats_asserter |
     --   |------------------------|
     --   | Inputs: clock_i        |
+
     --   |         reset_n_i      |
     --   |         in_i  <--------+  <- from pkt_validator
     --   |         feedback_i     |
@@ -350,13 +351,12 @@ package body random_pkt_checker is
     end function;
 
     function ref_header(rx_header_size : unsigned;
-                        header : header_t;
                         seq_num : unsigned(15 downto 0);
                         header_crc_params_c: crc_params_t) return byte_string 
     is 
         variable ret : byte_string(0 to HEADER_SIZE-1) := (others => (others => '-'));
         variable rand_data_v : byte_string(0 to 1) := reverse(prbs_byte_string(to_prbs_state(rx_header_size(14 downto 0)), prbs15, 2));
-        variable header_byte_str_v : byte_string(0 to 5) := to_le(header.seq_num) & to_le(rx_header_size) & rand_data_v(0) & rand_data_v(1);
+        variable header_byte_str_v : byte_string(0 to 5) := to_le(seq_num) & to_le(rx_header_size) & rand_data_v(0) & rand_data_v(1);
         variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
                                                                               crc_init(header_crc_params_c),
                                                                               header_byte_str_v))(1);
@@ -410,6 +410,11 @@ package body random_pkt_checker is
       function is_rand_data_corrupted(index_ko : unsigned) return boolean is
       begin
         return index_ko = 4 or index_ko = 5;
+      end function;
+
+      function is_crc_corrupted(index_ko : unsigned) return boolean is
+      begin 
+        return index_ko = 6 or index_ko = 7;
       end function;
 
       function is_header_corrupted(index_ko : unsigned) return boolean is

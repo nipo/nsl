@@ -49,6 +49,7 @@ architecture beh of random_pkt_validator is
         ST_HEADER_DEC,
         ST_REALIGN_BUF,
         ST_HEADER_STATS,
+        ST_REF_AGAIN,
         ST_DATA,
         ST_SEND_STATS_NO_EOP,
         ST_SEND_STATS_EOP,        
@@ -75,6 +76,9 @@ architecture beh of random_pkt_validator is
             realign_cnt : integer range 0 to header_config_c.data_width;
             was_last_beat : boolean;
             last_was_seq_num_err : boolean;
+            -- DEBUG 
+            header_byte_ref_debug : byte_string(0 to HEADER_SIZE-1);
+            payload_byte_ref_debug : byte_string(0 to config_c.data_width -1);
         end record;
 
     signal r, rin: regs_t;
@@ -104,7 +108,7 @@ begin
     end process;
 
     rx_process: process(r, in_i, out_i, rin)
-        variable header : header_t;
+        variable header,next_header : header_t;
         variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
         variable header_byte_ref_v, rx_header_v : byte_string(0 to HEADER_SIZE-1);
         variable send_stats_trigger_v : boolean;
@@ -112,6 +116,9 @@ begin
         rin <= r;
 
         header := header_unpack(bytes(header_config_c,r.header_buf), to_integer(r.rx_bytes));
+        next_header := header_unpack(bytes(header_config_c,
+                                           shift(header_config_c, r.header_buf, in_i)), 
+                                     to_integer(r.rx_bytes + count_valid_bytes(keep(config_c, in_i))));
         rx_header_v := bytes(header_config_c,r.header_buf);
 
         header_byte_ref_v := ref_header(if_else(r.was_last_beat, r.rx_bytes, header.pkt_size),
@@ -160,6 +167,8 @@ begin
                     else
                         rin.state <= ST_DATA;
                         rin.state_pkt_gen <= prbs_state(to_slv(header_byte_ref_v)(r.state_pkt_gen'length - 1 downto 0));
+                        -- DEBUG 
+                        rin.payload_byte_ref_debug <= payload_byte_ref_v;
                     end if;
                     --
                     for i in 0 to HEADER_SIZE - 1 loop
@@ -184,15 +193,63 @@ begin
                         end if;
                     end if;
                     --
-                    if is_seqnum_corrupted(rin.stats.stats_index_data_ko) then
-                        rin.last_was_seq_num_err <= false;
+                    if is_seqnum_corrupted(rin.stats.stats_index_data_ko) and send_stats_trigger_v then
+                        rin.state <= ST_REF_AGAIN;
+                    else
                         rin.seq_num <= header.seq_num;
+                        rin.stats.stats_seqnum <= header.seq_num;
+                        rin.was_last_beat <= false;
                     end if;
-                    rin.was_last_beat <= false;
+                    -- if is_seqnum_corrupted(rin.stats.stats_index_data_ko) then
+                    --     rin.last_was_seq_num_err <= false;
+                    --     rin.seq_num <= header.seq_num;
+                    -- end if;
                     rin.header <= header;
-                    rin.stats.stats_seqnum <= header.seq_num;
                     rin.stats.stats_pkt_size <= header.pkt_size;
-                    
+                    -- DEBUG
+                    rin.header_byte_ref_debug <= header_byte_ref_v;
+                
+                when ST_REF_AGAIN => 
+                    rin.header_byte_ref_debug <= header_byte_ref_v;
+                    rin.was_last_beat <= false;
+                    rin.stats.stats_seqnum <= header.seq_num;
+                    rin.state_pkt_gen <= prbs_state(to_slv(header_byte_ref_v)(r.state_pkt_gen'length - 1 downto 0));
+                    for i in 0 to HEADER_SIZE - 1 loop
+                        if i < to_integer(r.rx_bytes) then
+                            if header_byte_ref_v(i) /= rx_header_v(i) then
+                                send_stats_trigger_v := true;
+                                rin.stats.stats_index_data_ko <= to_unsigned(i,r.stats.stats_index_data_ko'length);
+                                --
+                                exit;
+                            end if;
+                        else
+                            exit;
+                        end if;
+                    end loop;
+                    -- Resync seqNum
+                    if not send_stats_trigger_v then
+                        rin.seq_num <= header.seq_num;
+                    else 
+                        -- Error in seqnum
+                        rin.stats.stats_index_data_ko <= r.stats.stats_index_data_ko;
+                    end if;
+                    --
+                    if send_stats_trigger_v then
+                        rin.stats.stats_header_valid <= false;
+                        if r.was_last_beat then
+                            rin.state <= ST_SEND_STATS_EOP;
+                        else
+                            rin.state <= ST_SEND_STATS_NO_EOP;
+                        end if;
+                    else
+                        if r.was_last_beat then
+                            rin.state <= ST_RESET_STATS;
+                        else
+                            rin.state <= ST_DATA;
+                            rin.payload_byte_ref_debug <= payload_byte_ref_v;
+                        end if;
+                    end if;
+
                 when ST_DATA => 
                     if is_valid(config_c, in_i) then
                         rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
@@ -228,12 +285,6 @@ begin
                     end if;
 
                 when ST_RESET_STATS => 
-                    if r.txer = TXER_IDLE then
-                        rin.stats_buf <= reset(stats_buf_config);
-                        rin.header_buf <= reset(header_config_c);
-                        rin.rx_bytes <= (others => '0');
-                        rin.stats <= stats_reset;
-                        rin.state <= ST_HEADER_DEC;
                     if is_ready(config_c, out_i) then
                         if r.txer = TXER_IDLE then
                             rin.stats_buf <= reset(stats_buf_config);
@@ -302,6 +353,7 @@ begin
     in_o <= accept(config_c, r.state /= ST_SEND_STATS_NO_EOP and 
                              r.state /= ST_SEND_STATS_EOP and 
                              r.state /= ST_REALIGN_BUF and 
+                             r.state /= ST_REF_AGAIN and
                              r.state /= ST_HEADER_STATS and 
                              r.state /= ST_RESET_STATS);
 
