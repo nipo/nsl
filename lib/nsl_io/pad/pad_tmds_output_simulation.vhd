@@ -6,7 +6,8 @@ use nsl_io.diff.all;
 
 entity pad_tmds_output is
   generic(
-    invert_c : boolean := false
+    invert_c : boolean := false;
+    driver_mode_c : string := "default"
     );
   port(
     data_i : in std_ulogic;
