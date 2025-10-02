@@ -38,12 +38,13 @@ architecture beh of rom_bytes_2p is
   type mem_t is array(natural range 0 to 2**word_addr_size_c-1) of word_t;
   
   function ram_init(blob : nsl_data.bytestream.byte_string) return mem_t is
-    variable ret : mem_t;
+    alias xblob: nsl_data.bytestream.byte_string(0 to blob'length-1) is blob;
+    variable ret : mem_t := (others => (others => '0'));
     variable tmp : nsl_data.bytestream.byte_string(0 to word_byte_count_c-1);
   begin
-    for i in 0 to ret'length-1
+    for i in 0 to (blob'length / word_byte_count_c) - 1
     loop
-      tmp := blob(blob'left + i*word_byte_count_c to blob'left + (i+1) * word_byte_count_c - 1);
+      tmp := xblob(i*word_byte_count_c to (i+1) * word_byte_count_c - 1);
       if little_endian_c then
         ret(i) := nsl_data.endian.from_le(tmp);
       else
