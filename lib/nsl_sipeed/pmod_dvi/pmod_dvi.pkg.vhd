@@ -6,6 +6,9 @@ library nsl_digilent, nsl_dvi;
 package pmod_dvi is
   
   component pmod_dvi_output is
+    generic(
+      driver_mode_c : string := "default"
+      );
     port(
       reset_n_i : in std_ulogic;
       pixel_clock_i : in std_ulogic;

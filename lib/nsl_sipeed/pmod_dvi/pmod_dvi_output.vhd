@@ -4,6 +4,9 @@ use ieee.std_logic_1164.all;
 library nsl_digilent, nsl_dvi;
 
 entity pmod_dvi_output is
+  generic(
+    driver_mode_c : string := "default"
+    );
   port(
     reset_n_i : in std_ulogic;
     pixel_clock_i : in std_ulogic;
@@ -20,6 +23,9 @@ architecture beh of pmod_dvi_output is
 begin
 
   driver: nsl_dvi.transceiver.dvi_driver
+    generic map(
+      driver_mode_c => driver_mode_c
+      );
     port map(
       reset_n_i => reset_n_i,
       pixel_clock_i => pixel_clock_i,

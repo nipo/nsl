@@ -7,6 +7,9 @@ library nsl_io, work;
 package transceiver is
 
   component dvi_driver is
+    generic(
+      driver_mode_c : string := "default"
+      );
     port(
       reset_n_i : in std_ulogic;
       pixel_clock_i : in std_ulogic;

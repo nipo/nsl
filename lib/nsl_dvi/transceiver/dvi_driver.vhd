@@ -4,6 +4,9 @@ use ieee.std_logic_1164.all;
 library nsl_io, work;
 
 entity dvi_driver is
+  generic(
+    driver_mode_c : string := "default"
+    );
   port(
     reset_n_i : in std_ulogic;
     pixel_clock_i : in std_ulogic;
@@ -38,6 +41,9 @@ begin
         );
 
     pad: nsl_io.pad.pad_tmds_output
+      generic map(
+        driver_mode_c => driver_mode_c
+        )
       port map(
         data_i => ser_s(i),
         pad_o => data_o(i)
@@ -57,6 +63,9 @@ begin
       );
 
   ck_pad: nsl_io.pad.pad_tmds_output
+    generic map(
+      driver_mode_c => driver_mode_c
+      )
     port map(
       data_i => clk_s,
       pad_o => clock_o
