@@ -9,7 +9,7 @@ package body gowin_config is
   function device_name return string
   is
   begin
-    return "GW5A-15A";
+    return "GW5A-60";
   end function;
 
   function internal_osc return string
