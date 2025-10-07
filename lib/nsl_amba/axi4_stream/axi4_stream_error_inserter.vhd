@@ -72,7 +72,7 @@ architecture beh of axi4_stream_error_inserter is
     prbs : prbs_state(30 downto 0);
     insert_error: boolean;
     error_beat_byte_index : error_byte_index_t;
-    pkt_byte_index, error_pkt_byte_index : integer range 0 to mtu_c+5;
+    pkt_byte_index, error_pkt_byte_index : integer range 0 to mtu_c+config_c.data_width;
     frm_cnt : integer;
   end record;
 
