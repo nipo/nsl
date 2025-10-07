@@ -15,9 +15,9 @@ entity random_pkt_generator is
   generic (
     mtu_c: integer := 1500;
     config_c: config_t;
-    data_prbs_init: prbs_state := x"deadbee"&"111";
-    data_prbs_poly: prbs_state := prbs31;
     header_crc_params_c: crc_params_t
+    data_prbs_init_c: prbs_state := x"deadbee"&"111";
+    data_prbs_poly_c: prbs_state := prbs31
     );
   port (
     clock_i : in std_ulogic;
@@ -80,13 +80,6 @@ begin
       end if;
       if reset_n_i = '0' then
         r.state <= ST_RESET;
-        r.state_pkt_gen <= data_prbs_init;
-        r.pkt_size <= (others => '0');
-        r.seq_num <= x"0001";
-        r.header <= reset(header_config_c);
-        r.filler_header_crc <= crc_init(header_crc_params_c);
-        r.cmd_buf <= reset(cmd_buf_config);
-        r.tx_bytes <= config_c.data_width;
       end if;
     end process;
 
@@ -103,7 +96,7 @@ begin
 
         payload_byte_v := prbs_byte_string(
                             r.state_pkt_gen, 
-                            data_prbs_poly,
+                            data_prbs_poly_c,
                             config_c.data_width);
 
         case r.state is
@@ -126,10 +119,7 @@ begin
 
             when ST_BUILD_HEADER => 
                 rin.header <= reset(header_config_c, 
-                                    header_pack(r.seq_num,
-                                                r.pkt_size,
-                                                crc_init(header_crc_params_c),
-                                                header_crc_params_c));
+                                    header_pack(header_from_cmd(r.cmd)));
                 rin.state <= ST_SEND_HEADER;
                                               
             when ST_SEND_HEADER =>   
@@ -157,15 +147,10 @@ begin
                     rin.tx_bytes <= r.tx_bytes + config_c.data_width;
 
                     rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
-                                                      data_prbs_poly,
+                                                      data_prbs_poly_c,
                                                       config_c.data_width * 8);
                     if r.tx_bytes >= r.pkt_size then
 
-                        -- if r.data_remainder /= 0 then
-                        --     rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
-                        --                                         data_prbs_poly,
-                        --                                         r.data_remainder * 8);
-                        -- end if;
                         rin.state <= ST_CMD_DEC;
                     end if;
                 end if;
@@ -188,7 +173,7 @@ begin
 
         payload_byte_v :=   prbs_byte_string(
                                 r.state_pkt_gen, 
-                                data_prbs_poly, 
+                                data_prbs_poly_c, 
                                 config_c.data_width);
 
         case r.state is
