@@ -15,39 +15,47 @@ use nsl_data.text.all;
 -- Generic random_pkt_checker implementation
 package random_pkt_checker is
 
-    constant HEADER_SIZE : integer := 8;
-    constant HEADER_CRC_SIZE : integer := 2;
-    constant CMD_SIZE : integer := 4;
     constant STATS_SIZE : integer := 8;
 
-    type header_t is 
-        record
-            seq_num : unsigned(15 downto 0);
-            pkt_size : unsigned(15 downto 0);
-            rand_data : unsigned(15 downto 0);
-            crc : unsigned(15 downto 0);
-        end record;
-
-    type stats_t is
-        record
-            stats_seqnum : unsigned(15 downto 0);
-            stats_pkt_size : unsigned(15 downto 0);
-            stats_header_valid : boolean;
-            stats_payload_valid : boolean;
-            stats_index_data_ko : unsigned(15 downto 0);
-        end record;
+    constant header_crc_params_c : crc_params_t := crc_params(
+        poly => x"104c11db7",
+        init => x"0",
+        complement_input => false,
+        complement_state => true,
+        byte_bit_order => BIT_ORDER_ASCENDING,
+        spill_order => EXP_ORDER_DESCENDING,
+        byte_order => BYTE_ORDER_INCREASING
+      );
 
     type cmd_t is
-        record
-            cmd_seqnum : unsigned(15 downto 0);
-            cmd_pkt_size : unsigned(15 downto 0);
-        end record;
+    record
+        seq_num : unsigned(15 downto 0);
+        pkt_size : unsigned(15 downto 0);
+    end record;
+
+    type header_t is 
+    record
+        cmd : cmd_t;
+        crc : crc_state_t;
+    end record;
+
+    type stats_t is
+    record
+        stats_seqnum : unsigned(15 downto 0);
+        stats_pkt_size : unsigned(15 downto 0);
+        stats_header_valid : boolean;
+        stats_payload_valid : boolean;
+        stats_index_data_ko : unsigned(15 downto 0);
+    end record;
 
     type error_feedback_array_t is array (natural range <>) of error_feedback_t;
 
+    subtype cmd_packed_t is byte_string(0 to 3);
+    subtype header_packed_t is byte_string(0 to 7);
 
-    function header_unpack(header : byte_string; valid_len : natural) return header_t;
-    function cmd_unpack(cmd : byte_string) return cmd_t;
+    function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
+    function cmd_unpack(cmd : cmd_packed_t) return cmd_t;
+    function cmd_pack(cmd : cmd_t) return cmd_packed_t;
     function ref_header(rx_header_size : unsigned;
                         seq_num : unsigned(15 downto 0);
                         header_crc_params_c: crc_params_t) return byte_string;
@@ -55,11 +63,8 @@ package random_pkt_checker is
     function stats_unpack(b : byte_string) return stats_t;
     function stats_pack(s : stats_t) return byte_string;
     function max(a, b : unsigned) return unsigned;
-    function header_pack(seq_num : unsigned;
-                         pkt_size : unsigned;
-                         filler_header_crc  : crc_state_t;
-                         header_crc_params_c : crc_params_t) return byte_string;
-
+    function header_pack(header: header_t) return header_packed_t;
+    function header_from_cmd(cmd:cmd_t) return header_t;
     function count_valid_bytes(tkeep : std_ulogic_vector) return natural;
     function to_slv(bstr : byte_string) return std_ulogic_vector;
     function is_seqnum_corrupted(index_ko : unsigned) return boolean;
@@ -136,9 +141,10 @@ package random_pkt_checker is
     component random_cmd_generator is
         generic (
           mtu_c: integer := 1500;
-          header_prbs_init: prbs_state := x"d"&"111";
-          header_prbs_poly: prbs_state := prbs7;
-          config_c : config_t := config(2, last => true)
+          header_prbs_init_c: prbs_state := x"d"&"111";
+          header_prbs_poly_c: prbs_state := prbs7;
+          config_c : config_t := config(2, last => true);
+          min_pkt_size : integer := 1
           );
         port (
           clock_i : in std_ulogic;
@@ -167,9 +173,8 @@ package random_pkt_checker is
         generic (
             mtu_c: integer := 1500;
             config_c: config_t;
-            data_prbs_init: prbs_state := x"deadbee"&"111";
-            data_prbs_poly: prbs_state := prbs31;
-            header_crc_params_c: crc_params_t
+            data_prbs_init_c: prbs_state := x"deadbee"&"111";
+            data_prbs_poly_c: prbs_state := prbs31
             );
         port (
             clock_i : in std_ulogic;
@@ -190,9 +195,8 @@ package random_pkt_checker is
         generic (
             mtu_c: integer := 1500;
             config_c: config_t;
-            data_prbs_init: prbs_state := x"deadbee"&"111";
-            data_prbs_poly: prbs_state := prbs31;
-            header_crc_params_c: crc_params_t
+            data_prbs_init_c: prbs_state := x"deadbee"&"111";
+            data_prbs_poly_c: prbs_state := prbs31
             );
           port (
             clock_i : in std_ulogic;
@@ -202,9 +206,7 @@ package random_pkt_checker is
             in_o : out slave_t;
             --
             out_o : out master_t;
-            out_i : in slave_t;
-            --
-            toggle_o : out std_ulogic
+            out_i : in slave_t
             );
         end component;
     -- Generate a std_ulogic error signal by comparing feedback with status
@@ -230,90 +232,57 @@ end package;
 
 package body random_pkt_checker is
 
-    function header_unpack(header : byte_string; valid_len : natural) return header_t is
-        variable ret : header_t;
-        variable idx : natural := 0;
+    function header_unpack(header : header_packed_t; valid_len : natural) return header_t
+    is
+        variable tmp_header : header_packed_t := header;
     begin
-        -- Initialize fields to zero
-        ret.seq_num   := (others => '0');
-        ret.pkt_size  := (others => '0');
-        ret.rand_data := (others => '0');
-        ret.crc       := (others => '0');
-    
-        -- === seq_num ===
-        if valid_len > idx then
-            ret.seq_num := (7 downto 0 => '0') & unsigned(header(idx));  -- LSB = received byte
-            idx := idx + 1;
-        end if;
-        if valid_len > idx then
-            ret.seq_num := unsigned(header(idx)) & ret.seq_num(7 downto 0); -- MSB received
-            idx := idx + 1;
-        end if;
-    
-        -- === pkt_size ===
-        if valid_len > idx then
-            ret.pkt_size := (7 downto 0 => '0') & unsigned(header(idx));
-            idx := idx + 1;
-        end if;
-        if valid_len > idx then
-            ret.pkt_size := unsigned(header(idx)) & ret.pkt_size(7 downto 0);
-            idx := idx + 1;
-        end if;
-    
-        -- === rand_data ===
-        if valid_len > idx then
-            ret.rand_data := (7 downto 0 => '0') & unsigned(header(idx));
-            idx := idx + 1;
-        end if;
-        if valid_len > idx then
-            ret.rand_data := unsigned(header(idx)) & ret.rand_data(7 downto 0);
-            idx := idx + 1;
-        end if;
-    
-        -- === crc ===
-        if valid_len > idx then
-            ret.crc := (7 downto 0 => '0') & unsigned(header(idx));
-            idx := idx + 1;
-        end if;
-        if valid_len > idx then
-            ret.crc := unsigned(header(idx)) & ret.crc(7 downto 0);
-            idx := idx + 1;
-        end if;
-    
-        return ret;
+        for i in tmp_header'range
+        loop
+            if valid_len <= i then
+                tmp_header(i) := to_byte(0);
+            end if;
+        end loop;
+
+        return header_t'(
+            cmd => cmd_unpack(tmp_header(0 to 3)),
+            crc => crc_load(header_crc_params_c, tmp_header(4 to 7))
+        );
     end function;
 
-    function header_pack(seq_num : unsigned;
-                         pkt_size : unsigned;
-                         filler_header_crc  : crc_state_t;
-                         header_crc_params_c : crc_params_t) return byte_string
+    function header_from_cmd(cmd:cmd_t) return header_t
     is
-        variable ret: byte_string(0 to HEADER_SIZE- 1) := (others => (others => '0'));
-        variable rand_data_v : byte_string(0 to 1) := prbs_byte_string(to_prbs_state(pkt_size(14 downto 0)), prbs15, 2);
+    begin
+        return header_t'(
+            cmd => cmd,
+            crc => crc_update(header_crc_params_c, 
+                                crc_init(header_crc_params_c),
+                                cmd_pack(cmd))
+        );
+    end function;
+
+    function cmd_pack(cmd : cmd_t) return cmd_packed_t
+    is
+    begin
+        return to_le(cmd.seq_num) & to_le(cmd.pkt_size);
+    end function;
+
+    function header_pack(header: header_t) return header_packed_t
+    is
+        variable ret: header_packed_t := (others => (others => '0'));
     begin 
-        ret(0) := std_ulogic_vector(seq_num(7 downto 0));
-        ret(1) := std_ulogic_vector(seq_num(15 downto 8));
-        ret(2) := std_ulogic_vector(pkt_size(7 downto 0));
-        ret(3) := std_ulogic_vector(pkt_size(15 downto 8));
-        ret(4) := rand_data_v(1);
-        ret(5) := rand_data_v(0); 
-        ret(6) := crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                filler_header_crc,
-                                ret(0 to 5)))(0);
-        ret(7) := crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                filler_header_crc,
-                                ret(0 to 5)))(1);
+        ret(0 to 3) := cmd_pack(header.cmd);
+        ret(4 to 7) := crc_spill(header_crc_params_c, 
+                                header.crc);
         return ret;
     end function;
-
-
-    function cmd_unpack(cmd : byte_string) return cmd_t 
+    
+    function cmd_unpack(cmd : cmd_packed_t) return cmd_t 
     is
-        variable ret: cmd_t;
     begin
-        ret.cmd_seqnum := unsigned(cmd(1)) & unsigned(cmd(0));
-        ret.cmd_pkt_size := unsigned(cmd(3)) & unsigned(cmd(2));
-        return ret;
+        return cmd_t'(
+         seq_num => from_le(cmd(0 to 1)),
+         pkt_size => from_le(cmd(2 to 3))
+        );
     end function;
 
     function stats_unpack(b : byte_string) return stats_t
@@ -354,7 +323,7 @@ package body random_pkt_checker is
                         seq_num : unsigned(15 downto 0);
                         header_crc_params_c: crc_params_t) return byte_string 
     is 
-        variable ret : byte_string(0 to HEADER_SIZE-1) := (others => (others => '-'));
+        variable ret : header_packed_t := (others => (others => '-'));
         variable rand_data_v : byte_string(0 to 1) := reverse(prbs_byte_string(to_prbs_state(rx_header_size(14 downto 0)), prbs15, 2));
         variable header_byte_str_v : byte_string(0 to 5) := to_le(seq_num) & to_le(rx_header_size) & rand_data_v(0) & rand_data_v(1);
         variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
