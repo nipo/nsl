@@ -488,9 +488,8 @@ package body crc is
   function crc_is_valid(params : crc_params_t;
                         data : byte_string) return boolean
   is
-    constant state : crc_state_t := crc_check(params);
   begin
-    return state = crc_update(params, crc_init(params), data);
+    return crc_is_valid(params, crc_update(params, crc_init(params), data));
   end function;
 
   function crc_is_valid(params : crc_params_t;
