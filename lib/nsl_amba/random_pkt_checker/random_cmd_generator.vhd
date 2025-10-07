@@ -14,9 +14,10 @@ use nsl_data.endian.all;
 entity random_cmd_generator is
   generic (
     mtu_c: integer := 1500;
-    header_prbs_init: prbs_state := x"d"&"111";
-    header_prbs_poly: prbs_state := prbs7;
-    config_c : config_t := config(2, last => true)
+    header_prbs_init_c: prbs_state := x"d"&"111";
+    header_prbs_poly_c: prbs_state := prbs7;
+    config_c : config_t := config(2, last => true);
+    min_pkt_size : integer := 1
     );
   port (
     clock_i : in std_ulogic;
@@ -31,7 +32,7 @@ end entity;
 
 architecture beh of random_cmd_generator is
     constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c);
-    constant cmd_buf_config : buffer_config_t := buffer_config(config_c, CMD_SIZE);
+    constant cmd_buf_config : buffer_config_t := buffer_config(config_c, cmd_packed_t'length);
 
     type state_t is (
         ST_RESET,
@@ -42,10 +43,9 @@ architecture beh of random_cmd_generator is
     type regs_t is
         record
             state : state_t;
-            pkt_size : unsigned(15 downto 0);
-            state_size_gen : prbs_state(6 downto 0);
+            cmd: cmd_t;
+            state_size_gen : prbs_state(header_prbs_init_c'range);
             cmd_buf : buffer_t;
-            seq_num : unsigned(15 downto 0);
         end record;
       
         signal r, rin: regs_t;
@@ -59,49 +59,30 @@ begin
       end if;
       if reset_n_i = '0' then
         r.state <= ST_RESET;
-        r.pkt_size <= (others => '0');
-        r.state_size_gen <= header_prbs_init;
-        r.cmd_buf <= reset(cmd_buf_config);
-        r.seq_num <= x"0001";
+        r.state_size_gen <= header_prbs_init_c;
+        r.cmd.seq_num <= (others => '0');
+        r.cmd.pkt_size <= (others => '0');
       end if;
     end process;
 
-      gen_cmd_process: process(r, out_i, enable_i)
-        variable pkt_size_v : unsigned(15 downto 0) := (others => '0');
-        variable prbs_val : unsigned(mtu_l2-1 downto 0);
-        variable tmp_val  : integer;
+    gen_cmd_process: process(r, out_i, enable_i)
     begin
 
         rin <= r;
 
-        prbs_val := unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly, mtu_l2));
-        tmp_val  := to_integer(prbs_val) + 1;
-        
-        if tmp_val > mtu_c then
-            tmp_val := mtu_c;
-        end if;
-        
-        pkt_size_v := to_unsigned(tmp_val, pkt_size_v'length);
-
         case r.state is
-
             when ST_RESET =>
                 rin.state <= ST_GEN_CMD;        
             
             when ST_GEN_CMD =>
                 if to_boolean(enable_i) then
-                    if is_ready(config_c, out_i) then
-                        rin.seq_num <= r.seq_num + 1;
-                        rin.pkt_size <= pkt_size_v;
+                    rin.cmd.pkt_size <= resize(unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly_c, mtu_l2)), r.cmd.pkt_size'length);
+                    rin.state_size_gen <= prbs_forward(r.state_size_gen, header_prbs_poly_c, mtu_l2);
+
+                    if r.cmd.pkt_size >= min_pkt_size and r.cmd.pkt_size <= mtu_c then
                         rin.state <= ST_SEND_CMD;
-                        rin.state_size_gen <= prbs_forward(r.state_size_gen,
-                                                           header_prbs_poly,
-                                                           config_c.data_width);
-                        rin.cmd_buf <= reset(cmd_buf_config, 
-                                             to_be(r.seq_num(7 downto 0) & 
-                                                   r.seq_num(15 downto 8) & 
-                                                   pkt_size_v(7 downto 0) & 
-                                                   pkt_size_v(15 downto 8)));
+                        rin.cmd_buf <= reset(cmd_buf_config, cmd_pack(r.cmd));
+                        rin.cmd.seq_num <= r.cmd.seq_num + 1;
                     end if;
                 end if;
 
