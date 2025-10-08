@@ -22,5 +22,7 @@ tb += axi4_stream_buffer
 tb += axi4_stream_buffer_io
 tb += axi4_stream_buffer_align
 tb += axi4_stream_buffer_short
+tb += axi4_stream_random_pkt_checker
+tb += axi4_stream_error_inserter
 
 include ../subdir.mk
