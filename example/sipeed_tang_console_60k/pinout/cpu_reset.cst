@@ -1,0 +1,2 @@
+IO_LOC  "cpu_reset_i" F4;
+IO_PORT "cpu_reset_i" IO_TYPE=LVCMOS15 PULL_MODE=UP BANK_VCCIO=1.5;

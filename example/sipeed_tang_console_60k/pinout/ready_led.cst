@@ -1,0 +1,2 @@
+IO_LOC  "ready_led_o" U12;
+IO_PORT "ready_led_o" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;

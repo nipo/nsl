@@ -1,0 +1,4 @@
+IO_LOC  "pll_clk2_i"   V10;
+IO_PORT "pll_clk2_i"   IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=1.5;
+# PLL clk 0/1 goes to q0_refclk1
+# PLL i2c goes to debug bridge and is shared with DDC

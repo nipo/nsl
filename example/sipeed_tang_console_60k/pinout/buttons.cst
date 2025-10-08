@@ -1,0 +1,6 @@
+IO_LOC  "s_n_i[1]" AA13;
+IO_PORT "s_n_i[1]" IO_TYPE=LVCMOS15 PULL_MODE=UP BANK_VCCIO=1.5;
+IO_LOC  "s_n_i[2]" AB13;
+IO_PORT "s_n_i[2]" IO_TYPE=LVCMOS15 PULL_MODE=UP BANK_VCCIO=1.5;
+# Also Y12, unwired
+# Also, F4 is S2 on SOM
