@@ -31,6 +31,7 @@ entity terminal_text_buffer is
     sof_i : in  std_ulogic;
     sol_i : in  std_ulogic;
     pixel_ready_i : in std_ulogic;
+    pixel_valid_o : out std_ulogic;
     pixel_o : out nsl_color.rgb.rgb24;
 
     term_clock_i : in  std_ulogic;
@@ -513,12 +514,14 @@ begin
     begin
       glyph_line_ready_s <= '0';
       pixel_o <= nsl_color.rgb.rgb24_black;
+      pixel_valid_o <= '0';
 
       case r.state is
         when ST_FILL =>
           glyph_line_ready_s <= '1';
 
         when ST_RENDER =>
+          pixel_valid_o <= '1';
           if r.pixels(0) = '1' then
             pixel_o <= r.fg;
           else

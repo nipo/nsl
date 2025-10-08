@@ -68,6 +68,7 @@ package encoder is
       sol_o : out std_ulogic;
       -- Asserted every cycle pixel data is taken by encoder
       pixel_ready_o : out std_ulogic;
+      pixel_valid_i : in std_ulogic := '1';
       pixel_i : in nsl_color.rgb.rgb24;
       
       tmds_o : out work.dvi.symbol_vector_t

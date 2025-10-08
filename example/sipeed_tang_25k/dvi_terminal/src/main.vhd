@@ -75,7 +75,7 @@ architecture beh of main is
 
   signal tmds_s : nsl_dvi.dvi.symbol_vector_t;
 
-  signal sol_s, sof_s, pixel_ready_s : std_ulogic;
+  signal sol_s, sof_s, pixel_ready_s, pixel_valid_s : std_ulogic;
   signal pixel_s : nsl_color.rgb.rgb24;
 
 begin
@@ -153,6 +153,7 @@ begin
        sof_o => sof_s,
        sol_o => sol_s,
        pixel_ready_o => pixel_ready_s,
+       pixel_valid_i => pixel_valid_s,
        pixel_i => pixel_s,
   
        tmds_o => tmds_s
@@ -211,6 +212,7 @@ begin
         sof_i => sof_s,
         sol_i => sol_s,
         pixel_ready_i => pixel_ready_s,
+        pixel_valid_o => pixel_valid_s,
         pixel_o => pixel_s,
 
         term_clock_i => clock_i,
