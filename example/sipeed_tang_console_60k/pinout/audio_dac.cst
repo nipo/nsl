@@ -1,0 +1,8 @@
+IO_LOC  "audio_dac_bck_o" 	Y17;
+IO_LOC  "audio_dac_wck_o" 	AB17;
+IO_LOC  "audio_dac_dout_o" 	AA16;
+IO_LOC  "audio_pa_en_o" 	Y14;
+IO_PORT "audio_dac_bck_o"    IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "audio_dac_wck_o"     IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "audio_dac_dout_o"    IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "audio_pa_en_o"     IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;

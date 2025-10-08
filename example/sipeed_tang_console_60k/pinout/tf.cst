@@ -1,0 +1,15 @@
+IO_LOC  "tf_clk_o"    V15;
+IO_PORT "tf_clk_o"    IO_TYPE=LVCMOS33;
+IO_LOC  "tf_cmd_o"    Y16;
+IO_PORT "tf_cmd_o"    IO_TYPE=LVCMOS33;
+IO_LOC  "tf_dat_io[0]" AA15;
+IO_PORT "tf_dat_io[0]" IO_TYPE=LVCMOS33;
+IO_LOC  "tf_dat_io[1]" AB15;
+IO_PORT "tf_dat_io[1]" IO_TYPE=LVCMOS33;
+IO_LOC  "tf_dat_io[2]" W14;
+IO_PORT "tf_dat_io[2]" IO_TYPE=LVCMOS33;
+IO_LOC  "tf_dat_io[3]" W15;
+IO_PORT "tf_dat_io[3]" IO_TYPE=LVCMOS33;
+IO_LOC  "tf_det_i" Y13;
+IO_PORT "tf_det_i" IO_TYPE=LVCMOS33;
+
