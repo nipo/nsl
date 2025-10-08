@@ -20,7 +20,7 @@ end boundary;
 
 architecture arch of boundary is
 
-  constant mtu_c : integer := 50;
+  constant mtu_c : integer := 500;
   constant probability_denom_l2_c : integer range 1 to 31 := 31;
   constant probability_c : real := 0.001;
   constant mode_c : string(1 to 6) := "RANDOM";
@@ -29,7 +29,6 @@ architecture arch of boundary is
   constant pkt_disappearance_rate_l2 : integer := nsl_math.arith.log2(pkt_disappearance_rate);
   constant tx_stream_cfg : config_t := config(4, keep => true, last => true);
   constant rx_stream_cfg : config_t := config(2, keep => true, last => true);
-  constant pressed_button_delay : integer := 25000000; -- 0.5 sec delay for 50MHz clock
   constant stats_buf_config_c : buffer_config_t := buffer_config(rx_stream_cfg, STATS_SIZE);
   constant feedback_default : error_feedback_t := (error => '0',
                                                    pkt_index_ko => to_unsigned(0, 16));
@@ -45,31 +44,18 @@ architecture arch of boundary is
     ST_ERROR_INCR,
     ST_ERROR_ASSERT
     );
-
-  type button_stats_t is (
-    BUTTON_STATE_IDLE,
-    BUTTON_STATE_INSERT_INDEX_ERR,
-    BUTTON_STATE_PRINT_INSERTED_ERR,
-    BUTTON_STATE_PRINT_DROPPED_PKTS
-    );
       
-  constant blink_time: integer := 25000000;
-  signal cnt: integer := 0;
-  signal led_state: std_ulogic := '0';
   signal insert_error_s : boolean := false;
   signal byte_index_s : integer range 0 to rx_stream_cfg.data_width;
   signal feed_back_s, feed_back_ipg_s : error_feedback_t;
 
-  signal cmd_bus, tx_bus , stats_bus, adapter_bus, adapter_inter_pkt_gap_bus, err_inserter_bus, pkt_validator_rand_back_pressure_bus, adapter_ipg_bus, debug_bus  : bus_t;
+  signal cmd_bus, tx_bus, stats_bus, adapter_bus, err_inserter_bus, adapter_ipg_bus : bus_t;
 
   signal clock_s, reset_n_s: std_ulogic;
   signal pressed_s: std_ulogic_vector(s_i'range);
 
   type regs_t is
     record
-      button_state : button_stats_t;
-      pressed_button_delay_cnt : integer range 0 to pressed_button_delay; 
-      button_pressed1, button_pressed2 : std_ulogic;
       stats_report_cnt : unsigned(7 downto 0);
       injected_error_cnt : unsigned(7 downto 0);
       ipg_cnt : integer range 0 to inter_pkt_gap_size + 1;
@@ -77,13 +63,7 @@ architecture arch of boundary is
       tb_error: unsigned(7 downto 0);
       state : state_t;
       incr_state : error_state_t;
-      rx_bytes, rx_bytes_r : integer range 0 to 2*mtu_c;
-      seq_num : unsigned(15 downto 0);
       stats_buf : buffer_t;
-      -- DEBUG
-      seq_num_ko_debug : boolean;
-      stats_debug, stats_debug_r : stats_t;
-      nbr_err_inserted_debug : unsigned(15 downto 0);
     end record;
 
   signal r, rin: regs_t;
@@ -97,10 +77,6 @@ begin
     end if;
 
     if reset_n_s = '0' then
-      r.button_state <= BUTTON_STATE_IDLE;
-      r.pressed_button_delay_cnt <= 0;
-      r.button_pressed1 <= '0';
-      r.button_pressed2 <= '0';
       r.stats_report_cnt <= (others => '0');
       r.injected_error_cnt <= (others => '0');
       r.ipg_cnt <=  0;
@@ -108,12 +84,7 @@ begin
       r.tb_error <= x"00";
       r.state <=  ST_IDLE;
       r.incr_state <=  ST_ERROR_IDLE;
-      r.rx_bytes <=  0;
-      r.rx_bytes_r <=  0;
-      r.seq_num <=  (others => '0');
       r.stats_buf <= reset(stats_buf_config_c);
-      r.seq_num_ko_debug <= true;
-      r.nbr_err_inserted_debug <= (others => ('0'));
     end if;
   end process;
 
@@ -209,32 +180,11 @@ begin
 
     stats_v := stats_unpack(bytes(stats_buf_config_c, shift(stats_buf_config_c, r.stats_buf, stats_bus.m)));
 
-    if is_valid(rx_stream_cfg, adapter_ipg_bus.m) and is_ready(rx_stream_cfg, adapter_ipg_bus.s) then
-      rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg, adapter_ipg_bus.m));
-      if is_last(rx_stream_cfg, adapter_ipg_bus.m) then
-        rin.rx_bytes_r <= r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg, adapter_ipg_bus.m));
-        rin.rx_bytes <= 0;
-      end if;
-    end if;
-
-    if feed_back_ipg_s.error = '1' and is_ready(rx_stream_cfg, err_inserter_bus.s) then
-      rin.nbr_err_inserted_debug <= r.nbr_err_inserted_debug + 1;
-    end if;
-
-    if is_valid(rx_stream_cfg, err_inserter_bus.m) and is_ready(rx_stream_cfg, err_inserter_bus.s) then
-      if is_last(rx_stream_cfg, adapter_ipg_bus.m) then
-        rin.seq_num <= r.seq_num + 1;
-      end if;
-    end if;
-
     if is_ready(rx_stream_cfg, stats_bus.s) and is_valid(rx_stream_cfg, stats_bus.m) then
       rin.stats_buf <= shift(stats_buf_config_c, r.stats_buf, stats_bus.m);
-      if is_last(rx_stream_cfg, stats_bus.m) then-- is_last(stats_buf_config_c, r.stats_buf) then
+      if is_last(rx_stream_cfg, stats_bus.m) then
         if not stats_v.stats_payload_valid or not stats_v.stats_header_valid then
           rin.stats_report_cnt <= r.stats_report_cnt + 1;
-          rin.stats_debug_r <= r.stats_debug;
-          rin.stats_debug <= stats_v;
-          
         end if;
       end if;
     end if;
@@ -243,16 +193,6 @@ begin
       when ST_ERROR_IDLE =>
         if feed_back_ipg_s.error = '1' or r.state = ST_PKT_DROP then
           rin.incr_state <= ST_ERROR_INCR;
-        end if;
-        --
-        if is_valid(rx_stream_cfg, adapter_ipg_bus.m) and is_ready(rx_stream_cfg, adapter_ipg_bus.s) then
-          if is_last(rx_stream_cfg, adapter_ipg_bus.m) then
-            if (r.rx_bytes_r < 2 and (r.seq_num > 255)) then
-              if r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg, adapter_ipg_bus.m)) /= 1 then
-                rin.incr_state <= ST_ERROR_INCR;
-              end if;
-            end if;
-          end if;
         end if;
 
       when ST_ERROR_INCR => 

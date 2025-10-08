@@ -16,14 +16,13 @@ entity tb is
 end tb;
 
 architecture arch of tb is
-  constant max_errors_per_scenario_c : natural := 250;
   constant mtu_c : integer := 50;
-  constant nbr_pkt_to_test : integer := 10000000;
+  constant nbr_pkt_to_test : integer := 10000;
   constant probability_denom_l2_c : integer range 1 to 31 := 31;
   constant probability_c : real := 0.1;
   constant mode_c : string(1 to 6) := "RANDOM";
-  constant nbr_scenario : integer := 1;
-  constant inter_pkt_gap_size : integer := 10000;
+  constant nbr_scenario : integer := 3;
+  constant inter_pkt_gap_size : integer := 100;
   constant pkt_disappearance_rate : integer := 64;
   constant pkt_disappearance_rate_l2 : integer := nsl_math.arith.log2(pkt_disappearance_rate);
 
@@ -64,16 +63,6 @@ architecture arch of tb is
      1 => config(4, keep => true, last => true), -- 4
      2 => config(4, keep => true, last => true), -- 2
      3 => config(8, keep => true, last => true));-- 8
-
-  constant header_crc_params : crc_params_t := crc_params(
-    init             => "",
-    poly             => x"18005",
-    complement_input => false,
-    complement_state => false,
-    byte_bit_order   => BIT_ORDER_ASCENDING,
-    spill_order      => EXP_ORDER_DESCENDING,
-    byte_order       => BYTE_ORDER_INCREASING
-    );
 
   function to_string(
     stats      : stats_t; 
@@ -131,12 +120,7 @@ architecture arch of tb is
       state : state_t;
       incr_state : incr_state_t;
       pkt_drop_cnt : integer;
-      rx_bytes, rx_bytes_r : integer range 0 to 2*mtu_c;
-      seq_num : unsigned(15 downto 0);
       stats_buf : buffer_t;
-      -- DEBUG
-      cmd_debug : cmd_t;
-      stats_debug : stats_t;
     end record;
 
   signal clock_s : std_ulogic;
@@ -148,7 +132,7 @@ architecture arch of tb is
   -- STATISTICS
   signal pkt_size_distribution_s : size_distribution_t := (others => (others => 0));
   signal index_data_ko_distribution_s : index_ko_t := (others => (others => 0));
-  shared variable ignore_pkt_sh_v, insert_seq_num_error_sh_v : boolean_vector(0 to nbr_scenario - 1) := (others => false);
+  shared variable insert_seq_num_error_sh_v : boolean_vector(0 to nbr_scenario - 1) := (others => false);
   --
   shared variable done_s_tmp : std_ulogic_vector(0 to nbr_scenario - 1);
   signal cmd_bus, tx_bus ,stats_bus, adapter_bus, adapter_ipg_bus, err_inserter_bus : bus_vector(0 to nbr_scenario - 1);
@@ -174,11 +158,6 @@ begin
         r.state <=  ST_IDLE;
         r.incr_state <=  ST_IDLE;
         r.pkt_drop_cnt <=  0;
-        r.cmd_debug.seq_num <= (others => '0');
-        r.cmd_debug.pkt_size <= (others => '0');
-        r.rx_bytes <=  0;
-        r.rx_bytes_r <=  0;
-        r.seq_num <= (others => '0');
         r.stats_buf <=  reset(stats_buf_config_c);
       end if;
     end process;
@@ -264,24 +243,9 @@ begin
 
       stats_v := stats_unpack(bytes(stats_buf_config_c, shift(stats_buf_config_c, r.stats_buf, stats_bus(i).m)));
 
-      if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) then
-        rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg_array(i), adapter_ipg_bus(i).m));
-        if is_last(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) then
-          rin.rx_bytes_r <= r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg_array(i), adapter_ipg_bus(i).m));
-          rin.rx_bytes <= 0;
-        end if;
-      end if;
-
-      if is_valid(rx_stream_cfg_array(i), err_inserter_bus(i).m) and is_ready(rx_stream_cfg_array(i), err_inserter_bus(i).s) then
-        if is_last(rx_stream_cfg_array(i), err_inserter_bus(i).m) then
-          rin.seq_num <= r.seq_num + 1;
-        end if;
-      end if;
-
       if is_ready(rx_stream_cfg_array(i), stats_bus(i).s) and is_valid(rx_stream_cfg_array(i), stats_bus(i).m) then
         rin.stats_buf <= shift(stats_buf_config_c, r.stats_buf, stats_bus(i).m);
         if is_last(stats_buf_config_c, r.stats_buf) then
-          rin.stats_debug <= stats_v;
           if not stats_v.stats_payload_valid or not stats_v.stats_header_valid then
             rin.stats_report_cnt <= r.stats_report_cnt + 1;
           end if;
@@ -292,16 +256,6 @@ begin
         when ST_IDLE =>
           if feed_back_ipg_s(i).error = '1' or r.state = ST_PKT_DROP then
             rin.incr_state <= ST_INCR;
-          end if;
-          --
-          if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) then
-            if is_last(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) then
-              if (r.rx_bytes_r < 2 and (r.seq_num > 255)) then
-                if r.rx_bytes + count_valid_bytes(keep(rx_stream_cfg_array(i), adapter_ipg_bus(i).m)) /= 1 then
-                  rin.incr_state <= ST_INCR;
-                end if;
-              end if;
-            end if;
           end if;
 
         when ST_INCR => 
@@ -343,11 +297,9 @@ begin
             end if;
 
           when ST_PKT_DROP => 
-            ignore_pkt_sh_v(i) := true;
             if is_valid(rx_stream_cfg_array(i), err_inserter_bus(i).m) and is_ready(rx_stream_cfg_array(i), err_inserter_bus(i).s) then
               if is_last(rx_stream_cfg_array(i), err_inserter_bus(i).m) then
                 rin.pkt_drop_cnt <= r.pkt_drop_cnt + 1;
-                ignore_pkt_sh_v(i) := false;
                 insert_seq_num_error_sh_v(i) := true;
                 rin.state <= ST_IDLE;
               end if;
@@ -383,13 +335,12 @@ begin
       -- Statistics collection
       variable pkt_size_distribution_v :integer_vector(0 to mtu_c) := (others => 0);
       variable index_data_ko_distribution_v : integer_vector(0 to mtu_c) := (others => 0);
-      variable feedback_array_v : error_feedback_array_t(0 to max_errors_per_scenario_c - 1);
       --
       variable first_error_v : boolean := true;
       variable stats_buf_v : buffer_t := reset(stats_buf_config_v_c);
-      variable rx_bytes_v, rx_bytes_r_v : integer range 0 to 2*mtu_c;
+      variable rx_bytes_v : integer range 0 to 2*mtu_c;
       variable stats_v : stats_t;
-      variable tested_pkts_v, seq_num_v : integer := 0;
+      variable tested_pkts_v : integer := 0;
       variable feedback_v : error_feedback_t;
     begin 
       if reset_n_s = '0' then
@@ -399,14 +350,6 @@ begin
           --
           if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) then
             rx_bytes_v := rx_bytes_v + count_valid_bytes(keep(rx_stream_cfg_array(i), adapter_ipg_bus(i).m));
-            if is_last(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) then
-              rx_bytes_r_v := rx_bytes_v;
-            end if;
-          end if;
-          if is_valid(rx_stream_cfg_array(i), err_inserter_bus(i).m) and is_ready(rx_stream_cfg_array(i), err_inserter_bus(i).s) then
-            if is_last(rx_stream_cfg_array(i), err_inserter_bus(i).m) then
-              seq_num_v := seq_num_v + 1;
-            end if;
           end if;
           --
           if insert_seq_num_error_sh_v(i) then
@@ -419,10 +362,6 @@ begin
               else
                 feedback_v := feed_back_ipg_s(i);
               end if;
-              first_error_v := false;
-            end if;
-            if rx_bytes_r_v < 2 and (seq_num_v > 255) then
-              feedback_v := header_error;
               first_error_v := false;
             end if;
           end if;
@@ -486,7 +425,6 @@ begin
               log_info("  " & to_string(j) & " : " & to_string(index_data_ko_distribution_s(s)(j)));
             end if;
           end loop;
-          --log_info("SCENARIO " & to_string(s) & " DUMP PKTS SUMMARY:" & to_string(r.pkt_drop_cnt(s)));
         end loop;  
         done_s <= done_s_tmp;
       end if;

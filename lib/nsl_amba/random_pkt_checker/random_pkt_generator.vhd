@@ -7,7 +7,6 @@ use nsl_data.bytestream.all;
 use nsl_amba.axi4_stream.all;
 use nsl_data.crc.all;
 use nsl_data.prbs.all;
-use nsl_logic.bool.all;
 use nsl_amba.random_pkt_checker.all;
 use nsl_data.endian.all;
 
@@ -36,7 +35,6 @@ architecture beh of random_pkt_generator is
     constant header_config_c : buffer_config_t := buffer_config(config_c, header_size);
     constant cmd_buf_config : buffer_config_t := buffer_config(config_c, cmd_packed_t'length);
     constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c) + 1;
-    constant header_l2 : integer := nsl_math.arith.log2(header_packed_t'length) + 1;
     constant data_width_l2 : integer := nsl_math.arith.log2(config_c.data_width);
 
     type state_t is (
@@ -66,7 +64,6 @@ architecture beh of random_pkt_generator is
             cmd: cmd_t;
             header : buffer_t;
             cmd_buf : buffer_t;
-            filler_header_crc  : crc_state_t;
             data_remainder : integer range 0 to config_c.data_width - 1;
             tx_bytes : unsigned(mtu_l2 - 1 downto 0);
             pkt_has_data : boolean;
@@ -86,7 +83,6 @@ begin
     end process;
 
     gen_process: process(r, in_i, out_i)
-        variable payload_byte_v : byte_string(0 to config_c.data_width -1);
         variable cmd_v : cmd_t;
         variable cmd_byte_v : cmd_packed_t;
     begin
@@ -95,11 +91,6 @@ begin
 
         cmd_byte_v := bytes(cmd_buf_config, r.cmd_buf);
         cmd_v := cmd_unpack(cmd_byte_v);
-
-        payload_byte_v := prbs_byte_string(
-                            r.state_pkt_gen, 
-                            data_prbs_poly_c,
-                            config_c.data_width);
 
         case r.state is
             when ST_RESET =>
@@ -123,7 +114,6 @@ begin
                 rin.data_remainder <= to_integer(cmd_v.pkt_size(data_width_l2 -1 downto 0));
                 rin.pkt_has_data <= (cmd_v.pkt_size > header_packed_t'length);
                 rin.state <= ST_BUILD_HEADER;
-                rin.filler_header_crc <= crc_init(header_crc_params_c);
 
             when ST_BUILD_HEADER => 
                 rin.header <= reset(header_config_c, 
@@ -134,14 +124,8 @@ begin
                 if is_ready(config_c, out_i) then
                     rin.tx_bytes <= r.tx_bytes + config_c.data_width;
                     rin.header <= shift(header_config_c, r.header);
-                    rin.filler_header_crc <= crc_update(header_crc_params_c, 
-                                                        r.filler_header_crc, 
-                                                        bytes(config_c,in_i));
-
+                    
                     if is_last(header_config_c, r.header) or r.tx_bytes >= r.cmd.pkt_size then
-                        -- pkt size if random beetween 1 and mtu including the header.
-                        -- pkt_size < header_packed_t'length means we only send parts of header and
-                        -- no data payload
                         if r.pkt_has_data then 
                             rin.pkt_has_data <= false;
                             rin.state <= ST_SEND_PAYLOAD;
@@ -174,8 +158,7 @@ begin
     begin
 
         is_last_word := (is_last(header_config_c, r.header) and
-                        r.cmd.pkt_size <= header_packed_t'length) or
-                        (r.tx_bytes >= r.cmd.pkt_size);
+                        r.cmd.pkt_size <= header_packed_t'length) or (r.tx_bytes >= r.cmd.pkt_size);
 
         out_o <= transfer_defaults(config_c);
 

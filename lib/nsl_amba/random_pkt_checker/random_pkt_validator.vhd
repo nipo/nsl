@@ -65,16 +65,12 @@ architecture beh of random_pkt_validator is
             state_pkt_gen :  prbs_state(30 downto 0);
             rx_bytes : unsigned(mtu_l2 - 1 downto 0);
             header_buf : buffer_t;
-            header : header_t;
             stats : stats_t;
             stats_buf : buffer_t;
             cmd : cmd_t;
+            rx_cmd : cmd_t;
             was_last_beat : boolean;
-            last_was_seq_num_err : boolean;
             header_crc : crc_state_t;
-            -- DEBUG 
-            header_byte_ref_debug : byte_string(0 to header_packed_t'length-1);
-            payload_byte_ref_debug : byte_string(0 to config_c.data_width -1);
         end record;
 
     signal r, rin: regs_t;
@@ -97,24 +93,18 @@ begin
         r.stats.stats_payload_valid <= true;
         r.stats.stats_index_data_ko <= (others => '0');
         r.was_last_beat <= false;
-        r.last_was_seq_num_err <= false;
         r.cmd.seq_num <= (others => '0');
         r.header_crc <= crc_init(header_crc_params_c);
       end if;
     end process;
 
     rx_process: process(r, in_i, out_i, rin)
-        variable header_v,next_header : header_t;
+        variable header_v : header_t;
         variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
-        variable header_byte_ref_v, rx_header_v : header_packed_t;
+        variable header_byte_ref_v : header_packed_t;
     begin
         rin <= r;
-
-        next_header := header_unpack(bytes(header_config_c,
-                                           shift(header_config_c, r.header_buf, in_i)), 
-                                     to_integer(r.rx_bytes + count_valid_bytes(keep(config_c, in_i))));
-        rx_header_v := bytes(header_config_c,r.header_buf);
-        
+       
         header_v := header_unpack(bytes(header_config_c,r.header_buf), to_integer(r.rx_bytes));
         header_byte_ref_v := header_pack(header_from_cmd(r.cmd));
 
@@ -154,7 +144,7 @@ begin
                     end if;
 
                 when ST_HEADER_STATS =>
-                    rin.header <= header_v;
+                    rin.rx_cmd <= header_v.cmd;
                     if not r.was_last_beat then
                         if crc_is_valid(header_crc_params_c, r.header_crc) then
                             rin.state <= ST_DATA;
@@ -175,7 +165,7 @@ begin
                     else
                         for i in 0 to header_packed_t'length - 1 loop
                             if i < to_integer(r.rx_bytes) then
-                                if header_byte_ref_v(i) /= rx_header_v(i) then
+                                if header_byte_ref_v(i) /= bytes(header_config_c,r.header_buf)(i) then
                                     rin.stats.stats_header_valid <= false;
                                     rin.stats.stats_index_data_ko <= to_unsigned(0,r.stats.stats_index_data_ko'length);
                                     --
@@ -192,12 +182,9 @@ begin
                     rin.cmd.seq_num <= header_v.cmd.seq_num;
                     rin.stats.stats_seqnum <= header_v.cmd.seq_num;
                     rin.stats.stats_pkt_size <= header_v.cmd.pkt_size;
-                    -- DEBUG
-                    rin.header_byte_ref_debug <= header_byte_ref_v;
 
                 when ST_DATA => 
                     if is_valid(config_c, in_i) then
-                        rin.payload_byte_ref_debug <= payload_byte_ref_v;
                         rin.stats.stats_seqnum <= r.cmd.seq_num;
                         rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
                         rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
@@ -218,7 +205,7 @@ begin
                         if is_last(config_c, in_i) then
                             rin.state <= ST_SEND_STATS;
                             if r.stats.stats_payload_valid then
-                                if r.header.cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, in_i)) then
+                                if r.rx_cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, in_i)) then
                                     rin.stats.stats_payload_valid <= false;
                                     rin.stats.stats_index_data_ko <= to_unsigned(10, r.stats.stats_index_data_ko'length); -- size header field
                                 end if;

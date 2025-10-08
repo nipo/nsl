@@ -56,17 +56,11 @@ package random_pkt_checker is
     function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
     function cmd_unpack(cmd : cmd_packed_t) return cmd_t;
     function cmd_pack(cmd : cmd_t) return cmd_packed_t;
-    function ref_header(rx_header_size : unsigned;
-                        seq_num : unsigned(15 downto 0);
-                        header_crc_params_c: crc_params_t) return byte_string;
-    function to_prbs_state(u : unsigned) return prbs_state;
     function stats_unpack(b : byte_string) return stats_t;
     function stats_pack(s : stats_t) return byte_string;
-    function max(a, b : unsigned) return unsigned;
     function header_pack(header: header_t) return header_packed_t;
     function header_from_cmd(cmd:cmd_t) return header_t;
     function count_valid_bytes(tkeep : std_ulogic_vector) return natural;
-    function to_slv(bstr : byte_string) return std_ulogic_vector;
     function is_seqnum_corrupted(index_ko : unsigned) return boolean;
     function is_size_corrupted(index_ko : unsigned) return boolean;
     function is_rand_data_corrupted(index_ko : unsigned) return boolean;
@@ -77,7 +71,7 @@ package random_pkt_checker is
     -- ================================================================
     --
     -- Data flows sequentially through four components:
-    -- random_cmd_generator -> random_pkt_generator -> random_pkt_validator -> random_stats_asserter
+    -- random_cmd_generator -> random_pkt_generator -> random_pkt_validator
     --
     --   +------------------------+
     --   |  random_cmd_generator  |
@@ -85,44 +79,31 @@ package random_pkt_checker is
     --   | Inputs: clock_i        |
     --   |         reset_n_i      |
     --   |         enable_i       |
-    --   | Outputs: out_o --------+-----------------------------+
-    --   |         out_i          |                             |
-    --   +------------------------+                             |
-    --                                                           |
-    --                                                           v
-    --   +------------------------+
-    --   |  random_pkt_generator  |
-    --   |------------------------|
-    --   | Inputs: clock_i        |
-    --   |         reset_n_i      |
+    --   | Outputs: out_o --------+----------------------+
+    --   |         out_i          |                      |
+    --   +------------------------+                      |
+    --                                                   |
+    --                                                   |
+    --   +------------------------+                      |
+    --   |  random_pkt_generator  |                      |
+    --   |------------------------|                      |
+    --   | Inputs: clock_i        |                      |
+    --   |         reset_n_i      |                      v
     --   |         in_i  <--------+  <- from cmd_generator
-    --   | Outputs: out_o --------+-----------------------------+
-    --   |         in_o           |
-    --   +------------------------+
-    --                                                           |
-    --                                                           v
-    --   +------------------------+
-    --   |  random_pkt_validator  |
-    --   |------------------------|
-    --   | Inputs: clock_i        |
-    --   |         reset_n_i      |
+    --   | Outputs: out_o --------+----------------------+
+    --   |         in_o           |                      |
+    --   +------------------------+                      |
+    --                                                   |
+    --                                                   |
+    --   +------------------------+                      |
+    --   |  random_pkt_validator  |                      |
+    --   |------------------------|                      |
+    --   | Inputs: clock_i        |                      |
+    --   |         reset_n_i      |                      v
     --   |         in_i  <--------+  <- from pkt_generator
     --   | Outputs: out_o --------+-----------------------------+
     --   |         in_o           |
     --   +------------------------+
-    --                                                           |
-    --                                                           v
-    --   +------------------------+
-    --   |  random_stats_asserter |
-    --   |------------------------|
-    --   | Inputs: clock_i        |
-
-    --   |         reset_n_i      |
-    --   |         in_i  <--------+  <- from pkt_validator
-    --   |         feedback_i     |
-    --   | Outputs: assert_error_o|
-    --   +------------------------+
-    --
     -- ================================================================
     -- Notes:
     -- 1. random_cmd_generator:
@@ -132,9 +113,7 @@ package random_pkt_checker is
     -- 3. random_pkt_validator:
     --    - Recreates reference data from received header using PRBS
     --    - Compares with received packet to detect corruption or loss
-    -- 4. random_stats_asserter:
-    --    - Produces std_ulogic error signal from validator feedback
-    --    - Can be used as a hardware trigger
+    --    - Generates status report whith the initial generated command, header/payload Ko bits. and ko byte index
     -- ================================================================
     -- Generate a pseudo-random command formed by concatenating
     -- a packet sequence number with a random size in the range 1 to mtu_c.
@@ -209,25 +188,6 @@ package random_pkt_checker is
             out_i : in slave_t
             );
         end component;
-    -- Generate a std_ulogic error signal by comparing feedback with status
-    -- from random_pkt_validator. Can be used as a hardware trigger.
-    component random_stats_asserter is
-        generic (
-            config_c: config_t
-            );
-            port (
-            clock_i : in std_ulogic;
-            reset_n_i : in std_ulogic;
-            --
-            in_i : in master_t;
-            in_o : out slave_t;
-            --
-            toggle_i : in std_ulogic;
-            --
-            feedback_i : in error_feedback_t;
-            assert_error_o : out std_ulogic
-            );
-  end component;
 end package;
 
 package body random_pkt_checker is
@@ -309,43 +269,6 @@ package body random_pkt_checker is
         return ret;
     end function;
 
-    -- Convert unsigned to prbs_state
-    function to_prbs_state(u : unsigned) return prbs_state is
-        variable result : prbs_state(14 downto 0);
-    begin
-        for i in u'range loop
-            result(i) := std_ulogic(u(i));
-        end loop;
-        return result;
-    end function;
-
-    function ref_header(rx_header_size : unsigned;
-                        seq_num : unsigned(15 downto 0);
-                        header_crc_params_c: crc_params_t) return byte_string 
-    is 
-        variable ret : header_packed_t := (others => (others => '-'));
-        variable rand_data_v : byte_string(0 to 1) := reverse(prbs_byte_string(to_prbs_state(rx_header_size(14 downto 0)), prbs15, 2));
-        variable header_byte_str_v : byte_string(0 to 5) := to_le(seq_num) & to_le(rx_header_size) & rand_data_v(0) & rand_data_v(1);
-        variable crc_0_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(1);
-        variable crc_1_v : byte :=  crc_spill(header_crc_params_c, crc_update(header_crc_params_c, 
-                                                                              crc_init(header_crc_params_c),
-                                                                              header_byte_str_v))(0);
-    begin 
-        ret(0 to 7) := to_be(seq_num(7 downto 0)) & to_be(seq_num(15 downto 8)) & to_be(rx_header_size(7 downto 0)) & to_be(rx_header_size(15 downto 8)) & rand_data_v & crc_1_v & crc_0_v;
-        return ret;
-    end function;
-    
-    function max(a, b : unsigned) return unsigned is
-    begin
-        if a > b then
-            return a;
-        else
-            return b;
-        end if;
-    end function;
-
     function count_valid_bytes(tkeep : std_ulogic_vector) return natural is
         variable cnt : natural := 0;
     begin
@@ -356,39 +279,30 @@ package body random_pkt_checker is
         end loop;
         return cnt;
     end function;
-    
-    function to_slv(bstr : byte_string) return std_ulogic_vector is
-        variable res : std_ulogic_vector(bstr'length*8 - 1 downto 0);
-      begin
-        for i in 0 to bstr'length-1 loop
-          res((i+1)*8-1 downto i*8) := bstr(i);
-        end loop;
-        return res;
-      end function;
 
-      function is_seqnum_corrupted(index_ko : unsigned) return boolean is
-      begin 
+    function is_seqnum_corrupted(index_ko : unsigned) return boolean is
+    begin 
         return index_ko = 0 or index_ko = 1;
-      end function;
+    end function;
 
-      function is_size_corrupted(index_ko : unsigned) return boolean is
-      begin
+    function is_size_corrupted(index_ko : unsigned) return boolean is
+    begin
         return index_ko = 2 or index_ko = 3;
-      end function;
-      
-      function is_rand_data_corrupted(index_ko : unsigned) return boolean is
-      begin
+    end function;
+    
+    function is_rand_data_corrupted(index_ko : unsigned) return boolean is
+    begin
         return index_ko = 4 or index_ko = 5;
-      end function;
+    end function;
 
-      function is_crc_corrupted(index_ko : unsigned) return boolean is
-      begin 
+    function is_crc_corrupted(index_ko : unsigned) return boolean is
+    begin 
         return index_ko = 6 or index_ko = 7;
-      end function;
+    end function;
 
-      function is_header_corrupted(index_ko : unsigned) return boolean is
-      begin 
+    function is_header_corrupted(index_ko : unsigned) return boolean is
+    begin 
         return index_ko = 0 or index_ko = 1 or index_ko = 2 or index_ko = 3 or index_ko = 4 or index_ko = 5 or index_ko = 6 or index_ko = 7;
-      end function;
+    end function;
 
 end package body;

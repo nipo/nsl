@@ -3,13 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_data, nsl_amba, nsl_math, nsl_logic;
-use nsl_data.bytestream.all;
 use nsl_amba.axi4_stream.all;
-use nsl_data.crc.all;
 use nsl_data.prbs.all;
-use nsl_logic.bool.all;
 use nsl_amba.random_pkt_checker.all;
-use nsl_data.endian.all;
 
 entity random_cmd_generator is
   generic (
@@ -75,7 +71,7 @@ begin
                 rin.state <= ST_GEN_CMD;        
             
             when ST_GEN_CMD =>
-                if to_boolean(enable_i) then
+                if enable_i = '1' then
                     rin.cmd.pkt_size <= resize(unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly_c, mtu_l2)), r.cmd.pkt_size'length);
                     rin.state_size_gen <= prbs_forward(r.state_size_gen, header_prbs_poly_c, mtu_l2);
 
