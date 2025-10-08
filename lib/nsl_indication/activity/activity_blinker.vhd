@@ -41,6 +41,9 @@ architecture rtl of activity_blinker is
 begin
 
   deglitcher: nsl_clocking.async.async_input
+    generic map(
+      debounce_count_c => 0
+      )
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
