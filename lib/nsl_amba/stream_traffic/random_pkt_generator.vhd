@@ -20,12 +20,12 @@ entity random_pkt_generator is
   port (
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
-    --
-    in_i : in master_t;
-    in_o : out slave_t;
-    --
-    out_o : out master_t;
-    out_i : in slave_t
+
+    cmd_i : in master_t;
+    cmd_o : out slave_t;
+
+    packet_o : out master_t;
+    packet_i : in slave_t
     );
 end entity;
 
@@ -82,7 +82,7 @@ begin
     end if;
   end process;
 
-  gen_process: process(r, in_i, out_i)
+  gen_process: process(r, cmd_i, packet_i)
     variable cmd_v : cmd_t;
     variable cmd_byte_v : cmd_packed_t;
   begin
@@ -99,8 +99,8 @@ begin
         rin.cmd_buf <= reset(cmd_buf_config);
 
       when ST_CMD_GET =>
-        if is_valid(config_c, in_i) then
-          rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, in_i);
+        if is_valid(config_c, cmd_i) then
+          rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, cmd_i);
           if is_last(cmd_buf_config, r.cmd_buf) then
             rin.state <= ST_CMD_DEC;
           end if;
@@ -121,7 +121,7 @@ begin
         rin.state <= ST_SEND_HEADER;
         
       when ST_SEND_HEADER =>   
-        if is_ready(config_c, out_i) then
+        if is_ready(config_c, packet_i) then
           rin.tx_bytes <= r.tx_bytes + config_c.data_width;
           rin.header <= shift(header_config_c, r.header);
           
@@ -136,7 +136,7 @@ begin
         end if;
 
       when ST_SEND_PAYLOAD => 
-        if is_ready(config_c, out_i) then
+        if is_ready(config_c, packet_i) then
           rin.tx_bytes <= r.tx_bytes + config_c.data_width;
 
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
@@ -160,7 +160,7 @@ begin
     is_last_word := (is_last(header_config_c, r.header) and
                      r.cmd.pkt_size <= header_packed_t'length) or (r.tx_bytes >= r.cmd.pkt_size);
 
-    out_o <= transfer_defaults(config_c);
+    packet_o <= transfer_defaults(config_c);
 
     payload_byte_v :=   prbs_byte_string(
       r.state_pkt_gen, 
@@ -169,22 +169,22 @@ begin
 
     case r.state is
       when ST_SEND_HEADER => 
-        out_o <=  transfer(config_c,
-                           bytes => r.header.data(0 to config_c.data_width-1),
-                           keep => keep_generator(config_c, r.data_remainder, is_last_word),
-                           valid => true,
-                           last => is_last_word);
+        packet_o <=  transfer(config_c,
+                              bytes => r.header.data(0 to config_c.data_width-1),
+                              keep => keep_generator(config_c, r.data_remainder, is_last_word),
+                              valid => true,
+                              last => is_last_word);
         
       when ST_SEND_PAYLOAD => 
-        out_o <= transfer(config_c,
-                          bytes => payload_byte_v,
-                          keep => keep_generator(config_c, r.data_remainder, is_last_word),
-                          last => is_last_word);
+        packet_o <= transfer(config_c,
+                             bytes => payload_byte_v,
+                             keep => keep_generator(config_c, r.data_remainder, is_last_word),
+                             last => is_last_word);
 
       when others =>
     end case;
   end process;
   
-  in_o <=  accept(config_c, r.state = ST_CMD_GET);
+  cmd_o <=  accept(config_c, r.state = ST_CMD_GET);
 
 end architecture;

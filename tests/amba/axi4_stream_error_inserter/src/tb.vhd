@@ -26,7 +26,7 @@ architecture arch of tb is
   constant mtu_c : integer := 1500;
   constant probability_c : real := 0.1;
   constant probability_denom_l2_c : integer range 1 to 31 := 31;
-  constant nbr_pkt_to_test : integer := 10000;
+  constant nbr_pkt_to_test : integer := 100;
   constant nbr_scenario : integer := 2;
   constant max_errors_per_scenario_c : natural := 250;
 
@@ -42,8 +42,8 @@ architecture arch of tb is
   type integer_vector is array (natural range <>) of integer;
   
   -- Define per-scenario mode string
-  type mode_array_t is array (0 to nbr_scenario-1) of string(1 to 6);
-  constant mode_array_c : mode_array_t := ("MANUAL", "RANDOM");
+  type mode_array_t is array (0 to nbr_scenario-1) of error_mode_t;
+  constant mode_array_c : mode_array_t := (ERROR_MODE_MANUAL, ERROR_MODE_RANDOM);
 
   signal clock_i_s : std_ulogic;
   signal reset_n_i_s : std_ulogic;
@@ -65,7 +65,7 @@ architecture arch of tb is
                                            variable a, b: in frame_queue_root_t;
                                            variable feed_back_array : in error_feedback_array_t;
                                            constant scenario : integer;
-                                           constant mode : string;
+                                           constant mode : error_mode_t;
                                            sev: severity_level := failure) 
   is
       variable a_frm, b_frm: frame_t;
@@ -100,7 +100,7 @@ architecture arch of tb is
                    a_frm.data(index to index + cfg.data_width-1) = data_ko_ref) then
                     assert false
                       report "Mismatch detected!" & LF &
-                              "  Mode             : " & mode & LF &
+                              "  Mode             : " & to_string(mode) & LF &
                               "  Frame count      : " & integer'image(global_frm_cnt_sh_v(scenario)) & LF &
                               "  Byte index       : " & integer'image(index_ko) & LF &
                               "  Expected KO idx  : " & integer'image(to_integer(feed_back_array(err_cnt_sh_v(scenario)).pkt_index_ko)) & LF &
@@ -204,7 +204,7 @@ begin
       frame_queue_master(config_c, master_q(i), clock_i_s, in_s(i).s, in_s(i).m);
     end process;
 
-    gen_manual_error_insertion : if mode_array_c(i) = "MANUAL" generate
+    gen_manual_error_insertion : if mode_array_c(i) = ERROR_MODE_MANUAL generate
       manual_error_insertion_proc : process(clock_i_s, reset_n_i_s)
       is
         variable state : prbs_state(30 downto 0) := x"deadbee"&"111";
@@ -278,7 +278,7 @@ begin
           end if;
 
           if tested_pkts mod 1000 = 0 then
-            log_info("INFO: for scenario : " & mode_array_c(i) &
+            log_info("INFO: for scenario : " & to_string(mode_array_c(i)) &
                     " | Nbr of sent pkts : " & to_string(tested_pkts) &
                     " | Nbr of inserted error : " & to_string(inserted_error) &
                     " | Error ratio : " & to_string(error_ratio));

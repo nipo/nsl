@@ -73,6 +73,8 @@ package stream_traffic is
   function is_rand_data_corrupted(index_ko : unsigned) return boolean;
   function is_crc_corrupted(index_ko : unsigned) return boolean;
   function is_header_corrupted(index_ko : unsigned) return boolean;
+
+
   -- ================================================================
   -- Random Packet Generation & Validation Pipeline
   -- ================================================================
@@ -122,6 +124,8 @@ package stream_traffic is
   --    - Compares with received packet to detect corruption or loss
   --    - Generates status report whith the initial generated command, header/payload Ko bits. and ko byte index
   -- ================================================================
+
+
   -- Generate a pseudo-random command formed by concatenating
   -- a packet sequence number with a random size in the range 1 to mtu_c.
   component random_cmd_generator is
@@ -135,13 +139,14 @@ package stream_traffic is
     port (
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
-      --
-      enable_i : in std_ulogic;
-      --
-      out_o : out master_t;
-      out_i : in slave_t
+
+      enable_i : in std_ulogic := '1';
+
+      cmd_o : out master_t;
+      cmd_i : in slave_t
       );
   end component;
+
   -- Uses the "random_cmd_generator" output as a seed to generate random
   -- packets of length cmd.size based on a PRBS sequence. A header is added
   -- at the beginning (if size permits) with the following fields:
@@ -165,14 +170,15 @@ package stream_traffic is
     port (
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
-      --
-      in_i : in master_t;
-      in_o : out slave_t;
-      --
-      out_o : out master_t;
-      out_i : in slave_t
+
+      cmd_i : in master_t;
+      cmd_o : out slave_t;
+
+      packet_o : out master_t;
+      packet_i : in slave_t
       );
   end component;
+
   -- Reuses the random_pkt_generator PRBS polynomial, seeded with values
   -- from the received header. The generated reference data is compared
   -- against the received data to detect corruption, while sequence number
@@ -187,16 +193,22 @@ package stream_traffic is
     port (
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
-      --
-      in_i : in master_t;
-      in_o : out slave_t;
-      --
-      out_o : out master_t;
-      out_i : in slave_t
+
+      packet_i : in master_t;
+      packet_o : out slave_t;
+
+      stats_o : out master_t;
+      stats_i : in slave_t
       );
   end component;
 
+  type error_mode_t is (
+    ERROR_MODE_RANDOM,
+    ERROR_MODE_MANUAL
+    );
 
+  function to_string(m: error_mode_t) return string;
+  
   -- This injects errors into the AXI stream, either randomly or in a
   -- controlled way depending on mode_c.
   -- It provides feedback with the error beat, the packet byte index,
@@ -206,7 +218,7 @@ package stream_traffic is
       config_c : config_t;
       probability_denom_l2_c : natural range 1 to 31 := 7;
       probability_c : real := 0.95;
-      mode_c : string := "RANDOM";
+      mode_c : error_mode_t := ERROR_MODE_RANDOM;
       mtu_c : integer := 1500
       );
     port(
@@ -341,6 +353,15 @@ package body stream_traffic is
   function is_header_corrupted(index_ko : unsigned) return boolean is
   begin 
     return index_ko = 0 or index_ko = 1 or index_ko = 2 or index_ko = 3 or index_ko = 4 or index_ko = 5 or index_ko = 6 or index_ko = 7;
+  end function;
+
+  function to_string(m: error_mode_t) return string
+  is
+  begin
+    case m is
+      when ERROR_MODE_RANDOM => return "RANDOM";
+      when ERROR_MODE_MANUAL => return "MANUAL";
+    end case;
   end function;
 
 end package body;

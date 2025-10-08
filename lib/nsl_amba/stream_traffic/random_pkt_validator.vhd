@@ -21,12 +21,12 @@ entity random_pkt_validator is
   port (
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
-    --
-    in_i : in master_t;
-    in_o : out slave_t;
-    --
-    out_o : out master_t;
-    out_i : in slave_t    
+
+    packet_i : in master_t;
+    packet_o : out slave_t;
+
+    stats_o : out master_t;
+    stats_i : in slave_t    
     );
 end entity;
 
@@ -98,7 +98,7 @@ begin
       end if;
     end process;
 
-    rx_process: process(r, in_i, out_i, rin)
+    rx_process: process(r, packet_i, stats_i, rin)
         variable header_v : header_t;
         variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
         variable header_byte_ref_v : header_packed_t;
@@ -118,18 +118,18 @@ begin
                 rin.state <= ST_HEADER_DEC;
 
             when ST_HEADER_DEC =>
-                if is_valid(config_c, in_i) then
-                    rin.header_buf <= shift(header_config_c, r.header_buf, in_i);
-                    rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
+                if is_valid(config_c, packet_i) then
+                    rin.header_buf <= shift(header_config_c, r.header_buf, packet_i);
+                    rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
                     rin.stats.stats_payload_valid <= true;
                     rin.stats.stats_header_valid <= true;
                     rin.header_crc <= crc_update(header_crc_params_c, 
                                         r.header_crc, 
-                                        bytes(config_c, in_i));
-                    if is_last(header_config_c, r.header_buf) or is_last(config_c, in_i) then
-                        rin.was_last_beat <= is_last(config_c, in_i);
-                        rin.cmd.pkt_size <= resize(r.rx_bytes + count_valid_bytes(keep(config_c, in_i)),r.cmd.pkt_size'length);
-                        if should_align(header_config_c, r.header_buf,in_i) then
+                                        bytes(config_c, packet_i));
+                    if is_last(header_config_c, r.header_buf) or is_last(config_c, packet_i) then
+                        rin.was_last_beat <= is_last(config_c, packet_i);
+                        rin.cmd.pkt_size <= resize(r.rx_bytes + count_valid_bytes(keep(config_c, packet_i)),r.cmd.pkt_size'length);
+                        if should_align(header_config_c, r.header_buf,packet_i) then
                             rin.state <= ST_REALIGN_BUF;
                         else
                             rin.state <= ST_HEADER_STATS;
@@ -184,17 +184,17 @@ begin
                     rin.stats.stats_pkt_size <= header_v.cmd.pkt_size;
 
                 when ST_DATA => 
-                    if is_valid(config_c, in_i) then
+                    if is_valid(config_c, packet_i) then
                         rin.stats.stats_seqnum <= r.cmd.seq_num;
-                        rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, in_i));
+                        rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
                         rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                                           data_prbs_poly_c,
                                                           config_c.data_width * 8);
                         --
                         if r.stats.stats_payload_valid then
                             for i in payload_byte_ref_v'range loop
-                                if keep(config_c, in_i)(i) = '1' then
-                                    if payload_byte_ref_v(i) /= bytes(config_c, in_i)(i) then
+                                if keep(config_c, packet_i)(i) = '1' then
+                                    if payload_byte_ref_v(i) /= bytes(config_c, packet_i)(i) then
                                         rin.stats.stats_payload_valid <= false;
                                         rin.stats.stats_index_data_ko <= resize(r.rx_bytes + i, r.stats.stats_index_data_ko'length);   
                                     end if;
@@ -202,10 +202,10 @@ begin
                             end loop;
                         end if;
                         --
-                        if is_last(config_c, in_i) then
+                        if is_last(config_c, packet_i) then
                             rin.state <= ST_SEND_STATS;
                             if r.stats.stats_payload_valid then
-                                if r.rx_cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, in_i)) then
+                                if r.rx_cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i)) then
                                     rin.stats.stats_payload_valid <= false;
                                     rin.stats.stats_index_data_ko <= to_unsigned(10, r.stats.stats_index_data_ko'length); -- size header field
                                 end if;
@@ -224,8 +224,8 @@ begin
                     end if;      
                     
                 when ST_IGNORE => 
-                    if is_valid(config_c, in_i) then
-                        if is_last(config_c, in_i) then
+                    if is_valid(config_c, packet_i) then
+                        if is_last(config_c, packet_i) then
                             rin.state <= ST_SEND_STATS;
                         end if;
                     end if;
@@ -240,7 +240,7 @@ begin
                 end if;
 
             when TXER_SEND_STATS =>
-                if is_ready(config_c, out_i) then
+                if is_ready(config_c, stats_i) then
                     rin.stats_buf <= shift(stats_buf_config, r.stats_buf);
                     if is_last(stats_buf_config, r.stats_buf) then
                         rin.txer <= TXER_IDLE;
@@ -250,20 +250,20 @@ begin
         end case;
     end process;
 
-    in_o <= accept(config_c, r.state /= ST_SEND_STATS and 
+    packet_o <= accept(config_c, r.state /= ST_SEND_STATS and 
                              r.state /= ST_REALIGN_BUF and 
                              r.state /= ST_HEADER_STATS);
 
-    proc_txer: process(r, in_i)
+    proc_txer: process(r, packet_i)
     begin
-        out_o <= transfer_defaults(config_c);
+        stats_o <= transfer_defaults(config_c);
         case r.txer is 
             when TXER_SEND_STATS => 
-                out_o <= transfer(config_c,
+              stats_o <= transfer(config_c,
                                   src => next_beat(stats_buf_config, r.stats_buf, last => false),
                                   force_last => true,
                                   last => is_last(stats_buf_config, r.stats_buf));  
-            when others => 
+          when others => 
         end case;
     end process;
 end architecture;

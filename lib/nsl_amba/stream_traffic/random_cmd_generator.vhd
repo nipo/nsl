@@ -18,11 +18,11 @@ entity random_cmd_generator is
   port (
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
-    --
-    enable_i : in std_ulogic;
-    --
-    out_o : out master_t;
-    out_i : in slave_t
+
+    enable_i : in std_ulogic := '1';
+
+    cmd_o : out master_t;
+    cmd_i : in slave_t
     );
 end entity;
 
@@ -61,7 +61,7 @@ begin
     end if;
   end process;
 
-  gen_cmd_process: process(r, out_i, enable_i)
+  gen_cmd_process: process(r, cmd_i, enable_i)
   begin
 
     rin <= r;
@@ -83,7 +83,7 @@ begin
         end if;
 
       when ST_SEND_CMD => 
-        if is_ready(config_c, out_i) then
+        if is_ready(config_c, cmd_i) then
           rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf);
           if is_last(cmd_buf_config, r.cmd_buf) then
             rin.state <= ST_GEN_CMD;
@@ -95,11 +95,11 @@ begin
   
   txer_proc: process(r) is
   begin
-    out_o <= transfer_defaults(config_c);
+    cmd_o <= transfer_defaults(config_c);
 
     case r.state is
       when ST_SEND_CMD => 
-        out_o <= transfer(config_c,
+        cmd_o <= transfer(config_c,
                           src => next_beat(cmd_buf_config, r.cmd_buf));
       when others => 
     end case;

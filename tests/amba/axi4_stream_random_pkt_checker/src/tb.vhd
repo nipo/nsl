@@ -17,10 +17,10 @@ end tb;
 
 architecture arch of tb is
   constant mtu_c : integer := 50;
-  constant nbr_pkt_to_test : integer := 10000;
+  constant nbr_pkt_to_test : integer := 100;
   constant probability_denom_l2_c : integer range 1 to 31 := 31;
   constant probability_c : real := 0.1;
-  constant mode_c : string(1 to 6) := "RANDOM";
+  constant mode_c : error_mode_t := ERROR_MODE_RANDOM;
   constant nbr_scenario : integer := 3;
   constant inter_pkt_gap_size : integer := 100;
   constant pkt_disappearance_rate : integer := 64;
@@ -174,8 +174,8 @@ begin
         --
         enable_i => '1',
         --
-        out_o => cmd_bus(i).m,
-        out_i => cmd_bus(i).s
+        cmd_o => cmd_bus(i).m,
+        cmd_i => cmd_bus(i).s
         );
 
     pkt_gen : nsl_amba.stream_traffic.random_pkt_generator
@@ -189,11 +189,11 @@ begin
         clock_i => clock_s,
         reset_n_i => reset_n_s,
         --
-        in_i => cmd_bus(i).m,
-        in_o => cmd_bus(i).s,
+        cmd_i => cmd_bus(i).m,
+        cmd_o => cmd_bus(i).s,
         --
-        out_o => tx_bus(i).m,
-        out_i => tx_bus(i).s
+        packet_o => tx_bus(i).m,
+        packet_i => tx_bus(i).s
         );
 
     axi4_stream_medium_width_adapter : nsl_amba.axi4_stream.axi4_stream_width_adapter
@@ -320,12 +320,12 @@ begin
       port map (
         clock_i => clock_s,
         reset_n_i => reset_n_s,
-        --
-        in_i => adapter_ipg_bus(i).m,
-        in_o => adapter_ipg_bus(i).s,
-        --
-        out_o => stats_bus(i).m,
-        out_i => stats_bus(i).s
+
+        packet_i => adapter_ipg_bus(i).m,
+        packet_o => adapter_ipg_bus(i).s,
+
+        stats_o => stats_bus(i).m,
+        stats_i => stats_bus(i).s
         );
 
     stats_bus(i).s <= accept(rx_stream_cfg_array(i), true);

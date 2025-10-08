@@ -14,7 +14,7 @@ entity stream_error_inserter is
     config_c : config_t;
     probability_denom_l2_c : natural range 1 to 31 := 7;
     probability_c : real := 0.95;
-    mode_c : string := "RANDOM";
+    mode_c : error_mode_t := ERROR_MODE_RANDOM;
     mtu_c : integer := 1500
     );
   port(
@@ -109,7 +109,7 @@ begin
             if is_ready(config_c, out_i) then
                 rin.pkt_byte_index <= r.pkt_byte_index + config_c.data_width;
                 rin.insert_error <= false;
-                if mode_c = "RANDOM" then
+                if mode_c = ERROR_MODE_RANDOM then
                     if is_ready(config_c, out_i) then 
                         rin.prbs <= prbs_forward(r.prbs, prbs31, probability_v'length);
                         if probability_v <= probability_threshold_c then
@@ -144,18 +144,14 @@ begin
     assert_proc: process(clock_i) is
     begin
         if rising_edge(clock_i) then
-            assert mode_c = "RANDOM" or mode_c = "MANUAL"
-            report "ERROR: Mode must be MANUAL or RANDOM."
-            severity failure;
-            --
             assert mtu_c mod 2 = 0
             report "ERROR: Bus must be a multiple of 2."
             severity failure;
-            --
+
             assert r.error_pkt_byte_index <= mtu_c 
             report "ERROR: byte index cannot be supp to mtu."
             severity failure;
-            --
+
             assert r.pkt_byte_index <= mtu_c 
             report "ERROR: Number of bytes cannot be supp to mtu."
             severity failure;
