@@ -20,6 +20,10 @@ package prbs is
   -- state.
   function prbs_forward(state, poly : prbs_state;
                          count : integer := 1) return prbs_state;
+
+  function prbs_forward(state, poly : prbs_state;
+                        mixed_in : std_ulogic_vector) return prbs_state;
+
   -- Moves `count` cycles backwards in the PRBS stream, yields next
   -- state.
   function prbs_backward(state, poly : prbs_state;
@@ -88,10 +92,13 @@ package body prbs is
   end function;
 
   function prbs_forward(state, poly : prbs_state;
-                         count : integer := 1) return prbs_state is
+                        mixed_in : std_ulogic_vector) return prbs_state
+  is
     alias xstate : prbs_state(state'length-1 downto 0) is state;
     alias xpoly : prbs_state(poly'length-1 downto 0) is poly;
+    alias xmi : std_ulogic_vector(0 to mixed_in'length-1) is mixed_in;
     variable tmp : prbs_state(state'length-1 downto 0);
+    variable inserted: std_ulogic;
   begin
     assert state'length = poly'length - 1
       report "State must be 1 bit less than polynom"
@@ -101,13 +108,21 @@ package body prbs is
       severity failure;
 
     tmp := xstate;
-    for i in 1 to count
+    for i in xmi'range
     loop
-      tmp := tmp(tmp'left-1 downto 0)
-                & xor_reduce(std_ulogic_vector(tmp) and std_ulogic_vector(poly(poly'left downto 1)));
+      inserted := xor_reduce(std_ulogic_vector(tmp) and std_ulogic_vector(xpoly(xpoly'left downto 1)));
+      inserted := inserted xor xmi(i);
+      tmp := tmp(tmp'left-1 downto 0) & inserted;
     end loop;
 
     return tmp;
+  end function;
+
+  function prbs_forward(state, poly : prbs_state;
+                         count : integer := 1) return prbs_state is
+    constant z : std_ulogic_vector(0 to count-1) := (others => '0');
+  begin
+    return prbs_forward(state, poly, z);
   end function;
 
   function prbs_backward(state, poly : prbs_state;
