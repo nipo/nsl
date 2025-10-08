@@ -50,7 +50,9 @@ begin
 
   widths_match: if in_config_c.data_width = out_config_c.data_width
   generate
-    out_o <= in_i;
+    out_o <= transfer(cfg => in_config_c,
+                      src_cfg => out_config_c,
+                      src => in_i);
     in_o <= out_i;
 
     assert in_config_c.has_keep = out_config_c.has_keep
@@ -63,7 +65,7 @@ begin
 
     assert in_config_c.has_last = out_config_c.has_last
       report "In/out last do not match"
-      severity failure;
+      severity warning;
   end generate;
 
   widener: if in_config_c.data_width < out_config_c.data_width
