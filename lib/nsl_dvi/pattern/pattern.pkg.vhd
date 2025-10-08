@@ -18,6 +18,7 @@ package pattern is
       sof_i : in  std_ulogic;
       sol_i : in  std_ulogic;
       pixel_ready_i : in std_ulogic;
+      pixel_valid_o : out std_ulogic;
       pixel_o : out nsl_color.rgb.rgb24
       );
   end component;

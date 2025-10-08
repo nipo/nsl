@@ -13,6 +13,7 @@ entity color_bars is
       sof_i : in  std_ulogic;
       sol_i : in  std_ulogic;
       pixel_ready_i : in std_ulogic;
+      pixel_valid_o : out std_ulogic;
       pixel_o : out nsl_color.rgb.rgb24
     );
 end color_bars;
@@ -61,5 +62,6 @@ begin
   end process;
 
   pixel_o <= to_rgb24(rgb3_from_suv(std_ulogic_vector(r.color)));
+  pixel_valid_o <= '1';
 
 end beh;

@@ -29,6 +29,7 @@ entity dvi_10_encoder is
     sof_o : out std_ulogic;
     sol_o : out std_ulogic;
     pixel_ready_o : out std_ulogic;
+    pixel_valid_i : in std_ulogic := '1';
     pixel_i : in nsl_color.rgb.rgb24;
     
     tmds_o : out work.dvi.symbol_vector_t
@@ -70,6 +71,8 @@ architecture beh of dvi_10_encoder is
   signal period_s : period_t;
 
   signal hsync_s, vsync_s: std_ulogic;
+
+  signal pixel_s : nsl_color.rgb.rgb24;
   
 begin
 
@@ -174,7 +177,7 @@ begin
     end if;
   end process;
 
-  mealy: process(r, pixel_i, vsync_i, hsync_i) is
+  mealy: process(r, vsync_i, hsync_i) is
   begin
     period_s <= PERIOD_CONTROL;
     pixel_ready_o <= '0';
@@ -210,14 +213,16 @@ begin
   sof_o <= '1' when r.h_state = ST_SYNC and r.v_state = ST_SYNC and r.h_left = 0 and r.v_left = 0 else '0';
   sol_o <= '1' when r.h_state = ST_SYNC and r.v_state = ST_ACT and r.h_left = 0 else '0';
   
+  pixel_s <= pixel_i when pixel_valid_i = '1' else nsl_color.rgb.rgb24_green;
+
   encoder: work.encoder.source_stream_encoder
     port map(
       reset_n_i => reset_n_i,
       pixel_clock_i => pixel_clock_i,
       period_i => period_s,
-      pixel_i(0) => byte(pixel_i.b),
-      pixel_i(1) => byte(pixel_i.g),
-      pixel_i(2) => byte(pixel_i.r),
+      pixel_i(0) => byte(pixel_s.b),
+      pixel_i(1) => byte(pixel_s.g),
+      pixel_i(2) => byte(pixel_s.r),
       hsync_i => hsync_s,
       vsync_i => vsync_s,
       tmds_o => tmds_o
