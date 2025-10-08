@@ -48,4 +48,10 @@ package body gowin_config is
     return 500.0e6;
   end function;
 
+  function pll_odiv_possibilities return ivec
+  is
+  begin
+    return (2,4,8,16,32,48,64,80,96,112,128);
+  end function;
+
 end package body;

@@ -21,7 +21,7 @@ vhdl-sources += pll_basic_gowin.vhd
 deps += nsl_data.text
 deps += nsl_hwdep.gowin_config
 deps += nsl_synthesis.logging
-deps += gowin.components
+deps += nsl_clocking.distribution
 endif
 
 ifneq ($(filter xc6slx%,$(target_part))$(filter xc7%,$(target_part)),)
