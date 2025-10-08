@@ -166,7 +166,7 @@ begin
       generic map (
         mtu_c => mtu_c,
         config_c => tx_stream_cfg_array(i),
-        min_pkt_size => 2
+        min_pkt_size_c => 2
         )
       port map (
         clock_i => clock_s,

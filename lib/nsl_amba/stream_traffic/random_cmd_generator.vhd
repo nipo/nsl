@@ -13,7 +13,7 @@ entity random_cmd_generator is
     header_prbs_init_c: prbs_state := x"d"&"111";
     header_prbs_poly_c: prbs_state := prbs7;
     config_c : config_t := config(2, last => true);
-    min_pkt_size : integer := 1
+    min_pkt_size_c : integer := 1
     );
   port (
     clock_i : in std_ulogic;
@@ -75,7 +75,7 @@ begin
           rin.cmd.pkt_size <= resize(unsigned(prbs_bit_string(r.state_size_gen, header_prbs_poly_c, mtu_l2)), r.cmd.pkt_size'length);
           rin.state_size_gen <= prbs_forward(r.state_size_gen, header_prbs_poly_c, mtu_l2);
 
-          if r.cmd.pkt_size >= min_pkt_size and r.cmd.pkt_size <= mtu_c then
+          if r.cmd.pkt_size >= min_pkt_size_c and r.cmd.pkt_size <= mtu_c then
             rin.state <= ST_SEND_CMD;
             rin.cmd_buf <= reset(cmd_buf_config, cmd_pack(r.cmd));
             rin.cmd.seq_num <= r.cmd.seq_num + 1;

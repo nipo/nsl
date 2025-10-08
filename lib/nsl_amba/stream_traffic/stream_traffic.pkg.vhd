@@ -130,7 +130,7 @@ package stream_traffic is
       header_prbs_init_c: prbs_state := x"d"&"111";
       header_prbs_poly_c: prbs_state := prbs7;
       config_c : config_t := config(2, last => true);
-      min_pkt_size : integer := 1
+      min_pkt_size_c : integer := 1
       );
     port (
       clock_i : in std_ulogic;
