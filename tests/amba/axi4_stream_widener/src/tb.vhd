@@ -109,7 +109,7 @@ begin
       bus_i => output_s
       );
   
-  input_pacer: nsl_amba.axi4_stream.axi4_stream_pacer
+  input_pacer: nsl_amba.stream_traffic.axi4_stream_pacer
     generic map(
       config_c => in_cfg_c
       )
@@ -140,7 +140,7 @@ begin
       out_i => output2_s.s
       );
   
-  output_pacer: nsl_amba.axi4_stream.axi4_stream_pacer
+  output_pacer: nsl_amba.stream_traffic.axi4_stream_pacer
     generic map(
       config_c => out_cfg_c
       )
