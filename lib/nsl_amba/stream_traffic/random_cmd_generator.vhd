@@ -95,13 +95,12 @@ begin
   
   txer_proc: process(r) is
   begin
-    cmd_o <= transfer_defaults(config_c);
-
     case r.state is
       when ST_SEND_CMD => 
-        cmd_o <= transfer(config_c,
-                          src => next_beat(cmd_buf_config, r.cmd_buf));
+        cmd_o <= next_beat(cmd_buf_config, r.cmd_buf);
+
       when others => 
+        cmd_o <= transfer_defaults(config_c);
     end case;
   end process;
 
