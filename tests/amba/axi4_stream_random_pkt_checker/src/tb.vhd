@@ -69,58 +69,37 @@ architecture arch of tb is
     tx_stream  : config_t; 
     rx_stream  : config_t
   ) return string is
-    constant line_sep : string := "+----------------------------+";
-    variable header_valid_str  : string(1 to 5);
-    variable payload_valid_str : string(1 to 5);
   begin
-    -- Convert booleans to string
-    if stats.header_valid then
-      header_valid_str := "TRUE ";
-    else
-      header_valid_str := "FALSE";
-    end if;
-  
-    if stats.payload_valid then
-      payload_valid_str := "TRUE ";
-    else
-      payload_valid_str := "FALSE";
-    end if;
-  
-    -- Build report string
     return LF &
             "+----------------------------+" & LF &
             "|        SCENARIO REPORT     |" & LF &
-            line_sep & LF &
+            "+----------------------------+" & LF &
             "| Scenario      : " & to_string(scenario) & LF &
-            "| TX Config     : width=" & to_string(tx_stream.data_width) &
-                              ", has_keep=" & boolean'image(tx_stream.has_keep) &
-                              ", has_last=" & boolean'image(tx_stream.has_last) & LF &
-            "| RX Config     : width=" & to_string(rx_stream.data_width) &
-                              ", has_keep=" & boolean'image(rx_stream.has_keep) &
-                              ", has_last=" & boolean'image(rx_stream.has_last) & LF &
-            line_sep & LF &
+            "| TX Config     : " & to_string(tx_stream) & LF &
+            "| RX Config     : " & to_string(rx_stream) & LF &
+            "+----------------------------+" & LF &
             "|        STATS REPORT        |" & LF &
-            line_sep & LF &
+            "+----------------------------+" & LF &
             "| Seq Num       : " & to_string(to_integer(stats.seq_num)) & LF &
             "| Packet Size   : " & to_string(to_integer(stats.pkt_size)) & LF &
-            "| Header Valid  : " & header_valid_str & LF &
-            "| Payload Valid : " & payload_valid_str & LF &
+            "| Header Valid  : " & to_string(stats.header_valid) & LF &
+            "| Payload Valid : " & to_string(stats.payload_valid) & LF &
             "| Index Data KO : " & to_string(to_integer(stats.index_data_ko)) & LF &
             "+----------------------------+";
   end function;
 
   type buffer_array_t is array (natural range <> ) of buffer_t;
   type regs_t is
-    record
-      stats_report_cnt : unsigned(5 downto 0);
-      injected_error_cnt : unsigned(5 downto 0);
-      ipg_cnt : integer range 0 to inter_pkt_gap_size + 1;
-      pkt_cnt : unsigned(pkt_disappearance_rate_l2 downto 0);
-      state : state_t;
-      incr_state : incr_state_t;
-      pkt_drop_cnt : integer;
-      stats_buf : buffer_t;
-    end record;
+  record
+    stats_report_cnt : unsigned(5 downto 0);
+    injected_error_cnt : unsigned(5 downto 0);
+    ipg_cnt : integer range 0 to inter_pkt_gap_size + 1;
+    pkt_cnt : unsigned(pkt_disappearance_rate_l2 downto 0);
+    state : state_t;
+    incr_state : incr_state_t;
+    pkt_drop_cnt : integer;
+    stats_buf : buffer_t;
+  end record;
 
   signal clock_s : std_ulogic;
   signal reset_n_s : std_ulogic;
@@ -128,13 +107,13 @@ architecture arch of tb is
   
   signal feed_back_s, feed_back_ipg_s : error_feedback_array_t(0 to nbr_scenario - 1);
   signal insert_error_s : boolean_vector(0 to nbr_scenario - 1) := (others => false);
-  -- STATISTICS
+
   signal pkt_size_distribution_s : size_distribution_t := (others => (others => 0));
   signal index_data_ko_distribution_s : index_ko_t := (others => (others => 0));
   shared variable insert_seq_num_error_sh_v : boolean_vector(0 to nbr_scenario - 1) := (others => false);
-  --
+
   shared variable done_s_tmp : std_ulogic_vector(0 to nbr_scenario - 1);
-  signal cmd_bus, tx_bus ,stats_bus, adapter_bus, adapter_ipg_bus, err_inserter_bus : bus_vector(0 to nbr_scenario - 1);
+  signal cmd_bus, tx_bus, stats_bus, adapter_bus, adapter_ipg_bus, err_inserter_bus : bus_vector(0 to nbr_scenario - 1);
 
 begin
 
