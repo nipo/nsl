@@ -13,9 +13,7 @@ use nsl_data.endian.all;
 entity random_pkt_generator is
   generic (
     mtu_c: integer := 1500;
-    config_c: config_t;
-    data_prbs_init_c: prbs_state := x"deadbee"&"111";
-    data_prbs_poly_c: prbs_state := prbs31
+    config_c: config_t
     );
   port (
     clock_i : in std_ulogic;

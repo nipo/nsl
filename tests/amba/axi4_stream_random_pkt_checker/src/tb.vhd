@@ -7,7 +7,6 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
 use nsl_data.text.all;
-use nsl_data.prbs.all;
 use nsl_simulation.logging.all;
 use nsl_amba.axi4_stream.all;
 use nsl_amba.stream_traffic.all;
@@ -181,9 +180,7 @@ begin
     pkt_gen : nsl_amba.stream_traffic.random_pkt_generator
       generic map (
         mtu_c => mtu_c,
-        config_c => tx_stream_cfg_array(i),
-        data_prbs_init_c => x"deadbee"&"111",
-        data_prbs_poly_c => prbs31
+        config_c => tx_stream_cfg_array(i)
         )
       port map (
         clock_i => clock_s,
@@ -314,8 +311,7 @@ begin
     pkt_checker : nsl_amba.stream_traffic.random_pkt_validator
       generic map (
         mtu_c => mtu_c,
-        config_c => rx_stream_cfg_array(i),
-        data_prbs_poly_c => prbs31
+        config_c => rx_stream_cfg_array(i)
         )
       port map (
         clock_i => clock_s,

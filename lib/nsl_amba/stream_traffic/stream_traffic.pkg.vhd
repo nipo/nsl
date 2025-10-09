@@ -99,9 +99,7 @@ package stream_traffic is
   component random_pkt_generator is
     generic (
       mtu_c: integer := 1500;
-      config_c: config_t;
-      data_prbs_init_c: prbs_state := x"deadbee"&"111";
-      data_prbs_poly_c: prbs_state := prbs31
+      config_c: config_t
       );
     port (
       clock_i : in std_ulogic;
@@ -122,9 +120,7 @@ package stream_traffic is
   component random_pkt_validator is
     generic (
       mtu_c: integer := 1500;
-      config_c: config_t;
-      data_prbs_init_c: prbs_state := x"deadbee"&"111";
-      data_prbs_poly_c: prbs_state := prbs31
+      config_c: config_t
       );
     port (
       clock_i : in std_ulogic;
@@ -190,6 +186,9 @@ package stream_traffic is
     spill_order => EXP_ORDER_DESCENDING,
     byte_order => BYTE_ORDER_INCREASING
     );
+
+  constant data_prbs_init_c: prbs_state := x"deadbee"&"111";
+  constant data_prbs_poly_c: prbs_state := prbs31;
 
   type cmd_t is
   record
