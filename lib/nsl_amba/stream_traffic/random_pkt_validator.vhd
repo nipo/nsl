@@ -33,7 +33,7 @@ end entity;
 architecture beh of random_pkt_validator is
 
   constant header_config_c : buffer_config_t := buffer_config(config_c, header_packed_t'length);
-  constant stats_buf_config : buffer_config_t := buffer_config(config_c, STATS_SIZE);
+  constant stats_buf_config : buffer_config_t := buffer_config(config_c, stats_packed_t'length);
   constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c) + 1;
   constant stats_reset : stats_t := (
     seq_num        => to_unsigned(0, 16),

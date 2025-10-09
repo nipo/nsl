@@ -179,8 +179,6 @@ package stream_traffic is
       );
   end component;
 
-  constant STATS_SIZE : integer := 8;
-
   function to_string(m: error_mode_t) return string;
 
   constant header_crc_params_c : crc_params_t := crc_params(
@@ -218,12 +216,13 @@ package stream_traffic is
 
   subtype cmd_packed_t is byte_string(0 to 3);
   subtype header_packed_t is byte_string(0 to 7);
+  subtype stats_packed_t is byte_string(0 to 7);
 
   function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
   function cmd_unpack(cmd : cmd_packed_t) return cmd_t;
   function cmd_pack(cmd : cmd_t) return cmd_packed_t;
-  function stats_unpack(b : byte_string) return stats_t;
-  function stats_pack(s : stats_t) return byte_string;
+  function stats_unpack(b : stats_packed_t) return stats_t;
+  function stats_pack(s : stats_t) return stats_packed_t;
   function header_pack(header: header_t) return header_packed_t;
   function header_from_cmd(cmd:cmd_t) return header_t;
   function is_seq_num_corrupted(index_ko : unsigned) return boolean;
@@ -275,8 +274,7 @@ package body stream_traffic is
     variable ret: header_packed_t := (others => (others => '0'));
   begin 
     ret(0 to 3) := cmd_pack(header.cmd);
-    ret(4 to 7) := crc_spill(header_crc_params_c, 
-                             header.crc);
+    ret(4 to 7) := crc_spill(header_crc_params_c, header.crc);
     return ret;
   end function;
   
@@ -289,21 +287,21 @@ package body stream_traffic is
       );
   end function;
 
-  function stats_unpack(b : byte_string) return stats_t
+  function stats_unpack(b : stats_packed_t) return stats_t
   is
-    variable ret: stats_t;
-  begin 
-    ret.seq_num := unsigned(b(1)) & unsigned(b(0));
-    ret.pkt_size := unsigned(b(3)) & unsigned(b(2));
-    ret.header_valid := to_boolean(b(4)(7));
-    ret.payload_valid := to_boolean(b(5)(7));
-    ret.index_data_ko := unsigned(b(7)) & unsigned(b(6));
-    return ret;
+  begin
+    return stats_t'(
+      seq_num => from_le(b(0 to 1)),
+      pkt_size => from_le(b(2 to 3)),
+      header_valid => b(4)(7) = '1',
+      payload_valid => b(5)(7) = '1',
+      index_data_ko => from_le(b(6 to 7))
+      );
   end function;
 
-  function stats_pack(s : stats_t) return byte_string
+  function stats_pack(s : stats_t) return stats_packed_t
   is
-    variable ret: byte_string(0 to 7) := (others =>(others => '0'));
+    variable ret: stats_packed_t := (others => x"00");
   begin 
     ret(0 to 1) := to_le(s.seq_num);
     ret(2 to 3) := to_le(s.pkt_size);

@@ -141,7 +141,7 @@ begin
 
   gen_scenarios : for i in 0 to nbr_scenario-1 generate
     signal byte_index_s : integer range 0 to rx_stream_cfg_array(i).data_width;
-    constant stats_buf_config_c : buffer_config_t := buffer_config(rx_stream_cfg_array(i), STATS_SIZE);
+    constant stats_buf_config_c : buffer_config_t := buffer_config(rx_stream_cfg_array(i), stats_packed_t'length);
     signal r, rin: regs_t;
   begin
 
@@ -331,7 +331,7 @@ begin
     stats_bus(i).s <= accept(rx_stream_cfg_array(i), true);
 
     stats_proc : process(clock_s)
-      constant stats_buf_config_v_c : buffer_config_t := buffer_config(rx_stream_cfg_array(i), STATS_SIZE+1);
+      constant stats_buf_config_v_c : buffer_config_t := buffer_config(rx_stream_cfg_array(i), stats_packed_t'length);
       -- Statistics collection
       variable pkt_size_distribution_v :integer_vector(0 to mtu_c) := (others => 0);
       variable index_data_ko_distribution_v : integer_vector(0 to mtu_c) := (others => 0);
@@ -342,6 +342,7 @@ begin
       variable stats_v : stats_t;
       variable tested_pkts_v : integer := 0;
       variable feedback_v : error_feedback_t;
+      variable last: boolean;
     begin 
       if reset_n_s = '0' then
         null;
@@ -367,9 +368,9 @@ begin
           end if;
           --
           if is_ready(rx_stream_cfg_array(i), stats_bus(i).s) and is_valid(rx_stream_cfg_array(i), stats_bus(i).m) then
+            last := is_last(stats_buf_config_v_c, stats_buf_v);
             stats_buf_v := shift(stats_buf_config_v_c, stats_buf_v, stats_bus(i).m);
-            if is_last(stats_buf_config_v_c, stats_buf_v) then
-              stats_buf_v := shift(stats_buf_config_v_c, stats_buf_v, stats_bus(i).m);
+            if last then
               stats_v := stats_unpack(bytes(stats_buf_config_v_c, stats_buf_v));
               if not stats_v.payload_valid or not stats_v.header_valid then
                 index_data_ko_distribution_v(to_integer(stats_v.index_data_ko)) := 
