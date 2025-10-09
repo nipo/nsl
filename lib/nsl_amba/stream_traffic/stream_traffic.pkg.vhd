@@ -12,118 +12,55 @@ use nsl_logic.bool.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
 
--- Generic stream_traffic_validator implementation
+-- ================================================================
+-- Random Packet Generation & Validation Pipeline
+-- ================================================================
+--
+-- Data flows sequentially through three components:
+--
+-- random_cmd_generator:
+--   - Generates pseudo-random commands (seq_num + random pkt_size)
+-- random_pkt_generator:
+--   - Generates packet data using PRBS, prepends header
+--     (seq_num, pkt_size, rand_data, crc)
+-- random_pkt_validator:
+--   - Recreates reference data from received header using PRBS
+--   - Compares with received packet to detect corruption or loss
+--   - Generates status report whith the initial generated command,
+--     header/payload Ko bits. and ko byte index
+--
+--   +------------------------+
+--   |  random_cmd_generator  |
+--   |------------------------|
+--   | Inputs: clock_i        |
+--   |         reset_n_i      |
+--   |         enable_i       |
+--   | Outputs: cmd_o ------------+
+--   |          cmd_i         |   |
+--   +------------------------+   |
+--                                |
+--   +------------------------+   |
+--   |  random_pkt_generator  |   |
+--   |------------------------|   |
+--   | Inputs: clock_i        |   |
+--   |         reset_n_i      |   |
+--   |         cmd_i  <-----------+
+--   |         cmd_o          |
+--   | Outputs: packet_o ---------+
+--   |          packet_i      |   |
+--   +------------------------+   |
+--                                |
+--   +------------------------+   |
+--   |  random_pkt_validator  |   |
+--   |------------------------|   |
+--   | Inputs: clock_i        |   |
+--   |         reset_n_i      |   |
+--   |         packet_i  <--------+
+--   |         packet_o       |
+--   | Outputs: stats_o  -------->
+--   |          stats_i       |
+--   +------------------------+
 package stream_traffic is
-
-  constant STATS_SIZE : integer := 8;
-
-  constant header_crc_params_c : crc_params_t := crc_params(
-    poly => x"104c11db7",
-    init => x"0",
-    complement_input => false,
-    complement_state => true,
-    byte_bit_order => BIT_ORDER_ASCENDING,
-    spill_order => EXP_ORDER_DESCENDING,
-    byte_order => BYTE_ORDER_INCREASING
-    );
-
-  type cmd_t is
-  record
-    seq_num : unsigned(15 downto 0);
-    pkt_size : unsigned(15 downto 0);
-  end record;
-
-  type header_t is 
-  record
-    cmd : cmd_t;
-    crc : crc_state_t;
-  end record;
-
-  type stats_t is
-  record
-    seq_num : unsigned(15 downto 0);
-    pkt_size : unsigned(15 downto 0);
-    header_valid : boolean;
-    payload_valid : boolean;
-    index_data_ko : unsigned(15 downto 0);
-  end record;
-
-  -- Error feedback
-  type error_feedback_t is
-  record
-    error : std_ulogic ; -- Error inserted or not
-    pkt_index_ko : unsigned(15 downto 0);
-  end record;
-
-  type error_feedback_array_t is array (natural range <>) of error_feedback_t;
-
-  subtype cmd_packed_t is byte_string(0 to 3);
-  subtype header_packed_t is byte_string(0 to 7);
-
-  function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
-  function cmd_unpack(cmd : cmd_packed_t) return cmd_t;
-  function cmd_pack(cmd : cmd_t) return cmd_packed_t;
-  function stats_unpack(b : byte_string) return stats_t;
-  function stats_pack(s : stats_t) return byte_string;
-  function header_pack(header: header_t) return header_packed_t;
-  function header_from_cmd(cmd:cmd_t) return header_t;
-  function is_seq_num_corrupted(index_ko : unsigned) return boolean;
-  function is_size_corrupted(index_ko : unsigned) return boolean;
-  function is_rand_data_corrupted(index_ko : unsigned) return boolean;
-  function is_crc_corrupted(index_ko : unsigned) return boolean;
-  function is_header_corrupted(index_ko : unsigned) return boolean;
-
-
-  -- ================================================================
-  -- Random Packet Generation & Validation Pipeline
-  -- ================================================================
-  --
-  -- Data flows sequentially through four components:
-  -- random_cmd_generator -> random_pkt_generator -> random_pkt_validator
-  --
-  --   +------------------------+
-  --   |  random_cmd_generator  |
-  --   |------------------------|
-  --   | Inputs: clock_i        |
-  --   |         reset_n_i      |
-  --   |         enable_i       |
-  --   | Outputs: out_o --------+----------------------+
-  --   |         out_i          |                      |
-  --   +------------------------+                      |
-  --                                                   |
-  --                                                   |
-  --   +------------------------+                      |
-  --   |  random_pkt_generator  |                      |
-  --   |------------------------|                      |
-  --   | Inputs: clock_i        |                      |
-  --   |         reset_n_i      |                      v
-  --   |         in_i  <--------+  <- from cmd_generator
-  --   | Outputs: out_o --------+----------------------+
-  --   |         in_o           |                      |
-  --   +------------------------+                      |
-  --                                                   |
-  --                                                   |
-  --   +------------------------+                      |
-  --   |  random_pkt_validator  |                      |
-  --   |------------------------|                      |
-  --   | Inputs: clock_i        |                      |
-  --   |         reset_n_i      |                      v
-  --   |         in_i  <--------+  <- from pkt_generator
-  --   | Outputs: out_o --------+-----------------------------+
-  --   |         in_o           |
-  --   +------------------------+
-  -- ================================================================
-  -- Notes:
-  -- 1. random_cmd_generator:
-  --    - Generates pseudo-random commands (seq_num + random pkt_size)
-  -- 2. random_pkt_generator:
-  --    - Generates packet data using PRBS, prepends header (seq_num, pkt_size, rand_data, crc)
-  -- 3. random_pkt_validator:
-  --    - Recreates reference data from received header using PRBS
-  --    - Compares with received packet to detect corruption or loss
-  --    - Generates status report whith the initial generated command, header/payload Ko bits. and ko byte index
-  -- ================================================================
-
 
   -- Generate a pseudo-random command formed by concatenating
   -- a packet sequence number with a random size in the range 1 to mtu_c.
@@ -206,7 +143,12 @@ package stream_traffic is
     ERROR_MODE_MANUAL
     );
 
-  function to_string(m: error_mode_t) return string;
+  -- Error feedback
+  type error_feedback_t is
+  record
+    error : std_ulogic ; -- Error inserted or not
+    pkt_index_ko : unsigned(15 downto 0);
+  end record;
   
   -- This injects errors into the AXI stream, either randomly or in a
   -- controlled way depending on mode_c.
@@ -236,6 +178,59 @@ package stream_traffic is
       feed_back_o : out error_feedback_t
       );
   end component;
+
+  constant STATS_SIZE : integer := 8;
+
+  function to_string(m: error_mode_t) return string;
+
+  constant header_crc_params_c : crc_params_t := crc_params(
+    poly => x"104c11db7",
+    init => x"0",
+    complement_input => false,
+    complement_state => true,
+    byte_bit_order => BIT_ORDER_ASCENDING,
+    spill_order => EXP_ORDER_DESCENDING,
+    byte_order => BYTE_ORDER_INCREASING
+    );
+
+  type cmd_t is
+  record
+    seq_num : unsigned(15 downto 0);
+    pkt_size : unsigned(15 downto 0);
+  end record;
+
+  type header_t is 
+  record
+    cmd : cmd_t;
+    crc : crc_state_t;
+  end record;
+
+  type stats_t is
+  record
+    seq_num : unsigned(15 downto 0);
+    pkt_size : unsigned(15 downto 0);
+    header_valid : boolean;
+    payload_valid : boolean;
+    index_data_ko : unsigned(15 downto 0);
+  end record;
+
+  type error_feedback_array_t is array (natural range <>) of error_feedback_t;
+
+  subtype cmd_packed_t is byte_string(0 to 3);
+  subtype header_packed_t is byte_string(0 to 7);
+
+  function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
+  function cmd_unpack(cmd : cmd_packed_t) return cmd_t;
+  function cmd_pack(cmd : cmd_t) return cmd_packed_t;
+  function stats_unpack(b : byte_string) return stats_t;
+  function stats_pack(s : stats_t) return byte_string;
+  function header_pack(header: header_t) return header_packed_t;
+  function header_from_cmd(cmd:cmd_t) return header_t;
+  function is_seq_num_corrupted(index_ko : unsigned) return boolean;
+  function is_size_corrupted(index_ko : unsigned) return boolean;
+  function is_rand_data_corrupted(index_ko : unsigned) return boolean;
+  function is_crc_corrupted(index_ko : unsigned) return boolean;
+  function is_header_corrupted(index_ko : unsigned) return boolean;
 
 end package;
 
