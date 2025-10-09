@@ -62,6 +62,13 @@ use nsl_data.text.all;
 --   +------------------------+
 package stream_traffic is
 
+  subtype cmd_packed_t is byte_string(0 to 3);
+  subtype header_packed_t is byte_string(0 to 7);
+  subtype stats_packed_t is byte_string(0 to 7);
+
+  constant cmd_config_default_c: config_t := config(cmd_packed_t'length, last => true);
+  constant stats_config_default_c: config_t := config(stats_packed_t'length, last => true);
+  
   -- Generate a pseudo-random command formed by concatenating
   -- a packet sequence number with a random size in the range 1 to mtu_c.
   component random_cmd_generator is
@@ -69,7 +76,7 @@ package stream_traffic is
       mtu_c: integer := 1500;
       header_prbs_init_c: prbs_state := x"d"&"111";
       header_prbs_poly_c: prbs_state := prbs7;
-      config_c : config_t := config(2, last => true);
+      cmd_config_c : config_t := cmd_config_default_c;
       min_pkt_size_c : integer := 1
       );
     port (
@@ -99,7 +106,8 @@ package stream_traffic is
   component random_pkt_generator is
     generic (
       mtu_c: integer := 1500;
-      config_c: config_t
+      cmd_config_c : config_t := cmd_config_default_c;
+      packet_config_c: config_t
       );
     port (
       clock_i : in std_ulogic;
@@ -120,7 +128,8 @@ package stream_traffic is
   component random_pkt_validator is
     generic (
       mtu_c: integer := 1500;
-      config_c: config_t
+      packet_config_c: config_t;
+      stats_config_c : config_t := stats_config_default_c
       );
     port (
       clock_i : in std_ulogic;
@@ -235,10 +244,6 @@ package stream_traffic is
   end record;
 
   type error_feedback_array_t is array (natural range <>) of error_feedback_t;
-
-  subtype cmd_packed_t is byte_string(0 to 3);
-  subtype header_packed_t is byte_string(0 to 7);
-  subtype stats_packed_t is byte_string(0 to 7);
 
   function header_unpack(header : header_packed_t; valid_len : natural) return header_t;
   function cmd_unpack(cmd : cmd_packed_t) return cmd_t;

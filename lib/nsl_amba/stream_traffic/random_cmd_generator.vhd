@@ -12,7 +12,7 @@ entity random_cmd_generator is
     mtu_c: integer := 1500;
     header_prbs_init_c: prbs_state := x"d"&"111";
     header_prbs_poly_c: prbs_state := prbs7;
-    config_c : config_t := config(2, last => true);
+    cmd_config_c : config_t := cmd_config_default_c;
     min_pkt_size_c : integer := 1
     );
   port (
@@ -28,7 +28,7 @@ end entity;
 
 architecture beh of random_cmd_generator is
   constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c);
-  constant cmd_buf_config : buffer_config_t := buffer_config(config_c, cmd_packed_t'length);
+  constant cmd_buf_config : buffer_config_t := buffer_config(cmd_config_c, cmd_packed_t'length);
 
   type state_t is (
     ST_RESET,
@@ -83,7 +83,7 @@ begin
         end if;
 
       when ST_SEND_CMD => 
-        if is_ready(config_c, cmd_i) then
+        if is_ready(cmd_config_c, cmd_i) then
           rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf);
           if is_last(cmd_buf_config, r.cmd_buf) then
             rin.state <= ST_GEN_CMD;
@@ -100,7 +100,7 @@ begin
         cmd_o <= next_beat(cmd_buf_config, r.cmd_buf);
 
       when others => 
-        cmd_o <= transfer_defaults(config_c);
+        cmd_o <= transfer_defaults(cmd_config_c);
     end case;
   end process;
 

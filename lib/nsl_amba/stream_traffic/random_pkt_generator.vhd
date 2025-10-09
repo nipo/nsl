@@ -13,7 +13,8 @@ use nsl_data.endian.all;
 entity random_pkt_generator is
   generic (
     mtu_c: integer := 1500;
-    config_c: config_t
+    cmd_config_c : config_t := cmd_config_default_c;
+    packet_config_c: config_t
     );
   port (
     clock_i : in std_ulogic;
@@ -30,10 +31,10 @@ end entity;
 architecture beh of random_pkt_generator is
 
   constant header_size : integer := 8;
-  constant header_config_c : buffer_config_t := buffer_config(config_c, header_size);
-  constant cmd_buf_config : buffer_config_t := buffer_config(config_c, cmd_packed_t'length);
+  constant header_config_c : buffer_config_t := buffer_config(packet_config_c, header_size);
+  constant cmd_buf_config : buffer_config_t := buffer_config(cmd_config_c, cmd_packed_t'length);
   constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c) + 1;
-  constant data_width_l2 : integer := nsl_math.arith.log2(config_c.data_width);
+  constant data_width_l2 : integer := nsl_math.arith.log2(packet_config_c.data_width);
 
   type state_t is (
     ST_RESET,
@@ -44,8 +45,8 @@ architecture beh of random_pkt_generator is
     ST_SEND_PAYLOAD
     );
 
-  function keep_generator(config_c: config_t; data_remainder : integer; is_last_word : boolean) return std_ulogic_vector is
-    variable ret : std_ulogic_vector(0 to config_c.data_width-1) := (others => '1');
+  function keep_generator(packet_config_c: config_t; data_remainder : integer; is_last_word : boolean) return std_ulogic_vector is
+    variable ret : std_ulogic_vector(0 to packet_config_c.data_width-1) := (others => '1');
   begin 
     if is_last_word then
       if data_remainder /= 0 then
@@ -62,7 +63,7 @@ architecture beh of random_pkt_generator is
     cmd: cmd_t;
     header : buffer_t;
     cmd_buf : buffer_t;
-    data_remainder : integer range 0 to config_c.data_width - 1;
+    data_remainder : integer range 0 to packet_config_c.data_width - 1;
     tx_bytes : unsigned(mtu_l2 - 1 downto 0);
     pkt_has_data : boolean;
   end record;
@@ -93,11 +94,11 @@ begin
     case r.state is
       when ST_RESET =>
         rin.state <= ST_CMD_GET;
-        rin.tx_bytes <= to_unsigned(config_c.data_width, r.tx_bytes'length);
+        rin.tx_bytes <= to_unsigned(packet_config_c.data_width, r.tx_bytes'length);
         rin.cmd_buf <= reset(cmd_buf_config);
 
       when ST_CMD_GET =>
-        if is_valid(config_c, cmd_i) then
+        if is_valid(cmd_config_c, cmd_i) then
           rin.cmd_buf <= shift(cmd_buf_config, r.cmd_buf, cmd_i);
           if is_last(cmd_buf_config, r.cmd_buf) then
             rin.state <= ST_CMD_DEC;
@@ -105,7 +106,7 @@ begin
         end if;
 
       when ST_CMD_DEC => 
-        rin.tx_bytes <= to_unsigned(config_c.data_width, r.tx_bytes'length);
+        rin.tx_bytes <= to_unsigned(packet_config_c.data_width, r.tx_bytes'length);
         rin.state_pkt_gen <= prbs_forward(data_prbs_init_c, data_prbs_poly_c,
                                           std_ulogic_vector(from_le(cmd_byte_v)));
         rin.cmd <= cmd_v;
@@ -119,8 +120,8 @@ begin
         rin.state <= ST_SEND_HEADER;
         
       when ST_SEND_HEADER =>   
-        if is_ready(config_c, packet_i) then
-          rin.tx_bytes <= r.tx_bytes + config_c.data_width;
+        if is_ready(packet_config_c, packet_i) then
+          rin.tx_bytes <= r.tx_bytes + packet_config_c.data_width;
           rin.header <= shift(header_config_c, r.header);
           
           if is_last(header_config_c, r.header) or r.tx_bytes >= r.cmd.pkt_size then
@@ -134,12 +135,12 @@ begin
         end if;
 
       when ST_SEND_PAYLOAD => 
-        if is_ready(config_c, packet_i) then
-          rin.tx_bytes <= r.tx_bytes + config_c.data_width;
+        if is_ready(packet_config_c, packet_i) then
+          rin.tx_bytes <= r.tx_bytes + packet_config_c.data_width;
 
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                             data_prbs_poly_c,
-                                            config_c.data_width * 8);
+                                            packet_config_c.data_width * 8);
           if r.tx_bytes >= r.cmd.pkt_size then
             rin.state <= ST_CMD_GET;
           end if;
@@ -151,38 +152,38 @@ begin
   end process;
 
   proc_txer: process(r)
-    variable payload_byte_v : byte_string(0 to config_c.data_width -1);
+    variable payload_byte_v : byte_string(0 to packet_config_c.data_width -1);
     variable is_last_word : boolean := false;
   begin
 
     is_last_word := (is_last(header_config_c, r.header) and
                      r.cmd.pkt_size <= header_packed_t'length) or (r.tx_bytes >= r.cmd.pkt_size);
 
-    packet_o <= transfer_defaults(config_c);
+    packet_o <= transfer_defaults(packet_config_c);
 
     payload_byte_v :=   prbs_byte_string(
       r.state_pkt_gen, 
       data_prbs_poly_c, 
-      config_c.data_width);
+      packet_config_c.data_width);
 
     case r.state is
       when ST_SEND_HEADER => 
-        packet_o <=  transfer(config_c,
-                              bytes => r.header.data(0 to config_c.data_width-1),
-                              keep => keep_generator(config_c, r.data_remainder, is_last_word),
+        packet_o <=  transfer(packet_config_c,
+                              bytes => r.header.data(0 to packet_config_c.data_width-1),
+                              keep => keep_generator(packet_config_c, r.data_remainder, is_last_word),
                               valid => true,
                               last => is_last_word);
         
       when ST_SEND_PAYLOAD => 
-        packet_o <= transfer(config_c,
+        packet_o <= transfer(packet_config_c,
                              bytes => payload_byte_v,
-                             keep => keep_generator(config_c, r.data_remainder, is_last_word),
+                             keep => keep_generator(packet_config_c, r.data_remainder, is_last_word),
                              last => is_last_word);
 
       when others =>
     end case;
   end process;
   
-  cmd_o <=  accept(config_c, r.state = ST_CMD_GET);
+  cmd_o <=  accept(cmd_config_c, r.state = ST_CMD_GET);
 
 end architecture;

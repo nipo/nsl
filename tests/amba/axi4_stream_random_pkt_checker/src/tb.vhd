@@ -164,7 +164,7 @@ begin
     cmd_gen : nsl_amba.stream_traffic.random_cmd_generator
       generic map (
         mtu_c => mtu_c,
-        config_c => tx_stream_cfg_array(i),
+        cmd_config_c => tx_stream_cfg_array(i),
         min_pkt_size_c => 2
         )
       port map (
@@ -180,7 +180,8 @@ begin
     pkt_gen : nsl_amba.stream_traffic.random_pkt_generator
       generic map (
         mtu_c => mtu_c,
-        config_c => tx_stream_cfg_array(i)
+        cmd_config_c => tx_stream_cfg_array(i),
+        packet_config_c => tx_stream_cfg_array(i)
         )
       port map (
         clock_i => clock_s,
@@ -311,7 +312,8 @@ begin
     pkt_checker : nsl_amba.stream_traffic.random_pkt_validator
       generic map (
         mtu_c => mtu_c,
-        config_c => rx_stream_cfg_array(i)
+        packet_config_c => rx_stream_cfg_array(i),
+        stats_config_c => rx_stream_cfg_array(i)
         )
       port map (
         clock_i => clock_s,

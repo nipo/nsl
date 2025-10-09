@@ -14,7 +14,8 @@ use nsl_data.endian.all;
 entity random_pkt_validator is
   generic (
     mtu_c: integer := 1500;
-    config_c: config_t
+    packet_config_c: config_t;
+    stats_config_c : config_t := stats_config_default_c
     );
   port (
     clock_i : in std_ulogic;
@@ -30,8 +31,8 @@ end entity;
 
 architecture beh of random_pkt_validator is
 
-  constant header_config_c : buffer_config_t := buffer_config(config_c, header_packed_t'length);
-  constant stats_buf_config : buffer_config_t := buffer_config(config_c, stats_packed_t'length);
+  constant header_config_c : buffer_config_t := buffer_config(packet_config_c, header_packed_t'length);
+  constant stats_buf_config : buffer_config_t := buffer_config(stats_config_c, stats_packed_t'length);
   constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c) + 1;
   constant stats_reset : stats_t := (
     seq_num        => to_unsigned(0, 16),
@@ -98,7 +99,7 @@ begin
 
   rx_process: process(r, packet_i, stats_i)
     variable header_v : header_t;
-    variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
+    variable payload_byte_ref_v : byte_string(0 to packet_config_c.data_width -1);
     variable header_byte_ref_v : header_packed_t;
   begin
     rin <= r;
@@ -108,24 +109,24 @@ begin
 
     payload_byte_ref_v := prbs_byte_string(r.state_pkt_gen, 
                                            data_prbs_poly_c,
-                                           config_c.data_width);
+                                           packet_config_c.data_width);
 
     case r.state is
       when ST_RESET =>
         rin.state <= ST_HEADER_DEC;
 
       when ST_HEADER_DEC =>
-        if is_valid(config_c, packet_i) then
+        if is_valid(packet_config_c, packet_i) then
           rin.header_buf <= shift(header_config_c, r.header_buf, packet_i);
-          rin.rx_bytes <= r.rx_bytes + byte_count(config_c, packet_i);
+          rin.rx_bytes <= r.rx_bytes + byte_count(packet_config_c, packet_i);
           rin.stats.payload_valid <= true;
           rin.stats.header_valid <= true;
           rin.header_crc <= crc_update(header_crc_params_c, 
                                        r.header_crc, 
-                                       bytes(config_c, packet_i));
-          if is_last(header_config_c, r.header_buf) or is_last(config_c, packet_i) then
-            rin.was_last_beat <= is_last(config_c, packet_i);
-            rin.cmd.pkt_size <= resize(r.rx_bytes + byte_count(config_c, packet_i),r.cmd.pkt_size'length);
+                                       bytes(packet_config_c, packet_i));
+          if is_last(header_config_c, r.header_buf) or is_last(packet_config_c, packet_i) then
+            rin.was_last_beat <= is_last(packet_config_c, packet_i);
+            rin.cmd.pkt_size <= resize(r.rx_bytes + byte_count(packet_config_c, packet_i),r.cmd.pkt_size'length);
             if should_align(header_config_c, r.header_buf,packet_i) then
               rin.state <= ST_REALIGN_BUF;
             else
@@ -181,17 +182,17 @@ begin
         rin.stats.pkt_size <= header_v.cmd.pkt_size;
 
       when ST_DATA => 
-        if is_valid(config_c, packet_i) then
+        if is_valid(packet_config_c, packet_i) then
           rin.stats.seq_num <= r.cmd.seq_num;
-          rin.rx_bytes <= r.rx_bytes + byte_count(config_c, packet_i);
+          rin.rx_bytes <= r.rx_bytes + byte_count(packet_config_c, packet_i);
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                             data_prbs_poly_c,
-                                            config_c.data_width * 8);
+                                            packet_config_c.data_width * 8);
 
           if r.stats.payload_valid then
             for i in payload_byte_ref_v'range loop
-              if keep(config_c, packet_i)(i) = '1' then
-                if payload_byte_ref_v(i) /= bytes(config_c, packet_i)(i) then
+              if keep(packet_config_c, packet_i)(i) = '1' then
+                if payload_byte_ref_v(i) /= bytes(packet_config_c, packet_i)(i) then
                   rin.stats.payload_valid <= false;
                   rin.stats.index_data_ko <= resize(r.rx_bytes + i, r.stats.index_data_ko'length);   
                 end if;
@@ -199,10 +200,10 @@ begin
             end loop;
           end if;
 
-          if is_last(config_c, packet_i) then
+          if is_last(packet_config_c, packet_i) then
             rin.state <= ST_SEND_STATS;
             if r.stats.payload_valid then
-              if r.rx_cmd.pkt_size /= r.rx_bytes + byte_count(config_c, packet_i) then
+              if r.rx_cmd.pkt_size /= r.rx_bytes + byte_count(packet_config_c, packet_i) then
                 rin.stats.payload_valid <= false;
                 rin.stats.index_data_ko <= to_unsigned(10, r.stats.index_data_ko'length); -- size header field
               end if;
@@ -221,8 +222,8 @@ begin
         end if;      
         
       when ST_IGNORE => 
-        if is_valid(config_c, packet_i) then
-          if is_last(config_c, packet_i) then
+        if is_valid(packet_config_c, packet_i) then
+          if is_last(packet_config_c, packet_i) then
             rin.state <= ST_SEND_STATS;
           end if;
         end if;
@@ -237,7 +238,7 @@ begin
         end if;
 
       when TXER_SEND_STATS =>
-        if is_ready(config_c, stats_i) then
+        if is_ready(stats_config_c, stats_i) then
           rin.stats_buf <= shift(stats_buf_config, r.stats_buf);
           if is_last(stats_buf_config, r.stats_buf) then
             rin.txer <= TXER_IDLE;
@@ -251,10 +252,10 @@ begin
   begin
     case r.state is
       when ST_HEADER_DEC | ST_DATA | ST_IGNORE =>
-        packet_o <= accept(config_c, true);
+        packet_o <= accept(packet_config_c, true);
 
       when others =>
-        packet_o <= accept(config_c, false);
+        packet_o <= accept(packet_config_c, false);
     end case;
 
     case r.txer is 
@@ -262,7 +263,7 @@ begin
         stats_o <= next_beat(stats_buf_config, r.stats_buf, last => true);  
 
       when others => 
-        stats_o <= transfer_defaults(config_c);
+        stats_o <= transfer_defaults(stats_config_c);
     end case;
   end process;
 end architecture;
