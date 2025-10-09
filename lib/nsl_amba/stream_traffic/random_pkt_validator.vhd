@@ -36,11 +36,11 @@ architecture beh of random_pkt_validator is
   constant stats_buf_config : buffer_config_t := buffer_config(config_c, STATS_SIZE);
   constant mtu_l2 : integer := nsl_math.arith.log2(mtu_c) + 1;
   constant stats_reset : stats_t := (
-    stats_seqnum        => to_unsigned(0, 16),
-    stats_pkt_size      => to_unsigned(0, 16),
-    stats_header_valid  => true,
-    stats_payload_valid => true,
-    stats_index_data_ko => to_unsigned(0, 16)
+    seq_num        => to_unsigned(0, 16),
+    pkt_size      => to_unsigned(0, 16),
+    header_valid  => true,
+    payload_valid => true,
+    index_data_ko => to_unsigned(0, 16)
     );
   
   type state_t is (
@@ -87,11 +87,11 @@ begin
       r.header_buf <= reset(header_config_c);
       r.stats_buf <= reset(stats_buf_config);
       r.rx_bytes <= (others => '0');
-      r.stats.stats_seqnum <= (others => '0');
-      r.stats.stats_pkt_size <= (others => '0');
-      r.stats.stats_header_valid <= true;
-      r.stats.stats_payload_valid <= true;
-      r.stats.stats_index_data_ko <= (others => '0');
+      r.stats.seq_num <= (others => '0');
+      r.stats.pkt_size <= (others => '0');
+      r.stats.header_valid <= true;
+      r.stats.payload_valid <= true;
+      r.stats.index_data_ko <= (others => '0');
       r.was_last_beat <= false;
       r.cmd.seq_num <= (others => '0');
       r.header_crc <= crc_init(header_crc_params_c);
@@ -121,8 +121,8 @@ begin
         if is_valid(config_c, packet_i) then
           rin.header_buf <= shift(header_config_c, r.header_buf, packet_i);
           rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
-          rin.stats.stats_payload_valid <= true;
-          rin.stats.stats_header_valid <= true;
+          rin.stats.payload_valid <= true;
+          rin.stats.header_valid <= true;
           rin.header_crc <= crc_update(header_crc_params_c, 
                                        r.header_crc, 
                                        bytes(config_c, packet_i));
@@ -152,22 +152,22 @@ begin
                                               std_ulogic_vector(from_le(cmd_pack(header_unpack(bytes(header_config_c, r.header_buf),
                                                                                                header_packed_t'length).cmd))));
           else
-            rin.stats.stats_header_valid <= false;
-            rin.stats.stats_index_data_ko <= to_unsigned(0,r.stats.stats_index_data_ko'length);
+            rin.stats.header_valid <= false;
+            rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
             rin.state <= ST_IGNORE;
           end if;
           --
           if header_v.cmd.seq_num /= r.cmd.seq_num then
-            rin.stats.stats_header_valid <= false;
-            rin.stats.stats_index_data_ko <= to_unsigned(0,r.stats.stats_index_data_ko'length);
+            rin.stats.header_valid <= false;
+            rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
             rin.state <= ST_IGNORE;
           end if;
         else
           for i in 0 to header_packed_t'length - 1 loop
             if i < to_integer(r.rx_bytes) then
               if header_byte_ref_v(i) /= bytes(header_config_c,r.header_buf)(i) then
-                rin.stats.stats_header_valid <= false;
-                rin.stats.stats_index_data_ko <= to_unsigned(0,r.stats.stats_index_data_ko'length);
+                rin.stats.header_valid <= false;
+                rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
                 --
                 exit;
               end if;
@@ -180,23 +180,23 @@ begin
         --
         rin.header_crc <= crc_init(header_crc_params_c);
         rin.cmd.seq_num <= header_v.cmd.seq_num;
-        rin.stats.stats_seqnum <= header_v.cmd.seq_num;
-        rin.stats.stats_pkt_size <= header_v.cmd.pkt_size;
+        rin.stats.seq_num <= header_v.cmd.seq_num;
+        rin.stats.pkt_size <= header_v.cmd.pkt_size;
 
       when ST_DATA => 
         if is_valid(config_c, packet_i) then
-          rin.stats.stats_seqnum <= r.cmd.seq_num;
+          rin.stats.seq_num <= r.cmd.seq_num;
           rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                             data_prbs_poly_c,
                                             config_c.data_width * 8);
           --
-          if r.stats.stats_payload_valid then
+          if r.stats.payload_valid then
             for i in payload_byte_ref_v'range loop
               if keep(config_c, packet_i)(i) = '1' then
                 if payload_byte_ref_v(i) /= bytes(config_c, packet_i)(i) then
-                  rin.stats.stats_payload_valid <= false;
-                  rin.stats.stats_index_data_ko <= resize(r.rx_bytes + i, r.stats.stats_index_data_ko'length);   
+                  rin.stats.payload_valid <= false;
+                  rin.stats.index_data_ko <= resize(r.rx_bytes + i, r.stats.index_data_ko'length);   
                 end if;
               end if;
             end loop;
@@ -204,10 +204,10 @@ begin
           --
           if is_last(config_c, packet_i) then
             rin.state <= ST_SEND_STATS;
-            if r.stats.stats_payload_valid then
+            if r.stats.payload_valid then
               if r.rx_cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i)) then
-                rin.stats.stats_payload_valid <= false;
-                rin.stats.stats_index_data_ko <= to_unsigned(10, r.stats.stats_index_data_ko'length); -- size header field
+                rin.stats.payload_valid <= false;
+                rin.stats.index_data_ko <= to_unsigned(10, r.stats.index_data_ko'length); -- size header field
               end if;
             end if;
           end if;

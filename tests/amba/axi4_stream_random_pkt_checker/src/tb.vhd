@@ -75,13 +75,13 @@ architecture arch of tb is
     variable payload_valid_str : string(1 to 5);
   begin
     -- Convert booleans to string
-    if stats.stats_header_valid then
+    if stats.header_valid then
       header_valid_str := "TRUE ";
     else
       header_valid_str := "FALSE";
     end if;
   
-    if stats.stats_payload_valid then
+    if stats.payload_valid then
       payload_valid_str := "TRUE ";
     else
       payload_valid_str := "FALSE";
@@ -102,11 +102,11 @@ architecture arch of tb is
             line_sep & LF &
             "|        STATS REPORT        |" & LF &
             line_sep & LF &
-            "| Seq Num       : " & to_string(to_integer(stats.stats_seqnum)) & LF &
-            "| Packet Size   : " & to_string(to_integer(stats.stats_pkt_size)) & LF &
+            "| Seq Num       : " & to_string(to_integer(stats.seq_num)) & LF &
+            "| Packet Size   : " & to_string(to_integer(stats.pkt_size)) & LF &
             "| Header Valid  : " & header_valid_str & LF &
             "| Payload Valid : " & payload_valid_str & LF &
-            "| Index Data KO : " & to_string(to_integer(stats.stats_index_data_ko)) & LF &
+            "| Index Data KO : " & to_string(to_integer(stats.index_data_ko)) & LF &
             "+----------------------------+";
   end function;
 
@@ -246,7 +246,7 @@ begin
       if is_ready(rx_stream_cfg_array(i), stats_bus(i).s) and is_valid(rx_stream_cfg_array(i), stats_bus(i).m) then
         rin.stats_buf <= shift(stats_buf_config_c, r.stats_buf, stats_bus(i).m);
         if is_last(stats_buf_config_c, r.stats_buf) then
-          if not stats_v.stats_payload_valid or not stats_v.stats_header_valid then
+          if not stats_v.payload_valid or not stats_v.header_valid then
             rin.stats_report_cnt <= r.stats_report_cnt + 1;
           end if;
         end if;
@@ -371,10 +371,10 @@ begin
             if is_last(stats_buf_config_v_c, stats_buf_v) then
               stats_buf_v := shift(stats_buf_config_v_c, stats_buf_v, stats_bus(i).m);
               stats_v := stats_unpack(bytes(stats_buf_config_v_c, stats_buf_v));
-              if not stats_v.stats_payload_valid or not stats_v.stats_header_valid then
-                index_data_ko_distribution_v(to_integer(stats_v.stats_index_data_ko)) := 
-                  index_data_ko_distribution_v(to_integer(stats_v.stats_index_data_ko)) + 1;
-                if feedback_v.pkt_index_ko /= stats_v.stats_index_data_ko then
+              if not stats_v.payload_valid or not stats_v.header_valid then
+                index_data_ko_distribution_v(to_integer(stats_v.index_data_ko)) := 
+                  index_data_ko_distribution_v(to_integer(stats_v.index_data_ko)) + 1;
+                if feedback_v.pkt_index_ko /= stats_v.index_data_ko then
                   log_info("DUMPED INDEX KO" & " - " & to_string(stats_v, i, tx_stream_cfg_array(i), rx_stream_cfg_array(i)));
                   log_info("DEBUG: feedback_v.pkt_index_ko=" & to_string(feedback_v.pkt_index_ko));
                   assert false severity failure;

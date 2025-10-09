@@ -41,11 +41,11 @@ package stream_traffic is
 
   type stats_t is
   record
-    stats_seqnum : unsigned(15 downto 0);
-    stats_pkt_size : unsigned(15 downto 0);
-    stats_header_valid : boolean;
-    stats_payload_valid : boolean;
-    stats_index_data_ko : unsigned(15 downto 0);
+    seq_num : unsigned(15 downto 0);
+    pkt_size : unsigned(15 downto 0);
+    header_valid : boolean;
+    payload_valid : boolean;
+    index_data_ko : unsigned(15 downto 0);
   end record;
 
   -- Error feedback
@@ -68,7 +68,7 @@ package stream_traffic is
   function header_pack(header: header_t) return header_packed_t;
   function header_from_cmd(cmd:cmd_t) return header_t;
   function count_valid_bytes(tkeep : std_ulogic_vector) return natural;
-  function is_seqnum_corrupted(index_ko : unsigned) return boolean;
+  function is_seq_num_corrupted(index_ko : unsigned) return boolean;
   function is_size_corrupted(index_ko : unsigned) return boolean;
   function is_rand_data_corrupted(index_ko : unsigned) return boolean;
   function is_crc_corrupted(index_ko : unsigned) return boolean;
@@ -299,11 +299,11 @@ package body stream_traffic is
   is
     variable ret: stats_t;
   begin 
-    ret.stats_seqnum := unsigned(b(1)) & unsigned(b(0));
-    ret.stats_pkt_size := unsigned(b(3)) & unsigned(b(2));
-    ret.stats_header_valid := to_boolean(b(4)(7));
-    ret.stats_payload_valid := to_boolean(b(5)(7));
-    ret.stats_index_data_ko := unsigned(b(7)) & unsigned(b(6));
+    ret.seq_num := unsigned(b(1)) & unsigned(b(0));
+    ret.pkt_size := unsigned(b(3)) & unsigned(b(2));
+    ret.header_valid := to_boolean(b(4)(7));
+    ret.payload_valid := to_boolean(b(5)(7));
+    ret.index_data_ko := unsigned(b(7)) & unsigned(b(6));
     return ret;
   end function;
 
@@ -311,11 +311,11 @@ package body stream_traffic is
   is
     variable ret: byte_string(0 to 7) := (others =>(others => '0'));
   begin 
-    ret(0 to 1) := to_le(s.stats_seqnum);
-    ret(2 to 3) := to_le(s.stats_pkt_size);
-    ret(4)(7) := to_logic(s.stats_header_valid);
-    ret(5)(7) := to_logic(s.stats_payload_valid);
-    ret(6 to 7) := to_le(s.stats_index_data_ko);
+    ret(0 to 1) := to_le(s.seq_num);
+    ret(2 to 3) := to_le(s.pkt_size);
+    ret(4)(7) := to_logic(s.header_valid);
+    ret(5)(7) := to_logic(s.payload_valid);
+    ret(6 to 7) := to_le(s.index_data_ko);
     return ret;
   end function;
 
@@ -330,7 +330,7 @@ package body stream_traffic is
     return cnt;
   end function;
 
-  function is_seqnum_corrupted(index_ko : unsigned) return boolean is
+  function is_seq_num_corrupted(index_ko : unsigned) return boolean is
   begin 
     return index_ko = 0 or index_ko = 1;
   end function;
