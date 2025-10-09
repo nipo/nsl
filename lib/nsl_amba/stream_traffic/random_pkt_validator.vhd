@@ -98,7 +98,7 @@ begin
     end if;
   end process;
 
-  rx_process: process(r, packet_i, stats_i, rin)
+  rx_process: process(r, packet_i, stats_i)
     variable header_v : header_t;
     variable payload_byte_ref_v : byte_string(0 to config_c.data_width -1);
     variable header_byte_ref_v : header_packed_t;
