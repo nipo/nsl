@@ -28,7 +28,7 @@ architecture arch of tb is
   type stream_cfg_array_t is array (natural range <>) of config_t;
   type integer_vector is array (natural range <>) of integer;
   type boolean_vector is array (natural range <> ) of boolean;
-  --
+
   type size_distribution_t is array (0 to nbr_scenario - 1) of integer_vector(0 to mtu_c);
   type index_ko_t is array (0 to nbr_scenario - 1) of integer_vector(0 to mtu_c);
   constant feedback_default : error_feedback_t := (error => '0',
@@ -52,16 +52,16 @@ architecture arch of tb is
   type incr_state_vector_t is array (natural range <> ) of incr_state_t;
                                                 
   constant tx_stream_cfg_array : stream_cfg_array_t := 
-    (0 => config(2, keep => true, last => true), -- 4
-     1 => config(2, keep => true, last => true), -- 2
-     2 => config(4, keep => true, last => true), -- 2
-     3 => config(8, keep => true, last => true));-- 8
+    (0 => config(2, keep => true, last => true),
+     1 => config(2, keep => true, last => true),
+     2 => config(4, keep => true, last => true),
+     3 => config(8, keep => true, last => true));
      
   constant rx_stream_cfg_array : stream_cfg_array_t := 
-    (0 => config(2, keep => true, last => true), -- 2
-     1 => config(4, keep => true, last => true), -- 4
-     2 => config(4, keep => true, last => true), -- 2
-     3 => config(8, keep => true, last => true));-- 8
+    (0 => config(2, keep => true, last => true),
+     1 => config(4, keep => true, last => true),
+     2 => config(4, keep => true, last => true),
+     3 => config(8, keep => true, last => true));
 
   function to_string(
     stats      : stats_t; 
@@ -149,9 +149,9 @@ begin
       port map (
         clock_i => clock_s,
         reset_n_i => reset_n_s,
-        --
+
         enable_i => '1',
-        --
+
         cmd_o => cmd_bus(i).m,
         cmd_i => cmd_bus(i).s
         );
@@ -165,10 +165,10 @@ begin
       port map (
         clock_i => clock_s,
         reset_n_i => reset_n_s,
-        --
+
         cmd_i => cmd_bus(i).m,
         cmd_o => cmd_bus(i).s,
-        --
+
         packet_o => tx_bus(i).m,
         packet_i => tx_bus(i).s
         );
@@ -312,7 +312,7 @@ begin
       -- Statistics collection
       variable pkt_size_distribution_v :integer_vector(0 to mtu_c) := (others => 0);
       variable index_data_ko_distribution_v : integer_vector(0 to mtu_c) := (others => 0);
-      --
+
       variable first_error_v : boolean := true;
       variable stats_buf_v : buffer_t := reset(stats_buf_config_v_c);
       variable rx_bytes_v : integer range 0 to 2*mtu_c;
@@ -325,11 +325,11 @@ begin
         null;
       elsif rising_edge(clock_s) then
         if done_s_tmp(i) /= '1' then
-          --
+
           if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) then
             rx_bytes_v := rx_bytes_v + byte_count(rx_stream_cfg_array(i), adapter_ipg_bus(i).m);
           end if;
-          --
+
           if insert_seq_num_error_sh_v(i) then
             feedback_v := header_error;
             first_error_v := false;
@@ -343,7 +343,7 @@ begin
               first_error_v := false;
             end if;
           end if;
-          --
+
           if is_ready(rx_stream_cfg_array(i), stats_bus(i).s) and is_valid(rx_stream_cfg_array(i), stats_bus(i).m) then
             last := is_last(stats_buf_config_v_c, stats_buf_v);
             stats_buf_v := shift(stats_buf_config_v_c, stats_buf_v, stats_bus(i).m);
@@ -362,7 +362,7 @@ begin
               end if;
             end if;
           end if;
-          --
+
           if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and 
              is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) and 
              is_last(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) then
