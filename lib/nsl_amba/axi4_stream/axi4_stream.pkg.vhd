@@ -98,6 +98,7 @@ package axi4_stream is
   function is_last(cfg: config_t; m: master_t; default: boolean := true) return boolean;
   function is_ready(cfg: config_t; s: slave_t) return boolean;
   function bytes(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return byte_string;
+  function byte_count(cfg: config_t; m: master_t) return natural;
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned;
   function strobe(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
   function keep(cfg: config_t; m: master_t; order: byte_order_t := BYTE_ORDER_INCREASING) return std_ulogic_vector;
@@ -726,6 +727,22 @@ package body axi4_stream is
     else
       return reverse(m.data(0 to cfg.data_width-1));
     end if;
+  end function;
+
+  function byte_count(cfg: config_t; m: master_t) return natural
+  is
+    variable count: natural := 0;
+  begin
+    if not cfg.has_keep then
+      return cfg.data_width;
+    end if;
+
+    for i in 0 to cfg.data_width
+    loop
+      count := count + if_else(m.keep(i) = '1', 1, 0);
+    end loop;
+
+    return count;
   end function;
 
   function value(cfg: config_t; m: master_t; endian: endian_t := ENDIAN_LITTLE) return unsigned

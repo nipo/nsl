@@ -113,14 +113,13 @@ begin
                                            config_c.data_width);
 
     case r.state is
-
       when ST_RESET =>
         rin.state <= ST_HEADER_DEC;
 
       when ST_HEADER_DEC =>
         if is_valid(config_c, packet_i) then
           rin.header_buf <= shift(header_config_c, r.header_buf, packet_i);
-          rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
+          rin.rx_bytes <= r.rx_bytes + byte_count(config_c, packet_i);
           rin.stats.payload_valid <= true;
           rin.stats.header_valid <= true;
           rin.header_crc <= crc_update(header_crc_params_c, 
@@ -128,7 +127,7 @@ begin
                                        bytes(config_c, packet_i));
           if is_last(header_config_c, r.header_buf) or is_last(config_c, packet_i) then
             rin.was_last_beat <= is_last(config_c, packet_i);
-            rin.cmd.pkt_size <= resize(r.rx_bytes + count_valid_bytes(keep(config_c, packet_i)),r.cmd.pkt_size'length);
+            rin.cmd.pkt_size <= resize(r.rx_bytes + byte_count(config_c, packet_i),r.cmd.pkt_size'length);
             if should_align(header_config_c, r.header_buf,packet_i) then
               rin.state <= ST_REALIGN_BUF;
             else
@@ -186,7 +185,7 @@ begin
       when ST_DATA => 
         if is_valid(config_c, packet_i) then
           rin.stats.seq_num <= r.cmd.seq_num;
-          rin.rx_bytes <= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i));
+          rin.rx_bytes <= r.rx_bytes + byte_count(config_c, packet_i);
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                             data_prbs_poly_c,
                                             config_c.data_width * 8);
@@ -205,7 +204,7 @@ begin
           if is_last(config_c, packet_i) then
             rin.state <= ST_SEND_STATS;
             if r.stats.payload_valid then
-              if r.rx_cmd.pkt_size /= r.rx_bytes + count_valid_bytes(keep(config_c, packet_i)) then
+              if r.rx_cmd.pkt_size /= r.rx_bytes + byte_count(config_c, packet_i) then
                 rin.stats.payload_valid <= false;
                 rin.stats.index_data_ko <= to_unsigned(10, r.stats.index_data_ko'length); -- size header field
               end if;

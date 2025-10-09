@@ -349,7 +349,7 @@ begin
         if done_s_tmp(i) /= '1' then
           --
           if is_valid(rx_stream_cfg_array(i), adapter_ipg_bus(i).m) and is_ready(rx_stream_cfg_array(i), adapter_ipg_bus(i).s) then
-            rx_bytes_v := rx_bytes_v + count_valid_bytes(keep(rx_stream_cfg_array(i), adapter_ipg_bus(i).m));
+            rx_bytes_v := rx_bytes_v + byte_count(rx_stream_cfg_array(i), adapter_ipg_bus(i).m);
           end if;
           --
           if insert_seq_num_error_sh_v(i) then

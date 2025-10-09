@@ -67,7 +67,6 @@ package stream_traffic is
   function stats_pack(s : stats_t) return byte_string;
   function header_pack(header: header_t) return header_packed_t;
   function header_from_cmd(cmd:cmd_t) return header_t;
-  function count_valid_bytes(tkeep : std_ulogic_vector) return natural;
   function is_seq_num_corrupted(index_ko : unsigned) return boolean;
   function is_size_corrupted(index_ko : unsigned) return boolean;
   function is_rand_data_corrupted(index_ko : unsigned) return boolean;
@@ -317,17 +316,6 @@ package body stream_traffic is
     ret(5)(7) := to_logic(s.payload_valid);
     ret(6 to 7) := to_le(s.index_data_ko);
     return ret;
-  end function;
-
-  function count_valid_bytes(tkeep : std_ulogic_vector) return natural is
-    variable cnt : natural := 0;
-  begin
-    for i in tkeep'range loop
-      if tkeep(i) = '1' then
-        cnt := cnt + 1;
-      end if;
-    end loop;
-    return cnt;
   end function;
 
   function is_seq_num_corrupted(index_ko : unsigned) return boolean is
