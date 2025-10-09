@@ -155,7 +155,7 @@ begin
             rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
             rin.state <= ST_IGNORE;
           end if;
-          --
+
           if header_v.cmd.seq_num /= r.cmd.seq_num then
             rin.stats.header_valid <= false;
             rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
@@ -163,20 +163,20 @@ begin
           end if;
         else
           for i in 0 to header_packed_t'length - 1 loop
-            if i < to_integer(r.rx_bytes) then
-              if header_byte_ref_v(i) /= bytes(header_config_c,r.header_buf)(i) then
-                rin.stats.header_valid <= false;
-                rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
-                --
-                exit;
-              end if;
-            else
+            if i >= to_integer(r.rx_bytes) then
+              exit;
+            end if;
+
+            if header_byte_ref_v(i) /= bytes(header_config_c,r.header_buf)(i) then
+              rin.stats.header_valid <= false;
+              rin.stats.index_data_ko <= to_unsigned(0,r.stats.index_data_ko'length);
+
               exit;
             end if;
           end loop;
           rin.state <= ST_SEND_STATS;
         end if;
-        --
+
         rin.header_crc <= crc_init(header_crc_params_c);
         rin.cmd.seq_num <= header_v.cmd.seq_num;
         rin.stats.seq_num <= header_v.cmd.seq_num;
@@ -189,7 +189,7 @@ begin
           rin.state_pkt_gen <= prbs_forward(r.state_pkt_gen, 
                                             data_prbs_poly_c,
                                             config_c.data_width * 8);
-          --
+
           if r.stats.payload_valid then
             for i in payload_byte_ref_v'range loop
               if keep(config_c, packet_i)(i) = '1' then
@@ -200,7 +200,7 @@ begin
               end if;
             end loop;
           end if;
-          --
+
           if is_last(config_c, packet_i) then
             rin.state <= ST_SEND_STATS;
             if r.stats.payload_valid then
@@ -249,20 +249,22 @@ begin
     end case;
   end process;
 
-  packet_o <= accept(config_c, r.state /= ST_SEND_STATS and 
-                     r.state /= ST_REALIGN_BUF and 
-                     r.state /= ST_HEADER_STATS);
-
-  proc_txer: process(r, packet_i)
+  moore: process(r)
   begin
-    stats_o <= transfer_defaults(config_c);
+    case r.state is
+      when ST_HEADER_DEC | ST_DATA | ST_IGNORE =>
+        packet_o <= accept(config_c, true);
+
+      when others =>
+        packet_o <= accept(config_c, false);
+    end case;
+
     case r.txer is 
       when TXER_SEND_STATS => 
-        stats_o <= transfer(config_c,
-                            src => next_beat(stats_buf_config, r.stats_buf, last => false),
-                            force_last => true,
-                            last => is_last(stats_buf_config, r.stats_buf));  
+        stats_o <= next_beat(stats_buf_config, r.stats_buf, last => true);  
+
       when others => 
+        stats_o <= transfer_defaults(config_c);
     end case;
   end process;
 end architecture;
