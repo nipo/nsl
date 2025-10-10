@@ -192,7 +192,7 @@ package stream_traffic is
   component axi4_stream_pacer is
     generic(
       config_c : config_t;
-      probability_denom_l2_c : natural range 1 to 31 := 7;
+      probability_denom_l2_c : integer range 1 to 31 := 7;
       probability_c : real := 0.95
       );
     port(

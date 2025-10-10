@@ -2,14 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_data, nsl_math;
+library work, nsl_data, nsl_math, nsl_logic;
 use work.axi4_stream.all;
-use nsl_data.prbs.all;
+use nsl_data.probability.all;
+use nsl_logic.bool.all;
 
 entity axi4_stream_pacer is
   generic(
     config_c : config_t;
-    probability_denom_l2_c : natural range 1 to 31 := 7;
+    probability_denom_l2_c : integer range 1 to 31 := 7;
     probability_c : real := 0.95
     );
   port(
@@ -26,53 +27,29 @@ end entity;
 
 architecture beh of axi4_stream_pacer is
 
-  subtype probability_t is unsigned(probability_denom_l2_c-1 downto 0);
-  constant probability_threshold_i_c: integer
-    := integer(probability_c * 2.0 ** probability_denom_l2_c);
-  constant probability_threshold_il_c: integer
-    := nsl_math.arith.min(2**probability_denom_l2_c-1, probability_threshold_i_c);
-  constant probability_threshold_c : probability_t
-    := to_unsigned(probability_threshold_il_c, probability_t'length);
-
-  type regs_t is
-  record
-    prbs: prbs_state(30 downto 0);
-    pass: boolean;
-  end record;
-
-  signal r, rin: regs_t;
-
+  signal use_s, pass_su_s: std_ulogic;
+  signal pass_s: boolean;
+  
 begin
 
-  regs: process(clock_i, reset_n_i) is
-  begin
-    if rising_edge(clock_i) then
-      r <= rin;
-    end if;
+  probability_streamer: nsl_data.probability.probability_stream_constant
+    generic map(
+      state_width_c => probability_denom_l2_c,
+      probability_c => probability_c
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      ready_i => use_s,
+      value_o => pass_su_s
+      );
 
-    if reset_n_i = '0' then
-      r.prbs <= (others => '1');
-      r.pass <= false;
-    end if;
-  end process;
-  
-  transition: process(r, in_i, out_i) is
-    variable probability_v: probability_t;
-    variable consumed: boolean;
-  begin
-    rin <= r;
+  pass_s <= pass_su_s = '1';
+  use_s <= to_logic(is_valid(config_c, in_i) and is_ready(config_c, out_i));
 
-    consumed := is_valid(config_c, in_i) and is_ready(config_c, out_i) and r.pass;
-
-    if consumed or not r.pass then
-      probability_v := unsigned(prbs_bit_string(r.prbs, prbs31, probability_v'length));
-      rin.prbs <= prbs_forward(r.prbs, prbs31, probability_v'length);
-
-      rin.pass <= probability_v <= probability_threshold_c;
-    end if;
-  end process;
-
-  out_o <= transfer(config_c, in_i, force_valid => true, valid => is_valid(config_c, in_i) and r.pass);
-  in_o <= accept(config_c, is_ready(config_c, out_i) and r.pass);
+  out_o <= transfer(config_c, in_i,
+                    force_valid => true,
+                    valid => is_valid(config_c, in_i) and pass_s);
+  in_o <= accept(config_c, is_ready(config_c, out_i) and pass_s);
 
 end architecture;
