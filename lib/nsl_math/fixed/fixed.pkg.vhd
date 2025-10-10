@@ -2,7 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
-library nsl_data;
 
 library nsl_math;
 
@@ -153,7 +152,89 @@ end package;
 
 package body fixed is
 
-  use nsl_data.text.all;
+  function to_string(v: real) return string
+  is
+  begin
+    return real'image(v);
+  end function;
+
+  function to_string(v: std_ulogic) return character
+  is
+  begin
+    case v is
+      when '0' => return '0';
+      when '1' => return '1';
+      when 'L' => return 'L';
+      when 'H' => return 'H';
+      when 'Z' => return 'Z';
+      when 'X' => return 'X';
+      when 'U' => return 'U';
+      when 'W' => return 'W';
+      when others => return '-';
+    end case;
+  end function;
+
+  function to_string(v: std_ulogic_vector) return string
+  is
+    variable ret: string(v'range) := (others => '?');
+  begin
+    for i in v'range
+    loop
+      ret(i) := to_string(v(i));
+    end loop;
+    return ret;
+  end function;
+
+  function "*"(v: string; c: natural) return string
+  is
+    variable ret: string(1 to v'length * c);
+  begin
+    for i in 0 to c-1
+    loop
+      ret(1+i*v'length to (1+i)*v'length) := v;
+    end loop;
+    return ret;
+  end function;
+  
+  function to_string(value: ufixed) return string
+  is
+  begin
+    if value'length <= 0 then
+      return to_string(to_real(value)) & " (-.u)";
+    elsif value'left >= 0 then
+      if value'right < 0 then
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto 0)))
+          & "." & to_string(to_suv(value(-1 downto value'right))) & "u)";
+      else
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "u)";
+      end if;
+    else
+      return to_string(to_real(value))
+          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "u)";
+    end if;
+  end function;
+
+  function to_string(value: sfixed) return string
+  is
+  begin
+    if value'length <= 0 then
+      return to_string(to_real(value)) & " (-.s)";
+    elsif value'left >= 0 then
+      if value'right < 0 then
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto 0)))
+          & "." & to_string(to_suv(value(-1 downto value'right))) & "s)";
+      else
+        return to_string(to_real(value))
+          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "s)";
+      end if;
+    else
+      return to_string(to_real(value))
+          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "s)";
+    end if;
+  end function;
 
   function sign(value : sfixed) return std_ulogic
   is
@@ -345,14 +426,16 @@ package body fixed is
   is
     constant sat_min : ufixed(left downto right) := (others => '0');
     constant sat_max : ufixed(left downto right) := (others => '1');
+    constant as_int: integer := integer(round(value * 2.0 ** (-right)));
+    constant w: integer := left - right + 1;
     variable ret : ufixed(left downto right);
   begin
-    if value <= 0.0 then
+    if as_int <= 0 or w <= 0 then
       return sat_min;
-    elsif value >= 2.0 ** (left+1) - 2.0 ** right then
+    elsif as_int >= (2 ** w) - 1 then
       return sat_max;
     else
-      ret := ufixed(to_unsigned(integer(round(value * 2.0 ** (-right))), left - right + 1));
+      ret := ufixed(to_unsigned(as_int, w));
       return ret;
     end if;
   end function;
@@ -889,46 +972,6 @@ package body fixed is
     end if;
 
     return signed(to_suv(a)) <= signed(to_suv(b));
-  end function;
-
-  function to_string(value: ufixed) return string
-  is
-  begin
-    if value'length <= 0 then
-      return to_string(to_real(value)) & " (-.u)";
-    elsif value'left >= 0 then
-      if value'right < 0 then
-        return to_string(to_real(value))
-          & " (" & to_string(to_suv(value(value'left downto 0)))
-          & "." & to_string(to_suv(value(-1 downto value'right))) & "u)";
-      else
-        return to_string(to_real(value))
-          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "u)";
-      end if;
-    else
-      return to_string(to_real(value))
-          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "u)";
-    end if;
-  end function;
-
-  function to_string(value: sfixed) return string
-  is
-  begin
-    if value'length <= 0 then
-      return to_string(to_real(value)) & " (-.s)";
-    elsif value'left >= 0 then
-      if value'right < 0 then
-        return to_string(to_real(value))
-          & " (" & to_string(to_suv(value(value'left downto 0)))
-          & "." & to_string(to_suv(value(-1 downto value'right))) & "s)";
-      else
-        return to_string(to_real(value))
-          & " (" & to_string(to_suv(value(value'left downto value'right))) & ("-" * value'right) & "s)";
-      end if;
-    else
-      return to_string(to_real(value))
-          & " (." & ("-" * (-value'left-1)) & to_string(to_suv(value(value'left downto value'right))) & "s)";
-    end if;
   end function;
 
   function to_ufixed_saturate(s: sfixed;
