@@ -176,6 +176,8 @@ begin
               rin.data <= reg_cfg_value;
             elsif std_match(dap_i.addr(7 downto 2), reg_base) then
               rin.data <= std_ulogic_vector(rom_base);
+            elsif std_match(dap_i.addr(7 downto 2), reg_baseh) then
+              rin.data <= (others => '0');
             elsif std_match(dap_i.addr(7 downto 2), reg_idr) then
               rin.data <= std_ulogic_vector(idr);
             else
