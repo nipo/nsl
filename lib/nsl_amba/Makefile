@@ -13,4 +13,5 @@ packages += mm_stream_adapter
 packages += mm_fifo
 packages += axi_apb
 packages += stream_traffic
+packages += stream_to_udp
 nsl_amba-ghdl-flags += -Wno-hide
