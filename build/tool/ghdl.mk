@@ -17,8 +17,8 @@ lib_cf = $(call workdir,$1)/$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
 clean-dirs += $(build-dir)
 
-vhpidirect-plugin := $(sorted $(vhpidirect-plugin))
-vpi-plugin := $(sorted $(vpi-plugin))
+vhpidirect-plugin := $(sort $(vhpidirect-plugin))
+vpi-plugin := $(sort $(vpi-plugin))
 
 ifeq ($(GHDL_LLVM),)
 # GHDL Without LLVM
