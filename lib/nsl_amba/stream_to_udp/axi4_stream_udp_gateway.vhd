@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 library nsl_amba, nsl_simulation, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_data.text.all;
+use nsl_simulation.socket.all;
 use nsl_simulation.udp_socket.all;
 use nsl_amba.axi4_stream.all;
 

@@ -1,4 +1,5 @@
 vhdl-sources += udp_socket.pkg.vhd
+deps += nsl_simulation.socket
 
 ifeq ($(tool),ghdl)
 
