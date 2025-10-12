@@ -395,7 +395,7 @@ begin
           else
             rin.ap_state <= AP_IDLE;
           end if;
-          rin.ap_rdbuf <= unsigned(dap_i.rdata);
+          rin.ap_rdbuf <= to_01(unsigned(dap_i.rdata));
         end if;
 
       when AP_WRITE =>
