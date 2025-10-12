@@ -573,7 +573,7 @@ package axi4_stream is
     variable root: frame_queue_root_t;
     variable frm: out frame_t;
     dt : in time := 10 ns;
-    timeout : in time := 100 us;
+    timeout : in time := 0 ps;
     sev: severity_level := failure);
 
   -- Waits for a frame to be present on a queue.
@@ -1229,10 +1229,8 @@ package body axi4_stream is
     while not done
     loop
       wait until rising_edge(clock);
-      if is_valid(cfg, stream_i) then
-        done := true;
-        beat := stream_i;
-      end if;
+      beat := stream_i;
+      done := is_valid(cfg, stream_i);
 
       wait until falling_edge(clock);
       if done then
@@ -1983,7 +1981,7 @@ package body axi4_stream is
     variable root: frame_queue_root_t;
     variable frm: out frame_t;
     dt : in time := 10 ns;
-    timeout : in time := 100 us;
+    timeout : in time := 0 ps;
     sev: severity_level := failure)
   is
     variable root_v: frame_queue_root_t := root;
@@ -1991,7 +1989,7 @@ package body axi4_stream is
     variable ret: frame_t;
     variable time_left: time := timeout;
   begin
-    while time_left > dt
+    while time_left > dt or timeout = 0 ps
     loop
       if root_v.head /= null then
         item_a := root_v.head;
@@ -2001,8 +1999,12 @@ package body axi4_stream is
         frm := ret;
         return;
       end if;
+
       wait for dt;
-      time_left := time_left - dt;
+
+      if timeout /= 0 ps then
+        time_left := time_left - dt;
+      end if;
     end loop;
     assert false
       report "Timeout while waiting for frame"
