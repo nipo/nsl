@@ -1,0 +1,13 @@
+vhdl-sources += tb.vhd
+deps += nsl_coresight.swd
+deps += nsl_coresight.memap_mapper
+deps += nsl_coresight.ap
+deps += nsl_coresight.dp
+deps += nsl_coresight.transactor
+deps += nsl_coresight.testing
+deps += nsl_simulation.driver
+deps += nsl_bnoc.framed
+deps += nsl_line_coding.hdlc
+deps += nsl_amba.axi4_mm
+deps += nsl_amba.ram
+deps += nsl_amba.stream_to_tcp
