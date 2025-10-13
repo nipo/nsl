@@ -6,4 +6,5 @@ packages += logging
 packages += assertions
 packages += socket
 packages += udp_socket
+packages += tcp_socket
 
