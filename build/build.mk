@@ -79,6 +79,7 @@ $(foreach l,$(source-types),$(call source-list-cleanup,$l))
 deps :=
 srcdir := $3
 $1.$2-library := $1
+$1.$2-package := $2
 $1.$2-sub-packages :=
 $1-all-packages += $1.$2
 packages :=
