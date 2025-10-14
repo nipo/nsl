@@ -17,9 +17,6 @@ lib_cf = $(call workdir,$1)/$1-obj$(_GHDL_CF_SUFFIX_$($1-vhdl-version)).cf
 
 clean-dirs += $(build-dir)
 
-vhpidirect-plugin := $(sort $(vhpidirect-plugin))
-vpi-plugin := $(sort $(vpi-plugin))
-
 ifeq ($(GHDL_LLVM),)
 # GHDL Without LLVM
 
@@ -51,7 +48,7 @@ define ghdl-compile-rules
 		$(sort $(foreach l,$(libraries),-P$(call workdir,$(top-lib)))) \
 		--work=$(top-lib) $(top-entity) \
 		$(foreach x,$(topcell-generics),-g$x) \
-		$(foreach l,$(vpi-plugin),--vpi=$(build-dir)/$l-vpi.so) \
+		$(foreach l,$(all-vpi-plugins),--vpi=$l) \
 		--ieee-asserts=disable --unbuffered $$*' >> $@
 	chmod +x $@
 endef
@@ -72,13 +69,13 @@ define ghdl-compile-rules
 		--std=$(_GHDL_STD_$($(top-lib)-vhdl-version)) \
 		$(foreach l,$(libraries),-P$(call workdir,$l)) \
 		$(foreach l,$(libraries),$($l-ghdl-flags)) \
-		$(foreach l,$(vhpidirect-plugin),-Wl,$(build-dir)/$l-vhpidirect.so) \
+		$(foreach l,$(all-vhpidirect-plugins),-Wl,$l) \
 		--work=$(top-lib) -e $(top-entity)
 
 endef
 
 define ghdl-run-rules
-	./$< $(foreach l,$(vpi-plugin),--vpi=$(build-dir)/$l-vpi.so) $1
+	./$< $(foreach l,$(all-vpi-plugins),--vpi=$l) $1
 endef
 
 endif
@@ -111,27 +108,32 @@ endef
 
 define vhpidirect-plugin-compile-rule
 
-$(build-dir)/$1-vhpidirect.so: $($1-plugin-sources)
-	$(SILENT)mkdir -p $(build-dir)
-	gcc -shared -fPIC -o $$@ $$<
+$($1-library)/$($1-package)-vhpidirect.so: $(foreach s,$(all-vhpidirect-sources),$(if $(filter $1,$($s-package)),$s)) $(BUILD_ROOT)/support/vhpidirect/vhpidirect_user.h
+	$(SILENT)mkdir -p $($1-library)
+	gcc -shared -fPIC -o $$@ $$(filter %.c,$$^) -I$(BUILD_ROOT)/support/vhpidirect
+
+all-vhpidirect-plugins += $($1-library)/$($1-package)-vhpidirect.so
 
 endef
 
-$(eval $(foreach p,$(vhpidirect-plugin),$(call vhpidirect-plugin-compile-rule,$p)))
-
+all-vhpidirect-plugins :=
+$(eval $(foreach p,$(sort $(foreach s,$(all-vhpidirect-sources),$($s-package))),$(call vhpidirect-plugin-compile-rule,$p)))
 
 define vpi-plugin-compile-rule
 
-$(build-dir)/$1-vpi.so: $($1-plugin-sources)
-	$(SILENT)mkdir -p $(build-dir)
-	$(GHDL) --vpi-compile gcc -c -o $(build-dir)/$1.o  $$< -W -Wall -O2  -DVPI_DO_NOT_FREE_CALLBACK_HANDLES
-	$(GHDL) --vpi-link gcc -shared -fPIC -o $$@ $(build-dir)/$1.o -lm -L$(GHDL_VPI_LIB_DIR)
+$($1-library)/$($1-package)-vpi.so: $(foreach s,$(all-vpi-sources),$(if $(filter $1,$($s-package)),$s))
+	$(SILENT)mkdir -p $($1-library)
+	$(GHDL) --vpi-compile gcc -c -o $($1-library)/$1.o  $$^ -W -Wall -O2  -DVPI_DO_NOT_FREE_CALLBACK_HANDLES
+	$(GHDL) --vpi-link gcc -shared -fPIC -o $$@ $($1-library)/$1.o -lm -L$(GHDL_VPI_LIB_DIR)
+
+all-vpi-plugins += $($1-library)/$($1-package)-vpi.so
 
 endef
 
-$(eval $(foreach p,$(vpi-plugin),$(call vpi-plugin-compile-rule,$p)))
+all-vpi-plugins :=
+$(eval $(foreach p,$(sort $(foreach s,$(all-vpi-sources),$($s-package))),$(call vpi-plugin-compile-rule,$p)))
 
-$(target): $(sources) $(MAKEFILE_LIST) $(foreach l,$(vhpidirect-plugin),$(build-dir)/$l-vhpidirect.so) $(foreach l,$(vpi-plugin),$(build-dir)/$l-vpi.so)
+$(target): $(sources) $(MAKEFILE_LIST) $(all-vhpidirect-plugins) $(all-vpi-plugins)
 	$(SILENT)echo "[GHDL] Backend: $(ghdl-backend)"
 	$(SILENT)mkdir -p $(build-dir)
 	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))

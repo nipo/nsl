@@ -9,74 +9,7 @@
 #include <time.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-
-static
-struct timespec simulation_origin;
-
-struct ghdl_range
-{
-    int32_t left, right, dir, len;
-};
-
-struct ghdl_array
-{
-    char *data;
-    struct ghdl_range *range;
-};
-
-struct ghdl_signal
-{
-    char *data;
-    struct ghdl_range *range;
-};
-
-struct ghdl_access
-{
-    struct ghdl_range range;
-    uint8_t data[0];
-};
-
-static
-void *ghdl_array_data(struct ghdl_array *s)
-{
-    return s->data;
-}
-
-static
-const void *ghdl_array_const_data(const struct ghdl_array *s)
-{
-    return s->data;
-}
-
-static
-size_t ghdl_array_length(const struct ghdl_array *s)
-{
-    return s->range->len;
-}
-
-static
-char *ghdl_c_string_p(const struct ghdl_array *str)
-{
-    if (!str)
-        return NULL;
-
-    size_t sz = ghdl_array_length(str);
-    char *ret = malloc(sz+1);
-
-    memcpy(ret, ghdl_array_const_data(str), sz);
-    ret[sz] = 0;
-    return ret;
-}
-
-typedef long long unsigned ghdl_time_t;
-
-static
-__attribute__((constructor))
-void udp_socket_ctor(void)
-{
-    printf("udp_socket plugin loaded\n");
-}
-
+#include <vhpidirect_user.h>
 
 static
 void hexdump(const void *data, size_t size)
@@ -155,10 +88,10 @@ void udp_socket_create(
 int udp_socket_sendto(
     int fd,
     struct ghdl_sockaddr_in_t *remote,
-    const struct ghdl_array *data)
+    const struct vhpidirect_array *data)
 {
-    size_t data_len = ghdl_array_length(data);
-    const uint8_t *data_ptr = ghdl_array_const_data(data);
+    size_t data_len = data->range->len;
+    const uint8_t *data_ptr = data->data;
     struct sockaddr_in addr;
 
     sockaddr_in_from_ghdl(&addr, remote);
@@ -198,7 +131,7 @@ int udp_socket_recv_len(
 void udp_socket_recv_data(
     int fd,
     struct ghdl_sockaddr_in_t *remote,
-    struct ghdl_array *rdata,
+    struct vhpidirect_array *rdata,
     int *rlen)
 {
     struct sockaddr_in addr;
