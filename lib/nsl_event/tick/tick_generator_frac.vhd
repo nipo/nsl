@@ -2,9 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_data;
+library nsl_math;
 use nsl_math.fixed.all;
-use nsl_data.text.all;
 
 entity tick_generator_frac is
   port(
@@ -33,15 +32,6 @@ architecture beh of tick_generator_frac is
   signal r, rin: regs_t;
   
 begin
-
-  assert false
-    report
-    "tick_generator_frac"
-    & ", num ("&to_string(freq_num_i'left)&":"&to_string(freq_num_i'right)&")"
-    & ", denom ("&to_string(freq_denom_i'left)&":"&to_string(freq_denom_i'right)&")"
-    & ", acc ("&to_string(acc_t'left)&":"&to_string(acc_t'right)&")"
-    
-    severity note;
 
   regs: process(clock_i, reset_n_i) is
   begin
