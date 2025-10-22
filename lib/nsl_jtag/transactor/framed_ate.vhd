@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_bnoc, nsl_io;
+library nsl_jtag, nsl_bnoc, nsl_io, nsl_event;
 use nsl_jtag.ate.all;
 use nsl_jtag.transactor.all;
 use nsl_bnoc.framed.all;
@@ -62,7 +62,7 @@ architecture rtl of framed_ate is
     rsp_data : std_ulogic_vector(7 downto 0);
     rsp_word_left : natural range 0 to 31;
 
-    divisor : natural range 0 to 255;
+    divisor : unsigned(7 downto 0);
 
     srst_drive : std_ulogic;
   end record;
@@ -78,6 +78,8 @@ architecture rtl of framed_ate is
   signal s_rsp_valid : std_ulogic;
   signal s_rsp_data  : std_ulogic_vector(data_max_size-1 downto 0);
 
+  signal tick_s : std_ulogic;
+  
 begin
   
   reg: process(clock_i, reset_n_i)
@@ -88,6 +90,7 @@ begin
     if reset_n_i = '0' then
       r.rsp_st <= ST_RSP_RESET;
       r.cmd_st <= ST_CMD_RESET;
+      r.divisor <= (others => '1');
     end if;
   end process;
 
@@ -186,7 +189,7 @@ begin
         
       when ST_CMD_DIV_GET =>
         if cmd_i.valid = '1' then
-          rin.divisor <= to_integer(unsigned(cmd_i.data));
+          rin.divisor <= unsigned(cmd_i.data);
           rin.cmd_last <= cmd_i.last = '1';
           rin.cmd_st <= ST_CMD_IDLE;
         end if;
@@ -318,17 +321,25 @@ begin
         s_rsp_ready <= '1';
     end case;
   end process;
-  
+
+  tick_gen: nsl_event.tick.tick_generator_integer
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      period_m1_i => r.divisor,
+      tick_o => tick_s
+      );
+
   ate: jtag_ate
     generic map (
-      prescaler_width => 8,
       data_max_size => data_max_size,
       allow_pipelining => false
       )
     port map (
       reset_n_i => reset_n_i,
       clock_i    => clock_i,
-      divisor_i => r.divisor,
+
+      tick_i => tick_s,
 
       cmd_ready_o => s_cmd_ready,
       cmd_valid_i => s_cmd_valid,

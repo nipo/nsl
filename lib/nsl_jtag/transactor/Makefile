@@ -3,3 +3,4 @@ vhdl-sources += framed_ate.vhd
 deps += nsl_bnoc.framed
 deps += nsl_jtag.jtag
 deps += nsl_jtag.ate
+deps += nsl_event.tick

@@ -17,7 +17,6 @@ package ate is
   
   component jtag_ate
     generic (
-      prescaler_width : positive;
       data_max_size : positive := 8;
       allow_pipelining : boolean := true
       );
@@ -25,8 +24,8 @@ package ate is
       reset_n_i   : in  std_ulogic;
       clock_i      : in  std_ulogic;
 
-      divisor_i  : in natural range 0 to 2 ** prescaler_width - 1 := 0;
-
+      tick_i : in std_ulogic;
+      
       cmd_ready_o   : out std_ulogic;
       cmd_valid_i   : in  std_ulogic;
       cmd_op_i      : in  ate_op;
