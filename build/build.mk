@@ -201,8 +201,8 @@ endef
 #  other libraries for a given library
 define lib_deps_calc
 $1-packages := $(call pkg-donedeps-first,$($1-enabled-packages))
-$(1)-deps-unsorted := $(sort $(foreach p,$($1-enabled-packages),$($p-deps-unsorted)))
-$(1)-libdeps-unsorted := $(sort $(filter-out $1,$(foreach t,$(foreach p,$($1-enabled-packages),$($p-deepdeps-unsorted)),$($t-library))))
+$(1)-deps-unsorted := $(filter-out $1,$(sort $(foreach p,$($1-enabled-packages),$($p-deps-unsorted))))
+$(1)-libdeps-unsorted := $(filter-out $1,$(sort $(filter-out $1,$(foreach t,$(foreach p,$($1-enabled-packages),$($p-deepdeps-unsorted)),$($t-library)))))
 
 endef
 
@@ -234,8 +234,8 @@ endef
 # <library> <libraries>
 # Removes libraries in $2 from references in lib $1
 define exclude-libs-lib
-$1-libdeps-unsorted := $(call filter-out-many,$($1-libdeps-unsorted),$2)
-$1-deps-unsorted := $(call filter-out-many,$($1-libdeps-unsorted),$2)
+$1-libdeps-unsorted := $(sort $(call filter-out-many,$($1-libdeps-unsorted),$2 $1))
+$1-deps-unsorted := $(sort $(call filter-out-many,$($1-libdeps-unsorted),$2 $1))
 $(foreach p,$($1-packages),$(call exclude-libs-pkg,$p,$(foreach l,$2,$($l-all-packages))))
 
 endef
