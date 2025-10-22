@@ -133,10 +133,19 @@ endef
 all-vpi-plugins :=
 $(eval $(foreach p,$(sort $(foreach s,$(all-vpi-sources),$($s-package))),$(call vpi-plugin-compile-rule,$p)))
 
-$(target): $(sources) $(MAKEFILE_LIST) $(all-vhpidirect-plugins) $(all-vpi-plugins)
+define lib-cf-rule
+
+$(call lib_cf,$1): $(foreach l,$($1-libdeps-unsorted),$(call lib_cf,$l)) $(MAKEFILE_LIST) $($1-sources)
+	$(SILENT)mkdir -p $(build-dir)
+	$(if $(foreach f,$($1-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$1))
+
+endef
+
+$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(eval $(call lib-cf-rule,$l))))
+
+$(target): $(sources) $(MAKEFILE_LIST) $(all-vhpidirect-plugins) $(all-vpi-plugins) $(call lib_cf,$(top-lib))
 	$(SILENT)echo "[GHDL] Backend: $(ghdl-backend)"
 	$(SILENT)mkdir -p $(build-dir)
-	$(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(call ghdl-library-rules,$l)))
 	$(call ghdl-compile-rules)
 
 run: $(target)
