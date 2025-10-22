@@ -46,7 +46,7 @@ begin
       rin.acc <= period_m1_i;
       rin.tick <= '1';
     else
-      rin.acc <= r.acc - 1;
+      rin.acc <= to_01(r.acc - 1, '0');
       rin.tick <= '0';
     end if;
   end process;
