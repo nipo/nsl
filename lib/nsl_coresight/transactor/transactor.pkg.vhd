@@ -65,6 +65,8 @@ package transactor is
       clock_i     : in  std_ulogic;
       reset_n_i   : in  std_ulogic;
 
+      tick_i : in std_ulogic;
+      
       cmd_valid_i : in  std_ulogic;
       cmd_ready_o : out std_ulogic;
       cmd_data_i  : in  dp_cmd_data;

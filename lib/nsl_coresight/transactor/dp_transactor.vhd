@@ -10,6 +10,8 @@ entity dp_transactor is
     clock_i      : in  std_ulogic;
     reset_n_i   : in  std_ulogic;
 
+    tick_i : in std_ulogic;
+    
     cmd_valid_i  : in  std_ulogic;
     cmd_ready_o  : out std_ulogic;
     cmd_data_i : in  dp_cmd_data;
@@ -58,9 +60,6 @@ architecture rtl of dp_transactor is
     turnaround    : natural range 0 to 3;
     cycle_count   : natural range 0 to 63;
 
-    divisor       : unsigned(15 downto 0);
-    counter       : unsigned(15 downto 0);
-
     data          : std_ulogic_vector(31 downto 0);
     op            : std_ulogic_vector(7 downto 0);
     run_val       : std_ulogic;
@@ -90,7 +89,7 @@ begin
     end if;
   end process;
 
-  transition: process (r, cmd_valid_i, cmd_data_i, rsp_ready_i, swd_i)
+  transition: process (r, cmd_valid_i, cmd_data_i, rsp_ready_i, swd_i, tick_i)
     variable swclk_falling : boolean;
     variable swclk_rising : boolean;
   begin
@@ -103,10 +102,7 @@ begin
         null;
 
       when others =>
-        rin.counter <= r.counter - 1;
-
-        if r.counter = (r.counter'range => '0') then
-          rin.counter <= r.divisor;
+        if tick_i = '1' then
           rin.swd.clk <= not r.swd.clk;
           swclk_falling := r.swd.clk = '1';
           swclk_rising := r.swd.clk = '0';
@@ -119,8 +115,6 @@ begin
         rin.swd.clk <= '0';
         rin.swd.dio.v <= '0';
         rin.turnaround <= 0;
-        rin.divisor <= (others => '1');
-        rin.counter <= (others => '0');
 
       when ST_CMD_GET =>
         if cmd_valid_i = '1' then
@@ -138,10 +132,6 @@ begin
           rin.cycle_count <= to_integer(unsigned(r.op(5 downto 0)));
           rin.state <= ST_RUN;
           rin.run_val <= r.op(6);
-
-        elsif std_match(r.op, DP_CMD_DIVISOR) then
-          rin.divisor <= unsigned(r.data(31 downto 16));
-          rin.state <= ST_RSP_PUT;
 
         elsif std_match(r.op, DP_CMD_BITBANG) then
           rin.cycle_count <= to_integer(unsigned(r.op(4 downto 0)));

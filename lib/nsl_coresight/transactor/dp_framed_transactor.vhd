@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_coresight, nsl_io;
+library nsl_bnoc, nsl_coresight, nsl_io, nsl_event;
 use nsl_coresight.transactor.all;
 
 entity dp_framed_transactor is
@@ -54,10 +54,14 @@ architecture rtl of dp_framed_transactor is
 
     data            : std_ulogic_vector(31 downto 0);
 
+    divisor         : unsigned(15 downto 0);
+
     srst_drive : std_ulogic;
   end record;
 
   signal r, rin : regs_t;
+
+  signal tick_s : std_ulogic;
 
 begin
 
@@ -109,7 +113,12 @@ begin
           rin.data <= cmd_i.data & r.data(31 downto 8);
           rin.last <= cmd_i.last;
           if r.cycle = 0 then
-            rin.state <= STATE_SWD_CMD;
+            if std_match(r.cmd, DP_CMD_DIVISOR) then
+              rin.divisor <= unsigned(cmd_i.data & r.data(31 downto 24));
+              rin.state <= STATE_RSP_PUT;
+            else
+              rin.state <= STATE_SWD_CMD;
+            end if;
           end if;
         end if;
 
@@ -194,11 +203,21 @@ begin
     end case;
   end process;
 
+  tick_gen: nsl_event.tick.tick_generator_integer
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      period_m1_i => r.divisor,
+      tick_o => tick_s
+      );
+
   swd_port: dp_transactor
     port map(
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
+      tick_i => tick_s,
+      
       cmd_valid_i => s_swd_cmd_valid,
       cmd_ready_o => s_swd_cmd_ready,
       cmd_data_i.op => r.cmd,
