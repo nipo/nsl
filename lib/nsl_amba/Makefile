@@ -15,4 +15,5 @@ packages += axi_apb
 packages += stream_traffic
 packages += stream_to_udp
 packages += stream_to_tcp
+packages += stream_meta
 nsl_amba-ghdl-flags += -Wno-hide
