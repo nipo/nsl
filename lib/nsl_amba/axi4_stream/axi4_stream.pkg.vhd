@@ -1418,7 +1418,7 @@ package body axi4_stream is
     variable beat: master_t;
     variable d: byte_string(0 to cfg.data_width-1);
     variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
-    variable first: boolean := false;
+    variable first: boolean := true;
   begin
     assert cfg.has_last
       report "Packet_receive with a byte stream cannot support unframed interface"
@@ -1448,9 +1448,9 @@ package body axi4_stream is
       if first then
         first := false;
 
-        id := work.axi4_stream.id(cfg, beat)(0 to id'length-1);
-        user := work.axi4_stream.user(cfg, beat)(0 to user'length-1);
-        dest := work.axi4_stream.dest(cfg, beat)(0 to dest'length-1);
+        id := work.axi4_stream.id(cfg, beat);
+        user := work.axi4_stream.user(cfg, beat);
+        dest := work.axi4_stream.dest(cfg, beat);
       end if;
 
       if is_last(cfg, beat) then
@@ -1474,7 +1474,7 @@ package body axi4_stream is
     variable beat: master_t;
     variable d: byte_string(0 to cfg.data_width-1);
     variable s, k: std_ulogic_vector(0 to cfg.data_width-1);
-    variable first: boolean := false;
+    variable first: boolean := true;
     variable should_be_last: boolean;
     variable offset: integer := 0;
   begin
@@ -1510,9 +1510,9 @@ package body axi4_stream is
       if first then
         first := false;
 
-        id := work.axi4_stream.id(cfg, beat)(0 to id'length-1);
-        user := work.axi4_stream.user(cfg, beat)(0 to user'length-1);
-        dest := work.axi4_stream.dest(cfg, beat)(0 to dest'length-1);
+        id := work.axi4_stream.id(cfg, beat);
+        user := work.axi4_stream.user(cfg, beat);
+        dest := work.axi4_stream.dest(cfg, beat);
       end if;
 
       if cfg.has_last then
