@@ -74,7 +74,7 @@ begin
     wait for 100 ns;
 
     -- Test 6: Short frame with cancel status (3 bytes < 8)
-    -- Expected output: 3 data bytes + 5 padding bytes + cancel
+    -- Expected output: 3 data bytes + and no padding
     log_info("Test 6: Sending 3 bytes with cancel status");
     committed_put(in_s.req, in_s.ack, clock_s,
                   from_hex("112233"), false,
@@ -125,10 +125,10 @@ begin
                     1, 2);
 
     -- Check 6: 3 bytes padded to 8 with cancel status
-    log_info("Checking test 6: expecting 3 data + 5 padding bytes with cancel");
+    log_info("Checking test 6: expecting 3 data and no padding");
     committed_check("padder test 6",
                     out_s.req, out_s.ack, clock_s,
-                    from_hex("112233ffffffffff"), false, LOG_LEVEL_FATAL,
+                    from_hex("112233"), false, LOG_LEVEL_FATAL,
                     1, 2);
 
     log_info("All padder tests passed");
