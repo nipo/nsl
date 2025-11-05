@@ -236,6 +236,26 @@ package committed is
       );
   end component;
 
+  -- Pads frames to a minimum size by appending a constant padding byte.
+  -- Frames already meeting or exceeding min_size_c are passed through unchanged.
+  -- The status byte is always forwarded after padding.
+  component committed_padder is
+    generic(
+      min_size_c : positive;
+      padding_byte_c : byte := x"00"
+      );
+    port(
+      reset_n_i  : in  std_ulogic;
+      clock_i    : in  std_ulogic;
+
+      in_i   : in committed_req_t;
+      in_o   : out committed_ack_t;
+
+      out_o   : out committed_req_t;
+      out_i   : in committed_ack_t
+      );
+  end component;
+
   -- A module asserting valid_o exactly during one cycle at end of
   -- every frame.  Gives out statistic about past frame when valid_o
   -- is asserted.
