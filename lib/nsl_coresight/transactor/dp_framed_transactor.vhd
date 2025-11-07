@@ -84,6 +84,7 @@ begin
       when STATE_RESET =>
         rin.state <= STATE_CMD_GET;
         rin.srst_drive <= '0';
+        rin.divisor <= (others => '1');
 
       when STATE_CMD_GET =>
         if cmd_i.valid = '1' then
