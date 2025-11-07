@@ -101,7 +101,7 @@ begin
       when IN_HEADER =>
         if r.fifo_fillness < fifo_depth_c then
           fifo_push := true;
-          fifo_data := frame_header_i(r.in_ctr);
+          fifo_data := dereference_safe(frame_header_i, r.in_ctr);
           if r.in_ctr /= header_length_c - 1 then
             rin.in_ctr <= r.in_ctr + 1;
           else
