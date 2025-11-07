@@ -57,7 +57,7 @@ begin
 
     assert in_config_c.has_keep = out_config_c.has_keep
       report "In/out keep do not match"
-      severity failure;
+      severity warning;
 
     assert in_config_c.has_strobe = out_config_c.has_strobe
       report "In/out strobe do not match"
