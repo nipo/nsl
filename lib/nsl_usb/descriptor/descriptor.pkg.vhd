@@ -25,6 +25,7 @@ package descriptor is
   constant SUBTYPE_CDC_FUNC_HEADER          : integer := 16#00#;
   constant SUBTYPE_CDC_FUNC_CALL_MGMT       : integer := 16#01#;
   constant SUBTYPE_CDC_FUNC_ACM             : integer := 16#02#;
+  constant SUBTYPE_CDC_FUNC_ECM             : integer := 16#0F#;
   constant SUBTYPE_CDC_FUNC_DLM             : integer := 16#03#;
   constant SUBTYPE_CDC_FUNC_TEL_RING        : integer := 16#04#;
   constant SUBTYPE_CDC_FUNC_TEL_CALL        : integer := 16#05#;
@@ -108,6 +109,11 @@ package descriptor is
     capabilities, data_interface : natural)
     return byte_string;
 
+  function cdc_functional_ecm(
+    iMacAddress, max_segment_size, statistics,
+    nbr_mc_filters, nbr_power_filters : natural := 0)
+    return byte_string;
+
   function language(
     langid : natural := 16#409#)
     return byte_string;
@@ -158,6 +164,21 @@ package body descriptor is
   is
   begin
     return wv(to_unsigned(n, 16));
+  end function;
+
+  function wwv(n: unsigned)
+    return byte_string
+  is
+  begin
+    assert n'length <= 32 severity failure;
+    return to_le(resize(n, 32));
+  end function;
+
+  function wwv(n: integer range 0 to 65535  )
+    return byte_string
+  is
+  begin
+    return wwv(to_unsigned(n, 32));
   end function;
 
   function sized(
@@ -344,6 +365,22 @@ package body descriptor is
       TYPE_STRING,
       wv(langid));
   end function language;
+
+  function cdc_functional_ecm(
+    iMacAddress, max_segment_size, statistics,
+    nbr_mc_filters, nbr_power_filters : natural := 0)
+    return byte_string
+  is
+  begin
+    return sized(
+      TYPE_CDC_CS_INTERFACE,
+      bv(SUBTYPE_CDC_FUNC_ECM)
+      & bv(iMacAddress)
+      & wwv(statistics)
+      & wv(max_segment_size)
+      & wv(nbr_mc_filters)
+      & bv(nbr_power_filters));
+  end function cdc_functional_ecm;
 
   function string_from_ascii(
     str : string)
