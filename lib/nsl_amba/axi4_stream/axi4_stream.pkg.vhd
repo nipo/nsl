@@ -518,7 +518,7 @@ package axi4_stream is
                       variable frm: out frame_t);
 
   -- Factory function for a frame
-  function frame(
+impure function frame(
     constant data: byte_string := null_byte_string;
     constant dest: std_ulogic_vector := na_suv;
     constant id:   std_ulogic_vector := na_suv;
@@ -1796,7 +1796,7 @@ package body axi4_stream is
     return b.beat_count;
   end function;
 
-  function frame(
+impure function frame(
     constant data: byte_string := null_byte_string;
     constant dest: std_ulogic_vector := na_suv;
     constant id:   std_ulogic_vector := na_suv;
