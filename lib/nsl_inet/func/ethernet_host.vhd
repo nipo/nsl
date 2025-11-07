@@ -15,6 +15,7 @@ entity ethernet_host is
   generic(
     clock_hz_c : natural;
     dhcp_c: boolean := false;
+    l1_has_fcs_c : boolean := true;
     ip_proto_c: ip_proto_vector := ip_proto_vector_null_c;
     udp_port_c: udp_port_vector := udp_port_vector_null_c
     );
@@ -120,6 +121,7 @@ begin
   eth: work.ethernet.ethernet_layer
     generic map(
       ethertype_c => ethertype_list_c,
+      l1_has_fcs_c => l1_has_fcs_c,
       l1_header_length_c => 0
       )
     port map(
