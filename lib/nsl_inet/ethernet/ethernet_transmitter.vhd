@@ -12,6 +12,7 @@ use nsl_logic.bool.all;
 entity ethernet_transmitter is
   generic(
     l1_header_length_c : integer := 0;
+    l1_has_fcs_c : boolean := true;
     min_frame_size_c : natural := 64 --bytes
     );
   port(
@@ -287,20 +288,29 @@ begin
     end case;
   end process;
 
-  fcs: nsl_bnoc.crc.crc_committed_adder
-    generic map(
-      header_length_c => l1_header_length_c,
-      params_c => fcs_params_c
-      )
-    port map(
-      reset_n_i => reset_n_i,
-      clock_i => clock_i,
+  has_fcs: if l1_has_fcs_c
+  generate
+    fcs: nsl_bnoc.crc.crc_committed_adder
+      generic map(
+        header_length_c => l1_header_length_c,
+        params_c => fcs_params_c
+        )
+      port map(
+        reset_n_i => reset_n_i,
+        clock_i => clock_i,
 
-      in_i => to_fcs_s.req,
-      in_o => to_fcs_s.ack,
+        in_i => to_fcs_s.req,
+        in_o => to_fcs_s.ack,
 
-      out_i => l1_i,
-      out_o => l1_o
-      );
+        out_i => l1_i,
+        out_o => l1_o
+        );
+  end generate;
 
+  no_fcs: if not l1_has_fcs_c
+  generate
+    to_fcs_s.ack <= l1_i;
+    l1_o <= to_fcs_s.req;
+  end generate;
+      
 end architecture;
