@@ -11,6 +11,7 @@ package stream_fifo is
     generic(
       config_c : nsl_amba.axi4_stream.config_t;
       depth_c : positive range 4 to positive'high;
+      out_pkt_available_range_c: integer range 0 to integer'high := 0;
       clock_count_c : integer range 1 to 2 := 1
       );
     port(
@@ -23,6 +24,7 @@ package stream_fifo is
 
       out_o : out nsl_amba.axi4_stream.master_t;
       out_i : in nsl_amba.axi4_stream.slave_t;
+      out_pkt_available : out integer range 0 to out_pkt_available_range_c;
       out_available_o : out integer range 0 to depth_c + 1
       );
   end component;
