@@ -11,6 +11,7 @@ use work.ethernet.all;
 entity ethernet_layer is
   generic(
     ethertype_c : ethertype_vector;
+    l1_has_fcs_c : boolean := true;
     -- Flit count to pass through at the start of a frame
     l1_header_length_c : integer := 0;
     min_frame_size_c : natural := 64; --bytes
@@ -64,6 +65,7 @@ begin
   receiver: work.ethernet.ethernet_receiver
     generic map(
       ethertype_c => ethertype_l_c,
+      l1_has_fcs_c => l1_has_fcs_c,
       l1_header_length_c => l1_header_length_c
       )
     port map(
@@ -151,6 +153,7 @@ begin
   transmitter: work.ethernet.ethernet_transmitter
     generic map(
       l1_header_length_c => l1_header_length_c,
+      l1_has_fcs_c => l1_has_fcs_c,
       min_frame_size_c => min_frame_size_c
       )
     port map(

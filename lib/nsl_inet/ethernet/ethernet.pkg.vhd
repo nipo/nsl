@@ -77,6 +77,7 @@ package ethernet is
       -- frame on frame_o port.  Only defined entries are handled.
       -- All non-handled ethertypes coming on l1_i are dropped.
       ethertype_c : ethertype_vector;
+      l1_has_fcs_c : boolean := true;
       -- Flit count to pass through at the start of a frame
       l1_header_length_c : integer := 0
       );
@@ -102,6 +103,7 @@ package ethernet is
     generic(
       -- Flit count to pass through at the start of a frame
       l1_header_length_c : integer := 0;
+      l1_has_fcs_c : boolean := true;
       min_frame_size_c : natural := 64 --bytes
       );
     port(
@@ -126,6 +128,7 @@ package ethernet is
   component ethernet_layer is
     generic(
       ethertype_c : ethertype_vector;
+      l1_has_fcs_c : boolean := true;
       -- Flit count to pass through at the start of a frame
       l1_header_length_c : integer := 0;
       min_frame_size_c : natural := 64; --bytes

@@ -201,6 +201,7 @@ package usb is
   constant BULK_MPS_FS_MIN: integer := 8;
   constant BULK_MPS_FS_MAX: integer := 64;
   constant BULK_MPS_HS: integer := 512;
+  constant BULK_MPS_SP: integer := 1024;
 
   function bit_count_cycles_fs(bit_count : integer; ref_clock_mhz : integer := 60) return integer;
   function bit_count_cycles_hs(bit_count : integer; ref_clock_mhz : integer := 60) return integer;

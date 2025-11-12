@@ -67,6 +67,8 @@ package bytestream is
   -- vector, returns a dontcare byte.
   function first_right(s: byte_string) return byte;
 
+  function dereference_safe(s: byte_string; i : integer) return byte;
+
   -- Shifts the byte string left and reinjects back the shifted byte
   -- in the empty position.
   function rot_left(s: byte_string) return byte_string;
@@ -444,6 +446,15 @@ package body bytestream is
       return dontcare_byte_c;
     end if;
     return s(s'right);
+  end function;
+
+  function dereference_safe(s: byte_string; i : integer) return byte
+  is
+  begin
+    if s'length = 0 then
+      return dontcare_byte_c;
+    end if;
+    return s(i);
   end function;
 
   function std_match(a, b: in byte_string) return boolean

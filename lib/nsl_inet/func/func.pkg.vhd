@@ -13,6 +13,9 @@ package func is
     generic(
       clock_hz_c : natural;
 
+      -- Whether l1 has FCS appended ot frames
+      l1_has_fcs_c : boolean := true;
+
       -- Whether to implement DHCP
       dhcp_c: boolean := false;
 

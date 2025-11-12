@@ -12,6 +12,7 @@ use work.ethernet.all;
 entity ethernet_receiver is
   generic(
     ethertype_c : ethertype_vector;
+    l1_has_fcs_c : boolean := true;
     l1_header_length_c : integer := 0
     );
   port(
@@ -342,18 +343,27 @@ begin
     end case;
   end process;
 
-  crc: nsl_bnoc.crc.crc_committed_checker
-    generic map(
-      header_length_c => l1_header_length_c,
-      params_c => work.ethernet.fcs_params_c
-      )
-    port map(
-      clock_i => clock_i,
-      reset_n_i => reset_n_i,
-      in_i => l1_i,
-      in_o => l1_o,
-      out_o => crced_i,
-      out_i => crced_o
-      );
-  
+  has_fcs: if l1_has_fcs_c
+  generate
+    crc: nsl_bnoc.crc.crc_committed_checker
+      generic map(
+        header_length_c => l1_header_length_c,
+        params_c => work.ethernet.fcs_params_c
+        )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+        in_i => l1_i,
+        in_o => l1_o,
+        out_o => crced_i,
+        out_i => crced_o
+        );
+  end generate;
+
+  no_fcs: if not l1_has_fcs_c
+  generate
+    crced_i <= l1_i;
+    l1_o <= crced_o;
+  end generate;
+
 end architecture;
