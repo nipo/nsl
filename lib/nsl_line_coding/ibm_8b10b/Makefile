@@ -1,9 +1,11 @@
 vhdl-sources += ibm_8b10b.pkg.vhd
+ifneq ($(target),doc)
 vhdl-sources += ibm_8b10b_logic.pkg.vhd
 vhdl-sources += ibm_8b10b_table.pkg.vhd
 vhdl-sources += ibm_8b10b_spec.pkg.vhd
 vhdl-sources += ibm_8b10b_decoder.vhd
 vhdl-sources += ibm_8b10b_encoder.vhd
+endif
 
 deps += nsl_logic.bool
 deps += nsl_logic.logic

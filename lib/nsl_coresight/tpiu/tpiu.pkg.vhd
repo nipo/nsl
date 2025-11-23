@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl;
-use nsl.framed.all;
+library nsl_bnoc;
+use nsl_bnoc.framed.all;
 
 package tpiu is
 
@@ -19,8 +19,8 @@ package tpiu is
       p_overflow  : out std_ulogic;
       p_sync      : out std_ulogic;
       p_tracedata : in  std_ulogic_vector(2 * trace_width - 1 downto 0);
-      p_out_val   : out nsl.framed.framed_req;
-      p_out_ack   : in  nsl.framed.framed_ack
+      p_out_val   : out nsl_bnoc.framed.framed_req;
+      p_out_ack   : in  nsl_bnoc.framed.framed_ack
       );
   end component;
 

@@ -7,7 +7,6 @@ vhdl-sources += icmpv4.vhd
 
 deps += nsl_math.arith
 deps += nsl_logic.bool
-deps += nsl_bnoc.fifo
 deps += nsl_bnoc.committed
 deps += nsl_memory.ram
 deps += nsl_inet.checksum

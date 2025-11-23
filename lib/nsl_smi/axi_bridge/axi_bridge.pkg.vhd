@@ -33,5 +33,5 @@ package axi_bridge is
       axi_o: out nsl_amba.axi4_mm.master_t;
       axi_i: in nsl_amba.axi4_mm.slave_t
       );
-  end entity;
+  end component;
 end package;

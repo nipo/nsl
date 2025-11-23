@@ -211,6 +211,7 @@ package body usb is
 
   use nsl_data.crc.all;
   use nsl_data.endian.all;
+  use nsl_data.bytestream.all;
   use nsl_logic.bool.all;
   
   function token_data(addr : device_address_t;

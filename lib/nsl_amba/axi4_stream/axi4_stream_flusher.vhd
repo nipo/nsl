@@ -21,7 +21,7 @@ entity axi4_stream_flusher is
     in_i : in master_t;
     in_o : out slave_t;
 
-    max_packet_length_m1_i : unsigned(max_packet_length_size_l2_c-1 downto 0) := (others => '1');
+    max_packet_length_m1_i : in unsigned(max_packet_length_size_l2_c-1 downto 0) := (others => '1');
 
     out_o : out master_t;
     out_i : in slave_t

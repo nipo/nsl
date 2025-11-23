@@ -259,16 +259,17 @@ package framed is
   -- Flush lags one cycle after matching data cycle,
   -- whatever the data flowing through during this later cycle.
   --
-  -- This creates three frames containing data [0, 1, 2] on the output:
-  --            _   _   _   _   _   _   _   _   _   _   _   _   _   _
-  -- clock_i \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \
-  --         _______________________________________________
-  -- ready                                                  \_________
-  --             ___________         _______________________     _____
-  -- valid   ___/           \_______/                       \___/
-  -- data    ---X 0 X 1 X 2 X-------X 0 X 1 X 2 X 0 X 1 X 2 X---X 8 X
-  --                             ___             ___             ___
-  -- flush_i ___________________/   \___________/   \___________/   \_
+  -- This creates three frames containing data [0, 1, 2] on the
+  -- output::
+  --              _   _   _   _   _   _   _   _   _   _   _   _   _   _
+  --   clock_i \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \_/ \
+  --           _______________________________________________
+  --   ready                                                  \_________
+  --               ___________         _______________________     _____
+  --   valid   ___/           \_______/                       \___/
+  --   data    ---X 0 X 1 X 2 X-------X 0 X 1 X 2 X 0 X 1 X 2 X---X 8 X
+  --                               ___             ___             ___
+  --   flush_i ___________________/   \___________/   \___________/   \_
   --
   component framed_committer is
     port(
@@ -325,11 +326,11 @@ package framed is
   --
   -- Routing decision is external to this module, using route_* ports.
   -- When forwarded, output frame has input header replaced with
-  -- passed header of out_header_count_c bytes.
+  -- passed header of ``out_header_count_c`` bytes.
   --
   -- If intention is to forward header as-is, parent should set
-  -- out_header_count_c = in_header_count_c and connect route_header_o
-  -- to route_header_i.
+  -- ``out_header_count_c`` = ``in_header_count_c`` and connect
+  -- ``route_header_o`` to ``route_header_i``.
   component framed_router is
     generic(
       in_count_c : natural;

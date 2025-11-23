@@ -11,8 +11,8 @@ use ieee.numeric_std.all;
 library unisim;
 use unisim.vcomponents.all;
 
-library nsl;
-use nsl.framed.all;
+library nsl_bnoc;
+use nsl_bnoc.framed.all;
 
 library nsl_memory;
 use nsl_memory.fifo.all;
@@ -29,8 +29,8 @@ entity tpiu_unformatter is
     p_overflow  : out std_ulogic;                                 --* Command/data fifo full 
     p_sync      : out std_ulogic;                                 --* Synchronization is done 
     p_tracedata : in  std_ulogic_vector(2 * trace_width - 1 downto 0); --* input  data
-    p_out_val   : out nsl.framed.framed_req;
-    p_out_ack   : in  nsl.framed.framed_ack
+    p_out_val   : out nsl_bnoc.framed.framed_req;
+    p_out_ack   : in  nsl_bnoc.framed.framed_ack
     );
 
 end entity tpiu_unformatter;

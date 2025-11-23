@@ -23,20 +23,21 @@ use nsl_logic.bool.all;
 -- character would be encoded as 01 01 03 05 05 00, the 'q'
 -- character as 00 00 06 05 06 04.  Bytes are used for easy
 -- alignment, but only the necessary bits will actually be used
--- in the ROM.
+-- in the ROM:
 --
---   /----- LSB of each word
---   |  /-- MSB of each word
---   |  |
---   v  v
---  +----+----+
---  |#   |    | <- First word
---  |#   |    |
---  |##  | ## |
---  |# # |# # |
---  |# # | ## |
---  |    |  # | <- Last word
---  +----+----+
+-- ::
+--       /----- LSB of each word
+--       |  /-- MSB of each word
+--       |  |
+--       v  v
+--      +----+----+
+--      |#   |    | <- First word
+--      |#   |    |
+--      |##  | ## |
+--      |# # |# # |
+--      |# # | ## |
+--      |    |  # | <- Last word
+--      +----+----+
 package font is
 
   -- Arbitrary constants for record declarations
@@ -66,8 +67,9 @@ package font is
   -- Font definition helper. Pass a vector of glyphs, they'll define
   -- the font.
   --
-  -- Usage:
-  -- constant my_font_c : font_t := font_define(4, 6,
+  -- Usage::
+  --
+  --   constant my_font_c : font_t := font_define(4, 6,
   --        glyph(" ## ",
   --              "# # ",
   --              "# # ",
