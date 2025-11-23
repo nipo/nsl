@@ -1,4 +1,3 @@
-
 Address and address vector abstraction
 ======================================
 
@@ -75,8 +74,9 @@ Address vectors
 ---------------
 
 Address vectors can be created manually, or by calling
-``routing_table()`` function. It accepts from 1 to 16 address strings as
-argument and yields a vector of relevant length.
+:vhdl:function:`routing_table <nsl_amba.address.routing_table>`
+function. It accepts from 1 to 16 address strings as argument and
+yields a vector of relevant length.
 
 Lookup
 ------
@@ -84,9 +84,11 @@ Lookup
 To ease lookup in an address vector, two functions can be
 used.
 
-* ``routing_table_lookup()`` gives the index of the entry matching the
-  address.  It may return a default value when passed address does not
-  match any entry.
+* :vhdl:function:`routing_table_lookup
+  <nsl_amba.address.routing_table_lookup>` gives the index of the
+  entry matching the address.  It may return a default value when
+  passed address does not match any entry.
 
-* ``routing_table_matches_entry()`` tells whether given address matches
-  a given index of a routing table.
+* :vhdl:function:`routing_table_matches_entry
+  <nsl_amba.address.routing_table_matches_entry>` tells whether given
+  address matches a given index of a routing table.

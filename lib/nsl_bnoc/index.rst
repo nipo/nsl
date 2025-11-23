@@ -1,4 +1,3 @@
-
 ============================================
  NSL-custom on-chip communication framework
 ============================================
@@ -6,25 +5,35 @@
 Overview
 ========
 
-`nsl_bnoc` is a set of 8-bit wide data streaming infrastructure
-models, with variants features depending on the needs:
+:vhdl:library:`nsl_bnoc` is a set of 8-bit wide data streaming
+infrastructure models, with variants features depending on the needs:
 
-* `pipe <pipe/>`_, an unidirectional 8-bit fifo interface (typically
+* `pipe <pipe>`_, an unidirectional 8-bit fifo interface (typically
   used to interface a wire protocol transceiver, like an UART),
 
-* `framed <framed/>`_, a `pipe <pipe/>`_ with added framing
+* `framed <framed>`_, a `pipe <pipe>`_ with added framing
   information (typically used to interface a wire protocol with
   framing info),
 
-* `committed <committed/>`_, a `framed <framed/>`_ with late validity
+* `committed <committed>`_, a `framed <framed>`_ with late validity
   of packet (typically used to convey frames with a CRC check at the
   end),
 
-* `routed <routed/>`_, a `framed <framed/>`_ with routing information
+* `routed <routed>`_, a `framed <framed>`_ with routing information
   header,
 
 * converters, FIFOs, CRC checkers, router, buffers around these
   protocols.
+
+Details
+=======
+
+.. toctree::
+
+   pipe
+   framed
+   committed
+   routed
 
 Rationale
 =========

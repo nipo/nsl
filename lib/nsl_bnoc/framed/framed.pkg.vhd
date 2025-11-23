@@ -374,14 +374,14 @@ package framed is
       out_o     : out framed_req_array(0 to out_count_c-1);
       out_i     : in framed_ack_array(0 to out_count_c-1);
 
-    route_valid_o       : out std_ulogic;
-    route_header_o      : out byte_string(0 to in_header_count_c-1);
-    route_source_o      : out natural range 0 to in_count_c-1;
+      route_valid_o       : out std_ulogic;
+      route_header_o      : out byte_string(0 to in_header_count_c-1);
+      route_source_o      : out natural range 0 to in_count_c-1;
 
-    route_ready_i       : in  std_ulogic := '1';
-    route_header_i      : in  byte_string(0 to out_header_count_c-1) := (others => x"00");
-    route_destination_i : in  natural range 0 to out_count_c-1;
-    route_drop_i        : in std_ulogic := '0'
+      route_ready_i       : in  std_ulogic := '1';
+      route_header_i      : in  byte_string(0 to out_header_count_c-1) := (others => x"00");
+      route_destination_i : in  natural range 0 to out_count_c-1;
+      route_drop_i        : in std_ulogic := '0'
       );
   end component;
 
