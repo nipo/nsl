@@ -35,6 +35,8 @@ package mm_fifo is
       master_o : out work.axi4_mm.master_t;
       master_i : in work.axi4_mm.slave_t
       );
+    --@-- clocking clock:clock_i(0), port:slave
+    --@-- clocking clock:clock_i(clock_count_c-1), port:master
   end component;
 
   -- A full AXI4-MM slice

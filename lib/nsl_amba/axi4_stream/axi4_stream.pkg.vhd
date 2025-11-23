@@ -63,6 +63,7 @@ package axi4_stream is
     last: boolean := false) return config_t;
 
   -- Master-driven interface
+  --@-- grouped group:bus_t
   type master_t is
   record
     id: id_t;
@@ -76,6 +77,7 @@ package axi4_stream is
   end record;
 
   -- Slave-driven interface
+  --@-- grouped group:bus_t
   type slave_t is
   record
     ready: std_ulogic;
@@ -84,7 +86,9 @@ package axi4_stream is
   -- Bus
   type bus_t is
   record
+    --@-- grouped direction:forward
     m: master_t;
+    --@-- grouped direction:reverse
     s: slave_t;
   end record;
 

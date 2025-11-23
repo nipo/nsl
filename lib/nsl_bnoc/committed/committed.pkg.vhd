@@ -11,13 +11,18 @@ use nsl_data.bytestream.all;
   
 package committed is
 
+  --@-- grouped group:committed_bus_t
   subtype committed_req_t is nsl_bnoc.framed.framed_req;
+  --@-- grouped group:committed_bus_t
   subtype committed_ack_t is nsl_bnoc.framed.framed_ack;
+
   subtype committed_req is committed_req_t;
   subtype committed_ack is committed_ack_t;
 
   type committed_bus_t is record
+    --@-- grouped direction:forward
     req: committed_req;
+    --@-- grouped direction:reverse
     ack: committed_ack;
   end record;
   subtype committed_bus is committed_bus_t;
@@ -114,6 +119,8 @@ package committed is
       out_o   : out committed_req_t;
       out_i   : in committed_ack_t
       );
+    --@-- clocking clock:clock_i(0), port:in
+    --@-- clocking clock:clock_i(clock_count_c-1), port:out
   end component;
 
   -- Measures the actual byte length of committed frame (validity flit
@@ -155,6 +162,8 @@ package committed is
       out_o   : out committed_req_t;
       out_i   : in committed_ack_t
       );
+    --@-- clocking clock:clock_i(0), port:in
+    --@-- clocking clock:clock_i(clock_count_c-1), port:out,size_o,good_o,size_valid_o,size_ready_i
   end component;
 
   -- A small fifo that allows the frame to get out only when fillness reaches a

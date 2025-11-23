@@ -13,19 +13,35 @@ package framed is
 
   subtype framed_data_t is std_ulogic_vector(7 downto 0);
 
-  type framed_req_t is record
+  --@-- grouped group:framed_bus_t
+  type framed_req_t is
+  record
     data : framed_data_t;
     last : std_ulogic;
     valid  : std_ulogic;
   end record;
 
-  type framed_ack_t is record
+  --@-- grouped group:framed_bus_t
+  type framed_ack_t is
+  record
     ready  : std_ulogic;
   end record;
 
-  type framed_bus_t is record
+  --@-- grouped group:framed_io
+  type framed_bus_t is
+  record
+    --@-- grouped direction:forward
     req: framed_req_t;
+    --@-- grouped direction:reverse
     ack: framed_ack_t;
+  end record;
+
+  type framed_io is
+  record
+    --@-- grouped direction:forward
+    cmd: framed_bus_t;
+    --@-- grouped direction:reverse
+    rsp: framed_bus_t;
   end record;
 
   subtype framed_req is framed_req_t;
@@ -69,6 +85,10 @@ package framed is
       p_out_val   : out framed_req_t;
       p_out_ack   : in framed_ack_t
       );
+    --@-- grouped name:in, members:p_in_val;p_in_ack
+    --@-- grouped name:out, members:p_out_val;p_out_ack
+    --@-- clocking clock:p_clk(0), port:in
+    --@-- clocking clock:p_clk(clock_count_c-1), port:out
   end component;
 
   -- A fifo slice (i.e. a 2-deep fifo)
@@ -172,6 +192,12 @@ package framed is
       p_target_rsp_val   : in framed_req_t;
       p_target_rsp_ack   : out framed_ack_t
       );
+    --@-- grouped name:p_cmd, members:p_cmd_val;p_cmd_ack
+    --@-- grouped name:p_rsp, members:p_rsp_val;p_rsp_ack
+    --@-- grouped name:p_target_cmd, members:p_target_cmd_val;p_target_cmd_ack
+    --@-- grouped name:p_target_rsp, members:p_target_rsp_val;p_target_rsp_ack
+    --@-- grouped name:target, members:p_target_cmd;p_target_rsp
+    --@-- grouped name:source, members:p_cmd;p_rsp
   end component;
 
   -- Funnel takes multiple framed sources and merges them in a

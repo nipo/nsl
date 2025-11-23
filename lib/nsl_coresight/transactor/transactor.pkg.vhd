@@ -58,6 +58,7 @@ package transactor is
 
       system_reset_n_o : out nsl_io.io.opendrain
       );
+    --@-- grouped name:command, members:cmd;rsp
   end component;
 
   component dp_transactor

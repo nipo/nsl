@@ -122,6 +122,8 @@ package memap_mapper is
       dp_rsp_i : in nsl_bnoc.framed.framed_req;
       dp_rsp_o : out nsl_bnoc.framed.framed_ack
       );
+    --@-- grouped name:transactor, members:dp_cmd;dp_rsp
+    --@-- grouped name:command, members:cmd;rsp
   end component;
   
 end package memap_mapper;

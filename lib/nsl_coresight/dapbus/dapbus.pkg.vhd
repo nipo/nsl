@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 -- Coresight DAP-Bus implemetation.
 package dapbus is
 
+  --@-- grouped group:dapbus_bus
   type dapbus_m_o is record
     sel : std_ulogic;
     enable : std_ulogic;
@@ -23,6 +24,7 @@ package dapbus is
     abort => '-'
     );
 
+  --@-- grouped group:dapbus_bus
   type dapbus_m_i is record
     ready : std_ulogic;
     rdata : std_ulogic_vector(31 downto 0);
@@ -37,7 +39,9 @@ package dapbus is
 
   type dapbus_bus is
   record
+    --@-- grouped direction:forward
     ms : dapbus_m_o;
+    --@-- grouped direction:reverse
     sm : dapbus_m_i;
   end record;
   

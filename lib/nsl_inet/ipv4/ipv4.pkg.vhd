@@ -15,6 +15,7 @@ use work.checksum.all;
 package ipv4 is
 
   -- IPv4 address, in network order
+  --@-- convert python:str, serialize:'value', convert:nsl_inet.ipv4.to_ipv4({})
   subtype ipv4_t is byte_string(0 to 3);
 
   subtype ipv4_nibble_t is integer range 0 to 255;

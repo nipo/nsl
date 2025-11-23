@@ -8,9 +8,11 @@ package bytestream is
   -- Pair of hex nibbles that can represent a byte
   subtype byte_hex_string is string(1 to 2);
   -- A byte
+  --@-- convert python:bytes, serialize:'value[0]', convert:nsl_data.bytestream.to_byte({})
   subtype byte is std_ulogic_vector(7 downto 0);
   -- A string of bytes. It is mostly supposed to be used as an ascending,
   -- 0-based vector.
+  --@-- convert python:bytes, serialize:'f"{value.hex()}"', convert:nsl_data.bytestream.from_hex({})
   type byte_string is array(natural range <>) of byte;
 
   -- Takes a std_ulogic_vector of N * 8 bits and packs it in N bytes. First

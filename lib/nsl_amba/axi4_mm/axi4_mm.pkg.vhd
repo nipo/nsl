@@ -323,6 +323,7 @@ package axi4_mm is
   function is_valid(cfg: config_t; read_data: read_data_t) return boolean;
 
   -- Master-driven meta-record. Can typically be used as port.
+  --@-- grouped group:bus_t
   type master_t is
   record
     aw: address_t;
@@ -333,6 +334,7 @@ package axi4_mm is
   end record;
 
   -- Slave-driven meta-record. Can typically be used as port.
+  --@-- grouped group:bus_t
   type slave_t is
   record
     aw: handshake_t;
@@ -345,7 +347,9 @@ package axi4_mm is
   -- Bus meta-record, typically used for a signal.
   type bus_t is
   record
+    --@-- grouped direction:forward
     m: master_t;
+    --@-- grouped direction:reverse
     s: slave_t;
   end record;
 

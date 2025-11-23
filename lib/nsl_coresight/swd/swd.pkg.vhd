@@ -6,25 +6,31 @@ library nsl_io;
 -- SWD bus abstracted types.
 package swd is
 
+  --@-- grouped group:swd_master_bus
   type swd_master_o is record
     dio : nsl_io.io.directed;
     clk : std_ulogic;
   end record;
 
+  --@-- grouped group:swd_master_bus
   type swd_master_i is record
     dio : std_ulogic;
   end record;
 
   type swd_master_bus is
   record
+    --@-- grouped direction:forward
     o: swd_master_o;
+    --@-- grouped direction:reverse
     i: swd_master_i;
   end record;
   
+  --@-- grouped group:swd_slave_bus
   type swd_slave_o is record
     dio : nsl_io.io.directed;
   end record;
 
+  --@-- grouped group:swd_slave_bus
   type swd_slave_i is record
     clk : std_ulogic;
     dio : std_ulogic;
@@ -32,7 +38,9 @@ package swd is
 
   type swd_slave_bus is
   record
+    --@-- grouped direction:forward
     o: swd_slave_o;
+    --@-- grouped direction:reverse
     i: swd_slave_i;
   end record;
 
