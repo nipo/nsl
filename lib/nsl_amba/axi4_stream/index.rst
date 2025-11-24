@@ -94,7 +94,7 @@ handshaking logic errors.
 Buffer helper
 -------------
 
-.. image:: axis_buffer2.svg
+.. image:: ../img/axis_buffer2.svg
   :width: 400
   :alt: A AXI-Stream buffer
 
@@ -123,7 +123,7 @@ be left unspecified).
 Serialization tools
 -------------------
 
-.. image:: axis_packer.svg
+.. image:: ../img/axis_packer.svg
   :width: 400
   :alt: AXI-Stream packer model
 

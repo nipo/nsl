@@ -251,8 +251,6 @@ interfaces.
   synchronous interface to backend access in terms of read and write
   channel, non concurrent.
 
-  .. vhdl:symbol:: nsl_amba.axi4_mm.axi4_mm_lite_slave
-
 * :vhdl:component:`nsl_amba.axi4_mm.axi4_mm_lite_regmap` is
   abstracting even more as it:
 

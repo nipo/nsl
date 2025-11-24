@@ -1,12 +1,22 @@
+==========
+ROM blocks
+==========
 
-===
-ROM
-===
+`rom_bytes`_ is a single-port ROM implemented through initialized
+block RAMs. Read port has an arbitrary byte count.
 
-* `rom_bytes <rom_bytes.vhd>`_ is a single-port ROM implemented
-  through initialized block RAMs.  Initial contents are given through
-  generic as a byte string.
+Initial contents are given through generic as a byte string. When
+memory is multi-byte, endianness of the byte string that initializes
+the ROM can be selected.
 
-* `rom_bytes_2p <rom_bytes_2p.vhd>`_ is the same ROM with twin reading
-  ports.  They read the same storage with the same contents, but can
-  have different addresses.
+.. _rom_bytes:
+
+.. vhdl:autocomponent:: nsl_memory.rom.rom_bytes
+
+`rom_bytes_2p`_ is the same ROM with twin reading ports.  They read
+the same storage with the same contents, but can have different
+addresses.
+
+.. _rom_bytes_2p:
+
+.. vhdl:autocomponent:: nsl_memory.rom.rom_bytes_2p

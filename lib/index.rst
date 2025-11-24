@@ -20,4 +20,6 @@ backend-agnostic implementations.
    nsl_clocking/index
    nsl_io/index
    nsl_color/index
+   nsl_event/index
    debug
+   network

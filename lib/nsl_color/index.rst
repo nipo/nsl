@@ -9,5 +9,5 @@ YCbCr_ package allows to convey color spaces adapted for HDMI.
 
 .. toctree::
 
-   rgb
-   ycbcr
+   rgb/index
+   ycbcr/index

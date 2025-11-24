@@ -26,8 +26,14 @@ Detailed description
 
 .. toctree::
 
-   address
-   axi4_mm
-   axi4_stream
-   apb
    design
+   address/index
+   axi4_mm/index
+   axi4_stream/index
+   apb/index
+   apb_routing/index
+   axi_apb/index
+   mm_fifo/index
+   ram/index
+   stream_endpoint/index
+   stream_fifo/index

@@ -34,6 +34,6 @@ Custom On-chip Communication Framework
 --------------------------------------
 
 Before implementing high-end standard interconnects, NSL had the need
-for an efficient communication framework. `bnoc`_ is a set of 8-bit
+for an efficient communication framework. `bnoc <bnoc/index>`_ is a set of 8-bit
 wide data streaming infrastructure models, with various features
 depending on the needs.

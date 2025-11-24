@@ -21,7 +21,7 @@ in master/slave devices that do not pass transactions through, but act
 as a standalong master.  This kind of topology can be handled, as
 messages never go through A to B:
 
-.. raw::
+::
 
                    /----> Slave/master --\
    Root  --> Router           (A)         Router ---> Slave (B)

@@ -13,7 +13,7 @@ older).
 Configuration for APB is held in ``config_t`` record type. It holds the
 follwing settings:
 
-* Address, data, *user,
+* Address, data, \*user,
 * prot, rme, strb, ready, err and wakeup fields availability.
 
 ``config()`` function can generate such a configuration yet ensuring it

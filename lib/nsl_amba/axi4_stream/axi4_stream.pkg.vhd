@@ -265,6 +265,7 @@ package axi4_stream is
       out_o : out master_t;
       out_i : in slave_t
       );
+    --@-- grouped name:in_, members:in_i;in_o
   end component;
 
   -- This extracts a header of fixed size from the stream. Header is
