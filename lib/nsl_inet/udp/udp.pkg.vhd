@@ -117,6 +117,8 @@ package udp is
       to_l3_o : out committed_req;
       to_l3_i : in committed_ack
       );
+  --@-- grouped name:l3, members:to_l3;from_l3
+  --@-- grouped name:l5, members:to_l5;from_l5
   end component;
 
   function udp_pack(

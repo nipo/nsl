@@ -87,8 +87,9 @@ package framed is
       );
     --@-- grouped name:in, members:p_in_val;p_in_ack
     --@-- grouped name:out, members:p_out_val;p_out_ack
+    --@-- clocking reset:p_resetn, port:p_clk(0)
     --@-- clocking clock:p_clk(0), port:in
-    --@-- clocking clock:p_clk(clock_count_c-1), port:out
+    --@-- clocking clock:p_clk(clock_count-1), port:out
   end component;
 
   -- A fifo slice (i.e. a 2-deep fifo)

@@ -21,9 +21,17 @@ package routed is
   subtype routed_req is nsl_bnoc.framed.framed_req;
   subtype routed_ack is nsl_bnoc.framed.framed_ack;
   subtype routed_bus is nsl_bnoc.framed.framed_bus;
+  --@-- grouped group:routed_bus_t
   subtype routed_req_t is nsl_bnoc.framed.framed_req_t;
+  --@-- grouped group:routed_bus_t
   subtype routed_ack_t is nsl_bnoc.framed.framed_ack_t;
-  subtype routed_bus_t is nsl_bnoc.framed.framed_bus_t;
+  type routed_bus_t is
+  record
+    --@-- grouped direction:forward
+    req: routed_req_t;
+    --@-- grouped direction:reverse
+    ack: routed_ack_t;
+  end record;
 
   constant routed_req_idle_c : routed_req_t := nsl_bnoc.framed.framed_req_idle_c;
   constant routed_ack_idle_c : routed_ack_t := nsl_bnoc.framed.framed_ack_idle_c;
@@ -137,6 +145,9 @@ package routed is
       out_o   : out routed_req_t;
       out_i   : in routed_ack_t
       );
+    --@-- clocking reset:reset_n_i, port:clock_i(0)
+    --@-- clocking clock:clock_i(0), port:in
+    --@-- clocking clock:clock_i(clock_count_c-1), port:out
   end component;
 
   component routed_fifo_slice is
@@ -191,6 +202,8 @@ package routed is
       p_rsp_out_val   : out routed_req_t;
       p_rsp_out_ack   : in routed_ack_t
       );
+  --@-- grouped name:routed, members:p_cmd_in;p_rsp_out
+  --@-- grouped name:framed, members:p_rsp_in;p_cmd_out
   end component;
 
   -- This component strips incoming routing information for routed
@@ -226,6 +239,8 @@ package routed is
       routed_out_o  : out routed_req_t;
       routed_out_i  : in routed_ack_t
       );
+  --@-- grouped name:routed, members:routed_in;routed_out
+  --@-- grouped name:framed, members:framed_in;framed_out
   end component;
 
   component routed_gateway
@@ -247,6 +262,8 @@ package routed is
       p_rsp_out_val   : out routed_req_t;
       p_rsp_out_ack   : in routed_ack_t
       );
+  --@-- grouped name:src, members:p_cmd_in;p_rsp_out
+  --@-- grouped name:dst, members:p_rsp_in;p_cmd_out
   end component;
   
   function routed_header(dst: component_id; src: component_id)

@@ -149,6 +149,8 @@ package ethernet is
       from_l1_i : in nsl_bnoc.committed.committed_req;
       from_l1_o : out nsl_bnoc.committed.committed_ack
       );
+  --@-- grouped name:l1, members:to_l1;from_l1
+  --@-- grouped name:l3, members:to_l3;from_l3
   end component;
 
   -- An ethernet router based on destination address to select output port.

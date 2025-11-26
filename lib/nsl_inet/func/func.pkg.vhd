@@ -62,5 +62,8 @@ package func is
       ip_rx_o : out committed_req_vector(0 to ip_proto_c'length-1);
       ip_rx_i : in committed_ack_vector(0 to ip_proto_c'length-1) := (others => committed_ack_blackhole_c)
       );
+  --@-- grouped name:l1, members:l1_rx;l1_tx
+  --@-- grouped name:udp, members:udp_rx;udp_tx
+  --@-- grouped name:ip, members:ip_rx;ip_tx
   end component;
 end package func;

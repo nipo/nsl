@@ -208,6 +208,8 @@ package ipv4 is
       from_l2_i : in committed_req;
       from_l2_o : out committed_ack
       );
+  --@-- grouped name:l2, members:to_l2;from_l2
+  --@-- grouped name:l4, members:to_l4;from_l4
   end component;
 
   -- IP Header

@@ -119,6 +119,7 @@ package committed is
       out_o   : out committed_req_t;
       out_i   : in committed_ack_t
       );
+    --@-- clocking reset:reset_n_i, port:clock_i(0)
     --@-- clocking clock:clock_i(0), port:in
     --@-- clocking clock:clock_i(clock_count_c-1), port:out
   end component;
