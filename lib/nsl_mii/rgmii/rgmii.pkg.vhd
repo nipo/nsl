@@ -2,11 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, work;
+library nsl_bnoc, work, nsl_amba;
 use work.flit.all;
 use work.link.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
+use nsl_amba.axi4_stream.all;
 
 package rgmii is
 
@@ -80,6 +81,38 @@ package rgmii is
 
       tx_i : in committed_req;
       tx_o : out committed_ack
+      );
+  end component;
+
+  -- RGMII driver. Implements 10/100/1000 transparently. 
+  -- Uses axi4 stream interfaces. Always feed a
+  -- 125 MHz clock to TX clock.
+  component rgmii_axi4_stream_driver is
+    generic(
+      rx_clock_delay_ps_c: natural := 0;
+      tx_clock_delay_ps_c: natural := 0;
+      ipg_c : natural := 96 --bits
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i : in std_ulogic;
+  
+      rgmii_o : out rgmii_io_group_t;
+      rgmii_i : in  rgmii_io_group_t;
+  
+      mode_i : in link_speed_t;
+  
+      rx_sfd_o: out std_ulogic;
+      tx_sfd_o: out std_ulogic;
+  
+      rx_clock_o : out std_ulogic;
+      rx_flit_o : out mii_flit_t;
+      
+      rx_o : out master_t;
+      rx_i : in slave_t;
+  
+      tx_i : in master_t;
+      tx_o : out slave_t
       );
   end component;
 

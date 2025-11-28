@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-library nsl_mii, nsl_data, nsl_simulation, nsl_math, nsl_logic;
+library nsl_mii, nsl_data, nsl_simulation, nsl_math, nsl_logic, nsl_amba;
 use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
 use nsl_mii.rmii.all;
@@ -12,6 +12,7 @@ use nsl_simulation.logging.all;
 use nsl_logic.bool.all;
 use nsl_data.text.all;
 use nsl_data.bytestream.all;
+use nsl_amba.axi4_stream.all;
 use nsl_data.endian.all;
 
 package testing is
@@ -96,6 +97,79 @@ package testing is
     constant speed: link_speed_t := LINK_SPEED_100;
     level : log_level_t := LOG_LEVEL_WARNING);
   
+  type frame_usr_insert_t is record
+    id: id_t;
+    data: byte_stream;
+    dest: dest_t;
+    user: user_t;
+    ts: time;
+    user_flip : boolean;
+    user_flip_beat : integer;
+  end record;  
+
+  -- Custom packet send procedure able to toggle user to propagate mii error.
+  -- if user_flip is true and beat number match user_flip_beat, user first bit
+  -- will be set to one.
+  procedure packet_send(constant cfg: config_t;
+                        signal user_flip : in boolean;
+                        signal user_flip_beat : in integer;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: byte_string;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant user: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv);
+
+  procedure frame_put(constant cfg: config_t;
+                      signal user_flip : in boolean;
+                      signal user_flip_beat : in integer;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in slave_t;
+                      signal stream_o: out master_t;
+                      variable frm: frame_t);
+
+  procedure frame_queue_master(
+      constant cfg: config_t;
+      signal user_flip : in boolean;
+      signal user_flip_beat : in integer;
+      variable root: in frame_queue_root_t;
+      signal clock: in std_ulogic;
+      signal stream_i: in slave_t;
+      signal stream_o: out master_t;
+      timeout : in time := 100 us;
+      dt : in time := 10 ns);
+
+  procedure send_and_check_packet(
+      signal clock_s: in std_ulogic;
+      variable root_master: in frame_queue_root_t;
+      variable root_slave: in frame_queue_root_t;
+      signal user_flip : out boolean;
+      signal user_flip_beat : out integer;
+      constant data: byte_string);
+
+  procedure send_and_check_packet(
+      signal clock_s: in std_ulogic;
+      variable root_master: in frame_queue_root_t;
+      variable root_slave: in frame_queue_root_t;
+      signal user_flip : out boolean;
+      signal user_flip_beat : out integer;
+      constant data1: byte_string;
+      constant data2: byte_string);
+
+  procedure send_packet_with_error(
+      signal clock_s: in std_ulogic;
+      variable root_master: in frame_queue_root_t;
+      signal user_flip : out boolean;
+      signal user_flip_beat : out integer;
+      constant data: byte_string;
+      constant error_beat: integer);
+
+  function byte_range(left, right: byte) return byte_string;
+  function eth_packet_overhead_adder(b : byte_string) return byte_string;
+
 end testing;
 
 package body testing is
@@ -830,5 +904,177 @@ package body testing is
              & ", valid: " & to_string(rx_valid)
              & " OK");
   end procedure;
+
+  procedure packet_send(constant cfg: config_t;
+                        signal user_flip : in boolean;
+                        signal user_flip_beat : in integer;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: byte_string;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant user: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv)
+  is
+    constant padding_len: integer := (-packet'length) mod cfg.data_width;
+    constant padding: byte_string(1 to padding_len) := (others => dontcare_byte_c);
+    constant data: byte_string(0 to packet'length+padding_len-1) := packet & padding;
+    variable data_strobe: std_ulogic_vector(0 to data'length-1) := (others => '0');
+    variable data_keep: std_ulogic_vector(0 to data'length-1) := (others => '0');
+    variable index, beat : natural;
+  begin
+    if strobe'length /= 0 then
+      data_strobe(0 to strobe'length-1) := strobe;
+    else
+      data_strobe(0 to packet'length-1) := (others => '1');
+    end if;
+
+    if keep'length /= 0 then
+      data_keep(0 to keep'length-1) := keep;
+    else
+      data_keep(0 to packet'length-1) := (others => '1');
+    end if;
+
+    index := 0;
+    beat := 0;
+    while index < data'length
+    loop
+      send(cfg, clock, stream_i, stream_o,
+            bytes => data(index to index + cfg.data_width - 1),
+            strobe => data_strobe(index to index + cfg.data_width - 1),
+            keep => data_keep(index to index + cfg.data_width - 1),
+            id => id,
+            user => if_else(user_flip and (beat = user_flip_beat), "1", "0"),
+            dest => dest,
+            valid => true,
+            last => index >= data'length - cfg.data_width);
+      index := index + cfg.data_width;
+      beat := beat + 1;
+    end loop;
+  end procedure;
+
+  procedure frame_put(constant cfg: config_t;
+                      signal user_flip : in boolean;
+                      signal user_flip_beat : in integer;
+                      signal clock: in std_ulogic;
+                      signal stream_i: in slave_t;
+                      signal stream_o: out master_t;
+                      variable frm: frame_t)
+  is
+    variable f : frame_t := frm;
+  begin
+    packet_send(cfg, user_flip, user_flip_beat, clock, stream_i, stream_o, f.data.all,
+                dest => f.dest(cfg.dest_width-1 downto 0),
+                user => f.user(cfg.user_width-1 downto 0),
+                id => f.id(cfg.id_width-1 downto 0));
+    deallocate(f.data);
+  end procedure;
+
+  procedure frame_queue_master(constant cfg: config_t;
+                               signal user_flip : in boolean;
+                               signal user_flip_beat : in integer;
+                               variable root: in frame_queue_root_t;
+                               signal clock: in std_ulogic;
+                               signal stream_i: in slave_t;
+                               signal stream_o: out master_t;
+                               timeout : in time := 100 us;
+                               dt : in time := 10 ns)
+  is
+    variable frm: frame_t;
+  begin
+    stream_o <= transfer_defaults(cfg);
+
+    loop
+      frame_queue_get(root, frm, dt, timeout);
+      wait until falling_edge(clock);
+      frame_put(cfg, user_flip, user_flip_beat, clock, stream_i, stream_o, frm);
+    end loop;
+  end procedure;
+
+  procedure send_and_check_packet(
+    signal clock_s: in std_ulogic;
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    signal user_flip : out boolean;
+    signal user_flip_beat : out integer;
+    constant data: byte_string) is
+  begin
+    frame_queue_check_io(
+      root_master => root_master, 
+      root_slave  => root_slave, 
+      data => data,
+      user => "0",
+      timeout => 1000 us);
+
+      user_flip <= false;
+      user_flip_beat <= 0;
+    wait until rising_edge(clock_s);
+  end procedure;
+
+  procedure send_and_check_packet(
+    signal clock_s: in std_ulogic;
+    variable root_master: in frame_queue_root_t;
+    variable root_slave: in frame_queue_root_t;
+    signal user_flip : out boolean;
+    signal user_flip_beat : out integer;
+    constant data1: byte_string;
+    constant data2: byte_string) is
+  begin
+    frame_queue_check_io(
+      root_master => root_master, 
+      root_slave  => root_slave, 
+      data1 => data1,
+      data2 => data2,
+      user1 => "0",
+      user2 => "0",
+      timeout => 1000000 us);
+
+      user_flip <= false;
+      user_flip_beat <= 0;
+    wait until rising_edge(clock_s);
+  end procedure;
+
+  procedure send_packet_with_error(
+    signal clock_s: in std_ulogic;
+    variable root_master: in frame_queue_root_t;
+    signal user_flip : out boolean;
+    signal user_flip_beat : out integer;
+    constant data: byte_string;
+    constant error_beat: integer) is
+      variable frm_v : frame_t; 
+  begin
+    user_flip <= true;
+    user_flip_beat <= error_beat;
+    wait until rising_edge(clock_s);
+    
+    frm_v := frame(data, user => "0");
+    frame_queue_put(root_master, frm_v);
+    
+    -- Wait for packet to be sent
+    wait for 20000 ns;
+    
+    user_flip <= false;
+    user_flip_beat <= 0;
+    wait until rising_edge(clock_s);
+  end procedure;
+
+  function byte_range(left, right: byte) return byte_string
+  is
+    variable ret : byte_string(to_integer(unsigned(left)) to to_integer(unsigned(right)));
+  begin
+    for i in ret'range
+    loop
+      ret(i) := byte(to_unsigned(i, 8));
+    end loop;
+    return ret;
+  end function;
+
+  function eth_packet_overhead_adder(b : byte_string) return byte_string 
+  is 
+  begin 
+    return from_hex("5555555555555555") & from_hex("D5") & b;
+  end function;
   
 end testing;

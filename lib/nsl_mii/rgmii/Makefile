@@ -1,5 +1,6 @@
 vhdl-sources += rgmii.pkg.vhd
 vhdl-sources += rgmii_driver.vhd
+vhdl-sources += rgmii_axi4_stream_driver.vhd
 vhdl-sources += rgmii_rx_driver.vhd
 vhdl-sources += rgmii_tx_driver.vhd
 vhdl-sources += rgmii_to_gmii.vhd

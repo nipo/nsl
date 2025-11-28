@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_bnoc;
+library nsl_data, nsl_bnoc, nsl_amba;
 use nsl_data.bytestream.all;
+use nsl_amba.axi4_stream.all;
 
 package mii is
   -- IEEE-802.3 MAC-centric naming of signals
@@ -120,6 +121,34 @@ package mii is
 
       tx_i : in nsl_bnoc.committed.committed_req;
       tx_o : out nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
+  -- MII driver that resynchronizes all signals internally using fifos.
+  -- Instantiates clock buffers as needed.
+  -- Uses AXI4-STREAM interfaces instead of committed
+  component mii_axi_driver_resync is
+    generic(
+      ipg_c : natural := 96 --bits
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i : in std_ulogic;
+  
+      rx_clock_o: out std_ulogic;
+      rx_sfd_o: out std_ulogic;
+  
+      tx_clock_o: out std_ulogic;
+      tx_sfd_o: out std_ulogic;
+  
+      mii_o : out mii_m2p;
+      mii_i : in  mii_p2m;
+  
+      rx_o : out master_t;
+      rx_i : in slave_t;
+  
+      tx_i : in master_t;
+      tx_o : out slave_t
       );
   end component;
 

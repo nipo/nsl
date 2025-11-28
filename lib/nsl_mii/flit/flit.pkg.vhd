@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_bnoc;
+library nsl_data, nsl_bnoc, nsl_amba;
 use nsl_data.bytestream.all;
+use nsl_amba.axi4_stream.all;
 
 package flit is
 
@@ -12,6 +13,8 @@ package flit is
     valid  : std_ulogic;
     error  : std_ulogic;
   end record;
+
+  constant axi4_flit_cfg : config_t := config(1, user => 1, last => true);
 
   component mii_flit_from_committed is
     generic(
@@ -47,6 +50,39 @@ package flit is
       committed_o : out nsl_bnoc.committed.committed_req;
       committed_i : in nsl_bnoc.committed.committed_ack
       );
+  end component;
+
+  component mii_flit_from_axi4_stream is
+    generic (
+        ipg_c             : natural := 96; -- bits
+        pre_count_c       : natural := 8; -- flits, not including SFD
+        handle_underrun_c : boolean := true
+    );
+    port (
+        clock_i   : in std_ulogic;
+        reset_n_i : in std_ulogic;
+
+        in_i : in  master_t;
+        in_o : out slave_t;
+
+        underrun_o : out std_ulogic;
+        packet_o   : out std_ulogic;
+        flit_o     : out mii_flit_t;
+        ready_i    : in  std_ulogic
+    );
+  end component;
+
+  component mii_flit_to_axi4_stream is
+    port (
+        clock_i   : in std_ulogic;
+        reset_n_i : in std_ulogic;
+
+        flit_i  : in mii_flit_t;
+        valid_i : in std_ulogic;
+
+        out_o : out master_t;
+        out_i : in  slave_t
+    );
   end component;
 
 end package flit;
