@@ -671,6 +671,32 @@ impure function frame(
     timeout : in time := 100 us;
     sev: severity_level := failure);
   
+  -- Sends a frame on master queue and expects frame2 matching on slave
+  -- queue.
+  procedure frame_queue_check_io(
+    variable root_master : in frame_queue_root_t;
+    variable root_slave : in frame_queue_root_t;
+    variable frm1 : in frame_t;
+    variable frm2 : in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev : severity_level := failure);
+
+  procedure frame_queue_check_io(
+      variable root_master : in frame_queue_root_t;
+      variable root_slave : in frame_queue_root_t;
+      constant data1 : byte_string := null_byte_string;
+      constant data2 : byte_string := null_byte_string;
+      constant dest1 : std_ulogic_vector := na_suv;
+      constant id1 : std_ulogic_vector := na_suv;
+      constant user1 : std_ulogic_vector := na_suv;
+      constant dest2 : std_ulogic_vector := na_suv;
+      constant id2 : std_ulogic_vector := na_suv;
+      constant user2 : std_ulogic_vector := na_suv;
+      dt : in time := 10 ns;
+      timeout : in time := 100 us;
+      sev : severity_level := failure);
+
   -- Master-side procedure. Takes frames from a queue and puts them to
   -- signals.  Never returns
   procedure frame_queue_master(constant cfg: config_t;
@@ -2051,6 +2077,39 @@ impure function frame(
     frame_clone(c, frm);
     frame_queue_put(root_master, c);
     frame_queue_check(root_slave, frm, dt, timeout, sev);
+  end procedure;
+
+  procedure frame_queue_check_io(
+    variable root_master : in frame_queue_root_t;
+    variable root_slave : in frame_queue_root_t;
+    variable frm1 : in frame_t;
+    variable frm2 : in frame_t;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev : severity_level := failure) is
+  begin
+    frame_queue_put(root_master, frm1);
+    frame_queue_check(root_slave, frm2, dt, timeout, sev);
+  end procedure;
+
+  procedure frame_queue_check_io(
+    variable root_master : in frame_queue_root_t;
+    variable root_slave : in frame_queue_root_t;
+    constant data1 : byte_string := null_byte_string;
+    constant data2 : byte_string := null_byte_string;
+    constant dest1 : std_ulogic_vector := na_suv;
+    constant id1 : std_ulogic_vector := na_suv;
+    constant user1 : std_ulogic_vector := na_suv;
+    constant dest2 : std_ulogic_vector := na_suv;
+    constant id2 : std_ulogic_vector := na_suv;
+    constant user2 : std_ulogic_vector := na_suv;
+    dt : in time := 10 ns;
+    timeout : in time := 100 us;
+    sev : severity_level := failure) is
+    variable frm1 : frame_t := frame(data1, dest1, id1, user1);
+    variable frm2 : frame_t := frame(data2, dest2, id2, user2);
+  begin
+    frame_queue_check_io(root_master, root_slave, frm1, frm2, dt, timeout, sev);
   end procedure;
 
   procedure frame_queue_get(
