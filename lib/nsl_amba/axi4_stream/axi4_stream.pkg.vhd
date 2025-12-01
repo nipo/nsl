@@ -98,6 +98,20 @@ package axi4_stream is
   type slave_vector is array (natural range <>) of slave_t;
   type bus_vector is array (natural range <>) of bus_t;
 
+  -- Null vector for an empty master vector.
+  constant null_master_c : master_t := (
+    id    => (others => '-'),
+    data  => (others => (others => '-')),
+    strobe=> (others => '-'),
+    keep  => (others => '-'),
+    dest  => (others => '-'),
+    user  => (others => '-'),
+    valid => '-',
+    last  => '-'
+  );
+
+  constant null_master_vector : master_vector(1 to 0) := (others => null_master_c);
+ 
   constant na_suv: std_ulogic_vector(1 to 0) := (others => '-');
 
   function is_valid(cfg: config_t; m: master_t) return boolean;
@@ -678,7 +692,16 @@ package axi4_stream is
   procedure frame_queue_assert_equal(constant cfg: config_t;
                                      variable a, b: in frame_queue_root_t;
                                      sev: severity_level := failure);
+  -- Concatenation operators for master_vector
+  function "&"(left: master_vector; right: master_t) return master_vector;
+  function "&"(left: master_t; right: master_vector) return master_vector;
+  function "&"(left: master_vector; right: master_vector) return master_vector;
   
+  function shift_left(cfg : config_t;
+                      s: master_vector) return master_vector;
+  
+  function shift_right(cfg : config_t;
+                       s: master_vector) return master_vector;                  
 end package;
 
 package body axi4_stream is
@@ -2138,5 +2161,60 @@ package body axi4_stream is
       report "Left queue is shorter than right one, after "&to_string(count)&" frames"
       severity sev;
   end procedure;
+
+  function "&"(left: master_vector; right: master_t) return master_vector
+  is
+    alias xleft: master_vector(0 to left'length-1) is left;
+    variable ret: master_vector(0 to left'length);
+  begin
+    ret(0 to left'length-1) := xleft;
+    ret(left'length) := right;
+    return ret;
+  end function;
+
+  function "&"(left: master_t; right: master_vector) return master_vector
+  is
+    alias xright: master_vector(0 to right'length-1) is right;
+    variable ret: master_vector(0 to right'length);
+  begin
+    ret(0) := left;
+    ret(1 to right'length) := xright;
+    return ret;
+  end function;
+
+  function "&"(left: master_vector; right: master_vector) return master_vector
+  is
+    alias xleft: master_vector(0 to left'length-1) is left;
+    alias xright: master_vector(0 to right'length-1) is right;
+    variable ret: master_vector(0 to left'length + right'length - 1);
+  begin
+    ret(0 to left'length-1) := xleft;
+    ret(left'length to left'length + right'length - 1) := xright;
+    return ret;
+  end function;
+
+  function shift_left(cfg : config_t;
+                      s: master_vector) return master_vector
+  is
+    constant b: master_t := transfer_defaults(cfg);
+    alias xs: master_vector(0 to s'length-1) is s;
+  begin
+    if s'length = 0 then
+      return null_master_vector;
+    end if;
+    return xs(1 to xs'right) & b;
+  end function;
+
+  function shift_right(cfg : config_t;
+                       s: master_vector) return master_vector
+  is
+    constant b: master_t := transfer_defaults(cfg);
+    alias xs: master_vector(0 to s'length-1) is s;
+  begin
+    if s'length = 0 then
+      return null_master_vector;
+    end if;
+    return b & xs(0 to xs'right-1);
+  end function;
 
 end package body axi4_stream;
