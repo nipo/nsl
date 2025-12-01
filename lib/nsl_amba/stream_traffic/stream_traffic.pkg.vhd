@@ -207,6 +207,27 @@ package stream_traffic is
       );
   end component;
 
+  -- Ensures each outgoing packet is at least `min_size_c` bytes.
+  -- Forwards data from the FIFO, then appends `padding_byte_c` until the
+  -- minimum size is reached. Handles valid/ready and sets `last` correctly.
+  component axi4_stream_padder is
+    generic(
+      config_c : config_t;
+      min_size_c : positive;
+      padding_byte_c : byte := x"00"
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+  
+      in_i   : in  master_t;
+      in_o   : out slave_t;
+  
+      out_o  : out master_t;
+      out_i  : in slave_t
+      );
+  end component;
+
   function to_string(m: error_mode_t) return string;
 
   constant header_crc_params_c : crc_params_t := crc_params(

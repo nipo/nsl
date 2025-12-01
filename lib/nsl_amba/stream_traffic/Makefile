@@ -4,10 +4,12 @@ vhdl-sources += random_pkt_generator.vhd
 vhdl-sources += random_cmd_generator.vhd
 vhdl-sources += stream_error_inserter.vhd
 vhdl-sources += axi4_stream_pacer.vhd
+vhdl-sources += axi4_stream_padder.vhd
 
 deps += nsl_logic.bool
 deps += nsl_logic.logic
 deps += nsl_amba.axi4_stream
+deps += nsl_amba.stream_fifo
 deps += nsl_data.crc
 deps += nsl_data.bytestream
 deps += nsl_data.endian
