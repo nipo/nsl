@@ -289,6 +289,24 @@ package axi4_stream is
       );
   end component;
 
+  -- Output data once prefill_count_c bytes are received. If the 
+  -- packet is smaller, it is just outputted.
+  component axi4_stream_prefill_buffer is
+    generic (
+        config_c    : config_t;
+        prefill_count_c : natural
+    );
+    port (
+        reset_n_i : in std_ulogic;
+        clock_i   : in std_ulogic;
+
+        in_i : in  master_t;
+        in_o : out slave_t;
+
+        out_o : out master_t;
+        out_i : in  slave_t
+    );
+  end component;
   
   function to_string(cfg: config_t) return string;
   function to_string(cfg: config_t; a: master_t) return string;
