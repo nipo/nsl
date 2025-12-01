@@ -577,6 +577,10 @@ package axi4_stream is
   end record;
 
   type frame_queue_root_t is access frame_queue_root_item_t;
+    
+  procedure frame_clone(
+    variable ret: out frame_t;
+    variable frm: in frame_t);
 
   -- Initializes a frame queue
   procedure frame_queue_init(
