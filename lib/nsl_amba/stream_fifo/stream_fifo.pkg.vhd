@@ -111,4 +111,25 @@ package stream_fifo is
     );
   end component;
 
+  -- If in_error_i is asserted during an AXI4-Stream packet transmission,
+  -- The packet is dropped.
+  component axi4_stream_fifo_clean is
+    generic (
+        fifo_word_count_l2 : natural  := 11;
+        config_c : nsl_amba.axi4_stream.config_t
+    );
+    port (
+        clock_i   : in std_ulogic;
+        reset_n_i : in std_ulogic;
+
+        in_i : in  nsl_amba.axi4_stream.master_t;
+        in_error_i : in std_ulogic;
+        in_o : out nsl_amba.axi4_stream.slave_t;
+
+        out_o : out nsl_amba.axi4_stream.master_t;
+        out_i : in  nsl_amba.axi4_stream.slave_t
+    );
+  end component;
+
+  component axi4_stream_flow_control_fifo is
 end package stream_fifo;
