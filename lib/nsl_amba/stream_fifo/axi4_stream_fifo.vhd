@@ -11,7 +11,7 @@ use nsl_data.endian.all;
 entity axi4_stream_fifo is
   generic(
     config_c : config_t;
-    depth_c : positive range 4 to positive'high;
+    depth_c : positive range 1 to positive'high;
     out_pkt_available_range_c: integer range 0 to integer'high;
     clock_count_c : integer range 1 to 2 := 1
     );

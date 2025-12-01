@@ -10,7 +10,7 @@ package stream_fifo is
   component axi4_stream_fifo is
     generic(
       config_c : nsl_amba.axi4_stream.config_t;
-      depth_c : positive range 4 to positive'high;
+      depth_c : positive range 1 to positive'high;
       out_pkt_available_range_c: integer range 0 to integer'high := 0;
       clock_count_c : integer range 1 to 2 := 1
       );
@@ -129,7 +129,7 @@ package stream_fifo is
         out_o : out nsl_amba.axi4_stream.master_t;
         out_i : in  nsl_amba.axi4_stream.slave_t
     );
-  end component;
+  end component; 
   -- Asynchronous AXI4-Stream FIFO designed to transfer full packets between two independent clock domains.
   -- No back-pressure on the input interface is generated, if the fifo is overrun the entire pkt is dropped.
   component axi4_stream_async_packet_drop_fifo is
