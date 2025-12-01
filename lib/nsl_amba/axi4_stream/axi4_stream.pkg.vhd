@@ -595,6 +595,11 @@ package axi4_stream is
     variable root: in frame_queue_root_t;
     variable frm: in frame_t);
 
+  -- Print queue size 
+  procedure get_queue_size(
+    constant ptext : string := "";
+    variable q : in frame_queue_root_t);
+
   -- Appends a frame to two queues, takes ownership of frame's buffer
   procedure frame_queue_put2(
     variable a, b: in frame_queue_root_t;
@@ -1958,6 +1963,24 @@ package body axi4_stream is
       end loop;
       chain_a.chain := item_a;
     end if;
+  end procedure;
+
+  procedure get_queue_size(
+    constant ptext : string := "";
+    variable q : in frame_queue_root_t)
+  is
+    variable q_size_v : integer := 0;
+    variable current_item: frame_queue_t;
+  begin 
+    -- Start from head and traverse the chain without modifying
+    current_item := q.head;
+    
+    while current_item /= null loop
+      q_size_v := q_size_v + 1;
+      current_item := current_item.chain;  -- Move to next item in the linked list
+    end loop;
+    
+    report("INFO: " & ptext & " queue size is " & to_string(q_size_v));
   end procedure;
 
   procedure frame_queue_check(
