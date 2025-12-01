@@ -91,4 +91,24 @@ package stream_fifo is
       );
   end component;
 
+  -- Output only full AXI4-Stream packets.
+  component axi4_stream_fifo_atomic is
+    generic (
+      config_c  : nsl_amba.axi4_stream.config_t;
+      depth_c     : natural;
+      txn_depth_c : natural := 4;
+      clk_count_c : natural range 1 to 2
+    );
+    port (
+        reset_n_i : in std_ulogic;
+        clock_i   : in std_ulogic_vector(0 to clk_count_c - 1);
+
+        in_i : in  nsl_amba.axi4_stream.master_t;
+        in_o : out nsl_amba.axi4_stream.slave_t;
+
+        out_o : out nsl_amba.axi4_stream.master_t;
+        out_i : in  nsl_amba.axi4_stream.slave_t
+    );
+  end component;
+
 end package stream_fifo;

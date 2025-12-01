@@ -28,5 +28,6 @@ tb += axi4_stream_error_inserter
 tb += axi4_stream_router
 tb += axi4_stream_crc_checker
 tb += axi4_stream_padder
+tb += axi4_stream_atomic
 
 include ../subdir.mk
