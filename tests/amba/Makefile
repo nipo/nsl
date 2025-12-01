@@ -26,5 +26,6 @@ tb += axi4_stream_buffer_short
 tb += axi4_stream_random_pkt_checker
 tb += axi4_stream_error_inserter
 tb += axi4_stream_router
+tb += axi4_stream_crc_checker
 
 include ../subdir.mk
