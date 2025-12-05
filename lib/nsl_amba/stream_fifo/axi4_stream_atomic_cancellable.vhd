@@ -7,7 +7,7 @@ use nsl_amba.axi4_stream.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
 
-entity axi4_stream_async_packet_drop_fifo is
+entity axi4_stream_atomic_cancellable is
     generic (
         config_c        : config_t;
         word_count_l2_c : integer;
@@ -31,12 +31,13 @@ entity axi4_stream_async_packet_drop_fifo is
     );
 end entity;
 
-architecture beh of axi4_stream_async_packet_drop_fifo is
+architecture beh of axi4_stream_atomic_cancellable is
 
     constant word_count_data_width_l2_c : integer := nsl_math.arith.log2(2**word_count_l2_c/config_c.data_width);
     subtype ptr_t is unsigned(word_count_data_width_l2_c - 1 downto 0);
     subtype mem_ptr_t is unsigned(word_count_data_width_l2_c - 1 downto 0);
 
+    constant max_ptr_c : ptr_t := (others => '1'); 
     constant fifo_elements_c : string := "idskoul";
     constant data_fifo_width_c: positive := vector_length(config_c, fifo_elements_c);
     subtype data_fifo_word_t is std_ulogic_vector(0 to data_fifo_width_c-1);
@@ -58,23 +59,25 @@ architecture beh of axi4_stream_async_packet_drop_fifo is
         read_enable : std_ulogic;
     end record;
 
-    signal right_wrap_and_rptr_bin_s : unsigned(ptr_t'length downto 0);
-    signal right_rptr_wrap_s : std_ulogic;
+    type side_info_t is record
+      -- Position including wrap bit.
+      local_pos, peer_pos : ptr_t;
+      local_wrap, peer_wrap : std_ulogic;
+      local_valid, peer_valid : std_ulogic;
+      local_sync_ready, peer_sync_ready : std_ulogic;
+    end record;
 
-    signal right_rptr_s, right_rptr_gray_s :  unsigned(ptr_t'length downto 0);
+    signal s_left, s_right: side_info_t;
 
-    signal left_resync_wrap_and_wptr_s  : std_ulogic_vector(ptr_t'length downto 0);
-    signal left_resync_wrap_and_wptr_ready_s : std_ulogic;
+    signal right_local_wrap_ptr_bin_s, right_local_wrap_ptr_unsigned_s, left_local_wrap_ptr_s : unsigned(ptr_t'length downto 0);
+    signal right_local_rptr_gray_s :  unsigned(ptr_t'length downto 0);
+    signal right_peer_wrap_prt_s  : std_ulogic_vector(ptr_t'length downto 0);
 
     signal write_ram_s : write_ram_t;
     signal read_ram_s : read_ram_t;
-    signal right_rptr_resync_s : ptr_t;
 
-    signal left_wrap_and_wptr_s : std_ulogic_vector(ptr_t'length downto 0);
-    signal left_wrap_and_wptr_valid_s, left_wrap_and_wptr_ready_s, left_resync_wrap_and_wptr_valid_s : std_ulogic;
-
-    signal in_streamer_valid_s, out_streamer_valid_s : std_ulogic;
-    signal in_streamer_ready_s, out_streamer_ready_s : std_ulogic;
+    signal out_streamer_valid_s : std_ulogic;
+    signal in_streamer_ready_s : std_ulogic;
     signal out_stream_data_s : data_fifo_word_t;
 
     signal reset_n_s: std_ulogic_vector(0 to clock_count_c-1);
@@ -126,10 +129,11 @@ begin
                 r.wptr_wrap <= '0';
                 r.wptr_sp_wrap <= '0';
                 r.do_commit <= '0';
+
             end if;
         end process;
 
-        write_transition : process (r, in_i, error_i, right_rptr_resync_s, left_resync_wrap_and_wptr_valid_s, do_write_s) is
+        write_transition : process (r, s_left, in_i, error_i, do_write_s) is
         begin
 
             rin <= r;
@@ -142,8 +146,10 @@ begin
                     if is_valid(config_c, in_i) then
                         if do_write_s then
                             rin.wptr_sp <= r.wptr_sp + 1;
-                            rin.wptr_sp_wrap <= not r.wptr_sp_wrap;
-                        else
+                            if r.wptr_sp = max_ptr_c then
+                                rin.wptr_sp_wrap <= not r.wptr_sp_wrap; 
+                            end if;
+                        else 
                             rin.write_overrun <= '1';
                         end if;
 
@@ -151,7 +157,11 @@ begin
                             if do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE then
                                 rin.do_commit <= '1';
                                 rin.wptr <= r.wptr_sp + 1;
-                                rin.wptr_wrap <= not r.wptr_sp_wrap;
+                                if r.wptr_sp = max_ptr_c then
+                                    rin.wptr_wrap <= not r.wptr_sp_wrap;
+                                else
+                                    rin.wptr_wrap <= r.wptr_sp_wrap;  -- Keep current wrap
+                                end if;
                             else
                                 -- ROLLBACK
                                 rin.wptr_sp <= r.wptr;
@@ -173,7 +183,7 @@ begin
                     end if;
 
                 when OUT_WRITE_POINTER =>
-                    if left_wrap_and_wptr_ready_s = '1' then
+                    if s_left.local_sync_ready = '1' then
                         rin.do_commit <= '0';
                         rin.out_state <= OUT_WRITE_POINTER_IDLE;
                     end if;
@@ -185,13 +195,13 @@ begin
         end process;
 
         -- Check if we're in the same wrap cycle as remote read pointer
-        in_same_wrap_s <= r.wptr_wrap = right_rptr_wrap_s;
+        in_same_wrap_s <= r.wptr_sp_wrap = s_left.peer_wrap;
         -- FIFO is full when:
         -- - Pointers are equal AND we're one wrap ahead (different wrap bits)
         -- FIFO has space when:
         -- - Pointers are different in same wrap cycle, OR
         -- - Pointers are equal in same wrap cycle (empty)
-        in_fifo_full_s <= (r.wptr_sp = right_rptr_resync_s) and not in_same_wrap_s; 
+        in_fifo_full_s <= (r.wptr_sp = s_left.peer_pos) and not in_same_wrap_s; 
         do_write_s <= not in_fifo_full_s and is_valid(config_c, in_i);
 
         ram_writer_proc : process (r, in_i, do_write_s) is
@@ -213,21 +223,26 @@ begin
 
         remote_wptr_txer_proc : process (r) is
         begin
-
-            left_wrap_and_wptr_s <= r.wptr_wrap & std_ulogic_vector(r.wptr);
-            left_wrap_and_wptr_valid_s <= '0';
+            
+            s_left.local_pos <= r.wptr;
+            s_left.local_wrap <= r.wptr_wrap;
+            s_left.local_valid <= '0';
 
             case r.out_state is
                 when OUT_WRITE_POINTER =>
-                    left_wrap_and_wptr_valid_s <= '1';
+                    s_left.local_valid <= '1';
 
                 when others =>
                     null;
             end case;
         end process;
 
-        overrun_o <= r.write_overrun;
-        in_o <= accept(config_c, true); -- No back pressure, if overrun packet is dropped.
+        overrun_o <= r.write_overrun or 
+            to_logic(r.in_state = IN_DATA_STORE and 
+             is_valid(config_c, in_i) and
+             is_last(config_c, in_i) and
+             not (do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE));
+        in_o <= accept(config_c, r.in_state /= IN_RESET); -- No back pressure, if overrun packet is dropped.
     end block;
 
     inter_domain_ptr_resync : block 
@@ -246,34 +261,41 @@ begin
               slave_o => reset_n_s
               );
 
+            left_local_wrap_ptr_s <= s_left.local_wrap & s_left.local_pos;
+
             resync_wptr: nsl_clocking.interdomain.interdomain_fifo_slice
             generic map(
-                data_width_c => ptr_t'length + 1
+                data_width_c =>  s_right.peer_pos'length + 1
             )
             port map(
                 reset_n_i => reset_n_i,
                 clock_i   => clock_i,
     
-                out_data_o  => left_resync_wrap_and_wptr_s,
-                out_ready_i => left_resync_wrap_and_wptr_ready_s,
-                out_valid_o => left_resync_wrap_and_wptr_valid_s,
+                out_data_o => right_peer_wrap_prt_s,
+                out_ready_i => s_right.peer_sync_ready,
+                out_valid_o => s_right.peer_valid,
     
-                in_data_i  => left_wrap_and_wptr_s,
-                in_valid_i => left_wrap_and_wptr_valid_s,
-                in_ready_o => left_wrap_and_wptr_ready_s
+                in_data_i  => std_ulogic_vector(left_local_wrap_ptr_s),
+                in_valid_i => s_left.local_valid,
+                in_ready_o => s_left.local_sync_ready
             );
+
+            s_right.peer_wrap <= right_peer_wrap_prt_s(ptr_t'length);
+            s_right.peer_pos <=  unsigned(right_peer_wrap_prt_s(ptr_t'length - 1 downto 0));
+
+            right_local_wrap_ptr_unsigned_s <= s_right.local_wrap & s_right.local_pos;
 
             gray_rptr_encoding: nsl_clocking.interdomain.interdomain_counter
             generic map(
-              data_width_c => right_rptr_s'length,
+              data_width_c => s_right.local_pos'length +1,
               input_is_gray_c => false,
               output_is_gray_c => true
               )
             port map(
               clock_in_i => clock_i(1),
               clock_out_i => clock_i(0),
-              data_i => right_rptr_s,
-              data_o => right_rptr_gray_s
+              data_i => right_local_wrap_ptr_unsigned_s,
+              data_o => right_local_rptr_gray_s
               );
 
             resync_rptr : nsl_math.gray.gray_decoder_pipelined
@@ -283,13 +305,13 @@ begin
             )
             port map(
                 clock_i  => clock_i(0),
-                gray_i   => std_ulogic_vector(right_rptr_gray_s),
-                binary_o => right_wrap_and_rptr_bin_s
+                gray_i   => std_ulogic_vector(right_local_rptr_gray_s),
+                binary_o => right_local_wrap_ptr_bin_s
             );
     
-            right_rptr_wrap_s <= right_wrap_and_rptr_bin_s(right_wrap_and_rptr_bin_s'left);
-            right_rptr_resync_s <= right_wrap_and_rptr_bin_s(right_wrap_and_rptr_bin_s'left - 1 downto 0);
-
+            s_left.peer_wrap <= right_local_wrap_ptr_bin_s(right_local_wrap_ptr_bin_s'left);
+            s_left.peer_pos <= right_local_wrap_ptr_bin_s(right_local_wrap_ptr_bin_s'left - 1 downto 0);
+            
         end generate;
 
         sync: if is_synchronous generate
@@ -302,8 +324,8 @@ begin
               )
             port map(
               clock_i => clock_i(0),
-              data_i => std_ulogic_vector(right_rptr_s),
-              unsigned(data_o) => right_rptr_gray_s
+              data_i => std_ulogic_vector(s_right.local_pos),
+              unsigned(data_o) => right_local_rptr_gray_s
               );
       
           rptr: nsl_clocking.intradomain.intradomain_multi_reg
@@ -312,8 +334,8 @@ begin
               )
             port map(
               clock_i => clock_i(0),
-              data_i => std_ulogic_vector(right_rptr_gray_s),
-              unsigned(data_o) => right_wrap_and_rptr_bin_s
+              data_i => std_ulogic_vector(right_local_rptr_gray_s),
+              unsigned(data_o) => right_local_wrap_ptr_bin_s
               );
         end generate;
     
@@ -367,8 +389,8 @@ begin
             clock_i => clock_i(1),
             reset_n_i => reset_n_s(1),
 
-            addr_valid_i => in_streamer_valid_s,
-            addr_ready_o => out_streamer_ready_s,
+            addr_valid_i => s_right.local_valid,
+            addr_ready_o => s_right.local_sync_ready,
             addr_i => unsigned(r.rptr),
             sideband_i => (others => '0'),
 
@@ -395,9 +417,9 @@ begin
             end if;
         end process;
 
-        left_resync_wrap_and_wptr_ready_s <= '1';
+        s_right.peer_sync_ready <= '1';
 
-        read_transition : process (r, out_i, left_resync_wrap_and_wptr_valid_s, left_resync_wrap_and_wptr_ready_s, left_resync_wrap_and_wptr_s, out_streamer_ready_s, do_read_s) is
+        read_transition : process (r, s_right, do_read_s) is
         begin
             rin <= r;
 
@@ -406,33 +428,38 @@ begin
                     rin.out_state <= OUT_READ_DATA;
 
                 when OUT_READ_DATA =>
-                    if do_read_s then
-                        rin.rptr <= r.rptr + 1;
-                        rin.wptr_wrap <= not r.wptr_wrap;
+                    if s_right.local_sync_ready = '1' then
+                        if do_read_s then
+                            rin.rptr <= r.rptr + 1;
+                            if r.rptr = max_ptr_c then
+                                rin.wptr_wrap <= not r.wptr_wrap;
+                            end if;
+                        end if;
                     end if;
 
                 when others =>
                     null;
             end case;
 
-            if left_resync_wrap_and_wptr_valid_s = '1' and left_resync_wrap_and_wptr_ready_s ='1' then
-                rin.remote_wptr <= unsigned(left_resync_wrap_and_wptr_s(left_resync_wrap_and_wptr_s'left - 1 downto 0));
-                rin.remote_wrap <= std_ulogic(left_resync_wrap_and_wptr_s(left_resync_wrap_and_wptr_s'left));
+            if s_right.peer_valid = '1' then
+                rin.remote_wptr <= s_right.peer_pos;
+                rin.remote_wrap <= s_right.peer_wrap;
             end if;
         end process;
-
+        
         out_same_wrap_s <= r.wptr_wrap = r.remote_wrap;
         out_fifo_full_s <= (r.rptr = r.remote_wptr) and out_same_wrap_s;
-        do_read_s <= not out_fifo_full_s and is_ready(config_c, out_i) and out_streamer_ready_s = '1';
+        do_read_s <= not out_fifo_full_s;
 
         ram_reader_proc : process (r,do_read_s) is
         begin
-            in_streamer_valid_s <= '0';
-            right_rptr_s <= r.wptr_wrap & r.rptr;
+            s_right.local_valid <= '0';
+            s_right.local_wrap <= r.wptr_wrap;
+            s_right.local_pos <= r.rptr;
 
             case r.out_state is
                 when OUT_READ_DATA =>
-                    in_streamer_valid_s <= to_logic(do_read_s);
+                    s_right.local_valid <= to_logic(do_read_s);
 
                 when others =>
                     null;

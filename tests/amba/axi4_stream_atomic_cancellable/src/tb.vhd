@@ -158,7 +158,7 @@ begin
   --     bus_i => output_s
   --     );
   
-  dut: nsl_amba.stream_fifo.axi4_stream_async_packet_drop_fifo
+  dut: nsl_amba.stream_fifo.axi4_stream_atomic_cancellable
     generic map(
       config_c => config_c(i),
       word_count_l2_c => word_count_l2_c,

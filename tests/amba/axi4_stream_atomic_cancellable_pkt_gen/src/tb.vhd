@@ -19,7 +19,7 @@ end tb;
 
 architecture arch of tb is
 
-  constant nbr_scenario_c : integer := 1;
+  constant nbr_scenario_c : integer := 3;
   constant word_count_l2_c : integer := 9;
   constant word_count_c : integer := 2**word_count_l2_c;
   constant mtu_c : integer := word_count_c;
@@ -81,7 +81,7 @@ begin
         packet_i => input_s.s
         );
 
-    dut: nsl_amba.stream_fifo.axi4_stream_async_packet_drop_fifo
+    dut: nsl_amba.stream_fifo.axi4_stream_atomic_cancellable
     generic map(
       config_c => config_c(i),
       word_count_l2_c => word_count_l2_c,
@@ -160,22 +160,24 @@ begin
           end if;
         end if;
         if pkt_to_play_c <= nbr_pkts_played_v then
-          if wait_end_sim_v = 0 then
-            log_info("==== **  FINAL STATS " & to_string(i) & " ** ====");
-            log_info("INFO: Number packets played " & to_string(nbr_pkts_played_v));
-            log_info("INFO: Number packets dropped " & to_string(nbr_dropped_pkts_v));
-            log_info("INFO: Number packets out " & to_string(nbr_pkt_out_v));
-            log_info("INFO: Number sequm error detected " & to_string(nbr_header_seqnum_error_detected_v));
-            log_info("INFO: Max dropped packets in a row " & to_string(max_drop_pkt_row_v));
-            log_info("INFO: Pourcentage of dropped packets " & to_string(drop_pkt_proportion) & " %");
-            if nbr_pkts_played_v /= (nbr_dropped_pkts_v + nbr_pkt_out_v) then
-              assert false
-              report "ERROR: Packets where lost."
-              severity failure;
+          if done_s(i) = '0' then
+            if wait_end_sim_v = 0 then
+              log_info("==== **  FINAL STATS " & to_string(i) & " ** ====");
+              log_info("INFO: Number packets played " & to_string(nbr_pkts_played_v));
+              log_info("INFO: Number packets dropped " & to_string(nbr_dropped_pkts_v));
+              log_info("INFO: Number packets out " & to_string(nbr_pkt_out_v));
+              log_info("INFO: Number sequm error detected " & to_string(nbr_header_seqnum_error_detected_v));
+              log_info("INFO: Max dropped packets in a row " & to_string(max_drop_pkt_row_v));
+              log_info("INFO: Pourcentage of dropped packets " & to_string(drop_pkt_proportion) & " %");
+              if nbr_pkts_played_v /= (nbr_dropped_pkts_v + nbr_pkt_out_v) then
+                assert false
+                report "ERROR: Packets where lost."
+                severity failure;
+              end if;
+              done_s(i) <= '1';
+            else
+              wait_end_sim_v := wait_end_sim_v - 1;
             end if;
-            done_s(i) <= '1';
-          else
-            wait_end_sim_v := wait_end_sim_v - 1;
           end if;
         end if;
       end if;

@@ -132,7 +132,7 @@ package stream_fifo is
   end component; 
   -- Asynchronous AXI4-Stream FIFO designed to transfer full packets between two independent clock domains.
   -- No back-pressure on the input interface is generated, if the fifo is overrun the entire pkt is dropped.
-  component axi4_stream_async_packet_drop_fifo is
+  component axi4_stream_atomic_cancellable is
     generic (
         config_c        : nsl_amba.axi4_stream.config_t;
         word_count_l2_c : integer;

@@ -5,7 +5,7 @@ vhdl-sources += axi4_stream_slice.vhd
 vhdl-sources += axi4_stream_cdc.vhd
 vhdl-sources += axi4_stream_fifo_atomic.vhd
 vhdl-sources += axi4_stream_fifo_clean.vhd
-vhdl-sources += axi4_stream_async_packet_drop_fifo.vhd
+vhdl-sources += axi4_stream_atomic_cancellable.vhd
 
 deps += nsl_memory.fifo
 deps += nsl_memory.streamer
