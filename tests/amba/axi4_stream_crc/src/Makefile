@@ -6,6 +6,8 @@ deps += nsl_data.text
 deps += nsl_simulation.assertions
 deps += nsl_simulation.driver
 deps += nsl_simulation.logging
+deps += nsl_data.prbs
 
 deps += nsl_amba.axi4_stream
 deps += nsl_amba.stream_crc
+deps += nsl_amba.stream_traffic
