@@ -22,7 +22,7 @@ entity axi4_stream_crc_adder is
     );
 begin
 
-  assert not config_c.has_keep and not config_c.has_strobe
+  assert not (config_c.data_width > 1 and (config_c.has_keep or config_c.has_strobe))
     report "This module does not handle sparse input stream"
     severity failure;
 
