@@ -14,7 +14,8 @@ entity random_pkt_generator is
   generic (
     mtu_c: integer := 1500;
     cmd_config_c : config_t := cmd_config_default_c;
-    packet_config_c: config_t
+    packet_config_c: config_t;
+    igp_c : integer := 0
     );
   port (
     clock_i : in std_ulogic;
@@ -42,7 +43,8 @@ architecture beh of random_pkt_generator is
     ST_CMD_DEC,
     ST_BUILD_HEADER,
     ST_SEND_HEADER,
-    ST_SEND_PAYLOAD
+    ST_SEND_PAYLOAD,
+    ST_IGP
     );
 
   function keep_generator(packet_config_c: config_t; data_remainder : integer; is_last_word : boolean) return std_ulogic_vector is
@@ -66,6 +68,7 @@ architecture beh of random_pkt_generator is
     data_remainder : integer range 0 to packet_config_c.data_width - 1;
     tx_bytes : unsigned(mtu_l2 - 1 downto 0);
     pkt_has_data : boolean;
+    igp_cnt : integer range 0 to igp_c;
   end record;
   
   signal r, rin: regs_t;
@@ -96,6 +99,7 @@ begin
         rin.state <= ST_CMD_GET;
         rin.tx_bytes <= to_unsigned(packet_config_c.data_width, r.tx_bytes'length);
         rin.cmd_buf <= reset(cmd_buf_config);
+        rin.igp_cnt <= igp_c;
 
       when ST_CMD_GET =>
         if is_valid(cmd_config_c, cmd_i) then
@@ -129,7 +133,11 @@ begin
               rin.pkt_has_data <= false;
               rin.state <= ST_SEND_PAYLOAD;
             else
-              rin.state <= ST_CMD_GET;
+              if igp_c /= 0 then
+                rin.state <= ST_IGP;
+              else
+                rin.state <= ST_CMD_GET;
+              end if;
             end if;
           end if;
         end if;
@@ -142,6 +150,19 @@ begin
                                             data_prbs_poly_c,
                                             packet_config_c.data_width * 8);
           if r.tx_bytes >= r.cmd.pkt_size then
+            if igp_c /= 0 then
+              rin.state <= ST_IGP;
+            else
+              rin.state <= ST_CMD_GET;
+            end if;
+          end if;
+        end if;
+
+      when ST_IGP => 
+        if is_ready(packet_config_c, packet_i) then
+          rin.igp_cnt <= r.igp_cnt - 1;
+          if r.igp_cnt = 1 then
+            rin.igp_cnt <= igp_c;
             rin.state <= ST_CMD_GET;
           end if;
         end if;

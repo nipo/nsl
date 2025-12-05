@@ -107,7 +107,8 @@ package stream_traffic is
     generic (
       mtu_c: integer := 1500;
       cmd_config_c : config_t := cmd_config_default_c;
-      packet_config_c: config_t
+      packet_config_c: config_t;
+      igp_c : integer := 0
       );
     port (
       clock_i : in std_ulogic;
