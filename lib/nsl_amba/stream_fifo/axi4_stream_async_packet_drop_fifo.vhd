@@ -37,6 +37,7 @@ architecture beh of axi4_stream_async_packet_drop_fifo is
     subtype ptr_t is unsigned(word_count_data_width_l2_c - 1 downto 0);
     subtype mem_ptr_t is unsigned(word_count_data_width_l2_c - 1 downto 0);
 
+    constant max_ptr_c : ptr_t := (others => '1'); 
     constant fifo_elements_c : string := "idskoul";
     constant data_fifo_width_c: positive := vector_length(config_c, fifo_elements_c);
     subtype data_fifo_word_t is std_ulogic_vector(0 to data_fifo_width_c-1);
@@ -129,7 +130,7 @@ begin
             end if;
         end process;
 
-        write_transition : process (r, in_i, error_i, right_rptr_resync_s, left_resync_wrap_and_wptr_valid_s, do_write_s) is
+        write_transition : process (r, in_i, error_i, do_write_s) is
         begin
 
             rin <= r;
@@ -142,8 +143,10 @@ begin
                     if is_valid(config_c, in_i) then
                         if do_write_s then
                             rin.wptr_sp <= r.wptr_sp + 1;
-                            rin.wptr_sp_wrap <= not r.wptr_sp_wrap;
-                        else
+                            if r.wptr_sp = max_ptr_c then
+                                rin.wptr_sp_wrap <= not r.wptr_sp_wrap; 
+                            end if;
+                        else 
                             rin.write_overrun <= '1';
                         end if;
 
@@ -151,7 +154,11 @@ begin
                             if do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE then
                                 rin.do_commit <= '1';
                                 rin.wptr <= r.wptr_sp + 1;
-                                rin.wptr_wrap <= not r.wptr_sp_wrap;
+                                if r.wptr_sp = max_ptr_c then
+                                    rin.wptr_wrap <= not r.wptr_sp_wrap;
+                                else
+                                    rin.wptr_wrap <= r.wptr_sp_wrap;  -- Keep current wrap
+                                end if;
                             else
                                 -- ROLLBACK
                                 rin.wptr_sp <= r.wptr;
@@ -185,7 +192,7 @@ begin
         end process;
 
         -- Check if we're in the same wrap cycle as remote read pointer
-        in_same_wrap_s <= r.wptr_wrap = right_rptr_wrap_s;
+        in_same_wrap_s <= r.wptr_sp_wrap = right_rptr_wrap_s;
         -- FIFO is full when:
         -- - Pointers are equal AND we're one wrap ahead (different wrap bits)
         -- FIFO has space when:
@@ -226,8 +233,12 @@ begin
             end case;
         end process;
 
-        overrun_o <= r.write_overrun;
-        in_o <= accept(config_c, true); -- No back pressure, if overrun packet is dropped.
+        overrun_o <= r.write_overrun or 
+            to_logic(r.in_state = IN_DATA_STORE and 
+             is_valid(config_c, in_i) and
+             is_last(config_c, in_i) and
+             not (do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE));
+        in_o <= accept(config_c, r.in_state /= IN_RESET); -- No back pressure, if overrun packet is dropped.
     end block;
 
     inter_domain_ptr_resync : block 
@@ -397,7 +408,7 @@ begin
 
         left_resync_wrap_and_wptr_ready_s <= '1';
 
-        read_transition : process (r, out_i, left_resync_wrap_and_wptr_valid_s, left_resync_wrap_and_wptr_ready_s, left_resync_wrap_and_wptr_s, out_streamer_ready_s, do_read_s) is
+        read_transition : process (r, out_streamer_ready_s, left_resync_wrap_and_wptr_valid_s, left_resync_wrap_and_wptr_ready_s, left_resync_wrap_and_wptr_s, out_streamer_ready_s, do_read_s) is
         begin
             rin <= r;
 
@@ -406,9 +417,13 @@ begin
                     rin.out_state <= OUT_READ_DATA;
 
                 when OUT_READ_DATA =>
-                    if do_read_s then
-                        rin.rptr <= r.rptr + 1;
-                        rin.wptr_wrap <= not r.wptr_wrap;
+                    if out_streamer_ready_s = '1' then
+                        if do_read_s then
+                            rin.rptr <= r.rptr + 1;
+                            if r.rptr = max_ptr_c then
+                                rin.wptr_wrap <= not r.wptr_wrap;
+                            end if;
+                        end if;
                     end if;
 
                 when others =>
@@ -423,7 +438,7 @@ begin
 
         out_same_wrap_s <= r.wptr_wrap = r.remote_wrap;
         out_fifo_full_s <= (r.rptr = r.remote_wptr) and out_same_wrap_s;
-        do_read_s <= not out_fifo_full_s and is_ready(config_c, out_i) and out_streamer_ready_s = '1';
+        do_read_s <= not out_fifo_full_s;
 
         ram_reader_proc : process (r,do_read_s) is
         begin
