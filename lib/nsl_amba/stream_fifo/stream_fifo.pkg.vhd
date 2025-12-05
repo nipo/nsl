@@ -125,9 +125,11 @@ package stream_fifo is
         in_i : in  nsl_amba.axi4_stream.master_t;
         in_error_i : in std_ulogic;
         in_o : out nsl_amba.axi4_stream.slave_t;
+        in_free_o : out unsigned(fifo_word_count_l2 downto 0);
 
         out_o : out nsl_amba.axi4_stream.master_t;
-        out_i : in  nsl_amba.axi4_stream.slave_t
+        out_i : in  nsl_amba.axi4_stream.slave_t;
+        out_available_o : out unsigned(fifo_word_count_l2 downto 0)
     );
   end component; 
   -- Asynchronous AXI4-Stream FIFO designed to transfer full packets between two independent clock domains.

@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library work, nsl_data, nsl_math, nsl_logic, nsl_amba;
 use nsl_logic.bool.all;
@@ -20,9 +21,11 @@ entity axi4_stream_fifo_clean is
         in_i : in  master_t;
         in_error_i : in std_ulogic;
         in_o : out slave_t;
+        in_free_o : out unsigned(fifo_word_count_l2 downto 0);
 
         out_o : out master_t;
-        out_i : in  slave_t
+        out_i : in  slave_t;
+        out_available_o : out unsigned(fifo_word_count_l2 downto 0)
     );
 end entity;
 
