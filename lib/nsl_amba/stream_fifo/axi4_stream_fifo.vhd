@@ -93,11 +93,13 @@ begin
     out_available_o <= to_integer(out_available);
     in_free_o <= to_integer(in_free);
 
-    packet_counter_proc: process(reset_n_i, clock_i) is
+    packet_counter_proc: process(clock_i, reset_n_i) is
       variable out_v : master_t;
       variable inc, dec: boolean;
     begin
-      if rising_edge(clock_i(0)) then
+      if reset_n_i = '0' then 
+        pkt_counter <= (others => '0');
+      elsif rising_edge(clock_i(0)) then
         out_v := vector_unpack(config_c, fifo_elements_c, out_data_s);
         inc := is_valid(config_c, in_i) and is_last(config_c, in_i);
         dec := out_data_valid_s = '1' and is_last(config_c, out_v) and is_ready(config_c, out_i);
@@ -106,10 +108,6 @@ begin
         elsif dec and not inc then 
           pkt_counter <= pkt_counter - 1;
         end if;
-      end if;
-
-      if reset_n_i = '0' then
-        pkt_counter <= (others => '0');
       end if;
     end process;
     out_pkt_available <= to_integer(pkt_counter);
