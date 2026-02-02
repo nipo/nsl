@@ -83,6 +83,8 @@ package axi4_mm is
     has_lock: boolean;
   end record;
 
+  type config_vector is array (integer range <>) of config_t;
+  
   -- Generates a configuration.  data_bus_width should be a multiple
   -- of 8, matching a power-of-two number of bytes.  Bus will be
   -- AXI4-Lite if no burst is possible (max_length = 1), and id,
