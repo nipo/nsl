@@ -1,5 +1,11 @@
 vhdl-sources += transactor.pkg.vhd
 vhdl-sources += uart8.vhd
+vhdl-sources += uart8_no_generics.vhd
+vhdl-sources += cbor_controller.vhd
 deps += nsl_bnoc.pipe
 deps += nsl_uart.serdes
 deps += nsl_clocking.async
+deps += nsl_amba.axi4_stream
+deps += nsl_data.cbor
+deps += nsl_data.fifo
+deps += nsl_logic.bool
