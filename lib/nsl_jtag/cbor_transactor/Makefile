@@ -1,0 +1,10 @@
+vhdl-sources += cbor_transactor.pkg.vhd
+vhdl-sources += controller.vhd
+deps += nsl_jtag.jtag
+deps += nsl_jtag.ate
+deps += nsl_data.bytestream
+deps += nsl_data.endian
+deps += nsl_data.text
+deps += nsl_data.cbor
+deps += nsl_amba.axi4_stream
+deps += nsl_simulation.logging
