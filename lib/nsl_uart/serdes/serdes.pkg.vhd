@@ -61,5 +61,53 @@ package serdes is
       break_o     : out std_ulogic
       );
   end component;
+  
+  component uart_tx_dynamic_config is
+    generic(
+      bit_count_c : natural range 7 to 8
+      );
+    port(
+      clock_i      : in std_ulogic;
+      reset_n_i    : in std_ulogic;
+
+      tick_i       : in std_ulogic;
+
+      uart_o       : out std_ulogic;
+      rtr_i        : in std_ulogic := '0';
+
+      data_i       : in std_ulogic_vector(bit_count_c-1 downto 0);
+      ready_o      : out std_ulogic;
+      valid_i      : in std_ulogic;
+
+      stop_count_i : in natural range 1 to 2;
+      parity_i     : in parity_t;
+      rtr_active_i : in std_ulogic := '0'
+      );
+  end component;
+
+  component uart_rx_dynamic_config is
+    generic(
+      bit_count_c : natural
+      );
+    port(
+      clock_i        : in std_ulogic;
+      reset_n_i      : in std_ulogic;
+
+      tick_i         : in std_ulogic;
+
+      uart_i         : in std_ulogic;
+      rts_o          : out std_ulogic;
+
+      data_o         : out std_ulogic_vector(bit_count_c-1 downto 0);
+      valid_o        : out std_ulogic;
+      ready_i        : in std_ulogic := '1';
+      parity_error_o : out std_ulogic;
+      break_o        : out std_ulogic;
+
+      stop_count_i   : in natural range 1 to 2;
+      parity_i       : in parity_t;
+      rts_active_i   : in std_ulogic := '0'
+      );
+  end component;
 
 end package serdes;

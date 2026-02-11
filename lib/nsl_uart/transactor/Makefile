@@ -1,5 +1,13 @@
 vhdl-sources += transactor.pkg.vhd
 vhdl-sources += uart8.vhd
+vhdl-sources += uart8_dynamic_config.vhd
+vhdl-sources += axi4stream_cbor_uart_transactor.vhd
 deps += nsl_bnoc.pipe
 deps += nsl_uart.serdes
 deps += nsl_clocking.async
+deps += nsl_amba.axi4_stream
+deps += nsl_data.cbor
+deps += nsl_data.fifo
+deps += nsl_logic.bool
+deps += nsl_event.tick
+deps += nsl_signal_generator.frequency
