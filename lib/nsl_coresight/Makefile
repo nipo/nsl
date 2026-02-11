@@ -9,3 +9,4 @@ packages += testing
 packages += transactor
 packages += bridge
 packages += memap_mapper
+packages += cbor_transactor

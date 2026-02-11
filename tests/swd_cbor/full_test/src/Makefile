@@ -1,0 +1,15 @@
+vhdl-sources += tb.vhd
+deps += nsl_coresight.cbor_transactor
+deps += nsl_coresight.dp
+deps += nsl_coresight.dapbus
+deps += nsl_coresight.ap
+deps += nsl_coresight.testing
+deps += nsl_coresight.swd
+deps += nsl_event.tick
+deps += nsl_simulation.driver
+deps += nsl_simulation.logging
+deps += nsl_amba.axi4_mm
+deps += nsl_amba.ram
+deps += nsl_amba.stream_traffic
+deps += nsl_amba.stream_to_udp
+deps += nsl_data.bytestream
