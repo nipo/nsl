@@ -9,3 +9,5 @@ ise-build
 Default.wcfg
 isim1.wdb
 *.gtkw
+**/nsl_simulation/
+**/report.txt
