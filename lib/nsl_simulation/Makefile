@@ -2,6 +2,7 @@ packages += file_io
 packages += fifo
 packages += driver
 packages += control
+packages += test_reports
 packages += logging
 packages += assertions
 packages += socket
