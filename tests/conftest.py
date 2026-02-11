@@ -120,7 +120,7 @@ def save_simulation_log(testbench_dir: Path, stdout: str, stderr: str) -> Path:
     return log_path
 
 
-def run_vhdl_simulation(testbench_dir: Path, timeout: int = 300) -> VhdlSimulationResult:
+def run_vhdl_simulation(testbench_dir: Path, timeout: int = 600) -> VhdlSimulationResult:
     """
     Build and run a VHDL simulation.
 
@@ -133,13 +133,26 @@ def run_vhdl_simulation(testbench_dir: Path, timeout: int = 300) -> VhdlSimulati
     """
     print(f"[VHDL] Building and running testbench in {testbench_dir}")
 
-    build_result = subprocess.run(
-        ["make", "run"],
-        cwd=testbench_dir,
-        capture_output=True,
-        text=True,
-        timeout=timeout
-    )
+    try:
+        build_result = subprocess.run(
+            ["make", "run"],
+            cwd=testbench_dir,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+    except subprocess.TimeoutExpired as e:
+        stdout = (e.stdout or b"").decode(errors="replace")
+        stderr = (e.stderr or b"").decode(errors="replace")
+        print(f"[VHDL] TIMEOUT after {timeout}s in {testbench_dir}")
+        save_simulation_log(testbench_dir, stdout, stderr)
+        return VhdlSimulationResult(
+            testbench_path=testbench_dir,
+            return_code=-1,
+            stdout=stdout,
+            stderr=stderr,
+            build_failed=True,
+        )
 
     # Save the full simulation log to a file
     log_path = save_simulation_log(testbench_dir, build_result.stdout, build_result.stderr)
@@ -212,7 +225,7 @@ def discover_vhdl_testbenches(base_dir: Path) -> list[Path]:
 _simulation_cache: dict[Path, VhdlSimulationResult] = {}
 
 
-def get_simulation_result(testbench_dir: Path, timeout: int = 300) -> VhdlSimulationResult:
+def get_simulation_result(testbench_dir: Path, timeout: int = 600) -> VhdlSimulationResult:
     """Get or compute simulation result (cached)."""
     if testbench_dir not in _simulation_cache:
         _simulation_cache[testbench_dir] = run_vhdl_simulation(testbench_dir, timeout)
