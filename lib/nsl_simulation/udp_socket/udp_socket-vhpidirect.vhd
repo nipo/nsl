@@ -19,7 +19,7 @@ package body udp_socket is
 
   attribute foreign of udp_socket_sendto: procedure is "VHPIDIRECT udp_socket-vhpidirect.so udp_socket_sendto";
 
-  function udp_socket_recv_len(socket: udp_socket_t) return integer
+  impure function udp_socket_recv_len(socket: udp_socket_t) return integer
   is
   begin
     assert false report "Should not be called" severity failure;
