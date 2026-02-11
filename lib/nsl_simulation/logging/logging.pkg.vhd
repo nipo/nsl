@@ -53,6 +53,10 @@ package logging is
   procedure log_error(context: log_context; message : string);
   procedure log_fatal(context: log_context; message : string);
 
+  procedure log_test_suite_start(suite_name : string);
+  procedure log_test_result(test_name : string; test_passed : boolean; pass_count : inout integer; fail_count : inout integer);
+  procedure log_test_suite_summary(suite_name : string; pass_count : integer; fail_count : integer);
+
 end package;
 
 package body logging is
@@ -179,5 +183,55 @@ package body logging is
   begin
     log_fatal("[" & context & "] " & message);
   end procedure;
-  
+
+  procedure log_test_suite_start(suite_name : string) is
+  begin
+    log(LOG_LEVEL_INFO, "======================================", LOG_COLOR_CYAN);
+    log(LOG_LEVEL_INFO, suite_name, LOG_COLOR_CYAN);
+    log(LOG_LEVEL_INFO, "======================================", LOG_COLOR_CYAN);
+    nsl_simulation.test_reports.test_suite_start(suite_name);
+  end procedure;
+
+  procedure log_test_result(test_name : string; test_passed : boolean; pass_count : inout integer; fail_count : inout integer) is
+    variable test_number : integer;
+  begin
+    test_number := pass_count + fail_count + 1;
+
+    if test_passed then
+      pass_count := pass_count + 1;
+      log(LOG_LEVEL_INFO, "======== Test #" & integer'image(test_number) & " PASS: " & test_name, LOG_COLOR_GREEN);
+    else
+      fail_count := fail_count + 1;
+      log_error("======== Test #" & integer'image(test_number) & " FAIL: " & test_name);
+    end if;
+    nsl_simulation.test_reports.test_case_result(test_number, test_name, test_passed);
+  end procedure;
+      
+  procedure log_test_suite_summary(suite_name : string; pass_count : integer; fail_count : integer) is
+    variable total : integer;
+  begin
+    total := pass_count + fail_count;
+      
+    log_info("========================================");
+    log_info("Test Suite: " & suite_name);
+    log_info("----------------------------------------");
+    log_info("Total tests: " & integer'image(total));
+    log_info("Passed:      " & integer'image(pass_count));
+    
+    if fail_count > 0 then
+      log_error("Failed:      " & integer'image(fail_count));
+    else
+      log_info("Failed:      " & integer'image(fail_count));
+    end if;
+    
+    log_info("========================================");
+    
+    if fail_count = 0 then
+      log_info("All tests passed!");
+    else
+      log_error(integer'image(fail_count) & " test(s) failed.");
+    end if;
+    nsl_simulation.test_reports.test_suite_end;
+  end procedure;
+
 end package body;
