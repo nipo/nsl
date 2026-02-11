@@ -1,0 +1,17 @@
+vhdl-sources += clocked_slave_nack.vhd
+vhdl-sources += clocked_slave_10bit.vhd
+vhdl-sources += tb.vhd
+deps += nsl_i2c.cbor_transactor
+deps += nsl_i2c.clocked
+deps += nsl_i2c.i2c
+deps += nsl_simulation.driver
+deps += nsl_simulation.control
+deps += nsl_simulation.fifo
+deps += nsl_simulation.logging
+deps += nsl_amba.axi4_stream
+deps += nsl_amba.stream_traffic
+deps += nsl_amba.ram
+deps += nsl_amba.stream_to_udp
+deps += nsl_amba.stream_fifo
+deps += nsl_data.bytestream
+deps += nsl_clocking.async
