@@ -196,7 +196,7 @@ begin
           rin.parser <= nsl_data.cbor.feed(r.parser, data);
           if nsl_data.cbor.is_last( r.parser, data ) then
             rin.state <= ST_ARRAY_ENTER;
-            rin.tick_per_ms <= tick_i_hz / 2000;
+            rin.tick_per_ms <= tick_i_hz / 2000; -- 2 ticks per bit
           end if;
         end if;
 
@@ -268,7 +268,7 @@ begin
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_SHIFT;
             rin.state     <= ST_RSP_BSTR_HDR_PREP;
           elsif r.tag = 8 then
-            rin.word_count  <= (nsl_data.cbor.arg_int(r.parser)+7)/8; -- -1?
+            rin.word_count  <= (nsl_data.cbor.arg_int(r.parser)+7)/8;
             if nsl_data.cbor.arg_int(r.parser) mod 8 = 0 then
               rin.bit_count <= 8;
             else
@@ -444,7 +444,8 @@ begin
           if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
             if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
               if r.last then
-                rin.state <= ST_RESET;
+                rin.parser <= nsl_data.cbor.reset;
+                rin.state <= ST_ARRAY_GET;
               else
                 rin.state <= ST_RSP_BREAK_PREP;
               end if;
