@@ -281,7 +281,8 @@ architecture rtl of controller is
         rin.is_bitbang    <= false;
         rin.par_in        <= '0';
         rin.par_out       <= '0';
-      
+        rin.cmd_cancelled <= false;
+
       when ST_ARRAY_GET =>
         rin.cmd_cancelled <= false;
         if cmd_i.valid = '1' then
@@ -579,7 +580,7 @@ architecture rtl of controller is
         elsif swclk_rising then
           if r.word_count = 0 then
             rin.state <= ST_RSP_WRITE_STATUS_PREP;
-            rin.cycle_count <= rin.wait_cycles;
+            rin.cycle_count <= r.wait_cycles;
           else
               -- Multi-word write: do turnaround before next command
               rin.cycle_count <= r.turnaround;
