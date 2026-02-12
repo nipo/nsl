@@ -748,16 +748,20 @@ package axi4_stream is
     timeout : in time := 100 us;
     sev: severity_level := failure);
 
-  -- Sends a frame (of data1) on master queue and expects an exactly matching frame
-  -- (data2) on slave queue
+  -- Sends a frame (of data1 with dest1/id1/user1 sidebands) on master queue
+  -- and expects an exactly matching frame (data2 with dest2/id2/user2
+  -- sidebands) on slave queue
   procedure frame_queue_check_io(
     variable root_master: in frame_queue_root_t;
     variable root_slave: in frame_queue_root_t;
     constant data1: byte_string := null_byte_string;
     constant data2: byte_string := null_byte_string;
-    constant dest: std_ulogic_vector := na_suv;
-    constant id:   std_ulogic_vector := na_suv;
-    constant user: std_ulogic_vector := na_suv;
+    constant dest1: std_ulogic_vector := na_suv;
+    constant id1:   std_ulogic_vector := na_suv;
+    constant user1: std_ulogic_vector := na_suv;
+    constant dest2: std_ulogic_vector := na_suv;
+    constant id2:   std_ulogic_vector := na_suv;
+    constant user2: std_ulogic_vector := na_suv;
     dt : in time := 10 ns;
     timeout : in time := 100 us;
     sev: severity_level := failure);
@@ -768,14 +772,17 @@ package axi4_stream is
     variable root_slave: in frame_queue_root_t;
     constant data1: byte_string := null_byte_string;
     constant data2: byte_string := null_byte_string;
-    constant dest: std_ulogic_vector := na_suv;
-    constant id:   std_ulogic_vector := na_suv;
-    constant user: std_ulogic_vector := na_suv;
+    constant dest1: std_ulogic_vector := na_suv;
+    constant id1:   std_ulogic_vector := na_suv;
+    constant user1: std_ulogic_vector := na_suv;
+    constant dest2: std_ulogic_vector := na_suv;
+    constant id2:   std_ulogic_vector := na_suv;
+    constant user2: std_ulogic_vector := na_suv;
     variable check_status : out boolean;
     dt : in time := 10 ns;
     timeout : in time := 100 us;
     sev: severity_level := failure);
-  
+
   -- Master-side procedure. Takes frames from a queue and puts them to
   -- signals.  Never returns
   procedure frame_queue_master(constant cfg: config_t;
@@ -2286,15 +2293,18 @@ package body axi4_stream is
     variable root_slave: in frame_queue_root_t;
     constant data1: byte_string := null_byte_string;
     constant data2: byte_string := null_byte_string;
-    constant dest: std_ulogic_vector := na_suv;
-    constant id:   std_ulogic_vector := na_suv;
-    constant user: std_ulogic_vector := na_suv;
+    constant dest1: std_ulogic_vector := na_suv;
+    constant id1:   std_ulogic_vector := na_suv;
+    constant user1: std_ulogic_vector := na_suv;
+    constant dest2: std_ulogic_vector := na_suv;
+    constant id2:   std_ulogic_vector := na_suv;
+    constant user2: std_ulogic_vector := na_suv;
     dt : in time := 10 ns;
     timeout : in time := 100 us;
     sev: severity_level := failure)
   is
-    variable frm1: frame_t := frame(data1, dest, id, user);
-    variable frm2: frame_t := frame(data2, dest, id, user);
+    variable frm1: frame_t := frame(data1, dest1, id1, user1);
+    variable frm2: frame_t := frame(data2, dest2, id2, user2);
   begin
     frame_queue_check_io(root_master, root_slave, frm1, frm2, dt, timeout, sev);
   end procedure;
@@ -2304,20 +2314,23 @@ package body axi4_stream is
     variable root_slave: in frame_queue_root_t;
     constant data1: byte_string := null_byte_string;
     constant data2: byte_string := null_byte_string;
-    constant dest: std_ulogic_vector := na_suv;
-    constant id:   std_ulogic_vector := na_suv;
-    constant user: std_ulogic_vector := na_suv;
+    constant dest1: std_ulogic_vector := na_suv;
+    constant id1:   std_ulogic_vector := na_suv;
+    constant user1: std_ulogic_vector := na_suv;
+    constant dest2: std_ulogic_vector := na_suv;
+    constant id2:   std_ulogic_vector := na_suv;
+    constant user2: std_ulogic_vector := na_suv;
     variable check_status : out boolean;
     dt : in time := 10 ns;
     timeout : in time := 100 us;
     sev: severity_level := failure)
   is
-    variable frm1: frame_t := frame(data1, dest, id, user);
-    variable frm2: frame_t := frame(data2, dest, id, user);
+    variable frm1: frame_t := frame(data1, dest1, id1, user1);
+    variable frm2: frame_t := frame(data2, dest2, id2, user2);
   begin
     frame_queue_check_io(root_master, root_slave, frm1, frm2, check_status, dt, timeout, sev);
   end procedure;
-    
+
   procedure frame_queue_get(
     variable root: frame_queue_root_t;
     variable frm: out frame_t;
