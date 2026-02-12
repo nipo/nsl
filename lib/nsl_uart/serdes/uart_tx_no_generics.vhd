@@ -135,7 +135,6 @@ begin
           else
             rin.state <= ST_IDLE;
           end if;
-          rin.shreg <= (others => '-');
         end if;
 
     end case;
