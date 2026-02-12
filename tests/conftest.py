@@ -133,6 +133,10 @@ def run_vhdl_simulation(testbench_dir: Path, timeout: int = 600) -> VhdlSimulati
     """
     print(f"[VHDL] Building and running testbench in {testbench_dir}")
 
+    report_path = testbench_dir / "report.txt"
+    if report_path.exists():
+        report_path.unlink()
+
     try:
         build_result = subprocess.run(
             ["make", "run"],
@@ -289,6 +293,8 @@ def collect_vhdl_tests() -> list[VhdlTestInfo]:
 
         result = get_simulation_result(tb_path)
         full_log = strip_ansi(result.stdout)
+        if result.stderr:
+            full_log += "\n" + strip_ansi(result.stderr)
 
         if result.build_failed:
             # Build failed — no report.txt, emit a single failing entry

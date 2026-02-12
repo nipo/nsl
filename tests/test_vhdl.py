@@ -29,6 +29,11 @@ def test_vhdl(vhdl_test, record_xml_attribute):
     record_xml_attribute("classname", vhdl_test.classname)
     record_xml_attribute("name", test_name)
 
+    # Print full simulation log to stdout so junit_logging captures it
+    # into <system-out> in the JUnit XML for Jenkins to display
+    if vhdl_test.full_log:
+        print(vhdl_test.full_log)
+
     # Check if test passed
     if not vhdl_test.passed:
         if vhdl_test.test_name:
