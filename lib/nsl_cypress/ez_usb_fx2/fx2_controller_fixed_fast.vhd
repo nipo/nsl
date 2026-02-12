@@ -141,7 +141,7 @@ begin
     end case;
   end process;
 
-  output: process (r)
+  output: process (r, tx_full_n_s, tx_i, rx_empty_n_s, rx_i, from_fx2_i)
     variable received_bytes : nsl_data.bytestream.byte_string(0 downto 0);
   begin
     to_fx2_o.addr   <= "--";
