@@ -395,7 +395,7 @@ begin
             rin.state <= ST_POLL_ARRAY_GET;
           else
             nsl_simulation.logging.log_warning("Unknown command, draining frame");
-            rin.last  <= true;
+            rin.last  <= false;
             rin.state <= ST_ERROR_DRAIN;
           end if;
           rin.parser <= nsl_data.cbor.reset;
@@ -420,7 +420,7 @@ begin
             -- nsl_simulation.logging.log_info("Address is set to " & nsl_data.text.to_string(rin.addr));
           else
             nsl_simulation.logging.log_warning("Wrong data type for address, draining frame");
-            rin.last  <= true;
+            rin.last  <= false;
             rin.state <= ST_ERROR_DRAIN;
           end if;
 
@@ -447,7 +447,7 @@ begin
             rin.word_total <= nsl_data.cbor.arg_int(r.parser);
           else
             nsl_simulation.logging.log_warning("Wrong data type for read or write operation, draining frame");
-            rin.last  <= true;
+            rin.last  <= false;
             rin.state <= ST_ERROR_DRAIN;
           end if;
 
@@ -627,9 +627,10 @@ begin
 
         when ST_IO_FLUSH_PUT =>
           if rsp_i.ready = '1' then
-            rin.word_count <= r.word_count - 1;
             if r.word_count = 0 then
               rin.state <= ST_CMD_GET;
+            else
+              rin.word_count <= r.word_count - 1;
             end if;
           end if;
         
@@ -728,7 +729,8 @@ begin
           if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
             if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
               if r.last then
-                rin.state <= ST_RESET;
+                rin.parser <= nsl_data.cbor.reset;
+                rin.state <= ST_ARRAY_GET;
               else
                 rin.state <= ST_RSP_BREAK_PREP;
               end if;
