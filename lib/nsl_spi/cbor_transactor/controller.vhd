@@ -488,7 +488,8 @@ begin
           if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
             if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
               if r.last then
-                rin.state <= ST_RESET;
+                rin.parser <= nsl_data.cbor.reset;
+                rin.state <= ST_ARRAY_GET;
               else
                 rin.state <= ST_RSP_BREAK_PREP;
               end if;
