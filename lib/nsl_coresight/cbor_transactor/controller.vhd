@@ -338,7 +338,7 @@ architecture rtl of controller is
             -- of cycles to wait for
           else
             nsl_simulation.logging.log_warning("Unhandled CBOR tag " & integer'image(tag) &" received, draining frame");
-            rin.last  <= true;
+            rin.last  <= false;
             rin.state <= ST_ERROR_DRAIN;
           end if;
         elsif nsl_data.cbor.kind(r.parser) = nsl_data.cbor.KIND_POSITIVE then
@@ -388,7 +388,7 @@ architecture rtl of controller is
               rin.state <= ST_CMD_END;
             else
               nsl_simulation.logging.log_warning("Unhandled tag contect for positive number received, draining frame");
-              rin.last  <= true;
+              rin.last  <= false;
               rin.state <= ST_ERROR_DRAIN;
             end if;
           end if;
@@ -426,10 +426,14 @@ architecture rtl of controller is
                 rin.state <= ST_CMD_END;
               end if;
             else
-              nsl_simulation.logging.log_warning("Unhandled tag contect for bytestring, draining frame");
-              rin.last  <= true;
+              nsl_simulation.logging.log_warning("Unhandled tag context for bytestring, draining frame");
+              rin.last  <= false;
               rin.state <= ST_ERROR_DRAIN;
             end if;
+          else
+            nsl_simulation.logging.log_error("Received bytestring outside of tag, register undefined. Draining frame");
+            rin.last  <= false;
+            rin.state <= ST_ERROR_DRAIN;
           end if;
         elsif nsl_data.cbor.kind(r.parser) = nsl_data.cbor.KIND_TRUE then -- JTAG-to-SWD
           rin.inside_cmd <= false;
@@ -444,12 +448,16 @@ architecture rtl of controller is
           end if;
         elsif nsl_data.cbor.kind(r.parser) = nsl_data.cbor.KIND_BREAK then
           if r.indefinite then
-            rin.state  <= ST_RSP_BREAK_PREP;
+            rin.state <= ST_RSP_BREAK_PREP;
           else 
-            nsl_simulation.logging.log_warning("Found break code inside definite lenght array");
+            nsl_simulation.logging.log_warning("Found break code inside definite lenght array. Malformed command, draining frame");
+            rin.last  <= false;
+            rin.state <= ST_ERROR_DRAIN;
           end if;
         else
           nsl_simulation.logging.log_error("Received non-compliant command");
+          rin.last  <= false;
+          rin.state <= ST_ERROR_DRAIN;
         end if;
       
       when ST_CMD_END =>
@@ -805,7 +813,8 @@ architecture rtl of controller is
           if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
             if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
               if r.last then
-                rin.state <= ST_RESET;
+                rin.parser <= nsl_data.cbor.reset;
+                rin.state <= ST_ARRAY_GET;
               else
                 rin.state <= ST_RSP_BREAK_PREP;
               end if;
