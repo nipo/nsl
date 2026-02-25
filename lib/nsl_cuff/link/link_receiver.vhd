@@ -209,6 +209,10 @@ begin
       if rising_edge(clock_i) then
         r <= rin;
       end if;
+
+      if reset_n_i = '0' then
+        r.state <= LINK_LANE_ALIGN;
+      end if;
     end process;
 
     transition: process(r, state_s, lane_restart_s) is

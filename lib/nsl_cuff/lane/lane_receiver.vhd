@@ -185,7 +185,7 @@ begin
 
   moore: process(r) is
   begin
-    if disparity_error_s = '0' and code_error_s = '0' and is_word_expected(data_s) then
+    if r.disparity_error = '0' and r.code_error = '0' and is_word_expected(r.data) then
       align_valid_o <= '1';
     else
       align_valid_o <= '0';
