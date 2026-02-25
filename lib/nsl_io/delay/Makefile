@@ -35,6 +35,7 @@ endif
 ifeq ($(hwdep),gowin)
 ifneq ($(filter GW5%,$(target_part)),)
 vhdl-sources += input_delay_fixed_gowin_gw5.vhd
+vhdl-sources += input_delay_variable_gowin_gw5.vhd
 else
 vhdl-sources += input_delay_fixed_gowin.vhd
 endif

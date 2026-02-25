@@ -24,7 +24,11 @@ endif
 
 ifeq ($(hwdep),gowin)
 vhdl-sources += serdes_ddr10_output_gowin.vhd
+ifneq ($(filter GW5%,$(target_part)),)
+vhdl-sources += serdes_ddr10_input_gowin_gw5.vhd
+else
 vhdl-sources += serdes_ddr10_input_gowin.vhd
+endif
 vhdl-sources += serdes_output_gowin.vhd
 vhdl-sources += serdes_input_gowin.vhd
 vhdl-sources += serdes_blocks_gowin.vhd
