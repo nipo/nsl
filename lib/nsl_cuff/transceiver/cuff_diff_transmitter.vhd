@@ -7,12 +7,16 @@ use nsl_io.diff.all;
   
 entity cuff_diff_transmitter is
   generic(
-    lane_count_c : natural
+    lane_count_c : natural;
+    ddr_mode_c: boolean := true
     );
   port(
     clock_i : in std_ulogic;
+    gearbox_clock_i : in std_ulogic := '0';
     bit_clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
+
+    serdes_strobe_i : in std_ulogic := '0';
 
     lane_i : in cuff_code_vector(0 to lane_count_c-1);
     pad_o : out nsl_io.diff.diff_pair_vector(0 to lane_count_c-1)
@@ -37,12 +41,15 @@ begin
 
   inst: nsl_cuff.transceiver.cuff_transmitter
     generic map(
-      lane_count_c => lane_count_c
+      lane_count_c => lane_count_c,
+      ddr_mode_c => ddr_mode_c
       )
     port map(
       clock_i => clock_i,
+      gearbox_clock_i => gearbox_clock_i,
       bit_clock_i => bit_clock_i,
       reset_n_i => reset_n_i,
+      serdes_strobe_i => serdes_strobe_i,
 
       pad_o => se_s,
       lane_i => lane_i

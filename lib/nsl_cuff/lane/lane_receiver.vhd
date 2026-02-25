@@ -80,6 +80,7 @@ begin
 
     if reset_n_i = '0' then
       r.state <= LANE_BIT_ALIGN;
+      r.align_restart <= '1';
     end if;
   end process;
 

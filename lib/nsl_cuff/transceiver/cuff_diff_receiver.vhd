@@ -10,13 +10,17 @@ entity cuff_diff_receiver is
     lane_count_c : natural;
     input_fixed_delay_ps_c: natural := 0;
     has_input_alignment_c: boolean := true;
-    diff_term : boolean := true
+    diff_term : boolean := true;
+    ddr_mode_c : boolean := true
     );
   port(
     clock_i : in std_ulogic;
+    gearbox_clock_i : in std_ulogic := '0';
     bit_clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
-
+    
+    serdes_strobe_i : in std_ulogic := '0';
+    
     pad_i : in diff_pair_vector(0 to lane_count_c-1);
     lane_o : out cuff_code_vector(0 to lane_count_c-1);
 
@@ -49,12 +53,15 @@ begin
     generic map(
       lane_count_c => lane_count_c,
       input_fixed_delay_ps_c => input_fixed_delay_ps_c,
-      has_input_alignment_c => has_input_alignment_c
+      has_input_alignment_c => has_input_alignment_c,
+      ddr_mode_c => ddr_mode_c
       )
     port map(
       clock_i => clock_i,
+      gearbox_clock_i => gearbox_clock_i,
       bit_clock_i => bit_clock_i,
       reset_n_i => reset_n_i,
+      serdes_strobe_i => serdes_strobe_i,
       pad_i => se_s,
       lane_o => lane_o,
       align_restart_i => align_restart_i,

@@ -8,12 +8,16 @@ entity cuff_receiver is
   generic(
     lane_count_c : natural;
     input_fixed_delay_ps_c: natural := 0;
-    has_input_alignment_c: boolean := true
+    has_input_alignment_c: boolean := true;
+    ddr_mode_c: boolean := true
     );
   port(
     clock_i : in std_ulogic;
+    gearbox_clock_i : in std_ulogic := '0';
     bit_clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
+
+    serdes_strobe_i : in std_ulogic := '0';
 
     pad_i : in std_ulogic_vector(0 to lane_count_c-1);
     lane_o : out cuff_code_vector(0 to lane_count_c-1);
@@ -79,7 +83,8 @@ begin
       align_ready_o(i) <= '1';
     end generate;
 
-    deserializer: nsl_io.serdes.serdes_ddr10_input
+    ddr_gen : if ddr_mode_c generate
+      deserializer: nsl_io.serdes.serdes_ddr10_input
       port map(
         word_clock_i => clock_i,
         bit_clock_i => bit_clock_i,
@@ -89,6 +94,22 @@ begin
         bitslip_i => slip_shift_s,
         mark_o => slip_mark_s
         );
+    end generate;
+
+    sdr_gen: if not ddr_mode_c generate
+      deserializer: nsl_io.serdes.serdes_sdr10_input
+        port map(
+          word_clock_i => clock_i,
+          gearbox_clock_i => gearbox_clock_i,
+          bit_clock_i => bit_clock_i,
+          reset_n_i => reset_n_i,
+          serdes_strobe_i => serdes_strobe_i,
+          parallel_o => lane_o(i),
+          serial_i => delayed_s,
+          bitslip_i => slip_shift_s,
+          mark_o => slip_mark_s
+          );
+    end generate;
   end generate;
 
 end architecture;
