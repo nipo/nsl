@@ -51,6 +51,19 @@ package delay is
       );
   end component;
 
+  component input_delay_variable_sdr is
+    port(
+      clock_i : in std_ulogic;
+      bit_clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      mark_o : out std_ulogic;
+      shift_i : in std_ulogic;
+
+      data_i : in std_ulogic;
+      data_o : out std_ulogic
+      );
+  end component;
+
   -- Iterates over all possible delay and bit slip possibilities and
   -- gets the best match.
   -- There may be no serdes shift or no delay shift. In such case, leave defaut
