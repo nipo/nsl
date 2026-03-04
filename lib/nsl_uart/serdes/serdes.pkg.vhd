@@ -61,5 +61,60 @@ package serdes is
       break_o     : out std_ulogic
       );
   end component;
+  
+  component uart_tx_no_generics is
+    generic(
+      bit_count_c : natural range 7 to 8
+      );
+    port(
+      clock_i     : in std_ulogic;
+      reset_n_i   : in std_ulogic;
+
+      divisor_i   : in unsigned;
+
+      -- Should be exposed as device TX
+      uart_o      : out std_ulogic;
+      -- Should be exposed as device /CTS. This is active low by
+      -- default, but could be reversed through generics.
+      rtr_i       : in std_ulogic := '0';
+
+      data_i      : in std_ulogic_vector(bit_count_c-1 downto 0);
+      ready_o     : out std_ulogic;
+      valid_i     : in std_ulogic;
+      
+      -- bit_count   : in unsigned(3 downto 0); -- range 7 to 8
+      stop_count_i: in unsigned(1 downto 0); -- range 1 to 2
+      parity_i    : in unsigned(1 downto 0); -- encoded value of parity_t
+      rtr_active_i: in std_ulogic := '0'
+      );
+  end component;
+
+  component uart_rx_no_generics is
+    generic(
+      bit_count_c : natural
+      );
+    port(
+      clock_i     : in std_ulogic;
+      reset_n_i   : in std_ulogic;
+
+      divisor_i   : in unsigned;
+
+      -- Should be exposed as device RX
+      uart_i      : in std_ulogic;
+      -- Should be exposed as device /RTS. This is active low by
+      -- default, but could be reversed through generics.
+      rts_o       : out std_ulogic;
+
+      data_o         : out std_ulogic_vector(bit_count_c-1 downto 0);
+      valid_o        : out std_ulogic;
+      ready_i        : in std_ulogic := '1';
+      parity_error_o : out std_ulogic;
+      break_o        : out std_ulogic;
+
+      stop_count_i   : in unsigned(1 downto 0); -- range 1 to 2
+      parity_i       : in unsigned(1 downto 0); -- encoded value of parity_t
+      rts_active_i   : in std_ulogic := '0'
+      );
+  end component;
 
 end package serdes;
