@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gbs-plugin-nsl"
+version = "0.1.0"
+description = "GBS plugin for loading NSL tree repositories"
+requires-python = ">=3.13"
+dependencies = [
+    "gbs",
+]
+
+[project.readme]
+file = "readme.md"
+content-type = "text/markdown"
+
+[project.entry-points."gbs.backends"]
+nsl = "gbs.plugin.nsl"
+
+[project.entry-points."gbs.loaders"]
+nsl_tree = "gbs.plugin.nsl.tree"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gbs"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+
+[tool.hatch.build.targets.sdist]
+packages = ["gbs"]
