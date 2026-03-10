@@ -11,12 +11,12 @@ placed-reports += $(build-dir)/placed_usage.rpt
 placed-reports += $(build-dir)/placed_control_sets.rpt
 placed-reports += $(link-reports)
 routed-reports = $(build-dir)/routed_drc.rpt
-routed-reports = $(build-dir)/routed_methodology.rpt
-routed-reports = $(build-dir)/routed_power.rpt
-routed-reports = $(build-dir)/routed_route_status.rpt
-routed-reports = $(build-dir)/routed_timing_summary.rpt
-routed-reports = $(build-dir)/routed_incremental_reuse.rpt
-routed-reports = $(build-dir)/routed_clock_utilization.rpt
+routed-reports += $(build-dir)/routed_methodology.rpt
+routed-reports += $(build-dir)/routed_power.rpt
+routed-reports += $(build-dir)/routed_route_status.rpt
+routed-reports += $(build-dir)/routed_timing_summary.rpt
+routed-reports += $(build-dir)/routed_incremental_reuse.rpt
+routed-reports += $(build-dir)/routed_clock_utilization.rpt
 routed-reports += $(placed-reports)
 
 include $(TOOL_ROOT)/vivado-create.inc.mk
@@ -50,7 +50,6 @@ endef
 
 define read_checkpoint
 	$(foreach s,$(sources),$(call file-append_$($s-language)_link,$1,$s))
-	$(call file-append,$1,link_design -top $(top-entity) -part $(target_part)$(target_package)$(target_speed))
 	$(call file-append,$1,open_checkpoint -quiet $2)
 
 endef
@@ -60,6 +59,17 @@ define project_init
 	$(SILENT)for f in $(vivado-init-tcl) ; do \
 		cat $$f >> $1 ; \
 	done
+	$(if $(vivado-ip-repo-paths),$(call file-append,$1,set_property ip_repo_paths [concat [get_property ip_repo_paths [current_project]] [list $(foreach p,$(vivado-ip-repo-paths),{$p})]] [current_project]))
+	$(if $(vivado-ip-repo-paths),$(call file-append,$1,update_ip_catalog -rebuild))
+endef
+
+define project_init_synth
+	$(call file-append,$1,create_project synth project -part $(target_part)$(target_package)$(target_speed) -force)
+	$(SILENT)for f in $(vivado-init-tcl) ; do \
+		cat $$f >> $1 ; \
+	done
+	$(if $(vivado-ip-repo-paths),$(call file-append,$1,set_property ip_repo_paths [concat [get_property ip_repo_paths [current_project]] [list $(foreach p,$(vivado-ip-repo-paths),{$p})]] [current_project]))
+	$(if $(vivado-ip-repo-paths),$(call file-append,$1,update_ip_catalog -rebuild))
 endef
 
 $(build-dir)/sources.tcl: $(sources) $(MAKEFILE_LIST)
@@ -77,10 +87,16 @@ project/$(target).xpr: $(build-dir)/$(target)-xpr-gen.tcl
 
 $(build-dir)/synth.dcp: $(sources) $(vivado-init-tcl) $(MAKEFILE_LIST)
 	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
+	$(call project_init_synth,$@.tcl)
 	$(call vivado-tcl-sources-append,$@.tcl,sources_1,constrs_1)
-	$(call file-append,$@,set_param synth.elaboration.rodinMoreOptions {rt::set_parameter ignoreVhdlAssertStmts false})
-	$(call file-append,$@.tcl,synth_design -top $(top-entity) -part $(target_part)$(target_package)$(target_speed) -assert)
+	$(call file-append,$@.tcl,launch_runs synth_1 -jobs 4)
+	$(call file-append,$@.tcl,wait_on_run synth_1)
+	$(call file-append,$@.tcl,if { [get_property PROGRESS [get_runs synth_1]] != "100%" } { error "Synthesis failed" })
+	$(call file-append,$@.tcl,launch_runs impl_1 -jobs 4 -to_step write_bitstream)
+	$(call file-append,$@.tcl,wait_on_run impl_1)
+	$(call file-append,$@.tcl,if { [get_property PROGRESS [get_runs impl_1]] != "100%" } { error "Implementation failed" })
+	$(call file-append,$@.tcl,file copy -force project/synth.runs/impl_1/$(top-entity).bit bitstream.bit)
+	$(call file-append,$@.tcl,open_run synth_1 -name synth_1)
 	$(call file-append,$@.tcl,write_checkpoint -force -noxdef $(notdir $@))
 	$(call vivado-tcl-run,$@.tcl)
 
@@ -93,115 +109,10 @@ $(build-dir)/synth.rpt: $(build-dir)/synth.dcp
 	$(call file-append,$@.tcl,report_utilization -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)))
 	$(call vivado-tcl-run,$@.tcl)
 
+$(build-dir)/bitstream.bit: $(build-dir)/synth.dcp
 $(build-dir)/link_opt.dcp: $(build-dir)/synth.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,opt_design)
-	$(call file-append,$@.tcl,write_checkpoint -force $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/link_opt_drc.rpt: $(build-dir)/link_opt.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_drc -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)) -rpx $(notdir $(@:.rpt=.rpx)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/placed.dcp: $(build-dir)/link_opt.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-#	$(call file-append,$@.tcl,implement_debug_core)
-#	$(foreach s,$(all-constraint-sources),$(call file-append_constraint_synth,$@,$s))
-	$(call file-append,$@.tcl,place_design)
-	$(call file-append,$@.tcl,write_checkpoint -force $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/placed_io.rpt: $(build-dir)/placed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_io -file $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/placed_usage.rpt: $(build-dir)/placed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_utilization -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/placed_control_sets.rpt: $(build-dir)/placed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_control_sets -verbose -file $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed.dcp: $(build-dir)/placed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,route_design)
-	$(call file-append,$@.tcl,write_checkpoint -force $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_drc.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_drc -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)) -rpx $(notdir $(@:.rpt=.rpx)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_methodology.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_methodology -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)) -rpx $(notdir $(@:.rpt=.rpx)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_power.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_power -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)) -rpx $(notdir $(@:.rpt=.rpx)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_route_status.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_route_status -file $(notdir $@) -pb $(notdir $(@:.rpt=.pb)))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_timing_summary.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_timing_summary -max_paths 10 -file $(notdir $@) -rpx $(notdir $(@:.rpt=.rpx)) -warn_on_violation)
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_incremental_reuse.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_incremental_reuse -file $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/routed_clock_utilization.rpt: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,report_clock_utilization -file $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
-
-$(build-dir)/bitstream.bit: $(build-dir)/routed.dcp
-	$(call file-clear,$@.tcl)
-	$(call project_init,$@.tcl)
-	$(call read_checkpoint,$@.tcl,$(notdir $<))
-	$(call file-append,$@.tcl,write_bitstream -force $(notdir $@))
-	$(call vivado-tcl-run,$@.tcl)
+$(build-dir)/placed.dcp: $(build-dir)/synth.dcp
+$(build-dir)/routed.dcp: $(build-dir)/synth.dcp
 
 $(build-dir)/$(target)-fast.tcl: $(build-dir)/sources.tcl $(vivado-init-tcl) $(MAKEFILE_LIST)
 	$(call file-clear,$@)
@@ -245,3 +156,4 @@ $(target)-fast.x4.bin: $(target)-fast.bit
 	$(call vivado-tcl-cmd,write_cfgmem -force -size 16 -format BIN -interface SPIx4 -loadbit "up 0x0 $<" $@)
 
 clean-dirs += $(build-dir)
+clean-dirs += $(dir $(build-dir))bd-build

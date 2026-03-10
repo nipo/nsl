@@ -12,9 +12,15 @@ define file-append
 endef
 
 define _vivado-add-bd-before
-	$(call file-append,$1,set f [add_files [file normalize {$2}]])
-	$(call file-append,$1,reset_target Synthesis $$f)
-	$(call file-append,$1,open_bd_design $$f)
+	$(call file-append,$1,set _bd_orig [file normalize {$2}])
+	$(call file-append,$1,set _bd_dir [file join [file dirname [pwd]] bd-build])
+	$(call file-append,$1,file mkdir $$_bd_dir)
+	$(call file-append,$1,set _bd_copy [file join $$_bd_dir [file tail $$_bd_orig]])
+	$(call file-append,$1,file copy -force $$_bd_orig $$_bd_copy)
+	$(call file-append,$1,set _bd_file [add_files $$_bd_copy])
+	$(call file-append,$1,generate_target all $$_bd_file)
+	$(call file-append,$1,export_ip_user_files -of_objects $$_bd_file -no_script -sync -force -quiet)
+	$(call file-append,$1,create_ip_run $$_bd_file)
 
 endef
 
@@ -89,7 +95,9 @@ define vivado-tcl-sources-append
 	$(call file-append,$1,set_property "generic" "$(topcell-generics)" $$_sources_fileset)
 	$(call file-append,$1,set_param synth.elaboration.rodinMoreOptions {rt::set_parameter ignoreVhdlAssertStmts false})
 	$(call file-append,$1,foreach {xci} [get_files -of_objects [get_filesets $$_sources_fileset_name] "*.xci"] {)
-	$(call file-append,$1,    generate_target "synthesis implementation" $$xci)
+	$(call file-append,$1,    if {[get_property parent_composite_file $$xci] eq {}} {)
+	$(call file-append,$1,        generate_target "synthesis implementation" $$xci)
+	$(call file-append,$1,    })
 	$(call file-append,$1,})
 
 endef
