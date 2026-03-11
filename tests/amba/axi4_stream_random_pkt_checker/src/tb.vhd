@@ -25,7 +25,7 @@ architecture arch of tb is
   constant pkt_disappearance_rate : integer := 64;
   constant pkt_disappearance_rate_l2 : integer := nsl_math.arith.log2(pkt_disappearance_rate);
 
-  type stream_cfg_array_t is array (natural range <>) of config_t;
+  type config_vector is array (natural range <>) of config_t;
   type integer_vector is array (natural range <>) of integer;
   type boolean_vector is array (natural range <> ) of boolean;
 
@@ -51,13 +51,13 @@ architecture arch of tb is
   type state_vector_t is array (natural range <> ) of state_t;
   type incr_state_vector_t is array (natural range <> ) of incr_state_t;
                                                 
-  constant tx_stream_cfg_array : stream_cfg_array_t := 
+  constant tx_stream_cfg_array : config_vector := 
     (0 => config(2, keep => true, last => true),
      1 => config(2, keep => true, last => true),
      2 => config(4, keep => true, last => true),
      3 => config(8, keep => true, last => true));
      
-  constant rx_stream_cfg_array : stream_cfg_array_t := 
+  constant rx_stream_cfg_array : config_vector := 
     (0 => config(2, keep => true, last => true),
      1 => config(4, keep => true, last => true),
      2 => config(4, keep => true, last => true),

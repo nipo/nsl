@@ -17,12 +17,12 @@ architecture arch of tb is
   constant nbr_scenario : integer := 3;
   constant min_size_c : positive := 8;
   constant padding_byte_c : byte := x"ff";
-  constant config_c : stream_cfg_array_t :=
+  constant config_c : config_vector :=
     (0 => config(1, last => true),
      1 => config(2, last => true),
      2 => config(4, last => true));
 
-  type stream_cfg_array_t is array (natural range <>) of config_t;
+  type config_vector is array (natural range <>) of config_t;
 
   signal clock_s, reset_n_s: std_ulogic;
   signal done_s: std_ulogic_vector(0 to nbr_scenario -1);
