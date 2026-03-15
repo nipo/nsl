@@ -1,3 +1,0 @@
-[submodule "lib/neorv32/neorv32_project"]
-	path = lib/neorv32/neorv32_project
-	url = https://github.com/stnolting/neorv32
