@@ -167,7 +167,7 @@ begin
       tvalid => s_axis_tvalid,
       tready => s_axis_tready,
       tdata => s_axis_tdata,
-      tlast => s_axis_tlast
+      tlast => s_axis_tlast,
 
       stream_i => rx_s.s,
       stream_o => rx_s.m
@@ -181,7 +181,7 @@ begin
       tvalid => m_axis_tvalid,
       tready => m_axis_tready,
       tdata => m_axis_tdata,
-      tlast => m_axis_tlast
+      tlast => m_axis_tlast,
 
       stream_i => tx_s.m,
       stream_o => tx_s.s
