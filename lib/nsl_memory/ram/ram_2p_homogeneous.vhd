@@ -43,7 +43,7 @@ begin
   begin
     if rising_edge(a_clock_i) then
       if a_enable_i = '1' then
-        if read_before_write_c then
+        if not read_before_write_c then
           for i in 0 to data_word_count_c - 1
           loop
             if a_write_en_i(i) = '1' then
@@ -60,7 +60,7 @@ begin
           a_data_o <= dpram_reg(to_integer(to_01(a_address_i, '0')));
         end if;
 
-        if not read_before_write_c then
+        if read_before_write_c then
           for i in 0 to data_word_count_c - 1
           loop
             if a_write_en_i(i) = '1' then
@@ -78,7 +78,7 @@ begin
     if rising_edge(b_clock_i)
     then
       if b_enable_i = '1' then
-        if read_before_write_c then
+        if not read_before_write_c then
           if b_can_write_c then
             for i in 0 to data_word_count_c - 1
             loop
@@ -97,7 +97,7 @@ begin
           b_data_o <= dpram_reg(to_integer(to_01(b_address_i, '0')));
         end if;
 
-        if not read_before_write_c then
+        if read_before_write_c then
           if b_can_write_c then
             for i in 0 to data_word_count_c - 1
             loop
