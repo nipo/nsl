@@ -5,10 +5,10 @@ use ieee.numeric_std.all;
 library nsl_jtag, nsl_io, nsl_amba, nsl_data, nsl_simulation;
 use nsl_data.cbor.all;
 
-entity controller is
+entity axi4stream_cbor_ate is
   generic(
     clock_i_hz_c : natural;
-    axi_s_cfg_c  : nsl_amba.axi4_stream.config_t
+    stream_config_c  : nsl_amba.axi4_stream.config_t
     );
   port (
     clock_i      : in  std_ulogic;
@@ -27,7 +27,8 @@ entity controller is
     );
 end entity;
 
-architecture rtl of controller is
+architecture rtl of axi4stream_cbor_ate is
+
   
   constant data_max_size_c      : natural := 8;
   constant cbr_hdr_max_size_c   : natural := 3;
@@ -137,15 +138,15 @@ architecture rtl of controller is
 
 begin
   
-  assert nsl_amba.axi4_stream.byte_count(axi_s_cfg_c, cmd_i) = 1
+  assert nsl_amba.axi4_stream.byte_count(stream_config_c, cmd_i) = 1
     report "AXI-Stream bad data length, must be 1 byte"
     severity failure;
   
-  assert axi_s_cfg_c.has_last = true
+  assert stream_config_c.has_last = true
     report "AXI-Stream configuration incorrect, must have TLAST"
     severity failure;
   
-  assert axi_s_cfg_c.has_ready = true
+  assert stream_config_c.has_ready = true
     report "AXI-Stream configuration incorrect, must have TREADY"
     severity failure;
 
@@ -190,9 +191,9 @@ begin
           rin.state         <= ST_ARRAY_GET;
 
       when ST_ARRAY_GET =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
           nsl_simulation.logging.log_info("In ST_ARRAY_GET, parsing a byte");
-          data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+          data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
           rin.parser <= nsl_data.cbor.feed(r.parser, data);
           if nsl_data.cbor.is_last( r.parser, data ) then
             rin.state <= ST_ARRAY_ENTER;
@@ -217,8 +218,8 @@ begin
         end if;
 
       when ST_CMD_GET =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-          data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+          data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
           rin.parser <= nsl_data.cbor.feed(r.parser, data );
           if nsl_data.cbor.is_last( r.parser, data ) then
             rin.state <= ST_CMD_EXEC;
@@ -369,8 +370,8 @@ begin
         end if;
 
         if r.has_tdi then
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            rin.data <= nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            rin.data <= nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
             if r.word_count /= 0 then
               rin.word_count <= r.word_count - 1;
             end if;
@@ -396,7 +397,7 @@ begin
         end if;
   
       when ST_DATA_PUT =>
-        if not r.has_tdo or nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if not r.has_tdo or nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if r.word_count = 0 then
             rin.state <= ST_CMD_END;
           else
@@ -410,7 +411,7 @@ begin
           rin.last  <= false;
 
       when ST_RSP_ARRAY_HDR_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_CMD_GET;
             end if;
@@ -423,7 +424,7 @@ begin
           rin.last  <= false;
 
       when ST_RSP_BSTR_HDR_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_DATA_GET;
             end if;
@@ -436,32 +437,28 @@ begin
           rin.state <= ST_RSP_BREAK_PUT;
     
       when ST_RSP_BREAK_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             rin.state <= ST_ARRAY_GET;
           end if;
 
       when ST_ERROR_DRAIN =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
-              if r.last then
-                rin.parser <= nsl_data.cbor.reset;
-                rin.state <= ST_ARRAY_GET;
-              else
-                rin.state <= ST_RSP_BREAK_PREP;
-              end if;
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_last(stream_config_c, cmd_i) then
+            if r.last then
+              rin.parser <= nsl_data.cbor.reset;
+              rin.state <= ST_ARRAY_GET;
+            else
+              rin.state <= ST_RSP_BREAK_PREP;
             end if;
           end if;
-
-      when others =>
-          null;
-
+        end if;
     end case;
   end process;
 
   moore: process (r)
   begin
-    cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, false);
-    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => axi_s_cfg_c);
+    cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, false);
+    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => stream_config_c);
 
     s_rsp_ready <= '0';
     s_cmd_valid <= '0';
@@ -471,17 +468,17 @@ begin
     when ST_RESET | ST_ARRAY_ENTER | ST_CMD_EXEC | ST_CMD_END =>
 
     when ST_ARRAY_GET =>
-      cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
     when ST_CMD_GET | ST_ERROR_DRAIN =>
-      cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
     when ST_ATE_RUN | ST_DATA_RUN => 
       s_cmd_valid <= '1';
 
     when ST_DATA_GET =>
       if r.has_tdi then
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+          cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
       end if;
       
     when ST_DATA_PUT =>
@@ -489,15 +486,15 @@ begin
         -- Mask upper bits for partial-byte shifts (minus tags or tag 8 with non-multiple of 8)
         -- bit_count is size_m1: 0 means 1 bit valid, 6 means 7 bits valid, 8 means full byte
         if r.word_count = 0 and r.bit_count /= 8 then
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c,
+            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c,
             bytes => nsl_data.bytestream.from_suv(r.data and bit_mask(r.bit_count)), last => r.last);
         else
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.data), last => r.last);
+            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data), last => r.last);
         end if;
       end if;
     
     when ST_RSP_BREAK_PUT =>
-      rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.data), last => r.last);
+        rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data), last => r.last);
 
     when ST_RSP_ARRAY_HDR_PREP | ST_RSP_BSTR_HDR_PREP | ST_RSP_BREAK_PREP =>
 

@@ -1,5 +1,5 @@
 vhdl-sources += cbor_transactor.pkg.vhd
-vhdl-sources += controller.vhd
+vhdl-sources += axi4stream_cbor_ate.vhd
 deps += nsl_jtag.jtag
 deps += nsl_jtag.ate
 deps += nsl_data.bytestream
