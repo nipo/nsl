@@ -1,5 +1,5 @@
 vhdl-sources +=cbor_transactor.pkg.vhd
-vhdl-sources += controller.vhd
+vhdl-sources += axi4stream_cbor_spi_transactor.vhd
 deps += nsl_logic.bool
 deps += nsl_logic.logic
 deps += nsl_spi.spi

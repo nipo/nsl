@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_spi, nsl_io, nsl_logic, nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.cbor.all;
 
-entity controller is
+entity axi4stream_cbor_spi_transactor is
   generic(
     clock_i_hz_c  : natural;
     axi_s_cfg_c   : nsl_amba.axi4_stream.config_t;
@@ -31,7 +31,7 @@ entity controller is
     );
 end entity;
 
-architecture rtl of controller is
+architecture rtl of axi4stream_cbor_spi_transactor is
 
   constant cbr_hdr_max_size_c : natural := 3;
   constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);

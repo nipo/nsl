@@ -47,7 +47,7 @@ package cbor_transactor is
     -- responses = [* response]
     -- response = spi-shift-bytes    ; response data stream, only for shifts not tagged with #6.9
 
-  component controller
+  component axi4stream_cbor_spi_transactor
     generic(
       clock_i_hz_c  : natural;
       axi_s_cfg_c   : nsl_amba.axi4_stream.config_t;
