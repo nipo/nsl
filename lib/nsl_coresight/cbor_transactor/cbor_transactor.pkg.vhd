@@ -51,10 +51,10 @@ package cbor_transactor is
 
   -- If there is an error, the command stream will stop being executed from the point where the error happens. The response stream will not have responses for all the commands in the command stream that expect a response (write and read).
   
-  component controller
+  component axi4stream_cbor_dp_transactor
     generic(
-      clock_i_hz_c : natural;
-      axi_s_cfg_c  : nsl_amba.axi4_stream.config_t
+      clock_i_hz_c    : natural;
+      stream_config_c : nsl_amba.axi4_stream.config_t
       );
     port (
       reset_n_i : in std_ulogic;

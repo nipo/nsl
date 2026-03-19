@@ -5,10 +5,10 @@ use ieee.numeric_std.all;
 library nsl_coresight, nsl_amba, nsl_data, nsl_simulation, nsl_logic;
 use nsl_data.cbor.all;
 
-entity controller is
+entity axi4stream_cbor_dp_transactor is
   generic(
-    clock_i_hz_c : natural;
-    axi_s_cfg_c  : nsl_amba.axi4_stream.config_t
+    clock_i_hz_c    : natural;
+    stream_config_c : nsl_amba.axi4_stream.config_t
     );
   port (
     reset_n_i : in std_ulogic;
@@ -28,9 +28,9 @@ entity controller is
   );
 end entity;
 
-architecture rtl of controller is
+architecture rtl of axi4stream_cbor_dp_transactor is
   constant cbr_hdr_max_size_c : natural := 5;
-  constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);
+  constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, cbr_hdr_max_size_c);
 
   constant err_ok_c     : std_ulogic_vector(2 downto 0) := "001"; 
   constant err_wait_c   : std_ulogic_vector(2 downto 0) := "010"; 
@@ -210,15 +210,15 @@ architecture rtl of controller is
 
  begin
   
-  assert nsl_amba.axi4_stream.byte_count(axi_s_cfg_c, cmd_i) = 1
+  assert nsl_amba.axi4_stream.byte_count(stream_config_c, cmd_i) = 1
     report "AXI-Stream bad data length, must be 1 byte"
     severity failure;
   
-  assert axi_s_cfg_c.has_last = true
+  assert stream_config_c.has_last = true
     report "AXI-Stream configuration incorrect, must have TLAST"
     severity failure;
   
-  assert axi_s_cfg_c.has_ready = true
+  assert stream_config_c.has_ready = true
     report "AXI-Stream configuration incorrect, must have TREADY"
     severity failure;
   
@@ -309,7 +309,7 @@ architecture rtl of controller is
         end if; 
 
       when ST_CMD_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
             if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
               rin.state <= ST_CMD_EXEC;
@@ -543,7 +543,7 @@ architecture rtl of controller is
         end if;
 
       when ST_DATA_GET =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
           if r.is_bitbang then
             rin.data <= r.data(23 downto 0) & cmd_i.data(0);
             rin.state <= ST_BITBANG;
@@ -673,7 +673,7 @@ architecture rtl of controller is
         end if;
         
       when ST_DATA_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             rin.word_count <= r.word_count - 1;  -- Decrement word count
             if r.word_count = 1 then  -- This was the last word
@@ -693,7 +693,7 @@ architecture rtl of controller is
         rin.last  <= false;
           
       when ST_RSP_ARRAY_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             rin.state <= ST_CMD_GET;
           end if;
@@ -707,7 +707,7 @@ architecture rtl of controller is
         rin.state <= ST_RSP_READ_HDR_PUT;
 
       when ST_RSP_READ_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             rin.state <= ST_CMD_SHIFT;
           end if;
@@ -725,7 +725,7 @@ architecture rtl of controller is
         rin.state <= ST_RSP_WRITE_STATUS_PUT;
 
       when ST_RSP_WRITE_STATUS_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             if r.cmd_cancelled then
               rin.state <= ST_CMD_CANCELLED;
@@ -752,7 +752,7 @@ architecture rtl of controller is
         rin.state <= ST_RSP_READ_STATUS_PUT;
       
       when ST_RSP_READ_STATUS_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             if r.cmd_cancelled then
               rin.state <= ST_CMD_END;
@@ -768,7 +768,7 @@ architecture rtl of controller is
         rin.state <= ST_RSP_BSTR_HDR_PUT;
 
       when ST_RSP_BSTR_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             rin.state <= ST_DATA_SHIFT_IN;
           end if;
@@ -781,7 +781,7 @@ architecture rtl of controller is
         rin.state <= ST_RSP_BSTR_BREAK_PUT;
     
       when ST_RSP_BSTR_BREAK_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           rin.state <= ST_CMD_END;
         end if;
           
@@ -791,12 +791,12 @@ architecture rtl of controller is
         rin.state <= ST_RSP_BREAK_PUT;
     
       when ST_RSP_BREAK_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           rin.state <= ST_ARRAY_GET;
         end if;
 
       when ST_CMD_CANCELLED =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
           nsl_simulation.logging.log_info("[Cancelled command] Discarding data to write");
           if r.cycle = 0 then
             rin.cycle <= 3;
@@ -811,8 +811,8 @@ architecture rtl of controller is
         end if;
 
       when ST_ERROR_DRAIN =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            if nsl_amba.axi4_stream.is_last(stream_config_c, cmd_i) then
               if r.last then
                 rin.parser <= nsl_data.cbor.reset;
                 rin.state <= ST_ARRAY_GET;
@@ -830,8 +830,8 @@ architecture rtl of controller is
 
   moore: process(r)
   begin
-    cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, false);
-    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => axi_s_cfg_c);
+    cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, false);
+    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => stream_config_c);
 
     swd_o <= r.swd;
 
@@ -839,7 +839,7 @@ architecture rtl of controller is
       when ST_RESET | ST_ARRAY_ENTER | ST_CMD_EXEC | ST_CMD_END =>
         
       when ST_ARRAY_GET | ST_CMD_GET | ST_DATA_GET | ST_ERROR_DRAIN | ST_CMD_CANCELLED =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
                 
       when ST_CMD_SHIFT | ST_CMD_TURNAROUND | ST_ACK_SHIFT | ST_ACK_TURNAROUND | ST_DATA_SHIFT_OUT | ST_PARITY_SHIFT_OUT | ST_DATA_SHIFT_IN | ST_PARITY_SHIFT_IN | ST_DATA_TURNAROUND | ST_RUN | ST_BITBANG =>
         
@@ -849,7 +849,7 @@ architecture rtl of controller is
         rsp_o <= nsl_amba.axi4_stream.next_beat(cfg => buffer_cfg_c, b => r.encoded, last => r.last);
         
       when ST_RSP_BREAK_PUT | ST_RSP_BSTR_BREAK_PUT =>
-        rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.data(7 downto 0)), last => r.last);
+        rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data(7 downto 0)), last => r.last);
 
     end case;
   end process;
