@@ -1,5 +1,5 @@
 vhdl-sources += cbor_transactor.pkg.vhd
-vhdl-sources += controller.vhd
+vhdl-sources += axi4stream_cbor_i2c_controller.vhd
 deps += nsl_i2c.i2c
 deps += nsl_i2c.master
 deps += nsl_data.bytestream

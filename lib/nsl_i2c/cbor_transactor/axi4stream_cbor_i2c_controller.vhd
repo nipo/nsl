@@ -7,9 +7,8 @@ use nsl_i2c.cbor_transactor.all;
 use nsl_i2c.master.all;
 use nsl_i2c.i2c."+";
 use nsl_data.cbor.all;
--- use nsl_data.bytestream.all;
 
-entity controller is
+entity axi4stream_cbor_i2c_controller is
     generic(
         clock_i_hz_c    : natural range 0 to 100000000;
         target_scl_hz_c : natural range 0 to 400000 := 400000;
@@ -29,7 +28,7 @@ entity controller is
     );
 end entity;
 
-architecture beh of controller is
+architecture beh of axi4stream_cbor_i2c_controller is
 
     constant cbr_hdr_max_size_c    : natural := 4;
     constant buffer_cfg_c          : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);

@@ -36,7 +36,7 @@ package cbor_transactor is
     --  i2c-addr-nack = false
     --  i2c-data-nack = #6.2(uint) ; nack byte index
 
-  component controller
+  component axi4stream_cbor_i2c_controller
     generic(
       clock_i_hz_c    : natural;
       target_scl_hz_c : natural := 400000;
