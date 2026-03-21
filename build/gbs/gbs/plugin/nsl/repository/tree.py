@@ -129,6 +129,10 @@ class NSLRepository(Repository):
         makefile = Makefile(makefile_path)
         makefile.interpret(context)
 
+        # Track this Makefile as a definition file
+        if makefile_path.resolve() not in self.definition_files:
+            self.definition_files.append(makefile_path.resolve())
+
         # Extract package list (filter-dependent!)
         packages_str = context.expand(context.get("packages", ""))
         packages = packages_str.split()
@@ -169,6 +173,10 @@ class NSLRepository(Repository):
         # Parse and interpret Makefile
         makefile = Makefile(makefile_path)
         makefile.interpret(context)
+
+        # Track this Makefile as a definition file
+        if makefile_path.resolve() not in self.definition_files:
+            self.definition_files.append(makefile_path.resolve())
 
         # Extract sources
         vhdl_sources_str = context.expand(context.get("vhdl-sources", ""))
