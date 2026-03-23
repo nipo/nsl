@@ -4,6 +4,7 @@ vhdl-sources += random_pkt_generator.vhd
 vhdl-sources += random_cmd_generator.vhd
 vhdl-sources += stream_error_inserter.vhd
 vhdl-sources += axi4_stream_pacer.vhd
+vhdl-sources += axi4_stream_pacer_dynamic.vhd
 vhdl-sources += axi4_stream_padder.vhd
 
 deps += nsl_logic.bool

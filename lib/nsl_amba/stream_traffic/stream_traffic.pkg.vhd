@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_logic, nsl_amba;
+library nsl_data, nsl_logic, nsl_amba, nsl_math;
 use nsl_data.bytestream.all;
 use nsl_amba.axi4_stream.all;
 use nsl_logic.logic.xor_reduce;
@@ -206,6 +206,30 @@ package stream_traffic is
       out_o : out master_t;
       out_i : in slave_t
       );
+  end component;
+
+  -- This component gates the stream going through it to a lower pace
+  -- than line rate with a probability of going through of
+  -- probability_i.  Internally, it uses a PRBS to generate numbers of
+  -- width probability_denom_l2_c that are compared against
+  -- probability_i.
+  component axi4_stream_pacer_dynamic is
+    generic(
+      config_c : config_t;
+      probability_denom_l2_c : integer range 1 to 31 := 7
+    );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      probability_i : in nsl_math.fixed.ufixed(-1 downto -probability_denom_l2_c);
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+    );
   end component;
 
   -- Ensures each outgoing packet is at least `min_size_c` bytes.
