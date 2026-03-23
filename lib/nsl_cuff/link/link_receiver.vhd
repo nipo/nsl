@@ -112,18 +112,17 @@ begin
         all_sof := all_sof and r.lane(i).head.sof;
       end loop;
 
-      all_ready := (r.lane(0).state /= LANE_BIT_ALIGN
-                    and r.lane(0).state /= LANE_BIT_ALIGN);
+      all_ready := (r.lane(0).state /= LANE_BIT_ALIGN);
       for i in 1 to lane_count_c - 1
       loop
-        all_same_state := all_same_state and (r.lane(i).state = r.lane(0).state);
+        all_same_state := all_same_state and ((r.lane(i).state = r.lane(0).state) or (r.lane(i).state = LANE_BUS_ALIGN and r.lane(0).state = LANE_BUS_ALIGN_READY));
         any_other_sof := any_other_sof and r.lane(i).head.sof;
         all_ready := all_ready and (r.lane(i).state /= LANE_BIT_ALIGN);
       end loop;
 
       case r.state is
         when LINK_LANE_ALIGN =>
-          if all_same_state and r.lane(0).state = LANE_BUS_ALIGN then
+          if all_same_state and (r.lane(0).state = LANE_BUS_ALIGN or r.lane(0).state = LANE_BUS_ALIGN_READY) then
             rin.state <= LINK_BUS_ALIGN;
             rin.timeout <= 31;
           end if;
@@ -154,7 +153,7 @@ begin
           end if;
 
         when LINK_READY =>
-          if all_ready then
+          if all_ready and r.lane(0).state = LANE_BUS_ALIGN_READY then
             rin.state <= LINK_STARTUP;
           end if;
 

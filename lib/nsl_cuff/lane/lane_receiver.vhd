@@ -98,7 +98,8 @@ begin
         if disparity_error_s /= '0' or code_error_s /= '0' then
           rin.sync_index <= 0;
         elsif (lane_index_c = 0 and r.data = CUFF_SYNC_SOF_MAIN)
-          or (lane_index_c /= 0 and r.data = CUFF_SYNC_SOF_SEC) then
+          or (lane_index_c /= 0 and r.data = CUFF_SYNC_SOF_SEC) 
+          or (lane_index_c = 0 and r.data = CUFF_SYNC_SOF_READY) then
           rin.sync_index <= 1;
           if align_ready_i = '1' then
             rin.state <= LANE_BUS_ALIGN;
