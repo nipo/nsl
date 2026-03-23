@@ -2,6 +2,7 @@ packages += spi
 packages += shift_register
 packages += slave
 packages += transactor
+packages += cbor_transactor
 packages += router
 packages += fifo_transport
 packages += io_extender

@@ -41,7 +41,7 @@ package cbor is
     kind: kind_t;
     arg_left: integer range 0 to 8;
     arg: byte_string(0 to 7);
-    undefinite : boolean;
+    indefinite : boolean;
   end record;
 
   -- Resets a parser for next item parsing
@@ -65,27 +65,41 @@ package cbor is
   -- Serializes a full item of type positive. Will encode the value
   -- with the minimum count of bytes.
   function cbor_positive(value: natural) return byte_string;
+  function cbor_positive(value: unsigned) return byte_string;
   -- Serializes a full item of type negative. Will encode the value
   -- with the minimum count of bytes. Passed value is the actual value
   -- (negative).
   function cbor_negative(value: integer) return byte_string;
+  function cbor_negative(value: unsigned) return byte_string;
   -- Serializes a number, depending on sign of the value parameter, it
   -- spills a positive or negative item
   function cbor_number(value: integer) return byte_string;
+  function cbor_number(value: unsigned) return byte_string;
   -- Serializes a definite byte string (including data)
   function cbor_bstr(value: byte_string) return byte_string;
   -- Serializes a definite text string (including data)
   function cbor_tstr(value: string) return byte_string;
-  -- Serializes an array header (if length is passed), or undefinite
+  -- Serializes an array header (if length is passed), or indefinite
   -- (if negative or default). Contents are not handled here.
   function cbor_array_hdr(length: integer := -1) return byte_string;
-  -- Serializes a map header (if length is passed), or undefinite
+  function cbor_array_hdr(length: unsigned) return byte_string;
+  -- Serializes a map header (if length is passed), or indefinite
   -- (if negative or default). Contents are not handled here.
   function cbor_map_hdr(length: integer := -1) return byte_string;
-  -- Serializes a tag item. Contained item may be concatinated after.
+  function cbor_map_hdr(length: unsigned) return byte_string;
+  -- Serializes a tag item. Contained item may be concatenated after.
   function cbor_tag_hdr(value: natural) return byte_string;
+  function cbor_tag_hdr(value: unsigned) return byte_string;  
+  -- Serializes a byte string header (indefinite if negative or default). 
+  -- Contained bytes may be concatenated after.
+  function cbor_bstr_hdr(length: integer := -1) return byte_string;
+  function cbor_bstr_hdr(length: unsigned; width: integer := -1) return byte_string;  
+  -- Serializes a text string header. Contained characters may be concatenated after.
+  function cbor_tstr_hdr(length: natural) return byte_string;
+  function cbor_tstr_hdr(length: unsigned) return byte_string;  
   -- Serializes a simple item.
   function cbor_simple(value: natural) return byte_string;
+  function cbor_simple(value: unsigned) return byte_string;  
   -- Serializes true (simple(21))
   function cbor_true return byte_string;
   -- Serializes false (simple(20))
@@ -118,16 +132,16 @@ package cbor is
   -- encoded.
   function cbor_tagged(tag: natural; item: byte_string) return byte_string;
 
-  -- Serializes an undefinite byte string. Must be passed a
+  -- Serializes an indefinite byte string. Must be passed a
   -- concatination of encoded definite byte strings
   function cbor_bstr_undef(elements: byte_string) return byte_string;
-  -- Serializes an undefinite text string. Must be passed a
+  -- Serializes an indefinite text string. Must be passed a
   -- concatination of encoded definite text strings
   function cbor_tstr_undef(elements: byte_string) return byte_string;
-  -- Serializes an undefinite array. Must be passed a
+  -- Serializes an indefinite array. Must be passed a
   -- concatination of encoded items
   function cbor_array_undef(elements: byte_string) return byte_string;
-  -- Serializes an undefinite map. Must be passed a
+  -- Serializes an indefinite map. Must be passed a
   -- concatination of encoded pairs of items
   function cbor_map_undef(elements: byte_string) return byte_string;
 
@@ -146,7 +160,7 @@ package body cbor is
     ret.arg := (others => dontcare_byte_c);
     ret.arg_left := 0;
     ret.kind := KIND_INVALID;
-    ret.undefinite := false;
+    ret.indefinite := false;
     return ret;
   end function;
 
@@ -166,7 +180,7 @@ package body cbor is
       ret.arg_left := parser.arg_left - 1;
     else
       ret.header_valid := true;
-      ret.undefinite := false;
+      ret.indefinite := false;
       ret.arg_left := 0;
       ret.arg := (others => x"00");
       ret.kind := KIND_INVALID;
@@ -220,14 +234,14 @@ package body cbor is
       elsif argument = 27 then
         ret.arg_left := 8;
       elsif argument = 31 then
-        ret.undefinite := true;
+        ret.indefinite := true;
       else
         ret.arg := (0 to 6 => x"00",
                     7 => "000" & data(4 downto 0));
       end if;
     end if;
 
-    return ret;
+   return ret;
   end function;
 
   function is_last(parser: parser_t;
@@ -290,31 +304,63 @@ package body cbor is
     return "";
   end function;
 
-  function item_encode(major: integer range 0 to 7;
-                       argument: unsigned)
+  function item_encode_fixed(major: integer range 0 to 7;
+                       argument: unsigned;
+                       arg_width_l2: integer range -1 to 3)
     return byte_string
   is
-    constant sarg : unsigned := unpad(argument);
-    constant xarg : unsigned(sarg'length-1 downto 0) := sarg;
     constant maj_suv : std_ulogic_vector := std_ulogic_vector(to_unsigned(major, 3));
   begin
-    if xarg'length <= 8 then
-      if xarg'length = 0 or xarg < 24 then
-        return (0 => maj_suv & std_ulogic_vector(resize(xarg, 5)));
-      else
-        return from_suv(maj_suv & "11000") & to_be(resize(xarg, 8));
-      end if;
-    elsif xarg'length <= 16 then
-      return from_suv(maj_suv & "11001") & to_be(resize(xarg, 16));
-    elsif xarg'length <= 32 then
-      return from_suv(maj_suv & "11010") & to_be(resize(xarg, 32));
-    elsif xarg'length <= 64 then
-      return from_suv(maj_suv & "11011") & to_be(resize(xarg, 64));
-    else
-      assert false
-        report "Argument too big"
-        severity failure;
+    if arg_width_l2 = -1 then
+      return (0 => maj_suv & std_ulogic_vector(resize(argument, 5)));
+    elsif arg_width_l2 = 0 then
+      return from_suv(maj_suv & "11000") & to_be(resize(argument, 8));
+    elsif arg_width_l2 = 1 then
+      return from_suv(maj_suv & "11001") & to_be(resize(argument, 16));
+    elsif arg_width_l2 = 2  then
+      return from_suv(maj_suv & "11010") & to_be(resize(argument, 32));
+    elsif arg_width_l2 = 3  then
+      return from_suv(maj_suv & "11011") & to_be(resize(argument, 64));
     end if;
+  end function;
+
+  function item_encode(major: integer range 0 to 7;
+                       argument: unsigned;
+                       auto_width: boolean := true)
+    return byte_string
+  is
+    variable w_l2 : integer := -1;
+  begin
+    if auto_width then
+      if argument'length <= 8 then
+        if argument'length = 0 or argument < 24 then
+          return item_encode_fixed(major, argument, -1);
+        else
+          return item_encode_fixed(major, argument, 0);
+        end if;
+      elsif argument'length <= 16 then
+        return item_encode_fixed(major, argument, 1);
+      elsif argument'length <= 32 then
+        return item_encode_fixed(major, argument, 2);
+      elsif argument'length <= 64 then
+        return item_encode_fixed(major, argument, 3);
+      else
+        assert false
+          report "Argument too big"
+          severity failure;
+      end if;
+    else
+      if argument'length > 4 then
+        w_l2 := nsl_math.arith.log2((argument'length + 7) / 8);
+      end if;
+      return item_encode_fixed(major, argument, w_l2);
+    end if;
+  end function;
+
+  function cbor_positive(value: unsigned) return byte_string
+  is
+  begin
+     return item_encode(0, value, auto_width => false);
   end function;
 
   function cbor_positive(value: natural) return byte_string
@@ -323,11 +369,28 @@ package body cbor is
     return item_encode(0, to_unsigned_auto(value));
   end function;
 
+  function cbor_negative(value: unsigned) return byte_string
+  is
+  begin
+    return item_encode(1, value, auto_width => false);
+  end function;
+
   function cbor_negative(value: integer) return byte_string
   is
   begin
     return item_encode(1, to_unsigned_auto(-value-1));
   end function;
+
+  function cbor_number(value: unsigned) return byte_string
+  is
+  begin
+    if value < 0 then
+      return cbor_negative(value);
+    else
+      return cbor_positive(value);
+    end if;
+  end function;
+
 
   function cbor_number(value: integer) return byte_string
   is
@@ -351,7 +414,13 @@ package body cbor is
   begin
     return item_encode(3, to_unsigned_auto(bs'length)) & bs;
   end function;
-
+  
+  function cbor_array_hdr(length: unsigned) return byte_string
+  is
+  begin
+    return item_encode(4, length, auto_width => false);
+  end function;
+  
   function cbor_array_hdr(length: integer := -1) return byte_string
   is
   begin
@@ -360,6 +429,12 @@ package body cbor is
     else
       return item_encode(4, to_unsigned_auto(length));
     end if;
+  end function;
+
+  function cbor_map_hdr(length: unsigned) return byte_string
+  is
+  begin
+    return item_encode(5, length, auto_width => false);
   end function;
 
   function cbor_map_hdr(length: integer := -1) return byte_string
@@ -372,10 +447,48 @@ package body cbor is
     end if;
   end function;
 
+  function cbor_tag_hdr(value: unsigned) return byte_string
+  is
+  begin
+    return item_encode(6, value, auto_width => false);
+  end function;
+
   function cbor_tag_hdr(value: natural) return byte_string
   is
   begin
     return item_encode(6, to_unsigned_auto(value));
+  end function;
+  
+  function cbor_bstr_hdr(length: unsigned; width: integer := -1) return byte_string
+  is
+  begin
+    if width < 0 then
+      return item_encode(2, length, auto_width => false);
+    else
+      return item_encode(2, resize(length, width), auto_width => false);
+    end if;
+  end function;
+  
+  function cbor_bstr_hdr(length: integer := -1) return byte_string
+  is
+  begin
+    if length < 0 then
+      return item_encode_undef(2);
+    else
+      return item_encode(2, to_unsigned_auto(length));
+    end if;
+  end function;
+
+  function cbor_tstr_hdr(length: unsigned) return byte_string
+  is
+  begin
+    return item_encode(3, length, auto_width => false);
+  end function;
+
+  function cbor_tstr_hdr(length: natural) return byte_string
+  is
+  begin
+    return item_encode(3, to_unsigned_auto(length));
   end function;
 
   function cbor_false return byte_string
@@ -406,6 +519,12 @@ package body cbor is
   is
   begin
     return item_encode_undef(7);
+  end function;
+
+  function cbor_simple(value: unsigned) return byte_string
+  is
+  begin
+    return item_encode(7, value, auto_width => false);
   end function;
 
   function cbor_simple(value: natural) return byte_string
@@ -440,7 +559,7 @@ package body cbor is
         write(output, to_string(-1-arg_int(p)));
 
       when KIND_BSTR =>
-        if p.undefinite then
+        if p.indefinite then
           write(output, string'("(_ "));
           while input.all'length /= 0 and input.all(input.all'left) /= x"ff"
           loop
@@ -458,7 +577,7 @@ package body cbor is
         end if;
 
       when KIND_TSTR =>
-        if p.undefinite then
+        if p.indefinite then
           write(output, string'("(_ "));
           while input.all(input.all'left) /= x"ff"
           loop
@@ -476,7 +595,7 @@ package body cbor is
         end if;
 
       when KIND_ARRAY =>
-        if p.undefinite then
+        if p.indefinite then
           write(output, string'("[_ "));
           while input.all(input.all'left) /= x"ff"
           loop
@@ -499,13 +618,13 @@ package body cbor is
         end if;
 
       when KIND_MAP =>
-        if p.undefinite then
+        if p.indefinite then
           write(output, string'("{_ "));
-          undefinite: while input.all(input.all'left) /= x"ff"
+          indefinite: while input.all(input.all'left) /= x"ff"
           loop
             cbor_diag_convert(output, input);
             if input.all(input.all'left) = x"ff" then
-              exit undefinite;
+              exit indefinite;
             end if;
             write(output, string'(": "));
             cbor_diag_convert(output, input);
