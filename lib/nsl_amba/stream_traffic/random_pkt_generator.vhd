@@ -158,14 +158,16 @@ begin
           end if;
         end if;
 
-      when ST_IGP => 
-        if is_ready(packet_config_c, packet_i) then
-          rin.igp_cnt <= r.igp_cnt - 1;
-          if r.igp_cnt = 1 then
-            rin.igp_cnt <= igp_c;
-            rin.state <= ST_CMD_GET;
+    when ST_IGP =>
+      if is_ready(packet_config_c, packet_i) then
+          if r.igp_cnt > 0 then
+              rin.igp_cnt <= r.igp_cnt - 1;
           end if;
-        end if;
+          if r.igp_cnt = 1 then
+              rin.igp_cnt <= igp_c;
+              rin.state <= ST_CMD_GET;
+          end if;
+      end if;
 
       when others => 
         null;
