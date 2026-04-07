@@ -63,6 +63,9 @@ architecture beh of lane_receiver is
 
     code_error, disparity_error : std_ulogic;
     data: nsl_line_coding.ibm_8b10b.data_t;
+
+    realign_counter: integer range 0 to 255;
+    retrain_counter: integer range 0 to 1023;
   end record;
 
   signal r, rin: regs_t;
@@ -81,6 +84,7 @@ begin
     if reset_n_i = '0' then
       r.state <= LANE_BIT_ALIGN;
       r.align_restart <= '1';
+      r.realign_counter <= 255;
     end if;
   end process;
 
@@ -124,6 +128,8 @@ begin
         end if;
         if r.data = CUFF_DATA_IDLE then
           rin.state <= LANE_DATA;
+          rin.realign_counter <= 255;
+          rin.retrain_counter <= 1023;
         else
           case r.sync_index is
             when 0 =>
@@ -177,10 +183,34 @@ begin
         end if;
 
       when LANE_DATA =>
-        if disparity_error_s /= '0' or code_error_s /= '0' then
-          rin.sync_index <= 0;
-          rin.state <= LANE_BIT_ALIGN;
-          rin.align_restart <= '1';
+        if code_error_s = '1' or disparity_error_s = '1' then
+          if r.realign_counter = 0 then
+            rin.sync_index <= 0;
+            rin.state <= LANE_BIT_ALIGN;
+            rin.align_restart <= '1';
+          else
+            if (r.realign_counter - 4) < 0 then
+              rin.realign_counter <= 0;
+            else
+              rin.realign_counter <= r.realign_counter - 4;
+            end if;
+          end if;
+        else
+          if r.realign_counter < 255 then
+            rin.realign_counter <= r.realign_counter + 1;
+          end if;
+        end if;
+
+        if r.disparity_error = '0' and r.code_error = '0' and is_word_expected(r.data) then
+          if r.retrain_counter = 0 then
+            rin.sync_index <= 0;
+            rin.state <= LANE_BIT_ALIGN;
+            rin.align_restart <= '1';
+          else
+            rin.retrain_counter <= r.retrain_counter - 1;
+          end if;
+        else
+          rin.retrain_counter <= 1023;
         end if;
     end case;
   end process;

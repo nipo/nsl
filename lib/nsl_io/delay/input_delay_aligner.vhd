@@ -39,6 +39,7 @@ architecture beh of input_delay_aligner is
     ST_SERDES_STEP,
     ST_DELAY_ALIGN,
     ST_DELAY_APPLY,
+    ST_VERIFY,
     ST_LOCKED
     );
 
@@ -48,6 +49,7 @@ architecture beh of input_delay_aligner is
     had_valid: boolean;
     stabilization_timeout: integer range 0 to stabilization_max_c-1;
     state: state_t;
+    verify_timeout: integer range 0 to 31;
   end record;
 
   signal r, rin: regs_t;
@@ -142,7 +144,18 @@ begin
       when ST_DELAY_APPLY =>
         rin.delay_value <= (r.delay_value - 1) mod delay_step_count_c;
         if r.delay_value = 0 then
-          rin.state <= ST_LOCKED;
+          rin.state <= ST_VERIFY;
+          rin.verify_timeout <= 31;
+        end if;
+
+      when ST_VERIFY =>
+        rin.verify_timeout <= (r.verify_timeout - 1) mod 32;
+        if r.verify_timeout = 0 then
+          if valid_i = '1' then
+            rin.state <= ST_LOCKED;
+          else
+            rin.state <= ST_SERDES_STEP;
+          end if;
         end if;
 
       when ST_LOCKED =>
@@ -159,7 +172,7 @@ begin
     ready_o <= '0';
 
     case r.state is
-      when ST_RESET | ST_DELAY_SCANNED | ST_STABILITY_WAIT | ST_STABILITY_EVAL =>
+      when ST_RESET | ST_DELAY_SCANNED | ST_STABILITY_WAIT | ST_STABILITY_EVAL | ST_VERIFY =>
         null;
 
       when ST_SERDES_RESYNC | ST_SERDES_STEP =>
