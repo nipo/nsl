@@ -20,7 +20,6 @@ define _vivado-add-bd-before
 	$(call file-append,$1,set _bd_file [add_files $$_bd_copy])
 	$(call file-append,$1,generate_target all $$_bd_file)
 	$(call file-append,$1,export_ip_user_files -of_objects $$_bd_file -no_script -sync -force -quiet)
-	$(call file-append,$1,create_ip_run $$_bd_file)
 
 endef
 
