@@ -1,0 +1,14 @@
+vhdl-sources += tb.vhd
+deps += nsl_jtag.cbor_transactor
+deps += nsl_jtag.jtag
+deps += nsl_jtag.tap
+deps += nsl_event.tick
+deps += nsl_simulation.driver
+deps += nsl_simulation.logging
+deps += nsl_amba.axi4_mm
+deps += nsl_amba.ram
+deps += nsl_amba.stream_traffic
+deps += nsl_amba.stream_to_udp
+deps += nsl_amba.stream_fifo
+deps += nsl_data.bytestream
+deps += nsl_clocking.async

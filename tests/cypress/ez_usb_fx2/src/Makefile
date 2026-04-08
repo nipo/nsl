@@ -1,0 +1,9 @@
+vhdl-sources += tb.vhd
+vhdl-sources += tb2.vhd
+deps += nsl_amba.axi4_stream
+deps += nsl_data.bytestream
+deps += nsl_data.text
+deps += nsl_cypress.ez_usb_fx2
+deps += nsl_simulation.driver
+deps += nsl_simulation.control
+deps += nsl_simulation.logging
