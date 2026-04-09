@@ -104,11 +104,12 @@ begin
         in_o          => fifo_o,
         in_commit_i   => r.do_commit,
         in_rollback_i => r.do_rollback,
-        in_free_o     => open,
+        in_free_o     => in_free_o,
+        out_pkt_available_o => open,
 
         out_o           => out_o,
         out_i           => out_i,
-        out_available_o => open
+        out_available_o => out_available_o
     );
 
     in_o <= accept(config_c, r.state /= IN_COMMIT_OR_CANCEL and
