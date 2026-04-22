@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_jtag, nsl_data;
+library nsl_amba, nsl_jtag, nsl_data, nsl_event;
 use nsl_jtag.ate.all;
 use nsl_jtag.axi4lite_transactor.all;
 use nsl_data.bytestream.all;
@@ -55,7 +55,9 @@ architecture rtl of axi4lite_jtag_transactor is
   signal s_ate_cmd_ready, s_ate_cmd_valid,
          s_ate_rsp_ready, s_ate_rsp_valid : std_ulogic;
   signal s_ate_rsp_data : std_ulogic_vector(31 downto 0);
-  
+
+  signal tick_s: std_ulogic;
+  signal period_m1_s: unsigned(prescaler_width_c-1 downto 0);
 begin
 
   axi_slave: nsl_amba.axi4_mm.axi4_mm_lite_slave
@@ -200,9 +202,17 @@ begin
     end case;
   end process;
   
+  period_m1_s <= to_unsigned(r.divisor, prescaler_width_c);
+  tick_gen: nsl_event.tick.tick_generator_integer
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      period_m1_i => period_m1_s,
+      tick_o => tick_s
+    );
+
   ate: nsl_jtag.ate.jtag_ate
     generic map(
-      prescaler_width => prescaler_width_c,
       data_max_size => 32,
       allow_pipelining => false
       )
@@ -210,7 +220,7 @@ begin
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
-      divisor_i => r.divisor,
+      tick_i => tick_s,
 
       cmd_ready_o => s_ate_cmd_ready,
       cmd_valid_i => s_ate_cmd_valid,
