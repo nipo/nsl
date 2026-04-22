@@ -201,7 +201,14 @@ begin
 
     signal r, rin: regs_t;
 
+    signal align_ready_s: std_ulogic_vector(0 to lane_count_c-1);
+
+    attribute mark_debug : string;
+    attribute mark_debug of r : signal is "true";
+    attribute mark_debug of align_ready_s : signal is "true";
+    
   begin
+    align_ready_s <= align_ready_i;
 
     regs: process(clock_i, reset_n_i) is
     begin
@@ -241,7 +248,9 @@ begin
             rin.state <= LINK_RUNNING;
 
           when LINK_RUNNING =>
-            null;
+            if state_s(0) = LANE_BUS_ALIGN then
+              rin.state <= LINK_BUS_ALIGN;
+            end if;
         end case;
       end if;
     end process;

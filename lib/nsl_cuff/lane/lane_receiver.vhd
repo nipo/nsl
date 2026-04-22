@@ -73,6 +73,9 @@ architecture beh of lane_receiver is
   signal data_s: nsl_line_coding.ibm_8b10b.data_t;
   signal code_error_s, disparity_error_s: std_ulogic;
 
+  attribute mark_debug : string;
+  attribute mark_debug of r : signal is "true";
+
 begin
 
   regs: process(clock_i, reset_n_i) is
@@ -107,6 +110,7 @@ begin
           rin.sync_index <= 1;
           if align_ready_i = '1' then
             rin.state <= LANE_BUS_ALIGN;
+            rin.realign_counter <= 255;
           end if;
         elsif r.sync_index < 4 then
           rin.sync_index <= r.sync_index + 1;
@@ -122,11 +126,14 @@ begin
         end if;
 
         if disparity_error_s /= '0' or code_error_s /= '0' then
-          rin.sync_index <= 0;
-          rin.state <= LANE_BIT_ALIGN;
-          rin.align_restart <= '1';
-        end if;
-        if r.data = CUFF_DATA_IDLE then
+          if r.realign_counter = 0 then
+            rin.sync_index <= 0;
+            rin.state <= LANE_BIT_ALIGN;
+            rin.align_restart <= '1';
+          else
+            rin.realign_counter <= r.realign_counter - 1;
+          end if;
+        elsif r.data = CUFF_DATA_IDLE then
           rin.state <= LANE_DATA;
           rin.realign_counter <= 255;
           rin.retrain_counter <= 1023;
@@ -139,6 +146,8 @@ begin
                 elsif r.data /= CUFF_SYNC_SOF_MAIN and r.data /= CUFF_SYNC_SOF_READY then
                   rin.state <= LANE_BIT_ALIGN;
                   rin.align_restart <= '1';
+                elsif r.state = LANE_BUS_ALIGN_READY and r.data = CUFF_SYNC_SOF_MAIN then
+                  rin.state <= LANE_BUS_ALIGN;
                 end if;
               else
                 if r.data /= CUFF_SYNC_SOF_SEC then
