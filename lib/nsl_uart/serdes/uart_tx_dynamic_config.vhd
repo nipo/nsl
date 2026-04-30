@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_uart, nsl_logic;
 use nsl_uart.serdes.all;
 
-entity uart_tx_no_generics is
+entity uart_tx_dynamic_config is
   generic(
     bit_count_c : natural range 7 to 8
     );
@@ -13,8 +13,8 @@ entity uart_tx_no_generics is
     clock_i     : in std_ulogic;
     reset_n_i   : in std_ulogic;
 
-    divisor_i   : in unsigned;
-    
+    tick_i      : in std_ulogic;
+
     uart_o      : out std_ulogic;
     rtr_i       : in std_ulogic := '0';
 
@@ -22,13 +22,13 @@ entity uart_tx_no_generics is
     ready_o     : out std_ulogic;
     valid_i     : in std_ulogic;
     
-    stop_count_i: in unsigned(1 downto 0); -- range 1 to 2
-    parity_i    : in unsigned(1 downto 0); -- encoded value of parity_t
+    stop_count_i: in natural range 1 to 2;
+    parity_i    : in parity_t;
     rtr_active_i: in std_ulogic := '0'
     );
 end entity;
 
-architecture beh of uart_tx_no_generics is
+architecture beh of uart_tx_dynamic_config is
 
   type state_t is (
     ST_RESET,
@@ -47,16 +47,14 @@ architecture beh of uart_tx_no_generics is
   type regs_t is record
     shreg: std_ulogic_vector(max_shreg_width_c-1 downto 0);
     bit_ctr: natural range 0 to max_shreg_width_c-1;
-    divisor: unsigned(divisor_i'length - 1 downto 0);
+    tick_ctr: unsigned(0 downto 0);
     state: state_t;
   end record;
   
   signal r, rin: regs_t;
 
-  signal s_tick: std_ulogic;
-  
 begin
-  
+
   regs: process (reset_n_i, clock_i)
   begin
     if rising_edge(clock_i) then
@@ -64,11 +62,10 @@ begin
     end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-      r.divisor <= (others => '0');
     end if;
   end process;
 
-  transition: process(r, data_i, valid_i, divisor_i, rtr_i, rtr_active_i, stop_count_i, parity_i)
+  transition: process(r, data_i, valid_i, tick_i, rtr_i, rtr_active_i, stop_count_i, parity_i)
   begin
     rin <= r;
 
@@ -105,8 +102,7 @@ begin
         end if;
 
       when ST_PREPARE =>
-        rin.divisor <= divisor_i;
-        case parity_t'val(to_integer(parity_i)) is
+        case parity_i is
           when PARITY_NONE =>
             rin.bit_ctr <= r.bit_ctr;
 
@@ -118,22 +114,24 @@ begin
             rin.bit_ctr <= r.bit_ctr + 1;
             rin.shreg(bit_count_c + 1) <= not nsl_logic.logic.xor_reduce(r.shreg(bit_count_c downto 1));
         end case;
+        rin.tick_ctr <= "1";
         rin.state <= ST_SHIFT;
-        
+
       when ST_SHIFT =>
-        if r.divisor /= 0 then
-          rin.divisor <= r.divisor - 1;
-        elsif r.bit_ctr /= 0 then
-          rin.divisor <= divisor_i;
-          rin.state <= ST_SHIFT;
-          rin.bit_ctr <= r.bit_ctr - 1;
-          rin.shreg <= "-" & r.shreg(r.shreg'left downto 1);
-        else
-          -- Transmission complete, go back to idle (or wait for CTS if handshake enabled)
-          if rtr_active_i = '1' and rtr_i = '0' then
-            rin.state <= ST_WAIT;
+        if tick_i = '1' then
+          if r.tick_ctr /= 0 then
+            rin.tick_ctr <= r.tick_ctr - 1;
+          elsif r.bit_ctr /= 0 then
+            rin.tick_ctr <= "1";
+            rin.bit_ctr <= r.bit_ctr - 1;
+            rin.shreg <= "-" & r.shreg(r.shreg'left downto 1);
           else
-            rin.state <= ST_IDLE;
+            -- Transmission complete, go back to idle (or wait for CTS if handshake enabled)
+            if rtr_active_i = '1' and rtr_i = '0' then
+              rin.state <= ST_WAIT;
+            else
+              rin.state <= ST_IDLE;
+            end if;
           end if;
         end if;
 

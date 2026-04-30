@@ -4,13 +4,13 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_uart, nsl_clocking;
 
-entity uart8_no_generics is
+entity uart8_dynamic_config is
   port(
     reset_n_i    : in std_ulogic;
     clock_i      : in std_ulogic;
 
-    divisor_i   : in unsigned;
-    
+    tick_i     : in std_ulogic;
+
     tx_o   : out std_ulogic;
     cts_i  : in std_ulogic := '0';
     rx_i   : in  std_ulogic;
@@ -27,13 +27,13 @@ entity uart8_no_generics is
     parity_error_o : out std_ulogic;
     break_o        : out std_ulogic;
 
-    stop_count_i       : in unsigned(1 downto 0);
-    parity_i           : in unsigned(1 downto 0);
+    stop_count_i       : in natural range 1 to 2;
+    parity_i           : in nsl_uart.serdes.parity_t;
     handshake_active_i : in std_ulogic := '0'
     );
 end entity;
 
-architecture hier of uart8_no_generics is
+architecture hier of uart8_dynamic_config is
 
   signal rx_s, cts_s: std_ulogic;
   
@@ -55,7 +55,7 @@ begin
   rx_o <= rx_s;
   cts_o <= cts_s;
   
-  tx: nsl_uart.serdes.uart_tx_no_generics
+  tx: nsl_uart.serdes.uart_tx_dynamic_config
     generic map(
       bit_count_c => nsl_bnoc.pipe.pipe_data_t'length
       )
@@ -63,7 +63,7 @@ begin
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
-      divisor_i => divisor_i,
+      tick_i => tick_i,
 
       uart_o => tx_o,
       rtr_i => cts_s,
@@ -71,13 +71,13 @@ begin
       data_i => tx_data_i.data,
       ready_o => tx_data_o.ready,
       valid_i => tx_data_i.valid,
-    
+
       stop_count_i => stop_count_i,
       parity_i     => parity_i,
       rtr_active_i => handshake_active_i
       );
 
-  rx: nsl_uart.serdes.uart_rx_no_generics
+  rx: nsl_uart.serdes.uart_rx_dynamic_config
     generic map(
       bit_count_c => nsl_bnoc.pipe.pipe_data_t'length
       )
@@ -85,7 +85,7 @@ begin
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
-      divisor_i => divisor_i,
+      tick_i => tick_i,
 
       uart_i => rx_s,
       rts_o => rts_o,
@@ -96,7 +96,7 @@ begin
 
       parity_error_o => parity_error_o,
       break_o => break_o,
-      
+
       stop_count_i => stop_count_i,
       parity_i     => parity_i,
       rts_active_i => handshake_active_i

@@ -37,19 +37,18 @@ package transactor is
       );
   end component;
 
-  component uart8_no_generics is
+  component uart8_dynamic_config is
     port(
       reset_n_i    : in std_ulogic;
       clock_i      : in std_ulogic;
 
-      divisor_i   : in unsigned;
-      
+      tick_i     : in std_ulogic;
+
       tx_o   : out std_ulogic;
       cts_i  : in  std_ulogic := '0';
       rx_i   : in  std_ulogic;
       rts_o  : out std_ulogic;
 
-      -- Resync/deglitched raw signals
       cts_o  : out std_ulogic;
       rx_o   : out std_ulogic;
 
@@ -61,21 +60,21 @@ package transactor is
       parity_error_o : out std_ulogic;
       break_o        : out std_ulogic;
 
-      stop_count_i       : in unsigned(1 downto 0);
-      parity_i           : in unsigned(1 downto 0);
+      stop_count_i       : in natural range 1 to 2;
+      parity_i           : in nsl_uart.serdes.parity_t;
       handshake_active_i : in std_ulogic := '0'
       );
   end component;
 
-  component cbor_controller is
+  component axi4stream_cbor_uart_transactor is
     generic(
       system_clock_c     : natural;
-      axi_s_cfg_c        : nsl_amba.axi4_stream.config_t;
+      stream_config_c    : nsl_amba.axi4_stream.config_t;
       stop_count_c       : natural range 1 to 2 := 1;
       parity_c           : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
       handshake_active_c : std_ulogic := '0';
-      divisor_c          : unsigned(31 downto 0);
-      timeout_c          : unsigned(31 downto 0);
+      baud_rate_c        : unsigned(23 downto 0);
+      timeout_c          : unsigned(23 downto 0);
       bstr_max_size_c    : natural range 0 to 511
       );
     port (

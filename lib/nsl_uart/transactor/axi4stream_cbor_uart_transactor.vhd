@@ -2,18 +2,18 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;       
 
-library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic;
+library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic, nsl_event, nsl_signal_generator;
 use nsl_data.cbor.all;
 
-entity cbor_controller is
+entity axi4stream_cbor_uart_transactor is
   generic(
     system_clock_c     : natural;
-    axi_s_cfg_c        : nsl_amba.axi4_stream.config_t;
+    stream_config_c    : nsl_amba.axi4_stream.config_t;
     stop_count_c       : natural range 1 to 2 := 1;
     parity_c           : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
     handshake_active_c : std_ulogic := '0';
-    divisor_c          : unsigned(31 downto 0);
-    timeout_c          : unsigned(31 downto 0);
+    baud_rate_c        : unsigned(23 downto 0);
+    timeout_c          : unsigned(23 downto 0);
     bstr_max_size_c    : natural range 0 to 511
     );
   port (
@@ -32,7 +32,7 @@ entity cbor_controller is
     );
 end entity;
 
-architecture rtl of cbor_controller is
+architecture rtl of axi4stream_cbor_uart_transactor is
 
   constant OP_SUCCESS : std_ulogic_vector(7 downto 0) := X"F5";
   constant OP_FAILURE : std_ulogic_vector(7 downto 0) := X"F4";
@@ -42,10 +42,10 @@ architecture rtl of cbor_controller is
     if a > b then return a; else return b; end if;
   end function;
 
-  constant item_count_max_c : natural := max(bstr_max_size_c, 7);
+  constant item_count_max_c : natural := 511;
   constant cbr_max_size_c : natural := 30; -- max payload is the response with
                                            -- the configuration map
-  constant buffer_cfg_c   : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, 30);
+  constant buffer_cfg_c   : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, 30);
 
   constant FLOW_CTRL_STR_C : string := "flow-ctrl";
   constant PARITY_STR_C    : string := "parity";
@@ -56,70 +56,6 @@ architecture rtl of cbor_controller is
   constant E_STR_C         : string := "e";
   constant O_STR_C         : string := "o";
   
-  constant DIV_300     : unsigned := to_unsigned(system_clock_c / 300,     20);
-  constant DIV_1200    : unsigned := to_unsigned(system_clock_c / 1200,    20);
-  constant DIV_2400    : unsigned := to_unsigned(system_clock_c / 2400,    20);
-  constant DIV_4800    : unsigned := to_unsigned(system_clock_c / 4800,    20);
-  constant DIV_9600    : unsigned := to_unsigned(system_clock_c / 9600,    20);
-  constant DIV_19200   : unsigned := to_unsigned(system_clock_c / 19200,   20);
-  constant DIV_38400   : unsigned := to_unsigned(system_clock_c / 38400,   20);
-  constant DIV_57600   : unsigned := to_unsigned(system_clock_c / 57600,   20);
-  constant DIV_115200  : unsigned := to_unsigned(system_clock_c / 115200,  20);
-  constant DIV_230400  : unsigned := to_unsigned(system_clock_c / 230400,  20);
-  constant DIV_460800  : unsigned := to_unsigned(system_clock_c / 460800,  20);
-  constant DIV_921600  : unsigned := to_unsigned(system_clock_c / 921600,  20);
-  constant DIV_1000000 : unsigned := to_unsigned(system_clock_c / 1000000, 20);
-  constant DIV_2000000 : unsigned := to_unsigned(system_clock_c / 2000000, 20);
-  constant DIV_3000000 : unsigned := to_unsigned(system_clock_c / 3000000, 20);
-
-  -- Lookup table function to convert baud rate to divisor without runtime division
-  -- Supports common baud rates; unknown rates default to 115200
-  function baud_to_divisor(baud_rate : unsigned(31 downto 0)) return unsigned is
-  begin
-    case to_integer(baud_rate) is
-      when 300     => return DIV_300;
-      when 1200    => return DIV_1200;
-      when 2400    => return DIV_2400;
-      when 4800    => return DIV_4800;
-      when 9600    => return DIV_9600;
-      when 19200   => return DIV_19200;
-      when 38400   => return DIV_38400;
-      when 57600   => return DIV_57600;
-      when 115200  => return DIV_115200;
-      when 230400  => return DIV_230400;
-      when 460800  => return DIV_460800;
-      when 921600  => return DIV_921600;
-      when 1000000 => return DIV_1000000;
-      when 2000000 => return DIV_2000000;
-      when 3000000 => return DIV_3000000;
-      when others  => return DIV_115200;
-    end case;
-  end function;
-
-  -- Lookup table function to convert divisor to baud rate
-  -- Supports common baud rates; unknown divisors default to 115200
-  function divisor_to_baud(divisor : unsigned(19 downto 0)) return unsigned is
-  begin
-    if    divisor = DIV_300     then return to_unsigned(300,     32);
-    elsif divisor = DIV_1200    then return to_unsigned(1200,    32);
-    elsif divisor = DIV_2400    then return to_unsigned(2400,    32);
-    elsif divisor = DIV_4800    then return to_unsigned(4800,    32);
-    elsif divisor = DIV_9600    then return to_unsigned(9600,    32);
-    elsif divisor = DIV_19200   then return to_unsigned(19200,   32);
-    elsif divisor = DIV_38400   then return to_unsigned(38400,   32);
-    elsif divisor = DIV_57600   then return to_unsigned(57600,   32);
-    elsif divisor = DIV_115200  then return to_unsigned(115200,  32);
-    elsif divisor = DIV_230400  then return to_unsigned(230400,  32);
-    elsif divisor = DIV_460800  then return to_unsigned(460800,  32);
-    elsif divisor = DIV_921600  then return to_unsigned(921600,  32);
-    elsif divisor = DIV_1000000 then return to_unsigned(1000000, 32);
-    elsif divisor = DIV_2000000 then return to_unsigned(2000000, 32);
-    elsif divisor = DIV_3000000 then return to_unsigned(3000000, 32);
-    else
-      return to_unsigned(115200, 32);
-    end if;
-  end function;
-
   type state_t is (
     ST_RESET,
     ST_IDLE,
@@ -159,13 +95,12 @@ architecture rtl of cbor_controller is
     parity      : nsl_uart.serdes.parity_t;
     hs          : std_ulogic;
     stop_count  : natural range 1 to 2;
-    divisor     : unsigned(19 downto 0);
+    baudrate    : unsigned(23 downto 0);
 
-    count       : natural range 0 to bstr_max_size_c;
-    flush_count : natural range 0 to bstr_max_size_c;
-    bit_timer   : unsigned(19 downto 0);  -- Counts down one bit time (divisor clocks)
-    timeout     : unsigned(15 downto 0);  -- Counts bit times until flush
-    fifo        : nsl_data.bytestream.byte_string(0 to bstr_max_size_c - 1);
+    count       : natural range 0 to bstr_max_size_c + 8;
+    flush_count : natural range 0 to bstr_max_size_c + 8;
+    timeout     : unsigned(23 downto 0);  -- Counts 2x-baud ticks until flush
+    fifo        : nsl_data.bytestream.byte_string(0 to bstr_max_size_c + 7);
     
     encoded     : nsl_amba.axi4_stream.buffer_t;
     last        : boolean;
@@ -176,7 +111,8 @@ architecture rtl of cbor_controller is
 
   signal bnoc_tx_s, bnoc_rx_s: nsl_bnoc.pipe.pipe_bus_t;
 
-  signal parity_s, stop_count_s : unsigned(1 downto 0);
+  signal baudrate_x2_s : unsigned(24 downto 0);
+  signal baudratex2_s, tick_s: std_ulogic;
 begin
   
   reg: process(clock_i, reset_n_i)
@@ -189,7 +125,7 @@ begin
     end if;
   end process;
 
-  transition: process(cmd_i, r, bnoc_rx_s, bnoc_tx_s, rsp_i)
+  transition: process(cmd_i, r, bnoc_rx_s, bnoc_tx_s, rsp_i, tick_s)
       variable cbr_encoded : nsl_data.bytestream.byte_stream;
       variable cbr_len : natural;
   begin
@@ -218,33 +154,25 @@ begin
         rin.hs         <= handshake_active_c;
         rin.stop_count <= stop_count_c;
         rin.map_state  <= MAP_NONE;
-        rin.divisor    <= resize(divisor_c, 20);
+        rin.baudrate   <= baud_rate_c;
         rin.last       <= false;
         rin.len        <= 0;
         rin.count      <= 0;
-        rin.bit_timer  <= resize(divisor_c, 20);
-        rin.timeout    <= resize(timeout_c, 16);
+        rin.timeout    <= timeout_c;
  
       when ST_IDLE =>
-        -- Prescaler-based timeout: bit_timer counts clocks, timeout counts bit times
-        if r.count > 0 then
-          if r.bit_timer > 0 then
-            rin.bit_timer <= r.bit_timer - 1;
-          else
-            -- One bit time elapsed, reload and decrement timeout
-            rin.bit_timer <= r.divisor;
-            if r.timeout > 0 then
-              rin.timeout <= r.timeout - 1;
-            end if;
+        -- Tick-based timeout: count 2x-baud ticks
+        if r.count > 0 and tick_s = '1' then
+          if r.timeout > 0 then
+            rin.timeout <= r.timeout - 1;
           end if;
         end if;
 
-        if (r.count > 0 and r.timeout = 0) or not nsl_data.fifo.fifo_can_push(storage => r.fifo, fillness => r.count) then
-          -- Send loopback data when timeout expires or FIFO is full
+        if (r.count > 0 and r.timeout = 0) or r.count >= bstr_max_size_c then
+          -- Send loopback data when timeout expires or FIFO reaches max report size
           rin.flush_count <= r.count;
           rin.state       <= ST_RSP_BSTR_HDR_PREP;
-          rin.bit_timer   <= r.divisor;
-          rin.timeout     <= resize(timeout_c, 16);
+          rin.timeout     <= timeout_c;
         else
           if not nsl_data.cbor.is_done(r.parser) then
             if cmd_i.valid = '1' then
@@ -271,7 +199,7 @@ begin
 
       when ST_CONFIG_ITEM_GET =>
         if not nsl_data.cbor.is_done(r.parser) then
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
           end if;
         else
@@ -280,7 +208,7 @@ begin
             rin.state <= ST_CONFIG_STR_GET;
           elsif nsl_data.cbor.kind(r.parser) = nsl_data.cbor.KIND_POSITIVE then
             if r.map_state = MAP_VAL_BR then
-              rin.divisor <= baud_to_divisor(nsl_data.cbor.arg(r.parser, 32));
+              rin.baudrate <= nsl_data.cbor.arg(r.parser, 24);
               if r.item_count = 0 then
                 rin.map_state <= MAP_NONE;
                 rin.state <= ST_RSP_PUT;
@@ -414,7 +342,7 @@ begin
           when 5 =>
             rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(BAUD_RATE_STR_C));
           when 6 =>
-            rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_number(divisor_to_baud(r.divisor)));
+            rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_positive(r.baudrate));
             rin.last <= true;
           when others =>
             rin.item_count <= 0;
@@ -425,7 +353,7 @@ begin
         end if;
 
       when ST_MESSAGE_ROUTE =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) and bnoc_tx_s.ack.ready = '1' then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) and bnoc_tx_s.ack.ready = '1' then
           rin.item_count <= r.item_count - 1;
           if r.item_count = 1 then
             -- Message TX complete, send F5 confirmation immediately
@@ -439,7 +367,7 @@ begin
         rin.state <= ST_RSP_BSTR_HDR_PUT;
 
       when ST_RSP_BSTR_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             rin.state <= ST_RSP_DATA_PUT;
           end if;
@@ -447,7 +375,7 @@ begin
         end if;
                   
       when ST_RSP_DATA_PUT =>
-        if r.flush_count > 0 and nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if r.flush_count > 0 and nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           rin.flush_count <= r.flush_count - 1;
           rin.fifo <= nsl_data.fifo.fifo_shift_data(
             storage => r.fifo,
@@ -469,20 +397,20 @@ begin
         end if;
         
       when ST_RSP_CONFIG_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
-          if nsl_amba.axi4_stream.is_last(cfg => buffer_cfg_c, b => r.encoded) and nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_last(cfg => buffer_cfg_c, b => r.encoded) and nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             rin.state <= ST_RSP_CONFIG_PREP;
           end if;
           rin.encoded <= nsl_amba.axi4_stream.shift(buffer_cfg_c, r.encoded);
         end if;
         
       when ST_RSP_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           rin.state <= ST_IDLE;
         end if;
 
       when ST_ERROR_DRAIN =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) and nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) and nsl_amba.axi4_stream.is_last(stream_config_c, cmd_i) then
           rin.state <= ST_RSP_PUT;
           rin.rsp_success <= false;
           rin.parser <= nsl_data.cbor.reset;
@@ -494,8 +422,8 @@ begin
 
   output: process(r, bnoc_tx_s, cmd_i)
   begin
-    cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, false);
-    rsp_o <= nsl_amba.axi4_stream.transfer_defaults( cfg => axi_s_cfg_c);
+    cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, false);
+    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => stream_config_c);
 
     bnoc_tx_s.req.valid <= '0';
     bnoc_tx_s.req.data <= (others => '-');
@@ -505,20 +433,20 @@ begin
       when ST_RESET =>
                    
       when ST_IDLE =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, not nsl_data.cbor.is_done(r.parser));
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, not nsl_data.cbor.is_done(r.parser));
         
       when ST_CONFIG_ITEM_GET =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, not nsl_data.cbor.is_done(r.parser));
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, not nsl_data.cbor.is_done(r.parser));
         
       when ST_CONFIG_STR_GET =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
       when ST_CONFIG_STR_DRAIN =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, r.len /= 0);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, r.len /= 0);
 
       when ST_MESSAGE_ROUTE =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, nsl_logic.bool.to_boolean(bnoc_tx_s.ack.ready));
-        bnoc_tx_s.req.valid <= nsl_logic.bool.to_logic(nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i));
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, nsl_logic.bool.to_boolean(bnoc_tx_s.ack.ready));
+        bnoc_tx_s.req.valid <= nsl_logic.bool.to_logic(nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i));
         bnoc_tx_s.req.data <= cmd_i.data(0);
               
       when ST_RSP_BSTR_HDR_PREP | ST_RSP_CONFIG_PREP =>
@@ -531,30 +459,27 @@ begin
 
       when ST_RSP_DATA_PUT =>
         bnoc_rx_s.ack.ready <= '1';
-        rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.fifo(0)), last => r.flush_count = 1);
+        rsp_o <= nsl_amba.axi4_stream.transfer(cfg =>stream_config_c, bytes => nsl_data.bytestream.from_suv(r.fifo(0)), last => r.flush_count = 1);
 
       when ST_RSP_PUT =>
         if r.rsp_success then
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(OP_SUCCESS), last => true);
+          rsp_o <= nsl_amba.axi4_stream.transfer(cfg =>stream_config_c, bytes => nsl_data.bytestream.from_suv(OP_SUCCESS), last => true);
         else
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(OP_FAILURE), last => true);
+          rsp_o <= nsl_amba.axi4_stream.transfer(cfg =>stream_config_c, bytes => nsl_data.bytestream.from_suv(OP_FAILURE), last => true);
         end if;
 
       when ST_ERROR_DRAIN =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
     end case;
   end process;
 
-  stop_count_s <= to_unsigned(r.stop_count, 2);
-  parity_s <= to_unsigned(nsl_uart.serdes.parity_t'pos(r.parity), 2);
-  
-  uart8: nsl_uart.transactor.uart8_no_generics
+  uart8: nsl_uart.transactor.uart8_dynamic_config
     port map(
       reset_n_i => reset_n_i,
       clock_i => clock_i,
 
-      divisor_i  => r.divisor,
+      tick_i => tick_s,
 
       tx_o   => tx_o,
       cts_i  => cts_i,
@@ -573,9 +498,31 @@ begin
       parity_error_o => open,
       break_o     => open,
 
-      stop_count_i       => stop_count_s,
-      parity_i           => parity_s,
+      stop_count_i       => r.stop_count,
+      parity_i           => r.parity,
       handshake_active_i => r.hs
     );
+
+    tick: nsl_event.tick.tick_extractor_clock
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+
+        signal_i => baudratex2_s,
+        tick_o => tick_s
+      );
+
+    baudrate_x2_s <= shift_left(resize(r.baudrate, 25), 1);
+
+    baudrate_x2: nsl_signal_generator.frequency.frequency_generator
+      generic map(
+        clock_rate_c => system_clock_c
+      )
+      port map(
+        clock_i => clock_i,
+        reset_n_i => reset_n_i,
+        frequency_i => baudrate_x2_s,
+        value_o => baudratex2_s
+      );
 
 end architecture;
