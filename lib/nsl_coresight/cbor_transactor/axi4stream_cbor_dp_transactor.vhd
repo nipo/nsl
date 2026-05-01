@@ -188,7 +188,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
   
   procedure log_state_change(r : regs_t; rin: regs_t) is  begin
     if c_print_logs then
-      nsl_simulation.logging.log_info("In " & state_to_string(r.state) & " => " & state_to_string(rin.state) & LF );
+      nsl_simulation.logging.log_info("In " & state_to_string(r.state) & " => " & state_to_string(rin.state) & LF);
     end if;
   end procedure;
   
@@ -287,7 +287,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         rin.cmd_cancelled <= false;
         if cmd_i.valid = '1' then
           rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
-          if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
+          if nsl_data.cbor.is_last(r.parser, cmd_i.data(0)) then
             rin.state <= ST_ARRAY_ENTER;
           end if;
         end if;
@@ -311,7 +311,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
       when ST_CMD_GET =>
           if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
-            if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
+            if nsl_data.cbor.is_last(r.parser, cmd_i.data(0)) then
               rin.state <= ST_CMD_EXEC;
               if not r.indefinite and not r.inside_cmd then
                 rin.command_count <= r.command_count - 1;
@@ -669,7 +669,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
           rin.cmd_cancelled <= true;
           rin.state <= ST_RSP_READ_STATUS_PREP;
         else
-          rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.bytestream.from_suv(r.data) );
+          rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.bytestream.from_suv(r.data));
         end if;
         
       when ST_DATA_PUT =>
@@ -688,7 +688,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         end if;
 
       when ST_RSP_ARRAY_HDR_PREP =>
-        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_array_hdr(length => -1) );
+        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_array_hdr(length => -1));
         rin.state <= ST_RSP_ARRAY_HDR_PUT;
         rin.last  <= false;
           
@@ -764,7 +764,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         end if;
 
       when ST_RSP_BSTR_HDR_PREP =>
-        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_bstr_hdr(length => to_unsigned(4, 3) ) );
+        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_bstr_hdr(length => to_unsigned(4, 3)));
         rin.state <= ST_RSP_BSTR_HDR_PUT;
 
       when ST_RSP_BSTR_HDR_PUT =>
@@ -849,7 +849,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         rsp_o <= nsl_amba.axi4_stream.next_beat(cfg => buffer_cfg_c, b => r.encoded, last => r.last);
         
       when ST_RSP_BREAK_PUT | ST_RSP_BSTR_BREAK_PUT =>
-        rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data(7 downto 0)), last => r.last);
+        rsp_o <= nsl_amba.axi4_stream.transfer(cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data(7 downto 0)), last => r.last);
 
     end case;
   end process;
