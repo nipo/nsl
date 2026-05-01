@@ -14,7 +14,6 @@ entity axi4stream_cbor_dp_transactor is
     reset_n_i : in std_ulogic;
     clock_i   : in std_ulogic;
     
-    tick_i_hz : in natural;
     tick_i    : in std_ulogic;
 
     swd_o     : out nsl_coresight.swd.swd_master_o;
