@@ -290,12 +290,9 @@ begin
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_SHIFT;
             rin.state     <= ST_RSP_BSTR_HDR_PREP;
           elsif r.tag = TAG_SHIFT_NO_TDI then
-            rin.word_count  <= (nsl_data.cbor.arg_int(r.parser)+7)/8;
-            if nsl_data.cbor.arg_int(r.parser) mod 8 = 0 then
-              rin.bit_count <= 8;
-            else
-              rin.bit_count <= nsl_data.cbor.arg_int(r.parser) mod 8 - 1;
-            end if;
+            tmp            := nsl_data.cbor.arg_int(r.parser) - 1;
+            rin.word_count <= tmp / 8 + 1;
+            rin.bit_count  <= tmp mod 8;
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_SHIFT;
             rin.state     <= ST_RSP_BSTR_HDR_PREP;
           elsif r.tag = TAG_RESET then
