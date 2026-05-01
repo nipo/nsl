@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_uart;
+library nsl_bnoc, nsl_amba, nsl_uart, nsl_clocking;
 
 package transactor is
 
@@ -34,6 +34,62 @@ package transactor is
 
       parity_error_o : out std_ulogic;
       break_o     : out std_ulogic
+      );
+  end component;
+
+  component uart8_dynamic_config is
+    port(
+      reset_n_i    : in std_ulogic;
+      clock_i      : in std_ulogic;
+
+      tick_i     : in std_ulogic;
+
+      tx_o   : out std_ulogic;
+      cts_i  : in  std_ulogic := '0';
+      rx_i   : in  std_ulogic;
+      rts_o  : out std_ulogic;
+
+      cts_o  : out std_ulogic;
+      rx_o   : out std_ulogic;
+
+      tx_data_i  : in  nsl_bnoc.pipe.pipe_req_t;
+      tx_data_o  : out nsl_bnoc.pipe.pipe_ack_t;
+      rx_data_i  : in  nsl_bnoc.pipe.pipe_ack_t;
+      rx_data_o  : out nsl_bnoc.pipe.pipe_req_t;
+
+      parity_error_o : out std_ulogic;
+      break_o        : out std_ulogic;
+
+      stop_count_i       : in natural range 1 to 2;
+      parity_i           : in nsl_uart.serdes.parity_t;
+      handshake_active_i : in std_ulogic := '0'
+      );
+  end component;
+
+  component axi4stream_cbor_uart_transactor is
+    generic(
+      system_clock_c     : natural;
+      stream_config_c    : nsl_amba.axi4_stream.config_t;
+      stop_count_c       : natural range 1 to 2 := 1;
+      parity_c           : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
+      handshake_active_c : std_ulogic := '0';
+      baud_rate_c        : unsigned(23 downto 0);
+      timeout_c          : unsigned(23 downto 0);
+      bstr_max_size_c    : natural range 0 to 511
+      );
+    port (
+      reset_n_i    : in std_ulogic;
+      clock_i      : in std_ulogic;
+
+      tx_o   : out std_ulogic;
+      cts_i  : in std_ulogic := handshake_active_c;
+      rx_i   : in  std_ulogic;
+      rts_o  : out std_ulogic;
+
+      cmd_i  : in  nsl_amba.axi4_stream.master_t;
+      cmd_o  : out nsl_amba.axi4_stream.slave_t;
+      rsp_i  : in  nsl_amba.axi4_stream.slave_t;
+      rsp_o  : out nsl_amba.axi4_stream.master_t
       );
   end component;
 

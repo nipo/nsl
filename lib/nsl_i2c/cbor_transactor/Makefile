@@ -1,0 +1,9 @@
+vhdl-sources += cbor_transactor.pkg.vhd
+vhdl-sources += axi4stream_cbor_i2c_controller.vhd
+deps += nsl_i2c.i2c
+deps += nsl_i2c.master
+deps += nsl_data.bytestream
+deps += nsl_data.endian
+deps += nsl_data.cbor
+deps += nsl_amba.axi4_stream
+deps += nsl_simulation.logging
