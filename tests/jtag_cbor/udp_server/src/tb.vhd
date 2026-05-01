@@ -5,20 +5,18 @@ use ieee.numeric_std.all;
 entity tb is
 end tb;
 
-library nsl_jtag, nsl_amba, nsl_simulation, nsl_data, nsl_event;
+library nsl_jtag, nsl_amba, nsl_simulation, nsl_data, nsl_event, nsl_math;
 
 
 architecture arch of tb is
 
-  constant cfg_c: nsl_amba.axi4_stream.config_t
-    := nsl_amba.axi4_stream.config(1, last => true);
+  constant cfg_c: nsl_amba.axi4_stream.config_t := nsl_amba.axi4_stream.config(1, last => true);
 
   signal s_cmd           : nsl_amba.axi4_stream.bus_t;
   signal s_rsp           : nsl_amba.axi4_stream.bus_t;
 
   signal s_tap_ir : std_ulogic_vector(3 downto 0);
-  signal s_tap_reset, s_tap_run, s_tap_dr_capture,
-    s_tap_dr_shift, s_tap_dr_update, s_tap_dr_in, s_tap_dr_out : std_ulogic;
+  signal s_tap_reset, s_tap_run, s_tap_dr_capture, s_tap_dr_shift, s_tap_dr_update, s_tap_dr_in, s_tap_dr_out : std_ulogic;
   signal ate_o : nsl_jtag.jtag.jtag_ate_o;
   signal ate_i : nsl_jtag.jtag.jtag_ate_i;
   signal tap_o : nsl_jtag.jtag.jtag_tap_o;
@@ -30,8 +28,10 @@ architecture arch of tb is
   signal s_clk, s_resetn : std_ulogic;
   signal s_done : std_ulogic_vector(0 to 0);
 
-  signal   tick_s      : std_ulogic;
+  signal   tick_s, tick_ms_s: std_ulogic;
   constant tick_divisor: unsigned(7 downto 0) := (others => '1');
+  constant tick_ms_divisor : unsigned := nsl_math.arith.to_unsigned_auto(10e7/1000);
+
 begin
 
   ate_i <= nsl_jtag.jtag.to_ate(tap_o);
@@ -110,17 +110,16 @@ begin
     end if;
   end process;
 
-  dut: nsl_jtag.cbor_transactor.controller
+  dut: nsl_jtag.cbor_transactor.axi4stream_cbor_ate
   generic map(
-    clock_i_hz_c   => 10e7,
-    axi_s_cfg_c    => cfg_c
+    stream_config_c=> cfg_c
     )
   port map(
     clock_i  =>  s_clk,
     reset_n_i => s_resetn,
 
-    tick_i_hz => 10e7/to_integer(tick_divisor),
     tick_i => tick_s,
+    tick_ms_i => tick_ms_s,
     
     cmd_i => s_cmd.m,
     cmd_o => s_cmd.s,
@@ -191,5 +190,13 @@ begin
       period_m1_i => tick_divisor,
       tick_o => tick_s
       );
+
+  tick_ms_gen : nsl_event.tick.tick_generator_integer
+    port map(
+      clock_i     => s_clk,
+      reset_n_i   => s_resetn,
+      period_m1_i => tick_ms_divisor,
+      tick_o      => tick_ms_s
+    );
 
 end architecture;

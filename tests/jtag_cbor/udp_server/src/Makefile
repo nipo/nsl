@@ -10,3 +10,4 @@ deps += nsl_amba.ram
 deps += nsl_amba.stream_to_udp
 deps += nsl_amba.stream_fifo
 deps += nsl_data.bytestream
+deps += nsl_math.arith
