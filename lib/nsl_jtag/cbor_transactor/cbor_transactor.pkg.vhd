@@ -55,15 +55,14 @@ package cbor_transactor is
 
   component axi4stream_cbor_ate
     generic(
-      clock_i_hz_c : natural;
       stream_config_c  : nsl_amba.axi4_stream.config_t
-    );
+      );
     port (
       clock_i      : in  std_ulogic;
       reset_n_i    : in  std_ulogic;
 
-      tick_i_hz    : in natural;
       tick_i       : in std_ulogic;
+      tick_ms_i    : in std_ulogic;
 
       cmd_i        : in  nsl_amba.axi4_stream.master_t;
       cmd_o        : out nsl_amba.axi4_stream.slave_t;

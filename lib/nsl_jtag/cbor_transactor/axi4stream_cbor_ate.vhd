@@ -7,15 +7,14 @@ use nsl_data.cbor.all;
 
 entity axi4stream_cbor_ate is
   generic(
-    clock_i_hz_c : natural;
-    stream_config_c  : nsl_amba.axi4_stream.config_t
+    stream_config_c : nsl_amba.axi4_stream.config_t
     );
   port (
     clock_i      : in  std_ulogic;
     reset_n_i    : in  std_ulogic;
 
-    tick_i_hz    : in natural;
     tick_i       : in std_ulogic;
+    tick_ms_i : in std_ulogic;
 
     cmd_i        : in nsl_amba.axi4_stream.master_t;
     cmd_o        : out nsl_amba.axi4_stream.slave_t;
@@ -47,6 +46,9 @@ architecture rtl of axi4stream_cbor_ate is
     ST_ATE_RUN,
     ST_ATE_WAIT_FOR_DONE,
 
+    ST_ATE_RUN_MS,
+    ST_ATE_RUN_MS_WAIT_FOR_DONE,
+
     ST_DATA_GET,
     ST_DATA_RUN,
     ST_DATA_GET_RSP,
@@ -73,7 +75,6 @@ architecture rtl of axi4stream_cbor_ate is
     data          : std_ulogic_vector(7 downto 0);
     bit_count     : natural range 0 to 8;
     word_count    : natural range 0 to 4095;
-    tick_per_ms   : natural range 0 to 2**20-1;  -- supports ticks up to ~2 GHz
     
     parser        : nsl_data.cbor.parser_t;
     indefinite    : boolean;
@@ -164,11 +165,19 @@ begin
     end if;
   end process;
 
-  transition: process(cmd_i, r, rsp_i,
-                      s_cmd_ready, s_rsp_data, s_rsp_valid)
+  transition: process (cmd_i, r, rsp_i, tick_ms_i,
+                       s_cmd_ready, s_rsp_data, s_rsp_valid)
     variable data : std_ulogic_vector(7 downto 0);
   begin
     rin <= r;
+
+    if r.state = ST_ATE_RUN_MS or r.state = ST_ATE_RUN_MS_WAIT_FOR_DONE then
+      if tick_ms_i = '1' then
+        if r.word_count /= 0 then
+          rin.word_count <= r.word_count - 1;
+        end if;
+      end if;
+    end if;
 
     case r.state is
       
@@ -197,7 +206,6 @@ begin
           rin.parser <= nsl_data.cbor.feed(r.parser, data);
           if nsl_data.cbor.is_last( r.parser, data ) then
             rin.state <= ST_ARRAY_ENTER;
-            rin.tick_per_ms <= tick_i_hz / 2000; -- 2 ticks per bit
           end if;
         end if;
 
@@ -282,11 +290,11 @@ begin
             rin.word_count  <= nsl_data.cbor.arg_int(r.parser)-1;
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_RESET;
             rin.state       <= ST_ATE_RUN;
-          elsif r.tag = 11 then -- run for ms
-            rin.word_count  <= nsl_data.cbor.arg_int(r.parser) * r.tick_per_ms;
+          elsif r.tag = TAG_RUN_MS then
+            rin.word_count    <= nsl_data.cbor.arg_int(r.parser) + 1;
             rin.cmd_bit_count <= 0;
-            rin.cmd_pending <= nsl_jtag.ate.ATE_OP_RTI;
-            rin.state       <= ST_ATE_RUN;
+            rin.cmd_pending   <= nsl_jtag.ate.ATE_OP_RTI;
+            rin.state         <= ST_ATE_RUN_MS;
           else
             nsl_simulation.logging.log_warning("Unhandled tag context for positive value, draining frame");
             rin.last  <= false;
@@ -353,11 +361,25 @@ begin
           rin.state <= ST_ATE_WAIT_FOR_DONE;
         end if;
 
-      when ST_ATE_WAIT_FOR_DONE => 
+      when ST_ATE_WAIT_FOR_DONE =>
         if s_cmd_ready = '1' then
           if r.word_count /= 0 then
             rin.word_count <= r.word_count - 1;
-            rin.state <= ST_ATE_RUN;
+            rin.state      <= ST_ATE_RUN;
+          else
+            rin.state <= ST_CMD_END;
+          end if;
+        end if;
+
+      when ST_ATE_RUN_MS =>
+        if s_cmd_ready = '1' then
+          rin.state <= ST_ATE_RUN_MS_WAIT_FOR_DONE;
+        end if;
+
+      when ST_ATE_RUN_MS_WAIT_FOR_DONE =>
+        if s_cmd_ready = '1' then
+          if r.word_count /= 0 then
+            rin.state <= ST_ATE_RUN_MS;
           else
             rin.state <= ST_CMD_END;
           end if;
@@ -473,8 +495,8 @@ begin
     when ST_CMD_GET | ST_ERROR_DRAIN =>
         cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
-    when ST_ATE_RUN | ST_DATA_RUN => 
-      s_cmd_valid <= '1';
+      when ST_ATE_RUN | ST_ATE_RUN_MS | ST_DATA_RUN =>
+        s_cmd_valid <= '1';
 
     when ST_DATA_GET =>
       if r.has_tdi then
@@ -498,8 +520,8 @@ begin
 
     when ST_RSP_ARRAY_HDR_PREP | ST_RSP_BSTR_HDR_PREP | ST_RSP_BREAK_PREP =>
 
-    when ST_ATE_WAIT_FOR_DONE | ST_DATA_GET_RSP =>
-      s_rsp_ready <= '1';
+      when ST_ATE_WAIT_FOR_DONE | ST_ATE_RUN_MS_WAIT_FOR_DONE | ST_DATA_GET_RSP =>
+        s_rsp_ready <= '1';
     
     when ST_RSP_ARRAY_HDR_PUT | ST_RSP_BSTR_HDR_PUT =>
       rsp_o <= nsl_amba.axi4_stream.next_beat(cfg => buffer_cfg_c, b => r.encoded, last => r.last);
