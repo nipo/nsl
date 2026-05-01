@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_coresight, nsl_amba, nsl_data, nsl_simulation, nsl_logic;
 use nsl_data.cbor.all;
+use nsl_data.bytestream.all;
 
 entity axi4stream_cbor_dp_transactor is
   generic(
@@ -700,7 +701,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         end if;
 
       when ST_RSP_READ_HDR_PREP =>
-        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.bytestream."+"(nsl_data.cbor.cbor_array_hdr(3), nsl_data.cbor.cbor_bstr_hdr)) ;
+        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, byte_string'(nsl_data.cbor.cbor_array_hdr(3)) & byte_string'(nsl_data.cbor.cbor_bstr_hdr));
         -- array header for 3 items
         -- indefinite length bytestream header
         rin.state <= ST_RSP_READ_HDR_PUT;
@@ -743,11 +744,8 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         end if;
         status(2 downto 0) := r.ack;
         rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c,
-            nsl_data.bytestream."+"(
-              nsl_data.bytestream."+"(
-                nsl_data.cbor.cbor_break,
-                nsl_data.cbor.cbor_positive(to_unsigned(r.word_total - r.word_count, 5))),
-              nsl_data.cbor.cbor_positive(unsigned(status))));
+          (nsl_data.cbor.cbor_break & nsl_data.cbor.cbor_positive(to_unsigned(r.word_total - r.word_count, 5))) 
+          & nsl_data.cbor.cbor_positive(unsigned(status)));
         rin.state <= ST_RSP_READ_STATUS_PUT;
       
       when ST_RSP_READ_STATUS_PUT =>

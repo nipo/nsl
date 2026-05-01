@@ -44,7 +44,6 @@ package bytestream is
   function "and"(l, r : byte_string) return byte_string;
   function "or"(l, r : byte_string) return byte_string;
   function "xor"(l, r : byte_string) return byte_string;
-  function "+"(l, r : byte_string) return byte_string;
 
   -- Null vector for an empty byte string.
   constant null_byte_string : byte_string(1 to 0) := (others => x"00");
@@ -430,17 +429,6 @@ package body bytestream is
     loop
       ret(i) := xl(i) xor xr(i);
     end loop;
-    return ret;
-  end function;
-
-  function "+"(l, r : byte_string) return byte_string
-  is
-    alias xl: byte_string(0 to l'length-1) is l;
-    alias xr: byte_string(0 to r'length-1) is r;
-    variable ret: byte_string(0 to l'length + r'length - 1);
-  begin
-    ret(0 to xl'length-1) := xl;
-    ret(xl'length to ret'right) := xr;
     return ret;
   end function;
 
