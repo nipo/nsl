@@ -8,7 +8,7 @@ use nsl_data.cbor.all;
 entity axi4stream_cbor_spi_transactor is
   generic(
     clock_i_hz_c  : natural;
-    axi_s_cfg_c   : nsl_amba.axi4_stream.config_t;
+    stream_config_c   : nsl_amba.axi4_stream.config_t;
     slave_count_c : natural range 1 to 7 := 1;
     width_c       : natural := 7
     );
@@ -16,7 +16,6 @@ entity axi4stream_cbor_spi_transactor is
     clock_i   : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    tick_i_hz : in natural;
     tick_i    : in std_ulogic;
 
     sck_o     : out std_ulogic;
@@ -34,7 +33,7 @@ end entity;
 architecture rtl of axi4stream_cbor_spi_transactor is
 
   constant cbr_hdr_max_size_c : natural := 3;
-  constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);
+  constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, cbr_hdr_max_size_c);
 
   type state_t is (
     ST_RESET,
@@ -133,15 +132,15 @@ architecture rtl of axi4stream_cbor_spi_transactor is
   
 begin
   
-  assert nsl_amba.axi4_stream.byte_count(axi_s_cfg_c, cmd_i) = 1
+  assert nsl_amba.axi4_stream.byte_count(stream_config_c, cmd_i) = 1
     report "AXI-Stream bad data length, must be 1 byte"
     severity failure;
   
-  assert axi_s_cfg_c.has_last = true
+  assert stream_config_c.has_last = true
     report "AXI-Stream configuration incorrect, must have TLAST"
     severity failure;
   
-  assert axi_s_cfg_c.has_ready = true
+  assert stream_config_c.has_ready = true
     report "AXI-Stream configuration incorrect, must have TREADY"
     severity failure;
   
@@ -190,7 +189,7 @@ begin
         rin.last          <= false;
 
       when ST_ARRAY_GET =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
           nsl_simulation.logging.log_info("In parsing, ST_ARRAY_GET a byte");
           rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
           if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
@@ -216,7 +215,7 @@ begin
         end if;
 
       when ST_CMD_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
             if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
               rin.state <= ST_CMD_EXEC;
@@ -335,7 +334,7 @@ begin
 
       when ST_CMD_GET_CS =>
         if not nsl_data.cbor.is_done(r.parser) then
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
           end if;
         else
@@ -346,7 +345,7 @@ begin
         
       when ST_CMD_GET_MODE =>
         if not nsl_data.cbor.is_done(r.parser) then
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
           end if;
         else
@@ -359,7 +358,7 @@ begin
         end if;   
 
       when ST_DATA_GET =>
-        if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+        if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
           rin.mosi <= cmd_i.data(0)(width_c);
           rin.shreg <= cmd_i.data(0);
           rin.state <= ST_SHIFT_FIRST_HALF;
@@ -426,7 +425,7 @@ begin
          end if;
 
       when ST_DATA_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if r.word_count /= 0 then
             rin.word_count <= r.word_count - 1;
             rin.bit_count <= width_c;
@@ -450,7 +449,7 @@ begin
         rin.last  <= false;
           
       when ST_RSP_ARRAY_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_CMD_GET;
           end if;
@@ -463,7 +462,7 @@ begin
         rin.last  <= false;
 
       when ST_RSP_BSTR_HDR_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
             if r.has_mosi then
               rin.state <= ST_DATA_GET;
@@ -480,13 +479,13 @@ begin
         rin.state <= ST_RSP_BREAK_PUT;
     
       when ST_RSP_BREAK_PUT =>
-        if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+        if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
           rin.state <= ST_ARRAY_GET;
         end if;
       
       when ST_ERROR_DRAIN =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            if nsl_amba.axi4_stream.is_last(stream_config_c, cmd_i) then
               if r.last then
                 rin.parser <= nsl_data.cbor.reset;
                 rin.state <= ST_ARRAY_GET;
@@ -504,8 +503,8 @@ begin
   moore: process(r)
     variable rsp_data : std_ulogic_vector(7 downto 0);
   begin
-    cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, false);
-    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(axi_s_cfg_c);
+    cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, false);
+    rsp_o <= nsl_amba.axi4_stream.transfer_defaults(stream_config_c);
     rsp_o.valid <= '0';
     rsp_o.last <= '-';
     rsp_o.data(0) <= (others => '-');
@@ -540,17 +539,17 @@ begin
         end if;
 
       when ST_ARRAY_GET | ST_CMD_GET | ST_DATA_GET  | ST_ERROR_DRAIN =>
-        cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+        cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
       when ST_CMD_GET_MODE | ST_CMD_GET_CS =>
         if not nsl_data.cbor.is_done(r.parser) then
-          cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+          cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
         end if;
 
       when ST_DATA_PUT =>
         if r.has_miso then -- should never get here without r.has_miso being true..
           if r.minus = 0 then
-            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.shreg), last => false);
+            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.shreg), last => false);
           else
             -- report "in ST_DATA_PUT Word count is " & integer'image(r.word_count) & "; minus is " & integer'image(r.minus);
             if r.word_count = 0 and r.minus /= 0 then
@@ -560,12 +559,12 @@ begin
             else
               rsp_data := r.shreg;
             end if;
-            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(rsp_data), last => false);
+            rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(rsp_data), last => false);
           end if;
         end if;
     
     when ST_RSP_BREAK_PUT =>
-      rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.shreg), last => r.last);
+      rsp_o <= nsl_amba.axi4_stream.transfer( cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.shreg), last => r.last);
 
     when ST_RSP_ARRAY_HDR_PREP | ST_RSP_BSTR_HDR_PREP | ST_RSP_BREAK_PREP =>
     

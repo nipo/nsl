@@ -50,7 +50,7 @@ package cbor_transactor is
   component axi4stream_cbor_spi_transactor
     generic(
       clock_i_hz_c  : natural;
-      axi_s_cfg_c   : nsl_amba.axi4_stream.config_t;
+      stream_config_c   : nsl_amba.axi4_stream.config_t;
       slave_count_c : natural range 1 to 7 := 1;
       width_c       : natural := 7
     );
@@ -58,7 +58,6 @@ package cbor_transactor is
       clock_i   : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      tick_i_hz : in natural;
       tick_i    : in std_ulogic;
             
       sck_o     : out std_ulogic;
