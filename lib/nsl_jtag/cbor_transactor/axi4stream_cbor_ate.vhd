@@ -28,10 +28,22 @@ end entity;
 
 architecture rtl of axi4stream_cbor_ate is
 
-  
-  constant data_max_size_c      : natural := 8;
-  constant cbr_hdr_max_size_c   : natural := 3;
-  constant buffer_cfg_c         : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);
+  constant data_max_size_c    : natural := 8;
+  constant cbr_hdr_max_size_c : natural := 3;
+  constant buffer_cfg_c       : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, cbr_hdr_max_size_c);
+
+  constant TAG_SHIFT_MINUS1   : natural := 1;
+  constant TAG_SHIFT_MINUS2   : natural := 2;
+  constant TAG_SHIFT_MINUS3   : natural := 3;
+  constant TAG_SHIFT_MINUS4   : natural := 4;
+  constant TAG_SHIFT_MINUS5   : natural := 5;
+  constant TAG_SHIFT_MINUS6   : natural := 6;
+  constant TAG_SHIFT_MINUS7   : natural := 7;
+  constant TAG_SHIFT_NO_TDI   : natural := 8;
+  constant TAG_SHIFT_NO_TDO   : natural := 9;
+  constant TAG_RESET          : natural := 10;
+  constant TAG_RUN_MS         : natural := 11;
+
 
   type state_t is (
     ST_RESET,
@@ -168,6 +180,7 @@ begin
   transition: process (cmd_i, r, rsp_i, tick_ms_i,
                        s_cmd_ready, s_rsp_data, s_rsp_valid)
     variable data : std_ulogic_vector(7 downto 0);
+    variable tmp : natural range 0 to 4095;
   begin
     rin <= r;
 
@@ -242,22 +255,22 @@ begin
         rin.inside_cmd <= false;
         if nsl_data.cbor.kind(r.parser) = nsl_data.cbor.KIND_TAG then
           rin.tag <= nsl_data.cbor.arg_int(r.parser);
-          if nsl_data.cbor.arg_int(r.parser) > 0 and nsl_data.cbor.arg_int(r.parser) < 8 then -- minus
+          if nsl_data.cbor.arg_int(r.parser) >= TAG_SHIFT_MINUS1 and nsl_data.cbor.arg_int(r.parser) <= TAG_SHIFT_MINUS7 then
             rin.bit_count  <= data_max_size_c - nsl_data.cbor.arg_int(r.parser) - 1;
             rin.inside_cmd <= true;
             rin.state      <= ST_CMD_GET; -- going to get the bstr header
-          elsif nsl_data.cbor.arg_int(r.parser) = 8 then -- SHIFT with no TDI
+          elsif nsl_data.cbor.arg_int(r.parser) = TAG_SHIFT_NO_TDI then
             rin.has_tdi    <= false;
             rin.inside_cmd <= true;
             rin.state      <= ST_CMD_GET; -- going to get the number of cycles to shift
-          elsif nsl_data.cbor.arg_int(r.parser) = 9 then -- SHIFT with no TDO
+          elsif nsl_data.cbor.arg_int(r.parser) = TAG_SHIFT_NO_TDO then
             rin.has_tdo    <= false;
             rin.inside_cmd <= true;
             rin.state      <= ST_CMD_GET; -- going to get the data to SHIFT IN
-          elsif nsl_data.cbor.arg_int(r.parser) = 10 then -- reset for N cycles
+          elsif nsl_data.cbor.arg_int(r.parser) = TAG_RESET then -- reset for N cycles
             rin.inside_cmd <= true;
-            rin.state      <= ST_CMD_GET;  -- going to get the number of cycles
-          elsif nsl_data.cbor.arg_int(r.parser) = 11 then -- RTI for N ms
+            rin.state      <= ST_CMD_GET; -- going to get the number of cycles
+          elsif nsl_data.cbor.arg_int(r.parser) = TAG_RUN_MS then
             rin.inside_cmd <= true;
             rin.state      <= ST_CMD_GET; -- going to get the number of ms
           else
@@ -272,11 +285,11 @@ begin
             rin.word_count  <= nsl_data.cbor.arg_int(r.parser);
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_RTI;
             rin.state       <= ST_ATE_RUN;
-          elsif r.tag > 0 and r.tag < 8 then
+          elsif r.tag >= TAG_SHIFT_MINUS1 and r.tag <= TAG_SHIFT_MINUS7 then
             rin.word_count  <= nsl_data.cbor.arg_int(r.parser)-1;
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_SHIFT;
             rin.state     <= ST_RSP_BSTR_HDR_PREP;
-          elsif r.tag = 8 then
+          elsif r.tag = TAG_SHIFT_NO_TDI then
             rin.word_count  <= (nsl_data.cbor.arg_int(r.parser)+7)/8;
             if nsl_data.cbor.arg_int(r.parser) mod 8 = 0 then
               rin.bit_count <= 8;
@@ -285,7 +298,7 @@ begin
             end if;
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_SHIFT;
             rin.state     <= ST_RSP_BSTR_HDR_PREP;
-          elsif r.tag = 10 then
+          elsif r.tag = TAG_RESET then
             rin.cmd_bit_count <= 0;
             rin.word_count  <= nsl_data.cbor.arg_int(r.parser)-1;
             rin.cmd_pending <= nsl_jtag.ate.ATE_OP_RESET;
