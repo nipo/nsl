@@ -40,7 +40,7 @@ package cbor_transactor is
     generic(
       clock_i_hz_c    : natural;
       target_scl_hz_c : natural := 400000;
-      axi_s_cfg_c     : nsl_amba.axi4_stream.config_t
+      stream_config_c : nsl_amba.axi4_stream.config_t
     );
     port(
       clock_i   : in std_ulogic;

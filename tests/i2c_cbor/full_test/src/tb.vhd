@@ -171,10 +171,10 @@ begin
     );
 
   
-  dut: nsl_i2c.cbor_transactor.controller
+  dut: nsl_i2c.cbor_transactor.axi4stream_cbor_i2c_controller
     generic map(
       clock_i_hz_c => 10e7,
-      axi_s_cfg_c  => cfg_c
+      stream_config_c  => cfg_c
       )
     port map(
       clock_i  =>  s_clk,

@@ -12,7 +12,7 @@ entity axi4stream_cbor_i2c_controller is
     generic(
         clock_i_hz_c    : natural range 0 to 100000000;
         target_scl_hz_c : natural range 0 to 400000 := 400000;
-        axi_s_cfg_c     : nsl_amba.axi4_stream.config_t
+        stream_config_c     : nsl_amba.axi4_stream.config_t
     );
     port(
         clock_i     : in std_ulogic;
@@ -31,7 +31,7 @@ end entity;
 architecture beh of axi4stream_cbor_i2c_controller is
 
     constant cbr_hdr_max_size_c    : natural := 4;
-    constant buffer_cfg_c          : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(axi_s_cfg_c, cbr_hdr_max_size_c);
+    constant buffer_cfg_c          : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, cbr_hdr_max_size_c);
     constant clock_cycles_per_us_c : natural := clock_i_hz_c / 1000000;
 
   
@@ -227,15 +227,15 @@ architecture beh of axi4stream_cbor_i2c_controller is
     
 begin
 
-    assert nsl_amba.axi4_stream.byte_count(axi_s_cfg_c, cmd_i) = 1
+    assert nsl_amba.axi4_stream.byte_count(stream_config_c, cmd_i) = 1
       report "AXI-Stream bad data length, must be 1 byte"
       severity failure;
     
-    assert axi_s_cfg_c.has_last = true
+    assert stream_config_c.has_last = true
       report "AXI-Stream configuration incorrect, must have TLAST"
       severity failure;
 
-    assert axi_s_cfg_c.has_ready = true
+    assert stream_config_c.has_ready = true
       report "AXI-Stream configuration incorrect, must have TREADY"
       severity failure;
 
@@ -346,8 +346,8 @@ begin
           rin.timeout       <= 0;
 
         when ST_ARRAY_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
             rin.parser <= nsl_data.cbor.feed(r.parser, data);
             if nsl_data.cbor.is_last(r.parser, data) then
               rin.state <= ST_ARRAY_ENTER;
@@ -372,9 +372,9 @@ begin
           end if;
 
         when ST_CMD_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
-            if nsl_data.cbor.is_last( r.parser, cmd_i.data(0) ) then
+            if nsl_data.cbor.is_last(r.parser, cmd_i.data(0) ) then
               rin.cmd_cancelled <= false;
               rin.state <= ST_CMD_EXEC;
             end if;
@@ -403,8 +403,8 @@ begin
           end if;
 
         when ST_ADDR_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
             rin.parser <= nsl_data.cbor.feed(r.parser, data);
             if nsl_data.cbor.is_last(r.parser, data) then
               rin.state <= ST_ADDR_SET;
@@ -424,8 +424,8 @@ begin
           end if;
 
         when ST_OP_GET =>
-            if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-              data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i));
+            if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+              data := nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i));
               rin.parser <= nsl_data.cbor.feed(r.parser, data);
               if nsl_data.cbor.is_last(r.parser, data) then
                 rin.state <= ST_ADDR_SET_W_R;
@@ -524,7 +524,7 @@ begin
           end if;
        
         when ST_READ_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             rin.state <= ST_READ_END;
           end if;
         
@@ -536,7 +536,7 @@ begin
           end if;
           
         when ST_WRITE_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.data <= cmd_i.data(0);
             if not r.cmd_cancelled then
               rin.state <= ST_WRITE_RUN;
@@ -582,7 +582,7 @@ begin
 
         when ST_POLL_ARRAY_GET =>
           if not nsl_data.cbor.is_done(r.parser) then
-            if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+            if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
               rin.parser <= nsl_data.cbor.feed(r.parser, cmd_i.data(0));
             end if;
           else
@@ -594,13 +594,13 @@ begin
 
         when ST_TIMEOUT_GET =>
           if not nsl_data.cbor.is_done(r.parser) then
-            if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-              rin.parser <= nsl_data.cbor.feed(r.parser, nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(axi_s_cfg_c, cmd_i)));
+            if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+              rin.parser <= nsl_data.cbor.feed(r.parser, nsl_data.bytestream.first_left(nsl_amba.axi4_stream.bytes(stream_config_c, cmd_i)));
             end if;
           else
-            rin.timeout  <= integer( nsl_data.cbor.arg_int(r.parser) * clock_cycles_per_us_c );
+            rin.timeout  <= integer(nsl_data.cbor.arg_int(r.parser) * clock_cycles_per_us_c );
             -- nsl_simulation.logging.log_info("arg is " & nsl_data.text.to_string(nsl_data.cbor.arg_int(r.parser)) );
-            -- nsl_simulation.logging.log_info("Setting r.timeout to " & nsl_data.text.to_string(integer( nsl_data.cbor.arg_int(r.parser) * clock_i_hz_c / 1000000)));
+            -- nsl_simulation.logging.log_info("Setting r.timeout to " & nsl_data.text.to_string(integer(nsl_data.cbor.arg_int(r.parser) * clock_i_hz_c / 1000000)));
             rin.parser   <= nsl_data.cbor.reset;
             rin.state    <= ST_ADDR_GET;
           end if;
@@ -615,12 +615,12 @@ begin
 
 
         when ST_IO_FLUSH_GET =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
             rin.state <= ST_IO_FLUSH_PUT;
           end if;
 
         when ST_IO_FLUSH_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if r.word_count = 0 then
               rin.state <= ST_CMD_GET;
             else
@@ -647,7 +647,7 @@ begin
           rin.state <= ST_RSP_OK_PUT;
           
         when ST_RSP_OK_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             rin.state <= ST_CMD_END;
           end if;
         
@@ -658,7 +658,7 @@ begin
           end if;
         
         when ST_RSP_ANACK_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if r.rw = '1' then
               rin.state <= ST_CMD_END;
             else
@@ -670,13 +670,13 @@ begin
         
         when ST_RSP_DNACK_PREP =>
           if clocker_ready_i = '1' then
-            rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tagged(tag => 2, item => nsl_data.cbor.cbor_positive(value => to_unsigned( r.word_total - r.word_count - 1 , 10 ) )) );
+            rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tagged(tag => 2, item => nsl_data.cbor.cbor_positive(value => to_unsigned(r.word_total - r.word_count - 1 , 10 ) )) );
             rin.state <= ST_RSP_DNACK_PUT;
             rin.last  <= false;
           end if;
           
         when ST_RSP_DNACK_PUT  =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_WRITE_END;
             end if;
@@ -689,7 +689,7 @@ begin
         rin.last  <= false;
         
       when ST_RSP_ARRAY_HDR_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_CMD_GET;
             end if;
@@ -702,7 +702,7 @@ begin
           rin.last  <= false;
 
       when ST_RSP_BSTR_HDR_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             if nsl_amba.axi4_stream.is_last(buffer_cfg_c, r.encoded) then
               rin.state <= ST_READ_RUN;
             end if;
@@ -715,13 +715,13 @@ begin
           rin.state <= ST_RSP_BREAK_PUT;
     
       when ST_RSP_BREAK_PUT =>
-          if nsl_amba.axi4_stream.is_ready(axi_s_cfg_c, rsp_i) then
+          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
             rin.state <= ST_ARRAY_GET;
           end if;
 
       when ST_ERROR_DRAIN =>
-          if nsl_amba.axi4_stream.is_valid(axi_s_cfg_c, cmd_i) then
-            if nsl_amba.axi4_stream.is_last(axi_s_cfg_c, cmd_i) then
+          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
+            if nsl_amba.axi4_stream.is_last(stream_config_c, cmd_i) then
               if r.last then
                 rin.parser <= nsl_data.cbor.reset;
                 rin.state <= ST_ARRAY_GET;
@@ -813,8 +813,8 @@ begin
 
     moore: process (r)
     begin
-      cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, false);
-      rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => axi_s_cfg_c);
+      cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, false);
+      rsp_o <= nsl_amba.axi4_stream.transfer_defaults(cfg => stream_config_c);
 
       shift_enable_o    <= '0';
       shift_send_data_o <= '0';
@@ -832,18 +832,18 @@ begin
         when ST_RESET =>
 
         when ST_ARRAY_GET | ST_CMD_GET | ST_ADDR_GET | ST_OP_GET | ST_ERROR_DRAIN  =>
-          cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+          cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
         when ST_POLL_ARRAY_GET | ST_TIMEOUT_GET =>
           if not nsl_data.cbor.is_done(r.parser) then
-            cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+            cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
           end if;
 
         when ST_WRITE_GET =>
-          cmd_o <= nsl_amba.axi4_stream.accept(axi_s_cfg_c, true);
+          cmd_o <= nsl_amba.axi4_stream.accept(stream_config_c, true);
 
        when ST_READ_PUT =>
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.data) , last => r.last);
+          rsp_o <= nsl_amba.axi4_stream.transfer(cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data) , last => r.last);
           
           
         when ST_ARRAY_ENTER | ST_CMD_EXEC | ST_CMD_END | ST_ADDR_SET | ST_ADDR_SET_W_R | ST_WRITE_END | ST_READ_END =>
@@ -888,7 +888,7 @@ begin
           clocker_cmd_o <= I2C_BUS_STOP;
         
         when ST_RSP_OK_PUT | ST_RSP_ANACK_PUT | ST_RSP_BREAK_PUT =>
-          rsp_o <= nsl_amba.axi4_stream.transfer( cfg => axi_s_cfg_c, bytes => nsl_data.bytestream.from_suv(r.data) , last => r.last);
+          rsp_o <= nsl_amba.axi4_stream.transfer(cfg => stream_config_c, bytes => nsl_data.bytestream.from_suv(r.data) , last => r.last);
 
         when ST_RSP_BSTR_HDR_PUT | ST_RSP_ARRAY_HDR_PUT | ST_RSP_DNACK_PUT =>
           rsp_o <= nsl_amba.axi4_stream.next_beat(cfg => buffer_cfg_c, b => r.encoded, last => r.last);
