@@ -3,9 +3,13 @@ vhdl-sources += framed_to_axi4_stream.vhd
 vhdl-sources += axi4_stream_to_framed.vhd
 vhdl-sources += pipe_to_axi4_stream.vhd
 vhdl-sources += axi4_stream_to_pipe.vhd
+vhdl-sources += committed_to_axi4_stream.vhd
+vhdl-sources += axi4_stream_to_committed.vhd
 
 deps += nsl_bnoc.framed
 deps += nsl_bnoc.pipe
+deps += nsl_bnoc.committed
+deps += nsl_bnoc.packetizer
 deps += nsl_amba.axi4_stream
 deps += nsl_data.bytestream
 deps += nsl_logic.bool
