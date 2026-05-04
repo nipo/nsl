@@ -2181,7 +2181,7 @@ package body axi4_stream is
     variable status : boolean;
   begin
     frame_queue_get(root, rx_frm, dt, timeout, sev);
-    status := rx_frm.data.all = ref_frm.data.all
+    status := std_match(rx_frm.data.all, ref_frm.data.all)
       and rx_frm.id = ref_frm.id
       and rx_frm.user = ref_frm.user
       and rx_frm.dest = ref_frm.dest;
