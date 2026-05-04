@@ -25,11 +25,11 @@ package logging is
   function to_string(level : log_level_t) return string;
 
   function ansi_escape(command : character;
-                       arg0 : integer := - 1;
-                       arg1 : integer := - 1;
-                       arg2 : integer := - 1;
-                       arg3 : integer := - 1;
-                       arg4 : integer := - 1
+                       arg0 : integer := -1;
+                       arg1 : integer := -1;
+                       arg2 : integer := -1;
+                       arg3 : integer := -1;
+                       arg4 : integer := -1
   ) return string;
 
   function ansi_color(color : log_color_t;
@@ -89,11 +89,11 @@ package body logging is
   end procedure;
 
   function ansi_escape(command : character;
-                       arg0 : integer := - 1;
-                       arg1 : integer := - 1;
-                       arg2 : integer := - 1;
-                       arg3 : integer := - 1;
-                       arg4 : integer := - 1) return string
+                       arg0 : integer := -1;
+                       arg1 : integer := -1;
+                       arg2 : integer := -1;
+                       arg3 : integer := -1;
+                       arg4 : integer := -1) return string
     is
   begin
 
