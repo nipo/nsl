@@ -40,17 +40,16 @@ begin
 
   tick_i_hz_s <= 10e7/to_integer(tick_divisor);
   
-  dut: nsl_spi.cbor_transactor.controller
+  dut: nsl_spi.cbor_transactor.axi4stream_cbor_spi_transactor
     generic map(
       clock_i_hz_c   => 10e7,
-      axi_s_cfg_c    => cfg_c,
+      stream_config_c=> cfg_c,
       slave_count_c  => 5
       )
     port map(
       clock_i        => s_clk,
       reset_n_i      => s_resetn,
 
-      tick_i_hz      => tick_i_hz_s,
       tick_i         => tick_s,
 
       sck_o          => spi_master_o_s.sck,
