@@ -2363,6 +2363,7 @@ package body axi4_stream is
     assert false
       report "Timeout while waiting for frame"
       severity sev;
+    frm := frame(null_byte_string);
   end procedure;
 
   procedure frame_queue_master(constant cfg: config_t;
