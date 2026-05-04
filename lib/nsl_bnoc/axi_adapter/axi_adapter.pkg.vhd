@@ -15,6 +15,10 @@ package axi_adapter is
   -- AXI4-Stream configuration matching BNOC pipe abstraction:
   -- 1 byte data width, no last signal (continuous stream)
   constant axi4_stream_pipe_config_c : config_t := config(bytes => 1, last => false);
+  
+  -- AXI4-Stream configuration matching BNOC committed abstraction:
+  -- 1 byte data width, has last signal for frame boundaries
+  constant axi4_stream_committed_config_c : config_t := config(bytes => 1, last => true);
 
   -- Convert BNOC framed to AXI4-Stream
   component framed_to_axi4_stream is
@@ -69,6 +73,40 @@ package axi_adapter is
 
       pipe_o : out nsl_bnoc.pipe.pipe_req_t;
       pipe_i : in nsl_bnoc.pipe.pipe_ack_t
+      );
+  end component;
+
+  -- Convert BNOC committed to AXI4-Stream
+  -- Buffers the entire frame to propagate the validity bit (user(0))
+  -- on every AXI beat.
+  component committed_to_axi4_stream is
+    generic(
+      max_length_l2_c       : natural := 11;
+      max_packet_count_l2_c : natural := 4
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      committed_i : in nsl_bnoc.committed.committed_req_t;
+      committed_o : out nsl_bnoc.committed.committed_ack_t;
+
+      axi_o : out master_t;
+      axi_i : in slave_t
+      );
+  end component;
+  
+  -- Convert AXI4-Stream to BNOC committed
+  component axi4_stream_to_committed is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      axi_i : in master_t;
+      axi_o : out slave_t;
+
+      committed_o : out nsl_bnoc.committed.committed_req_t;
+      committed_i : in nsl_bnoc.committed.committed_ack_t
       );
   end component;
 
