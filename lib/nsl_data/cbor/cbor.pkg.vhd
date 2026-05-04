@@ -70,11 +70,11 @@ package cbor is
   -- with the minimum count of bytes. Passed value is the actual value
   -- (negative).
   function cbor_negative(value: integer) return byte_string;
-  function cbor_negative(value: unsigned) return byte_string;
+  function cbor_negative(value: signed) return byte_string;
   -- Serializes a number, depending on sign of the value parameter, it
   -- spills a positive or negative item
   function cbor_number(value: integer) return byte_string;
-  function cbor_number(value: unsigned) return byte_string;
+  function cbor_number(value: signed) return byte_string;
   -- Serializes a definite byte string (including data)
   function cbor_bstr(value: byte_string) return byte_string;
   -- Serializes a definite text string (including data)
@@ -369,10 +369,10 @@ package body cbor is
     return item_encode(0, to_unsigned_auto(value));
   end function;
 
-  function cbor_negative(value: unsigned) return byte_string
+  function cbor_negative(value: signed) return byte_string
   is
   begin
-    return item_encode(1, value, auto_width => false);
+    return item_encode(1, unsigned(-1-value), auto_width => false);
   end function;
 
   function cbor_negative(value: integer) return byte_string
@@ -381,13 +381,13 @@ package body cbor is
     return item_encode(1, to_unsigned_auto(-value-1));
   end function;
 
-  function cbor_number(value: unsigned) return byte_string
+  function cbor_number(value: signed) return byte_string
   is
   begin
     if value < 0 then
       return cbor_negative(value);
     else
-      return cbor_positive(value);
+      return cbor_positive(unsigned(value));
     end if;
   end function;
 
