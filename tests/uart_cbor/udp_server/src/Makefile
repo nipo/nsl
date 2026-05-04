@@ -6,3 +6,7 @@ deps += nsl_amba.axi4_stream
 deps += nsl_data.cbor
 deps += nsl_simulation.logging
 deps += nsl_simulation.driver
+deps += nsl_simulation.control
+deps += nsl_amba.stream_to_udp
+deps += nsl_amba.stream_fifo
+deps += nsl_data.bytestream

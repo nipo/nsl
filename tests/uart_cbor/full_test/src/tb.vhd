@@ -22,20 +22,23 @@ architecture arch of tb is
   signal s_uart: uart_t;
   signal s_clk, s_rst_n: std_ulogic;
 
-  signal s_cmd, s_rsp : nsl_amba.axi4_stream.bus_t;
+  signal s_ext_rx : std_ulogic := '1';
+  signal s_rx_loopback : boolean := true;
+  signal s_start_rx_inject : boolean := false;
 
+  signal s_cmd, s_rsp : nsl_amba.axi4_stream.bus_t;
   shared variable cmd_q, rsp_q: nsl_amba.axi4_stream.frame_queue_root_t;
 begin
 
-  dut : nsl_uart.transactor.cbor_controller
+  dut : nsl_uart.transactor.axi4stream_cbor_uart_transactor
     generic map(
       system_clock_c => 10e7,
-      axi_s_cfg_c => c_cfg,
+      stream_config_c => c_cfg,
       stop_count_c => 1,
       parity_c => nsl_uart.serdes.PARITY_NONE,
       handshake_active_c => '0',
-      divisor_c => to_unsigned(868, 32), -- 115200 bds
-      timeout_c => to_unsigned(2000, 32), -- timeout in bit time
+      baud_rate_c => to_unsigned(9600, 24),
+      timeout_c => to_unsigned(3000, 24), -- timeout in 2x-baud ticks (150 byte-times)
       bstr_max_size_c => 120
       )
     port map(
@@ -53,7 +56,23 @@ begin
       rsp_i => s_rsp.s
       );
 
-  s_uart.rx <= s_uart.tx;
+  rx_inject: process
+  begin
+    s_ext_rx <= '1';
+    s_rx_loopback <= true;
+    wait until s_start_rx_inject;
+    s_rx_loopback <= false;
+    nsl_uart.testing.uart8_wait(s_ext_rx, 10, 115200);
+
+    -- Send 250 bytes (0x00..0xF9)
+    for i in 0 to 249 loop
+      nsl_uart.testing.uart8_transmit(s_ext_rx, std_ulogic_vector(to_unsigned(i, 8)), 115200);
+    end loop;
+    wait;
+  end process;
+
+  -- uart is looped for most of the tests
+  s_uart.rx <= s_uart.tx when s_rx_loopback else s_ext_rx;
 
   driver : nsl_simulation.driver.simulation_driver
     generic map(
@@ -63,17 +82,18 @@ begin
       )
     port map(
       clock_period(0) => c_clock_period,
-      reset_duration(0) => c_clock_period*2,
+      reset_duration(0) => c_clock_period*8,
       reset_n_o(0) => s_rst_n,
       clock_o(0) => s_clk,
       done_i(0) => '0'
       );
   
+  s_uart.cts <= s_uart.rts;
+  
   stim: process
     variable check_status : boolean := false;
     variable pass_count, fail_count : integer := 0;
   begin
-    s_uart.cts <= '1';  -- CTS active = clear to send
 
     nsl_amba.axi4_stream.frame_queue_init(cmd_q);
     nsl_amba.axi4_stream.frame_queue_init(rsp_q);
@@ -96,15 +116,6 @@ begin
       message => "======================================",
       color => nsl_simulation.logging.LOG_COLOR_CYAN
     );
-    -- nsl_amba.axi4_stream.frame_queue_put(root => cmd_q,
-    --                                      data => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C6363747366706172697479616569626175642D72617465192d00"));
-    -- There's no response to this command, so the configuration changes would
-    -- need to be asserted. Can't do that from here.
-    -- assert()
-    -- wait for 80 ns;
-    -- nsl_simulation.logging.log(level => nsl_simulation.logging.LOG_LEVEL_INFO,
-    --                            message => "============================================== #0 CONFIGURATION SUCCESSFULLY SET" & LF,
-    --                            color => nsl_simulation.logging.LOG_COLOR_GREEN);   
 
     nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
                                               root_slave  => rsp_q,
@@ -112,10 +123,19 @@ begin
                                               data2 => nsl_data.bytestream.from_suv(x"F5"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
     nsl_simulation.logging.log_test_result("Set configuration", check_status, pass_count, fail_count);   
     
+    nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
+                                              root_slave  => rsp_q,
+                                              data1 => nsl_data.bytestream.from_suv(x"F6"),
+                                              data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C6363747366706172697479616569626175642D726174651a0001c200"),
+                                              check_status => check_status,
+                                              dt      => c_clock_period,
+                                              timeout => c_clock_period*100000,
+                                              sev     => warning);
+    nsl_simulation.logging.log_test_result("Retrieve configuration", check_status, pass_count, fail_count);
 
     -- Send "Hello world!" message - with single FSM, F5 comes first then loopback data
     nsl_amba.axi4_stream.frame_queue_put(root => cmd_q,
@@ -126,7 +146,7 @@ begin
                                            data => nsl_data.bytestream.from_suv(x"f5"),
                                            check_status => check_status,
                                            dt      => c_clock_period,
-                                           timeout => c_clock_period*1500000,
+                                           timeout => c_clock_period*150000,
                                            sev     => warning);
     nsl_simulation.logging.log_test_result("Hello world TX confirmation", check_status, pass_count, fail_count);
 
@@ -139,15 +159,17 @@ begin
                                            sev     => warning);
     nsl_simulation.logging.log_test_result("Hello world RX loopback", check_status, pass_count, fail_count);    
 
+    -- Test: Error response - send unsupported CBOR type (array)
+    -- 0x82 0x01 0x02 = array(2) [1, 2] - parser sees KIND_ARRAY, drains remaining bytes, returns F4
     nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
                                               root_slave  => rsp_q,
-                                              data1 => nsl_data.bytestream.from_suv(x"F6"),
-                                              data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C6363747366706172697479616569626175642D726174651a0001c200"),
+                                              data1 => nsl_data.bytestream.from_suv(x"820102"),
+                                              data2 => nsl_data.bytestream.from_suv(x"F4"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
-    nsl_simulation.logging.log_test_result("Retrieve configuration", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Error response (unsupported CBOR type)", check_status, pass_count, fail_count);
 
     -- Test 5: Single byte message
     -- Note: For short messages, TX confirmation (F5) arrives BEFORE RX loopback data
@@ -161,9 +183,9 @@ begin
                                            data => nsl_data.bytestream.from_suv(x"f5"),
                                            check_status => check_status,
                                            dt      => c_clock_period,
-                                           timeout => c_clock_period*1500000,
+                                           timeout => c_clock_period*100000,
                                            sev     => warning);
-    nsl_simulation.logging.log_test_result("Single byte TX confirmation", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Send message, check single byte TX confirmation", check_status, pass_count, fail_count);
 
     -- Then expect RX loopback data: bstr_hdr(1) + data = 59 00 01 xx
     nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
@@ -172,31 +194,31 @@ begin
                                            dt      => c_clock_period,
                                            timeout => c_clock_period*25000000,
                                            sev     => warning);
-    nsl_simulation.logging.log_test_result("Single byte RX loopback", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Sent message, single byte RX loopback", check_status, pass_count, fail_count);
 
-    -- Test 7: Configure no parity
-    -- Command: map(3) {flow-ctrl: "cts", parity: "n", baud-rate: 9600}
-    -- A3 69 "flow-ctrl" 63 "cts" 66 "parity" 61 "n" 69 "baud-rate" 19 2580
+    -- Test 7: Configure no parity (and change baudrate to 57600)
+    -- Command: map(3) {flow-ctrl: "cts", parity: "n", baud-rate: 57600}
+    -- A3 69 "flow-ctrl" 63 "cts" 66 "parity" 61 "n" 69 "baud-rate" 19 E100
     nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
                                               root_slave  => rsp_q,
-                                              data1 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C636374736670617269747961" & x"6e" & x"69626175642D726174651a0001c200"),
+                                              data1 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C636374736670617269747961" & x"6e" & x"69626175642D7261746519E100"),
                                               data2 => nsl_data.bytestream.from_suv(x"F5"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
-    nsl_simulation.logging.log_test_result("Configure no parity", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Configure no parity and change baudrate", check_status, pass_count, fail_count);
 
     -- Test 8: Verify parity change via query
     nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
                                               root_slave  => rsp_q,
                                               data1 => nsl_data.bytestream.from_suv(x"F6"),
-                                              data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C636374736670617269747961" & x"6e" & x"69626175642D726174651a0001c200"),
+                                              data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C636374736670617269747961" & x"6e" & x"69626175642D726174651a0000e100"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
-    nsl_simulation.logging.log_test_result("Verify no parity config", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Verify no parity and new baudrate configuration", check_status, pass_count, fail_count);
 
     -- Test 9: Send message with no parity ("TEST" = 4 bytes)
     -- With single FSM, F5 comes first, then RX loopback data
@@ -208,9 +230,9 @@ begin
                                            data => nsl_data.bytestream.from_suv(x"f5"),
                                            check_status => check_status,
                                            dt      => c_clock_period,
-                                           timeout => c_clock_period*1500000,
+                                           timeout => c_clock_period*100000,
                                            sev     => warning);
-    nsl_simulation.logging.log_test_result("No parity TX confirmation", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Sent message with no parity, receive TX confirmation", check_status, pass_count, fail_count);
 
     -- Then expect RX loopback data
     nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
@@ -219,9 +241,9 @@ begin
                                            dt      => c_clock_period,
                                            timeout => c_clock_period*25000000,
                                            sev     => warning);
-    nsl_simulation.logging.log_test_result("Message with no parity (TEST)", check_status, pass_count, fail_count);
+    nsl_simulation.logging.log_test_result("Sent message with no parity, check received message", check_status, pass_count, fail_count);
 
-    -- Test 11: Configure odd parity
+    -- Test 11: Configure odd parity (and go back to 115200 baudrate)
     -- parity: "o" = 61 6f
     nsl_amba.axi4_stream.frame_queue_check_io(root_master => cmd_q,
                                               root_slave  => rsp_q,
@@ -229,7 +251,7 @@ begin
                                               data2 => nsl_data.bytestream.from_suv(x"F5"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
     nsl_simulation.logging.log_test_result("Configure odd parity", check_status, pass_count, fail_count);
 
@@ -240,9 +262,31 @@ begin
                                               data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C636374736670617269747961" & x"6f" & x"69626175642D726174651a0001c200"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
     nsl_simulation.logging.log_test_result("Verify odd parity config", check_status, pass_count, fail_count);
+
+    -- Test: Send message with odd parity ("OK" = 2 bytes)
+    nsl_amba.axi4_stream.frame_queue_put(root => cmd_q,
+                                         data => nsl_data.bytestream.from_suv(x"424F4B"));
+
+    -- First expect TX confirmation (F5)
+    nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
+                                           data => nsl_data.bytestream.from_suv(x"f5"),
+                                           check_status => check_status,
+                                           dt      => c_clock_period,
+                                           timeout => c_clock_period*100000,
+                                           sev     => warning);
+    nsl_simulation.logging.log_test_result("Odd parity TX confirmation", check_status, pass_count, fail_count);
+
+    -- Then expect RX loopback data
+    nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
+                                           data => nsl_data.bytestream.from_suv(x"5900024F4B"),
+                                           check_status => check_status,
+                                           dt      => c_clock_period,
+                                           timeout => c_clock_period*25000000,
+                                           sev     => warning);
+    nsl_simulation.logging.log_test_result("Odd parity RX loopback", check_status, pass_count, fail_count);
 
     -- Test 13: Configure no flow control
     -- flow-ctrl: "none" = 64 6e6f6e65
@@ -252,7 +296,7 @@ begin
                                               data2 => nsl_data.bytestream.from_suv(x"F5"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
     nsl_simulation.logging.log_test_result("Configure no flow control", check_status, pass_count, fail_count);
 
@@ -263,7 +307,7 @@ begin
                                               data2 => nsl_data.bytestream.from_suv(x"A369666C6F772D6374726C" & x"646e6f6e65" & x"6670617269747961" & x"6e" & x"69626175642D726174651a0001c200"),
                                               check_status => check_status,
                                               dt      => c_clock_period,
-                                              timeout => c_clock_period*1500000,
+                                              timeout => c_clock_period*100000,
                                               sev     => warning);
     nsl_simulation.logging.log_test_result("Verify no flow control config", check_status, pass_count, fail_count);
 
@@ -277,7 +321,7 @@ begin
                                            data => nsl_data.bytestream.from_suv(x"f5"),
                                            check_status => check_status,
                                            dt      => c_clock_period,
-                                           timeout => c_clock_period*1500000,
+                                           timeout => c_clock_period*100000,
                                            sev     => warning);
     nsl_simulation.logging.log_test_result("Special chars TX confirmation", check_status, pass_count, fail_count);
 
@@ -312,6 +356,60 @@ begin
                                            timeout => c_clock_period*25000000,
                                            sev     => warning);
     nsl_simulation.logging.log_test_result("Maximum size message (120 bytes)", check_status, pass_count, fail_count);
+
+    -- Test: Large external RX stream (250 bytes, triggers multiple FIFO flushes)
+    -- Switch from loopback to external RX injection
+    -- At this point: baud=115200, parity=none, 1 stop bit, no flow control
+    s_start_rx_inject <= true;
+    wait for 1 ns;
+    s_start_rx_inject <= false;
+
+    -- Expect bstr(120) with bytes 0x00..0x77
+    nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
+                                           data => nsl_data.bytestream.from_suv(
+                                             x"590078"
+                                             & x"000102030405060708090A0B0C0D0E0F"
+                                             & x"101112131415161718191A1B1C1D1E1F"
+                                             & x"202122232425262728292A2B2C2D2E2F"
+                                             & x"303132333435363738393A3B3C3D3E3F"
+                                             & x"404142434445464748494A4B4C4D4E4F"
+                                             & x"505152535455565758595A5B5C5D5E5F"
+                                             & x"606162636465666768696A6B6C6D6E6F"
+                                             & x"7071727374757677"),
+                                           check_status => check_status,
+                                           dt      => c_clock_period,
+                                           timeout => c_clock_period*25000000,
+                                           sev     => warning);
+    nsl_simulation.logging.log_test_result("External RX first chunk (120 bytes)", check_status, pass_count, fail_count);
+
+    -- Expect bstr(120) with bytes 0x78..0xEF
+    nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
+                                           data => nsl_data.bytestream.from_suv(
+                                             x"590078"
+                                             & x"78797A7B7C7D7E7F"
+                                             & x"808182838485868788898A8B8C8D8E8F"
+                                             & x"909192939495969798999A9B9C9D9E9F"
+                                             & x"A0A1A2A3A4A5A6A7A8A9AAABACADAEAF"
+                                             & x"B0B1B2B3B4B5B6B7B8B9BABBBCBDBEBF"
+                                             & x"C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF"
+                                             & x"D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF"
+                                             & x"E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEF"),
+                                           check_status => check_status,
+                                           dt      => c_clock_period,
+                                           timeout => c_clock_period*25000000,
+                                           sev     => warning);
+    nsl_simulation.logging.log_test_result("External RX second chunk (120 bytes)", check_status, pass_count, fail_count);
+
+    -- Expect bstr(10) with bytes 0xF0..0xF9 (after timeout)
+    nsl_amba.axi4_stream.frame_queue_check(root => rsp_q,
+                                           data => nsl_data.bytestream.from_suv(
+                                             x"59000A"
+                                             & x"F0F1F2F3F4F5F6F7F8F9"),
+                                           check_status => check_status,
+                                           dt      => c_clock_period,
+                                           timeout => c_clock_period*25000000,
+                                           sev     => warning);
+    nsl_simulation.logging.log_test_result("External RX last chunk (10 bytes)", check_status, pass_count, fail_count);
 
     nsl_simulation.logging.log_test_suite_summary("UART CBOR TRANSACTOR TESTS", pass_count, fail_count);
 
