@@ -92,9 +92,9 @@ begin
 
       when IN_HEADER =>
         if packet_i.valid = '1' then
+          rin.in_header(r.in_ctr) <= packet_i.data;
           if r.in_ctr /= header_length_c - 1 then
             rin.in_ctr <= r.in_ctr + 1;
-            rin.in_header(r.in_ctr) <= packet_i.data;
           else
             rin.in_state <= IN_DATA;
           end if;
