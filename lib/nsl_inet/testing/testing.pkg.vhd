@@ -53,6 +53,18 @@ package testing is
   procedure pcap_read(file pcap_file: binary_file; variable header: inout pcap_header_t; packet: out pcap_packet_t);
   procedure pcap_packet_free(packet: inout pcap_packet_t);
 
+  function udp_frame_pack(
+    dest_mac, src_mac : mac48_t;
+    dest_ip, src_ip : ipv4_t;
+    dest_port, src_port : udp_port_t;
+    data : byte_string;
+    min_frame_size_c : natural := 64) return byte_string;
+
+  function arp_reply_frame_pack(
+    dest_mac, src_mac : mac48_t;
+    dest_ip, src_ip : ipv4_t;
+    min_frame_size_c : natural := 64) return byte_string;
+
 end package testing;
 
 package body testing is
@@ -368,5 +380,54 @@ package body testing is
     packet.timestamp := 0 sec;
     packet.original_length := 0;
   end procedure;
+
+  function udp_frame_pack(
+    dest_mac, src_mac : mac48_t;
+    dest_ip, src_ip : ipv4_t;
+    dest_port, src_port : udp_port_t;
+    data : byte_string;
+    min_frame_size_c : natural := 64) return byte_string
+  is
+  begin
+    return frame_pack(
+      dest     => dest_mac,
+      src      => src_mac,
+      ethertype => ethertype_ipv4,
+      payload  => ipv4_pack(
+        destination => dest_ip,
+        source      => src_ip,
+        proto       => ip_proto_udp,
+        data        => udp_pack(
+          destination    => dest_port,
+          source         => src_port,
+          data           => data,
+          destination_ip => dest_ip,
+          source_ip      => src_ip)),
+      min_frame_size_c => min_frame_size_c);
+  end function;
+
+  function arp_reply_frame_pack(
+    dest_mac, src_mac : mac48_t;
+    dest_ip, src_ip : ipv4_t;
+    min_frame_size_c : natural := 64) return byte_string
+  is
+    constant arp_payload : byte_string(0 to 27) :=
+      to_be(to_unsigned(1, 16))       -- HTYPE: Ethernet
+      & to_be(to_unsigned(16#0800#, 16)) -- PTYPE: IPv4
+      & to_byte(6)                     -- HLEN
+      & to_byte(4)                     -- PLEN
+      & to_be(to_unsigned(2, 16))      -- OPER: Reply
+      & src_mac                        -- SHA
+      & src_ip                         -- SPA
+      & dest_mac                       -- THA
+      & dest_ip;                       -- TPA
+  begin
+    return frame_pack(
+      dest     => dest_mac,
+      src      => src_mac,
+      ethertype => ethertype_arp,
+      payload  => arp_payload,
+      min_frame_size_c => min_frame_size_c);
+  end function;
 
 end package body testing;
