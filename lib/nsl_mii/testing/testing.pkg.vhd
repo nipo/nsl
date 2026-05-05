@@ -847,6 +847,8 @@ package body testing is
 
     valid := true;
     data := ret;
+
+    log_debug("* RMII > " & to_string(ret.all) & ", speed: " & to_string(speed));
   end procedure;
 
   procedure rmii_frame_check(

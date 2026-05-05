@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_bnoc, work;
+library nsl_data, nsl_bnoc, work, nsl_amba;
 use nsl_data.bytestream.all;
 use work.link.all;
 
@@ -53,6 +53,32 @@ package rmii is
 
       tx_i : in nsl_bnoc.committed.committed_req;
       tx_o : out nsl_bnoc.committed.committed_ack
+      );
+  end component;
+  
+  component rmii_axi_driver_resync is
+    generic(
+      ipg_c : natural := 96 --bits
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i : in std_ulogic;
+
+      rmii_ref_clock_i: in std_ulogic;
+      rmii_o : out rmii_m2p;
+      rmii_i : in  rmii_p2m;
+
+      link_speed_i: in link_speed_t := LINK_SPEED_100;
+
+      -- In clock_i domain
+      tx_sfd_o : out std_ulogic;
+      rx_sfd_o : out std_ulogic;
+      
+      rx_o : out nsl_amba.axi4_stream.master_t;
+      rx_i : in  nsl_amba.axi4_stream.slave_t;
+
+      tx_i : in  nsl_amba.axi4_stream.master_t;
+      tx_o : out nsl_amba.axi4_stream.slave_t
       );
   end component;
 
