@@ -2,14 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_memory, nsl_logic, nsl_bnoc, nsl_clocking;
+library work, nsl_memory, nsl_logic, nsl_amba, nsl_clocking;
 use nsl_logic.bool.all;
 use work.flit.all;
 use work.rmii.all;
 use nsl_logic.bool.all;
 use work.link.all;
 
-entity rmii_driver_resync is
+entity rmii_axi_driver_resync is
   generic(
     ipg_c : natural := 96 --bits
     );
@@ -25,16 +25,16 @@ entity rmii_driver_resync is
 
     tx_sfd_o : out std_ulogic;
     rx_sfd_o : out std_ulogic;
-    
-    rx_o : out nsl_bnoc.committed.committed_req;
-    rx_i : in nsl_bnoc.committed.committed_ack;
 
-    tx_i : in nsl_bnoc.committed.committed_req;
-    tx_o : out nsl_bnoc.committed.committed_ack
+    rx_o : out nsl_amba.axi4_stream.master_t;
+    rx_i : in  nsl_amba.axi4_stream.slave_t;
+
+    tx_i : in  nsl_amba.axi4_stream.master_t;
+    tx_o : out nsl_amba.axi4_stream.slave_t
     );
 end entity;
 
-architecture beh of rmii_driver_resync is
+architecture beh of rmii_axi_driver_resync is
 
   constant resync_depth_c : integer := 8;
   
@@ -80,8 +80,50 @@ architecture beh of rmii_driver_resync is
 
   signal r, rin: regs_t;
 
-begin
+  -- ILA DEBUG SIGNALS
+  -- attribute mark_debug   : string;
+  -- attribute keep         : string;
+  -- attribute dont_touch   : string;
+  -- attribute fsm_encoding : string;
 
+  -- signal rx_regs_ila: rx_regs_t;
+  -- attribute dont_touch of rx_regs_ila: signal is "true";
+  -- attribute keep       of rx_regs_ila: signal is "user";
+  -- attribute mark_debug of rx_regs_ila: signal is "true";
+  
+  -- signal tx_regs_ila: tx_regs_t;
+  -- attribute dont_touch of tx_regs_ila: signal is "true";
+  -- attribute keep       of tx_regs_ila: signal is "user";
+  -- attribute mark_debug of tx_regs_ila: signal is "true";
+
+  -- signal rx_flit_complete_ila: std_logic;
+  -- attribute dont_touch of rx_flit_complete_ila: signal is "true";
+  -- attribute keep       of rx_flit_complete_ila: signal is "user";
+  -- attribute mark_debug of rx_flit_complete_ila: signal is "true";
+
+  -- signal rx_flit_ila: mii_flit_t;
+  -- attribute dont_touch of rx_flit_ila: signal is "true";
+  -- attribute keep       of rx_flit_ila: signal is "user";
+  -- attribute mark_debug of rx_flit_ila: signal is "true";
+  
+  -- signal rx_valid_ila: std_logic;
+  -- attribute dont_touch of rx_valid_ila: signal is "true";
+  -- attribute keep       of rx_valid_ila: signal is "user";
+  -- attribute mark_debug of rx_valid_ila: signal is "true";
+
+  -- signal rx_sfd_ila: std_logic;
+  -- attribute dont_touch of rx_sfd_ila: signal is "true";
+  -- attribute keep       of rx_sfd_ila: signal is "user";
+  -- attribute mark_debug of rx_sfd_ila: signal is "true";
+  
+begin
+  -- ILA DEBUG SIGNALS
+  -- rx_regs_ila <= r.rx;
+  -- tx_regs_ila <= r.tx;
+  -- rx_flit_complete_ila <= s_rx_flit_complete;
+  -- rx_valid_ila <= rx_valid_s;
+  -- rx_sfd_ila <= rx_sfd_s;
+  
   -- MII Side
   rx_reset_sync: nsl_clocking.async.async_edge
     port map(
@@ -206,8 +248,7 @@ begin
                                                         -- no matter where in
                                                         -- the flit we are
 
-
-  rx_to_committed: work.flit.mii_flit_to_committed
+  rx_to_axi: work.flit.mii_flit_to_axi4_stream
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -215,12 +256,12 @@ begin
       flit_i => rx_flit_s,
       valid_i => rx_valid_s,
 
-      committed_o => rx_o,
-      committed_i => rx_i
+      out_o => rx_o,
+      out_i => rx_i
       );
   
   -- TX side
-  tx_from_committed: work.flit.mii_flit_from_committed
+  tx_from_axi: work.flit.mii_flit_from_axi4_stream
     generic map(
       ipg_c => ipg_c
       )
@@ -228,8 +269,8 @@ begin
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      committed_i => tx_i,
-      committed_o => tx_o,
+      in_i => tx_i,
+      in_o => tx_o,
 
       flit_o => tx_flit_s,
       ready_i => tx_flit_pop_s

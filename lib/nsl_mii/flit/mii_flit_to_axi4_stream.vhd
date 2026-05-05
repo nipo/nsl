@@ -141,6 +141,10 @@ begin
                     if is_ready(axi4_flit_cfg, out_i) then
                         fifo_pop := true;
                     end if;
+                elsif r.in_state = IN_COMMIT and r.fifo_fillness > 0 then
+                    if is_ready(axi4_flit_cfg, out_i) then
+                        fifo_pop := true;
+                    end if;
                 end if;
 
             when OUT_DATA =>
@@ -173,7 +177,7 @@ begin
         end if;
     end process;
 
-    moore : process (r) is
+    moore : process (r, out_i) is
         variable last_v : boolean;
     begin
 
@@ -186,7 +190,8 @@ begin
                 out_o <= transfer(cfg => axi4_flit_cfg,
                          bytes => from_suv(r.fifo(0)),
                          user => (0 => to_logic(r.in_error_seen or r.in_overflow)),
-                         valid => r.fifo_fillness > 1,
+                         valid => r.fifo_fillness > 1
+                                  or (r.fifo_fillness /= 0 and r.in_state = IN_COMMIT),
                          last => last_v);
 
             when OUT_DATA =>
