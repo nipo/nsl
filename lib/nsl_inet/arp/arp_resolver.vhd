@@ -189,13 +189,14 @@ begin
 
         when IN_DATA =>
           if tx_in_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-            fifo_push := true;
             if tx_in_i.last = '1' then
               if tx_in_i.data(0) = '1' then
                 rin.in_state <= IN_COMMIT;
               else
                 rin.in_state <= IN_CANCEL;
               end if;
+            else
+              fifo_push := true;
             end if;
           end if;
 
@@ -412,13 +413,14 @@ begin
 
         when IN_DATA =>
           if rx_in_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-            fifo_push := true;
             if rx_in_i.last = '1' then
               if rx_in_i.data(0) = '1' then
                 rin.in_state <= IN_COMMIT;
               else
                 rin.in_state <= IN_CANCEL;
               end if;
+            else
+              fifo_push := true;
             end if;
           end if;
 
