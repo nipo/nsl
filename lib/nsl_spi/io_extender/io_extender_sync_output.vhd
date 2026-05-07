@@ -31,7 +31,7 @@ architecture beh of io_extender_sync_output is
     );
 
   type regs_t is record
-    last_value, shreg, data_in: std_ulogic_vector(0 to data_i'length-1);
+    last_value, shreg: std_ulogic_vector(0 to data_i'length-1);
     state: state_t;
     changed: boolean;
     bit_ctr: natural range 0 to data_i'length-1;
@@ -58,7 +58,6 @@ begin
 
     if data_i /= r.last_value then
       rin.changed <= true;
-      rin.data_in <= data_i;
     end if;
     
     case r.state is
@@ -71,8 +70,8 @@ begin
         end if;
 
       when STATE_START =>
-        rin.last_value <= r.data_in;
-        rin.shreg <= r.data_in;
+        rin.last_value <= data_i;
+        rin.shreg <= data_i;
         rin.changed <= false;
         rin.state <= STATE_SHIFT_LOW;
         rin.bit_ctr <= data_i'length - 1;
