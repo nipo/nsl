@@ -33,6 +33,10 @@ entity axi4stream_cbor_uart_transactor is
 end entity;
 
 architecture rtl of axi4stream_cbor_uart_transactor is
+  function char_to_ulogic(c : character) return std_ulogic_vector is
+  begin
+    return std_ulogic_vector(to_unsigned(character'pos(c), 8));
+  end function;
 
   constant OP_SUCCESS : std_ulogic_vector(7 downto 0) := X"F5";
   constant OP_FAILURE : std_ulogic_vector(7 downto 0) := X"F4";
@@ -52,6 +56,7 @@ architecture rtl of axi4stream_cbor_uart_transactor is
   constant BAUD_RATE_STR_C : string := "baud-rate";
   constant NONE_STR_C      : string := "none";
   constant CTS_STR_C       : string := "cts";
+  constant XON_STR_C       : string := "xon";
   constant N_STR_C         : string := "n";
   constant E_STR_C         : string := "e";
   constant O_STR_C         : string := "o";
@@ -224,29 +229,29 @@ begin
       when ST_CONFIG_STR_GET =>
         if cmd_i.valid = '1' then
           if r.map_state = MAP_KEY then
-            if r.len = 9 and cmd_i.data(0) = x"66" then     -- 'f' = flow-ctrl
+            if r.len = FLOW_CTRL_STR_C'length and cmd_i.data(0) = char_to_ulogic(FLOW_CTRL_STR_C(1)) then
               rin.map_state <= MAP_KEY_FC;
-            elsif r.len = 6 and cmd_i.data(0) = x"70" then  -- 'p' = parity
+            elsif r.len = PARITY_STR_C'length and cmd_i.data(0) = char_to_ulogic(PARITY_STR_C(1)) then
               rin.map_state <= MAP_KEY_PAR;
-            elsif r.len = 9 and cmd_i.data(0) = x"62" then  -- 'b' = baud-rate
+            elsif r.len = BAUD_RATE_STR_C'length and cmd_i.data(0) = char_to_ulogic(BAUD_RATE_STR_C(1)) then
               rin.map_state <= MAP_KEY_BR;
             end if;
 
           elsif r.map_state = MAP_VAL_FC then
-            if r.len = 4 and cmd_i.data(0) = x"6E" then     -- 'n' = none
+            if r.len = NONE_STR_C'length and cmd_i.data(0) = char_to_ulogic(NONE_STR_C(1)) then
               rin.hs <= '0';
-            elsif r.len = 3 and cmd_i.data(0) = x"63" then  -- 'c' = cts
+            elsif r.len = CTS_STR_C'length and cmd_i.data(0) = char_to_ulogic(CTS_STR_C(1)) then
               rin.hs <= '1';
-            elsif r.len = 3 and cmd_i.data(0) = x"78" then  -- 'x' = xon
+            elsif r.len = XON_STR_C'length and cmd_i.data(0) = char_to_ulogic(XON_STR_C(1)) then
               rin.hs <= '0';
             end if;
 
           elsif r.map_state = MAP_VAL_PAR then
-            if cmd_i.data(0) = x"6E" then      -- 'n' = none
+            if cmd_i.data(0) = char_to_ulogic(N_STR_C(1)) then
               rin.parity <= nsl_uart.serdes.PARITY_NONE;
-            elsif cmd_i.data(0) = x"65" then   -- 'e' = even
+            elsif cmd_i.data(0) = char_to_ulogic(E_STR_C(1)) then
               rin.parity <= nsl_uart.serdes.PARITY_EVEN;
-            elsif cmd_i.data(0) = x"6F" then   -- 'o' = odd
+            elsif cmd_i.data(0) = char_to_ulogic(O_STR_C(1)) then
               rin.parity <= nsl_uart.serdes.PARITY_ODD;
             end if;
 
