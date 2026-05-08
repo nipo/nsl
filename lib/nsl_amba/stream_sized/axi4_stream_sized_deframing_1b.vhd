@@ -84,7 +84,6 @@ architecture rtl of axi4_stream_sized_deframing_1b is
     -- count = N-1, which is the off-by-one header value directly.
     count      : unsigned(31 downto 0);
     header_idx : natural range 0 to 3;
-    first_byte : boolean;
     -- Sideband captured from the first byte of each input frame, replayed
     -- on the header bytes.
     cap        : master_t;
@@ -117,16 +116,14 @@ begin
       when STATE_RESET =>
         rin.state      <= STATE_DATA;
         rin.count      <= (others => '1');
-        rin.first_byte <= true;
         rin.header_idx <= 0;
 
       when STATE_DATA =>
         if is_valid(in_config_c, in_i) and is_ready(fifo_config_c, fifo_in_ss) then
-          if r.first_byte then
-            rin.cap        <= in_i;
-            rin.first_byte <= false;
-          end if;
           rin.count <= r.count + 1;
+          if r.count = r.count'high then
+            rin.cap <= in_i;
+          end if;
           if is_last(in_config_c, in_i) then
             rin.state      <= STATE_HEADER;
             rin.header_idx <= 0;
@@ -148,7 +145,6 @@ begin
           if r.count = 0 then
             rin.state      <= STATE_DATA;
             rin.count      <= (others => '1');
-            rin.first_byte <= true;
           else
             rin.count <= r.count - 1;
           end if;
