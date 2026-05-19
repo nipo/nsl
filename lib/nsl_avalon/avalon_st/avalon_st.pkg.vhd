@@ -241,6 +241,33 @@ package avalon_st is
       );
   end component;
 
+  -- Width adapter between two Avalon-ST interfaces that differ only on
+  -- symbols_per_beat. The aspect ratio must be integer (one side's
+  -- symbols_per_beat divides the other's). All other config fields,
+  -- including data_bits_per_symbol, must match. Both sides must have
+  -- ready_latency = 0 and has_ready = true.
+  --
+  -- packet_user is latched on widening (carried from any input beat
+  -- of the group, taken from the latest accepted beat) and repeated
+  -- on narrowing. channel and error follow the same scheme.
+  -- symbol_user is shifted along with its symbol.
+  component avalon_st_width_adapter is
+    generic(
+      in_config_c  : config_t;
+      out_config_c : config_t
+      );
+    port(
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in  source_t;
+      in_o : out sink_t;
+
+      out_o : out source_t;
+      out_i : in  sink_t
+      );
+  end component;
+
   -- Bridges between two Avalon-ST interfaces that differ only in
   -- ready_latency (and consequently ready_allowance, which must equal
   -- ready_latency on both sides per the spec default). All other

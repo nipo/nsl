@@ -73,9 +73,13 @@ begin
       wait until falling_edge(in_clock_s);
 
       beat_v := prbs_byte_string(state_v, prbs31, 4);
+      state_v := prbs_forward(state_v, prbs31, 4*8);
       ch_v   := prbs_bit_string(state_v, prbs31, 3);
+      state_v := prbs_forward(state_v, prbs31, 3);
       pu_v   := prbs_bit_string(state_v, prbs31, 5);
+      state_v := prbs_forward(state_v, prbs31, 5);
       su_v   := prbs_bit_string(state_v, prbs31, 8);
+      state_v := prbs_forward(state_v, prbs31, 8);
 
       input_s.src <= transfer(cfg_c,
                               bytes       => beat_v,
@@ -85,7 +89,6 @@ begin
                               valid       => true,
                               sop         => n_v = 0,
                               eop         => n_v = beat_count_c - 1);
-      state_v := prbs_forward(state_v, prbs31, 4*8 + 3 + 5 + 8);
 
       -- Wait until the FIFO has accepted the beat this cycle.
       wait until rising_edge(in_clock_s);
@@ -121,10 +124,13 @@ begin
 
       if output_s.src.valid = '1' then
         beat_v := prbs_byte_string(state_v, prbs31, 4);
+        state_v := prbs_forward(state_v, prbs31, 4*8);
         ch_v   := prbs_bit_string(state_v, prbs31, 3);
+        state_v := prbs_forward(state_v, prbs31, 3);
         pu_v   := prbs_bit_string(state_v, prbs31, 5);
+        state_v := prbs_forward(state_v, prbs31, 5);
         su_v   := prbs_bit_string(state_v, prbs31, 8);
-        state_v := prbs_forward(state_v, prbs31, 4*8 + 3 + 5 + 8);
+        state_v := prbs_forward(state_v, prbs31, 8);
 
         assert_equal("beat "&integer'image(n_v),
                      bytes(cfg_c, output_s.src), beat_v, failure);

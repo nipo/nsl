@@ -1,5 +1,6 @@
 vhdl-sources += avalon_st.pkg.vhd
 vhdl-sources += avalon_st_ready_latency_adapter.vhd
+vhdl-sources += avalon_st_width_adapter.vhd
 
 deps += nsl_math.arith
 deps += nsl_logic.bool
