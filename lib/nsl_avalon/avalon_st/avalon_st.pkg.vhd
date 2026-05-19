@@ -241,6 +241,32 @@ package avalon_st is
       );
   end component;
 
+  -- Bridges between two Avalon-ST interfaces that differ only in
+  -- ready_latency (and consequently ready_allowance, which must equal
+  -- ready_latency on both sides per the spec default). All other
+  -- config fields must match.
+  --
+  -- has_ready handling: if out_config_c.has_ready is true,
+  -- in_config_c.has_ready must also be true. When in/out ready
+  -- latencies are equal, the adapter degenerates to wire-through and
+  -- any has_ready combination is allowed.
+  component avalon_st_ready_latency_adapter is
+    generic(
+      in_config_c  : config_t;
+      out_config_c : config_t
+      );
+    port(
+      clock_i   : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in  source_t;
+      in_o : out sink_t;
+
+      out_o : out source_t;
+      out_i : in  sink_t
+      );
+  end component;
+
 end package;
 
 package body avalon_st is
