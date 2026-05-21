@@ -1,4 +1,5 @@
 tb += committed_header
+tb += committed_filter
 tb += committed_padder
 tb += crc
 tb += framed_router
