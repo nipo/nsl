@@ -46,7 +46,16 @@ architecture beh of xonxoff_rx is
 
   signal r, rin: regs_t;
 
+  -- An incoming byte that is an XON/XOFF flow-control symbol. Such bytes are
+  -- out-of-band: they must be interpreted and consumed even when the rx fifo
+  -- is full, otherwise a stalled rx path would permanently mask the peer's
+  -- keepalive and leave peer_ready latched low.
+  signal flow_control_s : boolean;
+
 begin
+
+  flow_control_s <= enable_i = '1' and serdes_i.valid = '1'
+                    and (serdes_i.data = xon_c or serdes_i.data = xoff_c);
 
   regs: process(reset_n_i, clock_i) is
   begin
@@ -61,7 +70,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, rx_i, serdes_i, enable_i) is
+  transition: process(r, rx_i, serdes_i, enable_i, flow_control_s) is
     variable fifo_push, fifo_pop: boolean;
   begin
     rin <= r;
@@ -81,20 +90,13 @@ begin
       end if;
     end if;
 
-    if enable_i = '1' then
-      if serdes_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
-        if serdes_i.data = xon_c then
-          rin.timeout <= timeout_after_real_c;
-          rin.peer_ready <= '1';
-        elsif serdes_i.data = xoff_c then
-          rin.timeout <= timeout_after_real_c;
-          rin.peer_ready <= '0';
-        else
-          fifo_push := true;
-        end if;
-      end if;
-    else
-      fifo_push := serdes_i.valid = '1' and r.fifo_fillness < fifo_depth_c;
+    if flow_control_s then
+      -- XON/XOFF is consumed here, never pushed to the fifo, regardless of
+      -- fifo fullness.
+      rin.timeout <= timeout_after_real_c;
+      rin.peer_ready <= to_logic(serdes_i.data = xon_c);
+    elsif serdes_i.valid = '1' and r.fifo_fillness < fifo_depth_c then
+      fifo_push := true;
     end if;
     
     if fifo_push and fifo_pop then
@@ -109,7 +111,7 @@ begin
     end if;
   end process;
 
-  serdes_o <= pipe_accept(r.fifo_fillness < fifo_depth_c);
+  serdes_o <= pipe_accept(flow_control_s or r.fifo_fillness < fifo_depth_c);
   rx_o <= pipe_flit(r.fifo(0), r.fifo_fillness /= 0);
   peer_ready_o <= r.peer_ready or not enable_i;
   rx_ready_o <= to_logic(r.fifo_fillness < 2);
