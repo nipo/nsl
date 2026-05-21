@@ -79,7 +79,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, in_i, in_ready_s, in_free_s) is
+  transition: process(r, in_i, in_ready_s) is
   begin
     rin <= r;
 
@@ -88,12 +88,19 @@ begin
         rin.state <= ST_FILL;
 
       when ST_FILL =>
-        if in_free_s = 0 and in_ready_s = '0' then
-          if in_i.valid = '1' and in_i.last = '1' then
-            rin.state <= ST_CANCEL;
-          else
-            rin.state <= ST_OVERFLOW;
-          end if;
+        -- in_ready_s tracks the speculative write pointer, so it goes low as
+        -- soon as a single in-progress frame fills the buffer. in_free_s is
+        -- measured from the committed write pointer, which does not move
+        -- during a fill, so it must not gate overflow detection: a frame
+        -- larger than the buffer would otherwise wedge ST_FILL forever.
+        --
+        -- Overflow always routes through ST_OVERFLOW, even when the
+        -- overflowing flit is the last one. ST_FILL does not assert
+        -- in_o.ready while full, so that flit is still pending; ST_OVERFLOW
+        -- asserts in_o.ready and drains it. Jumping straight to ST_CANCEL
+        -- would leave it unconsumed and have it mis-parsed as a new frame.
+        if in_ready_s = '0' then
+          rin.state <= ST_OVERFLOW;
         else
           if in_i.valid = '1' and in_i.last = '1' then
             if in_i.data(0) = '1' then
