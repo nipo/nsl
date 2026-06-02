@@ -432,12 +432,17 @@ package body fixed is
   begin
     if as_int <= 0 or w <= 0 then
       return sat_min;
-    elsif as_int >= (2 ** w) - 1 then
-      return sat_max;
-    else
-      ret := ufixed(to_unsigned(as_int, w));
-      return ret;
     end if;
+    -- Skip the saturation check when 2**w would overflow VHDL integer:
+    -- saturation is unreachable since as_int is itself bounded by
+    -- integer'high < 2**w - 1 for w >= 31.
+    if w < 31 then
+      if as_int >= (2 ** w) - 1 then
+        return sat_max;
+      end if;
+    end if;
+    ret := ufixed(to_unsigned(as_int, w));
+    return ret;
   end function;
 
   function to_real(value : ufixed) return real
