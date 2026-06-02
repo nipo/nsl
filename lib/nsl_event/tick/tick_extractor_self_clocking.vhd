@@ -2,15 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_clocking;
+library nsl_math, nsl_clocking, work;
 use nsl_math.fixed.all;
+use work.tick.all;
 
 entity tick_extractor_self_clocking is
   generic(
     debounce_count_c: natural := 0;
     period_max_c : natural range 4 to integer'high;
     run_length_max_c : natural := 3;
-    tick_learn_c: natural := 64
+    tick_learn_c: natural := 64;
+    edge_filter_c : edge_filter_t := EDGE_FILTER_BOTH
     );
   port(
     clock_i : in  std_ulogic;
@@ -38,7 +40,7 @@ architecture beh of tick_extractor_self_clocking is
 
     to_180: integer range 0 to period_max_c;
 
-    last_tick, changed: std_ulogic;
+    last_value: std_ulogic;
   end record;
   
   signal r, rin : regs_t;
@@ -60,18 +62,29 @@ begin
   end process;
 
   transition: process(r, signal_i, reset_i, enable_i) is
+    variable changed: std_ulogic;
   begin
     rin <= r;
 
-    rin.last_tick <= signal_i;
-    rin.changed <= r.last_tick xor signal_i;
+    rin.last_value <= signal_i;
+
+    case edge_filter_c is
+      when EDGE_FILTER_BOTH =>
+        changed := r.last_value xor signal_i;
+      when EDGE_FILTER_RISING =>
+        changed := (not r.last_value) and signal_i;
+      when EDGE_FILTER_FALLING =>
+        changed := r.last_value and (not signal_i);
+      when EDGE_FILTER_TICK =>
+        changed := signal_i;
+    end case;
 
     if enable_i = '0' then
       rin.ref_period_valid <= false;
       rin.learn_period <= period_max_c;
       rin.learn_to_go <= tick_learn_c - 1;
       rin.learn_counter <= 0;
-    elsif r.changed = '1' then
+    elsif changed = '1' then
       rin.learn_counter <= 0;
       if r.learn_period >= r.learn_counter then
         rin.learn_period <= r.learn_counter;
@@ -103,10 +116,10 @@ begin
     if not r.ref_period_valid then
       rin.to_180 <= 0;
     else
-      if r.changed = '1' then
+      if changed = '1' then
         rin.to_180 <= r.ref_period / 2 - 1;
       elsif r.to_180 = 0 then
-        rin.to_180 <= r.ref_period;
+        rin.to_180 <= r.ref_period - 1;
       else
         rin.to_180 <= r.to_180 - 1;
       end if;

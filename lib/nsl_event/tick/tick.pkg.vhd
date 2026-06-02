@@ -8,6 +8,22 @@ use nsl_math.fixed.all;
 -- Tick-based clocking
 package tick is
 
+  -- Which input transitions a self-clocking extractor should consider
+  -- as periodic events. EDGE_FILTER_BOTH measures the interval between
+  -- successive transitions (the default, suitable for fully
+  -- self-clocking signals like Manchester). EDGE_FILTER_RISING and
+  -- EDGE_FILTER_FALLING restrict the measurement to a single edge
+  -- polarity, which is useful when only one edge type is periodic
+  -- (e.g. NTDP, where rising edges sit at carrier-cycle boundaries
+  -- while falling edges carry duty-cycle data).
+  -- Finally, tick mode only considers cycle with input=1.
+  type edge_filter_t is (
+    EDGE_FILTER_BOTH,
+    EDGE_FILTER_RISING,
+    EDGE_FILTER_FALLING,
+    EDGE_FILTER_TICK
+    );
+
   -- Fractional tick generator. Asserts tick_o for exactly one cycle every
   -- period_i cycles on average (period is a fixed point value here).
   component tick_generator is
@@ -58,7 +74,8 @@ package tick is
     generic(
       period_max_c : natural range 4 to integer'high;
       run_length_max_c : natural := 3;
-      tick_learn_c: natural := 64
+      tick_learn_c: natural := 64;
+      edge_filter_c : edge_filter_t := EDGE_FILTER_BOTH
       );
     port(
       clock_i : in  std_ulogic;
