@@ -14,6 +14,7 @@ package clock is
       reset_n_i : in std_ulogic;
 
       sub_nanosecond_inc_i: in ufixed;
+      inc_valid_i: in std_ulogic := '1';
 
       nanosecond_adj_i: in timestamp_nanosecond_offset_t := (others => '0');
       nanosecond_adj_set_i: in std_ulogic := '0';

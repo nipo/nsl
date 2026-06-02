@@ -12,6 +12,11 @@ entity clock_adjustable is
     reset_n_i : in std_ulogic;
 
     sub_nanosecond_inc_i: in ufixed;
+    -- Optional tick enable for the sub-nanosecond increment. When low,
+    -- the increment is held off for this cycle, but timestamp_set and
+    -- nanosecond_adj still apply. Default '1' keeps the historical
+    -- always-running behavior.
+    inc_valid_i: in std_ulogic := '1';
 
     nanosecond_adj_i: in timestamp_nanosecond_offset_t := (others => '0');
     nanosecond_adj_set_i: in std_ulogic := '0';
@@ -79,6 +84,7 @@ begin
 
   transition: process(r,
                       sub_nanosecond_inc_i,
+                      inc_valid_i,
                       nanosecond_adj_i,
                       nanosecond_adj_set_i,
                       timestamp_i,
@@ -95,9 +101,15 @@ begin
     -- Register sub-nanosecond increment
     rin.subns_increment <= resize(sub_nanosecond_inc_i, rin.subns_increment'left, rin.subns_increment'right);
 
-    -- Accumulate sub-nanoseconds
-    subns_sum := resize(r.subns_increment, subns_sum'left, subns_sum'right)
-                 + resize(r.subns_accumulator, subns_sum'left, subns_sum'right);
+    -- Accumulate sub-nanoseconds, gated by inc_valid_i
+    if timestamp_set_i = '1' then
+      subns_sum := resize(r.subns_increment, subns_sum'left, subns_sum'right);
+    elsif inc_valid_i = '1' then
+      subns_sum := resize(r.subns_increment, subns_sum'left, subns_sum'right)
+                   + resize(r.subns_accumulator, subns_sum'left, subns_sum'right);
+    else
+      subns_sum := resize(r.subns_accumulator, subns_sum'left, subns_sum'right);
+    end if;
 
     -- Extract integer / fractional parts
     rin.subns_accumulator <= subns_sum(rin.subns_accumulator'range);
@@ -129,12 +141,12 @@ begin
     if r.ns_accumulator < r.ns_increment_th_under then
       rin.ns_accumulator <= r.ns_accumulator + r.ns_increment_plus_sec_value;
       rin.s_increment <= "11"; -- -1
-    elsif r.ns_accumulator < r.ns_increment_th_over then
-      rin.ns_accumulator <= r.ns_accumulator + r.ns_increment_value;
-      rin.s_increment <= "00"; -- 0
-    else
+    elsif r.ns_accumulator >= r.ns_increment_th_over then
       rin.ns_accumulator <= r.ns_accumulator + r.ns_increment_minus_sec_value;
       rin.s_increment <= "01"; -- +1
+    else
+      rin.ns_accumulator <= r.ns_accumulator + r.ns_increment_value;
+      rin.s_increment <= "00"; -- 0
     end if;
 
     rin.ns_accumulator_resync <= r.ns_accumulator;
@@ -149,6 +161,7 @@ begin
       rin.ns_accumulator_resync <= resize(ns_acc_override_s, rin.ns_accumulator_resync'left, rin.ns_accumulator_resync'right);
       rin.s_accumulator <= s_acc_override;
       rin.abs_change <= '1';
+      rin.s_increment <= "00";
     end if;
   end process;
 
