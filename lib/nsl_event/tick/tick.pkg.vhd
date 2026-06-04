@@ -64,6 +64,18 @@ package tick is
       );
   end component;
 
+  component tick_180_generator is
+    port(
+      clock_i    : in  std_ulogic;
+      reset_n_i  : in  std_ulogic;
+
+      period_i : in ufixed;
+      
+      tick_i   : in std_ulogic;
+      tick_o   : out std_ulogic
+      );
+  end component;
+
   -- Recovers an UI tick from a self-clocking signal and asserts a
   -- tick phase shifted at 180 deg once block is confident enough
   -- about the stability of the measurement.
