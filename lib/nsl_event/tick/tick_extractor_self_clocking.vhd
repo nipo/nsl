@@ -96,6 +96,8 @@ begin
         if r.learn_counter < period_max_c then
           rin.ref_period_valid <= true;
           rin.ref_period <= r.learn_period + 1;
+        else
+          rin.ref_period_valid <= false;
         end if;
 
         rin.learn_period <= period_max_c;

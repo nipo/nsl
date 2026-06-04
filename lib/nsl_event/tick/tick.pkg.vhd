@@ -161,7 +161,9 @@ package tick is
       reset_n_i : in std_ulogic;
       tick_i : in std_ulogic;
       -- Expressed in clock_i cycles
-      period_o : out ufixed
+      period_o : out ufixed;
+      -- Whether period is stable
+      locked_o : out std_ulogic
       );
   end component;
 

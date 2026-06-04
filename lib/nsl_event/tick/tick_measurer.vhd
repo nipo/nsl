@@ -13,7 +13,8 @@ entity tick_measurer is
     clock_i : in  std_ulogic;
     reset_n_i : in std_ulogic;
     tick_i : in std_ulogic;
-    period_o : out ufixed
+    period_o : out ufixed;
+    locked_o : out std_ulogic
     );
 end tick_measurer;
 
@@ -25,10 +26,13 @@ architecture rtl of tick_measurer is
   record
     counter: ufixed(unit_c'range);
     period: ufixed(unit_c'range);
+    average_period: ufixed(period_o'range);
+    delta: ufixed(2 downto 0);
     valid: std_ulogic;
   end record;
 
   signal r, rin : regs_t;
+  signal period_s : ufixed(period_o'range);
 
 begin
 
@@ -45,10 +49,12 @@ begin
     end if;
   end process;
 
-  transition: process(r, tick_i) is
+  transition: process(r, tick_i, period_s) is
+    
   begin
     rin <= r;
 
+    rin.average_period <= period_s;
     rin.valid <= tick_i;
     if r.valid = '1' then
       rin.counter <= unit_c;
@@ -56,6 +62,8 @@ begin
     else
       rin.counter <= r.counter + unit_c;
     end if;
+
+    rin.delta <= resize(abs(sub_saturate(r.average_period, period_s)), rin.delta'left, rin.delta'right);
   end process;
 
   rc: nsl_dsp.rc.rc_ufixed
@@ -67,7 +75,10 @@ begin
       reset_n_i => reset_n_i,
       valid_i => r.valid,
       in_i => r.counter,
-      out_o => period_o
+      out_o => period_s
       );
+
+  period_o <= period_s;
+  locked_o <= '1' when r.delta <= 1.0 else '0';
 
 end rtl;
