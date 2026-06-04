@@ -54,7 +54,7 @@ define ghdl-compile-rules
 endef
 
 define ghdl-run-rules
-	./$< $1
+	./$< --ieee-asserts=disable $1
 endef
 
 else
@@ -75,7 +75,7 @@ define ghdl-compile-rules
 endef
 
 define ghdl-run-rules
-	./$< $(foreach x,$(topcell-generics),-g$x) $(foreach l,$(all-vpi-plugins),--vpi=$l) $1
+	./$< --ieee-asserts=disable $(foreach x,$(topcell-generics),-g$x) $(foreach l,$(all-vpi-plugins),--vpi=$l) $1
 endef
 
 endif
