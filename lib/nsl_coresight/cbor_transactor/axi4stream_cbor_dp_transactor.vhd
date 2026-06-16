@@ -701,7 +701,7 @@ architecture rtl of axi4stream_cbor_dp_transactor is
         end if;
 
       when ST_RSP_READ_HDR_PREP =>
-        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, byte_string'(nsl_data.cbor.cbor_array_hdr(3)) & byte_string'(nsl_data.cbor.cbor_bstr_hdr));
+        rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, byte_string'(nsl_data.cbor.cbor_array_hdr(3)) & byte_string'(nsl_data.cbor.cbor_bstr_hdr(-1)));
         -- array header for 3 items
         -- indefinite length bytestream header
         rin.state <= ST_RSP_READ_HDR_PUT;

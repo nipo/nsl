@@ -314,7 +314,7 @@ begin
           end if;
 
         else
-          nsl_simulation.logging.log_warning("Unknown CBOR type: " & nsl_data.cbor.kind_t'image(nsl_data.cbor.kind(r.parser)) & ", draining frame");
+          --nsl_simulation.logging.log_warning("Unknown CBOR type: " & nsl_data.cbor.kind_t'image(nsl_data.cbor.kind(r.parser)) & ", draining frame");
           rin.last  <= false;
           rin.state <= ST_ERROR_DRAIN;
         end if;
