@@ -30,4 +30,11 @@ vhdl-sources += ddr_input_gowin.vhd
 vhdl-sources += ddr_output_gowin.vhd
 endif
 
+ifneq ($(filter altera,$(hwdep)),)
+ifneq ($(filter A5E%,$(target_part)),)
+vhdl-sources += ddr_input_altera_10nm.vhd
+vhdl-sources += ddr_output_altera_10nm.vhd
+endif
+endif
+
 deps += nsl_io.diff
