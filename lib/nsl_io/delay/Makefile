@@ -1,5 +1,6 @@
 vhdl-sources += delay.pkg.vhd
 vhdl-sources += input_delay_aligner.vhd
+vhdl-sources += input_delay_aligner_slow.vhd
 vhdl-sources += input_bus_delay_fixed.vhd
 vhdl-sources += output_bus_delay_fixed.vhd
 deps += nsl_math.arith

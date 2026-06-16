@@ -73,9 +73,6 @@ architecture beh of lane_receiver is
   signal data_s: nsl_line_coding.ibm_8b10b.data_t;
   signal code_error_s, disparity_error_s: std_ulogic;
 
-  attribute mark_debug : string;
-  attribute mark_debug of r : signal is "true";
-
 begin
 
   regs: process(clock_i, reset_n_i) is

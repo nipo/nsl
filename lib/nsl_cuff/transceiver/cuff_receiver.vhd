@@ -38,7 +38,7 @@ begin
   begin
     with_aligner: if has_input_alignment_c
     generate
-      aligner: nsl_io.delay.input_delay_aligner
+      aligner: nsl_io.delay.input_delay_aligner_slow
         generic map(
           stabilization_delay_c => 7,
           stabilization_cycle_c => 6
