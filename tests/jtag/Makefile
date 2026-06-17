@@ -5,7 +5,4 @@ hwdep = simulation
 
 include ../../build/build.mk
 
-$(target): ate_responses.txt ate_commands.txt
-
-ate_responses.txt ate_commands.txt: txn_gen
-	./$< $@
+$(target):

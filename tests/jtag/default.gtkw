@@ -1,0 +1,91 @@
+[*]
+[*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
+[*] Wed Jun 17 17:16:50 2026
+[*]
+[dumpfile] "/home/nipo/projects/nsl/tests/jtag/tb.ghw"
+[dumpfile_mtime] "Wed Jun 17 17:14:55 2026"
+[dumpfile_size] 534760
+[savefile] "/home/nipo/projects/nsl/tests/jtag/default.gtkw"
+[timestart] 28484000000
+[size] 2216 1179
+[pos] -1 -1
+*-28.738708 614000000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[treeopen] top.tb.
+[treeopen] top.tb.ate.
+[treeopen] top.tb.ate.ate_impl.
+[treeopen] top.tb.ate.ate_impl.ate.
+[treeopen] top.tb.ate.ate_io_s.
+[treeopen] top.tb.dut.
+[treeopen] top.tb.dut.tap.
+[treeopen] top.tb.dut.tap.controller.
+[sst_width] 238
+[signals_width] 300
+[sst_expanded] 1
+[sst_vpaned_height] 359
+@28
+top.tb.ate_o.tck
+top.tb.ate_o.tdi.en
+top.tb.ate_o.tdi.v
+top.tb.ate_o.tms
+top.tb.ate_o.trst
+top.tb.ate_i.tdo
+@800200
+-IO
+@28
+top.tb.ate.ate_io_s.cmd.ack.ready
+@22
+#{top.tb.ate.ate_io_s.cmd.req.data[7:0]} top.tb.ate.ate_io_s.cmd.req.data[7] top.tb.ate.ate_io_s.cmd.req.data[6] top.tb.ate.ate_io_s.cmd.req.data[5] top.tb.ate.ate_io_s.cmd.req.data[4] top.tb.ate.ate_io_s.cmd.req.data[3] top.tb.ate.ate_io_s.cmd.req.data[2] top.tb.ate.ate_io_s.cmd.req.data[1] top.tb.ate.ate_io_s.cmd.req.data[0]
+@28
+top.tb.ate.ate_io_s.cmd.req.last
+top.tb.ate.ate_io_s.cmd.req.valid
+top.tb.ate.ate_io_s.rsp.ack.ready
+@22
+#{top.tb.ate.ate_io_s.rsp.req.data[7:0]} top.tb.ate.ate_io_s.rsp.req.data[7] top.tb.ate.ate_io_s.rsp.req.data[6] top.tb.ate.ate_io_s.rsp.req.data[5] top.tb.ate.ate_io_s.rsp.req.data[4] top.tb.ate.ate_io_s.rsp.req.data[3] top.tb.ate.ate_io_s.rsp.req.data[2] top.tb.ate.ate_io_s.rsp.req.data[1] top.tb.ate.ate_io_s.rsp.req.data[0]
+@28
+top.tb.ate.ate_io_s.rsp.req.last
+top.tb.ate.ate_io_s.rsp.req.valid
+@1000200
+-IO
+@28
+top.tb.ate.ate_impl.ate.rsp_valid_o
+top.tb.ate.ate_impl.ate.rsp_ready_i
+@420
+top.tb.ate.ate_impl.ate.cmd_size_m1_i
+top.tb.ate.ate_impl.ate.cmd_op_i
+@28
+top.tb.ate.ate_impl.ate.cmd_valid_i
+top.tb.ate.ate_impl.ate.cmd_ready_o
+@800200
+-ATE
+@420
+top.tb.ate.ate_impl.ate.r.data_left
+@22
+#{top.tb.ate.ate_impl.ate.r.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg[7] top.tb.ate.ate_impl.ate.r.data_shreg[6] top.tb.ate.ate_impl.ate.r.data_shreg[5] top.tb.ate.ate_impl.ate.r.data_shreg[4] top.tb.ate.ate_impl.ate.r.data_shreg[3] top.tb.ate.ate_impl.ate.r.data_shreg[2] top.tb.ate.ate_impl.ate.r.data_shreg[1] top.tb.ate.ate_impl.ate.r.data_shreg[0]
+#{top.tb.ate.ate_impl.ate.r.insertion_val[7:0]} top.tb.ate.ate_impl.ate.r.insertion_val[7] top.tb.ate.ate_impl.ate.r.insertion_val[6] top.tb.ate.ate_impl.ate.r.insertion_val[5] top.tb.ate.ate_impl.ate.r.insertion_val[4] top.tb.ate.ate_impl.ate.r.insertion_val[3] top.tb.ate.ate_impl.ate.r.insertion_val[2] top.tb.ate.ate_impl.ate.r.insertion_val[1] top.tb.ate.ate_impl.ate.r.insertion_val[0]
+@23
+#{top.tb.ate.ate_impl.ate.r.insertion_mask[7:0]} top.tb.ate.ate_impl.ate.r.insertion_mask[7] top.tb.ate.ate_impl.ate.r.insertion_mask[6] top.tb.ate.ate_impl.ate.r.insertion_mask[5] top.tb.ate.ate_impl.ate.r.insertion_mask[4] top.tb.ate.ate_impl.ate.r.insertion_mask[3] top.tb.ate.ate_impl.ate.r.insertion_mask[2] top.tb.ate.ate_impl.ate.r.insertion_mask[1] top.tb.ate.ate_impl.ate.r.insertion_mask[0]
+@420
+top.tb.ate.ate_impl.ate.r.state
+top.tb.ate.ate_impl.ate.r.tap_branch
+@28
+top.tb.ate.ate_impl.ate.r.tdi_next.v
+top.tb.ate.ate_impl.ate.r.tdi_next.en
+top.tb.ate.ate_impl.ate.r.tdi.en
+top.tb.ate.ate_impl.ate.r.tdi.v
+@420
+top.tb.ate.ate_impl.ate.r.tms_left
+@22
+#{top.tb.ate.ate_impl.ate.r.tms_shreg[0:13]} top.tb.ate.ate_impl.ate.r.tms_shreg[0] top.tb.ate.ate_impl.ate.r.tms_shreg[1] top.tb.ate.ate_impl.ate.r.tms_shreg[2] top.tb.ate.ate_impl.ate.r.tms_shreg[3] top.tb.ate.ate_impl.ate.r.tms_shreg[4] top.tb.ate.ate_impl.ate.r.tms_shreg[5] top.tb.ate.ate_impl.ate.r.tms_shreg[6] top.tb.ate.ate_impl.ate.r.tms_shreg[7] top.tb.ate.ate_impl.ate.r.tms_shreg[8] top.tb.ate.ate_impl.ate.r.tms_shreg[9] top.tb.ate.ate_impl.ate.r.tms_shreg[10] top.tb.ate.ate_impl.ate.r.tms_shreg[11] top.tb.ate.ate_impl.ate.r.tms_shreg[12] top.tb.ate.ate_impl.ate.r.tms_shreg[13]
+@1000200
+-ATE
+@800200
+-TAP
+@420
+top.tb.dut.tap.controller.r.state
+@22
+#{top.tb.dut.tap.ir_o[3:0]} top.tb.dut.tap.ir_o[3] top.tb.dut.tap.ir_o[2] top.tb.dut.tap.ir_o[1] top.tb.dut.tap.ir_o[0]
+@1000200
+-TAP
+[pattern_trace] 1
+[pattern_trace] 0

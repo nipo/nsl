@@ -7,3 +7,5 @@ deps += nsl_bnoc.framed
 deps += nsl_bnoc.routed
 deps += nsl_bnoc.testing
 deps += nsl_clocking.async
+deps += nsl_data.bytestream
+deps += nsl_data.endian
