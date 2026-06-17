@@ -4,3 +4,5 @@ deps += nsl_bnoc.framed
 deps += nsl_jtag.jtag
 deps += nsl_jtag.ate
 deps += nsl_event.tick
+deps += nsl_data.bytestream
+deps += nsl_data.endian
