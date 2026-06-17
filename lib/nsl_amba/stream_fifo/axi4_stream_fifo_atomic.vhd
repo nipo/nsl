@@ -31,6 +31,7 @@ architecture rtl of axi4_stream_fifo_atomic is
     signal in_end_detected, out_end_detected,
     in_allow, out_allow : std_ulogic;
 
+    constant k_dc: std_ulogic_vector(0 downto 0) := (others => '-');
 begin
 
     frame_fifo : nsl_memory.fifo.fifo_homogeneous
@@ -45,7 +46,7 @@ begin
         out_data_o  => open,
         out_ready_i => out_end_detected,
         out_valid_o => out_allow,
-        in_data_i   => "-",
+        in_data_i   => k_dc,
         in_valid_i  => in_end_detected,
         in_ready_o  => in_allow
     );
