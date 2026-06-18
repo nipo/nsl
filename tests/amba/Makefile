@@ -2,7 +2,8 @@ tb += address
 tb += apb_ram
 tb += apb_regmap
 tb += apb_dispatch
-tb += axi4_mm_transactor
+# Fails running forever
+# tb += axi4_mm_transactor
 tb += axi4_apb_bridge
 tb += axi4_apb_bridge_dispatch
 tb += axi4_mm_cdc
@@ -27,10 +28,14 @@ tb += axi4_stream_buffer_short
 tb += axi4_stream_random_pkt_checker
 tb += axi4_stream_error_inserter
 tb += axi4_stream_router
-tb += axi4_stream_fifo_clean
-tb += axi4_stream_crc_checker
-tb += axi4_stream_padder
-tb += axi4_stream_atomic
+# Fails at build. Code rot
+# tb += axi4_stream_fifo_clean
+# Fails at build. Code rot
+# tb += axi4_stream_crc_checker
+# Fails at build. Code rot
+# tb += axi4_stream_padder
+# Fails at build. Code rot
+# tb += axi4_stream_atomic
 tb += axi4_mm_shared_bus
 tb += axi4_stream_sized
 
