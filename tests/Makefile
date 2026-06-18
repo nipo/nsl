@@ -39,17 +39,18 @@ tb += pll
 tb += prbs
 tb += precise_clock
 tb += pwm
-#tb += recovery
-#tb += recovery_inv
 tb += sc202
-tb += smi
+# Code rot
+# tb += smi
 tb += spdif
 tb += spi
 tb += spi_bridge
 tb += spi_slave
-tb += swd
+# Legacy way of coding, should be rewritten
+# tb += swd
 tb += swd_monitor
-tb += swd_multidrop
+# Legacy way of coding, should be rewritten
+# tb += swd_multidrop
 tb += text
 tb += tick
 tb += tla202x
@@ -59,6 +60,5 @@ tb += usb11
 tb += usb2
 tb += usb2_framed
 tb += wishbone
-#tb += xadc
 
 include subdir.mk
