@@ -1,0 +1,24 @@
+name: spi_fifo_transport_master
+
+root:
+  name: top
+  deps:
+    - nsl_spi.fifo_transport
+    - nsl_clocking.async
+    - nsl_simulation.driver
+    - nsl_simulation.fifo
+    - nsl_spi.transactor
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -1,0 +1,26 @@
+name: inet_ipv4_trx
+
+root:
+  name: top
+  deps:
+    - nsl_inet.ipv4
+    - nsl_data.text
+    - nsl_data.bytestream
+    - nsl_bnoc.testing
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -1,0 +1,24 @@
+name: cuff_link
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_cuff.link
+    - nsl_cuff.transceiver
+    - nsl_bnoc.committed
+    - nsl_clocking.async
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

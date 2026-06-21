@@ -1,0 +1,19 @@
+name: bytestream
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log

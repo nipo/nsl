@@ -1,0 +1,34 @@
+name: usb2_framed
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.reset
+    - nsl_clocking.async
+    - nsl_memory.fifo
+    - nsl_usb.testing
+    - nsl_usb.utmi
+    - nsl_usb.func
+    - nsl_usb.usb
+    - nsl_data.text
+    - nsl_data.bytestream
+    - nsl_data.prbs
+    - nsl_data.crc
+    - nsl_bnoc.testing
+    - nsl_simulation.control
+    - nsl_simulation.logging
+  sources:
+    - file_type: vhdl
+      files:
+        - src/dut.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

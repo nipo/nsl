@@ -1,0 +1,26 @@
+name: amba_axi4_mm_crossbar
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_mm
+    - nsl_amba.mm_routing
+    - nsl_amba.address
+    - nsl_amba.ram
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

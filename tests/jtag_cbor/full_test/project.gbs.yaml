@@ -1,0 +1,33 @@
+name: jtag_cbor_full_test
+
+root:
+  name: top
+  deps:
+    - nsl_jtag.cbor_transactor
+    - nsl_jtag.jtag
+    - nsl_jtag.tap
+    - nsl_event.tick
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_amba.axi4_mm
+    - nsl_amba.ram
+    - nsl_amba.stream_traffic
+    - nsl_amba.stream_to_udp
+    - nsl_amba.stream_fifo
+    - nsl_data.bytestream
+    - nsl_clocking.async
+    - nsl_math.arith
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

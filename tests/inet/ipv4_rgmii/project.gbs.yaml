@@ -1,0 +1,34 @@
+name: inet_ipv4_rgmii
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_bnoc.framed
+    - nsl_bnoc.testing
+    - nsl_inet.ethernet
+    - nsl_inet.ipv4
+    - nsl_inet.testing
+    - nsl_inet.func
+    - nsl_inet.udp
+    - nsl_clocking.async
+    - nsl_mii.rgmii
+    - nsl_mii.link_monitor
+    - nsl_mii.link
+    - nsl_mii.flit
+  sources:
+    - file_type: vhdl
+      files:
+        - src/helper.pkg.vhd
+        - src/host.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

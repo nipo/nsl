@@ -1,0 +1,25 @@
+name: tla202x
+
+root:
+  name: top
+  deps:
+    - nsl_bnoc.framed
+    - nsl_ti.tla202x
+    - nsl_i2c.transactor
+    - nsl_i2c.clocked
+    - nsl_clocking.async
+    - nsl_simulation.driver
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -1,0 +1,31 @@
+name: ibm_8b10b_serdes
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_clocking.intradomain
+    - nsl_line_coding.ibm_8b10b
+    - nsl_simulation.driver
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_data.text
+    - nsl_logic.bool
+    - nsl_logic.logic
+    - nsl_simulation.control
+    - nsl_io.serdes
+    - nsl_io.delay
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

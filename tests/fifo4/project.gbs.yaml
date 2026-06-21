@@ -1,0 +1,19 @@
+name: fifo4
+
+root:
+  name: top
+  deps:
+    - nsl_memory.fifo
+    - nsl_simulation.assertions
+    - nsl_data.text
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log

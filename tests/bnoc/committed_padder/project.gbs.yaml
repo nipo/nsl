@@ -1,0 +1,26 @@
+name: bnoc_committed_padder
+
+root:
+  name: top
+  deps:
+    - nsl_bnoc.committed
+    - nsl_bnoc.testing
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_simulation.assertions
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

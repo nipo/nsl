@@ -1,0 +1,27 @@
+name: crc
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_data.crc
+    - nsl_data.text
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_inet.ethernet
+    - nsl_spdif.spdif
+    - nsl_usb.usb
+    - nsl_line_coding.hdlc
+    - nsl_ble.ble
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log

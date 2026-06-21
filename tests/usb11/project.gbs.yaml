@@ -1,0 +1,33 @@
+name: usb11
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.reset
+    - nsl_simulation.control
+    - nsl_clocking.async
+    - nsl_memory.fifo
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_usb.io
+    - nsl_usb.fs_phy
+    - nsl_usb.func
+  sources:
+    - file_type: vhdl
+      files:
+        - src/usb_commands.vhd
+        - src/dut.vhd
+        - src/usb_stimuli.vhd
+        - src/usb_fs_monitor.vhd
+        - src/usb_fs_master.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

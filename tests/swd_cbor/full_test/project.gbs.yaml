@@ -1,0 +1,33 @@
+name: swd_cbor_full_test
+
+root:
+  name: top
+  deps:
+    - nsl_coresight.cbor_transactor
+    - nsl_coresight.dp
+    - nsl_coresight.dapbus
+    - nsl_coresight.ap
+    - nsl_coresight.testing
+    - nsl_coresight.swd
+    - nsl_event.tick
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_amba.axi4_mm
+    - nsl_amba.ram
+    - nsl_amba.stream_traffic
+    - nsl_amba.stream_to_udp
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

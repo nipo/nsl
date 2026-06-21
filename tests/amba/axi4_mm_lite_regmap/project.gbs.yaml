@@ -1,0 +1,28 @@
+name: amba_axi4_mm_lite_regmap
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_data.crc
+    - nsl_data.text
+    - nsl_data.prbs
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+    - nsl_amba.axi4_mm
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

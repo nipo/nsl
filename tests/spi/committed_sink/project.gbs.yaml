@@ -1,0 +1,28 @@
+name: spi_committed_sink
+
+root:
+  name: top
+  deps:
+    - nsl_spi.slave
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_simulation.assertions
+    - nsl_bnoc.committed
+    - nsl_bnoc.testing
+    - nsl_spi.testing
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

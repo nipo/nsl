@@ -1,0 +1,23 @@
+name: i2s
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_simulation.fifo
+    - nsl_i2s.transmitter
+    - nsl_i2s.receiver
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

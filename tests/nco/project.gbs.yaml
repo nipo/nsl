@@ -1,0 +1,21 @@
+name: nco
+
+root:
+  name: top
+  deps:
+    - nsl_signal_generator.nco
+    - nsl_simulation.driver
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

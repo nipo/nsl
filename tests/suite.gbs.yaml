@@ -1,0 +1,337 @@
+name: nsl-tests
+description: NSL test suite
+
+settings:
+  max_parallel_projects: 4
+  stop_on_failure: false
+  output:
+    junit_xml: test-results/junit.xml
+    summary_json: test-results/summary.json
+    log_dir: test-results/logs
+    save_logs: true
+
+projects:
+  - name: amba_address
+    path: amba/address
+    tags: [ghdl, simulation]
+  - name: amba_apb_dispatch
+    path: amba/apb_dispatch
+    tags: [ghdl, simulation]
+  - name: amba_apb_ram
+    path: amba/apb_ram
+    tags: [ghdl, simulation]
+  - name: amba_apb_regmap
+    path: amba/apb_regmap
+    tags: [ghdl, simulation]
+  - name: amba_axi4_apb_bridge
+    path: amba/axi4_apb_bridge
+    tags: [ghdl, simulation]
+  - name: amba_axi4_apb_bridge_dispatch
+    path: amba/axi4_apb_bridge_dispatch
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_cdc
+    path: amba/axi4_mm_cdc
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_crossbar
+    path: amba/axi4_mm_crossbar
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_lite_ram
+    path: amba/axi4_mm_lite_ram
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_lite_regmap
+    path: amba/axi4_mm_lite_regmap
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_lite_stream_endpoint
+    path: amba/axi4_mm_lite_stream_endpoint
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_on_stream
+    path: amba/axi4_mm_on_stream
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_ram
+    path: amba/axi4_mm_ram
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_shared_bus
+    path: amba/axi4_mm_shared_bus
+    tags: [ghdl, simulation]
+  - name: amba_axi4_mm_types
+    path: amba/axi4_mm_types
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_buffer
+    path: amba/axi4_stream_buffer
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_buffer_align
+    path: amba/axi4_stream_buffer_align
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_buffer_io
+    path: amba/axi4_stream_buffer_io
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_buffer_short
+    path: amba/axi4_stream_buffer_short
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_cdc
+    path: amba/axi4_stream_cdc
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_error_inserter
+    path: amba/axi4_stream_error_inserter
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_fifo
+    path: amba/axi4_stream_fifo
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_flusher
+    path: amba/axi4_stream_flusher
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_meta
+    path: amba/axi4_stream_meta
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_narrower
+    path: amba/axi4_stream_narrower
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_random_pkt_checker
+    path: amba/axi4_stream_random_pkt_checker
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_router
+    path: amba/axi4_stream_router
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_sized
+    path: amba/axi4_stream_sized
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_types
+    path: amba/axi4_stream_types
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_widener
+    path: amba/axi4_stream_widener
+    tags: [ghdl, simulation]
+  - name: avalon_axi4_stream_adapter
+    path: avalon/axi4_stream_adapter
+    tags: [ghdl, simulation]
+  - name: avalon_fifo
+    path: avalon/fifo
+    tags: [ghdl, simulation]
+  - name: avalon_passthrough
+    path: avalon/passthrough
+    tags: [ghdl, simulation]
+  - name: avalon_ready_latency_adapter
+    path: avalon/ready_latency_adapter
+    tags: [ghdl, simulation]
+  - name: avalon_width_adapter
+    path: avalon/width_adapter
+    tags: [ghdl, simulation]
+  - name: bnoc_axi_adapter_framed
+    path: bnoc/axi_adapter_framed
+    tags: [ghdl, simulation]
+  - name: bnoc_axi_adapter_pipe
+    path: bnoc/axi_adapter_pipe
+    tags: [ghdl, simulation]
+  - name: bnoc_committed_filter
+    path: bnoc/committed_filter
+    tags: [ghdl, simulation]
+  - name: bnoc_committed_header
+    path: bnoc/committed_header
+    tags: [ghdl, simulation]
+  - name: bnoc_committed_padder
+    path: bnoc/committed_padder
+    tags: [ghdl, simulation]
+  - name: bnoc_crc
+    path: bnoc/crc
+    tags: [ghdl, simulation]
+  - name: bnoc_framed_router
+    path: bnoc/framed_router
+    tags: [ghdl, simulation]
+  - name: bnoc_spi_committed_sink
+    path: bnoc/spi_committed_sink
+    tags: [ghdl, simulation]
+  - name: bytestream
+    path: bytestream
+    tags: [ghdl, simulation]
+  - name: cbor_codec
+    path: cbor/codec
+    tags: [ghdl, simulation]
+  - name: clock_div
+    path: clock_div
+    tags: [ghdl, simulation]
+  - name: clock_rate_estimator
+    path: clock_rate_estimator
+    tags: [ghdl, simulation]
+  - name: color
+    path: color
+    tags: [ghdl, simulation]
+  - name: console
+    path: console
+    tags: [ghdl, simulation]
+  - name: cordic
+    path: cordic
+    tags: [ghdl, simulation]
+  - name: crc
+    path: crc
+    tags: [ghdl, simulation]
+  - name: crc_gen
+    path: crc_gen
+    tags: [ghdl, simulation]
+  - name: cuff_link
+    path: cuff/link
+    tags: [ghdl, simulation]
+  - name: ddr_io
+    path: ddr_io
+    tags: [ghdl, simulation]
+  - name: easyscale
+    path: easyscale
+    tags: [ghdl, simulation]
+  - name: encoder
+    path: encoder
+    tags: [ghdl, simulation]
+  - name: fifo4
+    path: fifo4
+    tags: [ghdl, simulation]
+  - name: fifo_count
+    path: fifo_count
+    tags: [ghdl, simulation]
+  - name: fixed
+    path: fixed
+    tags: [ghdl, simulation]
+  - name: float
+    path: float
+    tags: [ghdl, simulation]
+  - name: ftdi
+    path: ftdi
+    tags: [ghdl, simulation]
+  - name: gaussian
+    path: gaussian
+    tags: [ghdl, simulation]
+  - name: gray
+    path: gray
+    tags: [ghdl, simulation]
+  - name: gray_sync
+    path: gray_sync
+    tags: [ghdl, simulation]
+  - name: hdmi_di_bch
+    path: hdmi/di_bch
+    tags: [ghdl, simulation]
+  - name: i2c_cbor_full_test
+    path: i2c_cbor/full_test
+    tags: [ghdl, simulation]
+  - name: i2s
+    path: i2s
+    tags: [ghdl, simulation]
+  - name: ibm_8b10b_procedural
+    path: ibm_8b10b/procedural
+    tags: [ghdl, simulation]
+  - name: ibm_8b10b_serdes
+    path: ibm_8b10b/serdes
+    tags: [ghdl, simulation]
+  - name: ibm_8b10b_synchronous
+    path: ibm_8b10b/synchronous
+    tags: [ghdl, simulation]
+  - name: inet_ethernet
+    path: inet/ethernet
+    tags: [ghdl, simulation]
+  - name: inet_ipv4
+    path: inet/ipv4
+    tags: [ghdl, simulation]
+  - name: inet_ipv4_checksum
+    path: inet/ipv4_checksum
+    tags: [ghdl, simulation]
+  - name: inet_ipv4_receiver
+    path: inet/ipv4_receiver
+    tags: [ghdl, simulation]
+  - name: inet_ipv4_rgmii
+    path: inet/ipv4_rgmii
+    tags: [ghdl, simulation]
+  - name: inet_ipv4_trx
+    path: inet/ipv4_trx
+    tags: [ghdl, simulation]
+  - name: inet_mii
+    path: inet/mii
+    tags: [ghdl, simulation]
+  - name: inet_rmii
+    path: inet/rmii
+    tags: [ghdl, simulation]
+  - name: jtag
+    path: jtag
+    tags: [ghdl, simulation]
+  - name: jtag_cbor_full_test
+    path: jtag_cbor/full_test
+    tags: [ghdl, simulation]
+  - name: lifo
+    path: lifo
+    tags: [ghdl, simulation]
+  - name: mesochronous
+    path: mesochronous
+    tags: [ghdl, simulation]
+  - name: nco
+    path: nco
+    tags: [ghdl, simulation]
+  - name: padded
+    path: padded
+    tags: [ghdl, simulation]
+  - name: pll
+    path: pll
+    tags: [ghdl, simulation]
+  - name: prbs
+    path: prbs
+    tags: [ghdl, simulation]
+  - name: pwm
+    path: pwm
+    tags: [ghdl, simulation]
+  - name: sc202
+    path: sc202
+    tags: [ghdl, simulation]
+  - name: scrambler
+    path: scrambler
+    tags: [ghdl, simulation]
+  - name: serdes_input
+    path: serdes/input
+    tags: [ghdl, simulation]
+  - name: serdes_output
+    path: serdes/output
+    tags: [ghdl, simulation]
+  - name: spi_committed_sink
+    path: spi/committed_sink
+    tags: [ghdl, simulation]
+  - name: spi_fifo_transport_master
+    path: spi/fifo_transport_master
+    tags: [ghdl, simulation]
+  - name: spi_framed_sink
+    path: spi/framed_sink
+    tags: [ghdl, simulation]
+  - name: spi_cbor_full_test
+    path: spi_cbor/full_test
+    tags: [ghdl, simulation]
+  - name: spi_slave
+    path: spi_slave
+    tags: [ghdl, simulation]
+  - name: swd_cbor_full_test
+    path: swd_cbor/full_test
+    tags: [ghdl, simulation]
+  - name: swd_monitor
+    path: swd_monitor
+    tags: [ghdl, simulation]
+  - name: text
+    path: text
+    tags: [ghdl, simulation]
+  - name: tick
+    path: tick
+    tags: [ghdl, simulation]
+  - name: tla202x
+    path: tla202x
+    tags: [ghdl, simulation]
+  - name: tmds
+    path: tmds
+    tags: [ghdl, simulation]
+  - name: uart_8n1
+    path: uart_8n1
+    tags: [ghdl, simulation]
+  - name: uart_cbor_full_test
+    path: uart_cbor/full_test
+    tags: [ghdl, simulation]
+  - name: usb11
+    path: usb11
+    tags: [ghdl, simulation]
+  - name: usb2
+    path: usb2
+    tags: [ghdl, simulation]
+  - name: usb2_framed
+    path: usb2_framed
+    tags: [ghdl, simulation]
+  - name: wishbone_base
+    path: wishbone/base
+    tags: [ghdl, simulation]

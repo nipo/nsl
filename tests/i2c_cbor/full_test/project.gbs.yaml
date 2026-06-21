@@ -1,0 +1,35 @@
+name: i2c_cbor_full_test
+
+root:
+  name: top
+  deps:
+    - nsl_i2c.cbor_transactor
+    - nsl_i2c.clocked
+    - nsl_i2c.i2c
+    - nsl_simulation.driver
+    - nsl_simulation.control
+    - nsl_simulation.fifo
+    - nsl_simulation.logging
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_traffic
+    - nsl_amba.ram
+    - nsl_amba.stream_to_udp
+    - nsl_amba.stream_fifo
+    - nsl_data.bytestream
+    - nsl_clocking.async
+  sources:
+    - file_type: vhdl
+      files:
+        - src/clocked_slave_nack.vhd
+        - src/clocked_slave_10bit.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

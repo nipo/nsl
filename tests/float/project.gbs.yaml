@@ -1,0 +1,27 @@
+name: float
+
+root:
+  name: top
+  deps:
+    - nsl_math.fixed
+    - nsl_math.float
+    - nsl_data.text
+    - nsl_data.binary_io
+    - nsl_data.endian
+    - nsl_data.bytestream
+    - nsl_simulation.logging
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
