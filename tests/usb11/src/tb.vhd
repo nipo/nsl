@@ -2,6 +2,9 @@ library work, ieee;
 use ieee.std_logic_1164.all;
 use work.usb_commands.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 entity tb is
 end tb;
 
@@ -41,7 +44,7 @@ BEGIN
     reset_n_sync <= '0';
     wait for 10 us;
     reset_n_sync <= '1';
-    wait;
+    terminate(0);
   end process;
   
   usb_fs_slave : entity work.dut

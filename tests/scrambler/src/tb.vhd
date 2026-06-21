@@ -11,6 +11,7 @@ use nsl_data.prbs.all;
 use nsl_logic.logic.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 
 entity tb is
 end tb;
@@ -83,7 +84,7 @@ begin
                  payload,
                  unscrambled,
                  failure);
-    wait;
+    terminate(0);
   end process;
   
 end;

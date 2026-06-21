@@ -2,6 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use std.textio.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 entity tb is
 end entity;
 
@@ -40,7 +43,7 @@ begin
       report str;
       report describe_number(1);
       report describe_number(1000);
-      wait;
+      terminate(0);
     end process;
     
 end architecture;

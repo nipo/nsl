@@ -3,4 +3,5 @@ deps += nsl_simulation.text
 deps += nsl_simulation.logging
 deps += nsl_simulation.assertions
 deps += nsl_color.rgb
+deps += nsl_simulation.control
 

@@ -6,6 +6,7 @@ use ieee.math_real.all;
 library nsl_data, nsl_simulation, nsl_color;
 use nsl_data.text.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 use nsl_simulation.assertions.all;
 use nsl_color.rgb.all;
 
@@ -80,7 +81,7 @@ begin
                 &to_string(to_integer(c.b))&")");
     end loop;
 
-    wait;
+    terminate(0);
   end process;
 
 end;

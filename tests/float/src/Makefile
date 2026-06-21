@@ -6,3 +6,4 @@ deps += nsl_data.binary_io
 deps += nsl_data.endian
 deps += nsl_data.bytestream
 deps += nsl_simulation.logging
+deps += nsl_simulation.control

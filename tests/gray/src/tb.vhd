@@ -2,6 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 library nsl_math;
 
 entity tb is
@@ -25,7 +28,7 @@ begin
       s_bin := s_bin + 1;
     end loop;
     assert false report "OK" severity note;
-    wait;
+    terminate(0);
   end process;
   
 end;

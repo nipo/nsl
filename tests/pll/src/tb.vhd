@@ -1,6 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 entity tb is
 end tb;
 
@@ -113,7 +116,7 @@ begin
       wait for half_period;
     end loop;
 
-    wait;
+    terminate(0);
   end process;
   
   pll: nsl_clocking.pll.pll_basic

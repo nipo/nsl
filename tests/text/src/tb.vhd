@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data, nsl_simulation;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
+use nsl_simulation.control.all;
 
 entity tb is
 end tb;
@@ -51,7 +52,7 @@ begin
                  failure);
 
     assert false report "Test0 Done" severity note;
-    wait;
+    terminate(0);
   end process;
 
 end;

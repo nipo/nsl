@@ -8,3 +8,4 @@ deps += nsl_simulation.assertions
 deps += nsl_simulation.logging
 
 deps += nsl_amba.axi4_stream
+deps += nsl_simulation.control

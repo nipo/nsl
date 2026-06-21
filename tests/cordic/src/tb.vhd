@@ -10,6 +10,7 @@ use nsl_math.fixed.all;
 use nsl_data.text.all;
 use nsl_math.cordic.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 
 architecture arch of tb is
 
@@ -43,8 +44,8 @@ begin
 
     log_info("Max error: " & to_string(max_error));
     log_info("Significant fractional bits: " & to_string(integer(floor(-log2(max_error)))));
-    
-    wait;
+
+    terminate(0);
   end process;
 
 end;

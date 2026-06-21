@@ -10,6 +10,7 @@ use nsl_data.crc.all;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 
 entity tb is
 end tb;
@@ -48,7 +49,7 @@ begin
     serializer_torture(config(bytes => 2, strobe => true, keep => true), "iskdouv", 128);
     serializer_torture(config(bytes => 2, strobe => true, keep => true), "ouvidsk", 128);
 
-    wait;
+    terminate(0);
   end process;
   
 end;

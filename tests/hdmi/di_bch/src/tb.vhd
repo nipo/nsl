@@ -9,6 +9,7 @@ use nsl_data.crc.all;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 use nsl_hdmi.encoder.all;
 
 entity tb is
@@ -33,7 +34,7 @@ begin
                  failure);
 
     log_info(context, "done");
-    wait;
+    terminate(0);
   end process;
   
 end;

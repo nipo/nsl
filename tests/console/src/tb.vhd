@@ -1,6 +1,9 @@
 library ieee;
 use std.textio.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 entity tb is
 end tb;
 
@@ -12,7 +15,7 @@ begin
   begin
     write (l, String'("Hello world!"));
     writeline (output, l);
-    wait;
+    terminate(0);
   end process;
   
 end;

@@ -2,6 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 library nsl_ti, nsl_clocking, nsl_io;
 
 entity tb is
@@ -77,7 +80,7 @@ begin
     wait until falling_edge(s_busy);
     wait for 200 ns;
     s_done(1) <= '1';
-    wait;
+    terminate(0);
   end process;
 
   s_done(0) <= not s_busy;

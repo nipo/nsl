@@ -2,6 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+
+library nsl_simulation;
+use nsl_simulation.control.all;
 library nsl_io;
 
 entity tb is
@@ -97,7 +100,7 @@ begin
     end loop;
 
     assert false report "Simulation done" severity note;
-    wait;
+    terminate(0);
   end process;
 
   check: process

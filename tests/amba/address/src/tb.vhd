@@ -6,6 +6,7 @@ library nsl_data, nsl_simulation, nsl_amba;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 use nsl_amba.address.all;
 
 entity tb is
@@ -36,7 +37,7 @@ begin
     check_addr("xdead_0000",   "--------------------------------"&x"dead0000");
     check_addr(x"dead_0000",   "--------------------------------"&x"dead0000");
     check_addr("x--ad_0000/16",   "----------------------------------------"&x"ad"&"----------------");
-    wait;
+    terminate(0);
   end process;
 
 end;

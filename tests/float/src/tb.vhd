@@ -10,6 +10,7 @@ use nsl_data.text.all;
 use nsl_data.binary_io.all;
 use nsl_data.endian.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 use ieee.math_real.all;
 
 entity tb is
@@ -42,7 +43,7 @@ begin
     file_open(fd, "test.bin", WRITE_MODE);
     write(fd, to_be(unsigned(to_suv(f))));
     file_close(fd);
-    wait;
+    terminate(0);
   end process;
   
 end;

@@ -6,6 +6,7 @@ library nsl_math, nsl_simulation, nsl_data;
 use nsl_math.fixed.all;
 use nsl_data.text.all;
 use nsl_simulation.logging.all;
+use nsl_simulation.control.all;
 use ieee.math_real.all;
 
 entity tb is
@@ -36,7 +37,7 @@ begin
              & ", real: "
              & to_string(r));
     
-    wait;
+    terminate(0);
   end process;
   
 end;
