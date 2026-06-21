@@ -19,6 +19,8 @@ root:
 output:
   - name: simulation
     topcell: tb
+    filter_vars:
+      hwdep: simulation
     outputs:
       - type: simulation-log
         path: simulation.log

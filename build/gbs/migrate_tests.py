@@ -67,6 +67,8 @@ class TestbenchLeaf:
         lines.append("output:")
         lines.append("  - name: simulation")
         lines.append(f"    topcell: {info['topcell']}")
+        lines.append("    filter_vars:")
+        lines.append("      hwdep: simulation")
         if self.uses_control(info["deps"]):
             lines.append("    backend_config:")
             lines.append("      gbs.builtin.ghdl:")

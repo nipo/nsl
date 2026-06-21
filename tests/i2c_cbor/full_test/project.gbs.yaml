@@ -27,6 +27,8 @@ root:
 output:
   - name: simulation
     topcell: tb
+    filter_vars:
+      hwdep: simulation
     backend_config:
       gbs.builtin.ghdl:
         success_regex: "Terminating with error level: 0"
