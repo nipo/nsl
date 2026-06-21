@@ -6,6 +6,5 @@ tb += framed_router
 tb += spi_committed_sink
 tb += axi_adapter_framed
 tb += axi_adapter_pipe
-tb += committed_padder
 
 include ../subdir.mk

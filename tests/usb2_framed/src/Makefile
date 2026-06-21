@@ -4,7 +4,6 @@ vhdl-sources += tb.vhd
 deps += nsl_hwdep.reset
 deps += nsl_clocking.async
 deps += nsl_memory.fifo
-deps += nsl_amba.stream
 deps += nsl_usb.testing
 deps += nsl_usb.utmi
 deps += nsl_usb.func
