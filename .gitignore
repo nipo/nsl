@@ -1,5 +1,7 @@
 *.o
 *.cf
+.gbs/
+test-results/
 *.vcd
 tb
 *.ghw
