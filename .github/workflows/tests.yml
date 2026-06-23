@@ -1,13 +1,12 @@
 name: tests
 
 # Runs the GBS test suite inside the pre-built nsl-ci container.
-#
-# While iterating on this workflow itself, trigger only via workflow_dispatch
-# (no push/pull_request) to keep the Actions tab uncluttered. Once green,
-# add `push:` and `pull_request:` to gate merges.
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
 
 jobs:
   suite:

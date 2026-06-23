@@ -14,7 +14,7 @@ name: ci-image
 on:
   workflow_dispatch:
   push:
-    branches: [master, ci-bootstrap]
+    branches: [master]
     paths:
       - 'ci/Dockerfile'
       - 'build/gbs/**'
