@@ -58,6 +58,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Seed gbs user config
+        # GH Actions overrides HOME to /github/home in container jobs, hiding
+        # the /root/.config/gbs.yaml the image baked in. Copy it into the
+        # runtime HOME so gbs picks up the analyze/elaborate/run flags.
+        run: |
+          mkdir -p "$HOME/.config"
+          cp /root/.config/gbs.yaml "$HOME/.config/gbs.yaml"
+
       - name: Run GBS test suite
         working-directory: tests
         run: gbs suite build
