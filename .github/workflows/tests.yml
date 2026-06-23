@@ -9,7 +9,42 @@ on:
   pull_request:
 
 jobs:
+  wait-for-image:
+    # If this same push also triggered ci-image (Dockerfile or plugin change),
+    # block until that build finishes so we don't try to pull :latest before
+    # it's been republished. No-op for pushes that don't touch the image
+    # inputs.
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for ci-image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for _ in $(seq 1 60); do
+            running=$(gh run list \
+              --workflow=ci-image.yml \
+              --commit=${{ github.sha }} \
+              --status=in_progress \
+              --json databaseId --jq 'length')
+            queued=$(gh run list \
+              --workflow=ci-image.yml \
+              --commit=${{ github.sha }} \
+              --status=queued \
+              --json databaseId --jq 'length')
+            if [ "$running" = "0" ] && [ "$queued" = "0" ]; then
+              echo "No ci-image build pending for ${{ github.sha }}"
+              exit 0
+            fi
+            echo "ci-image still running for this sha; sleeping 15s"
+            sleep 15
+          done
+          echo "Gave up waiting for ci-image after 15 min"
+          exit 1
+
   suite:
+    needs: wait-for-image
     runs-on: ubuntu-latest
 
     container:
