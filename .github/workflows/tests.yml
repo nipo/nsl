@@ -16,6 +16,13 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository_owner }}/nsl-ci:latest
 
+    # publish-unit-test-result-action needs write access to Checks and PRs
+    # to render results in the PR Checks tab.
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +39,9 @@ jobs:
           if-no-files-found: error
 
       - name: Publish JUnit to the Checks tab
-        if: always()
+        # Skip under act: the Checks API requires a real GitHub App token
+        # which act cannot mint. Real CI sets ACT to "false" (undefined).
+        if: always() && !env.ACT
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           junit_files: tests/test-results/junit.xml
