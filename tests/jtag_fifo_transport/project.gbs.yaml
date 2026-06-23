@@ -1,0 +1,34 @@
+name: jtag_fifo_transport
+
+root:
+  name: top
+  deps:
+    - nsl_jtag.jtag
+    - nsl_jtag.transactor
+    - nsl_jtag.fifo_transport
+    - nsl_jtag.tap
+    - nsl_simulation.driver
+    - nsl_simulation.jtag
+    - nsl_bnoc.framed
+    - nsl_bnoc.routed
+    - nsl_bnoc.testing
+    - nsl_clocking.async
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_bnoc.framed
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

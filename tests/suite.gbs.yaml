@@ -248,6 +248,9 @@ projects:
   - name: jtag
     path: jtag
     tags: [ghdl, simulation]
+  - name: jtag_fifo_transport
+    path: jtag_fifo_transport
+    tags: [ghdl, simulation]
   - name: jtag_cbor_full_test
     path: jtag_cbor/full_test
     tags: [ghdl, simulation]
