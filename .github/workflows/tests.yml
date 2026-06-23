@@ -1,0 +1,38 @@
+name: tests
+
+# Runs the GBS test suite inside the pre-built nsl-ci container.
+#
+# While iterating on this workflow itself, trigger only via workflow_dispatch
+# (no push/pull_request) to keep the Actions tab uncluttered. Once green,
+# add `push:` and `pull_request:` to gate merges.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/nsl-ci:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run GBS test suite
+        working-directory: tests
+        run: gbs suite build
+
+      - name: Upload JUnit + per-project logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/test-results/
+          if-no-files-found: error
+
+      - name: Publish JUnit to the Checks tab
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          junit_files: tests/test-results/junit.xml

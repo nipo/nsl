@@ -1,0 +1,59 @@
+name: ci-image
+
+# Rebuilds the test-runner container and pushes it to GHCR.
+#
+# The image is consumed by .github/workflows/tests.yml via the `container:`
+# key. To pin a known-good image, change tests.yml from :latest to a sha- tag.
+#
+# After the first push, the package will be PRIVATE in GHCR by default. Flip
+# it to public at:
+#   github.com/users/<owner>/packages/container/nsl-ci/settings
+# so the test workflow can pull without a token and so external contributors
+# can run CI in their forks.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, ci-bootstrap]
+    paths:
+      - 'ci/Dockerfile'
+      - 'build/gbs/**'
+      - '.github/workflows/ci-image.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase owner
+        id: meta
+        run: echo "owner=${OWNER,,}" >> "$GITHUB_OUTPUT"
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ci/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/nsl-ci:latest
+            ghcr.io/${{ steps.meta.outputs.owner }}/nsl-ci:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
