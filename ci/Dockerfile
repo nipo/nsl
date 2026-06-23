@@ -8,16 +8,27 @@
 #   ghcr.io/<owner>/nsl-ci:sha-<sha>   -- one per commit, for pinning
 
 # GHDL upstream provides ready-made images keyed on (distro, backend, version).
-# LLVM backend is the right pick: -O2 codegen is several times faster than
-# mcode for the simulation workload the NSL suite exercises.
-FROM ghdl/ghdl:ubuntu24-llvm-5.0.1
+# mcode is the right pick for short-running unit tests: it skips LLVM code
+# generation entirely (no -O2 compile pass), so the per-test elaborate cost
+# is dominated by parsing rather than code emission. Per-cycle simulation is
+# slower than LLVM, but the NSL suite simulates only a few hundred ms of
+# wall-clock-equivalent time per test, where LLVM's faster runtime never
+# recoups its compile-time tax.
+#
+# mcode is x86-64 only. Both GitHub-hosted runners and the act-on-Mac
+# emulation path target linux/amd64, so this is fine for our use.
+FROM ghdl/ghdl:6.0.0-mcode-ubuntu-24.04
 
 # Python 3.13 is needed for gbs and the NSL plugin. Ubuntu 24.04 ships 3.12,
-# so pull 3.13 from deadsnakes.
+# so pull 3.13 from deadsnakes. NodeJS is needed because `container:`-jobs in
+# GitHub Actions run JavaScript actions (e.g. actions/checkout,
+# actions/upload-artifact) inside the container; the runner expects Node 20+
+# in PATH. Use the upstream NodeSource repo since Ubuntu's universe is on 18.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
         ca-certificates \
+        curl \
         git \
         && \
     add-apt-repository -y ppa:deadsnakes/ppa && \
@@ -25,6 +36,8 @@ RUN apt-get update && \
         python3.13 \
         python3.13-venv \
         && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

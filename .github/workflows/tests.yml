@@ -31,7 +31,10 @@ jobs:
         run: gbs suite build
 
       - name: Upload JUnit + per-project logs
-        if: always()
+        # Skip under act: upload-artifact@v4 talks to the GitHub-hosted
+        # artifact service and needs ACTIONS_RUNTIME_TOKEN which act doesn't
+        # mint. Real CI sets that env automatically.
+        if: always() && !env.ACT
         uses: actions/upload-artifact@v4
         with:
           name: test-results
