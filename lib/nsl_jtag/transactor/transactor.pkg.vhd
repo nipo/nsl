@@ -93,7 +93,7 @@ package body transactor is
   function cmd_shift_bytes(data: byte_string; read_tdo : boolean := true) return byte_string
   is
   begin
-    assert data'length > 1
+    assert data'length > 0
       report "Bad data length: too short"
       severity failure;
     assert data'length <= 32
