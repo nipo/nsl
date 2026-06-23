@@ -18,3 +18,9 @@ ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += jtag_user_tap_gowin.vhd
 deps += nsl_clocking.distribution
 endif
+
+ifneq ($(filter simulation,$(hwdep)),)
+vhdl-sources += jtag_user_register_simulation.vhd
+vhdl-sources += jtag_user_tap_simulation.vhd
+deps += nsl_simulation.jtag
+endif

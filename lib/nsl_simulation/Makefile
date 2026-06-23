@@ -1,5 +1,6 @@
 packages += file_io
 packages += fifo
+packages += jtag
 packages += driver
 packages += control
 packages += test_reports
