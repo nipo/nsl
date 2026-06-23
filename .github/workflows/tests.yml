@@ -21,23 +21,21 @@ jobs:
       - name: Wait for ci-image
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           for _ in $(seq 1 60); do
-            running=$(gh run list \
-              --workflow=ci-image.yml \
-              --commit=${{ github.sha }} \
-              --status=in_progress \
+            running=$(gh run list --repo "$REPO" \
+              --workflow=ci-image.yml --commit="$SHA" --status=in_progress \
               --json databaseId --jq 'length')
-            queued=$(gh run list \
-              --workflow=ci-image.yml \
-              --commit=${{ github.sha }} \
-              --status=queued \
+            queued=$(gh run list --repo "$REPO" \
+              --workflow=ci-image.yml --commit="$SHA" --status=queued \
               --json databaseId --jq 'length')
             if [ "$running" = "0" ] && [ "$queued" = "0" ]; then
-              echo "No ci-image build pending for ${{ github.sha }}"
+              echo "No ci-image build pending for $SHA"
               exit 0
             fi
-            echo "ci-image still running for this sha; sleeping 15s"
+            echo "ci-image still running for $SHA; sleeping 15s"
             sleep 15
           done
           echo "Gave up waiting for ci-image after 15 min"
