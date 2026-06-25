@@ -1,7 +1,11 @@
 vhdl-sources += control.pkg.vhd
 
 ifeq ($(GHDL_LLVM),)
+ifeq ($(ghdl-flavor),llvm)
+control-ghdl := control_vhpidirect.vhd
+else
 control-ghdl := control_ghdl.vhd
+endif
 else
 control-ghdl := control_vhpidirect.vhd
 endif
