@@ -6,3 +6,4 @@ deps += nsl_jtag.ate
 deps += nsl_event.tick
 deps += nsl_data.bytestream
 deps += nsl_data.endian
+deps += nsl_data.text
