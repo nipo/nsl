@@ -47,9 +47,15 @@ class NSLRepository(Repository):
         self._libraries = libraries
 
     def file_types(self) -> set[str]:
-        """Get all possible file types from NSL repository
+        """Source file types the planner must always be able to consume.
 
-        NSL repositories can contain VHDL, Verilog, and SystemVerilog.
+        Only unconditional source types belong here. The planner requires a
+        consuming pass for every type it is given, so conditionally-emitted
+        sources must be omitted. In particular ghdl-vhpidirect-c is produced
+        only under a tool==ghdl build and is then picked up opportunistically
+        by the GHDL simulate dispatcher; declaring it here would force every
+        other flow (e.g. ISE bitstream) to provide a consumer for it and so
+        fail to plan.
         """
         return {"vhdl"}
 
@@ -210,6 +216,27 @@ class NSLRepository(Repository):
                 sources.append(SourceFile(
                     path=package_path / source_file,
                     file_type="systemverilog"
+                ))
+
+        # GHDL VHPIDIRECT C sources. Package Makefiles declare these in
+        # vhpidirect-sources under their tool==ghdl branch; the GHDL simulate
+        # dispatcher compiles each into a .so and links it into the simulator.
+        # Without extracting them here the C never enters the build graph, so
+        # the simulator link fails on undefined VHPIDIRECT references.
+        #
+        # These sources include <vhpidirect_user.h>, which the NSL tree ships
+        # under build/support/vhpidirect (a sibling of lib/), not GHDL. Attach
+        # that include directory so the compile finds it without per-project
+        # configuration.
+        vhpidirect_support = self.root.parent / "build" / "support" / "vhpidirect"
+        vhpidirect_sources_str = context.expand(context.get("vhpidirect-sources", ""))
+        for source_file in vhpidirect_sources_str.split():
+            source_file = source_file.strip()
+            if source_file and not source_file.startswith('$('):
+                sources.append(SourceFile(
+                    path=package_path / source_file,
+                    file_type="ghdl-vhpidirect-c",
+                    include_dirs=[vhpidirect_support],
                 ))
 
         # Extract dependencies and qualify them
