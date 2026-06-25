@@ -17,9 +17,9 @@ entity mii_driver_resync is
     clock_i : in std_ulogic;
 
     rx_clock_o: out std_ulogic;
-    rx_sfd_o: out std_ulogic;
-
     tx_clock_o: out std_ulogic;
+
+    rx_sfd_o: out std_ulogic;
     tx_sfd_o: out std_ulogic;
 
     mii_o : out mii_m2p;
