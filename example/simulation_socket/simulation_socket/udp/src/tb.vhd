@@ -6,6 +6,7 @@ library nsl_data, nsl_simulation;
 use nsl_data.bytestream.all;
 use nsl_data.text.all;
 use nsl_simulation.udp_socket.all;
+use nsl_simulation.socket.all;
 use nsl_simulation.logging.all;
 
 entity tb is
