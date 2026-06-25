@@ -1,0 +1,47 @@
+name: nsl-examples
+description: NSL examples suite
+
+settings:
+  max_parallel_projects: 1
+  stop_on_failure: true
+  output:
+    save_logs: false
+
+projects:
+  - name: tang_25k_blink
+    path: sipeed_tang_25k/blink
+    tags: [gowin, tang_25k]
+  - name: tang_25k_dvi_terminal
+    path: sipeed_tang_25k/dvi_terminal
+    tags: [gowin, tang_25k]
+  - name: tang_25k_seven_segment_counter
+    path: sipeed_tang_25k/seven_segment_counter
+    tags: [gowin, tang_25k]
+  - name: tang_25k_hdmi
+    path: sipeed_tang_25k/hdmi
+    tags: [gowin, tang_25k]
+  - name: tang_console_60k_dvi_terminal
+    path: sipeed_tang_console_60k/dvi_terminal
+    tags: [gowin, tang_console_60k]
+  - name: tang_console_60k_blink
+    path: sipeed_tang_console_60k/blink
+    tags: [gowin, tang_console_60k]
+
+  - name: simulation_socket_simulation_socket_udp
+    path: simulation_socket/simulation_socket/udp
+    tags: [socket]
+  - name: simulation_socket_tcp_gw_swd_transactor
+    path: simulation_socket/tcp_gw/swd_transactor
+    tags: [socket]
+  - name: simulation_socket_jtag_cbor_udp_server
+    path: simulation_socket/jtag_cbor/udp_server
+    tags: [socket]
+  - name: simulation_socket_udp_gw_swd_transactor
+    path: simulation_socket/udp_gw/swd_transactor
+    tags: [socket]
+  - name: simulation_socket_spi_cbor_udp_server
+    path: simulation_socket/spi_cbor/udp_server
+    tags: [socket]
+  - name: simulation_socket_uart_cbor_udp_server
+    path: simulation_socket/uart_cbor/udp_server
+    tags: [socket]

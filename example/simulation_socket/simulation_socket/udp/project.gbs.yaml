@@ -1,0 +1,22 @@
+name: simulation_socket_udp
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_simulation.udp_socket
+    - nsl_simulation.logging
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl: {}
+    outputs:
+      - type: ghdl-simulator
+        path: tb

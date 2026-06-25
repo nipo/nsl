@@ -1,0 +1,29 @@
+name: tang_console_60k_blink
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/done_led.cst
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    backend_config:
+      gbs.builtin.gowin: {}
+    outputs:
+      - type: gowin-fs
+        path: blink.fs

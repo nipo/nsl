@@ -1,0 +1,41 @@
+name: tang_25k_seven_segment_counter
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_sipeed.pmod_dtx2
+    - nsl_sipeed.pmod_8xled
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/buttons.cst
+        - ../pinout/clk.cst
+        - ../pinout/j4_pmod_double_lvcmos33.cst
+        - ../pinout/j5_pmod_double_lvcmos33.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    backend_config:
+      gbs.builtin.gowin: {}
+    outputs:
+      - type: gowin-fs
+        path: seven_segment_counter.fs

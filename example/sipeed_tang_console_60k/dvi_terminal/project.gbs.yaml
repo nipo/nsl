@@ -1,0 +1,67 @@
+name: tang_console_60k_dvi_terminal
+
+root:
+  name: top
+  deps:
+    - nsl_digilent.pmod
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_event.tick
+    - nsl_clocking.pll
+    - nsl_dvi.transceiver
+    - nsl_dvi.pattern
+    - nsl_dvi.encoder
+    - nsl_dvi.terminal
+    - nsl_indication.font_6x8
+    - nsl_indication.font_4x6
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_io.io
+    - nsl_io.clock
+    - nsl_io.diff
+    - nsl_logic.bool
+    - nsl_math.fixed
+    - nsl_signal_generator.trigonometry
+    - nsl_uart.serdes
+  sources:
+    - file_type: vhdl
+      files:
+        - src/stage1_pll_mod.vhd
+        - src/stage1_pll.vhd
+        - src/dvi_pll_mod.vhd
+        - src/dvi_pll.vhd
+        - src/top.pkg.vhd
+        - src/boundary.vhd
+        - src/main.vhd
+    - file_type: verilog
+      files:
+        - src/stage1_pll_init.v
+        - src/dvi_pll_init.v
+    - file_type: gowin-cst
+      files:
+        - ../pinout/hdmi.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/buttons.cst
+        - ../pinout/clk.cst
+        - ../pinout/uart.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    backend_config:
+      gbs.builtin.gowin: {}
+    outputs:
+      - type: gowin-fs
+        path: dvi_terminal.fs

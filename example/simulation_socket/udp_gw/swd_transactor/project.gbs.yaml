@@ -1,0 +1,29 @@
+name: udp_gw_swd_transactor
+
+root:
+  name: top
+  deps:
+    - nsl_coresight.swd
+    - nsl_coresight.memap_mapper
+    - nsl_coresight.ap
+    - nsl_coresight.dp
+    - nsl_coresight.transactor
+    - nsl_coresight.testing
+    - nsl_simulation.driver
+    - nsl_bnoc.framed
+    - nsl_amba.axi4_mm
+    - nsl_amba.ram
+    - nsl_amba.stream_to_udp
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl: {}
+    outputs:
+      - type: ghdl-simulator
+        path: tb
