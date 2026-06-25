@@ -10,6 +10,8 @@ package body control is
 
   procedure terminate(retval : integer) is
   begin
+    report "Terminating with error level: " & integer'image(retval)
+      severity note;
     c_exit(retval);
   end procedure;
   

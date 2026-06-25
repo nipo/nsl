@@ -16,6 +16,8 @@ package body control is
 
   procedure terminate(retval : integer) is
   begin
+    report "Terminating with error level: " & integer'image(retval)
+      severity note;
     work.nvc_control.c_exit(retval);
   end procedure;
   

@@ -14,6 +14,8 @@ package body control is
 
   procedure terminate(retval : integer) is
   begin
+    report "Terminating with error level: " & integer'image(retval)
+      severity note;
     control_simulation(true, true, retval);
   end procedure;
   
