@@ -25,7 +25,7 @@ begin
   driver: nsl_dvi.transceiver.dvi_driver
     generic map(
       driver_mode_c => driver_mode_c
-      );
+      )
     port map(
       reset_n_i => reset_n_i,
       pixel_clock_i => pixel_clock_i,
