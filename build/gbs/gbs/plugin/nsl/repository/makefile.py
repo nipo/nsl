@@ -2,6 +2,20 @@ from typing import Optional, Tuple, List, Iterator
 from pathlib import Path
 import re
 
+class MakefileError(Exception):
+    """A malformed or unsupported construct in a Makefile.
+
+    Carries the offending file so the failure is actionable, unlike the bare
+    internal objects the evaluator used to leak (e.g. an orphan Else).
+    """
+    pass
+
+class _UnbalancedConditional(Exception):
+    """Internal: a structural conditional error raised while consuming the
+    statement stream. Makefile.interpret annotates it with the file name and
+    re-raises it as a MakefileError; it is never seen by callers."""
+    pass
+
 def balanced_paren(n: int) -> str:
     return r"[^()]*?(?:\("*n+r"[^()]*?"+r"\)[^()]*?)*?"*n
 
@@ -184,6 +198,16 @@ class Reader:
                     else_if = False
                 r = EndIf()
             else:
+                # A conditional directive we couldn't parse (e.g. "if eq(...)",
+                # "elif ...", "ifdef ...") would otherwise be silently dropped,
+                # leaving its else/endif orphaned and crashing the evaluator on
+                # an opaque internal object. Reject it here, where we still have
+                # the offending line.
+                token = line.split(None, 1)[0] if line.split() else ""
+                if token in ("if", "ifeq", "ifneq", "ifdef", "ifndef", "elif"):
+                    raise MakefileError(
+                        f"{self.path}: unsupported conditional syntax: {line.strip()!r}"
+                    )
                 print(f"Unhandled line in makefile: {line}")
                 continue
             yield r
@@ -205,18 +229,32 @@ class Context(dict):
         #print(prefix, expression)
         if isinstance(expression, Condition):
             is_true = expression.evaluate(self)
-            while te := next(exprs):
+            # Consume this conditional's body from the shared iterator: the
+            # true branch up to an Else/EndIf, then the false branch up to the
+            # EndIf. A nested Condition recurses and consumes its own EndIf, so
+            # the next EndIf we see is always ours.
+            in_true_branch = True
+            while True:
+                try:
+                    te = next(exprs)
+                except StopIteration:
+                    raise _UnbalancedConditional(
+                        f"unterminated '{expression.mode}' (missing 'endif')"
+                    )
                 if isinstance(te, EndIf):
-                    #print(prefix, "te", te)
                     return
                 if isinstance(te, Else):
-                    while fe := next(exprs):
-                        if isinstance(fe, EndIf):
-                            #print(prefix, "fe", fe)
-                            return
-                        self.evaluate(fe, exprs, do_run = do_run and not is_true, prefix = prefix + " ")
-                self.evaluate(te, exprs, do_run = do_run and is_true, prefix = prefix + " ")
-            raise RuntimeError("unreachable")
+                    in_true_branch = False
+                    continue
+                branch_active = is_true if in_true_branch else not is_true
+                self.evaluate(te, exprs, do_run = do_run and branch_active,
+                              prefix = prefix + " ")
+
+        if isinstance(expression, (Else, EndIf)):
+            keyword = "else" if isinstance(expression, Else) else "endif"
+            raise _UnbalancedConditional(
+                f"'{keyword}' without matching 'ifeq'/'ifneq'"
+            )
 
         if isinstance(expression, Assignment):
             if do_run:
@@ -228,7 +266,7 @@ class Context(dict):
                 expression.evaluate(self)
             return
 
-        raise RuntimeError(expression)
+        raise _UnbalancedConditional(f"unexpected statement: {expression!r}")
 
     dereference = re.compile(r"\$(?P<to_expand>\("+ balanced_paren(5)+r"\)|[^(])", re.I)
 
@@ -335,12 +373,15 @@ class Makefile:
 
     def interpret(self, context: "Context"):
         exprs = iter(self.expressions)
-        while exprs:
-            try:
-                e = next(exprs)
-            except StopIteration:
-                break
-            context.evaluate(e, exprs)
+        try:
+            while True:
+                try:
+                    e = next(exprs)
+                except StopIteration:
+                    break
+                context.evaluate(e, exprs)
+        except _UnbalancedConditional as exc:
+            raise MakefileError(f"{self.filename}: {exc}") from None
 
 if __name__ == "__main__":
     import sys
