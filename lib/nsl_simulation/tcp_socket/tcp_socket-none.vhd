@@ -4,6 +4,8 @@ package body tcp_socket is
                             socket: out tcp_socket_t)
   is
   begin
+    report "TCP listener unavailable" severity warning;
+
     socket := (-1, -1);
   end procedure;
 
@@ -11,6 +13,8 @@ package body tcp_socket is
                            socket: out tcp_socket_t)
   is
   begin
+    report "TCP connect unavailable" severity error;
+
     socket := (-1, -1);
   end procedure;
 

@@ -4,6 +4,7 @@ package body udp_socket is
                    socket: out udp_socket_t)
   is
   begin
+    report "UDP socket unavailable" severity warning;
     socket := -1;
   end procedure;
 
