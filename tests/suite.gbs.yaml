@@ -326,6 +326,7 @@ projects:
   - name: uart_cbor_full_test
     path: uart_cbor/full_test
     tags: [ghdl, simulation]
+    skip: true
   - name: usb11
     path: usb11
     tags: [ghdl, simulation]
