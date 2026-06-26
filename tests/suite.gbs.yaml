@@ -191,6 +191,9 @@ projects:
   - name: float
     path: float
     tags: [ghdl, simulation]
+  - name: framed_chunker
+    path: framed_chunker
+    tags: [ghdl, simulation]
   - name: ftdi
     path: ftdi
     tags: [ghdl, simulation]

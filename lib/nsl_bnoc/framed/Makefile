@@ -13,6 +13,8 @@ vhdl-sources += framed_framer.vhd
 vhdl-sources += framed_unframer.vhd
 vhdl-sources += framed_router.vhd
 vhdl-sources += framed_matrix.vhd
+vhdl-sources += framed_chunker.vhd
+vhdl-sources += framed_unchunker.vhd
 
 deps += nsl_memory.fifo
 deps += nsl_bnoc.pipe
