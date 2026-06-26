@@ -1,0 +1,32 @@
+name: jtag_continuous_transport_demo
+
+root:
+  name: top
+  deps:
+    - nsl_jtag.continuous_transport
+    - nsl_jtag.transactor
+    - nsl_jtag.jtag
+    - nsl_simulation.jtag
+    - nsl_simulation.driver
+    - nsl_bnoc.framed
+    - nsl_bnoc.pipe
+    - nsl_amba.stream_to_tcp
+    - nsl_amba.axi4_stream
+    - nsl_line_coding.hdlc
+    - nsl_clocking.async
+  sources:
+    - file_type: vhdl
+      files:
+        - tcp_framed_gateway.vhd
+        - tb.vhd
+
+# Build a standalone simulator binary; it never terminates (it serves the two
+# TCP sockets), so it is not run as part of the build -- launch it by hand.
+output:
+  - name: simulator
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    outputs:
+      - type: ghdl-simulator
+        path: simulator.exe

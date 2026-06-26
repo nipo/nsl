@@ -1,0 +1,32 @@
+name: jtag_continuous_transport_rx
+
+root:
+  name: top
+  deps:
+    - nsl_jtag.continuous_transport
+    - nsl_jtag.transactor
+    - nsl_jtag.jtag
+    - nsl_simulation.jtag
+    - nsl_bnoc.framed
+    - nsl_bnoc.testing
+    - nsl_clocking.async
+    - nsl_data.bytestream
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -254,6 +254,21 @@ projects:
   - name: jtag_cbor_full_test
     path: jtag_cbor/full_test
     tags: [ghdl, simulation]
+  - name: jtag_continuous_transport_bit_loopback
+    path: jtag_continuous_transport/bit_loopback
+    tags: [ghdl, simulation, jtag_continuous_transport]
+  - name: jtag_continuous_transport_deframer
+    path: jtag_continuous_transport/deframer
+    tags: [ghdl, simulation, jtag_continuous_transport]
+  - name: jtag_continuous_transport_framer
+    path: jtag_continuous_transport/framer
+    tags: [ghdl, simulation, jtag_continuous_transport]
+  - name: jtag_continuous_transport_loopback
+    path: jtag_continuous_transport/loopback
+    tags: [ghdl, simulation, jtag_continuous_transport]
+  - name: jtag_continuous_transport_rx
+    path: jtag_continuous_transport/rx
+    tags: [ghdl, simulation, jtag_continuous_transport]
   - name: lifo
     path: lifo
     tags: [ghdl, simulation]
