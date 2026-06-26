@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep, nsl_bnoc, nsl_spi;
+library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep, nsl_bnoc, nsl_spi, nsl_io;
 
 entity main is
   port (
@@ -12,7 +12,8 @@ entity main is
     button_i: in std_ulogic;
     clk16_i: in std_ulogic;
 
-    spi_cs_n_o, spi_mosi_o, spi_sck_o : out std_ulogic;
+    spi_cs_n_o, spi_sck_o : out std_ulogic;
+    spi_mosi_io: inout std_logic;
     spi_miso_i : in std_ulogic
   );
 end main;
@@ -41,6 +42,7 @@ architecture arch of main is
   signal blinker_r_ctr : natural range 0 to internal_clock_freq / 2 - 1;
   signal blinker_b : std_ulogic;
   signal blinker_b_ctr : natural range 0 to external_clock_freq / 2 - 1;
+  signal spi_mosi_o: nsl_io.io.tristated;
 
   function nibble_to_char(nibble : unsigned(3 downto 0))
     return character
@@ -127,7 +129,6 @@ begin
       product_c => "NSL Example SPI programmer",
       serial_c => "",
       hs_supported_c => false,
-      bulk_mps_count_l2_c => 2,
       phy_clock_rate_c => internal_clock_freq,
       self_powered_c => false
       )
@@ -143,11 +144,11 @@ begin
 
       online_o => online,
 
-      rx_o => comm_spi.pre_fifo.cmd.req,
-      rx_i => comm_spi.pre_fifo.cmd.ack,
+      out_o => comm_spi.pre_fifo.cmd.req,
+      out_i => comm_spi.pre_fifo.cmd.ack,
 
-      tx_i => comm_spi.pre_fifo.rsp.req,
-      tx_o => comm_spi.pre_fifo.rsp.ack
+      in_i => comm_spi.pre_fifo.rsp.req,
+      in_o => comm_spi.pre_fifo.rsp.ack
       );
 
   spi_cmd_fifo: nsl_bnoc.framed.framed_fifo
@@ -266,6 +267,10 @@ begin
     end if;
   end process;
 
-  
-  
+  spi_mosi: nsl_io.io.tristated_io_driver
+    port map(
+      io_io => spi_mosi_io,
+      v_i => spi_mosi_o
+      );
+
 end arch;

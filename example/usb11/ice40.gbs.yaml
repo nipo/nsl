@@ -21,10 +21,10 @@ root:
   sources:
     - file_type: vhdl
       files:
-        - ../src/main.vhd
+        - src/main.vhd
     - file_type: ice40-pcf
       files:
-        - ../src/main.pcf
+        - src/main.pcf
 
 output:
   - name: pnr

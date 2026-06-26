@@ -16,10 +16,10 @@ root:
   sources:
     - file_type: vhdl
       files:
-        - ../src/main.vhd
+        - src/main.vhd
     - file_type: xilinx-ucf
       files:
-        - ../src/main.ucf
+        - src/main.ucf
 
 output:
   - name: synthesis
