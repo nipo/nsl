@@ -1,0 +1,24 @@
+name: arty_a7_blink
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/leds.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc7a35tcsg324-1
+    backend_config:
+      gbs.builtin.vivado: {}
+    outputs:
+      - type: vivado-bitstream
+        path: blink.bit

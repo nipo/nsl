@@ -45,3 +45,13 @@ projects:
   - name: simulation_socket_uart_cbor_udp_server
     path: simulation_socket/uart_cbor/udp_server
     tags: [socket]
+
+  - name: arty_a7_blink
+    path: digilent_arty_a7/blink
+    tags: [vivado, arty_a7]
+  - name: arty_a7_seven_segment_counter
+    path: digilent_arty_a7/seven_segment_counter
+    tags: [vivado, arty_a7]
+  - name: arty_a7_inet
+    path: digilent_arty_a7/inet
+    tags: [vivado, arty_a7]

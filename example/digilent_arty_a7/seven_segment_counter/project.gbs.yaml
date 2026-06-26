@@ -1,0 +1,33 @@
+name: arty_a7_seven_segment_counter
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_sipeed.pmod_dtx2
+    - nsl_sipeed.pmod_8xled
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/buttons.xdc
+        - ../pinout/clk100.xdc
+        - ../pinout/ja_lvcmos33.xdc
+        - ../pinout/jb_lvcmos33.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc7a35tcsg324-1
+    backend_config:
+      gbs.builtin.vivado: {}
+    outputs:
+      - type: vivado-bitstream
+        path: seven_segment_counter.bit
