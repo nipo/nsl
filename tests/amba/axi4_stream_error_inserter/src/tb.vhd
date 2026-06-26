@@ -35,7 +35,7 @@ architecture arch of tb is
     pkt_index_ko  => (others => '0')
   );
 
-  type stream_cfg_array_t is array (natural range <>) of config_t;
+  type config_vector is array (natural range <>) of config_t;
   type error_feedback_array_t is array (natural range <>) of error_feedback_t;
   type error_feedback_array_array_t is array (0 to nbr_scenario-1) of error_feedback_array_t(0 to max_errors_per_scenario_c-1);
   type frame_queue_root_array_t is array (natural range <>) of frame_queue_root_t;
