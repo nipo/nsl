@@ -29,3 +29,5 @@ output:
     outputs:
       - type: simulation-log
         path: simulation.log
+#      - type: waveform-ghw
+#        path: tb.ghw
