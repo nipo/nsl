@@ -49,6 +49,7 @@ RUN ln -sf /usr/bin/python3.13 /usr/local/bin/python && \
 # Pinnable via build-arg so a Dockerfile change isn't required to bump gbs.
 ARG GBS_REF=master
 RUN python -m pip install --no-cache-dir \
+        click \
         "git+https://github.com/nipo/gbs.git@${GBS_REF}"
 
 # NSL plugin from the checked-out source tree. The image rebuilds whenever
