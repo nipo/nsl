@@ -1,0 +1,45 @@
+name: inet_arty_a7
+
+root:
+  name: top
+  deps:
+    - nsl_inet.ethernet
+    - nsl_inet.ipv4
+    - nsl_inet.udp
+    - nsl_bnoc.framed
+    - nsl_bnoc.sized
+    - nsl_bnoc.committed
+    - nsl_bnoc.pipe
+    - nsl_bnoc.packetizer
+    - nsl_bnoc.routed
+    - nsl_bnoc.control_status
+    - nsl_mii.mii
+    - nsl_smi.smi
+    - nsl_smi.transactor
+    - nsl_uart.serdes
+    - nsl_uart.transactor
+    - nsl_indication.activity
+    - nsl_line_coding.hdlc
+    - nsl_hwdep.reset
+    - nsl_clocking.pll
+    - nsl_io.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - ../src/func/func.pkg.vhd
+        - ../src/func/func_main.vhd
+        - ../src/boundary/fpga_io.vhd
+    - file_type: xilinx-xdc
+      files:
+        - arty_a7_35.xdc
+
+output:
+  - name: synthesis
+    topcell: fpga_io
+    target:
+      part: xc7a35tcsg324-1
+    backend_config:
+      gbs.builtin.vivado: {}
+    outputs:
+      - type: vivado-bitstream
+        path: inet_test.bit

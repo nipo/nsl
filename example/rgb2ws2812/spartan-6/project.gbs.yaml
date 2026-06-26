@@ -1,0 +1,28 @@
+name: rgb2ws2812_spartan6
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_ws.driver
+    - nsl_indication.activity
+    - nsl_color.rgb
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - ../src/rgb2ws2812.vhd
+    - file_type: xilinx-ucf
+      files:
+        - ../src/led.ucf
+
+output:
+  - name: synthesis
+    topcell: top
+    target:
+      part: xc6slx9-2tqg144
+    backend_config:
+      gbs.builtin.ise: {}
+    outputs:
+      - type: ise-bitstream
+        path: rgb2ws2812.bit

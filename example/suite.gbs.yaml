@@ -55,3 +55,23 @@ projects:
   - name: arty_a7_inet
     path: digilent_arty_a7/inet
     tags: [vivado, arty_a7]
+
+  - name: rgb2ws2812_spartan6
+    path: rgb2ws2812/spartan-6
+    tags: [ise, spartan6]
+  - name: usb_spartan6
+    path: usb/spartan6
+    tags: [ise, spartan6]
+
+  - name: inet_arty_a7
+    path: inet/arty_a7
+    tags: [vivado, arty_a7]
+  - name: inet_gw1n
+    path: inet/gw1n
+    tags: [gowin]
+  - name: inet_gw2a
+    path: inet/gw2a
+    tags: [gowin]
+  - name: inet_s6
+    path: inet/s6
+    tags: [ise, spartan6]

@@ -1,0 +1,33 @@
+name: usb_spartan6
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+    - nsl_hwdep.uid
+    - nsl_hwdep.reset
+    - nsl_clocking.async
+    - nsl_memory.fifo
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_usb.ulpi
+    - nsl_usb.func
+    - nsl_ftdi.ft245
+  sources:
+    - file_type: vhdl
+      files:
+        - ../src/main.vhd
+    - file_type: xilinx-ucf
+      files:
+        - ../src/main.ucf
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: xc6slx9-2tqg144
+    backend_config:
+      gbs.builtin.ise: {}
+    outputs:
+      - type: ise-bitstream
+        path: usb.bit
