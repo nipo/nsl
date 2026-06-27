@@ -6,3 +6,4 @@ deps += nsl_event.tick
 deps += nsl_dsp.box
 deps += nsl_time.timestamp
 deps += nsl_math.arith
+deps += nsl_data.text

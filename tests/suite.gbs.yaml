@@ -281,6 +281,15 @@ projects:
   - name: nco
     path: nco
     tags: [ghdl, simulation]
+  - name: precise_clock_offset
+    path: precise_clock/offset
+    tags: [ghdl, simulation]
+  - name: precise_clock_pps
+    path: precise_clock/pps
+    tags: [ghdl, simulation]
+  - name: precise_clock_phc
+    path: precise_clock/phc
+    tags: [ghdl, simulation]
   - name: padded
     path: padded
     tags: [ghdl, simulation]
