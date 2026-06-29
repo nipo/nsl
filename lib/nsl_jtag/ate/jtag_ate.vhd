@@ -71,6 +71,7 @@ architecture rtl of jtag_ate is
   
   constant tms_shreg_len : natural := 14;
   constant tms_move_max_len : natural := nsl_math.arith.max(14, data_max_size);
+  constant dont_care_vector : std_ulogic_vector(data_max_size-1 downto 0) := (others => '-');
 
   type regs_in_t is
   record
@@ -261,7 +262,7 @@ begin
         if tick_i = '1' then
           rin_input.data_shreg <= mask_merge(
             '0' & r_input.data_shreg(r_input.data_shreg'left downto 1),
-            "--------",
+            dont_care_vector,
             r_input.insertion_mask);
           rin_input.tdi_next <= to_tristated(r_input.data_shreg(0));
           rin_input.state <= ST_SHIFT_HIGH;
@@ -282,7 +283,7 @@ begin
         if tick_i = '1' then
           rin_input.data_shreg <= mask_merge(
             '0' & r_input.data_shreg(r_input.data_shreg'left downto 1),
-            "--------",
+            dont_care_vector,
             r_input.insertion_mask);          
           rin_input.tdi_next <= to_tristated(r_input.data_shreg(0));
           rin_input.state <= ST_SHIFT_DONE;
