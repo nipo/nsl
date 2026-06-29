@@ -9,6 +9,8 @@ entity jtag_ate is
   generic (
     data_max_size : positive := 8;
     allow_pipelining : boolean := true
+    -- TODO: add a generic that allows selecting a certain number of clock
+    -- cycles to delay the sampling of tdo
     );
   port (
     reset_n_i   : in  std_ulogic;
@@ -60,7 +62,8 @@ architecture rtl of jtag_ate is
   record
     state : state_t;
     tap_branch : tap_branch_t;
-    data_shreg, insertion_mask, insertion_val : std_ulogic_vector(data_max_size-1 downto 0);
+    insertion_mask, insertion_val : std_ulogic_vector(data_max_size-1 downto 0);
+    data_shreg_tdi, data_shreg_tdo : std_ulogic_vector(data_max_size-1 downto 0);
     data_left : natural range 0 to data_max_size-1;
     tms_shreg : std_ulogic_vector(0 to tms_shreg_len-1);
     tms_left : natural range 0 to tms_move_max_len - 1 + 2;
@@ -191,7 +194,8 @@ begin
                   -- We are in Capture or ending Shift with
                   -- uncompleted cycle, we need to insert one TMS=0
                   -- cycle to go to next Shift cycle.
-                  rin.data_shreg <= cmd_data_i;
+                  rin.data_shreg_tdi <= cmd_data_i;
+                  rin.data_shreg_tdo <= (others => '-');
                   rin.data_left <= cmd_size_m1_i;
                   rin.insertion_mask <= mask_range(data_max_size, cmd_size_m1_i, cmd_size_m1_i);
                   rin.tap_branch <= TAP_CAPTURED;
@@ -226,11 +230,15 @@ begin
 
       when ST_SHIFT_LOW =>
         if tick_i = '1' then
-          rin.data_shreg <= mask_merge(
-            '0' & r.data_shreg(r.data_shreg'left downto 1),
+          rin.data_shreg_tdo <= mask_merge(
+            '0' & r.data_shreg_tdo(r.data_shreg_tdo'left downto 1),
             r.insertion_val,
             r.insertion_mask);
-          rin.tdi_next <= to_tristated(r.data_shreg(0));
+          rin.data_shreg_tdi <= mask_merge(
+            '0' & r.data_shreg_tdi(r.data_shreg_tdi'left downto 1),
+            "--------",
+            r.insertion_mask);
+          rin.tdi_next <= to_tristated(r.data_shreg_tdi(0));
           rin.state <= ST_SHIFT_HIGH;
         end if;
 
@@ -247,11 +255,15 @@ begin
 
       when ST_SHIFT_HOLD =>
         if tick_i = '1' then
-          rin.data_shreg <= mask_merge(
-            '0' & r.data_shreg(r.data_shreg'left downto 1),
+          rin.data_shreg_tdo <= mask_merge(
+            '0' & r.data_shreg_tdo(r.data_shreg_tdo'left downto 1),
             r.insertion_val,
             r.insertion_mask);
-          rin.tdi_next <= to_tristated(r.data_shreg(0));
+          rin.data_shreg_tdi <= mask_merge(
+            '0' & r.data_shreg_tdi(r.data_shreg_tdi'left downto 1),
+            "--------",
+            r.insertion_mask);          
+          rin.tdi_next <= to_tristated(r.data_shreg_tdi(0));
           rin.state <= ST_SHIFT_DONE;
         end if;
         
@@ -293,7 +305,7 @@ begin
 
     cmd_ready_o <= '0';
     rsp_valid_o <= '0';
-    rsp_data_o <= r.data_shreg;
+    rsp_data_o <= r.data_shreg_tdo;
     case r.state is
       when ST_IDLE =>
         cmd_ready_o <= '1';

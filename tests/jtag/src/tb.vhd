@@ -179,9 +179,9 @@ begin
     ir_set(x"f");
     dr_select;
 
-    loopback_div_delay_test(0 ns, 0 ns, 2);
-    loopback_div_delay_test(3 ns, 5 ns, 3);
---    loopback_div_delay_test(3 ns, 5 ns, 2);
+    loopback_div_delay_test(0 ns, 0 ns, 5);
+    loopback_div_delay_test(10 ns, 30 ns, 5);
+    loopback_div_delay_test(11 ns, 30 ns, 5);
 
     wait for 50 us;
 
@@ -241,7 +241,7 @@ begin
         done_count => done_s'length
         )
       port map(
-        clock_period(0) => 5 ns,
+        clock_period(0) => 10 ns,
         reset_duration(0) => 5 ns,
         reset_n_o(0) => async_reset_n_s,
         clock_o(0) => clock_s,
