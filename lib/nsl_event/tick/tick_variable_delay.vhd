@@ -20,24 +20,33 @@ end tick_variable_delay;
 
 architecture rtl of tick_variable_delay is
 
-  constant num_regs : positive := 2**delay_max_l2_c;  
+  constant num_regs : positive := 2**delay_max_l2_c - 1;  
   signal s_data_shreg : std_ulogic_vector(num_regs - 1 downto 0);
   signal s_one_hot : std_ulogic_vector(num_regs - 1 downto 0);
   signal s_tick_vector : std_ulogic_vector(num_regs - 1 downto 0);
   
 begin
 
-  tick_o <= s_data_shreg(num_regs - 1);
   s_tick_vector <= (others => tick_i);
+
+  -- Determine tick_o driver
+  tick_out: process (delay_i, s_data_shreg, tick_i) is
+  begin  -- process tick_out
+    if to_integer(delay_i) = 0 then
+      tick_o <= tick_i;
+    else
+      tick_o <= s_data_shreg(0);
+    end if;
+  end process tick_out;
 
   -- One hot decode input delay
   one_hot: process(delay_i)
   begin
-    for i in 0 to num_regs - 1 loop
-      if i = (num_regs - to_integer(delay_i)) then
-        s_one_hot(i) <= '1';
+    for i in 1 to num_regs loop
+      if i = to_integer(delay_i) then
+        s_one_hot(i-1) <= '1';
       else
-        s_one_hot(i) <= '0';
+        s_one_hot(i-1) <= '0';
       end if;
     end loop;  -- i
   end process;
@@ -49,7 +58,7 @@ begin
     if reset_n_i = '0' then             -- asynchronous reset (active low)
       s_data_shreg <= (others => '0');
     elsif rising_edge(clock_i) then     -- rising clock edge
-      s_data_shreg <= std_ulogic_vector(shift_left(unsigned(s_data_shreg), 1))
+      s_data_shreg <= std_ulogic_vector(shift_right(unsigned(s_data_shreg), 1))
                       or (s_one_hot and s_tick_vector);
       end if;
   end process shift;

@@ -36,6 +36,9 @@ architecture arch of tb is
   signal tap_o : nsl_jtag.jtag.jtag_tap_o;
   signal tap_i : nsl_jtag.jtag.jtag_tap_i;
 
+  -- To ATE
+  signal s_tick_delay: unsigned(2 downto 0);
+
   shared variable cmd_delay, rsp_delay: time := 0 ns;
   
 begin
@@ -174,12 +177,15 @@ begin
 
     wait for 40 ns;
 
+    s_tick_delay <= "000"; -- No tick delay when not doing delay test
     chain_reset(3);
     blind_enumerate;
     ir_set(x"f");
     dr_select;
 
     loopback_div_delay_test(0 ns, 0 ns, 5);
+
+    s_tick_delay <= "100";
     loopback_div_delay_test(10 ns, 30 ns, 5);
     loopback_div_delay_test(11 ns, 30 ns, 5);
 
@@ -221,6 +227,9 @@ begin
         );
 
     ate_impl: nsl_jtag.transactor.framed_ate
+      generic map(
+        delay_max_l2_c => 3
+        )
       port map(
         clock_i  => clock_s,
         reset_n_i => clock_reset_n_s,
@@ -231,7 +240,9 @@ begin
         rsp_i => ate_io_s.rsp.ack,
 
         jtag_o => ate_o,
-        jtag_i => ate_i
+        jtag_i => ate_i,
+
+        tick_delay_i => s_tick_delay
         );
 
     driver: nsl_simulation.driver.simulation_driver

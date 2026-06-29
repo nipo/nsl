@@ -8,6 +8,9 @@ use nsl_jtag.transactor.all;
 use nsl_bnoc.framed.all;
 
 entity framed_ate is
+  generic(
+    delay_max_l2_c : positive
+    );  
   port (
     reset_n_i   : in  std_ulogic;
     clock_i      : in  std_ulogic;
@@ -19,6 +22,8 @@ entity framed_ate is
 
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
     jtag_i : in nsl_jtag.jtag.jtag_ate_i;
+
+    tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0);
 
     system_reset_n_o : out nsl_io.io.opendrain
     );
@@ -333,7 +338,7 @@ begin
   ate: jtag_ate
     generic map (
       data_max_size => data_max_size,
-      delay_max_l2_c => 3,
+      delay_max_l2_c => delay_max_l2_c,
       allow_pipelining => false
       )
     port map (
@@ -352,7 +357,7 @@ begin
       rsp_valid_o => s_rsp_valid,
       rsp_data_o => s_rsp_data,
 
-      tick_delay_i => b"100",
+      tick_delay_i => tick_delay_i,
 
       jtag_o => jtag_o,
       jtag_i => jtag_i
