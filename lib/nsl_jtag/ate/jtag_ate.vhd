@@ -8,9 +8,9 @@ use nsl_logic.logic.all;
 entity jtag_ate is
   generic (
     data_max_size : positive := 8;
-    allow_pipelining : boolean := true
-    -- TODO: add a generic that allows selecting a certain number of clock
-    -- cycles to delay the sampling of tdo
+    allow_pipelining : boolean := true;
+    -- Sample delay in number of clock cycles (clock_i)
+    tdo_sample_delay : integer := 3
     );
   port (
     reset_n_i   : in  std_ulogic;
@@ -52,8 +52,17 @@ architecture rtl of jtag_ate is
     -- Waiting for TDO to settle before sampling it and outputting
     -- data.
     ST_SHIFT_HOLD,
+    ST_SHIFT_WAIT,
     ST_SHIFT_DONE
     );
+
+  type state_sample_t is (
+    ST_RESET,
+    ST_IDLE,
+    ST_SAMPLE_NO_DELAY,
+    ST_WAIT_TICK,
+    ST_SAMPLE_DELAY
+    );  
 
   constant tms_shreg_len : natural := 14;
   constant tms_move_max_len : natural := nsl_math.arith.max(14, data_max_size);
@@ -62,15 +71,23 @@ architecture rtl of jtag_ate is
   record
     state : state_t;
     tap_branch : tap_branch_t;
-    insertion_mask, insertion_val : std_ulogic_vector(data_max_size-1 downto 0);
     data_shreg_tdi, data_shreg_tdo : std_ulogic_vector(data_max_size-1 downto 0);
+    insertion_mask, insertion_val : std_ulogic_vector(data_max_size-1 downto 0);
     data_left : natural range 0 to data_max_size-1;
     tms_shreg : std_ulogic_vector(0 to tms_shreg_len-1);
     tms_left : natural range 0 to tms_move_max_len - 1 + 2;
     tdi, tdi_next : tristated;
   end record;
 
+  type regs_sample_t is
+  record
+    state : state_sample_t;
+    data_shreg: std_ulogic_vector(data_max_size-1 downto 0);
+    delay_cycles_left: integer;
+  end record;
+
   signal r, rin: regs_t;
+  signal r_sample, rin_sample: regs_sample_t;
 
 begin
 
@@ -85,13 +102,15 @@ begin
     end if;
   end process;
 
-  transition: process(r, jtag_i, cmd_valid_i, cmd_op_i, cmd_data_i, cmd_size_m1_i, rsp_ready_i,
+  transition: process(cmd_data_i, cmd_op_i, cmd_size_m1_i, cmd_valid_i,
+                      jtag_i.tdo, r, rin_sample.data_shreg, rsp_ready_i,
                       tick_i) is
   begin
     rin <= r;
 
     rin.insertion_val <= (others => jtag_i.tdo);
-    
+    rin.data_shreg_tdo <= rin_sample.data_shreg;    
+
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IDLE;
@@ -195,7 +214,6 @@ begin
                   -- uncompleted cycle, we need to insert one TMS=0
                   -- cycle to go to next Shift cycle.
                   rin.data_shreg_tdi <= cmd_data_i;
-                  rin.data_shreg_tdo <= (others => '-');
                   rin.data_left <= cmd_size_m1_i;
                   rin.insertion_mask <= mask_range(data_max_size, cmd_size_m1_i, cmd_size_m1_i);
                   rin.tap_branch <= TAP_CAPTURED;
@@ -230,10 +248,6 @@ begin
 
       when ST_SHIFT_LOW =>
         if tick_i = '1' then
-          rin.data_shreg_tdo <= mask_merge(
-            '0' & r.data_shreg_tdo(r.data_shreg_tdo'left downto 1),
-            r.insertion_val,
-            r.insertion_mask);
           rin.data_shreg_tdi <= mask_merge(
             '0' & r.data_shreg_tdi(r.data_shreg_tdi'left downto 1),
             "--------",
@@ -255,22 +269,94 @@ begin
 
       when ST_SHIFT_HOLD =>
         if tick_i = '1' then
-          rin.data_shreg_tdo <= mask_merge(
-            '0' & r.data_shreg_tdo(r.data_shreg_tdo'left downto 1),
-            r.insertion_val,
-            r.insertion_mask);
           rin.data_shreg_tdi <= mask_merge(
             '0' & r.data_shreg_tdi(r.data_shreg_tdi'left downto 1),
             "--------",
-            r.insertion_mask);          
+            r.insertion_mask);
           rin.tdi_next <= to_tristated(r.data_shreg_tdi(0));
+          rin.state <= ST_SHIFT_WAIT;
+        end if;
+
+      when ST_SHIFT_WAIT =>
+        if r_sample.state = ST_IDLE then
           rin.state <= ST_SHIFT_DONE;
+        else
+          rin.state <= ST_SHIFT_WAIT;
         end if;
         
       when ST_SHIFT_DONE =>
         if rsp_ready_i = '1' then
           rin.state <= ST_IDLE;
         end if;
+    end case;
+  end process;
+
+  reg_sample: process(reset_n_i, clock_i)
+  begin
+    if rising_edge(clock_i) then
+      r_sample <= rin_sample;
+    end if;
+
+    if reset_n_i = '0' then
+      r_sample.state <= ST_RESET;
+    end if;
+  end process;
+
+  transition_sample: process(r.insertion_mask, r.insertion_val, r_sample,
+                             rin.state, tick_i) is
+  begin
+    rin_sample <= r_sample;
+
+    case r_sample.state is
+      when ST_RESET =>
+        rin_sample.state <= ST_IDLE;
+        rin_sample.data_shreg <= (others => '-');
+
+      when ST_IDLE =>
+        case rin.state is
+          when ST_SHIFT_LOW | ST_SHIFT_HOLD =>
+            if tdo_sample_delay = 0 then
+              rin_sample.state <= ST_SAMPLE_NO_DELAY;
+            else
+              rin_sample.state <= ST_WAIT_TICK;
+              rin_sample.delay_cycles_left <= tdo_sample_delay;
+            end if;
+          when others =>
+            rin_sample.state <= ST_IDLE;
+        end case;
+
+      when ST_SAMPLE_NO_DELAY =>
+        if tick_i = '1' then
+          -- Sample tdo
+          rin_sample.data_shreg <= mask_merge(
+            '0' & r_sample.data_shreg(r_sample.data_shreg'left downto 1),
+            r.insertion_val,
+            r.insertion_mask);
+          rin_sample.state <= ST_IDLE;
+        else
+          rin_sample.state <= ST_SAMPLE_NO_DELAY;
+        end if;
+
+      when ST_WAIT_TICK =>
+        if tick_i = '1' then
+          rin_sample.state <= ST_SAMPLE_DELAY;
+        else
+          rin_sample.state <= ST_WAIT_TICK;
+        end if;
+
+      when ST_SAMPLE_DELAY =>
+        if r_sample.delay_cycles_left = 0 then
+          -- Sample tdo
+          rin_sample.data_shreg <= mask_merge(
+            '0' & r_sample.data_shreg(r_sample.data_shreg'left downto 1),
+            r.insertion_val,
+            r.insertion_mask);
+          rin_sample.state <= ST_IDLE;
+        else
+          rin_sample.state <= ST_SAMPLE_DELAY;
+          rin_sample.delay_cycles_left <= r_sample.delay_cycles_left - 1;          
+        end if;
+ 
     end case;
   end process;
 
