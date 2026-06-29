@@ -202,7 +202,7 @@ package tick is
   -- Output the tick after specified delay
   component tick_variable_delay is
     generic (
-      delay_max_l2_c : positive);
+      delay_max_l2_c : natural);
     port (
       clock_i   : in  std_ulogic;
       reset_n_i : in  std_ulogic;

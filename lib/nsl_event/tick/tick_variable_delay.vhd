@@ -5,7 +5,7 @@ use ieee.math_real.all;
 
 entity tick_variable_delay is
   generic(
-    delay_max_l2_c : positive
+    delay_max_l2_c : natural
     );
   port(
     clock_i : in  std_ulogic;
@@ -20,7 +20,7 @@ end tick_variable_delay;
 
 architecture rtl of tick_variable_delay is
 
-  constant num_regs : positive := 2**delay_max_l2_c - 1;  
+  constant num_regs : natural := 2**delay_max_l2_c - 1;  
   signal s_data_shreg : std_ulogic_vector(num_regs - 1 downto 0);
   signal s_one_hot : std_ulogic_vector(num_regs - 1 downto 0);
   signal s_tick_vector : std_ulogic_vector(num_regs - 1 downto 0);

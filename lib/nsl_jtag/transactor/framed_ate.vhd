@@ -9,7 +9,7 @@ use nsl_bnoc.framed.all;
 
 entity framed_ate is
   generic(
-    delay_max_l2_c : positive
+    delay_max_l2_c : natural := 0
     );  
   port (
     reset_n_i   : in  std_ulogic;
@@ -23,7 +23,7 @@ entity framed_ate is
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
     jtag_i : in nsl_jtag.jtag.jtag_ate_i;
 
-    tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0);
+    tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0) := (others => '0');
 
     system_reset_n_o : out nsl_io.io.opendrain
     );

@@ -10,7 +10,7 @@ use nsl_event.tick.all;
 entity jtag_ate is
   generic (
     data_max_size : positive := 8;
-    delay_max_l2_c : positive := 3;
+    delay_max_l2_c : natural := 0;
     allow_pipelining : boolean := true
     );
   port (
@@ -29,7 +29,7 @@ entity jtag_ate is
     rsp_valid_o : out std_ulogic;
     rsp_data_o  : out std_ulogic_vector(data_max_size-1 downto 0);
 
-    tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0);
+    tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0) := (others => '0');
 
     jtag_o : out nsl_jtag.jtag.jtag_ate_o;
     jtag_i : in nsl_jtag.jtag.jtag_ate_i
