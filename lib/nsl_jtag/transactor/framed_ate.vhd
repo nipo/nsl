@@ -333,7 +333,7 @@ begin
   ate: jtag_ate
     generic map (
       data_max_size => data_max_size,
-      delay_max_l2_c => 8,
+      delay_max_l2_c => 3,
       allow_pipelining => false
       )
     port map (
@@ -352,7 +352,7 @@ begin
       rsp_valid_o => s_rsp_valid,
       rsp_data_o => s_rsp_data,
 
-      tick_delay_i => x"00",
+      tick_delay_i => b"100",
 
       jtag_o => jtag_o,
       jtag_i => jtag_i

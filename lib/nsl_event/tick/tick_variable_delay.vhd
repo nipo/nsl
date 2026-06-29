@@ -34,7 +34,7 @@ begin
   one_hot: process(delay_i)
   begin
     for i in 0 to num_regs - 1 loop
-      if i = to_integer(delay_i) then
+      if i = (num_regs - to_integer(delay_i)) then
         s_one_hot(i) <= '1';
       else
         s_one_hot(i) <= '0';

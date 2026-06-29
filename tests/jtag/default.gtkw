@@ -1,38 +1,51 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Wed Jun 24 13:35:52 2026
+[*] Thu Jun 25 08:28:28 2026
 [*]
 [dumpfile] "/home/isaac/Documents/Repos/nsl/tests/jtag/tb.ghw"
-[dumpfile_mtime] "Wed Jun 24 13:32:40 2026"
-[dumpfile_size] 193049
+[dumpfile_mtime] "Thu Jun 25 08:28:19 2026"
+[dumpfile_size] 547909
 [savefile] "/home/isaac/Documents/Repos/nsl/tests/jtag/default.gtkw"
-[timestart] 2566100000
+[timestart] 6334000000
 [size] 1969 1060
 [pos] -1 -1
-*-25.338707 2600000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.838709 6650000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
 [treeopen] top.tb.ate.
 [treeopen] top.tb.ate.ate_impl.
 [treeopen] top.tb.ate.ate_impl.ate.
-[treeopen] top.tb.ate.ate_impl.ate.r_input.
-[treeopen] top.tb.ate.ate_impl.ate.r_output.
+[treeopen] top.tb.ate.ate_impl.ate.rin_input.
 [treeopen] top.tb.ate.ate_impl.ate.rin_output.
+[treeopen] top.tb.ate.ate_impl.ate.tick_variable_delay_1.
+[treeopen] top.tb.ate.ate_impl.cmd_i.
 [treeopen] top.tb.dut.tap.jtag_o.
 [sst_width] 238
-[signals_width] 462
+[signals_width] 542
 [sst_expanded] 1
 [sst_vpaned_height] 359
 @28
 top.tb.ate.clock_s
 top.tb.ate_o.tck
 top.tb.ate.ate_impl.tick_gen.tick_o
+@29
+top.tb.ate.ate_impl.ate.tick_variable_delay_1.tick_o
+@22
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[7] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[0]
+@28
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[7] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[0]
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[7] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[0]
+@22
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[0]
+@28
 top.tb.ate_o.tdi.en
 top.tb.ate_o.tdi.v
 top.tb.dut.tap.jtag_i.tdi
 top.tb.ate_o.tms
 top.tb.ate_o.trst
+@29
 top.tb.ate_i.tdo
+@28
 top.tb.dut.tap.jtag_o.tdo.v
 @800200
 -IO
@@ -65,8 +78,10 @@ top.tb.ate.ate_impl.ate.cmd_ready_o
 @29
 #{top.tb.ate.ate_impl.ate.r_output.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r_output.data_shreg[7] top.tb.ate.ate_impl.ate.r_output.data_shreg[6] top.tb.ate.ate_impl.ate.r_output.data_shreg[5] top.tb.ate.ate_impl.ate.r_output.data_shreg[4] top.tb.ate.ate_impl.ate.r_output.data_shreg[3] top.tb.ate.ate_impl.ate.r_output.data_shreg[2] top.tb.ate.ate_impl.ate.r_output.data_shreg[1] top.tb.ate.ate_impl.ate.r_output.data_shreg[0]
 @420
+top.tb.ate.ate_impl.ate.r_output.data_left
+@421
 top.tb.ate.ate_impl.ate.r_output.state
-@29
+@28
 #{top.tb.ate.ate_impl.ate.r_input.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r_input.data_shreg[7] top.tb.ate.ate_impl.ate.r_input.data_shreg[6] top.tb.ate.ate_impl.ate.r_input.data_shreg[5] top.tb.ate.ate_impl.ate.r_input.data_shreg[4] top.tb.ate.ate_impl.ate.r_input.data_shreg[3] top.tb.ate.ate_impl.ate.r_input.data_shreg[2] top.tb.ate.ate_impl.ate.r_input.data_shreg[1] top.tb.ate.ate_impl.ate.r_input.data_shreg[0]
 @420
 top.tb.ate.ate_impl.ate.r_input.state

@@ -18,7 +18,7 @@ package ate is
   component jtag_ate
     generic (
       data_max_size : positive := 8;
-      delay_max_l2_c : positive := 8;
+      delay_max_l2_c : positive := 3;
       allow_pipelining : boolean := true
       );
     port (

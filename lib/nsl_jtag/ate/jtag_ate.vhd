@@ -2,14 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_math, nsl_io, nsl_logic;
+library nsl_jtag, nsl_math, nsl_io, nsl_logic, nsl_event;
 use nsl_io.io.all;
 use nsl_logic.logic.all;
+use nsl_event.tick.all;
 
 entity jtag_ate is
   generic (
     data_max_size : positive := 8;
-    delay_max_l2_c : positive := 8;
+    delay_max_l2_c : positive := 3;
     allow_pipelining : boolean := true
     );
   port (
@@ -94,10 +95,14 @@ architecture rtl of jtag_ate is
   signal r_output, rin_output: regs_out_t;
 
   signal s_cmd_ready: std_ulogic;
-  signal s_rsp_valid: std_ulogic;  
+  signal s_rsp_valid: std_ulogic;
+  signal s_delayed_tick: std_ulogic;
+  signal s_tick_i: std_ulogic;
+  signal s_tick_n_rst: std_ulogic;
 
 begin
 
+  -- Output ports tied to internal signals
   cmd_ready_o <= s_cmd_ready;
   rsp_valid_o <= s_rsp_valid;
 
@@ -302,8 +307,8 @@ begin
   end process;
 
   transition_tdo: process(cmd_op_i, cmd_size_m1_i, cmd_valid_i, jtag_i.tdo,
-                          r_output, rsp_ready_i, s_cmd_ready, s_rsp_valid,
-                          tick_i) is
+                          r_output, rsp_ready_i, s_cmd_ready, s_delayed_tick,
+                          s_rsp_valid) is
   begin
     rin_output <= r_output;
 
@@ -394,7 +399,7 @@ begin
         end if;
 
       when ST_SHIFT_LOW =>
-        if tick_i = '1' then
+        if s_delayed_tick = '1' then
           rin_output.data_shreg <= mask_merge(
             '0' & r_output.data_shreg(r_output.data_shreg'left downto 1),
             r_output.insertion_val,
@@ -403,7 +408,7 @@ begin
         end if;
 
       when ST_SHIFT_HIGH =>
-        if tick_i = '1' then
+        if s_delayed_tick = '1' then
           if r_output.data_left /= 0 then
             rin_output.state <= ST_SHIFT_LOW;
             rin_output.data_left <= r_output.data_left - 1;
@@ -413,7 +418,7 @@ begin
         end if;
 
       when ST_SHIFT_HOLD =>
-        if tick_i = '1' then
+        if s_delayed_tick = '1' then
           rin_output.data_shreg <= mask_merge(
             '0' & r_output.data_shreg(r_output.data_shreg'left downto 1),
             r_output.insertion_val,
@@ -428,11 +433,13 @@ begin
     end case;
   end process;  
 
-  ready_valid: process (r_input.state, r_output.state) is
+  ready_valid: process (r_input, r_output) is
   begin  -- process ready_valid
 
     s_cmd_ready <= '0';
     s_rsp_valid <= '0';
+
+    rsp_data_o <= r_output.data_shreg;    
     
     if (r_input.state = ST_IDLE) and (r_output.state = ST_IDLE) then
       s_cmd_ready <= '1';
@@ -472,8 +479,29 @@ begin
         null;
     end case;
 
-    rsp_data_o <= r_output.data_shreg;
-
   end process;
+
+  tick_delay_in: process (r_input.state, tick_i) is
+  begin  -- process tick_delay_in
+    case r_input.state is
+      when ST_SHIFT_LOW | ST_SHIFT_HIGH | ST_SHIFT_HOLD | ST_SHIFT_DONE =>
+        s_tick_i <= tick_i;
+        s_tick_n_rst <= '1';
+      when others =>
+        s_tick_i <= '0';
+        s_tick_n_rst <= '0';
+    end case;
+  end process tick_delay_in;
+
+  -- Tick variable delay instantiation
+  tick_variable_delay_1: tick_variable_delay
+    generic map (
+      delay_max_l2_c => delay_max_l2_c)
+    port map (
+      clock_i   => clock_i,
+      reset_n_i => s_tick_n_rst,
+      tick_i    => s_tick_i,
+      tick_o    => s_delayed_tick,
+      delay_i   => tick_delay_i);
 
 end architecture;
