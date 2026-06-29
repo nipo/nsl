@@ -20,7 +20,7 @@ use nsl_amba.stream_traffic.all;
 
 architecture arch of tb is
   constant nbr_scenario : integer := 3;
-  constant config_c : stream_cfg_array_t :=
+  constant config_c : config_vector :=
    (0 => axi4_flit_cfg,
     1 => config(2, user => 1,  last => true),
     2 => config(4, user => 1, last => true));
