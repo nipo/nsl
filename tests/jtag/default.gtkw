@@ -1,23 +1,23 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Tue Jun 23 12:21:37 2026
+[*] Wed Jun 24 13:35:52 2026
 [*]
 [dumpfile] "/home/isaac/Documents/Repos/nsl/tests/jtag/tb.ghw"
-[dumpfile_mtime] "Tue Jun 23 12:19:31 2026"
-[dumpfile_size] 232820
+[dumpfile_mtime] "Wed Jun 24 13:32:40 2026"
+[dumpfile_size] 193049
 [savefile] "/home/isaac/Documents/Repos/nsl/tests/jtag/default.gtkw"
-[timestart] 2953000000
+[timestart] 2566100000
 [size] 1969 1060
 [pos] -1 -1
-*-24.738707 3070000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.338707 2600000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
 [treeopen] top.tb.ate.
 [treeopen] top.tb.ate.ate_impl.
 [treeopen] top.tb.ate.ate_impl.ate.
-[treeopen] top.tb.ate.ate_impl.ate.r_sample.
-[treeopen] top.tb.ate.ate_impl.ate.rin.
-[treeopen] top.tb.ate.ate_impl.ate.rin_sample.
+[treeopen] top.tb.ate.ate_impl.ate.r_input.
+[treeopen] top.tb.ate.ate_impl.ate.r_output.
+[treeopen] top.tb.ate.ate_impl.ate.rin_output.
 [treeopen] top.tb.dut.tap.jtag_o.
 [sst_width] 238
 [signals_width] 462
@@ -60,22 +60,17 @@ top.tb.ate.ate_impl.ate.cmd_valid_i
 top.tb.ate.ate_impl.ate.cmd_ready_o
 @800200
 -ATE
-@28
-#{top.tb.ate.ate_impl.ate.r.insertion_mask[7:0]} top.tb.ate.ate_impl.ate.r.insertion_mask[7] top.tb.ate.ate_impl.ate.r.insertion_mask[6] top.tb.ate.ate_impl.ate.r.insertion_mask[5] top.tb.ate.ate_impl.ate.r.insertion_mask[4] top.tb.ate.ate_impl.ate.r.insertion_mask[3] top.tb.ate.ate_impl.ate.r.insertion_mask[2] top.tb.ate.ate_impl.ate.r.insertion_mask[1] top.tb.ate.ate_impl.ate.r.insertion_mask[0]
 @22
-#{top.tb.ate.ate_impl.ate.r.insertion_val[7:0]} top.tb.ate.ate_impl.ate.r.insertion_val[7] top.tb.ate.ate_impl.ate.r.insertion_val[6] top.tb.ate.ate_impl.ate.r.insertion_val[5] top.tb.ate.ate_impl.ate.r.insertion_val[4] top.tb.ate.ate_impl.ate.r.insertion_val[3] top.tb.ate.ate_impl.ate.r.insertion_val[2] top.tb.ate.ate_impl.ate.r.insertion_val[1] top.tb.ate.ate_impl.ate.r.insertion_val[0]
-@420
-top.tb.ate.ate_impl.ate.r.data_left
-@28
-#{top.tb.ate.ate_impl.ate.r.data_shreg_tdo[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg_tdo[7] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[6] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[5] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[4] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[3] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[2] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[1] top.tb.ate.ate_impl.ate.r.data_shreg_tdo[0]
+#{top.tb.ate.ate_impl.ate.r_output.insertion_val[7:0]} top.tb.ate.ate_impl.ate.r_output.insertion_val[7] top.tb.ate.ate_impl.ate.r_output.insertion_val[6] top.tb.ate.ate_impl.ate.r_output.insertion_val[5] top.tb.ate.ate_impl.ate.r_output.insertion_val[4] top.tb.ate.ate_impl.ate.r_output.insertion_val[3] top.tb.ate.ate_impl.ate.r_output.insertion_val[2] top.tb.ate.ate_impl.ate.r_output.insertion_val[1] top.tb.ate.ate_impl.ate.r_output.insertion_val[0]
 @29
-#{top.tb.ate.ate_impl.ate.r_sample.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r_sample.data_shreg[7] top.tb.ate.ate_impl.ate.r_sample.data_shreg[6] top.tb.ate.ate_impl.ate.r_sample.data_shreg[5] top.tb.ate.ate_impl.ate.r_sample.data_shreg[4] top.tb.ate.ate_impl.ate.r_sample.data_shreg[3] top.tb.ate.ate_impl.ate.r_sample.data_shreg[2] top.tb.ate.ate_impl.ate.r_sample.data_shreg[1] top.tb.ate.ate_impl.ate.r_sample.data_shreg[0]
-@28
-#{top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[7:0]} top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[7] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[6] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[5] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[4] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[3] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[2] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[1] top.tb.ate.ate_impl.ate.rin.data_shreg_tdo[0]
-#{top.tb.ate.ate_impl.ate.r.data_shreg_tdi[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg_tdi[7] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[6] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[5] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[4] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[3] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[2] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[1] top.tb.ate.ate_impl.ate.r.data_shreg_tdi[0]
+#{top.tb.ate.ate_impl.ate.r_output.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r_output.data_shreg[7] top.tb.ate.ate_impl.ate.r_output.data_shreg[6] top.tb.ate.ate_impl.ate.r_output.data_shreg[5] top.tb.ate.ate_impl.ate.r_output.data_shreg[4] top.tb.ate.ate_impl.ate.r_output.data_shreg[3] top.tb.ate.ate_impl.ate.r_output.data_shreg[2] top.tb.ate.ate_impl.ate.r_output.data_shreg[1] top.tb.ate.ate_impl.ate.r_output.data_shreg[0]
 @420
-top.tb.ate.ate_impl.ate.r.state
-top.tb.ate.ate_impl.ate.r_sample.state
+top.tb.ate.ate_impl.ate.r_output.state
+@29
+#{top.tb.ate.ate_impl.ate.r_input.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r_input.data_shreg[7] top.tb.ate.ate_impl.ate.r_input.data_shreg[6] top.tb.ate.ate_impl.ate.r_input.data_shreg[5] top.tb.ate.ate_impl.ate.r_input.data_shreg[4] top.tb.ate.ate_impl.ate.r_input.data_shreg[3] top.tb.ate.ate_impl.ate.r_input.data_shreg[2] top.tb.ate.ate_impl.ate.r_input.data_shreg[1] top.tb.ate.ate_impl.ate.r_input.data_shreg[0]
+@420
+top.tb.ate.ate_impl.ate.r_input.state
+top.tb.ate.ate_impl.ate.r_input.tms_left
 @1000200
 -ATE
 @800200
