@@ -198,4 +198,17 @@ package tick is
       );
   end component;
 
+  -- Delay the tick input by a specified number of clock cycles
+  -- Output the tick after specified delay
+  component tick_variable_delay is
+    generic (
+      delay_max_l2_c : positive);
+    port (
+      clock_i   : in  std_ulogic;
+      reset_n_i : in  std_ulogic;
+      tick_i    : in  std_ulogic;
+      tick_o    : out std_ulogic;
+      delay_i   : in  unsigned(delay_max_l2_c-1 downto 0));
+  end component;
+
 end package tick;
