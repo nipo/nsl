@@ -12,7 +12,6 @@ root:
     - nsl_amba.axi4_mm
     - nsl_amba.ram
     - nsl_amba.stream_traffic
-    - nsl_amba.stream_to_udp
     - nsl_amba.stream_fifo
     - nsl_data.bytestream
     - nsl_clocking.async
