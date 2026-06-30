@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Mon Jun 29 14:48:13 2026
+[*] Tue Jun 30 07:33:56 2026
 [*]
 [dumpfile] "/home/isaac/Documents/Repos/nsl/tests/jtag/tb.ghw"
-[dumpfile_mtime] "Mon Jun 29 14:44:09 2026"
-[dumpfile_size] 529454
+[dumpfile_mtime] "Tue Jun 30 07:24:46 2026"
+[dumpfile_size] 2505109
 [savefile] "/home/isaac/Documents/Repos/nsl/tests/jtag/default.gtkw"
-[timestart] 60652000000
+[timestart] 60211000000
 [size] 1969 1060
 [pos] -46 -46
-*-28.038710 61140000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-29.238710 61250000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
 [treeopen] top.tb.ate.
@@ -74,6 +74,8 @@ top.tb.ate.ate_impl.ate.cmd_ready_o
 top.tb.ate.ate_impl.ate.r.state_in
 @29
 #{top.tb.ate.ate_impl.ate.r.data_shreg_in[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg_in[7] top.tb.ate.ate_impl.ate.r.data_shreg_in[6] top.tb.ate.ate_impl.ate.r.data_shreg_in[5] top.tb.ate.ate_impl.ate.r.data_shreg_in[4] top.tb.ate.ate_impl.ate.r.data_shreg_in[3] top.tb.ate.ate_impl.ate.r.data_shreg_in[2] top.tb.ate.ate_impl.ate.r.data_shreg_in[1] top.tb.ate.ate_impl.ate.r.data_shreg_in[0]
+@23
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[7] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[0]
 @28
 top.tb.ate.ate_impl.ate.r.state_out
 @29

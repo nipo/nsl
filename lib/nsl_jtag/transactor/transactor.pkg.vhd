@@ -19,6 +19,7 @@ package transactor is
   constant JTAG_CMD_IR_CAPTURE  : nsl_bnoc.framed.framed_data_t := "10000001";
   constant JTAG_CMD_SWD_TO_JTAG : nsl_bnoc.framed.framed_data_t := "10000010";
   constant JTAG_CMD_DIVISOR     : nsl_bnoc.framed.framed_data_t := "10000011"; -- Next byte is divisor
+  constant JTAG_CMD_DELAY       : nsl_bnoc.framed.framed_data_t := "10000111"; -- Next byte is delay
   constant JTAG_CMD_SYS_RESET   : nsl_bnoc.framed.framed_data_t := "1000010-"; -- Set system reset (active high)
   constant JTAG_CMD_RESET_CYCLE : nsl_bnoc.framed.framed_data_t := "10011---"; -- cycle count
   constant JTAG_CMD_RTI_CYCLE   : nsl_bnoc.framed.framed_data_t := "10010---"; -- cycle count
@@ -56,6 +57,8 @@ package transactor is
   function cmd_swd_to_jtag return byte_string;
   -- Set divisor
   function cmd_divisor(divisor: integer range 1 to 256) return byte_string;
+  -- Set delay
+  function cmd_sample_delay(delay: integer range 0 to 255) return byte_string;  
   -- Set system reset
   function cmd_system_reset(asserted: boolean) return byte_string;
   -- Run for count of cycles x8
@@ -70,9 +73,6 @@ package transactor is
   procedure rsp(rsp_buffer: inout byte_stream);
   
   component framed_ate
-  generic(
-    delay_max_l2_c : natural := 0
-    );    
     port (
       reset_n_i   : in  std_ulogic;
       clock_i      : in  std_ulogic;
@@ -84,8 +84,6 @@ package transactor is
 
       jtag_o : out nsl_jtag.jtag.jtag_ate_o;
       jtag_i : in nsl_jtag.jtag.jtag_ate_i;
-
-      tick_delay_i : in unsigned(delay_max_l2_c-1 downto 0) := (others => '0');      
 
       system_reset_n_o : out nsl_io.io.opendrain
       );
@@ -192,6 +190,12 @@ package body transactor is
   begin
     return (0 => JTAG_CMD_DIVISOR, 1 => to_byte(divisor - 1));
   end function;
+
+  function cmd_sample_delay(delay: integer range 0 to 255) return byte_string
+  is
+  begin
+    return (0 => JTAG_CMD_DELAY, 1 => to_byte(delay));
+  end function;  
 
   function cmd_system_reset(asserted: boolean) return byte_string
   is
