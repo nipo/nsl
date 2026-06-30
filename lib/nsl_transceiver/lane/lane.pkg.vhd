@@ -164,6 +164,19 @@ package lane is
     );
 
   -- TX path: signals driven by the adapter into the transceiver.
+  -- The vendor backend may use only a subset of these fields,
+  -- depending on what the underlying primitive exposes; surplus
+  -- bits and signals stay at '-' / '0' and are pruned by synthesis.
+  --
+  -- ``control`` and ``control_h`` are paired opaque sideband vectors:
+  -- some vendor primitives expose two independent runtime-control
+  -- inputs per lane (for example, a "low-speed" and "high-speed"
+  -- variant). Adapters that only need one populate ``control``.
+  --
+  -- ``c2i_clock`` is an adapter-driven per-lane fabric clock used
+  -- by encodings where the protocol IP owns the lane's interface
+  -- clock (some implementations of 8b/10b at moderate line rates).
+  -- Adapters that don't need it leave it at '0'.
   type tx_master_t is
   record
     data : byte_string(0 to max_data_byte_count_c-1);
@@ -171,6 +184,8 @@ package lane is
     valid : std_ulogic;
     pcs_reset_n : std_ulogic;
     control : control_t;
+    control_h : control_t;
+    c2i_clock : std_ulogic;
   end record;
 
   -- TX path: signals driven by the transceiver back to the adapter.
@@ -239,7 +254,9 @@ package lane is
     aux => (others => (others => '-')),
     valid => '-',
     pcs_reset_n => '-',
-    control => (others => '-')
+    control => (others => '-'),
+    control_h => (others => '-'),
+    c2i_clock => '-'
     );
 
   constant null_tx_slave_c : tx_slave_t := (

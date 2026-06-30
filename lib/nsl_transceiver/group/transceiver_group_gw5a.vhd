@@ -376,6 +376,8 @@ architecture gw5a of transceiver_group is
 
   type ctrl_array_t is array (0 to 3) of std_logic_vector(42 downto 0);
   signal s_lane_ctrl : ctrl_array_t;
+  signal s_lane_ctrl_h : ctrl_array_t;
+  signal s_lane_c2i_clk : std_logic_vector(0 to 3);
 
   signal s_cmu0_ok : std_logic;
   signal s_cmu1_ok : std_logic;
@@ -460,6 +462,8 @@ begin
       s_align_trigger(lane_idx) <= rx_s_i(lane_idx).align_trigger;
       s_chbond_start(lane_idx) <= rx_s_i(lane_idx).chbond_start;
       s_lane_ctrl(lane_idx) <= std_logic_vector(tx_m_i(lane_idx).control(42 downto 0));
+      s_lane_ctrl_h(lane_idx) <= std_logic_vector(tx_m_i(lane_idx).control_h(42 downto 0));
+      s_lane_c2i_clk(lane_idx) <= tx_m_i(lane_idx).c2i_clock;
 
       tx_bufg: gowin.components.bufg
         port map(
@@ -488,6 +492,8 @@ begin
       s_align_trigger(lane_idx) <= '0';
       s_chbond_start(lane_idx) <= '0';
       s_lane_ctrl(lane_idx) <= (others => '0');
+      s_lane_ctrl_h(lane_idx) <= (others => '0');
+      s_lane_c2i_clk(lane_idx) <= '0';
       s_lane_pcs_tx_clk_buf(lane_idx) <= '0';
       s_lane_pcs_rx_clk_buf(lane_idx) <= '0';
       lane_tx_clock_o(lane_idx) <= '0';
@@ -594,6 +600,10 @@ begin
       FABRIC_LN1_CTRL_I => s_lane_ctrl(1),
       FABRIC_LN2_CTRL_I => s_lane_ctrl(2),
       FABRIC_LN3_CTRL_I => s_lane_ctrl(3),
+      FABRIC_LN0_CTRL_I_H => s_lane_ctrl_h(0),
+      FABRIC_LN1_CTRL_I_H => s_lane_ctrl_h(1),
+      FABRIC_LN2_CTRL_I_H => s_lane_ctrl_h(2),
+      FABRIC_LN3_CTRL_I_H => s_lane_ctrl_h(3),
       FABRIC_LN0_PD_I_H => "000",
       FABRIC_LN1_PD_I_H => "000",
       FABRIC_LN2_PD_I_H => "000",
@@ -602,10 +612,6 @@ begin
       FABRIC_LN1_RATE_I_H => "00",
       FABRIC_LN2_RATE_I_H => "00",
       FABRIC_LN3_RATE_I_H => "00",
-      FABRIC_LN0_CTRL_I_H => (others => '0'),
-      FABRIC_LN1_CTRL_I_H => (others => '0'),
-      FABRIC_LN2_CTRL_I_H => (others => '0'),
-      FABRIC_LN3_CTRL_I_H => (others => '0'),
 
       FABRIC_LN0_TXDATA_I => s_tx_data(0),
       FABRIC_LN1_TXDATA_I => s_tx_data(1),
@@ -714,10 +720,10 @@ begin
       LANE1_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(1),
       LANE2_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(2),
       LANE3_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(3),
-      LANE0_FABRIC_C2I_CLK => gw_gnd,
-      LANE1_FABRIC_C2I_CLK => gw_gnd,
-      LANE2_FABRIC_C2I_CLK => gw_gnd,
-      LANE3_FABRIC_C2I_CLK => gw_gnd,
+      LANE0_FABRIC_C2I_CLK => s_lane_c2i_clk(0),
+      LANE1_FABRIC_C2I_CLK => s_lane_c2i_clk(1),
+      LANE2_FABRIC_C2I_CLK => s_lane_c2i_clk(2),
+      LANE3_FABRIC_C2I_CLK => s_lane_c2i_clk(3),
       FABRIC_QUAD_CLK_RX => open,
 
       LANE0_RX_IF_FIFO_RDEN => s_rx_fifo_rden(0),
