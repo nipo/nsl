@@ -83,7 +83,11 @@ package group is
 
       pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
 
-      apb_clock_i : in std_ulogic;
+      -- APB clock for the user-facing master, sourced internally
+      -- from the vendor primitive's housekeeping clock. The APB
+      -- master and any companion logic on the configuration bus
+      -- must clock on this output.
+      apb_clock_o : out std_ulogic;
       apb_reset_n_i : in std_ulogic;
       apb_m_i : in nsl_amba.apb.master_t;
       apb_s_o : out nsl_amba.apb.slave_t
