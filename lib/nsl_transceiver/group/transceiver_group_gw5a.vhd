@@ -27,7 +27,12 @@ entity transceiver_group is
 
     pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
 
-    apb_clock_i : in std_ulogic;
+    -- APB clock for the user-facing master. Sourced internally from
+    -- GTR12_QUADB's FABRIC_CM_LIFE_CLK_O loopback (the same clock
+    -- the wizard uses for AHB / UPAR). The APB master and any
+    -- companion logic on the configuration bus must clock on this
+    -- output.
+    apb_clock_o : out std_ulogic;
     apb_reset_n_i : in std_ulogic;
     apb_m_i : in nsl_amba.apb.master_t;
     apb_s_o : out nsl_amba.apb.slave_t
@@ -375,6 +380,11 @@ architecture gw5a of transceiver_group is
   signal s_cmu0_ok : std_logic;
   signal s_cmu1_ok : std_logic;
 
+  signal s_cm_life_clk_raw : std_logic;
+  signal s_apb_clock : std_ulogic;
+  signal s_ahb_reset_n : std_ulogic;
+  signal s_test_dec_en : std_ulogic;
+
   signal gw_gnd : std_logic := '0';
   signal gw_vcc : std_logic := '1';
 
@@ -532,7 +542,7 @@ begin
       FABRIC_CMU1_CK_REF_O => open,
       FABRIC_CMU0_CLK => open,
       FABRIC_CMU1_CLK => open,
-      FABRIC_CM_LIFE_CLK_O => open,
+      FABRIC_CM_LIFE_CLK_O => s_cm_life_clk_raw,
       FABRIC_CM1_LIFE_CLK_O => open,
       FABRIC_PMA_CM0_DR_REFCLK_DET_O => open,
       FABRIC_PMA_CM1_DR_REFCLK_DET_O => open,
@@ -765,9 +775,9 @@ begin
       FABRIC_CLK_MON_O => open,
       FABRIC_POR_N_I => gw_gnd,
       FABRIC_QUAD_MCU_REQ_I => gw_gnd,
-      CK_AHB_I => apb_clock_i,
-      AHB_RSTN => apb_reset_n_i,
-      TEST_DEC_EN => gw_gnd,
+      CK_AHB_I => std_logic(s_apb_clock),
+      AHB_RSTN => std_logic(s_ahb_reset_n),
+      TEST_DEC_EN => std_logic(s_test_dec_en),
       QUAD_PCLK0 => open,
       QUAD_PCLK1 => open,
       QUAD_PCIE_CLK => gw_gnd,
@@ -777,13 +787,33 @@ begin
       CLK_VIQ_I => "00"
       );
 
-  apb_s_o <= (
-    ready => '1',
-    rdata => (others => (others => '0')),
-    slverr => '0',
-    wakeup => '0',
-    ruser => (others => '0'),
-    buser => (others => '0')
-    );
+  -- Buffer GTR12_QUADB's life clock so it can drive the APB
+  -- domain (bridge, user-facing APB master, and the primitive's
+  -- own AHB clock loopback).
+  apb_clock_bufg: gowin.components.bufg
+    port map(
+      i => s_cm_life_clk_raw,
+      o => s_apb_clock
+      );
+  apb_clock_o <= s_apb_clock;
+
+  upar_bridge: entity work.apb_upar_bridge_gw5a
+    generic map(
+      config_c => nsl_amba.apb.apb4_config(
+        address_width => 24,
+        data_bus_width => 32,
+        strb => true,
+        ready => true)
+      )
+    port map(
+      clock_i => s_apb_clock,
+      reset_n_i => apb_reset_n_i,
+
+      apb_i => apb_m_i,
+      apb_o => apb_s_o,
+
+      ahb_reset_n_o => s_ahb_reset_n,
+      test_dec_en_o => s_test_dec_en
+      );
 
 end architecture;
