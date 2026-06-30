@@ -166,7 +166,7 @@ architectural difference:
   mastership. The wizard never drives them in our sample but
   exposure is harmless when the adapter ties to '0'.
 
-After these filters, three mismatches remain — primitive inputs the
+After these filters, one mismatch remains — a primitive input the
 wizard sometimes drives but our current backend ties to a constant:
 
 ``CLK_VIQ_I``
@@ -180,22 +180,12 @@ wizard sometimes drives but our current backend ties to a constant:
    ``CLK_VIQ_I`` directly) and selecting the source from
    ``group.config_t``.
 
-``FABRIC_LN1_CTRL_I_H``
-   Forty-three-bit per-lane runtime control input, "high-speed"
-   variant. Only driven by 1000BASE-X (when placed on lane 1) in the
-   sampled configurations. Our lane record currently carries a single
-   ``control`` field plumbed into ``CTRL_I``; ``CTRL_I_H`` is left at
-   zero. When we add a 1000BASE-X adapter, we will need either a
-   second ``control_h`` field in ``lane.tx_master_t`` or a wider
-   ``control`` reinterpreted as two halves.
-
-``LANE0_FABRIC_C2I_CLK``
-   Per-lane "core-to-interface" clock input. Driven by the custom
-   8b10b protocol IP in our sample (all four polarity variants);
-   tied to ground for every other configuration. This is a per-lane
-   external clock the adapter provides. Belongs on ``lane.tx_master``
-   (or a sibling field) as a per-lane clock signal. Currently tied
-   to ground.
+``FABRIC_LN1_CTRL_I_H`` and ``LANE0_FABRIC_C2I_CLK`` are no longer
+in the mismatch list: ``lane.tx_master_t`` gained ``control_h`` and
+``c2i_clock`` fields that the GW5A backend wires through to the
+matching primitive inputs. Adapters that don't need them leave the
+fields at '0' (1000BASE-X drives ``control_h`` on the lane it's
+placed on; custom 8b10b drives ``c2i_clock``).
 
 ``TEST_DEC_EN`` is no longer in the mismatch list: the GW5A
 backend now instantiates ``GTR12_UPARA`` through
