@@ -2,13 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver;
+library nsl_transceiver, nsl_io, nsl_amba;
 
--- Configuration for a transceiver group: a cluster of lanes sharing
--- PLLs, reference clock routing and a configuration interface, as
--- exposed by a vendor primitive. Vendor group entities consume these
--- types; this package does not declare a generic group component, as
--- group instances are vendor-specific by nature.
+-- Configuration types and component declaration for a transceiver
+-- group: a cluster of lanes sharing PLLs, reference clock routing
+-- and a configuration interface, as exposed by a vendor primitive.
+-- The transceiver_group component is the portable contract; each
+-- vendor provides one entity+architecture matching it (one of which
+-- is selected at build time by the project's hwdep / target_part
+-- variables).
 package group is
 
   constant max_lane_count_c : natural := 8;
@@ -48,11 +50,45 @@ package group is
     user_clock_group_count : natural
     ) return config_t;
 
-  -- Target-agnostic intra-config consistency check. A vendor group
-  -- entity must additionally assert legality against its primitive
-  -- (e.g. which PLL can drive which lane at which line rate) in its
-  -- architecture body.
+  -- Target-agnostic intra-config consistency check. A vendor
+  -- architecture additionally asserts legality against its primitive
+  -- (which PLL can drive which lane at which line rate, etc.) in
+  -- its architecture body.
   function is_valid(cfg : config_t) return boolean;
+
+  -- Portable transceiver group component. One vendor entity matching
+  -- this declaration is compiled into the working library based on
+  -- the project's hwdep / target_part variables. The vendor entity
+  -- asserts at elaboration that the supplied config matches the
+  -- vendor primitive's shape (lane count, PLL count, etc.).
+  component transceiver_group is
+    generic(
+      config_c : config_t
+      );
+    port(
+      reset_n_i : in std_ulogic;
+
+      ref_clock_i : in nsl_io.diff.diff_pair_vector(0 to config_c.ref_clock_count-1);
+
+      lane_tx_o : out nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
+      lane_rx_i : in nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
+
+      lane_tx_clock_o : out std_ulogic_vector(0 to config_c.lane_count-1);
+      lane_rx_clock_o : out std_ulogic_vector(0 to config_c.lane_count-1);
+
+      tx_m_i : in nsl_transceiver.lane.tx_master_vector(0 to config_c.lane_count-1);
+      tx_s_o : out nsl_transceiver.lane.tx_slave_vector(0 to config_c.lane_count-1);
+      rx_m_o : out nsl_transceiver.lane.rx_master_vector(0 to config_c.lane_count-1);
+      rx_s_i : in nsl_transceiver.lane.rx_slave_vector(0 to config_c.lane_count-1);
+
+      pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
+
+      apb_clock_i : in std_ulogic;
+      apb_reset_n_i : in std_ulogic;
+      apb_m_i : in nsl_amba.apb.master_t;
+      apb_s_o : out nsl_amba.apb.slave_t
+      );
+  end component;
 
 end package group;
 
