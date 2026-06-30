@@ -166,7 +166,7 @@ architectural difference:
   mastership. The wizard never drives them in our sample but
   exposure is harmless when the adapter ties to '0'.
 
-After these filters, four mismatches remain — primitive inputs the
+After these filters, three mismatches remain — primitive inputs the
 wizard sometimes drives but our current backend ties to a constant:
 
 ``CLK_VIQ_I``
@@ -197,16 +197,15 @@ wizard sometimes drives but our current backend ties to a constant:
    (or a sibling field) as a per-lane clock signal. Currently tied
    to ground.
 
-``TEST_DEC_EN``
-   Single-bit input driven by ``GTR12_UPARA``'s
-   ``quad_cfg_test_dec_en`` output when UPARA is instantiated
-   (all USB3 configurations). Tied to ground when UPARA is absent
-   (10GBASE-R, JESD204B, custom 8b10b). This becomes correct when
-   we instantiate ``GTR12_UPARA`` for the APB-driven CSR access
-   path; pending that, ground tie-off matches the protocols that
-   do not need UPARA.
+``TEST_DEC_EN`` is no longer in the mismatch list: the GW5A
+backend now instantiates ``GTR12_UPARA`` through
+``apb_upar_bridge_gw5a``, which surfaces the primitive's
+``QUAD_CFG_TEST_DEC_EN`` output and the ``AHB_RSTN_O`` reset that
+feed back into the companion ``GTR12_QUADB``. The APB clock is
+the buffered ``FABRIC_CM_LIFE_CLK_O`` loopback the wizard uses
+(exposed on the entity as ``apb_clock_o``).
 
-98 primitive outputs we have at ``open`` are wired to internal
+97 primitive outputs we have at ``open`` are wired to internal
 named signals by the wizard. The wires feed either the protocol
 IPs (for status monitoring, 64b/66b helpers) or ``GTR12_UPARA``
 (for AHB/UPAR clocking and reset). Leaving them ``open`` is
