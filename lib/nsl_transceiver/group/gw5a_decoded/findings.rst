@@ -148,6 +148,72 @@ suggests:
    produces the raw table; an adapter-specific filter selects the
    subset.
 
+Backend audit (status against the reference)
+============================================
+
+``build/support/gw5a_decode/audit_vhd.py`` cross-checks our
+``transceiver_group_gw5a.vhd`` instantiation against the reference
+table. The audit suppresses a few categories of intentional
+architectural difference:
+
+- Differential pad ports (``LN[0-3]_TX[MP]_O``, ``LN[0-3]_RX[MP]_I``,
+  ``REFCLK[PM][01]_I``) are entity ports on our side; the wizard
+  routes them through synthesis-tool magic and so ties them to
+  ground at the wrapper level. No actual mismatch.
+- ``LANE[0-3]_ALIGN_TRIGGER`` and ``LANE[1-3]_CHBOND_START`` are
+  exposed by our backend through the lane record for adapters that
+  need manual word alignment or non-default channel bonding
+  mastership. The wizard never drives them in our sample but
+  exposure is harmless when the adapter ties to '0'.
+
+After these filters, four mismatches remain — primitive inputs the
+wizard sometimes drives but our current backend ties to a constant:
+
+``CLK_VIQ_I``
+   Two-bit selector for an *alternative reference clock source* (a
+   fabric-side clock pad or a MIPI clock pad), used by the ``refin``
+   and ``mclk`` configurations. The wizard wires this as
+   ``{mclk_i,gw_gnd}`` or ``{gw_gnd,gpio_refclk_i}`` rather than the
+   usual ``{gw_gnd,gw_gnd}``. Supporting non-pad refclks in our
+   backend requires adding optional ``mipi_clock_i`` /
+   ``fabric_refclk_i`` ports on the entity (or surfacing
+   ``CLK_VIQ_I`` directly) and selecting the source from
+   ``group.config_t``.
+
+``FABRIC_LN1_CTRL_I_H``
+   Forty-three-bit per-lane runtime control input, "high-speed"
+   variant. Only driven by 1000BASE-X (when placed on lane 1) in the
+   sampled configurations. Our lane record currently carries a single
+   ``control`` field plumbed into ``CTRL_I``; ``CTRL_I_H`` is left at
+   zero. When we add a 1000BASE-X adapter, we will need either a
+   second ``control_h`` field in ``lane.tx_master_t`` or a wider
+   ``control`` reinterpreted as two halves.
+
+``LANE0_FABRIC_C2I_CLK``
+   Per-lane "core-to-interface" clock input. Driven by the custom
+   8b10b protocol IP in our sample (all four polarity variants);
+   tied to ground for every other configuration. This is a per-lane
+   external clock the adapter provides. Belongs on ``lane.tx_master``
+   (or a sibling field) as a per-lane clock signal. Currently tied
+   to ground.
+
+``TEST_DEC_EN``
+   Single-bit input driven by ``GTR12_UPARA``'s
+   ``quad_cfg_test_dec_en`` output when UPARA is instantiated
+   (all USB3 configurations). Tied to ground when UPARA is absent
+   (10GBASE-R, JESD204B, custom 8b10b). This becomes correct when
+   we instantiate ``GTR12_UPARA`` for the APB-driven CSR access
+   path; pending that, ground tie-off matches the protocols that
+   do not need UPARA.
+
+98 primitive outputs we have at ``open`` are wired to internal
+named signals by the wizard. The wires feed either the protocol
+IPs (for status monitoring, 64b/66b helpers) or ``GTR12_UPARA``
+(for AHB/UPAR clocking and reset). Leaving them ``open`` is
+correct as long as we do not need to consume the signal in our
+adapter; auditing them is a per-adapter concern as we build out
+each protocol.
+
 Reproduction
 ============
 
@@ -157,5 +223,11 @@ To regenerate this analysis from new IPgen outputs::
        --src /path/to/ipgen/projects \\
        --out lib/nsl_transceiver/group/gw5a_decoded
 
-The script ignores subdirectories without ``serdes.v`` (wizard
-stubs from invalid options).
+To audit a backend file against the reference table::
+
+   python3.13 build/support/gw5a_decode/audit_vhd.py \\
+       --vhd lib/nsl_transceiver/group/transceiver_group_gw5a.vhd \\
+       --reference lib/nsl_transceiver/group/gw5a_decoded/gtr_ports.csv
+
+The decode script ignores subdirectories without ``serdes.v``
+(wizard stubs from invalid options).

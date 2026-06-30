@@ -369,6 +369,9 @@ architecture gw5a of transceiver_group is
   signal s_align_link : std_logic_vector(0 to 3);
   signal s_rxelecidle : std_logic_vector(0 to 3);
 
+  type ctrl_array_t is array (0 to 3) of std_logic_vector(42 downto 0);
+  signal s_lane_ctrl : ctrl_array_t;
+
   signal s_cmu0_ok : std_logic;
   signal s_cmu1_ok : std_logic;
 
@@ -446,6 +449,7 @@ begin
       s_rx_fifo_rden(lane_idx) <= rx_s_i(lane_idx).ready;
       s_align_trigger(lane_idx) <= rx_s_i(lane_idx).align_trigger;
       s_chbond_start(lane_idx) <= rx_s_i(lane_idx).chbond_start;
+      s_lane_ctrl(lane_idx) <= std_logic_vector(tx_m_i(lane_idx).control(42 downto 0));
 
       tx_bufg: gowin.components.bufg
         port map(
@@ -473,6 +477,7 @@ begin
       s_rx_fifo_rden(lane_idx) <= '0';
       s_align_trigger(lane_idx) <= '0';
       s_chbond_start(lane_idx) <= '0';
+      s_lane_ctrl(lane_idx) <= (others => '0');
       s_lane_pcs_tx_clk_buf(lane_idx) <= '0';
       s_lane_pcs_rx_clk_buf(lane_idx) <= '0';
       lane_tx_clock_o(lane_idx) <= '0';
@@ -575,10 +580,10 @@ begin
       FABRIC_LN1_RATE_I => "00",
       FABRIC_LN2_RATE_I => "00",
       FABRIC_LN3_RATE_I => "00",
-      FABRIC_LN0_CTRL_I => (others => '0'),
-      FABRIC_LN1_CTRL_I => (others => '0'),
-      FABRIC_LN2_CTRL_I => (others => '0'),
-      FABRIC_LN3_CTRL_I => (others => '0'),
+      FABRIC_LN0_CTRL_I => s_lane_ctrl(0),
+      FABRIC_LN1_CTRL_I => s_lane_ctrl(1),
+      FABRIC_LN2_CTRL_I => s_lane_ctrl(2),
+      FABRIC_LN3_CTRL_I => s_lane_ctrl(3),
       FABRIC_LN0_PD_I_H => "000",
       FABRIC_LN1_PD_I_H => "000",
       FABRIC_LN2_PD_I_H => "000",
