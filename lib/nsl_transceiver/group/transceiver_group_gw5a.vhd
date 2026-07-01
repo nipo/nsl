@@ -421,8 +421,9 @@ begin
           or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_64B66B
         report "transceiver_group/gw5a: lane encoding not supported by this backend yet"
         severity failure;
-      assert config_c.lanes(lane_idx).data_byte_count = 8
-        report "transceiver_group/gw5a: lane data_byte_count must be 8 in the current data path mapping"
+      assert config_c.lanes(lane_idx).data_byte_count = 1
+          or config_c.lanes(lane_idx).data_byte_count = 8
+        report "transceiver_group/gw5a: lane data_byte_count must be 1 (per-byte, e.g. 1.25 Gb/s SGMII-like) or 8 (per-word, e.g. 10 Gb/s)"
         severity failure;
     end generate;
   end generate;
