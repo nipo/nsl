@@ -79,6 +79,30 @@ package continuous_transport is
       );
   end component;
 
+  component jtag_continuous_transport_tap is
+    generic(
+      tx_fifo_depth_c : natural := 256;
+      rx_fifo_depth_c : natural := 256
+      );
+    port(
+      chip_tck_i : in std_ulogic := '0';
+      chip_tms_i : in std_ulogic := '0';
+      chip_tdi_i : in std_ulogic := '0';
+      chip_tdo_o : out std_ulogic;
+
+      -- Clocks the fifo, asynchronous to TCK of user reg
+      clock_i     : in  std_ulogic;
+      reset_n_i   : in  std_ulogic;
+      reset_n_o   : out std_ulogic;
+
+      tx_i : in nsl_bnoc.framed.framed_req;
+      tx_o : out nsl_bnoc.framed.framed_ack;
+
+      rx_o : out nsl_bnoc.framed.framed_req;
+      rx_i : in nsl_bnoc.framed.framed_ack
+      );
+  end component;
+
   component continuous_transport_core is
     generic(
       preamble_count_c : positive := preamble_min_c

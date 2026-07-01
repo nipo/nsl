@@ -122,7 +122,7 @@ begin
           rin.chunk <= shift_left(r.chunk, tx_data_i);
           rin.chunk_len_m1 <= (others => '0');
           -- With 1 byte in the buffer, we have to realign for size-2 times.
-          rin.aligner_left_m1 <= to_unsigned(data_bytes_max_c-2, rin.aligner_left_m1'length);
+          rin.aligner_left_m1 <= to_unsigned(data_bytes_max_c-2, r.aligner_left_m1'length);
           rin.chunk_last <= tx_last_i;
           if tx_last_i = '1' then
             -- Unaligned fulll packet
@@ -187,17 +187,17 @@ begin
           if r.budget /= 0 then
             rin.sender_state <= SENDER_DATA_OP;
             if r.chunk_len_m1 > r.budget then
-              rin.sender_left_m1 <= to_unsigned(r.budget, rin.sender_left_m1'length);
+              rin.sender_left_m1 <= to_unsigned(r.budget, r.sender_left_m1'length);
               rin.sender_last <= '0';
             else
-              rin.sender_left_m1 <= resize(r.chunk_len_m1, rin.sender_left_m1'length);
+              rin.sender_left_m1 <= resize(r.chunk_len_m1, r.sender_left_m1'length);
               -- The whole chunk fits, but it is only an end-of-packet if the
               -- chunk actually ended on one (a partial chunk flushed on a TX
               -- bubble has chunk_last = '0').
               rin.sender_last <= r.chunk_last;
             end if;
           end if;
-        elsif rin.rx_credit /= rx_free_i then
+        elsif r.rx_credit /= rx_free_i then
           -- Credit is dirty, update it.
           rin.sender_state <= SENDER_CREDIT_OP;
         elsif tx_level_i = 0 then
