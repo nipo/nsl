@@ -75,7 +75,7 @@ define ghdl-compile-rules
 endef
 
 define ghdl-run-rules
-	./$< $(foreach l,$(all-vpi-plugins),--vpi=$l) $1
+	./$< $(foreach x,$(topcell-generics),-g$x) $(foreach l,$(all-vpi-plugins),--vpi=$l) $1
 endef
 
 endif
