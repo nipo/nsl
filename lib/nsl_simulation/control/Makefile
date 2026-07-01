@@ -1,6 +1,6 @@
 vhdl-sources += control.pkg.vhd
 
-ifeq ($(ghdl-flavor),llvm)
+ifneq ($(filter $(ghdl-flavor),llvm gcc),)
 control-ghdl := control_vhpidirect.vhd
 else
 control-ghdl := control_ghdl.vhd
