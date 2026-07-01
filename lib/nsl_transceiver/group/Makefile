@@ -1,8 +1,10 @@
 vhdl-sources += group.pkg.vhd
 
 deps += nsl_transceiver.lane
+deps += nsl_transceiver.target
 deps += nsl_io.diff
 deps += nsl_amba.apb
+deps += nsl_math.int_ext
 
 ifeq ($(hwdep),gowin)
 ifneq ($(filter GW5%,$(target_part)),)
