@@ -144,7 +144,7 @@ endef
 $(foreach l,$(libraries),$(if $(foreach f,$($l-sources),$(if $(filter vhdl,$($f-language)),$f)),$(eval $(call lib-cf-rule,$l))))
 
 $(target): $(sources) $(MAKEFILE_LIST) $(all-vhpidirect-plugins) $(all-vpi-plugins) $(call lib_cf,$(top-lib))
-	$(SILENT)echo "[GHDL] Backend: $(ghdl-backend)"
+	$(SILENT)echo "[GHDL] Backend: $(ghdl-flavor)"
 	$(SILENT)mkdir -p $(build-dir)
 	$(call ghdl-compile-rules)
 
