@@ -1,0 +1,19 @@
+IO_LOC  "usb_dp_io" J19;
+IO_PORT "usb_dp_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+IO_LOC  "usb_dn_io" H19;
+IO_PORT "usb_dn_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+IO_LOC  "usb_dp_pullup_io" M17;
+IO_PORT "usb_dp_pullup_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+
+IO_LOC  "usb_unused_io[0]" H17;
+IO_PORT "usb_unused_io[0]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC  "usb_unused_io[1]" H18;
+IO_PORT "usb_unused_io[1]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC  "usb_unused_io[2]" H20;
+IO_PORT "usb_unused_io[2]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC  "usb_unused_io[3]" G20;
+IO_PORT "usb_unused_io[3]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC  "usb_unused_io[4]" J16;
+IO_PORT "usb_unused_io[4]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+IO_LOC  "usb_unused_io[5]" AB16;
+IO_PORT "usb_unused_io[5]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;

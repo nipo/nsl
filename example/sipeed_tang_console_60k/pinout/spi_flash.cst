@@ -1,0 +1,9 @@
+IO_LOC  "mspi_sck_o"    L12;
+IO_PORT "mspi_sck_o"    IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_LOC  "mspi_cs_n_o"    T19;
+IO_PORT "mspi_cs_n_o"    IO_TYPE=LVCMOS33 PULL_MODE=UP;
+IO_LOC  "mspi_mosi_io" P22;
+IO_PORT "mspi_mosi_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_LOC  "mspi_miso_i" R22;
+IO_PORT "mspi_miso_i" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+

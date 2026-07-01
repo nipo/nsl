@@ -1,0 +1,50 @@
+name: tang_console_60k_usb11
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_clocking.async
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_indication.activity
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_usb.fs_phy
+    - nsl_usb.func
+    - nsl_usb.io
+    - nsl_bnoc.pipe
+    - nsl_spi.transactor
+  sources:
+    - file_type: vhdl
+      files:
+        - main.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/usb_fs.cst
+        - ../pinout/spi_flash.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/buttons.cst
+        - ../pinout/clk.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - mspi
+        - done
+        - ready
+        - cpu
+    backend_config:
+      gbs.builtin.gowin: {}
+    outputs:
+      - type: gowin-fs
+        path: usb11.fs
