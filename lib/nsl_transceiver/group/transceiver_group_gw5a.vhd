@@ -2,17 +2,20 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_io, nsl_amba, nsl_data, gowin;
+library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, gowin;
 use nsl_data.bytestream.all;
+use nsl_math.int_ext.all;
+use nsl_transceiver.target.all;
 
 entity transceiver_group is
   generic(
-    config_c : nsl_transceiver.group.config_t
+    config_c : nsl_transceiver.group.config_t;
+    ref_clock_c : integer_vector
     );
   port(
     reset_n_i : in std_ulogic;
 
-    ref_clock_i : in nsl_io.diff.diff_pair_vector(0 to config_c.ref_clock_count-1);
+    ref_clock_i : in std_ulogic_vector(0 to ref_clock_c'length-1);
 
     lane_tx_o : out nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
     lane_rx_i : in nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
@@ -387,6 +390,12 @@ architecture gw5a of transceiver_group is
   signal s_ahb_reset_n : std_ulogic;
   signal s_test_dec_en : std_ulogic;
 
+  -- CLK_VIQ_I fabric slots. Bit 0 receives the ref_clock_i entry
+  -- tagged clock_id("fabric"); bit 1 receives the entry tagged
+  -- clock_id("mclk"). Zero when the corresponding source is not
+  -- listed in ref_clock_c.
+  signal s_clk_viq : std_ulogic_vector(1 downto 0) := (others => '0');
+
   signal gw_gnd : std_logic := '0';
   signal gw_vcc : std_logic := '1';
 
@@ -398,8 +407,8 @@ begin
   assert config_c.pll_count <= 2
     report "transceiver_group/gw5a: GTR12_QUADB exposes at most 2 quad-shared PLLs (CMU0/CMU1)"
     severity failure;
-  assert config_c.ref_clock_count <= 2
-    report "transceiver_group/gw5a: GTR12_QUADB exposes at most 2 reference clock pairs"
+  assert ref_clock_c'length <= 4
+    report "transceiver_group/gw5a: GTR12_QUADB exposes at most 4 fabric-side reference clock inputs (ref0/ref1/fabric/mclk)"
     severity failure;
   assert nsl_transceiver.group.is_valid(config_c)
     report "transceiver_group/gw5a: configuration failed target-agnostic consistency check"
@@ -415,6 +424,21 @@ begin
       assert config_c.lanes(lane_idx).data_byte_count = 8
         report "transceiver_group/gw5a: lane data_byte_count must be 8 in the current data path mapping"
         severity failure;
+    end generate;
+  end generate;
+
+  -- Reference clock source routing. Each ref_clock_i entry is
+  -- driven onto the primitive input matching the target-defined
+  -- identifier in ref_clock_c(i). "ref0" and "ref1" are pad-based
+  -- and handled by the FPGA pin constraints; their fabric-side
+  -- ports are left at ground, matching the wizard. "fabric" and
+  -- "mclk" drive the CLK_VIQ_I fabric slots.
+  ref_clock_route: for i in 0 to ref_clock_c'length-1 generate
+    is_fabric: if ref_clock_c(i) = clock_id("fabric") generate
+      s_clk_viq(0) <= ref_clock_i(i);
+    end generate;
+    is_mclk: if ref_clock_c(i) = clock_id("mclk") generate
+      s_clk_viq(1) <= ref_clock_i(i);
     end generate;
   end generate;
 
@@ -521,10 +545,14 @@ begin
       LN3_RXM_I => lane_rx_i(3).n,
       LN3_RXP_I => lane_rx_i(3).p,
 
-      REFCLKP0_I => ref_clock_i(0).p,
-      REFCLKM0_I => ref_clock_i(0).n,
-      REFCLKP1_I => ref_clock_i(config_c.ref_clock_count-1).p,
-      REFCLKM1_I => ref_clock_i(config_c.ref_clock_count-1).n,
+      -- Pad reference clocks. The primitive treats these ports as
+      -- decorative: the actual pin routing is fixed by the FPGA
+      -- pad constraints, and the wizard-generated wrapper leaves
+      -- them at ground.
+      REFCLKP0_I => gw_gnd,
+      REFCLKM0_I => gw_gnd,
+      REFCLKP1_I => gw_gnd,
+      REFCLKM1_I => gw_gnd,
       FABRIC_REFCLK_INPUT_SEL_I => "000",
       FABRIC_REFCLK1_INPUT_SEL_I => "000",
       FABRIC_PMA_PD_REFHCLK_I => gw_gnd,
@@ -790,7 +818,7 @@ begin
       PCIE_DIV2_REG => gw_gnd,
       PCIE_DIV4_REG => gw_gnd,
       PMAC_LN_RSTN => gw_gnd,
-      CLK_VIQ_I => "00"
+      CLK_VIQ_I => std_logic_vector(s_clk_viq)
       );
 
   -- Buffer GTR12_QUADB's life clock so it can drive the APB

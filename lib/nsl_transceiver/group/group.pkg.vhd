@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_io, nsl_amba;
+library nsl_transceiver, nsl_io, nsl_amba, nsl_math;
+use nsl_math.int_ext.all;
 
 -- Configuration types and component declaration for a transceiver
 -- group: a cluster of lanes sharing PLLs, reference clock routing
@@ -15,7 +16,6 @@ package group is
 
   constant max_lane_count_c : natural := 8;
   constant max_pll_count_c : natural := 4;
-  constant max_ref_clock_count_c : natural := 4;
   constant max_user_clock_group_count_c : natural := max_lane_count_c;
 
   type pll_config_t is
@@ -37,7 +37,6 @@ package group is
   record
     lane_count : natural range 0 to max_lane_count_c;
     pll_count : natural range 0 to max_pll_count_c;
-    ref_clock_count : natural range 0 to max_ref_clock_count_c;
     user_clock_group_count : natural range 0 to max_user_clock_group_count_c;
     plls : pll_config_vector(0 to max_pll_count_c-1);
     lanes : nsl_transceiver.lane.config_vector(0 to max_lane_count_c-1);
@@ -46,7 +45,6 @@ package group is
   function config(
     plls : pll_config_vector;
     lanes : nsl_transceiver.lane.config_vector;
-    ref_clock_count : natural;
     user_clock_group_count : natural
     ) return config_t;
 
@@ -63,12 +61,19 @@ package group is
   -- vendor primitive's shape (lane count, PLL count, etc.).
   component transceiver_group is
     generic(
-      config_c : config_t
+      config_c : config_t;
+      -- Reference clock source binding. One entry per fabric-side
+      -- refclk port; each carries a target-defined identifier from
+      -- nsl_transceiver.target.clock_id(name). The vendor entity
+      -- routes ref_clock_i(i) to the primitive input matching
+      -- ref_clock_c(i). Lane configurations refer to entries in
+      -- this array via lane.config_t.ref_clock_index.
+      ref_clock_c : integer_vector
       );
     port(
       reset_n_i : in std_ulogic;
 
-      ref_clock_i : in nsl_io.diff.diff_pair_vector(0 to config_c.ref_clock_count-1);
+      ref_clock_i : in std_ulogic_vector(0 to ref_clock_c'length-1);
 
       lane_tx_o : out nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
       lane_rx_i : in nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
@@ -101,7 +106,6 @@ package body group is
   function config(
     plls : pll_config_vector;
     lanes : nsl_transceiver.lane.config_vector;
-    ref_clock_count : natural;
     user_clock_group_count : natural
     ) return config_t
   is
@@ -109,7 +113,6 @@ package body group is
   begin
     ret.lane_count := lanes'length;
     ret.pll_count := plls'length;
-    ret.ref_clock_count := ref_clock_count;
     ret.user_clock_group_count := user_clock_group_count;
     ret.plls := (others => disabled_pll_c);
     ret.lanes := (others => nsl_transceiver.lane.disabled_lane_c);
@@ -122,6 +125,9 @@ package body group is
     return ret;
   end function;
 
+  -- Refclk-index bound checks live in the vendor architecture body
+  -- since the refclk count is carried by the transceiver_group
+  -- ref_clock_c generic, not by config_t.
   function is_valid(cfg : config_t) return boolean
   is
   begin
@@ -135,18 +141,7 @@ package body group is
       if not cfg.plls(cfg.lanes(i).pll_index).enabled then
         return false;
       end if;
-      if cfg.lanes(i).ref_clock_index >= cfg.ref_clock_count then
-        return false;
-      end if;
       if cfg.lanes(i).user_clock_group_index >= cfg.user_clock_group_count then
-        return false;
-      end if;
-    end loop;
-    for i in 0 to cfg.pll_count-1 loop
-      if not cfg.plls(i).enabled then
-        next;
-      end if;
-      if cfg.plls(i).ref_clock_index >= cfg.ref_clock_count then
         return false;
       end if;
     end loop;
