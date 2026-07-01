@@ -124,11 +124,14 @@ def parse_component(vhd: str) -> dict[str, PortDecl]:
     return ports
 
 
+VHDL_COMMENT_RE = re.compile(r"--[^\n]*")
+
+
 def parse_instantiation(vhd: str) -> dict[str, str]:
     m = INST_RE.search(vhd)
     if not m:
         return {}
-    body = m.group("body")
+    body = VHDL_COMMENT_RE.sub("", m.group("body"))
     actuals: dict[str, str] = {}
     # Split on top-level commas; respect parenthesis depth so
     # "(others => '0')" stays intact.

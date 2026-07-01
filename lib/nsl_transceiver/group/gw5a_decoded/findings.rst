@@ -166,19 +166,25 @@ architectural difference:
   mastership. The wizard never drives them in our sample but
   exposure is harmless when the adapter ties to '0'.
 
-After these filters, one mismatch remains — a primitive input the
-wizard sometimes drives but our current backend ties to a constant:
+After these filters, the audit reports no remaining mismatches
+against the sampled configurations. Every primitive input that
+the wizard drives is now driven by matching signals in our
+backend; every input the wizard ties to a constant matches the
+same tie in our port map.
 
-``CLK_VIQ_I``
-   Two-bit selector for an *alternative reference clock source* (a
-   fabric-side clock pad or a MIPI clock pad), used by the ``refin``
-   and ``mclk`` configurations. The wizard wires this as
-   ``{mclk_i,gw_gnd}`` or ``{gw_gnd,gpio_refclk_i}`` rather than the
-   usual ``{gw_gnd,gw_gnd}``. Supporting non-pad refclks in our
-   backend requires adding optional ``mipi_clock_i`` /
-   ``fabric_refclk_i`` ports on the entity (or surfacing
-   ``CLK_VIQ_I`` directly) and selecting the source from
-   ``group.config_t``.
+``CLK_VIQ_I`` is no longer in the mismatch list: the
+``transceiver_group`` component gained a portable ``ref_clock_c``
+generic (an ``integer_vector`` of clock-source identifiers) and
+a matching ``ref_clock_i`` port (a ``std_ulogic_vector``). The
+identifiers come from ``nsl_transceiver.target.clock_id(name)``,
+whose declaration lives in the target-agnostic
+``nsl_transceiver.target`` package and whose body is one of a
+set of target-specific implementations selected by hwdep /
+target_part. On GW5A the recognised names are ``"ref0"``,
+``"ref1"`` (pad refclks, routed by pin constraints), ``"fabric"``
+(drives ``CLK_VIQ_I[0]``) and ``"mclk"`` (drives
+``CLK_VIQ_I[1]``; the ``m`` in the name follows Gowin's own
+labelling and is unrelated to any MIPI block).
 
 ``FABRIC_LN1_CTRL_I_H`` and ``LANE0_FABRIC_C2I_CLK`` are no longer
 in the mismatch list: ``lane.tx_master_t`` gained ``control_h`` and
