@@ -63,6 +63,13 @@ begin
       do_io(response, cmd_divisor(div));
     end procedure;
 
+    procedure delay_set(delay: integer range 0 to 255)
+    is
+      variable response: byte_stream;
+    begin
+      do_io(response, cmd_sample_delay(delay));
+    end procedure;    
+
     procedure ir_set(ir: std_ulogic_vector)
     is
       variable command, response: byte_stream;
@@ -174,14 +181,17 @@ begin
 
     wait for 40 ns;
 
+    delay_set(0); -- No tick delay when not doing delay test
     chain_reset(3);
     blind_enumerate;
     ir_set(x"f");
     dr_select;
 
-    loopback_div_delay_test(0 ns, 0 ns, 2);
-    loopback_div_delay_test(3 ns, 5 ns, 3);
---    loopback_div_delay_test(3 ns, 5 ns, 2);
+    loopback_div_delay_test(0 ns, 0 ns, 5);
+
+    delay_set(4);
+    loopback_div_delay_test(10 ns, 30 ns, 5);
+    loopback_div_delay_test(11 ns, 30 ns, 5);
 
     wait for 50 us;
 
@@ -241,7 +251,7 @@ begin
         done_count => done_s'length
         )
       port map(
-        clock_period(0) => 5 ns,
+        clock_period(0) => 10 ns,
         reset_duration(0) => 5 ns,
         reset_n_o(0) => async_reset_n_s,
         clock_o(0) => clock_s,
