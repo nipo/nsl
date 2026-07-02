@@ -8,6 +8,9 @@ use nsl_jtag.transactor.all;
 use nsl_bnoc.framed.all;
 
 entity framed_ate is
+  generic(
+    tdo_delay_width_c: integer range 0 to 8 := 0
+    );
   port (
     reset_n_i   : in  std_ulogic;
     clock_i      : in  std_ulogic;
@@ -33,7 +36,8 @@ architecture rtl of framed_ate is
     ST_CMD_PUT,
     ST_CMD_DATA_GET,
     ST_CMD_DATA_PUT,
-    ST_CMD_DIV_GET
+    ST_CMD_DIV_GET,
+    ST_CMD_DEL_GET
     );
 
   type st_rsp_t is (
@@ -63,6 +67,7 @@ architecture rtl of framed_ate is
     rsp_word_left : natural range 0 to 31;
 
     divisor : unsigned(7 downto 0);
+    delay : unsigned(tdo_delay_width_c-1 downto 0);
 
     srst_drive : std_ulogic;
   end record;
@@ -91,6 +96,7 @@ begin
       r.rsp_st <= ST_RSP_RESET;
       r.cmd_st <= ST_CMD_RESET;
       r.divisor <= (others => '1');
+      r.delay <= (others => '0');
     end if;
   end process;
 
@@ -161,6 +167,8 @@ begin
           rin.cmd_pending <= ATE_OP_RTI;
         elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
           rin.cmd_st <= ST_CMD_DIV_GET;
+        elsif std_match(r.cmd_data, JTAG_CMD_DELAY) then
+          rin.cmd_st <= ST_CMD_DEL_GET;          
         elsif std_match(r.cmd_data, JTAG_CMD_SYS_RESET) then
           rin.cmd_st <= ST_CMD_IDLE;
           rin.srst_drive <= r.cmd_data(0);
@@ -193,6 +201,13 @@ begin
           rin.cmd_last <= cmd_i.last = '1';
           rin.cmd_st <= ST_CMD_IDLE;
         end if;
+
+      when ST_CMD_DEL_GET =>
+        if cmd_i.valid = '1' then
+          rin.delay <= unsigned(cmd_i.data(r.delay'range));
+          rin.cmd_last <= cmd_i.last = '1';
+          rin.cmd_st <= ST_CMD_IDLE;
+        end if;        
 
       when ST_CMD_DATA_PUT =>
         if s_cmd_ready = '1' then
@@ -233,6 +248,8 @@ begin
           end if;
         elsif std_match(r.rsp_data, JTAG_CMD_DIVISOR) then
           rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;
+        elsif std_match(r.rsp_data, JTAG_CMD_DELAY) then
+          rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;          
         else
           rin.rsp_st <= ST_RSP_PUT;
         end if;
@@ -300,7 +317,7 @@ begin
           cmd_o <= framed_accept(true);
         end if;
           
-      when ST_CMD_DATA_GET | ST_CMD_DIV_GET =>
+      when ST_CMD_DATA_GET | ST_CMD_DIV_GET | ST_CMD_DEL_GET =>
         cmd_o <= framed_accept(true);
 
       when ST_CMD_PUT | ST_CMD_DATA_PUT =>
@@ -333,6 +350,7 @@ begin
   ate: jtag_ate
     generic map (
       data_max_size => data_max_size,
+      tdo_delay_max_l2_c => r.delay'length,
       allow_pipelining => false
       )
     port map (
@@ -350,6 +368,8 @@ begin
       rsp_ready_i => s_rsp_ready,
       rsp_valid_o => s_rsp_valid,
       rsp_data_o => s_rsp_data,
+
+      tdo_delay_i => r.delay,
 
       jtag_o => jtag_o,
       jtag_i => jtag_i

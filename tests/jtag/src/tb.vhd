@@ -63,6 +63,13 @@ begin
       do_io(response, cmd_divisor(div));
     end procedure;
 
+    procedure delay_set(delay: integer range 0 to 255)
+    is
+      variable response: byte_stream;
+    begin
+      do_io(response, cmd_sample_delay(delay));
+    end procedure;    
+
     procedure ir_set(ir: std_ulogic_vector)
     is
       variable command, response: byte_stream;
@@ -138,7 +145,7 @@ begin
       do_io(response, cmd_shift(pad_data & loopback_data, true));
       rsp_shift(response, rsp_data);
 
-      assert_equal("Shift loopback", rsp_data(rsp_data'left downto pad_data'length), loopback_data, warning);
+      assert_equal("Shift loopback", rsp_data(rsp_data'left downto pad_data'length), loopback_data, FAILURE);
     end procedure;
 
     procedure ir_select
@@ -174,14 +181,17 @@ begin
 
     wait for 40 ns;
 
+    delay_set(0); -- No tick delay when not doing delay test
     chain_reset(3);
     blind_enumerate;
     ir_set(x"f");
     dr_select;
 
-    loopback_div_delay_test(0 ns, 0 ns, 2);
-    loopback_div_delay_test(3 ns, 5 ns, 3);
---    loopback_div_delay_test(3 ns, 5 ns, 2);
+    loopback_div_delay_test(0 ns, 0 ns, 5);
+
+    delay_set(5);
+    loopback_div_delay_test(10 ns, 60 ns, 5);
+    loopback_div_delay_test(11 ns, 60 ns, 5);
 
     wait for 50 us;
 
@@ -221,6 +231,9 @@ begin
         );
 
     ate_impl: nsl_jtag.transactor.framed_ate
+      generic map(
+        tdo_delay_width_c => 4
+        )
       port map(
         clock_i  => clock_s,
         reset_n_i => clock_reset_n_s,
@@ -241,7 +254,7 @@ begin
         done_count => done_s'length
         )
       port map(
-        clock_period(0) => 5 ns,
+        clock_period(0) => 10 ns,
         reset_duration(0) => 5 ns,
         reset_n_o(0) => async_reset_n_s,
         clock_o(0) => clock_s,

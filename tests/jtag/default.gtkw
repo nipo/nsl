@@ -1,35 +1,49 @@
 [*]
-[*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
-[*] Wed Jun 17 17:16:50 2026
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Tue Jun 30 07:33:56 2026
 [*]
-[dumpfile] "/home/nipo/projects/nsl/tests/jtag/tb.ghw"
-[dumpfile_mtime] "Wed Jun 17 17:14:55 2026"
-[dumpfile_size] 534760
-[savefile] "/home/nipo/projects/nsl/tests/jtag/default.gtkw"
-[timestart] 28484000000
-[size] 2216 1179
-[pos] -1 -1
-*-28.738708 614000000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[dumpfile] "/home/isaac/Documents/Repos/nsl/tests/jtag/tb.ghw"
+[dumpfile_mtime] "Tue Jun 30 07:24:46 2026"
+[dumpfile_size] 2505109
+[savefile] "/home/isaac/Documents/Repos/nsl/tests/jtag/default.gtkw"
+[timestart] 60211000000
+[size] 1969 1060
+[pos] -46 -46
+*-29.238710 61250000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] top.
 [treeopen] top.tb.
 [treeopen] top.tb.ate.
 [treeopen] top.tb.ate.ate_impl.
 [treeopen] top.tb.ate.ate_impl.ate.
-[treeopen] top.tb.ate.ate_io_s.
-[treeopen] top.tb.dut.
-[treeopen] top.tb.dut.tap.
-[treeopen] top.tb.dut.tap.controller.
+[treeopen] top.tb.ate.ate_impl.ate.r.
+[treeopen] top.tb.ate.ate_impl.ate.tick_variable_delay_1.
+[treeopen] top.tb.ate.ate_impl.cmd_i.
+[treeopen] top.tb.dut.tap.jtag_o.
 [sst_width] 238
-[signals_width] 300
+[signals_width] 542
 [sst_expanded] 1
 [sst_vpaned_height] 359
 @28
+top.tb.ate.clock_s
 top.tb.ate_o.tck
+top.tb.ate.ate_impl.tick_gen.tick_o
+top.tb.ate.ate_impl.ate.tick_variable_delay_1.tick_o
+@22
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_tick_vector[0]
+@28
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_one_hot[0]
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.s_data_shreg[0]
+@22
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[0]
+@28
 top.tb.ate_o.tdi.en
 top.tb.ate_o.tdi.v
+top.tb.dut.tap.jtag_i.tdi
 top.tb.ate_o.tms
 top.tb.ate_o.trst
+@29
 top.tb.ate_i.tdo
+top.tb.dut.tap.jtag_o.tdo.v
 @800200
 -IO
 @28
@@ -40,9 +54,7 @@ top.tb.ate.ate_io_s.cmd.ack.ready
 top.tb.ate.ate_io_s.cmd.req.last
 top.tb.ate.ate_io_s.cmd.req.valid
 top.tb.ate.ate_io_s.rsp.ack.ready
-@22
 #{top.tb.ate.ate_io_s.rsp.req.data[7:0]} top.tb.ate.ate_io_s.rsp.req.data[7] top.tb.ate.ate_io_s.rsp.req.data[6] top.tb.ate.ate_io_s.rsp.req.data[5] top.tb.ate.ate_io_s.rsp.req.data[4] top.tb.ate.ate_io_s.rsp.req.data[3] top.tb.ate.ate_io_s.rsp.req.data[2] top.tb.ate.ate_io_s.rsp.req.data[1] top.tb.ate.ate_io_s.rsp.req.data[0]
-@28
 top.tb.ate.ate_io_s.rsp.req.last
 top.tb.ate.ate_io_s.rsp.req.valid
 @1000200
@@ -59,24 +71,17 @@ top.tb.ate.ate_impl.ate.cmd_ready_o
 @800200
 -ATE
 @420
-top.tb.ate.ate_impl.ate.r.data_left
-@22
-#{top.tb.ate.ate_impl.ate.r.data_shreg[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg[7] top.tb.ate.ate_impl.ate.r.data_shreg[6] top.tb.ate.ate_impl.ate.r.data_shreg[5] top.tb.ate.ate_impl.ate.r.data_shreg[4] top.tb.ate.ate_impl.ate.r.data_shreg[3] top.tb.ate.ate_impl.ate.r.data_shreg[2] top.tb.ate.ate_impl.ate.r.data_shreg[1] top.tb.ate.ate_impl.ate.r.data_shreg[0]
-#{top.tb.ate.ate_impl.ate.r.insertion_val[7:0]} top.tb.ate.ate_impl.ate.r.insertion_val[7] top.tb.ate.ate_impl.ate.r.insertion_val[6] top.tb.ate.ate_impl.ate.r.insertion_val[5] top.tb.ate.ate_impl.ate.r.insertion_val[4] top.tb.ate.ate_impl.ate.r.insertion_val[3] top.tb.ate.ate_impl.ate.r.insertion_val[2] top.tb.ate.ate_impl.ate.r.insertion_val[1] top.tb.ate.ate_impl.ate.r.insertion_val[0]
+top.tb.ate.ate_impl.ate.r.state_in
+@29
+#{top.tb.ate.ate_impl.ate.r.data_shreg_in[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg_in[7] top.tb.ate.ate_impl.ate.r.data_shreg_in[6] top.tb.ate.ate_impl.ate.r.data_shreg_in[5] top.tb.ate.ate_impl.ate.r.data_shreg_in[4] top.tb.ate.ate_impl.ate.r.data_shreg_in[3] top.tb.ate.ate_impl.ate.r.data_shreg_in[2] top.tb.ate.ate_impl.ate.r.data_shreg_in[1] top.tb.ate.ate_impl.ate.r.data_shreg_in[0]
 @23
-#{top.tb.ate.ate_impl.ate.r.insertion_mask[7:0]} top.tb.ate.ate_impl.ate.r.insertion_mask[7] top.tb.ate.ate_impl.ate.r.insertion_mask[6] top.tb.ate.ate_impl.ate.r.insertion_mask[5] top.tb.ate.ate_impl.ate.r.insertion_mask[4] top.tb.ate.ate_impl.ate.r.insertion_mask[3] top.tb.ate.ate_impl.ate.r.insertion_mask[2] top.tb.ate.ate_impl.ate.r.insertion_mask[1] top.tb.ate.ate_impl.ate.r.insertion_mask[0]
-@420
-top.tb.ate.ate_impl.ate.r.state
-top.tb.ate.ate_impl.ate.r.tap_branch
+#{top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[7:0]} top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[7] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[6] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[5] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[4] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[3] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[2] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[1] top.tb.ate.ate_impl.ate.tick_variable_delay_1.delay_i[0]
 @28
-top.tb.ate.ate_impl.ate.r.tdi_next.v
-top.tb.ate.ate_impl.ate.r.tdi_next.en
-top.tb.ate.ate_impl.ate.r.tdi.en
-top.tb.ate.ate_impl.ate.r.tdi.v
-@420
-top.tb.ate.ate_impl.ate.r.tms_left
+top.tb.ate.ate_impl.ate.r.state_out
+@29
+#{top.tb.ate.ate_impl.ate.r.data_shreg_out[7:0]} top.tb.ate.ate_impl.ate.r.data_shreg_out[7] top.tb.ate.ate_impl.ate.r.data_shreg_out[6] top.tb.ate.ate_impl.ate.r.data_shreg_out[5] top.tb.ate.ate_impl.ate.r.data_shreg_out[4] top.tb.ate.ate_impl.ate.r.data_shreg_out[3] top.tb.ate.ate_impl.ate.r.data_shreg_out[2] top.tb.ate.ate_impl.ate.r.data_shreg_out[1] top.tb.ate.ate_impl.ate.r.data_shreg_out[0]
 @22
-#{top.tb.ate.ate_impl.ate.r.tms_shreg[0:13]} top.tb.ate.ate_impl.ate.r.tms_shreg[0] top.tb.ate.ate_impl.ate.r.tms_shreg[1] top.tb.ate.ate_impl.ate.r.tms_shreg[2] top.tb.ate.ate_impl.ate.r.tms_shreg[3] top.tb.ate.ate_impl.ate.r.tms_shreg[4] top.tb.ate.ate_impl.ate.r.tms_shreg[5] top.tb.ate.ate_impl.ate.r.tms_shreg[6] top.tb.ate.ate_impl.ate.r.tms_shreg[7] top.tb.ate.ate_impl.ate.r.tms_shreg[8] top.tb.ate.ate_impl.ate.r.tms_shreg[9] top.tb.ate.ate_impl.ate.r.tms_shreg[10] top.tb.ate.ate_impl.ate.r.tms_shreg[11] top.tb.ate.ate_impl.ate.r.tms_shreg[12] top.tb.ate.ate_impl.ate.r.tms_shreg[13]
+#{top.tb.ate.ate_impl.ate.r.insertion_val[7:0]} top.tb.ate.ate_impl.ate.r.insertion_val[7] top.tb.ate.ate_impl.ate.r.insertion_val[6] top.tb.ate.ate_impl.ate.r.insertion_val[5] top.tb.ate.ate_impl.ate.r.insertion_val[4] top.tb.ate.ate_impl.ate.r.insertion_val[3] top.tb.ate.ate_impl.ate.r.insertion_val[2] top.tb.ate.ate_impl.ate.r.insertion_val[1] top.tb.ate.ate_impl.ate.r.insertion_val[0]
 @1000200
 -ATE
 @800200
