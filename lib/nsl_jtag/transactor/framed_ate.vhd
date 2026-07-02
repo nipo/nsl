@@ -2,10 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_bnoc, nsl_io, nsl_event;
+library nsl_jtag, nsl_bnoc, nsl_io, nsl_event, nsl_data;
 use nsl_jtag.ate.all;
 use nsl_jtag.transactor.all;
 use nsl_bnoc.framed.all;
+use nsl_data.bytestream.all;
 
 entity framed_ate is
   generic(
@@ -29,6 +30,9 @@ end entity;
 
 architecture rtl of framed_ate is
 
+  constant api_version_c : integer := 1;
+  constant default_rsp_byte_c : byte := to_byte(16#5a# + api_version_c);
+  
   type st_cmd_t is (
     ST_CMD_RESET,
     ST_CMD_IDLE,
@@ -52,7 +56,7 @@ architecture rtl of framed_ate is
     );
 
   constant data_max_size : natural := 8;
-  
+
   type regs_t is
   record
     cmd_st : st_cmd_t;
@@ -73,7 +77,7 @@ architecture rtl of framed_ate is
   end record;
 
   signal r, rin: regs_t;
-  
+
   signal s_cmd_ready : std_ulogic;
   signal s_cmd_valid : std_ulogic;
   signal s_cmd_op    : ate_op;
@@ -84,9 +88,9 @@ architecture rtl of framed_ate is
   signal s_rsp_data  : std_ulogic_vector(data_max_size-1 downto 0);
 
   signal tick_s : std_ulogic;
-  
+
 begin
-  
+
   reg: process(clock_i, reset_n_i)
   begin
     if rising_edge(clock_i) then
@@ -104,7 +108,7 @@ begin
                       s_cmd_ready, s_rsp_data, s_rsp_valid)
   begin
     rin <= r;
-    
+
     case r.cmd_st is
       when ST_CMD_RESET =>
         rin.cmd_st <= ST_CMD_IDLE;
@@ -168,7 +172,7 @@ begin
         elsif std_match(r.cmd_data, JTAG_CMD_DIVISOR) then
           rin.cmd_st <= ST_CMD_DIV_GET;
         elsif std_match(r.cmd_data, JTAG_CMD_DELAY) then
-          rin.cmd_st <= ST_CMD_DEL_GET;          
+          rin.cmd_st <= ST_CMD_DEL_GET;
         elsif std_match(r.cmd_data, JTAG_CMD_SYS_RESET) then
           rin.cmd_st <= ST_CMD_IDLE;
           rin.srst_drive <= r.cmd_data(0);
@@ -187,14 +191,14 @@ begin
             rin.cmd_st <= ST_CMD_IDLE;
           end if;
         end if;
-        
+
       when ST_CMD_DATA_GET =>
         if cmd_i.valid = '1' then
           rin.cmd_data <= cmd_i.data;
           rin.cmd_last <= cmd_i.last = '1';
           rin.cmd_st <= ST_CMD_DATA_PUT;
         end if;
-        
+
       when ST_CMD_DIV_GET =>
         if cmd_i.valid = '1' then
           rin.divisor <= unsigned(cmd_i.data);
@@ -207,7 +211,7 @@ begin
           rin.delay <= unsigned(cmd_i.data(r.delay'range));
           rin.cmd_last <= cmd_i.last = '1';
           rin.cmd_st <= ST_CMD_IDLE;
-        end if;        
+        end if;
 
       when ST_CMD_DATA_PUT =>
         if s_cmd_ready = '1' then
@@ -249,7 +253,7 @@ begin
         elsif std_match(r.rsp_data, JTAG_CMD_DIVISOR) then
           rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;
         elsif std_match(r.rsp_data, JTAG_CMD_DELAY) then
-          rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;          
+          rin.rsp_st <= ST_RSP_WAIT_CMD_IDLE;
         else
           rin.rsp_st <= ST_RSP_PUT;
         end if;
@@ -316,7 +320,7 @@ begin
         if r.rsp_st = ST_RSP_IDLE then
           cmd_o <= framed_accept(true);
         end if;
-          
+
       when ST_CMD_DATA_GET | ST_CMD_DIV_GET | ST_CMD_DEL_GET =>
         cmd_o <= framed_accept(true);
 
@@ -329,11 +333,11 @@ begin
         null;
 
       when ST_RSP_PUT =>
-        rsp_o <= framed_flit(x"5a", last => r.cmd_last);
+        rsp_o <= framed_flit(default_rsp_byte_c, last => r.cmd_last);
 
       when ST_RSP_DATA_PUT =>
         rsp_o <= framed_flit(r.rsp_data, last => false);
-        
+
       when ST_RSP_DATA_GET | ST_RSP_DATA_BLACKHOLE =>
         s_rsp_ready <= '1';
     end case;

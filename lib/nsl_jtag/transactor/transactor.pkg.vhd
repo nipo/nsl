@@ -19,8 +19,8 @@ package transactor is
   constant JTAG_CMD_IR_CAPTURE  : nsl_bnoc.framed.framed_data_t := "10000001";
   constant JTAG_CMD_SWD_TO_JTAG : nsl_bnoc.framed.framed_data_t := "10000010";
   constant JTAG_CMD_DIVISOR     : nsl_bnoc.framed.framed_data_t := "10000011"; -- Next byte is divisor
-  constant JTAG_CMD_DELAY       : nsl_bnoc.framed.framed_data_t := "10000111"; -- Next byte is delay
   constant JTAG_CMD_SYS_RESET   : nsl_bnoc.framed.framed_data_t := "1000010-"; -- Set system reset (active high)
+  constant JTAG_CMD_DELAY       : nsl_bnoc.framed.framed_data_t := "10000111"; -- Next byte is delay
   constant JTAG_CMD_RESET_CYCLE : nsl_bnoc.framed.framed_data_t := "10011---"; -- cycle count
   constant JTAG_CMD_RTI_CYCLE   : nsl_bnoc.framed.framed_data_t := "10010---"; -- cycle count
   constant JTAG_CMD_RESET       : nsl_bnoc.framed.framed_data_t := "1011----"; -- in packet of 8 cycles
@@ -239,7 +239,8 @@ package body transactor is
     variable tmp: byte;
   begin
     read(rsp_buffer, tmp);
-    assert tmp = x"5a"
+    -- Only know these two versions for now.
+    assert tmp = x"5a" or tmp = x"5b"
       report "Unexpected response from ATE: "&to_string(tmp)
       severity warning;
   end procedure;
