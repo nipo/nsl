@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_jtag;
+library nsl_jtag, nsl_bnoc;
 
 package fifo_transport is
 
@@ -61,6 +61,30 @@ package fifo_transport is
       rx_data_o   : out std_ulogic_vector(width_c - 1 downto 0);
       rx_valid_o  : out std_ulogic;
       rx_ready_i  : in  std_ulogic
+      );
+  end component;
+
+  component jtag_framed_transport_tap is
+    generic(
+      tx_fifo_depth_c : natural := 128;
+      rx_fifo_depth_c : natural := 128
+      );
+    port(
+      chip_tck_i : in std_ulogic := '0';
+      chip_tms_i : in std_ulogic := '0';
+      chip_tdi_i : in std_ulogic := '0';
+      chip_tdo_o : out std_ulogic;
+
+      -- Clocks the fifo, asynchronous to TCK of user reg
+      clock_i     : in  std_ulogic;
+      reset_n_i   : in  std_ulogic;
+      reset_n_o   : out std_ulogic;
+
+      tx_i : in nsl_bnoc.framed.framed_req;
+      tx_o : out nsl_bnoc.framed.framed_ack;
+
+      rx_o : out nsl_bnoc.framed.framed_req;
+      rx_i : in nsl_bnoc.framed.framed_ack
       );
   end component;
 
