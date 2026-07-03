@@ -42,3 +42,14 @@ vhdl-sources += clock_internal_ice40.vhd
 vhdl-sources += clock_buffer_ice40.vhd
 deps += sb_ice.components
 endif
+
+ifneq ($(filter lattice-ecp5,$(hwdep)),)
+ifeq ($(compiler),yosys)
+vhdl-sources += clock_buffer_ecp5_yosys.vhd
+vhdl-sources += clock_internal_ecp5_yosys.vhd
+else
+vhdl-sources += clock_buffer_ecp5.vhd
+vhdl-sources += clock_internal_ecp5.vhd
+endif
+deps += sb_ice.components
+endif

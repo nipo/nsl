@@ -24,3 +24,13 @@ vhdl-sources += jtag_user_register_simulation.vhd
 vhdl-sources += jtag_user_tap_simulation.vhd
 deps += nsl_simulation.jtag
 endif
+
+ifneq ($(filter lattice-ecp5,$(hwdep)),)
+ifeq ($(compiler),yosys)
+vhdl-sources += jtag_user_tap_ecp5_yosys.vhd
+else
+vhdl-sources += jtag_user_tap_ecp5.vhd
+endif
+deps += nsl_clocking.distribution
+deps += sb_ice.components
+endif

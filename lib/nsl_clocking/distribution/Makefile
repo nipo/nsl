@@ -27,3 +27,12 @@ vhdl-sources += clock_buffer_gowin.vhd
 endif
 deps += gowin.components
 endif
+
+ifneq ($(filter lattice-ecp5,$(hwdep)),)
+ifeq ($(compiler),yosys)
+vhdl-sources += clock_buffer_ecp5_yosys.vhd
+else
+vhdl-sources += clock_buffer_ecp5.vhd
+endif
+deps += sb_ice.components
+endif
