@@ -127,8 +127,6 @@ class NSLRepository(Repository):
         context = Context()
 
         for key, value in filter_vars.items():
-            if key == "target":
-                context["target-usage"] = str(value)
             context[key] = str(value)
 
         # Parse and interpret library Makefile
@@ -172,8 +170,6 @@ class NSLRepository(Repository):
         context = Context()
 
         for key, value in filter_vars.items():
-            if key == "target":
-                context["target-usage"] = str(value)
             context[key] = str(value)
 
         # Parse and interpret Makefile
