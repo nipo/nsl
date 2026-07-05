@@ -1,8 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-
 entity serdes_sdr10_output is
     generic (
         left_to_right_c : boolean := false
@@ -22,18 +20,63 @@ end entity;
 
 architecture series6 of serdes_sdr10_output is
 
-    signal reset : std_ulogic;
-    signal d     : std_ulogic_vector(0 to 9);
+  attribute BOX_TYPE : string;
 
-    signal cascade_do : std_ulogic;
-    signal cascade_to : std_ulogic;
-    signal cascade_di : std_ulogic;
-    signal cascade_ti : std_ulogic;
+  component OSERDES2
+    generic (
+      BYPASS_GCLK_FF : boolean := FALSE;
+      DATA_RATE_OQ : string := "DDR";
+      DATA_RATE_OT : string := "DDR";
+      DATA_WIDTH : integer := 2;
+      OUTPUT_MODE : string := "SINGLE_ENDED";
+      SERDES_MODE : string := "NONE";
+      TRAIN_PATTERN : integer := 0
+      );
+    port (
+      OQ : out std_ulogic;
+      SHIFTOUT1 : out std_ulogic;
+      SHIFTOUT2 : out std_ulogic;
+      SHIFTOUT3 : out std_ulogic;
+      SHIFTOUT4 : out std_ulogic;
+      TQ : out std_ulogic;
+      CLK0 : in std_ulogic;
+      CLK1 : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      D1 : in std_ulogic;
+      D2 : in std_ulogic;
+      D3 : in std_ulogic;
+      D4 : in std_ulogic;
+      IOCE : in std_ulogic := 'H';
+      OCE : in std_ulogic := 'H';
+      RST : in std_ulogic;
+      SHIFTIN1 : in std_ulogic;
+      SHIFTIN2 : in std_ulogic;
+      SHIFTIN3 : in std_ulogic;
+      SHIFTIN4 : in std_ulogic;
+      T1 : in std_ulogic;
+      T2 : in std_ulogic;
+      T3 : in std_ulogic;
+      T4 : in std_ulogic;
+      TCE : in std_ulogic;
+      TRAIN : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    OSERDES2 : component is "PRIMITIVE";
 
-    -- Gearbox: 10 bits @ 100MHz -> 2x5 bits @ 200MHz
-    signal received_word_s : std_ulogic_vector(0 to 9);
-    signal high_nlow_s     : boolean;
-    signal gearbox_data_s  : std_ulogic_vector(0 to 4);
+  signal reset : std_ulogic;
+  signal d     : std_ulogic_vector(0 to 9);
+
+  signal cascade_do : std_ulogic;
+  signal cascade_to : std_ulogic;
+  signal cascade_di : std_ulogic;
+  signal cascade_ti : std_ulogic;
+
+  -- Gearbox: 10 bits @ 100MHz -> 2x5 bits @ 200MHz
+  signal received_word_s : std_ulogic_vector(0 to 9);
+  signal high_nlow_s     : boolean;
+  signal gearbox_data_s  : std_ulogic_vector(0 to 4);
+
 begin
 
     reset <= not reset_n_i;
@@ -79,7 +122,7 @@ begin
         end if;
     end process;
 
-    master : unisim.vcomponents.OSERDES2
+    master : OSERDES2
     generic map(
         DATA_WIDTH   => 5,
         DATA_RATE_OQ => "SDR",
@@ -120,7 +163,7 @@ begin
         SHIFTOUT4 => open        -- Dummy output
     );
 
-    slave : unisim.vcomponents.OSERDES2
+    slave : OSERDES2
     generic map(
         DATA_WIDTH   => 5,
         DATA_RATE_OQ => "SDR",

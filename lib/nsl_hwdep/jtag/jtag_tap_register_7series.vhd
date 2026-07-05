@@ -2,9 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim;
-use unisim.vcomponents.all;
-
 entity jtag_tap_register is
   generic(
     id_c    : natural range 1 to 4
@@ -23,6 +20,39 @@ entity jtag_tap_register is
 end entity;
 
 architecture seven_series of jtag_tap_register is
+
+  attribute BOX_TYPE : string;
+
+  component BSCANE2
+    generic (
+      DISABLE_JTAG : string := "FALSE";
+      JTAG_CHAIN : integer := 1
+      );
+    port (
+      CAPTURE : out std_ulogic := 'H';
+      DRCK : out std_ulogic := 'H';
+      RESET : out std_ulogic := 'H';
+      RUNTEST : out std_ulogic := 'L';
+      SEL : out std_ulogic := 'L';
+      SHIFT : out std_ulogic := 'L';
+      TCK : out std_ulogic := 'L';
+      TDI : out std_ulogic := 'L';
+      TMS : out std_ulogic := 'L';
+      UPDATE : out std_ulogic := 'L';
+      TDO : in std_ulogic := 'X'
+      );
+  end component;
+  attribute BOX_TYPE of
+    BSCANE2 : component is "PRIMITIVE";
+
+  component BUFG
+    port (
+      O : out std_ulogic;
+      I : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    BUFG : component is "PRIMITIVE";
 
   signal run, tck, tdo, reset, capture, selected, update, shift : std_ulogic;
   

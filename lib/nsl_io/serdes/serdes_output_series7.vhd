@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim, nsl_data;
+library nsl_data;
 
 entity serdes_output is
   generic(
@@ -21,6 +21,55 @@ entity serdes_output is
 end entity;
 
 architecture series7 of serdes_output is
+
+  attribute BOX_TYPE : string;
+
+  component OSERDESE2
+    generic (
+      DATA_RATE_OQ : string := "DDR";
+      DATA_RATE_TQ : string := "DDR";
+      DATA_WIDTH : integer := 4;
+      INIT_OQ : bit := '0';
+      INIT_TQ : bit := '0';
+      SERDES_MODE : string := "MASTER";
+      SRVAL_OQ : bit := '0';
+      SRVAL_TQ : bit := '0';
+      TBYTE_CTL : string := "FALSE";
+      TBYTE_SRC : string := "FALSE";
+      TRISTATE_WIDTH : integer := 4
+      );
+    port (
+      OFB : out std_ulogic;
+      OQ : out std_ulogic;
+      SHIFTOUT1 : out std_ulogic;
+      SHIFTOUT2 : out std_ulogic;
+      TBYTEOUT : out std_ulogic;
+      TFB : out std_ulogic;
+      TQ : out std_ulogic;
+      CLK : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      D1 : in std_ulogic;
+      D2 : in std_ulogic;
+      D3 : in std_ulogic;
+      D4 : in std_ulogic;
+      D5 : in std_ulogic;
+      D6 : in std_ulogic;
+      D7 : in std_ulogic;
+      D8 : in std_ulogic;
+      OCE : in std_ulogic;
+      RST : in std_ulogic;
+      SHIFTIN1 : in std_ulogic;
+      SHIFTIN2 : in std_ulogic;
+      T1 : in std_ulogic;
+      T2 : in std_ulogic;
+      T3 : in std_ulogic;
+      T4 : in std_ulogic;
+      TBYTEIN : in std_ulogic;
+      TCE : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    OSERDESE2 : component is "PRIMITIVE";
 
   constant data_rate_c: string := nsl_data.text.if_else(ddr_mode_c, "DDR", "SDR");
   constant cascade_needed_c: boolean := ratio_c > 8;
@@ -56,7 +105,7 @@ begin
     end loop;
   end process;
 
-  master: unisim.vcomponents.oserdese2
+  master: oserdese2
     generic map(
       data_rate_oq => data_rate_c,
       data_rate_tq => "SDR",
@@ -90,7 +139,7 @@ begin
 
   has_slave: if cascade_needed_c
   generate
-    slave: unisim.vcomponents.oserdese2
+    slave: oserdese2
       generic map(
         data_rate_oq => data_rate_c,
         data_rate_tq => "SDR",

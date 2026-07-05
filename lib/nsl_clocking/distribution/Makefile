@@ -6,7 +6,6 @@ endif
 
 ifeq ($(hwdep),xilinx)
 vhdl-sources += clock_buffer_xilinx.vhd
-deps += unisim.vcomponents
 endif
 
 ifeq ($(hwdep),lattice-machxo2)

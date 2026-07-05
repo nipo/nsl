@@ -16,7 +16,6 @@ ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += ddr_input_series7.vhd
 vhdl-sources += ddr_output_series7.vhd
 endif
-deps += unisim.vcomponents
 endif
 
 ifneq ($(filter lattice-machxo2,$(hwdep)),)

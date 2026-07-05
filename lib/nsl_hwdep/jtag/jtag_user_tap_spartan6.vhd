@@ -1,8 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-
 entity jtag_user_tap is
   generic(
     user_port_count_c : integer := 1
@@ -33,6 +31,36 @@ end entity;
 
 architecture s6 of jtag_user_tap is
 
+  attribute BOX_TYPE : string;
+  component BSCAN_SPARTAN6
+    generic (
+      JTAG_CHAIN : integer := 1
+      );
+    port (
+      CAPTURE : out std_ulogic := 'H';
+      DRCK : out std_ulogic := 'H';
+      RESET : out std_ulogic := 'H';
+      RUNTEST : out std_ulogic := 'L';
+      SEL : out std_ulogic := 'L';
+      SHIFT : out std_ulogic := 'L';
+      TCK : out std_ulogic := 'L';
+      TDI : out std_ulogic := 'L';
+      TMS : out std_ulogic := 'L';
+      UPDATE : out std_ulogic := 'L';
+      TDO : in std_ulogic := 'X'
+      );
+  end component;
+  attribute BOX_TYPE of
+    BSCAN_SPARTAN6 : component is "PRIMITIVE";
+  component BUFG
+    port (
+      O : out std_ulogic;
+      I : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    BUFG : component is "PRIMITIVE";
+
   signal run_s, tck_unb_s, reset_s, selected_s, capture_s, shift_s, update_s, tdi_s, tdo_s: std_ulogic_vector(0 to user_port_count_c-1);
   signal tck_s : std_ulogic;
 
@@ -43,7 +71,7 @@ begin
 
   insts: for i in 0 to user_port_count_c-1
   generate
-    inst: unisim.vcomponents.bscan_spartan6
+    inst: bscan_spartan6
     generic map(
       jtag_chain => i+1
       )
@@ -60,7 +88,7 @@ begin
       );
   end generate;
 
-  tck_buf: unisim.vcomponents.bufg
+  tck_buf: bufg
     port map(
       i => tck_unb_s(0),
       o => tck_s

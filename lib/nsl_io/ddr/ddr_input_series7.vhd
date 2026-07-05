@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io, unisim;
+library nsl_io;
 
 entity ddr_input is
   generic(
@@ -15,12 +15,34 @@ entity ddr_input is
 end entity;
 
 architecture series7 of ddr_input is
+
+  attribute BOX_TYPE : string;
+
+  component IDDR
+    generic (
+      DDR_CLK_EDGE : string := "OPPOSITE_EDGE";
+      INIT_Q1 : bit := '0';
+      INIT_Q2 : bit := '0';
+      SRTYPE : string := "SYNC"
+      );
+    port (
+      Q1 : out std_ulogic;
+      Q2 : out std_ulogic;
+      C : in std_ulogic;
+      CE : in std_ulogic;
+      D : in std_ulogic;
+      R : in std_ulogic := 'L';
+      S : in std_ulogic := 'L'
+      );
+  end component;
+  attribute BOX_TYPE of
+    IDDR : component is "PRIMITIVE";
   
 begin
 
   no_inv: if not invert_clock_polarity_c
   generate
-    pad: unisim.vcomponents.iddr
+    pad: iddr
       generic map(
         ddr_clk_edge => "SAME_EDGE"
         )
@@ -37,7 +59,7 @@ begin
 
   inv: if invert_clock_polarity_c
   generate
-    pad: unisim.vcomponents.iddr
+    pad: iddr
       generic map(
         ddr_clk_edge => "SAME_EDGE"
         )

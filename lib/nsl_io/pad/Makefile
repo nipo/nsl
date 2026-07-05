@@ -14,8 +14,6 @@ ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += pad_diff_input_xc7.vhd
 vhdl-sources += pad_diff_clock_input_xc7.vhd
 endif
-
-deps += unisim.vcomponents
 endif
 
 ifeq ($(hwdep),simulation)

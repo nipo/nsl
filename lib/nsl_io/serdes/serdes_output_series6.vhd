@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim, nsl_data;
+library nsl_data;
 
 entity serdes_output is
   generic(
@@ -21,6 +21,50 @@ entity serdes_output is
 end entity;
 
 architecture series6 of serdes_output is
+
+  attribute BOX_TYPE : string;
+
+  component OSERDES2
+    generic (
+      BYPASS_GCLK_FF : boolean := FALSE;
+      DATA_RATE_OQ : string := "DDR";
+      DATA_RATE_OT : string := "DDR";
+      DATA_WIDTH : integer := 2;
+      OUTPUT_MODE : string := "SINGLE_ENDED";
+      SERDES_MODE : string := "NONE";
+      TRAIN_PATTERN : integer := 0
+      );
+    port (
+      OQ : out std_ulogic;
+      SHIFTOUT1 : out std_ulogic;
+      SHIFTOUT2 : out std_ulogic;
+      SHIFTOUT3 : out std_ulogic;
+      SHIFTOUT4 : out std_ulogic;
+      TQ : out std_ulogic;
+      CLK0 : in std_ulogic;
+      CLK1 : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      D1 : in std_ulogic;
+      D2 : in std_ulogic;
+      D3 : in std_ulogic;
+      D4 : in std_ulogic;
+      IOCE : in std_ulogic := 'H';
+      OCE : in std_ulogic := 'H';
+      RST : in std_ulogic;
+      SHIFTIN1 : in std_ulogic;
+      SHIFTIN2 : in std_ulogic;
+      SHIFTIN3 : in std_ulogic;
+      SHIFTIN4 : in std_ulogic;
+      T1 : in std_ulogic;
+      T2 : in std_ulogic;
+      T3 : in std_ulogic;
+      T4 : in std_ulogic;
+      TCE : in std_ulogic;
+      TRAIN : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    OSERDES2 : component is "PRIMITIVE";
 
   constant data_rate_c: string := nsl_data.text.if_else(ddr_mode_c, "DDR", "SDR");
   constant cascade_needed_c: boolean := ratio_c > 4;
@@ -56,7 +100,7 @@ begin
 
   serial_clock_n_s <= not serial_clock_i;
   
-  master: unisim.vcomponents.oserdes2
+  master: oserdes2
     generic map(
       data_rate_oq => data_rate_c,
       data_rate_ot => data_rate_c,
@@ -89,7 +133,7 @@ begin
 
   has_slave: if cascade_needed_c
   generate
-    slave: unisim.vcomponents.oserdes2
+    slave: oserdes2
       generic map(
         data_rate_oq => data_rate_c,
         data_rate_ot => data_rate_c,

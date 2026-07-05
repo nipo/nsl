@@ -2,8 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim;
-
 library nsl_data;
 use nsl_data.crc.all;
 use nsl_data.bytestream.all;
@@ -20,6 +18,22 @@ entity uid32_reader is
 end entity;
 
 architecture xil of uid32_reader is
+
+  attribute BOX_TYPE : string;
+  component DNA_PORT
+    generic (
+      SIM_DNA_VALUE : bit_vector := X"000000000000000"
+      );
+    port (
+      DOUT : out std_ulogic;
+      CLK : in std_ulogic;
+      DIN : in std_ulogic;
+      READ : in std_ulogic;
+      SHIFT : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    DNA_PORT : component is "PRIMITIVE";
 
   constant crc_params_c : crc_params_t := crc_params(
     init             => "",
@@ -105,7 +119,7 @@ begin
     end case;
   end process;
 
-  dna_port: unisim.vcomponents.dna_port
+  dna_port: dna_port
     port map(
       clk => clock_i,
       shift => s_dna_shift,

@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library unisim, nsl_math, nsl_logic, nsl_data, nsl_clocking;
+library nsl_math, nsl_logic, nsl_data, nsl_clocking;
 use nsl_logic.bool.all;
 use nsl_data.text.all;
 use nsl_clocking.pll_config_series67.all;
@@ -24,6 +24,213 @@ entity pll_basic is
 end entity;
 
 architecture s6 of pll_basic is
+
+  attribute BOX_TYPE : string;
+
+  component PLL_BASE
+    generic (
+      BANDWIDTH : string := "OPTIMIZED";
+      CLKFBOUT_MULT : integer := 1;
+      CLKFBOUT_PHASE : real := 0.0;
+      CLKIN_PERIOD : real := 0.000;
+      CLKOUT0_DIVIDE : integer := 1;
+      CLKOUT0_DUTY_CYCLE : real := 0.5;
+      CLKOUT0_PHASE : real := 0.0;
+      CLKOUT1_DIVIDE : integer := 1;
+      CLKOUT1_DUTY_CYCLE : real := 0.5;
+      CLKOUT1_PHASE : real := 0.0;
+      CLKOUT2_DIVIDE : integer := 1;
+      CLKOUT2_DUTY_CYCLE : real := 0.5;
+      CLKOUT2_PHASE : real := 0.0;
+      CLKOUT3_DIVIDE : integer := 1;
+      CLKOUT3_DUTY_CYCLE : real := 0.5;
+      CLKOUT3_PHASE : real := 0.0;
+      CLKOUT4_DIVIDE : integer := 1;
+      CLKOUT4_DUTY_CYCLE : real := 0.5;
+      CLKOUT4_PHASE : real := 0.0;
+      CLKOUT5_DIVIDE : integer := 1;
+      CLKOUT5_DUTY_CYCLE : real := 0.5;
+      CLKOUT5_PHASE : real := 0.0;
+      CLK_FEEDBACK : string := "CLKFBOUT";
+      COMPENSATION : string := "SYSTEM_SYNCHRONOUS";
+      DIVCLK_DIVIDE : integer := 1;
+      REF_JITTER : real := 0.100;
+      RESET_ON_LOSS_OF_LOCK : boolean := FALSE
+      );
+    port (
+      CLKFBOUT : out std_ulogic;
+      CLKOUT0 : out std_ulogic;
+      CLKOUT1 : out std_ulogic;
+      CLKOUT2 : out std_ulogic;
+      CLKOUT3 : out std_ulogic;
+      CLKOUT4 : out std_ulogic;
+      CLKOUT5 : out std_ulogic;
+      LOCKED : out std_ulogic;
+      CLKFBIN : in std_ulogic;
+      CLKIN : in std_ulogic;
+      RST : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    PLL_BASE : component is "PRIMITIVE";
+
+  component PLLE2_ADV
+    generic (
+      BANDWIDTH : string := "OPTIMIZED";
+      CLKFBOUT_MULT : integer := 5;
+      CLKFBOUT_PHASE : real := 0.0;
+      CLKIN1_PERIOD : real := 0.0;
+      CLKIN2_PERIOD : real := 0.0;
+      CLKOUT0_DIVIDE : integer := 1;
+      CLKOUT0_DUTY_CYCLE : real := 0.5;
+      CLKOUT0_PHASE : real := 0.0;
+      CLKOUT1_DIVIDE : integer := 1;
+      CLKOUT1_DUTY_CYCLE : real := 0.5;
+      CLKOUT1_PHASE : real := 0.0;
+      CLKOUT2_DIVIDE : integer := 1;
+      CLKOUT2_DUTY_CYCLE : real := 0.5;
+      CLKOUT2_PHASE : real := 0.0;
+      CLKOUT3_DIVIDE : integer := 1;
+      CLKOUT3_DUTY_CYCLE : real := 0.5;
+      CLKOUT3_PHASE : real := 0.0;
+      CLKOUT4_DIVIDE : integer := 1;
+      CLKOUT4_DUTY_CYCLE : real := 0.5;
+      CLKOUT4_PHASE : real := 0.0;
+      CLKOUT5_DIVIDE : integer := 1;
+      CLKOUT5_DUTY_CYCLE : real := 0.5;
+      CLKOUT5_PHASE : real := 0.0;
+      COMPENSATION : string := "ZHOLD";
+      DIVCLK_DIVIDE : integer := 1;
+      REF_JITTER1 : real := 0.0;
+      REF_JITTER2 : real := 0.0;
+      STARTUP_WAIT : string := "FALSE"
+      );
+    port (
+      CLKFBOUT : out std_ulogic := '0';
+      CLKOUT0 : out std_ulogic := '0';
+      CLKOUT1 : out std_ulogic := '0';
+      CLKOUT2 : out std_ulogic := '0';
+      CLKOUT3 : out std_ulogic := '0';
+      CLKOUT4 : out std_ulogic := '0';
+      CLKOUT5 : out std_ulogic := '0';
+      DO : out std_logic_vector (15 downto 0);
+      DRDY : out std_ulogic := '0';
+      LOCKED : out std_ulogic := '0';
+      CLKFBIN : in std_ulogic;
+      CLKIN1 : in std_ulogic;
+      CLKIN2 : in std_ulogic;
+      CLKINSEL : in std_ulogic;
+      DADDR : in std_logic_vector(6 downto 0);
+      DCLK : in std_ulogic;
+      DEN : in std_ulogic;
+      DI : in std_logic_vector(15 downto 0);
+      DWE : in std_ulogic;
+      PWRDWN : in std_ulogic;
+      RST : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    PLLE2_ADV : component is "PRIMITIVE";
+
+  component MMCM_BASE
+    generic (
+      BANDWIDTH : string := "OPTIMIZED";
+      CLKFBOUT_MULT_F : real := 5.000;
+      CLKFBOUT_PHASE : real := 0.000;
+      CLKIN1_PERIOD : real := 0.000;
+      CLKOUT0_DIVIDE_F : real := 1.000;
+      CLKOUT0_DUTY_CYCLE : real := 0.500;
+      CLKOUT0_PHASE : real := 0.000;
+      CLKOUT1_DIVIDE : integer := 1;
+      CLKOUT1_DUTY_CYCLE : real := 0.500;
+      CLKOUT1_PHASE : real := 0.000;
+      CLKOUT2_DIVIDE : integer := 1;
+      CLKOUT2_DUTY_CYCLE : real := 0.500;
+      CLKOUT2_PHASE : real := 0.000;
+      CLKOUT3_DIVIDE : integer := 1;
+      CLKOUT3_DUTY_CYCLE : real := 0.500;
+      CLKOUT3_PHASE : real := 0.000;
+      CLKOUT4_CASCADE : boolean := FALSE;
+      CLKOUT4_DIVIDE : integer := 1;
+      CLKOUT4_DUTY_CYCLE : real := 0.500;
+      CLKOUT4_PHASE : real := 0.000;
+      CLKOUT5_DIVIDE : integer := 1;
+      CLKOUT5_DUTY_CYCLE : real := 0.500;
+      CLKOUT5_PHASE : real := 0.000;
+      CLKOUT6_DIVIDE : integer := 1;
+      CLKOUT6_DUTY_CYCLE : real := 0.500;
+      CLKOUT6_PHASE : real := 0.000;
+      CLOCK_HOLD : boolean := FALSE;
+      DIVCLK_DIVIDE : integer := 1;
+      REF_JITTER1 : real := 0.010;
+      STARTUP_WAIT : boolean := FALSE
+      );
+    port (
+      CLKFBOUT : out std_ulogic;
+      CLKFBOUTB : out std_ulogic;
+      CLKOUT0 : out std_ulogic;
+      CLKOUT0B : out std_ulogic;
+      CLKOUT1 : out std_ulogic;
+      CLKOUT1B : out std_ulogic;
+      CLKOUT2 : out std_ulogic;
+      CLKOUT2B : out std_ulogic;
+      CLKOUT3 : out std_ulogic;
+      CLKOUT3B : out std_ulogic;
+      CLKOUT4 : out std_ulogic;
+      CLKOUT5 : out std_ulogic;
+      CLKOUT6 : out std_ulogic;
+      LOCKED : out std_ulogic;
+      CLKFBIN : in std_ulogic;
+      CLKIN1 : in std_ulogic;
+      PWRDWN : in std_ulogic;
+      RST : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    MMCM_BASE : component is "PRIMITIVE";
+
+  component DCM_SP
+    generic (
+      CLKDV_DIVIDE : real := 2.0;
+      CLKFX_DIVIDE : integer := 1;
+      CLKFX_MULTIPLY : integer := 4;
+      CLKIN_DIVIDE_BY_2 : boolean := false;
+      CLKIN_PERIOD : real := 10.0;
+      CLKOUT_PHASE_SHIFT : string := "NONE";
+      CLK_FEEDBACK : string := "1X";
+      DESKEW_ADJUST : string := "SYSTEM_SYNCHRONOUS";
+      DFS_FREQUENCY_MODE : string := "LOW";
+      DLL_FREQUENCY_MODE : string := "LOW";
+      DSS_MODE : string := "NONE";
+      DUTY_CYCLE_CORRECTION : boolean := true;
+      FACTORY_JF : bit_vector := X"C080";
+      PHASE_SHIFT : integer := 0;
+      STARTUP_WAIT : boolean := false
+      );
+    port (
+      CLK0 : out std_ulogic := '0';
+      CLK180 : out std_ulogic := '0';
+      CLK270 : out std_ulogic := '0';
+      CLK2X : out std_ulogic := '0';
+      CLK2X180 : out std_ulogic := '0';
+      CLK90 : out std_ulogic := '0';
+      CLKDV : out std_ulogic := '0';
+      CLKFX : out std_ulogic := '0';
+      CLKFX180 : out std_ulogic := '0';
+      LOCKED : out std_ulogic := '0';
+      PSDONE : out std_ulogic := '0';
+      STATUS : out std_logic_vector(7 downto 0) := "00000000";
+      CLKFB : in std_ulogic := '0';
+      CLKIN : in std_ulogic := '0';
+      DSSEN : in std_ulogic := '0';
+      PSCLK : in std_ulogic := '0';
+      PSEN : in std_ulogic := '0';
+      PSINCDEC : in std_ulogic := '0';
+      RST : in std_ulogic := '0'
+      );
+  end component;
+  attribute BOX_TYPE of
+    DCM_SP : component is "PRIMITIVE";
 
   type params is
   record
@@ -103,7 +310,7 @@ begin
     signal s_feedback : std_ulogic;
   begin
     
-    pll_inst: unisim.vcomponents.pll_base
+    pll_inst: pll_base
       generic map (
         clk_feedback         => "CLKFBOUT",
         divclk_divide        => 1,
@@ -132,7 +339,7 @@ begin
     signal s_feedback : std_ulogic;
   begin
     
-    pll_inst: unisim.vcomponents.plle2_adv
+    pll_inst: plle2_adv
       generic map (
         divclk_divide        => 1,
         clkfbout_mult        => p.fin_factor,
@@ -170,7 +377,7 @@ begin
     signal s_feedback : std_ulogic;
   begin
     
-    mmcm_inst: unisim.vcomponents.mmcm_base
+    mmcm_inst: mmcm_base
       generic map (
         divclk_divide        => 1,
         clkfbout_mult_f      => real(p.fin_factor),
@@ -200,7 +407,7 @@ begin
     constant is_d2 : boolean := p.fin_factor = 1;
   begin
     
-    dcm_inst: unisim.vcomponents.dcm_sp
+    dcm_inst: dcm_sp
       generic map(
         clkin_period => input_period_ns_c,
 

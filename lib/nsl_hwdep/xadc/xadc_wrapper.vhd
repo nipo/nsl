@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_io, nsl_hwdep, unisim, nsl_logic;
+library nsl_math, nsl_io, nsl_hwdep, nsl_logic;
 use nsl_math.fixed.all;
 use nsl_hwdep.xadc.all;
 use nsl_logic.bool.all;
@@ -24,6 +24,75 @@ entity xadc_wrapper is
 end entity;
 
 architecture beh of xadc_wrapper is
+
+  attribute BOX_TYPE : string;
+
+  component XADC
+    generic (
+      INIT_40 : bit_vector := X"0000";
+      INIT_41 : bit_vector := X"0000";
+      INIT_42 : bit_vector := X"0800";
+      INIT_43 : bit_vector := X"0000";
+      INIT_44 : bit_vector := X"0000";
+      INIT_45 : bit_vector := X"0000";
+      INIT_46 : bit_vector := X"0000";
+      INIT_47 : bit_vector := X"0000";
+      INIT_48 : bit_vector := X"0000";
+      INIT_49 : bit_vector := X"0000";
+      INIT_4A : bit_vector := X"0000";
+      INIT_4B : bit_vector := X"0000";
+      INIT_4C : bit_vector := X"0000";
+      INIT_4D : bit_vector := X"0000";
+      INIT_4E : bit_vector := X"0000";
+      INIT_4F : bit_vector := X"0000";
+      INIT_50 : bit_vector := X"0000";
+      INIT_51 : bit_vector := X"0000";
+      INIT_52 : bit_vector := X"0000";
+      INIT_53 : bit_vector := X"0000";
+      INIT_54 : bit_vector := X"0000";
+      INIT_55 : bit_vector := X"0000";
+      INIT_56 : bit_vector := X"0000";
+      INIT_57 : bit_vector := X"0000";
+      INIT_58 : bit_vector := X"0000";
+      INIT_59 : bit_vector := X"0000";
+      INIT_5A : bit_vector := X"0000";
+      INIT_5B : bit_vector := X"0000";
+      INIT_5C : bit_vector := X"0000";
+      INIT_5D : bit_vector := X"0000";
+      INIT_5E : bit_vector := X"0000";
+      INIT_5F : bit_vector := X"0000";
+      SIM_DEVICE : string := "7SERIES";
+      SIM_MONITOR_FILE : string := "design.txt"
+      );
+    port (
+      ALM : out std_logic_vector(7 downto 0);
+      BUSY : out std_ulogic;
+      CHANNEL : out std_logic_vector(4 downto 0);
+      DO : out std_logic_vector(15 downto 0);
+      DRDY : out std_ulogic;
+      EOC : out std_ulogic;
+      EOS : out std_ulogic;
+      JTAGBUSY : out std_ulogic;
+      JTAGLOCKED : out std_ulogic;
+      JTAGMODIFIED : out std_ulogic;
+      MUXADDR : out std_logic_vector(4 downto 0);
+      OT : out std_ulogic;
+      CONVST : in std_ulogic;
+      CONVSTCLK : in std_ulogic;
+      DADDR : in std_logic_vector(6 downto 0);
+      DCLK : in std_ulogic;
+      DEN : in std_ulogic;
+      DI : in std_logic_vector(15 downto 0);
+      DWE : in std_ulogic;
+      RESET : in std_ulogic;
+      VAUXN : in std_logic_vector(15 downto 0);
+      VAUXP : in std_logic_vector(15 downto 0);
+      VN : in std_ulogic;
+      VP : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    XADC : component is "PRIMITIVE";
 
   function alarm_v(voltage: real) return bit_vector
   is
@@ -113,7 +182,7 @@ architecture beh of xadc_wrapper is
   
 begin
 
-  xadc: unisim.vcomponents.xadc
+  xadc: xadc
     generic map(
       init_40 => config0(config_c),
       init_41 => config1(config_c, alarms_c),

@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io, unisim;
+library nsl_io;
 
 entity ddr_output is
   port(
@@ -13,9 +13,31 @@ end entity;
 
 architecture xil of ddr_output is
 
+  attribute BOX_TYPE : string;
+
+  component ODDR2
+    generic (
+      DDR_ALIGNMENT : string := "NONE";
+      INIT : bit := '0';
+      SRTYPE : string := "SYNC"
+      );
+    port (
+      Q : out std_ulogic;
+      C0 : in std_ulogic;
+      C1 : in std_ulogic;
+      CE : in std_ulogic := 'H';
+      D0 : in std_ulogic;
+      D1 : in std_ulogic;
+      R : in std_ulogic := 'L';
+      S : in std_ulogic := 'L'
+      );
+  end component;
+  attribute BOX_TYPE of
+    ODDR2 : component is "PRIMITIVE";
+
 begin
 
-  pad: unisim.vcomponents.oddr2
+  pad: oddr2
     generic map(
       ddr_alignment => "C0",
       init => '0',

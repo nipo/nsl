@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim, nsl_data;
+library nsl_data;
 use nsl_data.endian.all;
 
 entity config_series7 is
@@ -18,6 +18,24 @@ entity config_series7 is
 end entity;
 
 architecture series7 of config_series7 is
+
+  attribute BOX_TYPE : string;
+  component ICAPE2
+    generic (
+      DEVICE_ID : bit_vector := X"03651093";
+      ICAP_WIDTH : string := "X32";
+      SIM_CFG_FILE_NAME : string := "NONE"
+      );
+    port (
+      O : out std_logic_vector(31 downto 0);
+      CLK : in std_ulogic;
+      CSIB : in std_ulogic;
+      I : in std_logic_vector(31 downto 0);
+      RDWRB : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    ICAPE2 : component is "PRIMITIVE";
 
   type state_t is (
     ST_RESET,
@@ -137,7 +155,7 @@ begin
     end case;
   end process;
 
-  icape2_instance: unisim.vcomponents.icape2
+  icape2_instance: icape2
     port map(
       clk => clock_i,
       csib => icape2_enable_n,

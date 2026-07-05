@@ -29,7 +29,6 @@ vhdl-sources += input_delay_variable_xc7.vhd
 vhdl-sources += output_delay_variable_xc7.vhd
 endif
 endif
-deps += unisim.vcomponents
 deps += nsl_data.text
 endif
 

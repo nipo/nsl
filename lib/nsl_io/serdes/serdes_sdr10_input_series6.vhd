@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim, nsl_data;
+library nsl_data;
 
 entity serdes_sdr10_input is
     generic (
@@ -26,20 +26,57 @@ end entity;
 
 architecture series6 of serdes_sdr10_input is
 
-    signal reset_s : std_ulogic;
+  attribute BOX_TYPE : string;
 
-    signal cascade     : std_ulogic;
-    signal d_word_sync : std_ulogic_vector(0 to 9);
-    signal d           : std_ulogic_vector(0 to 9);
-    signal slip_count  : integer range 0 to 9;
+  component ISERDES2
+    generic (
+      BITSLIP_ENABLE : boolean := FALSE;
+      DATA_RATE : string := "SDR";
+      DATA_WIDTH : integer := 1;
+      INTERFACE_TYPE : string := "NETWORKING";
+      SERDES_MODE : string := "NONE"
+      );
+    port (
+      CFB0 : out std_ulogic;
+      CFB1 : out std_ulogic;
+      DFB : out std_ulogic;
+      FABRICOUT : out std_ulogic;
+      INCDEC : out std_ulogic;
+      Q1 : out std_ulogic;
+      Q2 : out std_ulogic;
+      Q3 : out std_ulogic;
+      Q4 : out std_ulogic;
+      SHIFTOUT : out std_ulogic;
+      VALID : out std_ulogic;
+      BITSLIP : in std_ulogic := 'L';
+      CE0 : in std_ulogic := 'H';
+      CLK0 : in std_ulogic;
+      CLK1 : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      D : in std_ulogic;
+      IOCE : in std_ulogic := 'H';
+      RST : in std_ulogic := 'L';
+      SHIFTIN : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    ISERDES2 : component is "PRIMITIVE";
 
-    signal mark_s     : std_ulogic;
-    signal old_mark_s : std_ulogic;
+  signal reset_s : std_ulogic;
 
-    signal invert_s      : boolean;
-    signal high_nlow_s   : boolean;
-    signal parallel_s    : std_ulogic_vector(0 to 4);
-    signal gearbox_reg_s : std_ulogic_vector(0 to 4);
+  signal cascade     : std_ulogic;
+  signal d_word_sync : std_ulogic_vector(0 to 9);
+  signal d           : std_ulogic_vector(0 to 9);
+  signal slip_count  : integer range 0 to 9;
+
+  signal mark_s     : std_ulogic;
+  signal old_mark_s : std_ulogic;
+
+  signal invert_s      : boolean;
+  signal high_nlow_s   : boolean;
+  signal parallel_s    : std_ulogic_vector(0 to 4);
+  signal gearbox_reg_s : std_ulogic_vector(0 to 4);
+
 begin
 
     reset_s <= not reset_n_i;
@@ -79,7 +116,7 @@ begin
 
     invert_s <= slip_count >= 5;
 
-    master : unisim.vcomponents.ISERDES2
+    master : ISERDES2
     generic map(
         BITSLIP_ENABLE => true,
         DATA_RATE      => "SDR",
@@ -106,7 +143,7 @@ begin
         SHIFTIN => '0'
     );
 
-    slave : unisim.vcomponents.ISERDES2
+    slave : ISERDES2
     generic map(
         BITSLIP_ENABLE => true,
         DATA_RATE      => "SDR",

@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim, nsl_data;
+library nsl_data;
 
 entity serdes_input is
   generic(
@@ -24,6 +24,42 @@ entity serdes_input is
 end entity;
 
 architecture series6 of serdes_input is
+
+  attribute BOX_TYPE : string;
+
+  component ISERDES2
+    generic (
+      BITSLIP_ENABLE : boolean := FALSE;
+      DATA_RATE : string := "SDR";
+      DATA_WIDTH : integer := 1;
+      INTERFACE_TYPE : string := "NETWORKING";
+      SERDES_MODE : string := "NONE"
+      );
+    port (
+      CFB0 : out std_ulogic;
+      CFB1 : out std_ulogic;
+      DFB : out std_ulogic;
+      FABRICOUT : out std_ulogic;
+      INCDEC : out std_ulogic;
+      Q1 : out std_ulogic;
+      Q2 : out std_ulogic;
+      Q3 : out std_ulogic;
+      Q4 : out std_ulogic;
+      SHIFTOUT : out std_ulogic;
+      VALID : out std_ulogic;
+      BITSLIP : in std_ulogic := 'L';
+      CE0 : in std_ulogic := 'H';
+      CLK0 : in std_ulogic;
+      CLK1 : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      D : in std_ulogic;
+      IOCE : in std_ulogic := 'H';
+      RST : in std_ulogic := 'L';
+      SHIFTIN : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    ISERDES2 : component is "PRIMITIVE";
 
   constant iobdelay_c: string := nsl_data.text.if_else(from_delay_c, "BOTH", "NONE");
   constant data_rate_c: string := nsl_data.text.if_else(ddr_mode_c, "DDR", "SDR");
@@ -85,7 +121,7 @@ begin
 
   mark_o <= '1' when slip_count_s = 0 else '0';
   
-  master: unisim.vcomponents.iserdes2
+  master: iserdes2
     generic map (
       data_rate => data_rate_c,
       data_width => ratio_c,
@@ -112,7 +148,7 @@ begin
 
   has_slave: if cascade_needed_c
   generate
-    slave: unisim.vcomponents.iserdes2
+    slave: iserdes2
       generic map (
         data_rate => data_rate_c,
         data_width => ratio_c,

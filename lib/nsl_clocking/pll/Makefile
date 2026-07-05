@@ -37,7 +37,6 @@ deps += nsl_hwdep.xc7_config
 endif
 
 vhdl-sources += pll_basic_series67.vhd
-deps += unisim.vcomponents
 deps += nsl_math.arith
 deps += nsl_data.text
 deps += nsl_logic.bool

@@ -19,7 +19,6 @@ vhdl-sources += serdes_sdr10_input_series6.vhd
 # vhdl-sources += serdes_output_series6.vhd
 # vhdl-sources += serdes_input_series6.vhd
 endif
-deps += unisim.vcomponents
 endif
 
 ifeq ($(hwdep),gowin)

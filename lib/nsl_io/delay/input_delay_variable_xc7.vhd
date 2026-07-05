@@ -1,8 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-
 entity input_delay_variable is
   port(
     clock_i : in std_ulogic;
@@ -16,6 +14,37 @@ entity input_delay_variable is
 end entity;
 
 architecture xc7 of input_delay_variable is
+
+  attribute BOX_TYPE : string;
+
+  component IDELAYE2
+    generic (
+      CINVCTRL_SEL : string := "FALSE";
+      DELAY_SRC : string := "IDATAIN";
+      HIGH_PERFORMANCE_MODE : string := "FALSE";
+      IDELAY_TYPE : string := "FIXED";
+      IDELAY_VALUE : integer := 0;
+      PIPE_SEL : string := "FALSE";
+      REFCLK_FREQUENCY : real := 200.0;
+      SIGNAL_PATTERN : string := "DATA"
+      );
+    port (
+      CNTVALUEOUT : out std_logic_vector(4 downto 0);
+      DATAOUT : out std_ulogic;
+      C : in std_ulogic;
+      CE : in std_ulogic;
+      CINVCTRL : in std_ulogic;
+      CNTVALUEIN : in std_logic_vector(4 downto 0);
+      DATAIN : in std_ulogic;
+      IDATAIN : in std_ulogic;
+      INC : in std_ulogic;
+      LD : in std_ulogic;
+      LDPIPEEN : in std_ulogic;
+      REGRST : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    IDELAYE2 : component is "PRIMITIVE";
 
   constant ref_freq : real := 200.0e6;
   constant tap_step_count_c : integer := 32;
@@ -45,7 +74,7 @@ begin
 
   mark_o <= '1' when step_count_s = 0 else '0';
   
-  inst: unisim.vcomponents.idelaye2
+  inst: idelaye2
     generic map(
       delay_src => "IDATAIN",
       idelay_type => "VARIABLE",

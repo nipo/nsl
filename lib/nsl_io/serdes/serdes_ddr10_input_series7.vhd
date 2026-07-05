@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library unisim, nsl_data;
+library nsl_data;
 
 entity serdes_ddr10_input is
   generic(
@@ -22,6 +22,62 @@ entity serdes_ddr10_input is
 end entity;
 
 architecture series7 of serdes_ddr10_input is
+
+  attribute BOX_TYPE : string;
+
+  component ISERDESE2
+    generic (
+      DATA_RATE : string := "DDR";
+      DATA_WIDTH : integer := 4;
+      DYN_CLKDIV_INV_EN : string := "FALSE";
+      DYN_CLK_INV_EN : string := "FALSE";
+      INIT_Q1 : bit := '0';
+      INIT_Q2 : bit := '0';
+      INIT_Q3 : bit := '0';
+      INIT_Q4 : bit := '0';
+      INTERFACE_TYPE : string := "MEMORY";
+      IOBDELAY : string := "NONE";
+      NUM_CE : integer := 2;
+      OFB_USED : string := "FALSE";
+      SERDES_MODE : string := "MASTER";
+      SRVAL_Q1 : bit := '0';
+      SRVAL_Q2 : bit := '0';
+      SRVAL_Q3 : bit := '0';
+      SRVAL_Q4 : bit := '0'
+      );
+    port (
+      O : out std_ulogic;
+      Q1 : out std_ulogic;
+      Q2 : out std_ulogic;
+      Q3 : out std_ulogic;
+      Q4 : out std_ulogic;
+      Q5 : out std_ulogic;
+      Q6 : out std_ulogic;
+      Q7 : out std_ulogic;
+      Q8 : out std_ulogic;
+      SHIFTOUT1 : out std_ulogic;
+      SHIFTOUT2 : out std_ulogic;
+      BITSLIP : in std_ulogic;
+      CE1 : in std_ulogic;
+      CE2 : in std_ulogic;
+      CLK : in std_ulogic;
+      CLKB : in std_ulogic;
+      CLKDIV : in std_ulogic;
+      CLKDIVP : in std_ulogic;
+      D : in std_ulogic;
+      DDLY : in std_ulogic;
+      DYNCLKDIVSEL : in std_ulogic;
+      DYNCLKSEL : in std_ulogic;
+      OCLK : in std_ulogic;
+      OCLKB : in std_ulogic;
+      OFB : in std_ulogic;
+      RST : in std_ulogic;
+      SHIFTIN1 : in std_ulogic;
+      SHIFTIN2 : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    ISERDESE2 : component is "PRIMITIVE";
 
   constant from_delay_c: boolean := true;
   constant iobdelay_c: string := nsl_data.text.if_else(from_delay_c, "BOTH", "NONE");
@@ -79,7 +135,7 @@ begin
 
   mark_o <= '1' when slip_count = 0 else '0';
   
-  master: unisim.vcomponents.iserdese2
+  master: iserdese2
     generic map (
       data_rate => "DDR",
       data_width => 10,
@@ -121,7 +177,7 @@ begin
       oclkb => '0'
       );
 
-  slave: unisim.vcomponents.iserdese2
+  slave: iserdese2
     generic map (
       data_rate => "DDR",
       data_width => 10,

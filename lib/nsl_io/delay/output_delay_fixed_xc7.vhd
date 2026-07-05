@@ -1,8 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-
 entity output_delay_fixed is
   generic(
     delay_ps_c: integer;
@@ -16,6 +14,37 @@ end entity;
 
 architecture xc7 of output_delay_fixed is
 
+  attribute BOX_TYPE : string;
+
+  component ODELAYE2
+    generic (
+      CINVCTRL_SEL : string := "FALSE";
+      DELAY_SRC : string := "ODATAIN";
+      HIGH_PERFORMANCE_MODE : string := "FALSE";
+      ODELAY_TYPE : string := "FIXED";
+      ODELAY_VALUE : integer := 0;
+      PIPE_SEL : string := "FALSE";
+      REFCLK_FREQUENCY : real := 200.0;
+      SIGNAL_PATTERN : string := "DATA"
+      );
+    port (
+      CNTVALUEOUT : out std_logic_vector(4 downto 0);
+      DATAOUT : out std_ulogic;
+      C : in std_ulogic;
+      CE : in std_ulogic;
+      CINVCTRL : in std_ulogic;
+      CLKIN : in std_ulogic;
+      CNTVALUEIN : in std_logic_vector(4 downto 0);
+      INC : in std_ulogic;
+      LD : in std_ulogic;
+      LDPIPEEN : in std_ulogic;
+      ODATAIN : in std_ulogic;
+      REGRST : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    ODELAYE2 : component is "PRIMITIVE";
+
   constant ref_freq : real := 200.0e6;
   constant tap_delay_ps_c : integer := integer(1.0e12 / 32.0 / 2.0 / ref_freq);
   constant tap_count_i : integer := delay_ps_c / tap_delay_ps_c;
@@ -24,7 +53,7 @@ begin
 
   has_delay: if delay_ps_c /= 0
   generate
-    inst: unisim.vcomponents.odelaye2
+    inst: odelaye2
       generic map(
         delay_src => "ODATAIN",
         odelay_type => "FIXED",

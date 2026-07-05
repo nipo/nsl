@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io, unisim;
+library nsl_io;
 
 entity ddr_input is
   generic(
@@ -15,12 +15,35 @@ entity ddr_input is
 end entity;
 
 architecture xil of ddr_input is
+
+  attribute BOX_TYPE : string;
+
+  component IDDR2
+    generic (
+      DDR_ALIGNMENT : string := "NONE";
+      INIT_Q0 : bit := '0';
+      INIT_Q1 : bit := '0';
+      SRTYPE : string := "SYNC"
+      );
+    port (
+      Q0 : out std_ulogic;
+      Q1 : out std_ulogic;
+      C0 : in std_ulogic;
+      C1 : in std_ulogic;
+      CE : in std_ulogic := 'H';
+      D : in std_ulogic;
+      R : in std_ulogic := 'L';
+      S : in std_ulogic := 'L'
+      );
+  end component;
+  attribute BOX_TYPE of
+    IDDR2 : component is "PRIMITIVE";
   
 begin
 
   no_inv: if not invert_clock_polarity_c
   generate
-    pad: unisim.vcomponents.iddr2
+    pad: iddr2
       generic map(
         ddr_alignment => "C0",
         srtype => "SYNC")
@@ -38,7 +61,7 @@ begin
 
   inv: if invert_clock_polarity_c
   generate
-    pad: unisim.vcomponents.iddr2
+    pad: iddr2
       generic map(
         ddr_alignment => "C0",
         srtype => "SYNC")

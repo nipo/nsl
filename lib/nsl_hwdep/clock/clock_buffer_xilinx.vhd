@@ -1,9 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library unisim;
-use unisim.vcomponents.all;
-
 entity clock_buffer is
   port(
     clock_i      : in std_ulogic;
@@ -12,9 +9,21 @@ entity clock_buffer is
 end entity;
 
 architecture xil of clock_buffer is
+
+  attribute BOX_TYPE : string;
+
+  component BUFG
+    port (
+      O : out std_ulogic;
+      I : in std_ulogic
+      );
+  end component;
+  attribute BOX_TYPE of
+    BUFG : component is "PRIMITIVE";
+
 begin
 
-  buf: unisim.vcomponents.bufg
+  buf: bufg
     port map(
       i => clock_i,
       o => clock_o
