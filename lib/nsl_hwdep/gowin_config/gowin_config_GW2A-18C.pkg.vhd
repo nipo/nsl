@@ -3,7 +3,7 @@ package body gowin_config is
   function iodelay_step_ps return real
   is
   begin
-    return 25;
+    return 25.0;
   end function;
 
   function device_name return string
@@ -21,7 +21,7 @@ package body gowin_config is
   function pll_type return string
   is
   begin
-    return "pll";
+    return "pllr";
   end function;
 
   function pll_vco_fmin return real
