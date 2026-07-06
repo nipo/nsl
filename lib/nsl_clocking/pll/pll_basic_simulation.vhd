@@ -76,6 +76,7 @@ begin
     end if;
     if reset_n_i = '0' then
       last_clock_i_edge <= 0 ps;
+      period_s <= real(0);
 
       clock_i_period_lp <= clock_i_period_c;
       clock_i_stable_to_go <= stable_cycle_count_c - 1;
