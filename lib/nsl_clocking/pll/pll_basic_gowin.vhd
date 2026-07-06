@@ -23,6 +23,8 @@ end entity;
 
 architecture gw1n of pll_basic is
 
+  attribute syn_black_box: boolean;
+
   type gowin_pll_params is
   record
     odiv, idiv, fbdiv : integer;
@@ -243,6 +245,7 @@ begin
           clkoutd3 : out std_logic
           );
       end component rpll;
+      attribute syn_black_box of rpll : Component is true;
     begin
       inst: rpll
         generic map(
@@ -321,6 +324,7 @@ begin
           CLKOUTD3 : out std_logic
           );
       end COMPONENT;
+      attribute syn_black_box of pll : Component is true;
     begin
       inst: pll
         generic map(
@@ -480,6 +484,7 @@ begin
           CLKOUT6,CLKFBOUT : out std_logic
           );
       end COMPONENT;
+      attribute syn_black_box of plla : Component is true;
     begin
       inst: plla
         generic map(
