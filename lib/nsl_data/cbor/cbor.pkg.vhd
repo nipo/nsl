@@ -319,7 +319,7 @@ package body cbor is
       return from_suv(maj_suv & "11001") & to_be(resize(argument, 16));
     elsif arg_width_l2 = 2  then
       return from_suv(maj_suv & "11010") & to_be(resize(argument, 32));
-    elsif arg_width_l2 = 3  then
+    else
       return from_suv(maj_suv & "11011") & to_be(resize(argument, 64));
     end if;
   end function;
@@ -348,6 +348,7 @@ package body cbor is
         assert false
           report "Argument too big"
           severity failure;
+        return null_byte_string;
       end if;
     else
       if argument'length > 4 then
