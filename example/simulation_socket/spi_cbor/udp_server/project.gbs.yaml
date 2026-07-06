@@ -24,8 +24,6 @@ root:
 output:
   - name: simulation
     topcell: tb
-    backend_config:
-      gbs.builtin.ghdl: {}
     outputs:
       - type: ghdl-simulator
         path: tb

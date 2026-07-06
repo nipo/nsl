@@ -26,8 +26,6 @@ output:
     topcell: main
     target:
       part: xc6slx9-2tqg144
-    backend_config:
-      gbs.builtin.ise: {}
     outputs:
-      - type: ise-bitstream
+      - type: bitstream
         path: usb.bit

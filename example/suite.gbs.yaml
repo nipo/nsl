@@ -60,13 +60,10 @@ projects:
     path: rgb2ws2812/spartan-6
     tags: [ise, spartan6]
   - name: usb_spartan6
-    path: usb/spartan6
+    path: usb
     tags: [ise, spartan6]
-  - name: usb_ice40
-    path: usb/ice40
-    tags: [yosys, ice40]
   - name: usb11_ice40
-    path: usb11/ice40
+    path: usb11
     tags: [yosys, ice40]
 
   - name: inet_arty_a7

@@ -4,6 +4,7 @@ root:
   name: top
   deps:
     - nsl_inet.ethernet
+    - nsl_inet.func
     - nsl_inet.ipv4
     - nsl_inet.udp
     - nsl_bnoc.framed
@@ -37,9 +38,7 @@ output:
   - name: synthesis
     topcell: fpga_io
     target:
-      part: xc7a35tcsg324-1
-    backend_config:
-      gbs.builtin.vivado: {}
+      part: xc7a35t-1csg324
     outputs:
-      - type: vivado-bitstream
+      - type: bitstream
         path: inet_test.bit

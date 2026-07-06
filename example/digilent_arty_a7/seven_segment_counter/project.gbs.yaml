@@ -25,9 +25,7 @@ output:
   - name: synthesis
     topcell: boundary
     target:
-      part: xc7a35tcsg324-1
-    backend_config:
-      gbs.builtin.vivado: {}
+      part: xc7a35t-1csg324
     outputs:
-      - type: vivado-bitstream
+      - type: bitstream
         path: seven_segment_counter.bit

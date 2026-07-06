@@ -43,8 +43,6 @@ output:
         - done
         - ready
         - cpu
-    backend_config:
-      gbs.builtin.gowin: {}
     outputs:
       - type: gowin-fs
         path: usb11.fs

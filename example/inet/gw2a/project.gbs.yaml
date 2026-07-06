@@ -41,8 +41,6 @@ output:
     topcell: fpga_io
     target:
       part: GW2A-LV18QN88C8/I7#C
-    backend_config:
-      gbs.builtin.gowin: {}
     outputs:
       - type: gowin-fs
         path: inet_test.fs

@@ -55,6 +55,8 @@ root:
 output:
   - name: synthesis
     topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
     target:
       part: GW5A-LV25MG121NC1/I0#A
       use_as_gpio:
@@ -62,8 +64,6 @@ output:
         - done
         - ready
         - cpu
-    backend_config:
-      gbs.builtin.gowin: {}
     outputs:
       - type: gowin-fs
         path: dvi_terminal.fs

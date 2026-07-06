@@ -38,8 +38,6 @@ output:
     topcell: fpga_io
     target:
       part: xc6slx9-2tqg144
-    backend_config:
-      gbs.builtin.ise: {}
     outputs:
-      - type: ise-bitstream
+      - type: bitstream
         path: inet_test.bit
