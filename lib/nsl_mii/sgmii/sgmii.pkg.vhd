@@ -24,6 +24,12 @@ package sgmii is
   end record;
 
   component sgmii_driver is
+    generic (
+      link_timer_c : positive := 200000      -- SGMII spec says: "The link_timer
+                                             -- inside the Auto-Negotiation has been 
+                                             -- changed from 10 msec to 1.6 msec to
+                                             -- ensure a prompt update of the link status."
+      );
     port (
       reset_n_i    : in  std_ulogic;
       clock125_i   : in  std_ulogic;
@@ -48,6 +54,7 @@ package sgmii is
       reset_n_i   : in  std_ulogic;
 
       symbol_i    : in  nsl_line_coding.ibm_8b10b.data_t;
+      symbol_expected_o : out std_ulogic;      
 
       flit_o         : out mii_flit_t;
       config_valid_o : out std_ulogic;
