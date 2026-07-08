@@ -5,5 +5,6 @@ packages += mii
 packages += rmii
 packages += gmii
 packages += rgmii
+packages += sgmii
 packages += timestamping
 packages += testing
