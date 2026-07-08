@@ -7,12 +7,15 @@ use nsl_line_coding.ibm_8b10b.all;
 use nsl_io.diff.all;
 use nsl_io.pad.all;
 use nsl_io.serdes.all;
+use nsl_io.delay.all;
 use work.link.all;
 use work.flit.all;
 use work.sgmii.all;
 
 entity sgmii_driver is
-  
+  generic (
+    link_timer_c : positive := 200000
+    );
   port (
     reset_n_i  : in std_ulogic;
     clock125_i : in std_ulogic;
@@ -62,8 +65,6 @@ architecture beh of sgmii_driver is
   signal s_rx_flit_valid     : std_ulogic;
   signal s_rx_valid_2_commit : std_ulogic;
 
-  signal s_bitslip         : std_ulogic;
-  signal s_mark_serdes_in  : std_ulogic;
   signal s_autoneg_restart : std_ulogic;
 
   signal s_dec_valid_o       : std_ulogic;
@@ -71,7 +72,15 @@ architecture beh of sgmii_driver is
   signal s_disparity_error_o : std_ulogic;
   signal s_enc_valid_o       : std_ulogic;
 
-  signal s_bit_rstn_cheat : std_ulogic;
+  signal s_symbol_expected : std_ulogic;
+  signal s_valid_symbol : std_ulogic;
+
+  signal s_delay_shift : std_ulogic;
+  signal s_delay_mark : std_ulogic;
+  signal s_slip_shift : std_ulogic;
+  signal s_slip_mark : std_ulogic;
+  signal s_delayed_data : std_ulogic;
+  signal s_align_ready : std_ulogic;
 
 begin  -- architecture beh
 
@@ -82,13 +91,20 @@ begin  -- architecture beh
   s_clk_p2m_diff        <= sgmii_i.clk_p2m_diff;
   s_data_p2m_diff       <= sgmii_i.data_p2m_diff;
 
+  -- Valid symbol
+  s_valid_symbol <= s_symbol_expected and not(s_code_error_o) and not(s_disparity_error_o);
+
+  -- Restart autonegotiation on loss of connection
+  s_autoneg_restart <= not(s_align_ready);
+
   -- Component instatiation
-  -- RX side
+  -- RX side --------------------------------------------------------------------------------
   sgmii_pcs_rx_1 : work.sgmii.sgmii_pcs_rx
     port map (
       clock_i        => clock125_i,
       reset_n_i      => reset_n_i,
       symbol_i       => s_dec2rx_symbol,
+      symbol_expected_o => s_symbol_expected,
       flit_o         => s_rx_flit,
       config_valid_o => s_rx_config_valid,
       config_o       => s_rx_config,
@@ -119,33 +135,49 @@ begin  -- architecture beh
       valid_o           => s_dec_valid_o,
       data_o            => s_dec2rx_symbol,
       code_error_o      => s_code_error_o,
-      disparity_error_o => s_disparity_error_o  -- FIXME: hook this up to the
-                                                -- synchronizer
+      disparity_error_o => s_disparity_error_o  
       );
 
-  -- Cheat with the bitslip for now
-  bitslip_cheater : process (s_data_p2m_se) is
-  begin  -- process bitslip_cheater
-    if s_data_p2m_se = 'U' then
-      s_bit_rstn_cheat <= '0';
-    else
-      s_bit_rstn_cheat <= '1';
-    end if;
-  end process bitslip_cheater;
+  aligner: nsl_io.delay.input_delay_aligner_slow
+    generic map(
+      stabilization_delay_c => 8,
+      stabilization_cycle_c => 8
+      )
+    port map(
+      clock_i => clock125_i,
+      reset_n_i => reset_n_i,
+
+      delay_shift_o => s_delay_shift,
+      delay_mark_i => s_delay_mark,
+      serdes_shift_o => s_slip_shift,
+      serdes_mark_i => s_slip_mark,
+
+      restart_i => '0',
+      valid_i => s_valid_symbol,
+      ready_o => s_align_ready
+      );
+
+  delayer: nsl_io.delay.input_delay_variable
+    port map(
+      clock_i => clock125_i,
+      reset_n_i => reset_n_i,
+      mark_o => s_delay_mark,
+      shift_i => s_delay_shift,
+      data_i => s_data_p2m_se,
+      data_o => s_delayed_data
+      );  
 
   serdes_ddr10_input_1 : nsl_io.serdes.serdes_ddr10_input
     generic map (
       left_to_right_c => false)
     port map (
       bit_clock_i  => clock625_i,
-      word_clock_i => clock125_i,       --FIXME: use different clock source when
-                                        --you have the synchronizer
-      reset_n_i    => s_bit_rstn_cheat,
-      serial_i     => s_data_p2m_se,
+      word_clock_i => clock125_i,
+      reset_n_i    => reset_n_i,
+      serial_i     => s_delayed_data,
       parallel_o   => s_ser2dec_code,
-      bitslip_i    => '0',              -- FIXME: need synchronizer to pilot this to
-                                        -- synchronize incoming data
-      mark_o       => s_mark_serdes_in  -- FIXME: same as above
+      bitslip_i    => s_slip_shift,
+      mark_o       => s_slip_mark
       );
 
   pad_diff_input_1 : nsl_io.pad.pad_diff_input
@@ -168,7 +200,7 @@ begin  -- architecture beh
       p_se   => s_clk_p2m_se
       );
 
-  -- TX side
+  -- TX side --------------------------------------------------------------------------------
 
   s_clk_m2p_se <= clock125_i;
 
@@ -237,11 +269,10 @@ begin  -- architecture beh
       p_diff => s_clk_m2p_diff
       );
 
-  -- Auto negotiation
+  -- Auto negotiation ----------------------------------------------------------------------
   sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
     generic map (
-      link_timer_cycles_c => 30)                -- FIXME: not sure how many timer cycles
-                                                -- we want
+      link_timer_cycles_c => link_timer_c)
     port map (
       clock_i           => clock125_i,
       reset_n_i         => reset_n_i,
@@ -249,17 +280,14 @@ begin  -- architecture beh
                                                 -- Full Duplex only, no pause,
                                                 -- no next page
                                                 -- 0------0001----- (put zeros in place
-                                                -- of don't cares
-      restart_i         => s_autoneg_restart,   -- FIXME: use this to restart if
-                                                -- connection is lost (the synchronizer
-                                                -- can tell you this)
+                                                -- of don't cares)
+      restart_i         => s_autoneg_restart,
       rx_config_valid_i => s_rx_config_valid,
       rx_config_i       => s_rx_config,
       rx_idle_i         => s_rx_idle_match,
       send_config_o     => s_tx_send_config,
       tx_config_o       => s_tx_config,
       link_up_o         => s_link_up
-      -- partner_config_o  => partner_config_o -- FIXME: not sure I need this
       );  
 
 end architecture beh;
