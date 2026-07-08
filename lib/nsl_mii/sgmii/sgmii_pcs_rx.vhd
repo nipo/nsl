@@ -16,6 +16,7 @@ entity sgmii_pcs_rx is
     flit_o         : out mii_flit_t;
     config_valid_o : out std_ulogic;
     config_o       : out config_reg_t;
+    valid_o        : out std_ulogic;
     idle_match_o   : out std_ulogic
     );
 end entity;
@@ -61,6 +62,7 @@ begin
     flit_o.error <= '0';
     config_valid_o <= '0';
     config_o <= r.config_reg;
+    valid_o <= '0';
     idle_match_o <= '0';
 
     case r.state is
@@ -71,6 +73,7 @@ begin
           rin.state <= ST_DATA;
           flit_o.data <= x"55";
           flit_o.valid <= '1';
+          valid_o <= '1';
         end if;
 
       when ST_COMMA =>
@@ -83,6 +86,7 @@ begin
           rin.state <= ST_DATA;
           flit_o.data <= x"55";
           flit_o.valid <= '1';
+          valid_o <= '1';
         elsif symbol_i = K28_5 then
           rin.state <= ST_COMMA;
         else
@@ -111,16 +115,20 @@ begin
         if symbol_i.control = '0' then
           flit_o.data <= symbol_i.data;
           flit_o.valid <= '1';
+          valid_o <= '1';
         elsif symbol_i = K29_7 then
           rin.state <= ST_END_T;
+          valid_o <= '1';
         elsif symbol_i = K30_7 then
           flit_o.data <= x"fe";
           flit_o.valid <= '1';
           flit_o.error <= '1';
+          valid_o <= '1';
         else
           flit_o.data <= symbol_i.data;
           flit_o.valid <= '1';
           flit_o.error <= '1';
+          valid_o <= '1';
         end if;
 
       when ST_END_T =>
