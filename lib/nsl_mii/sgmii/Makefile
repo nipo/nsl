@@ -3,7 +3,6 @@ vhdl-sources += sgmii_driver.vhd
 vhdl-sources += sgmii_pcs_rx.vhd
 vhdl-sources += sgmii_pcs_tx.vhd
 vhdl-sources += sgmii_autoneg.vhd
-# vhdl-sources += sgmii_sync.vhd
 
 deps += nsl_data.bytestream
 deps += nsl_bnoc.committed
@@ -15,3 +14,4 @@ deps += nsl_io.diff
 deps += nsl_io.pad
 deps += nsl_io.serdes
 deps += nsl_io.ddr
+deps += nsl_io.delay

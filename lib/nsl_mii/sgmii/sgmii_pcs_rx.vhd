@@ -12,6 +12,7 @@ entity sgmii_pcs_rx is
     reset_n_i   : in  std_ulogic;
 
     symbol_i    : in  nsl_line_coding.ibm_8b10b.data_t;
+    symbol_expected_o : out std_ulogic;
 
     flit_o         : out mii_flit_t;
     config_valid_o : out std_ulogic;
@@ -63,6 +64,7 @@ begin
     config_valid_o <= '0';
     config_o <= r.config_reg;
     valid_o <= '0';
+    symbol_expected_o <= '1';
     idle_match_o <= '0';
 
     case r.state is
@@ -74,6 +76,8 @@ begin
           flit_o.data <= x"55";
           flit_o.valid <= '1';
           valid_o <= '1';
+        else
+          symbol_expected_o <= '0';
         end if;
 
       when ST_COMMA =>
@@ -90,6 +94,7 @@ begin
         elsif symbol_i = K28_5 then
           rin.state <= ST_COMMA;
         else
+          symbol_expected_o <= '0';
           rin.state <= ST_IDLE;
         end if;
 
@@ -125,6 +130,7 @@ begin
           flit_o.error <= '1';
           valid_o <= '1';
         else
+          symbol_expected_o <= '0';
           flit_o.data <= symbol_i.data;
           flit_o.valid <= '1';
           flit_o.error <= '1';
