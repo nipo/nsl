@@ -1,0 +1,30 @@
+name: inet_sgmii
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_mii.mii
+    - nsl_mii.sgmii
+    - nsl_mii.link
+    - nsl_mii.testing
+    - nsl_bnoc.committed
+    - nsl_bnoc.testing
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
+      - type: waveform-ghw
+        path: tb.ghw

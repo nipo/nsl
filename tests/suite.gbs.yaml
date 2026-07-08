@@ -503,6 +503,9 @@ projects:
   - name: inet_vlan_path_router
     path: inet/vlan_path_router
     tags: [ghdl, simulation]
+  - name: inet_sgmii
+    path: inet/sgmii
+    tags: [ghdl, simulation]    
   - name: jtag
     path: jtag
     tags: [ghdl, simulation, jtag_tap]
