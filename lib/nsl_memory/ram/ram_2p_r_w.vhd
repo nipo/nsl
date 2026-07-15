@@ -26,6 +26,8 @@ end ram_2p_r_w;
 
 architecture hier of ram_2p_r_w is
 
+  constant b_write_en_c: std_ulogic := '0';
+  constant b_data_c: std_ulogic_vector(data_size_c-1 downto 0) := (others => '-');
 begin
 
   impl: nsl_memory.ram.ram_2p_homogeneous
@@ -46,9 +48,9 @@ begin
 
       b_clock_i => clock_i(clock_count_c-1),
       b_enable_i => read_en_i,
-      b_write_en_i(0) => '0',
+      b_write_en_i(0) => b_write_en_c,
       b_address_i => read_address_i,
-      b_data_i => (others => '-'),
+      b_data_i => b_data_c,
       b_data_o => read_data_o
       );
 
