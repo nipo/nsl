@@ -20,18 +20,18 @@ architecture ecp5 of clock_buffer is
 
 begin
 
-  is_none: if mode_c = "none"
-  generate
+--  is_none: if mode_c = "none"
+--  generate
     clock_o <= clock_i;
-  end generate;
-
-  is_not_none: if mode_c /= "none"
-  generate
-  gb: TRELLIS_ECLKBUF
-    port map(
-      ECLKI => clock_i,
-      ECLKO => clock_o
-      );
-  end generate;
+--  end generate;
+--
+--  is_not_none: if mode_c /= "none"
+--  generate
+--  gb: TRELLIS_ECLKBUF
+--    port map(
+--      ECLKI => clock_i,
+--      ECLKO => clock_o
+--      );
+--  end generate;
 
 end architecture;

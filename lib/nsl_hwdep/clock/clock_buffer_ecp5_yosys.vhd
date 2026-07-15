@@ -17,10 +17,11 @@ architecture ecp5 of clock_buffer is
 
 begin
 
-  gb: TRELLIS_ECLKBUF
-    port map(
-      ECLKI => clock_i,
-      ECLKO => clock_o
-      );
+--  gb: TRELLIS_ECLKBUF
+--    port map(
+--      ECLKI => clock_i,
+--      ECLKO => clock_o
+--      );
+  clock_o <= clock_i;
 
 end architecture;
