@@ -41,3 +41,7 @@ deps += nsl_math.arith
 deps += nsl_data.text
 deps += nsl_logic.bool
 endif
+
+ifneq ($(filter lattice-ecp5,$(hwdep)),)
+vhdl-sources += pll_basic_ecp5.vhd
+endif
