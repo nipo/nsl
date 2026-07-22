@@ -1,0 +1,21 @@
+name: apb_rom
+
+root:
+  name: top
+  deps:
+    - nsl_amba.rom
+    - nsl_amba.apb
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      target-usage: simulation
+    outputs:
+      - type: simulation-log
+        path: tb.log

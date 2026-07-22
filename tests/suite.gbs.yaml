@@ -20,6 +20,9 @@ projects:
   - name: amba_apb_ram
     path: amba/apb_ram
     tags: [ghdl, simulation]
+  - name: amba_apb_rom
+    path: amba/apb_rom
+    tags: [ghdl, simulation]
   - name: amba_apb_regmap
     path: amba/apb_regmap
     tags: [ghdl, simulation]
