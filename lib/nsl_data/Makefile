@@ -8,3 +8,4 @@ packages += fifo
 packages += cbor
 packages += scrambler
 packages += probability
+packages += uuid
