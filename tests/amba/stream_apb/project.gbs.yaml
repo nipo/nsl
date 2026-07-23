@@ -1,0 +1,21 @@
+name: stream_apb
+
+root:
+  name: top
+  deps:
+    - nsl_amba.stream_apb
+    - nsl_amba.ram
+    - nsl_amba.apb
+    - nsl_amba.axi4_stream
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: tb.log

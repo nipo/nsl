@@ -26,6 +26,9 @@ projects:
   - name: amba_apb_regmap
     path: amba/apb_regmap
     tags: [ghdl, simulation]
+  - name: amba_stream_apb
+    path: amba/stream_apb
+    tags: [ghdl, simulation]
   - name: amba_axi4_apb_bridge
     path: amba/axi4_apb_bridge
     tags: [ghdl, simulation]

@@ -4,6 +4,7 @@ packages += axi4_stream
 packages += axi4_mm
 packages += ram
 packages += rom
+packages += stream_apb
 packages += stream_fifo
 packages += stream_crc
 packages += stream_endpoint
