@@ -81,6 +81,9 @@ architecture beh of sgmii_driver is
   signal s_slip_mark : std_ulogic;
   signal s_delayed_data : std_ulogic;
   signal s_align_ready : std_ulogic;
+  signal s_align_rst : std_ulogic;
+
+  signal s_loss_connect_rst_n : std_ulogic;
 
 begin  -- architecture beh
 
@@ -94,15 +97,41 @@ begin  -- architecture beh
   -- Valid symbol
   s_valid_symbol <= s_symbol_expected and not(s_code_error_o) and not(s_disparity_error_o);
 
-  -- Restart autonegotiation on loss of connection
+  -- Restart autonegotiation on loss of connection -----------------------------------------
   s_autoneg_restart <= not(s_align_ready);
+  
+  sys_rst: process (clock125_i, reset_n_i) is
+  begin
+    if reset_n_i = '0' then
+      s_loss_connect_rst_n <= '0';
+    elsif rising_edge(clock125_i) then  -- rising clock edge
+      if (s_link_up = '1') and (s_valid_symbol = '0') then
+        s_loss_connect_rst_n <= '0';
+      else
+        s_loss_connect_rst_n <= reset_n_i;
+      end if;
+    end if;
+  end process;
+
+  align_rst: process (clock125_i, reset_n_i) is
+  begin
+    if reset_n_i = '0' then
+      s_align_rst <= '1';
+    elsif rising_edge(clock125_i) then  -- rising clock edge
+      if (s_align_ready = '1') and (s_valid_symbol = '0') then
+        s_align_rst <= '1';
+      else
+        s_align_rst <= not(reset_n_i);
+      end if;
+    end if;
+  end process;    
 
   -- Component instatiation
   -- RX side --------------------------------------------------------------------------------
   sgmii_pcs_rx_1 : work.sgmii.sgmii_pcs_rx
     port map (
       clock_i        => clock125_i,
-      reset_n_i      => reset_n_i,
+      reset_n_i      => s_loss_connect_rst_n,
       symbol_i       => s_dec2rx_symbol,
       symbol_expected_o => s_symbol_expected,
       flit_o         => s_rx_flit,
@@ -115,7 +144,7 @@ begin  -- architecture beh
   rx_to_committed : work.flit.mii_flit_to_committed
     port map(
       clock_i   => clock125_i,
-      reset_n_i => reset_n_i,
+      reset_n_i => s_loss_connect_rst_n,
 
       flit_i  => s_rx_flit,
       valid_i => s_rx_valid_2_commit,
@@ -129,7 +158,7 @@ begin  -- architecture beh
       implementation_c => "logic")
     port map (
       clock_i           => clock125_i,
-      reset_n_i         => reset_n_i,
+      reset_n_i         => s_loss_connect_rst_n,
       valid_i           => '1',
       data_i            => s_ser2dec_code,
       valid_o           => s_dec_valid_o,
@@ -145,14 +174,14 @@ begin  -- architecture beh
       )
     port map(
       clock_i => clock125_i,
-      reset_n_i => reset_n_i,
+      reset_n_i => s_loss_connect_rst_n,
 
       delay_shift_o => s_delay_shift,
       delay_mark_i => s_delay_mark,
       serdes_shift_o => s_slip_shift,
       serdes_mark_i => s_slip_mark,
 
-      restart_i => '0',
+      restart_i => s_align_rst,
       valid_i => s_valid_symbol,
       ready_o => s_align_ready
       );
@@ -160,7 +189,7 @@ begin  -- architecture beh
   delayer: nsl_io.delay.input_delay_variable
     port map(
       clock_i => clock125_i,
-      reset_n_i => reset_n_i,
+      reset_n_i => s_loss_connect_rst_n,
       mark_o => s_delay_mark,
       shift_i => s_delay_shift,
       data_i => s_data_p2m_se,
@@ -173,7 +202,7 @@ begin  -- architecture beh
     port map (
       bit_clock_i  => clock625_i,
       word_clock_i => clock125_i,
-      reset_n_i    => reset_n_i,
+      reset_n_i    => s_loss_connect_rst_n,
       serial_i     => s_delayed_data,
       parallel_o   => s_ser2dec_code,
       bitslip_i    => s_slip_shift,
@@ -207,7 +236,7 @@ begin  -- architecture beh
   sgmii_pcs_tx_1 : work.sgmii.sgmii_pcs_tx
     port map (
       clock_i       => clock125_i,
-      reset_n_i     => reset_n_i,
+      reset_n_i     => s_loss_connect_rst_n,
       flit_i        => s_tx_flit,
       symbol_o      => s_tx2enc_symbol,
       send_config_i => s_tx_send_config,
@@ -221,7 +250,7 @@ begin  -- architecture beh
       )
     port map(
       clock_i   => clock125_i,
-      reset_n_i => reset_n_i,
+      reset_n_i => s_loss_connect_rst_n,
 
       committed_i => tx_i,
       committed_o => tx_o,
@@ -235,7 +264,7 @@ begin  -- architecture beh
       implementation_c => "logic")
     port map (
       clock_i   => clock125_i,
-      reset_n_i => reset_n_i,
+      reset_n_i => s_loss_connect_rst_n,
       valid_i   => '1',
       data_i    => s_tx2enc_symbol,
       valid_o   => s_enc_valid_o,
@@ -248,7 +277,7 @@ begin  -- architecture beh
     port map (
       bit_clock_i  => clock625_i,
       word_clock_i => s_clk_m2p_se,
-      reset_n_i    => reset_n_i,
+      reset_n_i    => s_loss_connect_rst_n,
       parallel_i   => s_enc2ser_code,
       serial_o     => s_data_m2p_se
       );
@@ -275,7 +304,7 @@ begin  -- architecture beh
       link_timer_cycles_c => link_timer_c)
     port map (
       clock_i           => clock125_i,
-      reset_n_i         => reset_n_i,
+      reset_n_i         => s_loss_connect_rst_n,
       config_i          => "0000000000100000",  -- See IEEE 802.3 clause 37
                                                 -- Full Duplex only, no pause,
                                                 -- no next page
