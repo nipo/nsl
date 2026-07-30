@@ -39,6 +39,7 @@ package sgmii is
       sgmii_i      : in  sgmii_p2m;
       
       link_speed_i : in  link_speed_t := LINK_SPEED_1000;
+      link_up_o    : out std_ulogic;      
       
       rx_o         : out nsl_bnoc.committed.committed_req;
       rx_i         : in  nsl_bnoc.committed.committed_ack;
