@@ -25,6 +25,7 @@ entity sgmii_driver is
     sgmii_i : in  sgmii_p2m;
 
     link_speed_i : in link_speed_t := LINK_SPEED_1000;
+    link_up_o : out std_ulogic;
 
     rx_o : out nsl_bnoc.committed.committed_req;
     rx_i : in  nsl_bnoc.committed.committed_ack;
@@ -96,6 +97,9 @@ begin  -- architecture beh
 
   -- Valid symbol
   s_valid_symbol <= s_symbol_expected and not(s_code_error_o) and not(s_disparity_error_o);
+
+  -- Link up
+  link_up_o <= s_link_up;
 
   -- Restart autonegotiation on loss of connection -----------------------------------------
   s_autoneg_restart <= not(s_align_ready);
