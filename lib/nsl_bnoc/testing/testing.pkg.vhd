@@ -213,7 +213,7 @@ package testing is
     signal ack: in nsl_bnoc.committed.committed_ack;
     signal clock: in std_ulogic;
     variable root: inout committed_queue_root;
-    constant context: string := "");
+    constant ctxt: string := "");
 
   procedure committed_queue_slave_worker(
     signal req: in nsl_bnoc.committed.committed_req;
@@ -267,7 +267,7 @@ package testing is
     signal ack: in nsl_bnoc.framed.framed_ack;
     signal clock: in std_ulogic;
     variable root: inout framed_queue_root;
-    constant context: string := "");
+    constant ctxt: string := "");
 
   procedure framed_queue_slave_worker(
     signal req: in nsl_bnoc.framed.framed_req;
@@ -681,7 +681,7 @@ package body testing is
     signal ack: in nsl_bnoc.committed.committed_ack;
     signal clock: in std_ulogic;
     variable root: inout committed_queue_root;
-    constant context: string := "")
+    constant ctxt: string := "")
   is
     variable data: byte_stream;
     variable valid: boolean;
@@ -787,7 +787,7 @@ package body testing is
     signal ack: in nsl_bnoc.framed.framed_ack;
     signal clock: in std_ulogic;
     variable root: inout framed_queue_root;
-    constant context: string := "")
+    constant ctxt: string := "")
   is
     variable data: byte_stream;
   begin

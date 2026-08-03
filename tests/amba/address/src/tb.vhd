@@ -16,14 +16,14 @@ architecture arch of tb is
 begin
 
   addr: process
-    constant context: log_context := "AXI4 Addr Parsing";
+    constant ctxt: log_context := "AXI4 Addr Parsing";
 
     constant width: natural := 32;
 
     procedure check_addr(a: string; value: unsigned)
     is
     begin
-      assert_equal(context & " " & a, address_parse(width, a), value, FAILURE);
+      assert_equal(ctxt & " " & a, address_parse(width, a), value, FAILURE);
     end procedure;
 
   begin

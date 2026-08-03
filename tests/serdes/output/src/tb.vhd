@@ -57,7 +57,7 @@ begin
       );
 
   sender: process
-    constant context : log_context := "Send";
+    constant ctxt : log_context := "Send";
     variable prbs_state_v : prbs_state(14 downto 0) := prbs_init_c;
     variable word_v : std_ulogic_vector(0 to ratio_c-1);
 
@@ -65,7 +65,7 @@ begin
                    ctx: string)
     is
     begin
-      log_info(context, "TX"&ctx&" "&to_string(word));
+      log_info(ctxt, "TX"&ctx&" "&to_string(word));
       wait until falling_edge(parallel_clock_s);
       if left_first_c then
         parallel_s <= word;
@@ -82,17 +82,17 @@ begin
     wait until rising_edge(reset_n_s);
     wait until rising_edge(parallel_clock_s);
 
-    log_info(context, "Sending " & to_string(alignment_words_c - 1) & " alignment zeros");
+    log_info(ctxt, "Sending " & to_string(alignment_words_c - 1) & " alignment zeros");
 
     for i in 1 to alignment_words_c - 1
     loop
       send(null_word_c, "/algn");
     end loop;
 
-    log_info(context, "Sending marker word");
+    log_info(ctxt, "Sending marker word");
     send(sync_word_c, "/mark");
 
-    log_info(context, "Sending " & to_string(prbs_words_c) & " PRBS words");
+    log_info(ctxt, "Sending " & to_string(prbs_words_c) & " PRBS words");
     for i in 0 to prbs_words_c - 1
     loop
       word_v := prbs_bit_string(prbs_state_v, prbs15, ratio_c);
@@ -100,13 +100,13 @@ begin
       send(word_v, "#"&to_string(i));
     end loop;
 
-    log_info(context, "Done sending");
+    log_info(ctxt, "Done sending");
     done_s(0) <= '1';
     wait;
   end process;
 
   receiver: process
-    constant context : log_context := "Recv";
+    constant ctxt : log_context := "Recv";
     variable prbs_state_v : prbs_state(14 downto 0) := prbs_init_c;
     variable zeros_seen_v : natural := 0;
     variable aligned_v : boolean := false;
@@ -147,7 +147,7 @@ begin
     wait until rising_edge(reset_n_s);
     wait for serial_period_c / 4;
 
-    log_info(context, "Waiting for alignment");
+    log_info(ctxt, "Waiting for alignment");
 
     while not aligned_v
     loop
@@ -156,27 +156,27 @@ begin
       if bit_v = '0' then
         zeros_seen_v := zeros_seen_v + 1;
       elsif zeros_seen_v >= (alignment_words_c / 2) * ratio_c then
-        log_info(context, "Aligned after " & to_string(zeros_seen_v) & " zeros");
+        log_info(ctxt, "Aligned after " & to_string(zeros_seen_v) & " zeros");
         aligned_v := true;
       else
         zeros_seen_v := 0;
       end if;
     end loop;
 
-    log_info(context, "Verifying PRBS bits");
+    log_info(ctxt, "Verifying PRBS bits");
     for i in 0 to prbs_words_c - 1
     loop
       expected_v := prbs_bit_string(prbs_state_v, prbs15, ratio_c);
       word_rx(word_v);
-      log_info(context, "RX#"&to_string(i)&" "&to_string(word_v));
+      log_info(ctxt, "RX#"&to_string(i)&" "&to_string(word_v));
       if word_v /= expected_v then
         wait for serial_period_c * ratio_c * 2;
       end if;
-      assert_equal(context, "RX#"&to_string(i), word_v, expected_v, failure);
+      assert_equal(ctxt, "RX#"&to_string(i), word_v, expected_v, failure);
       prbs_state_v := prbs_forward(prbs_state_v, prbs15, ratio_c);
     end loop;
 
-    log_info(context, "Verified " & to_string(bit_count_v) & " PRBS bits");
+    log_info(ctxt, "Verified " & to_string(bit_count_v) & " PRBS bits");
     done_s(1) <= '1';
     wait;
   end process;

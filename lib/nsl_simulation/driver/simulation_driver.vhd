@@ -22,7 +22,7 @@ entity simulation_driver is
 end entity;
 
 architecture beh of simulation_driver is
-  constant context : log_context := "simdrv";
+  constant ctxt : log_context := "simdrv";
   signal all_done : boolean;
   signal clock : std_ulogic_vector(0 to clock_count-1);
 begin
@@ -32,7 +32,7 @@ begin
   done: process(all_done)
   begin
     if all_done then
-      log_info(context, "all done, terminating");
+      log_info(ctxt, "all done, terminating");
       terminate(0);
     end if;
   end process;
@@ -53,7 +53,7 @@ begin
     gen: process
     begin
       wait until done_i(i) = '1';
-      log_info(context, "Done #" & integer'image(i) & " OK");
+      log_info(ctxt, "Done #" & integer'image(i) & " OK");
       wait;
     end process;
   end generate;
@@ -73,7 +73,7 @@ begin
         wait for half_period;
       end loop;
 
-      log_info(context, "clock #" & integer'image(i) & " stopped");
+      log_info(ctxt, "clock #" & integer'image(i) & " stopped");
       wait;
     end process;
   end generate;

@@ -47,11 +47,11 @@ package logging is
 
   subtype log_context is string;
 
-  procedure log_debug(context: log_context; message : string);
-  procedure log_info(context: log_context; message : string);
-  procedure log_warning(context: log_context; message : string);
-  procedure log_error(context: log_context; message : string);
-  procedure log_fatal(context: log_context; message : string);
+  procedure log_debug(ctxt: log_context; message : string);
+  procedure log_info(ctxt: log_context; message : string);
+  procedure log_warning(ctxt: log_context; message : string);
+  procedure log_error(ctxt: log_context; message : string);
+  procedure log_fatal(ctxt: log_context; message : string);
 
   procedure log_test_suite_start(suite_name : string);
   procedure log_test_result(test_name : string; test_passed : boolean; pass_count : inout integer; fail_count : inout integer);
@@ -159,29 +159,29 @@ package body logging is
     log(LOG_LEVEL_FATAL, message, LOG_COLOR_RED);
   end procedure;
 
-  procedure log_debug(context: log_context; message : string) is
+  procedure log_debug(ctxt: log_context; message : string) is
   begin
-    log_debug("[" & context & "] " & message);
+    log_debug("[" & ctxt & "] " & message);
   end procedure;
 
-  procedure log_info(context: log_context; message : string) is
+  procedure log_info(ctxt: log_context; message : string) is
   begin
-    log_info("[" & context & "] " & message);
+    log_info("[" & ctxt & "] " & message);
   end procedure;
 
-  procedure log_warning(context: log_context; message : string) is
+  procedure log_warning(ctxt: log_context; message : string) is
   begin
-    log_warning("[" & context & "] " & message);
+    log_warning("[" & ctxt & "] " & message);
   end procedure;
 
-  procedure log_error(context: log_context; message : string) is
+  procedure log_error(ctxt: log_context; message : string) is
   begin
-    log_error("[" & context & "] " & message);
+    log_error("[" & ctxt & "] " & message);
   end procedure;
 
-  procedure log_fatal(context: log_context; message : string) is
+  procedure log_fatal(ctxt: log_context; message : string) is
   begin
-    log_fatal("[" & context & "] " & message);
+    log_fatal("[" & ctxt & "] " & message);
   end procedure;
 
   procedure log_test_suite_start(suite_name : string) is

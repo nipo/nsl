@@ -69,73 +69,73 @@ package assertions is
                              b : in byte_string;
                              sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
                          sev : in severity_level);
 
-  procedure assert_match(context: in log_context;
+  procedure assert_match(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in integer;
                          b : in integer;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in boolean;
                          b : in boolean;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic;
                          b : in std_ulogic;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in bit_vector;
                          b : in bit_vector;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_logic_vector;
                          b : in std_logic_vector;
                          sev : in severity_level);
 
-  procedure assert_match(context: in log_context;
+  procedure assert_match(ctxt: in log_context;
                          what: in string;
                          a : in std_logic_vector;
                          b : in std_logic_vector;
                          sev : in severity_level);
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in unsigned;
                          b : in unsigned;
                          sev : in severity_level);
   
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in string;
                          b : in string;
                          sev : in severity_level);
   
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in byte_string;
                          b : in byte_string;
                          sev : in severity_level);
 
-  procedure assert_different(context: in log_context;
+  procedure assert_different(ctxt: in log_context;
                              what: in string;
                              a : in byte_string;
                              b : in byte_string;
@@ -145,25 +145,25 @@ end package;
 
 package body assertions is
 
-  procedure assert_equal_failure(context: in log_context;
+  procedure assert_equal_failure(ctxt: in log_context;
                                  what: in string;
                                  a : in string;
                                  b : in string;
                                  sev : in severity_level) is
   begin
-    log_error(context, "while " & what & ", " & a & " /= " & b);
+    log_error(ctxt, "while " & what & ", " & a & " /= " & b);
     if sev = FAILURE then
       nsl_simulation.control.terminate(1);
     end if;
   end procedure;
 
-  procedure assert_different_failure(context: in log_context;
+  procedure assert_different_failure(ctxt: in log_context;
                                  what: in string;
                                  a : in string;
                                  b : in string;
                                  sev : in severity_level) is
   begin
-    log_error(context, "while " & what & ", " & a & " = " & b);
+    log_error(ctxt, "while " & what & ", " & a & " = " & b);
     if sev = FAILURE then
       nsl_simulation.control.terminate(1);
     end if;
@@ -307,142 +307,142 @@ package body assertions is
     end if;
   end procedure;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
                          sev : in severity_level) is
   begin
     if a /= b then
-      assert_equal_failure(context, what,
+      assert_equal_failure(ctxt, what,
                            """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
                            """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
                            sev);
     end if;
   end procedure;
 
-  procedure assert_match(context: in log_context;
+  procedure assert_match(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic_vector;
                          b : in std_ulogic_vector;
                          sev : in severity_level) is
   begin
     if not std_match(a, b) then
-      assert_equal_failure(context, what,
+      assert_equal_failure(ctxt, what,
                            """" & to_string(a) & """ (x""" & to_hex_string(a) & """)",
                            """" & to_string(b) & """ (x""" & to_hex_string(b) & """)",
                            sev);
     end if;
   end procedure;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in integer;
                          b : in integer;
                          sev : in severity_level) is
  begin
     if a /= b then
-      assert_equal_failure(context, what,
+      assert_equal_failure(ctxt, what,
                            """" & to_string(a) & """",
                            """" & to_string(b) & """",
                            sev);
     end if;
  end;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in boolean;
                          b : in boolean;
                          sev : in severity_level) is
  begin
     if a /= b then
-      assert_equal_failure(context, what,
+      assert_equal_failure(ctxt, what,
                            """" & to_string(a) & """",
                            """" & to_string(b) & """",
                            sev);
     end if;
  end;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in bit_vector;
                          b : in bit_vector;
                          sev : in severity_level) is
   begin
-    assert_equal(context, what, to_stdulogicvector(a), to_stdulogicvector(b), sev);
+    assert_equal(ctxt, what, to_stdulogicvector(a), to_stdulogicvector(b), sev);
   end procedure;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_logic_vector;
                          b : in std_logic_vector;
                          sev : in severity_level) is
   begin
-    assert_equal(context, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
+    assert_equal(ctxt, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
   end procedure;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in std_ulogic;
                          b : in std_ulogic;
                          sev : in severity_level) is
   begin
     if a /= b then
-      assert_equal_failure(context, what, "'" & to_string(a) & "'", "'" & to_string(b) & "'", sev);
+      assert_equal_failure(ctxt, what, "'" & to_string(a) & "'", "'" & to_string(b) & "'", sev);
     end if;
   end procedure;
 
-  procedure assert_match(context: in log_context;
+  procedure assert_match(ctxt: in log_context;
                          what: in string;
                          a : in std_logic_vector;
                          b : in std_logic_vector;
                          sev : in severity_level) is
   begin
-    assert_match(context, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
+    assert_match(ctxt, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
   end procedure;
 
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in unsigned;
                          b : in unsigned;
                          sev : in severity_level) is
   begin
-    assert_equal(context, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
+    assert_equal(ctxt, what, std_ulogic_vector(a), std_ulogic_vector(b), sev);
   end procedure;
   
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in byte_string;
                          b : in byte_string;
                          sev : in severity_level) is
   begin
     if a /= b then
-      assert_equal_failure(context, what,
+      assert_equal_failure(ctxt, what,
                            to_string(a),
                            to_string(b),
                            sev);
     end if;
   end procedure;
   
-  procedure assert_equal(context: in log_context;
+  procedure assert_equal(ctxt: in log_context;
                          what: in string;
                          a : in string;
                          b : in string;
                          sev : in severity_level) is
   begin
     if a /= b then
-      assert_equal_failure(context, what, a, b, sev);
+      assert_equal_failure(ctxt, what, a, b, sev);
     end if;
   end procedure;
 
-  procedure assert_different(context: in log_context;
+  procedure assert_different(ctxt: in log_context;
                              what: in string;
                              a : in byte_string;
                              b : in byte_string;
                              sev : in severity_level) is
   begin
     if a = b then
-      assert_different_failure(context, what, to_string(a), to_string(b), sev);
+      assert_different_failure(ctxt, what, to_string(a), to_string(b), sev);
     end if;
   end procedure;
 

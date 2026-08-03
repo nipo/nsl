@@ -63,7 +63,7 @@ begin
       );
 
   sender: process
-    constant context : log_context := "Send";
+    constant ctxt : log_context := "Send";
     variable prbs_state_v : prbs_state(14 downto 0) := prbs_init_c;
     variable bit_v : std_ulogic;
     variable to_send_v: std_ulogic_vector(0 to ratio_c-1);
@@ -73,7 +73,7 @@ begin
     is
       alias xw: std_ulogic_vector(0 to word'length-1) is word;
     begin
-      log_info(context, "TX"&lab&" " & to_string(xw));
+      log_info(ctxt, "TX"&lab&" " & to_string(xw));
       for b in xw'range
       loop
         serial_s <= xw(b);
@@ -91,7 +91,7 @@ begin
     wait until rising_edge(reset_n_s);
     wait for serial_period_c / 4;
 
-    log_info(context, "Sending " & to_string(alignment_words_c) & " alignment words");
+    log_info(ctxt, "Sending " & to_string(alignment_words_c) & " alignment words");
     for i in 0 to alignment_words_c - 1
     loop
       send(alignment_pattern_c, "/Alig");
@@ -99,7 +99,7 @@ begin
 
     send(start_pattern_c, "/Sync");
 
-    log_info(context, "Sending " & to_string(prbs_words_c * ratio_c) & " PRBS bits");
+    log_info(ctxt, "Sending " & to_string(prbs_words_c * ratio_c) & " PRBS bits");
     for word in 0 to prbs_words_c - 1
     loop
       to_send_v := prbs_bit_string(prbs_state_v, prbs15, ratio_c);
@@ -107,13 +107,13 @@ begin
       send(to_send_v, "/"&to_string(word));
     end loop;
 
-    log_info(context, "Done sending");
+    log_info(ctxt, "Done sending");
     done_s(0) <= '1';
     wait;
   end process;
 
   receiver: process
-    constant context : log_context := "Recv";
+    constant ctxt : log_context := "Recv";
     variable prbs_state_v : prbs_state(14 downto 0) := prbs_init_c;
     variable aligned_v : boolean := false;
     variable ignore_count_v : natural := 0;
@@ -128,8 +128,8 @@ begin
     wait until rising_edge(reset_n_s);
     wait until rising_edge(parallel_clock_s);
 
-    log_info(context, "Expected alignment word: " & to_string(alignment_pattern_c));
-    log_info(context, "Aligning...");
+    log_info(ctxt, "Expected alignment word: " & to_string(alignment_pattern_c));
+    log_info(ctxt, "Aligning...");
 
     for repeats in 1 to ratio_c*2
     loop
@@ -146,9 +146,9 @@ begin
         end if;
 
         if stabilize = 0 then
-          log_info(context, "RX/Alig " & to_string(received_word_v));
+          log_info(ctxt, "RX/Alig " & to_string(received_word_v));
         else
-          log_info(context, "RX/Ignr " & to_string(received_word_v));
+          log_info(ctxt, "RX/Ignr " & to_string(received_word_v));
         end if;
       end loop;
 
@@ -157,7 +157,7 @@ begin
         exit;
       end if;
 
-      log_info(context, "Mismatch, issuing bitslip");
+      log_info(ctxt, "Mismatch, issuing bitslip");
       bitslip_s <= '1';
     end loop;
 
@@ -165,7 +165,7 @@ begin
       report "Alignment failed"
       severity failure;
 
-    log_info(context, "Match, aligned, wait for start");
+    log_info(ctxt, "Match, aligned, wait for start");
 
     loop
       wait until rising_edge(parallel_clock_s);
@@ -177,14 +177,14 @@ begin
         received_word_v := bitswap(parallel_s);
       end if;
 
-      log_info(context, "RX/Strt " & to_string(received_word_v));
+      log_info(ctxt, "RX/Strt " & to_string(received_word_v));
 
       if received_word_v(1) = '0' then
         exit;
       end if;
     end loop;
 
-    log_info(context, "Verifying PRBS words");
+    log_info(ctxt, "Verifying PRBS words");
     for i in 0 to prbs_words_c - 1
     loop
       wait until rising_edge(parallel_clock_s);
@@ -196,17 +196,17 @@ begin
         received_word_v := bitswap(parallel_s);
       end if;
 
-      log_info(context, "RX#"&to_string(i)&" " & to_string(received_word_v));
+      log_info(ctxt, "RX#"&to_string(i)&" " & to_string(received_word_v));
 
       expected_word_v := prbs_bit_string(prbs_state_v, prbs15, ratio_c);
       prbs_state_v := prbs_forward(prbs_state_v, prbs15, ratio_c);
 
-      assert_equal(context, "PRBS word " & to_string(i), received_word_v, expected_word_v, failure);
+      assert_equal(ctxt, "PRBS word " & to_string(i), received_word_v, expected_word_v, failure);
 
       word_count_v := word_count_v + 1;
     end loop;
 
-    log_info(context, "Verified " & to_string(word_count_v) & " PRBS words");
+    log_info(ctxt, "Verified " & to_string(word_count_v) & " PRBS words");
     done_s(1) <= '1';
     wait;
   end process;

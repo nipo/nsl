@@ -41,7 +41,7 @@ begin
     constant params_c : nsl_data.scrambler.scrambler_params_t
       := scrambler_params(x"0400_0080_0000_0001",
         word_bit_order => BIT_ORDER_ASCENDING);
-    constant context: log_context := "basic";
+    constant ctxt: log_context := "basic";
     variable payload: byte_string(0 to 127) := prbs_byte_string(x"deadbee"&"111", prbs31, 128);
     constant ones: byte_string(0 to 511) := (others => x"ff");
     variable tmpz: byte_string(ones'range);
@@ -61,7 +61,7 @@ begin
     scramble(params_c, s_state, payload, s_state, scrambled);
     unscramble(params_c, u_state, scrambled, u_state, unscrambled);
     
-    assert_equal(context, "synced",
+    assert_equal(ctxt, "synced",
                  payload,
                  unscrambled,
                  failure);
@@ -71,7 +71,7 @@ begin
     scrambled(60)(5) := not scrambled(60)(5);
     unscramble(params_c, u_state, scrambled, u_state, unscrambled);
 
-    assert_different(context, "synced",
+    assert_different(ctxt, "synced",
                      payload,
                      unscrambled,
                      failure);
@@ -80,7 +80,7 @@ begin
     scramble(params_c, s_state, payload, s_state, scrambled);
     unscramble(params_c, u_state, scrambled, u_state, unscrambled);
     
-    assert_equal(context, "synced again",
+    assert_equal(ctxt, "synced again",
                  payload,
                  unscrambled,
                  failure);

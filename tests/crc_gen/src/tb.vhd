@@ -16,7 +16,7 @@ end tb;
 
 architecture arch of tb is
 
-  procedure assert_equal(context: string;
+  procedure assert_equal(ctxt: string;
                          prefix: string;
                          params: crc_params_t;
                          a, b : crc_state_t;
@@ -26,10 +26,10 @@ architecture arch of tb is
     constant bs: std_ulogic_vector := crc_spill_vector(params, b);
   begin
     if as /= bs then
-      log_info(context&" "&to_string(params, a));
-      log_info(context&" "&to_string(params, b));
+      log_info(ctxt&" "&to_string(params, a));
+      log_info(ctxt&" "&to_string(params, b));
     end if;
-    assert_equal(context, prefix, as, bs, sev);
+    assert_equal(ctxt, prefix, as, bs, sev);
   end procedure;
 
 begin
@@ -44,40 +44,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "ethernet_fcs";
+        constant ctxt: string := "ethernet_fcs";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("2639f4cb")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -91,40 +91,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "zlib";
+        constant ctxt: string := "zlib";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("2639f4cb")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -138,40 +138,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "bluetooth_crc24";
+        constant ctxt: string := "bluetooth_crc24";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("565ac2")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -185,40 +185,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "hdlc";
+        constant ctxt: string := "hdlc";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("6e90")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -232,40 +232,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "iso14443a";
+        constant ctxt: string := "iso14443a";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("05bf")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -279,40 +279,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "iso14443b";
+        constant ctxt: string := "iso14443b";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("6e90")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -326,40 +326,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "one_wire";
+        constant ctxt: string := "one_wire";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("a1")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -373,40 +373,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/AUTOSAR";
+        constant ctxt: string := "CRC-8/AUTOSAR";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("df")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -420,40 +420,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/BLUETOOTH";
+        constant ctxt: string := "CRC-8/BLUETOOTH";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("26")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -467,40 +467,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/CDMA2000";
+        constant ctxt: string := "CRC-8/CDMA2000";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("da")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -514,40 +514,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/DARC";
+        constant ctxt: string := "CRC-8/DARC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("15")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -561,40 +561,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/DVB-S2";
+        constant ctxt: string := "CRC-8/DVB-S2";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("bc")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -608,40 +608,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/GSM-A";
+        constant ctxt: string := "CRC-8/GSM-A";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("37")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -655,40 +655,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/GSM-B";
+        constant ctxt: string := "CRC-8/GSM-B";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("94")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -702,40 +702,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/HITAG";
+        constant ctxt: string := "CRC-8/HITAG";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b4")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -749,40 +749,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/I-CODE";
+        constant ctxt: string := "CRC-8/I-CODE";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("7e")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -796,40 +796,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/LTE";
+        constant ctxt: string := "CRC-8/LTE";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("ea")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -843,40 +843,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/MAXIM-DOW";
+        constant ctxt: string := "CRC-8/MAXIM-DOW";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("a1")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -890,40 +890,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/MIFARE-MAD";
+        constant ctxt: string := "CRC-8/MIFARE-MAD";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("99")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -937,40 +937,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/NRSC-5";
+        constant ctxt: string := "CRC-8/NRSC-5";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("f7")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -984,40 +984,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/OPENSAFETY";
+        constant ctxt: string := "CRC-8/OPENSAFETY";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("3e")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1031,40 +1031,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/ROHC";
+        constant ctxt: string := "CRC-8/ROHC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("d0")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1078,40 +1078,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/SAE-J1850";
+        constant ctxt: string := "CRC-8/SAE-J1850";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("4b")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1125,40 +1125,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/SMBUS";
+        constant ctxt: string := "CRC-8/SMBUS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("f4")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1172,40 +1172,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/TECH-3250";
+        constant ctxt: string := "CRC-8/TECH-3250";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("97")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1219,40 +1219,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-8/WCDMA";
+        constant ctxt: string := "CRC-8/WCDMA";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("25")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1266,40 +1266,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/ARC";
+        constant ctxt: string := "CRC-16/ARC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("3dbb")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1313,40 +1313,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/CDMA2000";
+        constant ctxt: string := "CRC-16/CDMA2000";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("064c")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1360,40 +1360,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/CMS";
+        constant ctxt: string := "CRC-16/CMS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("e7ae")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1407,40 +1407,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/DDS-110";
+        constant ctxt: string := "CRC-16/DDS-110";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("cf9e")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1454,40 +1454,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/DECT-X";
+        constant ctxt: string := "CRC-16/DECT-X";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("7f00")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1501,40 +1501,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/DNP";
+        constant ctxt: string := "CRC-16/DNP";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("82ea")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1548,40 +1548,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/EN-13757";
+        constant ctxt: string := "CRC-16/EN-13757";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b7c2")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1595,40 +1595,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/GENIBUS";
+        constant ctxt: string := "CRC-16/GENIBUS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("4ed6")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1642,40 +1642,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/GSM";
+        constant ctxt: string := "CRC-16/GSM";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("3cce")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1689,40 +1689,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/IBM-3740";
+        constant ctxt: string := "CRC-16/IBM-3740";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b129")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1736,40 +1736,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/IBM-SDLC";
+        constant ctxt: string := "CRC-16/IBM-SDLC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("6e90")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1783,40 +1783,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/ISO-IEC-14443-3-A";
+        constant ctxt: string := "CRC-16/ISO-IEC-14443-3-A";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("05bf")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1830,40 +1830,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/KERMIT";
+        constant ctxt: string := "CRC-16/KERMIT";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("8921")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1877,40 +1877,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/LJ1200";
+        constant ctxt: string := "CRC-16/LJ1200";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("f4bd")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1924,40 +1924,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/M17";
+        constant ctxt: string := "CRC-16/M17";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("2b77")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -1971,40 +1971,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/MAXIM-DOW";
+        constant ctxt: string := "CRC-16/MAXIM-DOW";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("c244")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2018,40 +2018,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/MCRF4XX";
+        constant ctxt: string := "CRC-16/MCRF4XX";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("916f")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2065,40 +2065,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/MODBUS";
+        constant ctxt: string := "CRC-16/MODBUS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("374b")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2112,40 +2112,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/NRSC-5";
+        constant ctxt: string := "CRC-16/NRSC-5";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("66a0")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2159,40 +2159,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/OPENSAFETY-A";
+        constant ctxt: string := "CRC-16/OPENSAFETY-A";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("385d")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2206,40 +2206,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/OPENSAFETY-B";
+        constant ctxt: string := "CRC-16/OPENSAFETY-B";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("fe20")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2253,40 +2253,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/PROFIBUS";
+        constant ctxt: string := "CRC-16/PROFIBUS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("19a8")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2300,40 +2300,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/RIELLO";
+        constant ctxt: string := "CRC-16/RIELLO";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("d063")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2347,40 +2347,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/SPI-FUJITSU";
+        constant ctxt: string := "CRC-16/SPI-FUJITSU";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("cce5")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2394,40 +2394,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/T10-DIF";
+        constant ctxt: string := "CRC-16/T10-DIF";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("dbd0")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2441,40 +2441,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/TELEDISK";
+        constant ctxt: string := "CRC-16/TELEDISK";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b30f")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2488,40 +2488,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/TMS37157";
+        constant ctxt: string := "CRC-16/TMS37157";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b126")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2535,40 +2535,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/UMTS";
+        constant ctxt: string := "CRC-16/UMTS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("e8fe")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2582,40 +2582,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/USB";
+        constant ctxt: string := "CRC-16/USB";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("c8b4")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2629,40 +2629,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-16/XMODEM";
+        constant ctxt: string := "CRC-16/XMODEM";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("c331")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2676,40 +2676,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/BLE";
+        constant ctxt: string := "CRC-24/BLE";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("565ac2")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2723,40 +2723,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/FLEXRAY-A";
+        constant ctxt: string := "CRC-24/FLEXRAY-A";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("bd7979")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2770,40 +2770,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/FLEXRAY-B";
+        constant ctxt: string := "CRC-24/FLEXRAY-B";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("b8231f")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2817,40 +2817,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/INTERLAKEN";
+        constant ctxt: string := "CRC-24/INTERLAKEN";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("e6f3b4")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2864,40 +2864,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/LTE-A";
+        constant ctxt: string := "CRC-24/LTE-A";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("03e7cd")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2911,40 +2911,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/LTE-B";
+        constant ctxt: string := "CRC-24/LTE-B";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("52ef23")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -2958,40 +2958,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/OPENPGP";
+        constant ctxt: string := "CRC-24/OPENPGP";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("02cf21")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3005,40 +3005,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-24/OS-9";
+        constant ctxt: string := "CRC-24/OS-9";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("a50f20")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3052,40 +3052,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/AIXM";
+        constant ctxt: string := "CRC-32/AIXM";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("7fbf1030")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3099,40 +3099,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/AUTOSAR";
+        constant ctxt: string := "CRC-32/AUTOSAR";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("6ad09716")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3146,40 +3146,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/BASE91-D";
+        constant ctxt: string := "CRC-32/BASE91-D";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("76553187")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3193,40 +3193,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/BZIP2";
+        constant ctxt: string := "CRC-32/BZIP2";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("181989fc")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3240,40 +3240,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/CD-ROM-EDC";
+        constant ctxt: string := "CRC-32/CD-ROM-EDC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("c4edc26e")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3287,40 +3287,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/CKSUM";
+        constant ctxt: string := "CRC-32/CKSUM";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("80765e76")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3334,40 +3334,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/ISCSI";
+        constant ctxt: string := "CRC-32/ISCSI";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("839206e3")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3381,40 +3381,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/ISO-HDLC";
+        constant ctxt: string := "CRC-32/ISO-HDLC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("2639f4cb")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3428,40 +3428,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/JAMCRC";
+        constant ctxt: string := "CRC-32/JAMCRC";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("d9c60b34")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3475,40 +3475,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/MEF";
+        constant ctxt: string := "CRC-32/MEF";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("512fc2d2")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3522,40 +3522,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/MPEG-2";
+        constant ctxt: string := "CRC-32/MPEG-2";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("e7e67603")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3569,40 +3569,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-32/XFER";
+        constant ctxt: string := "CRC-32/XFER";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("38e30bbd")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3616,40 +3616,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-40/GSM";
+        constant ctxt: string := "CRC-40/GSM";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("46c64f16d4")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3663,40 +3663,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/ECMA-182";
+        constant ctxt: string := "CRC-64/ECMA-182";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("4773490b5fdf406c")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3710,40 +3710,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/GO-ISO";
+        constant ctxt: string := "CRC-64/GO-ISO";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("0110a475c75609b9")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3757,40 +3757,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/MS";
+        constant ctxt: string := "CRC-64/MS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("eace4e024fb7d475")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3804,40 +3804,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/REDIS";
+        constant ctxt: string := "CRC-64/REDIS";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("cad9b8c414d9c6e9")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3851,40 +3851,40 @@ begin
           spill_order => EXP_ORDER_ASCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/WE";
+        constant ctxt: string := "CRC-64/WE";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("0af0a4f1e359ec62")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 
@@ -3898,40 +3898,40 @@ begin
           spill_order => EXP_ORDER_DESCENDING,
           byte_order => BYTE_ORDER_INCREASING
         );
-        constant context: string := "CRC-64/XZ";
+        constant ctxt: string := "CRC-64/XZ";
       begin
-        assert_equal(context, "123..",
+        assert_equal(ctxt, "123..",
                      cfg_c,
                      crc_update(cfg_c, crc_init(cfg_c), from_hex("313233343536373839")),
                      crc_load(cfg_c, from_hex("fa3919dfbbc95d99")),
                      failure
                      );
-        assert_equal(context, "has_check",
+        assert_equal(ctxt, "has_check",
                      crc_has_constant_check(cfg_c),
                      true,
                      failure
                      );
-        assert_equal(context, "pre_00",
+        assert_equal(ctxt, "pre_00",
                      crc_is_pre_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "pre_ff",
+        assert_equal(ctxt, "pre_ff",
                      crc_is_pre_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_00",
+        assert_equal(ctxt, "post_00",
                      crc_is_post_zero_transparent(cfg_c),
                      false,
                      failure
                      );
-        assert_equal(context, "post_ff",
+        assert_equal(ctxt, "post_ff",
                      crc_is_post_ones_transparent(cfg_c),
                      false,
                      failure
                      );
-        log_info(context, "OK");
+        log_info(ctxt, "OK");
         wait;
       end process;
 

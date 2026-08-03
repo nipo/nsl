@@ -65,7 +65,7 @@ package testing is
     signal ack: in wb_ack_t;
     signal clock: in std_ulogic;
     variable root: inout wb_test_queue_root;
-    constant context: string := "");
+    constant ctxt: string := "");
 
   -- Queue execution a bunch of operations as a cycle. Poll for update /
   -- completion every dt.
@@ -100,7 +100,7 @@ package testing is
     constant config: wb_config_t;
     constant address: in unsigned;
     constant data: in std_ulogic_vector;
-    constant context: in string := "";
+    constant ctxt: in string := "";
     constant dt : in time := 10 ns;
     constant sev : in severity_level := warning);
 
@@ -234,7 +234,7 @@ package body testing is
     signal ack: in wb_ack_t;
     signal clock: in std_ulogic;
     variable root: inout wb_test_queue_root;
-    constant context: string := "")
+    constant ctxt: string := "")
   is
     variable item : wb_test_queue;
   begin
@@ -328,7 +328,7 @@ package body testing is
     constant config: wb_config_t;
     constant address: in unsigned;
     constant data: in std_ulogic_vector;
-    constant context: in string := "";
+    constant ctxt: in string := "";
     constant dt : in time := 10 ns;
     constant sev : in severity_level := warning)
   is
@@ -338,7 +338,7 @@ package body testing is
   begin
     wb_test_read(root, config, address, rdata, term, dt);
 
-    assert_match(context & " at address " & to_string(address), data, rdata, sev);
+    assert_match(ctxt & " at address " & to_string(address), data, rdata, sev);
 
   end procedure;
 

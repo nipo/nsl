@@ -20,20 +20,20 @@ architecture arch of tb is
 begin
 
   hdmi_bch: process
-    constant context: log_context := "HDMI DI BCH";
+    constant ctxt: log_context := "HDMI DI BCH";
     constant di_bch_init_c : di_bch_t := x"00";
   begin
-    assert_equal(context, "header",
+    assert_equal(ctxt, "header",
                  std_ulogic_vector(di_bch(di_bch_init_c, x"deadbe")),
                  x"ea",
                  failure);
 
-    assert_equal(context, "subpacket",
+    assert_equal(ctxt, "subpacket",
                  std_ulogic_vector(di_bch(di_bch_init_c, x"deadbeefdecafb")),
                  x"e5",
                  failure);
 
-    log_info(context, "done");
+    log_info(ctxt, "done");
     terminate(0);
   end process;
   
