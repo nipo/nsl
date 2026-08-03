@@ -2,9 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_logic;
+library nsl_amba, nsl_logic, nsl_data;
 use nsl_amba.axi4_mm.all;
 use nsl_logic.bool.all;
+use nsl_data.bytestream.BYTE_ORDER_DECREASING;
 
 entity axi4_mm_master_packer is
   generic (
@@ -85,7 +86,7 @@ begin
   axi_o.aw <= accept(config_c, awready = '1');
   
   wdata <= std_logic_vector(value(config_c, axi_i.w));
-  wstrb <= std_logic_vector(strb(config_c, axi_i.w));
+  wstrb <= std_logic_vector(strb(config_c, axi_i.w, BYTE_ORDER_DECREASING));
   wlast <= to_logic(is_last(config_c, axi_i.w));
   wuser <= std_logic_vector(user(config_c, axi_i.w));
   wvalid <= to_logic(is_valid(config_c, axi_i.w));

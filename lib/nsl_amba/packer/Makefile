@@ -9,3 +9,4 @@ vhdl-sources += axi4_stream_master_packer.vhd
 deps += nsl_amba.axi4_mm
 deps += nsl_amba.axi4_stream
 deps += nsl_logic.bool
+deps += nsl_data.endian
