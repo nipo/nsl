@@ -224,8 +224,15 @@ package body bytestream is
   end function;
 
   function to_character(b: byte) return character is
+    variable c: integer range 0 to 255 := 0;
   begin
-    return character'val(to_integer(b));
+    for i in 0 to 7
+    loop
+      if to_x01(b(i)) = '1' then
+        c := c + 2**i;
+      end if;
+    end loop;
+    return character'val(c);
   end function;
 
   function to_byte_string(s : string) return byte_string is
