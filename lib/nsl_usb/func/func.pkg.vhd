@@ -60,6 +60,60 @@ package func is
       );
   end component serial_port;
 
+  component serial_port_dual is
+    generic (
+      vendor_id_c            : unsigned(15 downto 0);
+      product_id_c           : unsigned(15 downto 0);
+      device_version_c       : unsigned(15 downto 0);
+      manufacturer_c         : string                := "";
+      product_c              : string                := "";
+      serial_c               : string                := "";
+      hs_supported_c         : boolean               := false;
+      self_powered_c         : boolean               := false;
+      phy_clock_rate_c : integer := 60000000;
+      bulk_fs_mps_l2_c : integer range 3 to 6 := 6;
+      bulk_mps_count_l2_c : integer := 1;
+      serial_i_length_c : natural := 0
+      );
+    port (
+      reset_n_i     : in  std_ulogic;
+      app_reset_n_o : out std_ulogic;
+      hs_o        : out std_ulogic;
+      suspend_o   : out std_ulogic;
+      online_o    : out std_ulogic;
+      serial_i    : in string(1 to serial_i_length_c) := (others => nul);
+
+      rx0_o     : out nsl_bnoc.pipe.pipe_req_t;
+      rx0_i     : in  nsl_bnoc.pipe.pipe_ack_t;
+      rx0_available_o : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
+
+      tx0_i  : in  nsl_bnoc.pipe.pipe_req_t;
+      tx0_o  : out nsl_bnoc.pipe.pipe_ack_t;
+      tx0_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
+      tx0_flush_i   : in  std_ulogic := '0';
+
+      rx1_o     : out nsl_bnoc.pipe.pipe_req_t;
+      rx1_i     : in  nsl_bnoc.pipe.pipe_ack_t;
+      rx1_available_o : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
+
+      tx1_i  : in  nsl_bnoc.pipe.pipe_req_t;
+      tx1_o  : out nsl_bnoc.pipe.pipe_ack_t;
+      tx1_room_o   : out unsigned(if_else(hs_supported_c, 9, bulk_fs_mps_l2_c) + bulk_mps_count_l2_c downto 0);
+      tx1_flush_i   : in  std_ulogic := '0';
+
+      frame_number_o : out frame_no_t;
+      frame_o        : out std_ulogic;
+
+      transaction_cmd_tap_o : out nsl_usb.sie.transaction_cmd;
+      transaction_rsp_tap_o : out nsl_usb.sie.transaction_rsp;
+
+      phy_data_o   : out nsl_usb.utmi.utmi_data8_sie2phy;
+      phy_data_i   : in  nsl_usb.utmi.utmi_data8_phy2sie;
+      phy_system_o : out nsl_usb.utmi.utmi_system_sie2phy;
+      phy_system_i : in  nsl_usb.utmi.utmi_system_phy2sie
+      );
+  end component;
+
   component vendor_bulk_pair is
     generic (
       vendor_id_c            : unsigned(15 downto 0);
