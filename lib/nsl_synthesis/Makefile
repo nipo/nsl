@@ -1,1 +1,2 @@
 packages += logging
+packages += assertion
