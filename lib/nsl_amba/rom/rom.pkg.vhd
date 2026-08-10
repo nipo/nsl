@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_data;
+library nsl_amba, nsl_data, nsl_memory;
+use nsl_memory.rom.rom_implementation_t;
 
 package rom is
 
@@ -13,6 +14,7 @@ package rom is
   component apb_rom is
     generic (
       config_c : nsl_amba.apb.config_t;
+      implementation_c : rom_implementation_t := ROM_BLOCK;
       contents_c : nsl_data.bytestream.byte_string
       );
     port (

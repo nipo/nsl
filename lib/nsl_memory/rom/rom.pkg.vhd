@@ -6,8 +6,15 @@ library nsl_data;
 
 package rom is
 
+  type rom_implementation_t is (
+    ROM_BLOCK,
+    ROM_DISTRIBUTED,
+    ROM_LOGIC
+    );
+  
   component rom_bytes
     generic (
+      implementation_c : rom_implementation_t := ROM_BLOCK;
       word_addr_size_c : natural;
       word_byte_count_c : natural;
       -- word_byte_count_c * 2 ** word_addr_size_c bytes
@@ -25,6 +32,7 @@ package rom is
 
   component rom_bytes_2p
     generic (
+      implementation_c : rom_implementation_t := ROM_BLOCK;
       word_addr_size_c : natural;
       word_byte_count_c : natural;
       -- word_byte_count_c * 2 ** word_addr_size_c bytes

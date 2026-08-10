@@ -6,10 +6,12 @@ library nsl_amba, nsl_data, nsl_memory, nsl_math;
 use nsl_amba.apb.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use nsl_memory.rom.rom_implementation_t;
 
 entity apb_rom is
   generic (
     config_c : config_t;
+    implementation_c : rom_implementation_t := ROM_BLOCK;
     contents_c : byte_string
     );
   port (
@@ -71,6 +73,7 @@ begin
 
   rom: nsl_memory.rom.rom_bytes
     generic map(
+      implementation_c => implementation_c,
       word_addr_size_c => word_addr_size_c,
       word_byte_count_c => word_byte_count_c,
       contents_c => rom_contents_c,

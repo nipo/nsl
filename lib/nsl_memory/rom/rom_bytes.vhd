@@ -3,9 +3,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_data, nsl_memory;
+use nsl_memory.rom.rom_implementation_t;
 
 entity rom_bytes is
   generic (
+    implementation_c : rom_implementation_t := ROM_BLOCK;
     word_addr_size_c : natural;
     word_byte_count_c : natural;
     -- word_byte_count_c * 2 ** word_addr_size_c bytes
@@ -29,6 +31,7 @@ begin
 
   impl: nsl_memory.rom.rom_bytes_2p
     generic map(
+      implementation_c => implementation_c,
       word_addr_size_c => word_addr_size_c,
       word_byte_count_c => word_byte_count_c,
       contents_c => contents_c,

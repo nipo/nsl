@@ -2,10 +2,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data;
+library nsl_data, nsl_memory;
+use nsl_memory.rom.rom_implementation_t;
 
 entity rom_bytes_2p is
   generic (
+    implementation_c : rom_implementation_t := ROM_BLOCK;
     word_addr_size_c : natural;
     word_byte_count_c : natural;
     -- word_byte_count_c * 2 ** word_addr_size_c bytes
@@ -57,8 +59,37 @@ architecture beh of rom_bytes_2p is
 
   constant memory : mem_t := ram_init(contents_c);
 
+  function to_rom_style(i: rom_implementation_t) return string
+    is
+  begin
+    if i = ROM_BLOCK then
+      return "block";
+    elsif i = ROM_DISTRIBUTED then
+      return "distributed";
+    else
+      return "distributed";
+    end if;
+  end function;
+
+  function to_syn_romstyle(i: rom_implementation_t) return string
+    is
+  begin
+    if i = ROM_BLOCK then
+      return "block_rom";
+    elsif i = ROM_DISTRIBUTED then
+      return "distributed_rom";
+    else
+      return "logic";
+    end if;
+  end function;
+
+  -- Xilinx attaches rom_style to the storage array
   attribute rom_style : string;
-  attribute rom_style of memory : constant is "block";
+  attribute rom_style of memory : constant is to_rom_style(implementation_c);
+  -- Gowin attaches syn_romstyle to the output signal
+  attribute syn_romstyle : string;
+  attribute syn_romstyle of a_data_o : signal is to_syn_romstyle(implementation_c);
+  attribute syn_romstyle of b_data_o : signal is to_syn_romstyle(implementation_c);
 
 begin
 
