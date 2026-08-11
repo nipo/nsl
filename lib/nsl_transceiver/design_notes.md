@@ -1,6 +1,7 @@
 # nsl_transceiver — intent and state
 
-State snapshot: commit `d0e3faa8`, branch `nipo/transceivers`.
+State snapshot: as of "nsl_transceiver: Add CUFF adapter and
+single-byte data path".
 
 ## Purpose
 
