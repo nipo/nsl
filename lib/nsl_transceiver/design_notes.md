@@ -180,7 +180,12 @@ acceptable.
 | `target` | `clock_id()` declaration + GW5A body. |
 | `cluster` | Portable component + config types + `is_valid()`. GW5A backend implemented. |
 | `dynamic_reconfig` | **Declaration only** — `apb_arbiter` component is declared with no entity behind it. |
-| `cuff_adapter` | Implemented, untested, uninstantiated. |
+| `cuff` | `cuff_adapter` entity, covered by `tests/transceiver/cuff_adapter`. |
+
+Note that the package is `cuff` and the entity inside it is
+`cuff_adapter`: packages and entities share one namespace per VHDL
+library, so a subset package cannot carry the same name as an entity
+it declares.
 
 ### `lane`
 
@@ -299,9 +304,11 @@ Functional gaps, roughly in dependency order:
 2. **`dynamic_reconfig.apb_arbiter` has no implementation.** Only the
    component declaration exists. It is needed as soon as more than one
    adapter in a cluster wants CSR access.
-3. **Nothing instantiates the library.** No testbench under `tests/`,
-   no synthesis project under `example/`. Neither the GW5A backend nor
-   `cuff_adapter` has been elaborated in anger.
+3. **The GW5A backend has no coverage.** `tests/transceiver/cuff_adapter`
+   exercises `lane`, `cluster` and `cuff` under GHDL, but the backend
+   selects on `hwdep=gowin` and instantiates `GTR12_QUADB`, which has
+   no simulation model. Only a synthesis project under `example/` on a
+   real GW5A part can compile it.
 4. **`cuff_adapter` ignores flow control.** It drives `tx.valid` to a
    constant `'1'`, never inspects `tx_s_i.ready`, and never inspects
    `rx_m_i.valid`. This matches CUFF's word-per-cycle contract only if

@@ -13,7 +13,7 @@ library nsl_transceiver, nsl_cuff;
 -- user clock. Data path uses lane.data_byte_count = 1 (one byte
 -- per lane per fabric cycle), matching CUFF's word-per-cycle
 -- contract.
-package cuff_adapter is
+package cuff is
 
   component cuff_adapter is
     generic(
@@ -38,4 +38,4 @@ package cuff_adapter is
       );
   end component;
 
-end package cuff_adapter;
+end package cuff;
