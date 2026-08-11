@@ -284,6 +284,15 @@ before anything faster.
 
 ## Gaps and next steps
 
+**Blocker: `group` is a reserved word.** VHDL reserves `group` from
+the 1993 standard onward (group and group template declarations), so
+`package group` and every `nsl_transceiver.group.<x>` selected name
+fail to parse. The package needs renaming — `cluster` was the
+alternative considered when the naming was settled — along with its
+subset directory and the 13 references to it. Nothing in the library
+can be analysed until this is done, which is why no build has ever
+covered it.
+
 Functional gaps, roughly in dependency order:
 
 1. **No CSR init path.** The backend wires UPAR but nothing writes it.
@@ -310,8 +319,3 @@ Functional gaps, roughly in dependency order:
 6. **Only one backend exists.** Agilex 5 and 7-series are unstarted;
    the portable contract has therefore been validated against exactly
    one primitive.
-
-7. **`tx_pack` / `rx_unpack` unconditionally cover bytes 0..7**
-   regardless of `data_byte_count`. For a one-byte lane this pushes
-   the adapter's `'-'` fill into the primitive: harmless for
-   synthesis, noisy in simulation.

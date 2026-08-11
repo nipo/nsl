@@ -453,20 +453,31 @@ begin
 
     enabled_lane: if config_c.lanes(lane_idx).enabled generate
 
-      tx_pack: for byte_idx in 0 to 7 generate
+      constant byte_count_c : natural := config_c.lanes(lane_idx).data_byte_count;
+
+    begin
+
+      tx_pack: for byte_idx in 0 to byte_count_c-1 generate
         s_tx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx)
           <= std_logic_vector(tx_m_i(lane_idx).data(byte_idx));
         s_tx_data(lane_idx)(64+byte_idx) <= tx_m_i(lane_idx).aux(byte_idx)(0);
       end generate;
+      -- Data and aux bytes past the lane's parallel width are '-' on
+      -- the adapter side. Zero them rather than handing don't-cares
+      -- to the primitive.
+      tx_pad: for byte_idx in byte_count_c to 7 generate
+        s_tx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx) <= (others => '0');
+        s_tx_data(lane_idx)(64+byte_idx) <= '0';
+      end generate;
       s_tx_data(lane_idx)(79 downto 72) <= (others => '0');
 
-      rx_unpack: for byte_idx in 0 to 7 generate
+      rx_unpack: for byte_idx in 0 to byte_count_c-1 generate
         rx_m_o(lane_idx).data(byte_idx)
           <= std_ulogic_vector(s_rx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx));
         rx_m_o(lane_idx).aux(byte_idx)
           <= (0 => s_rx_data(lane_idx)(64+byte_idx), others => '0');
       end generate;
-      rx_data_unused: for byte_idx in 8 to 31 generate
+      rx_data_unused: for byte_idx in byte_count_c to 31 generate
         rx_m_o(lane_idx).data(byte_idx) <= (others => '0');
         rx_m_o(lane_idx).aux(byte_idx) <= (others => '0');
       end generate;
