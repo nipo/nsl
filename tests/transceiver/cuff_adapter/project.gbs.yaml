@@ -1,0 +1,30 @@
+name: transceiver_cuff_adapter
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_transceiver.lane
+    - nsl_transceiver.cluster
+    - nsl_transceiver.cuff
+    - nsl_cuff.protocol
+    - nsl_line_coding.ibm_8b10b
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

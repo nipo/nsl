@@ -734,6 +734,9 @@ projects:
   - name: tmds
     path: tmds
     tags: [ghdl, simulation]
+  - name: transceiver_cuff_adapter
+    path: transceiver/cuff_adapter
+    tags: [ghdl, simulation]
   - name: uart_8n1
     path: uart_8n1
     tags: [ghdl, simulation]
