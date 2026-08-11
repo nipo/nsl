@@ -15,7 +15,7 @@ use nsl_data.endian.all;
 --
 -- The bridge runs on a single clock supplied by the caller. The
 -- wizard sources this clock from GTR12_QUADB's
--- FABRIC_CM_LIFE_CLK_O loopback; the transceiver group entity
+-- FABRIC_CM_LIFE_CLK_O loopback; the transceiver cluster entity
 -- exposes the same clock to its APB master so the user-facing
 -- APB transactions land on the same domain.
 entity apb_upar_bridge_gw5a is

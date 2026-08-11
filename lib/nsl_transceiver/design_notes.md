@@ -42,12 +42,16 @@ in a per-adapter init ROM.
 
 ## Design decisions and their rationale
 
-### Group, not "quad"
+### Cluster, not "quad", not "group"
 
-The portable unit is a *group* (`nsl_transceiver.group`), matching one
-vendor macroblock. "Quad" is the count that happens to be common in
+The portable unit is a *cluster* (`nsl_transceiver.cluster`), matching
+one vendor macroblock. "Quad" is the count that happens to be common in
 current silicon; it has been 2 in the past and is likely to be 6 or 8
 in the future, so it does not belong in a type name.
+
+"Group" would have read at least as naturally, but VHDL has reserved
+the word since the 1993 standard, for group and group template
+declarations. A `package group` does not parse.
 
 ### Structure mirrors what the vendor wizards produce
 
@@ -57,11 +61,11 @@ for the whole quad, and RTL glue between the two. The result is one
 macroblock per quad whose port map is the union of all user-side
 connections. `nsl_transceiver` uses the same decomposition:
 
-* one entity that maps to one macroblock (`transceiver_group`),
-* a group-wide config (`group.config_t`) holding PLLs, reference
+* one entity that maps to one macroblock (`transceiver_cluster`),
+* a cluster-wide config (`cluster.config_t`) holding PLLs, reference
   clock routing and lane count,
 * an array of per-lane configs (`lane.config_t`),
-* an array of per-lane IO records carrying only what the group entity
+* an array of per-lane IO records carrying only what the cluster entity
   and the protocol adapters need to agree on.
 
 This matters because one quad routinely serves several protocols at
@@ -100,7 +104,7 @@ two reset requests itself.
 `lane.config_t` describes what the adapter needs at the transceiver
 boundary: parallel width, encoding, alignment patterns, line rate,
 PLL and refclk routing, analog tuning. Whether the vendor primitive
-provides a feature natively or the group architecture supplies it in
+provides a feature natively or the cluster architecture supplies it in
 fabric logic is an implementation detail of the backend, not
 something the user configures.
 
@@ -122,30 +126,30 @@ reasonable *adapter* to write on top of the lane records.
 
 ### Portability by build-system file selection
 
-There is one `nsl_transceiver.group` package with a portable
-`transceiver_group` component declaration, and one vendor entity +
-architecture per target in its own `transceiver_group_<vendor>.vhd`.
+There is one `nsl_transceiver.cluster` package with a portable
+`transceiver_cluster` component declaration, and one vendor entity +
+architecture per target in its own `transceiver_cluster_<vendor>.vhd`.
 The subset Makefile gates each vendor file on `hwdep` and
 `target_part`, so exactly one lands in the working library. There is
-no `group_gw5a` package to name in user code.
+no `cluster_gw5a` package to name in user code.
 
 When a backend eventually needs to express primitive constraints
 (supported rates per PLL, VCO ranges, lane-to-PLL routing rules), the
 pattern to follow is the one used by
 `lib/nsl_clocking/pll/pll_config_series67.pkg.vhd` (declaration) and
 `pll_config_series7.vhd` (backend body), with raw constants under
-`lib/nsl_hwdep/`. See `group/index.rst` for the full description.
+`lib/nsl_hwdep/`. See `cluster/index.rst` for the full description.
 That layering is not in place yet, on purpose — there is no
 vendor-specific content in the package today.
 
 ### Reference clock binding by opaque identifier
 
-Reference clock topology is hardware-dependent, so the group takes an
+Reference clock topology is hardware-dependent, so the cluster takes an
 array of refclk inputs plus a generic array of identifiers saying
 what each entry is:
 
 ```vhdl
-inst: nsl_transceiver.group.transceiver_group
+inst: nsl_transceiver.cluster.transceiver_cluster
   generic map(
     ref_clock_c => (0 => clock_id("ref0"), 1 => clock_id("fabric"))
     )
@@ -157,7 +161,7 @@ inst: nsl_transceiver.group.transceiver_group
 
 `nsl_transceiver.target.clock_id(name)` is declared target-agnostically
 and has one target-specific package body, selected the same way the
-group backend is. Names are portable strings; the returned integers
+cluster backend is. Names are portable strings; the returned integers
 are implementation-defined. This avoids adding one entity port per
 possible clock source, and avoids ambiguity about which port a
 configuration actually uses.
@@ -173,7 +177,7 @@ acceptable.
 |---|---|
 | `lane` | Complete signal contract and config types. No entities. |
 | `target` | `clock_id()` declaration + GW5A body. |
-| `group` | Portable component + config types + `is_valid()`. GW5A backend implemented. |
+| `cluster` | Portable component + config types + `is_valid()`. GW5A backend implemented. |
 | `dynamic_reconfig` | **Declaration only** — `apb_arbiter` component is declared with no entity behind it. |
 | `cuff_adapter` | Implemented, untested, uninstantiated. |
 
@@ -196,7 +200,7 @@ control inputs per lane — plus `c2i_clock`, an adapter-driven per-lane
 fabric clock needed by encodings where the protocol IP owns the
 lane's interface clock.
 
-### `group`
+### `cluster`
 
 `config_t` holds lane count, PLL count, user clock group count, a
 `pll_config_vector` and a `lane.config_vector`. `is_valid()` performs
@@ -213,7 +217,7 @@ user-side APB master must clock on it.
 
 ## GW5A backend
 
-`transceiver_group_gw5a.vhd` wraps `GTR12_QUADB`. Elaboration asserts
+`transceiver_cluster_gw5a.vhd` wraps `GTR12_QUADB`. Elaboration asserts
 exactly 4 lanes, at most 2 PLLs (CMU0/CMU1), at most 4 refclk entries,
 config validity, per-lane encoding in {RAW, 8B10B, 64B66B}, and
 `data_byte_count` in {1, 8}.
@@ -246,7 +250,7 @@ configurations were swept across protocol (USB3, 1000BASE-X,
 choice, lane index, polarity swap, multi-protocol split quads and
 4-lane channel bonding; the generated `serdes.v` files were
 paired-diffed. `build/support/gw5a_decode/decode.py` produces the
-tables in `group/gw5a_decoded/`; `audit_vhd.py` cross-checks the
+tables in `cluster/gw5a_decoded/`; `audit_vhd.py` cross-checks the
 backend's port map against them.
 
 The load-bearing conclusions:
@@ -284,15 +288,6 @@ before anything faster.
 
 ## Gaps and next steps
 
-**Blocker: `group` is a reserved word.** VHDL reserves `group` from
-the 1993 standard onward (group and group template declarations), so
-`package group` and every `nsl_transceiver.group.<x>` selected name
-fail to parse. The package needs renaming — `cluster` was the
-alternative considered when the naming was settled — along with its
-subset directory and the 13 references to it. Nothing in the library
-can be analysed until this is done, which is why no build has ever
-covered it.
-
 Functional gaps, roughly in dependency order:
 
 1. **No CSR init path.** The backend wires UPAR but nothing writes it.
@@ -302,7 +297,7 @@ Functional gaps, roughly in dependency order:
    axes (refclk source, PLL, rate, protocol, polarity, lane).
 2. **`dynamic_reconfig.apb_arbiter` has no implementation.** Only the
    component declaration exists. It is needed as soon as more than one
-   adapter in a group wants CSR access.
+   adapter in a cluster wants CSR access.
 3. **Nothing instantiates the library.** No testbench under `tests/`,
    no synthesis project under `example/`. Neither the GW5A backend nor
    `cuff_adapter` has been elaborated in anger.

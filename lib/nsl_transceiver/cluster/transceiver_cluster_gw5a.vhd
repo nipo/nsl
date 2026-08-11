@@ -7,9 +7,9 @@ use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
 
-entity transceiver_group is
+entity transceiver_cluster is
   generic(
-    config_c : nsl_transceiver.group.config_t;
+    config_c : nsl_transceiver.cluster.config_t;
     ref_clock_c : integer_vector
     );
   port(
@@ -42,7 +42,7 @@ entity transceiver_group is
     );
 end entity;
 
--- GW5A backend wrapping the GTR12_QUADB transceiver group
+-- GW5A backend wrapping the GTR12_QUADB transceiver cluster
 -- primitive. The primitive exposes a fixed 4-lane / 2-PLL shape and
 -- four reference clock sources (ref0, ref1, fabric, mclk);
 -- configurations that do not match are rejected at elaboration.
@@ -63,7 +63,7 @@ end entity;
 -- they are CSR-driven and expected to be written over the APB port
 -- during init. The matching lane.config_t fields therefore reach no
 -- primitive input here.
-architecture gw5a of transceiver_group is
+architecture gw5a of transceiver_cluster is
 
   component GTR12_QUADB is
     port(
@@ -408,16 +408,16 @@ architecture gw5a of transceiver_group is
 begin
 
   assert config_c.lane_count = 4
-    report "transceiver_group/gw5a: GTR12_QUADB primitive requires exactly 4 lanes"
+    report "transceiver_cluster/gw5a: GTR12_QUADB primitive requires exactly 4 lanes"
     severity failure;
   assert config_c.pll_count <= 2
-    report "transceiver_group/gw5a: GTR12_QUADB exposes at most 2 quad-shared PLLs (CMU0/CMU1)"
+    report "transceiver_cluster/gw5a: GTR12_QUADB exposes at most 2 quad-shared PLLs (CMU0/CMU1)"
     severity failure;
   assert ref_clock_c'length <= 4
-    report "transceiver_group/gw5a: GTR12_QUADB exposes at most 4 fabric-side reference clock inputs (ref0/ref1/fabric/mclk)"
+    report "transceiver_cluster/gw5a: GTR12_QUADB exposes at most 4 fabric-side reference clock inputs (ref0/ref1/fabric/mclk)"
     severity failure;
-  assert nsl_transceiver.group.is_valid(config_c)
-    report "transceiver_group/gw5a: configuration failed target-agnostic consistency check"
+  assert nsl_transceiver.cluster.is_valid(config_c)
+    report "transceiver_cluster/gw5a: configuration failed target-agnostic consistency check"
     severity failure;
 
   encoding_check: for lane_idx in 0 to config_c.lane_count-1 generate
@@ -425,11 +425,11 @@ begin
       assert config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
           or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B
           or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_64B66B
-        report "transceiver_group/gw5a: lane encoding not supported by this backend yet"
+        report "transceiver_cluster/gw5a: lane encoding not supported by this backend yet"
         severity failure;
       assert config_c.lanes(lane_idx).data_byte_count = 1
           or config_c.lanes(lane_idx).data_byte_count = 8
-        report "transceiver_group/gw5a: lane data_byte_count must be 1 (per-byte, e.g. 1.25 Gb/s SGMII-like) or 8 (per-word, e.g. 10 Gb/s)"
+        report "transceiver_cluster/gw5a: lane data_byte_count must be 1 (per-byte, e.g. 1.25 Gb/s SGMII-like) or 8 (per-word, e.g. 10 Gb/s)"
         severity failure;
     end generate;
   end generate;

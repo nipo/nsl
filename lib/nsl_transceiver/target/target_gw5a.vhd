@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 -- GW5A backend body for nsl_transceiver.target. Names recognised:
 --
 -- - "ref0", "ref1": the two chip-level differential reference
---   clock pads on the transceiver group.
+--   clock pads on the transceiver cluster.
 -- - "fabric": the general-purpose fabric-input reference clock
 --   the wizard labels "refin". Feeds the GTR12_QUADB's CLK_VIQ_I
 --   fabric slot.

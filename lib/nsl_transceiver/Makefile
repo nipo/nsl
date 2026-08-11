@@ -1,5 +1,5 @@
 packages += lane
 packages += target
-packages += group
+packages += cluster
 packages += dynamic_reconfig
 packages += cuff_adapter

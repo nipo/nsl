@@ -16,7 +16,7 @@ package target is
   -- named clock source. The name is a portable string ("ref0",
   -- "ref1", "fabric", ...) whose meaning is stable across
   -- targets; the returned integer is consumed by the vendor
-  -- transceiver_group entity to route the matching ref_clock_i
+  -- transceiver_cluster entity to route the matching ref_clock_i
   -- signal to the correct primitive input. Elaboration fails if
   -- the name is not recognised by the target.
   function clock_id(name : string) return integer;

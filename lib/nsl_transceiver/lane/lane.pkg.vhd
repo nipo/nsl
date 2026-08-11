@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data;
 use nsl_data.bytestream.all;
 
--- Signal interface between a transceiver group block and a protocol
+-- Signal interface between a transceiver cluster block and a protocol
 -- adapter, for a single lane. The lane is exposed as two
 -- independent unidirectional buses (TX and RX) plus a shared PMA
 -- reset, so an application that owns TX and RX with separate
@@ -31,7 +31,7 @@ package lane is
 
   -- Vendor-opaque per-lane control and status carriers. Bit
   -- assignment is not portable between vendors; the protocol
-  -- adapter and the group entity for a given target agree on the
+  -- adapter and the cluster entity for a given target agree on the
   -- layout.
   constant max_control_width_c : natural := 64;
   constant max_status_width_c : natural := 32;
@@ -93,7 +93,7 @@ package lane is
     idle_byte_count => 0
     );
 
-  -- Analog/PMA tuning. Values are vendor-mapped by the group entity
+  -- Analog/PMA tuning. Values are vendor-mapped by the cluster entity
   -- (e.g. quantised to the nearest available setting); zero asks
   -- for the vendor's sensible default.
   type analog_t is
@@ -112,10 +112,10 @@ package lane is
     );
 
   -- Per-lane configuration. Describes the contract between the
-  -- protocol adapter and the group entity: parallel data width,
+  -- protocol adapter and the cluster entity: parallel data width,
   -- encoding, alignment, line rate, PLL/ref-clock routing, analog
   -- tuning. How a given vendor macroblock fulfils this contract is
-  -- internal to the group entity.
+  -- internal to the cluster entity.
   type config_t is
   record
     enabled : boolean;
