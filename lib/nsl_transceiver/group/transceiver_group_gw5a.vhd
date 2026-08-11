@@ -43,20 +43,26 @@ entity transceiver_group is
 end entity;
 
 -- GW5A backend wrapping the GTR12_QUADB transceiver group
--- primitive. The primitive exposes a fixed 4-lane / 2-PLL /
--- 2-ref-clock shape; configurations that do not match are rejected
--- at elaboration.
+-- primitive. The primitive exposes a fixed 4-lane / 2-PLL shape and
+-- four reference clock sources (ref0, ref1, fabric, mclk);
+-- configurations that do not match are rejected at elaboration.
 --
--- Current scope: per-lane data path is wired with a uniform layout
--- targeted at 8b10b and 64b/66b (data bytes 0..7 at txdata[63:0],
--- per-byte aux bit 0 at txdata[71:64], unused bits zeroed; RX
--- symmetric, with the upper 16 RX bits surfaced through
--- rx_master.status). Per-lane PMA / PCS resets are routed; per-lane
--- BUFGs sit on the recovered/derived fabric clocks; elastic FIFO
--- controls drive the valid/ready handshake. PLL ref-clock routing,
--- rate selection, equalizer settings and CSR access via GTR12_UPARA
--- are not yet plumbed; APB slave continues to return an immediate
--- no-op response.
+-- Per-lane data path uses a uniform layout serving both a one-byte
+-- and an eight-byte parallel interface: data bytes 0..7 at
+-- txdata[63:0], per-byte aux bit 0 at txdata[71:64], unused bits
+-- zeroed. RX is symmetric, with the upper 16 RX bits surfaced
+-- through rx_master.status. Per-lane PMA / PCS resets are routed;
+-- per-lane BUFGs sit on the recovered/derived fabric clocks;
+-- elastic FIFO controls drive the valid/ready handshake. CSR access
+-- goes through apb_upar_bridge_gw5a, which drives GTR12_UPARA and
+-- feeds its AHB reset and test-decoder-enable outputs back into the
+-- companion GTR12_QUADB.
+--
+-- Reference clock selection, line rate, encoding mode, polarity
+-- invert and analog tuning are not fabric inputs on this primitive:
+-- they are CSR-driven and expected to be written over the APB port
+-- during init. The matching lane.config_t fields therefore reach no
+-- primitive input here.
 architecture gw5a of transceiver_group is
 
   component GTR12_QUADB is
