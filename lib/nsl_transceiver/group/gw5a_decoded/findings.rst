@@ -75,15 +75,12 @@ in every configuration. Same for the per-lane CPLL trio
 bring-up and ready handshake are managed via CSR registers, not via
 the apparently-named fabric reset signals.
 
-The relevant backend correction: the first cut of
-``transceiver_group_gw5a.vhd`` had ``FABRIC_CMU0_RESETN_I`` connected
-to ``reset_n_i`` and ``FABRIC_LNn_CPLL_PD_I`` tied to ``gw_vcc``
-(powering down). The wizard never asserts either: both go to ``gw_gnd``.
-This commit corrects those tie-offs.
-
-``FABRIC_POR_N_I`` is similarly tied to ground in every configuration,
-despite its name suggesting it is a power-on reset input. The backend
-was driving it from ``reset_n_i``; corrected to ``gw_gnd``.
+The names invite three plausible-looking mistakes:
+``FABRIC_CMU0_RESETN_I`` driven from ``reset_n_i``,
+``FABRIC_LNn_CPLL_PD_I`` tied to ``gw_vcc`` to power down an unused
+CPLL, and ``FABRIC_POR_N_I`` driven from ``reset_n_i``. The wizard
+does none of these: all three go to ``gw_gnd``, and
+``transceiver_group_gw5a.vhd`` matches.
 
 AHB/UPAR bring-up is per-protocol-IP, not per-group
 ---------------------------------------------------
@@ -108,14 +105,14 @@ non-trivially used, omit it otherwise.
 CSR address space carries most of the per-configuration delta
 -------------------------------------------------------------
 
-Of the 515 distinct CSR addresses written by the wizard's init
-sequence, **76 vary across configurations**. The other 439 are
+Of the 516 distinct CSR addresses written by the wizard's init
+sequence, **406 vary across configurations**. The other 110 are
 common init writes (PMA biasing, internal clock dividers, default
-register values for unused features, etc.). The 76 varying writes
+register values for unused features, etc.). The varying writes
 are where refclk routing, line rate, encoding mode, polarity invert
 and analog tuning actually live.
 
-Decoding the 76-address subset by which configuration axis they
+Decoding that subset by which configuration axis they
 correlate with (refclk source, PLL choice, line rate, protocol,
 polarity, lane) is the next analysis pass. See
 ``csr_writes.rst`` for the raw per-address per-config table.
@@ -133,12 +130,10 @@ suggests:
 
 2. **Tie off everything else to the wizard's defaults**, primarily
    ``gw_gnd``. This avoids fighting the CSR-driven configuration.
-   The current commit aligns the tie-offs with the decoded wizard
-   behaviour.
 
 3. **Plumb the APB master through to ``GTR12_UPARA``** so the
    protocol adapter (or a CSR ROM if init-only suffices) can write
-   the relevant subset of the 515-address space. Optionally make
+   the relevant subset of the 516-address space. Optionally make
    ``GTR12_UPARA`` instantiation conditional on whether the adapter
    actually uses it.
 
@@ -168,38 +163,39 @@ architectural difference:
 
 After these filters, the audit reports no remaining mismatches
 against the sampled configurations. Every primitive input that
-the wizard drives is now driven by matching signals in our
-backend; every input the wizard ties to a constant matches the
-same tie in our port map.
+the wizard drives is driven by matching signals in our backend;
+every input the wizard ties to a constant matches the same tie in
+our port map.
 
-``CLK_VIQ_I`` is no longer in the mismatch list: the
-``transceiver_group`` component gained a portable ``ref_clock_c``
-generic (an ``integer_vector`` of clock-source identifiers) and
-a matching ``ref_clock_i`` port (a ``std_ulogic_vector``). The
-identifiers come from ``nsl_transceiver.target.clock_id(name)``,
-whose declaration lives in the target-agnostic
-``nsl_transceiver.target`` package and whose body is one of a
-set of target-specific implementations selected by hwdep /
-target_part. On GW5A the recognised names are ``"ref0"``,
-``"ref1"`` (pad refclks, routed by pin constraints), ``"fabric"``
-(drives ``CLK_VIQ_I[0]``) and ``"mclk"`` (drives
-``CLK_VIQ_I[1]``; the ``m`` in the name follows Gowin's own
-labelling and is unrelated to any MIPI block).
+Three of the primitive inputs needed a portable representation
+before they could be driven:
 
-``FABRIC_LN1_CTRL_I_H`` and ``LANE0_FABRIC_C2I_CLK`` are no longer
-in the mismatch list: ``lane.tx_master_t`` gained ``control_h`` and
-``c2i_clock`` fields that the GW5A backend wires through to the
-matching primitive inputs. Adapters that don't need them leave the
-fields at '0' (1000BASE-X drives ``control_h`` on the lane it's
-placed on; custom 8b10b drives ``c2i_clock``).
+- ``CLK_VIQ_I`` is fed through the ``transceiver_group``
+  component's ``ref_clock_c`` generic (an ``integer_vector`` of
+  clock-source identifiers) and its matching ``ref_clock_i`` port.
+  The identifiers come from
+  ``nsl_transceiver.target.clock_id(name)``, whose declaration
+  lives in the target-agnostic ``nsl_transceiver.target`` package
+  and whose body is one of a set of target-specific
+  implementations selected by hwdep / target_part. On GW5A the
+  recognised names are ``"ref0"`` and ``"ref1"`` (pad refclks,
+  routed by pin constraints), ``"fabric"`` (drives
+  ``CLK_VIQ_I[0]``) and ``"mclk"`` (drives ``CLK_VIQ_I[1]``; the
+  ``m`` in the name follows Gowin's own labelling and is unrelated
+  to any MIPI block).
 
-``TEST_DEC_EN`` is no longer in the mismatch list: the GW5A
-backend now instantiates ``GTR12_UPARA`` through
-``apb_upar_bridge_gw5a``, which surfaces the primitive's
-``QUAD_CFG_TEST_DEC_EN`` output and the ``AHB_RSTN_O`` reset that
-feed back into the companion ``GTR12_QUADB``. The APB clock is
-the buffered ``FABRIC_CM_LIFE_CLK_O`` loopback the wizard uses
-(exposed on the entity as ``apb_clock_o``).
+- ``FABRIC_LN1_CTRL_I_H`` and ``LANE0_FABRIC_C2I_CLK`` are driven
+  from the ``control_h`` and ``c2i_clock`` fields of
+  ``lane.tx_master_t``. Adapters that don't need them leave the
+  fields at '0' (1000BASE-X drives ``control_h`` on the lane it's
+  placed on; custom 8b10b drives ``c2i_clock``).
+
+- ``TEST_DEC_EN`` and ``AHB_RSTN`` come from ``GTR12_UPARA``,
+  instantiated through ``apb_upar_bridge_gw5a``, which surfaces the
+  primitive's ``QUAD_CFG_TEST_DEC_EN`` and ``AHB_RSTN_O`` outputs
+  for the companion ``GTR12_QUADB``. The APB clock is the buffered
+  ``FABRIC_CM_LIFE_CLK_O`` loopback the wizard uses (exposed on the
+  entity as ``apb_clock_o``).
 
 97 primitive outputs we have at ``open`` are wired to internal
 named signals by the wizard. The wires feed either the protocol
