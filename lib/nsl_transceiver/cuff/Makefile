@@ -1,4 +1,4 @@
-vhdl-sources += cuff_adapter.pkg.vhd
+vhdl-sources += cuff.pkg.vhd
 vhdl-sources += cuff_adapter.vhd
 
 deps += nsl_transceiver.lane
