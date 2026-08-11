@@ -6,13 +6,13 @@ library nsl_transceiver, nsl_io, nsl_amba, nsl_math;
 use nsl_math.int_ext.all;
 
 -- Configuration types and component declaration for a transceiver
--- group: a cluster of lanes sharing PLLs, reference clock routing
+-- cluster: a set of lanes sharing PLLs, reference clock routing
 -- and a configuration interface, as exposed by a vendor primitive.
--- The transceiver_group component is the portable contract; each
+-- The transceiver_cluster component is the portable contract; each
 -- vendor provides one entity+architecture matching it (one of which
 -- is selected at build time by the project's hwdep / target_part
 -- variables).
-package group is
+package cluster is
 
   constant max_lane_count_c : natural := 8;
   constant max_pll_count_c : natural := 4;
@@ -54,12 +54,12 @@ package group is
   -- its architecture body.
   function is_valid(cfg : config_t) return boolean;
 
-  -- Portable transceiver group component. One vendor entity matching
+  -- Portable transceiver cluster component. One vendor entity matching
   -- this declaration is compiled into the working library based on
   -- the project's hwdep / target_part variables. The vendor entity
   -- asserts at elaboration that the supplied config matches the
   -- vendor primitive's shape (lane count, PLL count, etc.).
-  component transceiver_group is
+  component transceiver_cluster is
     generic(
       config_c : config_t;
       -- Reference clock source binding. One entry per fabric-side
@@ -99,9 +99,9 @@ package group is
       );
   end component;
 
-end package group;
+end package cluster;
 
-package body group is
+package body cluster is
 
   function config(
     plls : pll_config_vector;
@@ -126,7 +126,7 @@ package body group is
   end function;
 
   -- Refclk-index bound checks live in the vendor architecture body
-  -- since the refclk count is carried by the transceiver_group
+  -- since the refclk count is carried by the transceiver_cluster
   -- ref_clock_c generic, not by config_t.
   function is_valid(cfg : config_t) return boolean
   is
@@ -148,4 +148,4 @@ package body group is
     return true;
   end function;
 
-end package body group;
+end package body cluster;

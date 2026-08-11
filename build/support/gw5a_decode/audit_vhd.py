@@ -2,7 +2,7 @@
 """Audit a VHDL backend's GTR12_QUADB port map against the decoded
 wizard reference.
 
-Reads our transceiver_group_gw5a.vhd, extracts the GTR12_QUADB port
+Reads our transceiver_cluster_gw5a.vhd, extracts the GTR12_QUADB port
 map, and cross-checks each port against gtr_ports.csv. Reports:
 
 * mismatches on constant tie-offs (wizard always ties to X, we tie
@@ -288,7 +288,7 @@ def compare(audit: Audit) -> tuple[list[str], list[str], list[str], list[str]]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--vhd", type=Path, required=True,
-                    help="VHDL backend file (transceiver_group_gw5a.vhd)")
+                    help="VHDL backend file (transceiver_cluster_gw5a.vhd)")
     ap.add_argument("--reference", type=Path, required=True,
                     help="Decoded reference CSV (gtr_ports.csv)")
     args = ap.parse_args()

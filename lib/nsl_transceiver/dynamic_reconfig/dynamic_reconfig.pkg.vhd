@@ -4,16 +4,16 @@ use ieee.numeric_std.all;
 
 library nsl_amba;
 
--- Configuration-bus plumbing for transceiver group entities. The
+-- Configuration-bus plumbing for transceiver cluster entities. The
 -- vendor-native register access bus is wrapped to APB by a
 -- vendor-specific bridge entity (declared elsewhere, alongside the
--- group entity). Per-lane / per-protocol-adapter masters arbitrate
--- access to the single group slave via a static address-space
+-- cluster entity). Per-lane / per-protocol-adapter masters arbitrate
+-- access to the single cluster slave via a static address-space
 -- demux.
 package dynamic_reconfig is
 
   -- N APB masters arbitrated into a single APB slave port. Each
-  -- master claims an address window in the group's register space,
+  -- master claims an address window in the cluster's register space,
   -- defined by a (base, mask) pair. A master's transaction is
   -- forwarded with its address unchanged; the demux only selects
   -- which transaction reaches the slave each cycle.
