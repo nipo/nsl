@@ -25,7 +25,7 @@ Headline findings
 =================
 
 Configuration is overwhelmingly CSR-driven, not fabric-driven
-------------------------------------------------------------
+-------------------------------------------------------------
 
 Of the 275 ``GTR12_QUADB`` ports, **only 40 vary across the 21
 sampled configurations**. The remaining 235 are wizard-baked tie-offs
@@ -80,10 +80,10 @@ The names invite three plausible-looking mistakes:
 ``FABRIC_LNn_CPLL_PD_I`` tied to ``gw_vcc`` to power down an unused
 CPLL, and ``FABRIC_POR_N_I`` driven from ``reset_n_i``. The wizard
 does none of these: all three go to ``gw_gnd``, and
-``transceiver_group_gw5a.vhd`` matches.
+``transceiver_cluster_gw5a.vhd`` matches.
 
-AHB/UPAR bring-up is per-protocol-IP, not per-group
----------------------------------------------------
+AHB/UPAR bring-up is per-protocol-IP, not per-cluster
+-----------------------------------------------------
 
 ``AHB_RSTN``, ``CK_AHB_I`` and ``TEST_DEC_EN`` are tied to ground in
 6 of the 21 sampled configurations and driven by named wires
@@ -147,7 +147,7 @@ Backend audit (status against the reference)
 ============================================
 
 ``build/support/gw5a_decode/audit_vhd.py`` cross-checks our
-``transceiver_group_gw5a.vhd`` instantiation against the reference
+``transceiver_cluster_gw5a.vhd`` instantiation against the reference
 table. The audit suppresses a few categories of intentional
 architectural difference:
 
@@ -170,7 +170,7 @@ our port map.
 Three of the primitive inputs needed a portable representation
 before they could be driven:
 
-- ``CLK_VIQ_I`` is fed through the ``transceiver_group``
+- ``CLK_VIQ_I`` is fed through the ``transceiver_cluster``
   component's ``ref_clock_c`` generic (an ``integer_vector`` of
   clock-source identifiers) and its matching ``ref_clock_i`` port.
   The identifiers come from
@@ -212,13 +212,13 @@ To regenerate this analysis from new IPgen outputs::
 
    python3.13 build/support/gw5a_decode/decode.py \\
        --src /path/to/ipgen/projects \\
-       --out lib/nsl_transceiver/group/gw5a_decoded
+       --out lib/nsl_transceiver/cluster/gw5a_decoded
 
 To audit a backend file against the reference table::
 
    python3.13 build/support/gw5a_decode/audit_vhd.py \\
-       --vhd lib/nsl_transceiver/group/transceiver_group_gw5a.vhd \\
-       --reference lib/nsl_transceiver/group/gw5a_decoded/gtr_ports.csv
+       --vhd lib/nsl_transceiver/cluster/transceiver_cluster_gw5a.vhd \\
+       --reference lib/nsl_transceiver/cluster/gw5a_decoded/gtr_ports.csv
 
 The decode script ignores subdirectories without ``serdes.v``
 (wizard stubs from invalid options).

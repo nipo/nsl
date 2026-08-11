@@ -1,8 +1,8 @@
-==================
-Transceiver groups
-==================
+====================
+Transceiver clusters
+====================
 
-This subset declares the portable ``transceiver_group`` component
+This subset declares the portable ``transceiver_cluster`` component
 and its configuration types. One vendor architecture is compiled
 into the working library at a time, selected by the project's
 ``hwdep`` and ``target_part`` Makefile variables.
@@ -10,9 +10,9 @@ into the working library at a time, selected by the project's
 Vendor-specific architectures
 =============================
 
-Each backend lives in its own ``transceiver_group_<vendor>.vhd``
-file alongside ``group.pkg.vhd``, providing ``entity
-transceiver_group is ...`` plus an ``architecture <vendor>`` body.
+Each backend lives in its own ``transceiver_cluster_<vendor>.vhd``
+file alongside ``cluster.pkg.vhd``, providing ``entity
+transceiver_cluster is ...`` plus an ``architecture <vendor>`` body.
 The Makefile gates each vendor file with the relevant
 ``hwdep`` / ``target_part`` filter so exactly one ends up in the
 working library.
@@ -43,10 +43,10 @@ PLL configuration packages (see
 declaration and ``pll_config_series7.vhd`` for the
 backend-specific body).
 
-The layering for the transceiver group would be:
+The layering for the transceiver cluster would be:
 
-* ``nsl_transceiver.group`` package declaration in
-  ``group.pkg.vhd`` declares both the portable types and any
+* ``nsl_transceiver.cluster`` package declaration in
+  ``cluster.pkg.vhd`` declares both the portable types and any
   function whose answer depends on the backend, e.g.::
 
     function vendor_supports_encoding(enc : nsl_transceiver.lane.encoding_t)
@@ -54,9 +54,9 @@ The layering for the transceiver group would be:
     function vendor_max_line_rate_mbps(pll_idx, refclk_hz : natural)
       return natural;
 
-* The ``nsl_transceiver.group`` package body lives in the vendor
-  file (``transceiver_group_<vendor>.vhd`` or a sibling
-  ``group_<vendor>_body.vhd``). It implements the vendor
+* The ``nsl_transceiver.cluster`` package body lives in the vendor
+  file (``transceiver_cluster_<vendor>.vhd`` or a sibling
+  ``cluster_<vendor>_body.vhd``). It implements the vendor
   functions, typically by calling into a target-family constants
   package under ``nsl_hwdep``. VHDL allows exactly one package
   body per package; the Makefile guarantees only one vendor body
@@ -66,7 +66,7 @@ The layering for the transceiver group would be:
   ``lib/nsl_hwdep/<vendor>_xcvr_config/`` (one file per chip
   family if needed, mirroring how
   ``lib/nsl_hwdep/xc7_config/`` is organised). The vendor
-  ``group`` body imports them.
+  ``cluster`` body imports them.
 
 * The portable ``is_valid`` function in the package body uses the
   vendor functions to validate intra-config consistency *and*

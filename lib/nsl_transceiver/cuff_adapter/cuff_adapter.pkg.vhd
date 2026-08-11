@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 library nsl_transceiver, nsl_cuff;
 
--- CUFF-side adapter for nsl_transceiver.group.transceiver_group.
+-- CUFF-side adapter for nsl_transceiver.cluster.transceiver_cluster.
 -- Bridges nsl_cuff.protocol.cuff_code_vector (10-bit 8b/10b words
 -- native to nsl_cuff's ISERDES/OSERDES transceiver) onto the
 -- nsl_transceiver lane records (8-bit data + K flag, encoded by
@@ -30,7 +30,7 @@ package cuff_adapter is
       rx_lane_o : out nsl_cuff.protocol.cuff_code_vector(0 to lane_count_c-1);
 
       -- Transceiver-side. Wires onto
-      -- nsl_transceiver.group.transceiver_group's lane records.
+      -- nsl_transceiver.cluster.transceiver_cluster's lane records.
       tx_m_o : out nsl_transceiver.lane.tx_master_vector(0 to lane_count_c-1);
       tx_s_i : in nsl_transceiver.lane.tx_slave_vector(0 to lane_count_c-1);
       rx_m_i : in nsl_transceiver.lane.rx_master_vector(0 to lane_count_c-1);
