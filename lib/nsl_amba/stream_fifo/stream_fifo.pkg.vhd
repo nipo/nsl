@@ -69,7 +69,8 @@ package stream_fifo is
   component axi4_stream_fifo_cancellable is
     generic(
       config_c : nsl_amba.axi4_stream.config_t;
-      word_count_l2_c : integer
+      word_count_l2_c : integer;
+      out_pkt_available_range_c: integer range 0 to integer'high := 0
       );
     port(
       reset_n_i : in  std_ulogic;
@@ -80,6 +81,7 @@ package stream_fifo is
       out_commit_i : in std_ulogic := '1';
       out_rollback_i : in std_ulogic := '0';
       out_available_o : out unsigned(word_count_l2_c downto 0);
+      out_pkt_available_o : out integer range 0 to out_pkt_available_range_c;
   
       in_i  : in  nsl_amba.axi4_stream.master_t;
       in_o : out nsl_amba.axi4_stream.slave_t;
