@@ -86,16 +86,17 @@ begin
         shift_reg_s <= (others => '0');
         count_s     <= ratio_c - 1;
       elsif rising_edge(clock_i) then
-        if count_s = ratio_c - 1 then
+        if count_s = 0 then
           shift_reg_s <= in_i;
-          count_s     <= 0;
+          count_s     <= ratio_c - 1;
         else
+          count_s     <= count_s - 1;
+          
           if msb_first_c then
             shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & dont_cares_c;
           else
             shift_reg_s <= dont_cares_c & shift_reg_s(0 to output_width_c - 1);
           end if;
-          count_s     <= count_s + 1;
         end if;
       end if;
     end process;
@@ -128,7 +129,7 @@ begin
       if reset_n_i = '0' then
         shift_reg_s <= (others => '0');
         out_reg_s   <= (others => '0');
-        count_s     <= 0;
+        count_s     <= ratio_c -1;
       elsif rising_edge(clock_i) then
         if msb_first_c then
           shift_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
@@ -136,15 +137,15 @@ begin
           shift_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);
         end if;
 
-        if count_s = ratio_c - 1 then
-          count_s   <= 0;
+        if count_s = 0 then
+          count_s   <= ratio_c - 1;
           if msb_first_c then
             out_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
           else
             out_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);
           end if;
         else
-          count_s <= count_s + 1;
+          count_s <= count_s - 1;
         end if;
       end if;
     end process;
