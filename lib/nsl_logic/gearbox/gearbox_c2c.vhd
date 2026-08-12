@@ -75,37 +75,37 @@ begin
   -- output_width_c - 1). 
   ------------------------------------------------------------------------
   gen_downsize : if input_width_c > output_width_c generate
-    signal shift_reg : std_ulogic_vector(0 to input_width_c - 1);
-    signal count     : natural range 0 to ratio_c - 1;
-    constant zeros   : std_ulogic_vector(output_width_c - 1 downto 0) := (others => '0');
+    signal shift_reg_s : std_ulogic_vector(0 to input_width_c - 1);
+    signal count_s     : natural range 0 to ratio_c - 1;
+    constant zeros_c   : std_ulogic_vector(output_width_c - 1 downto 0) := (others => '0');
   begin
 
     process(clock_i, reset_n_i)
     begin
       if reset_n_i = '0' then
-        shift_reg <= (others => '0');
-        count     <= ratio_c - 1;
+        shift_reg_s <= (others => '0');
+        count_s     <= ratio_c - 1;
       elsif rising_edge(clock_i) then
-        if count = ratio_c - 1 then
-          shift_reg <= in_i;
-          count     <= 0;
+        if count_s = ratio_c - 1 then
+          shift_reg_s <= in_i;
+          count_s     <= 0;
         else
           if msb_first_c then
-            shift_reg <= shift_reg(output_width_c to input_width_c - 1) & zeros;
+            shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & zeros_c;
           else
-            shift_reg <= zeros & shift_reg(0 to output_width_c - 1);
+            shift_reg_s <= zeros_c & shift_reg_s(0 to output_width_c - 1);
           end if;
-          count     <= count + 1;
+          count_s     <= count_s + 1;
         end if;
       end if;
     end process;
 
-    process(shift_reg)
+    process(shift_reg_s)
     begin
       if msb_first_c then
-        out_o <= shift_reg(0 to output_width_c - 1);
+        out_o <= shift_reg_s(0 to output_width_c - 1);
       else
-        out_o <= shift_reg(output_width_c to input_width_c - 1);
+        out_o <= shift_reg_s(output_width_c to input_width_c - 1);
       end if;
     end process;
 
@@ -114,42 +114,42 @@ begin
   ------------------------------------------------------------------------
   -- Upsize: input_width_c < output_width_c
   -- Shift in one input_width_c-wide chunk per cycle; once ratio_c chunks
-  -- have arrived, latch the completed word into out_reg and hold it
+  -- have arrived, latch the completed word into out_reg_s and hold it
   -- stable while the next word accumulates underneath.
   ------------------------------------------------------------------------
   gen_upsize : if input_width_c < output_width_c generate
-    signal shift_reg : std_ulogic_vector(0 to output_width_c - 1);
-    signal out_reg   : std_ulogic_vector(0 to output_width_c - 1);
-    signal count     : natural range 0 to ratio_c - 1;
+    signal shift_reg_s : std_ulogic_vector(0 to output_width_c - 1);
+    signal out_reg_s   : std_ulogic_vector(0 to output_width_c - 1);
+    signal count_s     : natural range 0 to ratio_c - 1;
   begin
 
     process(clock_i, reset_n_i)
     begin
       if reset_n_i = '0' then
-        shift_reg <= (others => '0');
-        out_reg   <= (others => '0');
-        count     <= 0;
+        shift_reg_s <= (others => '0');
+        out_reg_s   <= (others => '0');
+        count_s     <= 0;
       elsif rising_edge(clock_i) then
         if msb_first_c then
-          shift_reg <= shift_reg(input_width_c to output_width_c - 1) & in_i;
+          shift_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
         else
-          shift_reg <= in_i & shift_reg(0 to input_width_c - 1);
+          shift_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);
         end if;
 
-        if count = ratio_c - 1 then
-          count   <= 0;
+        if count_s = ratio_c - 1 then
+          count_s   <= 0;
           if msb_first_c then
-            out_reg <= shift_reg(input_width_c to output_width_c - 1) & in_i;
+            out_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
           else
-            out_reg <= in_i & shift_reg(0 to input_width_c - 1);
+            out_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);
           end if;
         else
-          count <= count + 1;
+          count_s <= count_s + 1;
         end if;
       end if;
     end process;
 
-    out_o <= out_reg;
+    out_o <= out_reg_s;
 
   end generate gen_upsize;
 
