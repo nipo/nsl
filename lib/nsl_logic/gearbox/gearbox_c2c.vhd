@@ -77,7 +77,7 @@ begin
   gen_downsize : if input_width_c > output_width_c generate
     signal shift_reg_s : std_ulogic_vector(0 to input_width_c - 1);
     signal count_s     : natural range 0 to ratio_c - 1;
-    constant zeros_c   : std_ulogic_vector(output_width_c - 1 downto 0) := (others => '0');
+    constant dont_cares_c   : std_ulogic_vector(output_width_c - 1 downto 0) := (others => '-');
   begin
 
     process(clock_i, reset_n_i)
@@ -91,9 +91,9 @@ begin
           count_s     <= 0;
         else
           if msb_first_c then
-            shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & zeros_c;
+            shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & dont_cares_c;
           else
-            shift_reg_s <= zeros_c & shift_reg_s(0 to output_width_c - 1);
+            shift_reg_s <= dont_cares_c & shift_reg_s(0 to output_width_c - 1);
           end if;
           count_s     <= count_s + 1;
         end if;
