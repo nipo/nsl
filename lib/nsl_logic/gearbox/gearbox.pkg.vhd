@@ -71,7 +71,7 @@ package gearbox is
     generic(
       input_width_c : positive;
       output_width_c    : positive;
-      msb_first_c : boolean := false      
+      left_to_right_c : boolean := false      
       );
     port(
       clock_i    : in  std_ulogic;

@@ -26,7 +26,7 @@ entity gearbox_c2c is
   generic(
     input_width_c  : positive;
     output_width_c : positive;
-    msb_first_c : boolean := false
+    left_to_right_c : boolean := false
     );
   port(
     clock_i   : in  std_ulogic;
@@ -103,7 +103,7 @@ begin
           count_s     <= count_s - 1;
           ready_o     <= '1';
           
-          if msb_first_c then
+          if left_to_right_c then
             shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & dont_cares_c;
           else
             shift_reg_s <= dont_cares_c & shift_reg_s(0 to output_width_c - 1);
@@ -114,7 +114,7 @@ begin
 
     process(shift_reg_s)
     begin
-      if msb_first_c then
+      if left_to_right_c then
         out_o <= shift_reg_s(0 to output_width_c - 1);
       else
         out_o <= shift_reg_s(output_width_c to input_width_c - 1);
@@ -147,7 +147,7 @@ begin
       end if;
       
       if rising_edge(clock_i) then
-        if msb_first_c then
+        if left_to_right_c then
           shift_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
         else
           shift_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);
@@ -156,7 +156,7 @@ begin
         if count_s = 0 then
           count_s   <= ratio_c - 1;
           valid_o   <= '1';
-          if msb_first_c then
+          if left_to_right_c then
             out_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
           else
             out_reg_s <= in_i & shift_reg_s(0 to input_width_c - 1);

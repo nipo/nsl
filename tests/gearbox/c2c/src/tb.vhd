@@ -65,7 +65,7 @@ begin
     generic map(
       input_width_c      => input_width_c,
       output_width_c     => output_width_c,
-      msb_first_c        => true
+      left_to_right_c        => true
       )
     port map(
       clock_i    => clock125_s,
