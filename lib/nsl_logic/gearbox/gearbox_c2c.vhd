@@ -85,7 +85,9 @@ begin
       if reset_n_i = '0' then
         shift_reg_s <= (others => '0');
         count_s     <= ratio_c - 1;
-      elsif rising_edge(clock_i) then
+      end if;
+      
+      if rising_edge(clock_i) then
         if count_s = 0 then
           shift_reg_s <= in_i;
           count_s     <= ratio_c - 1;
@@ -130,7 +132,9 @@ begin
         shift_reg_s <= (others => '0');
         out_reg_s   <= (others => '0');
         count_s     <= ratio_c -1;
-      elsif rising_edge(clock_i) then
+      end if;
+      
+      if rising_edge(clock_i) then
         if msb_first_c then
           shift_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
         else
