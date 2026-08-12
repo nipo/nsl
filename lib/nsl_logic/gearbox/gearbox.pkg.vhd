@@ -78,8 +78,10 @@ package gearbox is
       reset_n_i  : in  std_ulogic;
 
       in_i       : in  std_ulogic_vector(0 to input_width_c - 1);
+      ready_o   : out std_ulogic;      
 
-      out_o       : out std_ulogic_vector(0 to output_width_c - 1)
+      out_o       : out std_ulogic_vector(0 to output_width_c - 1);
+      valid_o   : out std_ulogic      
       );
   end component;  
 

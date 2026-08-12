@@ -37,6 +37,8 @@ architecture arch of tb is
 
   signal in_s       : std_ulogic_vector(0 to input_width_c - 1);
   signal out_s      : std_ulogic_vector(0 to output_width_c - 1);
+  signal ready_s    : std_ulogic;
+  signal valid_s    : std_ulogic;  
 
   constant preamble_words_c : natural := 4;
   constant total_bits_c     : natural := 10000;
@@ -69,7 +71,9 @@ begin
       clock_i    => clock125_s,
       reset_n_i  => reset_n_s,
       in_i       => in_s,
-      out_o      => out_s
+      ready_o    => ready_s,
+      out_o      => out_s,
+      valid_o    => valid_s
       );
 
   -- Assign clocks

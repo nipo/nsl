@@ -31,8 +31,12 @@ entity gearbox_c2c is
   port(
     clock_i   : in  std_ulogic;
     reset_n_i : in  std_ulogic;
+    
     in_i      : in  std_ulogic_vector(0 to input_width_c - 1);
-    out_o     : out std_ulogic_vector(0 to output_width_c - 1)
+    ready_o   : out std_ulogic;
+    
+    out_o     : out std_ulogic_vector(0 to output_width_c - 1);
+    valid_o   : out std_ulogic
     );
 end entity gearbox_c2c;
 
@@ -80,19 +84,24 @@ begin
     constant dont_cares_c   : std_ulogic_vector(output_width_c - 1 downto 0) := (others => '-');
   begin
 
+    valid_o <= '1';
+
     process(clock_i, reset_n_i)
     begin
       if reset_n_i = '0' then
         shift_reg_s <= (others => '0');
         count_s     <= ratio_c - 1;
+        ready_o     <= '0';
       end if;
       
       if rising_edge(clock_i) then
         if count_s = 0 then
           shift_reg_s <= in_i;
           count_s     <= ratio_c - 1;
+          ready_o     <= '0';
         else
           count_s     <= count_s - 1;
+          ready_o     <= '1';
           
           if msb_first_c then
             shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & dont_cares_c;
@@ -126,12 +135,15 @@ begin
     signal count_s     : natural range 0 to ratio_c - 1;
   begin
 
+    ready_o <= '1';
+
     process(clock_i, reset_n_i)
     begin
       if reset_n_i = '0' then
         shift_reg_s <= (others => '0');
         out_reg_s   <= (others => '0');
         count_s     <= ratio_c -1;
+        valid_o     <= '0';
       end if;
       
       if rising_edge(clock_i) then
@@ -143,6 +155,7 @@ begin
 
         if count_s = 0 then
           count_s   <= ratio_c - 1;
+          valid_o   <= '1';
           if msb_first_c then
             out_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
           else
@@ -150,6 +163,7 @@ begin
           end if;
         else
           count_s <= count_s - 1;
+          valid_o <= '0';
         end if;
       end if;
     end process;
@@ -163,6 +177,8 @@ begin
   ------------------------------------------------------------------------
   gen_equal : if input_width_c = output_width_c generate
     out_o <= in_i;
+    ready_o <= '1';
+    valid_o <= '1';
   end generate gen_equal;
 
 end architecture rtl;
