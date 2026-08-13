@@ -35,12 +35,12 @@ architecture sim of jtag_user_tap is
   
 begin
 
-  insts: for i in 0 to user_port_count_c
+  insts: for i in 0 to user_port_count_c-1
   generate
   begin
     inst: nsl_simulation.jtag.jtag_sim_reg
       generic map(
-        index_c => i - 1
+        index_c => i
         )
       port map(
         selected_o => selected_o(i),
