@@ -23,8 +23,9 @@ entity tb is
   generic(
     input_width_c         : positive := 8;
     output_width_c        : positive := 16;
-    input_clock_period_c  : time := 8 ns;
-    output_clock_period_c : time := 16 ns
+    input_clock_period_ns_c  : positive := 8;
+    output_clock_period_ns_c : positive := 16;
+    left_to_right_c       : boolean := false
     );
 end entity;
 
@@ -43,6 +44,30 @@ architecture arch of tb is
 
   constant preamble_words_c : natural := 4;
   constant total_bits_c     : natural := 10000;
+  constant input_clock_period_c  : time := input_clock_period_ns_c * 1 ns;
+  constant output_clock_period_c : time := output_clock_period_ns_c * 1 ns;
+
+  function min_len(a, b : positive) return positive is
+  begin
+    if a > b then
+      return b;
+    else
+      return a;
+    end if;
+  end function min_len;
+
+  constant chunk_size_c : positive := min_len(input_width_c, output_width_c);
+
+  function calc_ratio(a, b : positive) return positive is
+  begin
+    if a > b then
+      return a / b;
+    else
+      return b / a;
+    end if;
+  end function calc_ratio;
+
+  constant ratio_c : positive := calc_ratio(input_width_c, output_width_c);  
 
 begin
 
@@ -76,7 +101,7 @@ begin
     generic map(
       input_width_c      => input_width_c,
       output_width_c     => output_width_c,
-      left_to_right_c        => true
+      left_to_right_c    => left_to_right_c
       )
     port map(
       clock_i    => faster_clock_s,
@@ -144,10 +169,25 @@ begin
     constant data_init_c : prbs_state(14 downto 0) := (others => '1');
     variable verify_state : prbs_state(14 downto 0);
     variable expected     : std_ulogic_vector(0 to output_width_c - 1);
+    type t_data_array is array (0 to ratio_c - 1) of std_ulogic_vector(0 to output_width_c - 1);
+    variable expected_array : t_data_array;
+    variable received_array : t_data_array;
     variable bits_verified : natural := 0;
     variable marker_pos   : integer := -1;
     variable partial_len  : integer;
     variable partial_exp  : std_ulogic_vector(0 to output_width_c - 1);
+    variable express_eval : boolean := false;
+    
+    function swap_chunks(vec : std_ulogic_vector; chunk_w : positive) return std_ulogic_vector is
+      variable vRet : std_ulogic_vector(vec'range);
+      constant n : natural := vec'length / chunk_w;
+    begin
+      for i in 0 to n - 1 loop
+        vRet(i*chunk_w to (i+1)*chunk_w - 1) := vec((n-1-i)*chunk_w to (n-i)*chunk_w - 1);
+      end loop;
+      return vRet;
+    end function;
+    
   begin
     done_s(1) <= '0';
     verify_state := data_init_c;
@@ -183,42 +223,87 @@ begin
     log_info("Starting PRBS verification...");
 
     -- First partial word after marker (if any bits remain in this word)
-    if marker_pos < output_width_c - 1 then
-      partial_len := output_width_c - 1 - marker_pos;
-      partial_exp(0 to partial_len - 1) := prbs_bit_string(verify_state, data_poly_c, partial_len);
+    if left_to_right_c then
+      if marker_pos < output_width_c - 1 then
+        partial_len := output_width_c - 1 - marker_pos;
+        partial_exp(0 to partial_len - 1) := prbs_bit_string(verify_state, data_poly_c, partial_len);
+        express_eval := out_s(marker_pos + 1 to output_width_c - 1) /= partial_exp(0 to partial_len - 1);
+        if express_eval then
+          log_error("PRBS mismatch in first partial word: expected " &
+                    to_string(partial_exp(0 to partial_len - 1)) &
+                    ", got " & to_string(out_s(marker_pos + 1 to output_width_c - 1)));
+          assert false report "PRBS mismatch" severity failure;
+        end if;
 
-      if out_s(marker_pos + 1 to output_width_c - 1) /= partial_exp(0 to partial_len - 1) then
-        log_error("PRBS mismatch in first partial word: expected " &
-                  to_string(partial_exp(0 to partial_len - 1)) &
-                  ", got " & to_string(out_s(marker_pos + 1 to output_width_c - 1)));
-        assert false report "PRBS mismatch" severity failure;
+        verify_state := prbs_forward(verify_state, data_poly_c, partial_len);
+        bits_verified := bits_verified + partial_len;        
       end if;
 
-      verify_state := prbs_forward(verify_state, data_poly_c, partial_len);
-      bits_verified := bits_verified + partial_len;
+    else
+      if (marker_pos + chunk_size_c) < output_width_c then
+        partial_len := output_width_c - marker_pos - chunk_size_c;
+        partial_exp(0 to partial_len - 1) := prbs_bit_string(verify_state, data_poly_c, partial_len);
+        express_eval := out_s(0 to partial_len - 1) /= partial_exp(0 to partial_len - 1);
+        if express_eval then
+          log_error("PRBS mismatch in first partial word: expected " &
+                    to_string(partial_exp(0 to partial_len - 1)) &
+                    ", got " & to_string(out_s(marker_pos + 1 to output_width_c - 1)));
+          assert false report "PRBS mismatch" severity failure;
+        end if;
+
+        verify_state := prbs_forward(verify_state, data_poly_c, partial_len);
+        bits_verified := bits_verified + partial_len;        
+      end if;
     end if;
+
+    if left_to_right_c = false and (input_width_c > output_width_c) then
+      wait until rising_edge(clock_output_s); -- Re-align since chunks are flipped
+      wait for 1 ns;        
+    end if;    
 
     -- Full words
     while bits_verified < total_bits_c loop
-      wait until rising_edge(clock_output_s);
-      wait for 1 ns;
+      for i in 0 to (ratio_c - 1) loop
+        wait until rising_edge(clock_output_s);
+        wait for 1 ns;
 
-      expected := prbs_bit_string(verify_state, data_poly_c, output_width_c);
+        expected := prbs_bit_string(verify_state, data_poly_c, output_width_c);
 
-      if out_s /= expected then
-        log_error("PRBS mismatch at bit " & to_string(bits_verified) &
-                  ": expected " & to_string(expected) &
-                  ", got " & to_string(out_s));
-        assert false report "PRBS mismatch" severity failure;
-      end if;
+        if left_to_right_c = false then
+          expected := swap_chunks(expected, chunk_size_c);
+        end if;
 
-      verify_state := prbs_forward(verify_state, data_poly_c, output_width_c);
-      bits_verified := bits_verified + output_width_c;
+        expected_array(i) := expected;
+        received_array(i) := out_s;
+
+        verify_state := prbs_forward(verify_state, data_poly_c, output_width_c);
+
+      end loop;
+
+      for i in 0 to (ratio_c - 1) loop
+        if left_to_right_c or (input_width_c < output_width_c) then
+          if received_array(i) /= expected_array(i) then
+            log_error("PRBS mismatch at bit " & to_string(bits_verified) &
+                      ": expected " & to_string(expected_array(i)) &
+                      ", got " & to_string(received_array(i)));
+            assert false report "PRBS mismatch" severity failure;
+          end if;
+        else
+          if received_array(ratio_c - 1 - i) /= expected_array(i) then
+            log_error("PRBS mismatch at bit " & to_string(bits_verified) &
+                      ": expected " & to_string(expected_array(i)) &
+                      ", got " & to_string(received_array(ratio_c - 1 - i)));
+            assert false report "PRBS mismatch" severity failure;
+          end if;          
+        end if;
+      end loop;
+
+      bits_verified := bits_verified + ratio_c * output_width_c;
 
       -- Progress report
       if bits_verified mod 1000 < output_width_c then
         log_info("Verified " & to_string(bits_verified) & " bits...");
-      end if;
+      end if;            
     end loop;
 
     log_info("=== TEST PASSED ===");
