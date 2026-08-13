@@ -285,7 +285,7 @@ begin
         axi_o.b <= accept(config_c, true);
 
       when ST_READ_CMD =>
-        axi_o.aw <= address(config_c, addr => r.addr, valid => true);
+        axi_o.ar <= address(config_c, addr => r.addr, valid => true);
 
       when ST_READ_RSP =>
         axi_o.r <= accept(config_c, true);
