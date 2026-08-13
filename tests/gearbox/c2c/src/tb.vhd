@@ -21,17 +21,18 @@ use nsl_data.prbs.all;
 
 entity tb is
   generic(
-    input_width_c      : positive := 16;
-    output_width_c     : positive := 8
+    input_width_c         : positive := 8;
+    output_width_c        : positive := 16;
+    input_clock_period_c  : time := 8 ns;
+    output_clock_period_c : time := 16 ns
     );
 end entity;
 
 architecture arch of tb is
 
-  signal clock125_s   : std_ulogic;
-  signal clockslow_s   : std_ulogic;
   signal clock_input_s : std_ulogic;
   signal clock_output_s : std_ulogic;
+  signal faster_clock_s : std_ulogic;
   signal reset_n_s : std_ulogic;
   signal done_s    : std_ulogic_vector(0 to 1);
 
@@ -45,6 +46,16 @@ architecture arch of tb is
 
 begin
 
+  gen_input_slower: if input_clock_period_c > output_clock_period_c generate
+  begin
+    faster_clock_s <= clock_output_s;
+  end generate;
+
+  gen_output_slower: if input_clock_period_c < output_clock_period_c generate
+  begin
+    faster_clock_s <= clock_input_s;
+  end generate;  
+
   simdrv: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 2,
@@ -52,11 +63,11 @@ begin
       done_count  => done_s'length
       )
     port map(
-      clock_period(0) => 8 ns,
-      clock_period(1) => 16 ns,
+      clock_period(0) => output_clock_period_c,
+      clock_period(1) => input_clock_period_c,
       reset_duration  => (others => 100 ns),
-      clock_o(0)      => clock125_s,
-      clock_o(1)      => clockslow_s,      
+      clock_o(0)      => clock_output_s,
+      clock_o(1)      => clock_input_s,      
       reset_n_o(0)    => reset_n_s,
       done_i          => done_s
       );
@@ -68,17 +79,13 @@ begin
       left_to_right_c        => true
       )
     port map(
-      clock_i    => clock125_s,
+      clock_i    => faster_clock_s,
       reset_n_i  => reset_n_s,
       in_i       => in_s,
       ready_o    => ready_s,
       out_o      => out_s,
       valid_o    => valid_s
       );
-
-  -- Assign clocks
-  clock_input_s <= clockslow_s;
-  clock_output_s <= clock125_s;
 
   -- Input generation process
   input_proc: process
