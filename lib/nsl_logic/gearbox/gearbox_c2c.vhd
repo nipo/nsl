@@ -24,19 +24,19 @@ use ieee.std_logic_1164.all;
 
 entity gearbox_c2c is
   generic(
-    input_width_c  : positive;
-    output_width_c : positive;
+    input_width_c   : positive;
+    output_width_c  : positive;
     left_to_right_c : boolean := false
     );
   port(
-    clock_i   : in  std_ulogic;
-    reset_n_i : in  std_ulogic;
-    
-    in_i      : in  std_ulogic_vector(0 to input_width_c - 1);
-    ready_o   : out std_ulogic;
-    
-    out_o     : out std_ulogic_vector(0 to output_width_c - 1);
-    valid_o   : out std_ulogic
+    clock_i   : in std_ulogic;
+    reset_n_i : in std_ulogic;
+
+    in_i    : in  std_ulogic_vector(0 to input_width_c - 1);
+    ready_o : out std_ulogic;
+
+    out_o   : out std_ulogic_vector(0 to output_width_c - 1);
+    valid_o : out std_ulogic
     );
 end entity gearbox_c2c;
 
@@ -79,9 +79,9 @@ begin
   -- output_width_c - 1). 
   ------------------------------------------------------------------------
   gen_downsize : if input_width_c > output_width_c generate
-    signal shift_reg_s : std_ulogic_vector(0 to input_width_c - 1);
-    signal count_s     : natural range 0 to ratio_c - 1;
-    constant dont_cares_c   : std_ulogic_vector(0 to output_width_c - 1) := (others => '-');
+    signal shift_reg_s    : std_ulogic_vector(0 to input_width_c - 1);
+    signal count_s        : natural range 0 to ratio_c - 1;
+    constant dont_cares_c : std_ulogic_vector(0 to output_width_c - 1) := (others => '-');
   begin
 
     valid_o <= '1';
@@ -93,16 +93,16 @@ begin
         count_s     <= ratio_c - 1;
         ready_o     <= '0';
       end if;
-      
+
       if rising_edge(clock_i) then
         if count_s = 0 then
           shift_reg_s <= in_i;
           count_s     <= ratio_c - 1;
           ready_o     <= '0';
         else
-          count_s     <= count_s - 1;
-          ready_o     <= '1';
-          
+          count_s <= count_s - 1;
+          ready_o <= '1';
+
           if left_to_right_c then
             shift_reg_s <= shift_reg_s(output_width_c to input_width_c - 1) & dont_cares_c;
           else
@@ -145,7 +145,7 @@ begin
         count_s     <= ratio_c -1;
         valid_o     <= '0';
       end if;
-      
+
       if rising_edge(clock_i) then
         if left_to_right_c then
           shift_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
@@ -154,8 +154,8 @@ begin
         end if;
 
         if count_s = 0 then
-          count_s   <= ratio_c - 1;
-          valid_o   <= '1';
+          count_s <= ratio_c - 1;
+          valid_o <= '1';
           if left_to_right_c then
             out_reg_s <= shift_reg_s(input_width_c to output_width_c - 1) & in_i;
           else
@@ -176,7 +176,7 @@ begin
   -- Equal width: ratio_c = 1, trivial passthrough.
   ------------------------------------------------------------------------
   gen_equal : if input_width_c = output_width_c generate
-    out_o <= in_i;
+    out_o   <= in_i;
     ready_o <= '1';
     valid_o <= '1';
   end generate gen_equal;
