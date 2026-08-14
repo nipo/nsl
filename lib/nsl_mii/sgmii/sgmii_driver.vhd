@@ -1,13 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library work, nsl_line_coding, nsl_io, nsl_logic, nsl_bnoc;
-use nsl_logic.bool.all;
-use nsl_line_coding.ibm_8b10b.all;
-use nsl_io.diff.all;
-use nsl_io.pad.all;
-use nsl_io.serdes.all;
-use nsl_io.delay.all;
+library work, nsl_bnoc;
 use work.link.all;
 use work.flit.all;
 use work.sgmii.all;
@@ -17,38 +11,27 @@ entity sgmii_driver is
     link_timer_c : positive := 200000
     );
   port (
-    reset_n_i  : in std_ulogic;
-    clock125_i : in std_ulogic;
-    clock625_i : in std_ulogic;
+    reset_n_i : in std_ulogic;
+    clock_i   : in std_ulogic;
 
     sgmii_o : out sgmii_m2p;
     sgmii_i : in  sgmii_p2m;
 
-    link_speed_i : in link_speed_t := LINK_SPEED_1000;
-    link_up_o : out std_ulogic;
+    link_speed_i : in  link_speed_t := LINK_SPEED_1000;
+    link_up_o    : out std_ulogic;
 
     rx_o : out nsl_bnoc.committed.committed_req;
     rx_i : in  nsl_bnoc.committed.committed_ack;
 
     tx_i : in  nsl_bnoc.committed.committed_req;
     tx_o : out nsl_bnoc.committed.committed_ack
-    );    
+    );
 
 end entity sgmii_driver;
 
 architecture beh of sgmii_driver is
 
   -- Internal signals
-  signal s_clk_m2p_diff  : nsl_io.diff.diff_pair;
-  signal s_clk_p2m_diff  : nsl_io.diff.diff_pair;
-  signal s_data_m2p_diff : nsl_io.diff.diff_pair;
-  signal s_data_p2m_diff : nsl_io.diff.diff_pair;
-
-  signal s_clk_m2p_se  : std_ulogic;
-  signal s_clk_p2m_se  : std_ulogic;
-  signal s_data_m2p_se : std_ulogic;
-  signal s_data_p2m_se : std_ulogic;
-
   signal s_rx_config_valid : std_ulogic;
   signal s_rx_config       : config_reg_t;
   signal s_rx_idle_match   : std_ulogic;
@@ -56,59 +39,42 @@ architecture beh of sgmii_driver is
   signal s_tx_config       : config_reg_t;
   signal s_link_up         : std_ulogic;
 
-  signal s_tx2enc_symbol : nsl_line_coding.ibm_8b10b.data_t;
-  signal s_dec2rx_symbol : nsl_line_coding.ibm_8b10b.data_t;
-  signal s_ser2dec_code  : nsl_line_coding.ibm_8b10b.code_word_t;
-  signal s_enc2ser_code  : nsl_line_coding.ibm_8b10b.code_word_t;
-
   signal s_tx_flit           : mii_flit_t;
   signal s_rx_flit           : mii_flit_t;
-  signal s_rx_flit_valid     : std_ulogic;
   signal s_rx_valid_2_commit : std_ulogic;
 
   signal s_autoneg_restart : std_ulogic;
 
-  signal s_dec_valid_o       : std_ulogic;
-  signal s_code_error_o      : std_ulogic;
-  signal s_disparity_error_o : std_ulogic;
-  signal s_enc_valid_o       : std_ulogic;
-
   signal s_symbol_expected : std_ulogic;
-  signal s_valid_symbol : std_ulogic;
+  signal s_valid_symbol    : std_ulogic;
 
-  signal s_delay_shift : std_ulogic;
-  signal s_delay_mark : std_ulogic;
-  signal s_slip_shift : std_ulogic;
-  signal s_slip_mark : std_ulogic;
-  signal s_delayed_data : std_ulogic;
   signal s_align_ready : std_ulogic;
-  signal s_align_rst : std_ulogic;
+  signal s_align_rst   : std_ulogic;
 
   signal s_loss_connect_rst_n : std_ulogic;
 
 begin  -- architecture beh
 
   -- Signal assignments
-  -- Differential pairs
-  sgmii_o.clk_m2p_diff  <= s_clk_m2p_diff;
-  sgmii_o.data_m2p_diff <= s_data_m2p_diff;
-  s_clk_p2m_diff        <= sgmii_i.clk_p2m_diff;
-  s_data_p2m_diff       <= sgmii_i.data_p2m_diff;
+  -- Outputs
+  sgmii_o.align_rst    <= s_align_rst;
+  sgmii_o.sys_reset_n  <= s_loss_connect_rst_n;
+  sgmii_o.valid_symbol <= s_valid_symbol;
 
   -- Valid symbol
-  s_valid_symbol <= s_symbol_expected and not(s_code_error_o) and not(s_disparity_error_o);
+  s_valid_symbol <= s_symbol_expected and not(sgmii_i.code_err) and not(sgmii_i.disparity_err);
 
   -- Link up
   link_up_o <= s_link_up;
 
   -- Restart autonegotiation on loss of connection -----------------------------------------
-  s_autoneg_restart <= not(s_align_ready);
-  
-  sys_rst: process (clock125_i, reset_n_i) is
+  s_autoneg_restart <= not(sgmii_i.align_ready);
+
+  sys_rst : process (clock_i, reset_n_i) is
   begin
     if reset_n_i = '0' then
       s_loss_connect_rst_n <= '0';
-    elsif rising_edge(clock125_i) then  -- rising clock edge
+    elsif rising_edge(clock_i) then     -- rising clock edge
       if (s_link_up = '1') and (s_valid_symbol = '0') then
         s_loss_connect_rst_n <= '0';
       else
@@ -117,37 +83,37 @@ begin  -- architecture beh
     end if;
   end process;
 
-  align_rst: process (clock125_i, reset_n_i) is
+  align_rst : process (clock_i, reset_n_i) is
   begin
     if reset_n_i = '0' then
       s_align_rst <= '1';
-    elsif rising_edge(clock125_i) then  -- rising clock edge
-      if (s_align_ready = '1') and (s_valid_symbol = '0') then
+    elsif rising_edge(clock_i) then     -- rising clock edge
+      if (sgmii_i.align_ready = '1') and (s_valid_symbol = '0') then
         s_align_rst <= '1';
       else
         s_align_rst <= not(reset_n_i);
       end if;
     end if;
-  end process;    
+  end process;
 
   -- Component instatiation
   -- RX side --------------------------------------------------------------------------------
   sgmii_pcs_rx_1 : work.sgmii.sgmii_pcs_rx
     port map (
-      clock_i        => clock125_i,
-      reset_n_i      => s_loss_connect_rst_n,
-      symbol_i       => s_dec2rx_symbol,
+      clock_i           => clock_i,
+      reset_n_i         => s_loss_connect_rst_n,
+      symbol_i          => sgmii_i.data_p2m_symbol,
       symbol_expected_o => s_symbol_expected,
-      flit_o         => s_rx_flit,
-      config_valid_o => s_rx_config_valid,
-      config_o       => s_rx_config,
-      valid_o        => s_rx_valid_2_commit,
-      idle_match_o   => s_rx_idle_match
+      flit_o            => s_rx_flit,
+      config_valid_o    => s_rx_config_valid,
+      config_o          => s_rx_config,
+      valid_o           => s_rx_valid_2_commit,
+      idle_match_o      => s_rx_idle_match
       );
 
   rx_to_committed : work.flit.mii_flit_to_committed
     port map(
-      clock_i   => clock125_i,
+      clock_i   => clock_i,
       reset_n_i => s_loss_connect_rst_n,
 
       flit_i  => s_rx_flit,
@@ -157,92 +123,14 @@ begin  -- architecture beh
       committed_i => rx_i
       );
 
-  ibm_8b10b_decoder_1 : nsl_line_coding.ibm_8b10b.ibm_8b10b_decoder
-    generic map (
-      implementation_c => "logic")
-    port map (
-      clock_i           => clock125_i,
-      reset_n_i         => s_loss_connect_rst_n,
-      valid_i           => '1',
-      data_i            => s_ser2dec_code,
-      valid_o           => s_dec_valid_o,
-      data_o            => s_dec2rx_symbol,
-      code_error_o      => s_code_error_o,
-      disparity_error_o => s_disparity_error_o  
-      );
-
-  aligner: nsl_io.delay.input_delay_aligner_slow
-    generic map(
-      stabilization_delay_c => 8,
-      stabilization_cycle_c => 8
-      )
-    port map(
-      clock_i => clock125_i,
-      reset_n_i => s_loss_connect_rst_n,
-
-      delay_shift_o => s_delay_shift,
-      delay_mark_i => s_delay_mark,
-      serdes_shift_o => s_slip_shift,
-      serdes_mark_i => s_slip_mark,
-
-      restart_i => s_align_rst,
-      valid_i => s_valid_symbol,
-      ready_o => s_align_ready
-      );
-
-  delayer: nsl_io.delay.input_delay_variable
-    port map(
-      clock_i => clock125_i,
-      reset_n_i => s_loss_connect_rst_n,
-      mark_o => s_delay_mark,
-      shift_i => s_delay_shift,
-      data_i => s_data_p2m_se,
-      data_o => s_delayed_data
-      );  
-
-  serdes_ddr10_input_1 : nsl_io.serdes.serdes_ddr10_input
-    generic map (
-      left_to_right_c => false)
-    port map (
-      bit_clock_i  => clock625_i,
-      word_clock_i => clock125_i,
-      reset_n_i    => s_loss_connect_rst_n,
-      serial_i     => s_delayed_data,
-      parallel_o   => s_ser2dec_code,
-      bitslip_i    => s_slip_shift,
-      mark_o       => s_slip_mark
-      );
-
-  pad_diff_input_1 : nsl_io.pad.pad_diff_input
-    generic map (
-      diff_term => true,
-      is_clock  => false,
-      invert    => false)
-    port map (
-      p_diff => s_data_p2m_diff,
-      p_se   => s_data_p2m_se
-      );
-
-  pad_diff_input_2 : nsl_io.pad.pad_diff_input
-    generic map (
-      diff_term => true,
-      is_clock  => true,
-      invert    => false)
-    port map (
-      p_diff => s_clk_p2m_diff,
-      p_se   => s_clk_p2m_se
-      );
-
   -- TX side --------------------------------------------------------------------------------
-
-  s_clk_m2p_se <= clock125_i;
 
   sgmii_pcs_tx_1 : work.sgmii.sgmii_pcs_tx
     port map (
-      clock_i       => clock125_i,
+      clock_i       => clock_i,
       reset_n_i     => s_loss_connect_rst_n,
       flit_i        => s_tx_flit,
-      symbol_o      => s_tx2enc_symbol,
+      symbol_o      => sgmii_o.data_m2p_symbol,
       send_config_i => s_tx_send_config,
       config_i      => s_tx_config,
       link_up_i     => s_link_up
@@ -253,7 +141,7 @@ begin  -- architecture beh
       ipg_c => 96
       )
     port map(
-      clock_i   => clock125_i,
+      clock_i   => clock_i,
       reset_n_i => s_loss_connect_rst_n,
 
       committed_i => tx_i,
@@ -263,51 +151,12 @@ begin  -- architecture beh
       ready_i => s_link_up
       );
 
-  ibm_8b10b_encoder_1 : nsl_line_coding.ibm_8b10b.ibm_8b10b_encoder
-    generic map (
-      implementation_c => "logic")
-    port map (
-      clock_i   => clock125_i,
-      reset_n_i => s_loss_connect_rst_n,
-      valid_i   => '1',
-      data_i    => s_tx2enc_symbol,
-      valid_o   => s_enc_valid_o,
-      data_o    => s_enc2ser_code
-      );
-
-  serdes_ddr10_output_1 : nsl_io.serdes.serdes_ddr10_output
-    generic map (
-      left_to_right_c => false)
-    port map (
-      bit_clock_i  => clock625_i,
-      word_clock_i => s_clk_m2p_se,
-      reset_n_i    => s_loss_connect_rst_n,
-      parallel_i   => s_enc2ser_code,
-      serial_o     => s_data_m2p_se
-      );
-
-  pad_diff_output_1 : nsl_io.pad.pad_diff_output
-    generic map (
-      is_clock => false)
-    port map (
-      p_se   => s_data_m2p_se,
-      p_diff => s_data_m2p_diff
-      );
-
-  pad_diff_output_2 : nsl_io.pad.pad_diff_output
-    generic map (
-      is_clock => true)
-    port map (
-      p_se   => s_clk_m2p_se,
-      p_diff => s_clk_m2p_diff
-      );
-
   -- Auto negotiation ----------------------------------------------------------------------
   sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
     generic map (
       link_timer_cycles_c => link_timer_c)
     port map (
-      clock_i           => clock125_i,
+      clock_i           => clock_i,
       reset_n_i         => s_loss_connect_rst_n,
       config_i          => "0000000000100000",  -- See IEEE 802.3 clause 37
                                                 -- Full Duplex only, no pause,
@@ -321,6 +170,6 @@ begin  -- architecture beh
       send_config_o     => s_tx_send_config,
       tx_config_o       => s_tx_config,
       link_up_o         => s_link_up
-      );  
+      );
 
 end architecture beh;
