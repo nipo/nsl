@@ -22,8 +22,8 @@ TB_BINARY = "./tb"
 
 # ---- Sweep parameters ------------------------------------------------
 
-BASE_WIDTHS = [4, 8, 16]          # "smaller" width candidates
-MULTIPLIERS = [1, 2]           # k: how many times bigger the other width/clock is
+BASE_WIDTHS = [4, 8, 16, 32]          # "smaller" width candidates
+MULTIPLIERS = [1, 2, 3, 4, 5]           # k: how many times bigger the other width/clock is
 BASE_CLOCK_PERIOD_NS = 8          # period (ns) of the faster clock, paired with the smaller width
 LEFT_TO_RIGHT_VALUES = [True, False]
 
