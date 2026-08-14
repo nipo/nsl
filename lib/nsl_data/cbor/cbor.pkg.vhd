@@ -62,6 +62,16 @@ package cbor is
   -- Retrieves the argument as an integer.
   function arg_int(parser: parser_t) return integer;
 
+  -- Parses the item header at the start of data and returns the
+  -- resulting parser state. data must contain a complete header.
+  function cbor_parse(data: byte_string) return parser_t;
+  -- Byte count of the item header at the start of data.
+  function cbor_header_length(data: byte_string) return natural;
+  -- Byte count of the whole item at the start of data, contents
+  -- included. Items being self-delimiting, this is what walks a
+  -- concatenation of items.
+  function cbor_item_length(data: byte_string) return natural;
+
   -- Serializes a full item of type positive. Will encode the value
   -- with the minimum count of bytes.
   function cbor_positive(value: natural) return byte_string;
@@ -279,6 +289,100 @@ package body cbor is
   is
   begin
     return to_integer(arg(parser, 32));
+  end function;
+
+  function cbor_parse(data: byte_string) return parser_t
+  is
+    alias d: byte_string(0 to data'length-1) is data;
+    variable p: parser_t := reset;
+  begin
+    for i in d'range
+    loop
+      p := feed(p, d(i));
+      if is_done(p) then
+        return p;
+      end if;
+    end loop;
+
+    assert false
+      report "Truncated CBOR item header"
+      severity failure;
+    return p;
+  end function;
+
+  function cbor_header_length(data: byte_string) return natural
+  is
+    alias d: byte_string(0 to data'length-1) is data;
+    variable p: parser_t := reset;
+  begin
+    for i in d'range
+    loop
+      p := feed(p, d(i));
+      if is_done(p) then
+        return i + 1;
+      end if;
+    end loop;
+
+    assert false
+      report "Truncated CBOR item header"
+      severity failure;
+    return 0;
+  end function;
+
+  function cbor_item_length(data: byte_string) return natural
+  is
+    alias d: byte_string(0 to data'length-1) is data;
+    constant p: parser_t := cbor_parse(d);
+    variable i: natural := cbor_header_length(d);
+    variable item_count: natural;
+  begin
+    case kind(p) is
+      when KIND_INVALID =>
+        assert false
+          report "Invalid CBOR item"
+          severity failure;
+
+      when KIND_BSTR | KIND_TSTR =>
+        if p.indefinite then
+          while kind(cbor_parse(d(i to d'right))) /= KIND_BREAK
+          loop
+            i := i + cbor_item_length(d(i to d'right));
+          end loop;
+          i := i + 1;
+        else
+          i := i + arg_int(p);
+        end if;
+
+      when KIND_ARRAY | KIND_MAP =>
+        if p.indefinite then
+          while kind(cbor_parse(d(i to d'right))) /= KIND_BREAK
+          loop
+            i := i + cbor_item_length(d(i to d'right));
+          end loop;
+          i := i + 1;
+        else
+          item_count := arg_int(p);
+          if kind(p) = KIND_MAP then
+            item_count := item_count * 2;
+          end if;
+          for e in 1 to item_count
+          loop
+            i := i + cbor_item_length(d(i to d'right));
+          end loop;
+        end if;
+
+      when KIND_TAG =>
+        i := i + cbor_item_length(d(i to d'right));
+
+      when others =>
+        null;
+    end case;
+
+    assert i <= d'length
+      report "Truncated CBOR item"
+      severity failure;
+
+    return i;
   end function;
 
   function item_encode_undef(major: integer range 0 to 7)

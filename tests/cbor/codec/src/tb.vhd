@@ -27,7 +27,18 @@ architecture arch of tb is
     log_info(ctx, "OK");
     wait;
   end procedure;
-  
+
+  procedure length_assert(ctx: string; data: byte_string;
+                          header_size: natural; item_size: natural)
+  is
+  begin
+    assert_equal(ctx & " header length", cbor_header_length(data), header_size, FAILURE);
+    assert_equal(ctx & " item length", cbor_item_length(data), item_size, FAILURE);
+
+    log_info(ctx, "OK");
+    wait;
+  end procedure;
+
 begin
 
   codec_assert("ne1",
@@ -104,5 +115,20 @@ begin
                from_hex("5f42010243030405ff"),
                cbor_bstr_undef(cbor_bstr(from_hex("0102")) & cbor_bstr(from_hex("030405"))),
                "(_ h'0102', h'030405')");
-  
+
+  length_assert("l_uint", from_hex("01"), 1, 1);
+  length_assert("l_uint16", from_hex("1904d2"), 3, 3);
+  length_assert("l_bstr", from_hex("4401020304"), 1, 5);
+  length_assert("l_tstr", cbor_tstr("hello"), 1, 6);
+  length_assert("l_array", from_hex("820102"), 1, 3);
+  length_assert("l_map", from_hex("a201020304"), 1, 5);
+  length_assert("l_nested",
+                cbor_array(cbor_array(cbor_number(1)), cbor_tstr("x")), 1, 5);
+  length_assert("l_tag",
+                from_hex("d82076687474703a2f2f7777772e6578616d706c652e636f6d"), 2, 25);
+  length_assert("l_bstr_undef", from_hex("5f42010243030405ff"), 1, 9);
+  length_assert("l_map_undef", from_hex("bf6346756ef563416d7421ff"), 1, 12);
+  -- Items being self-delimiting, a concatenation is walked one item at a time.
+  length_assert("l_concat", from_hex("820102") & from_hex("a201020304"), 1, 3);
+
 end;

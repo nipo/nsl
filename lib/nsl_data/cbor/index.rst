@@ -16,6 +16,20 @@ will give out the details of the item.  For items containing data
 (BSTR, TSTR), it is caller's responsability to consume data length
 before returning to parsing an item.
 
+Buffer walking
+--------------
+
+When the whole encoded data is available as a ``byte_string``,
+``cbor_parse()`` yields the parser state for the item header at the
+start of the buffer, ``cbor_header_length()`` the size of that header,
+and ``cbor_item_length()`` the size of the whole item, contents
+included. The latter walks a concatenation of items:
+
+.. code:: vhdl
+
+   -- Second item of a concatenation
+   second := data(data'left + cbor_item_length(data) to data'right);
+
 Diagnostic pretty-printer
 -------------------------
 
