@@ -14,11 +14,18 @@ package slave is
   --
   -- There is a configurable count of bytes for address, used as big-endian.
   -- Data words are transceived in order.
+  --
+  -- On reads, dummy_bytes_c bytes are inserted between address and data.
+  -- Their contents on MISO is undefined, and the read of the first data
+  -- word is issued as soon as the address is complete, so the dummy bytes
+  -- are turnaround time for a memory that cannot answer at line rate.
+  -- Writes have no dummy byte.
   component spi_memory_controller is
     generic(
       addr_bytes_c   : natural range 1 to 4 := 1;
       data_bytes_c   : natural range 1 to 4 := 1;
-      write_opcode_c : byte := x"0b"
+      write_opcode_c : byte := x"0b";
+      dummy_bytes_c  : natural := 0
       );
     port(
       clock_i : in std_ulogic;

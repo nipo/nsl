@@ -16,8 +16,12 @@ architecture sim of tb is
   constant cpha_c: std_ulogic := '0';
   constant half_cycle: time := 77 ns;
   
+  -- Dummy bytes inserted between address and data on the reads of the
+  -- second controller.
+  constant dummy_bytes_c: natural := 2;
+
   signal clock_s, reset_n_s: std_ulogic;
-  signal done_s: std_ulogic_vector(0 to 1);
+  signal done_s: std_ulogic_vector(0 to 3);
 
   signal addr_s: unsigned(15 downto 0);
   signal tx_data_s, rx_data_s: byte_string(0 to 3);
@@ -26,6 +30,14 @@ architecture sim of tb is
 
   signal spi_m: nsl_spi.spi.spi_slave_i;
   signal spi_s: nsl_spi.spi.spi_slave_o;
+
+  signal dummy_addr_s: unsigned(15 downto 0);
+  signal dummy_tx_data_s, dummy_rx_data_s: byte_string(0 to 3);
+  signal dummy_tx_ready_s, dummy_rx_valid_s: std_ulogic;
+  signal dummy_active_s : std_ulogic;
+
+  signal dummy_spi_m: nsl_spi.spi.spi_slave_i;
+  signal dummy_spi_s: nsl_spi.spi.spi_slave_o;
 
   procedure spi_io(signal m: out nsl_spi.spi.spi_slave_i;
                    signal s: in nsl_spi.spi.spi_slave_o;
@@ -168,6 +180,37 @@ begin
     done_s(1) <= '1';
     wait;
   end process;
+
+  -- Same sequence against a controller asking for dummy bytes: the read
+  -- carries two of them between address and data, the write carries none.
+  dummy_spi_trx: process
+  begin
+    dummy_spi_m.cs_n <= '1';
+    done_s(2) <= '0';
+
+    spi_io(dummy_spi_m, dummy_spi_s,
+           from_hex("03123400000000000000000000"),
+           from_hex("----------deadbeefdecafbad"), cpol_c, cpha_c);
+    spi_io(dummy_spi_m, dummy_spi_s,
+           from_hex("0b45679876543219876541"),
+           from_hex("----------------------"), cpol_c, cpha_c);
+
+    done_s(2) <= '1';
+    wait;
+  end process;
+
+  dummy_par_trx: process
+  begin
+    done_s(3) <= '0';
+
+    parallel_tx(dummy_tx_data_s, dummy_tx_ready_s, dummy_active_s, dummy_addr_s,
+                x"1234", from_hex("deadbeefdecafbad"));
+    parallel_rx(dummy_rx_data_s, dummy_rx_valid_s, dummy_active_s, dummy_addr_s,
+                x"4567", from_hex("9876543219876541"));
+
+    done_s(3) <= '1';
+    wait;
+  end process;
   
   dut: nsl_spi.slave.spi_memory_controller
     generic map(
@@ -196,6 +239,34 @@ begin
       wvalid_o => rx_valid_s
       );
   
+  dummy_dut: nsl_spi.slave.spi_memory_controller
+    generic map(
+      addr_bytes_c => dummy_addr_s'length/8,
+      data_bytes_c => dummy_tx_data_s'length,
+      write_opcode_c => x"0b",
+      dummy_bytes_c => dummy_bytes_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      spi_i => dummy_spi_m,
+      spi_o => dummy_spi_s,
+
+      selected_o => dummy_active_s,
+
+      addr_o => dummy_addr_s,
+
+      cpol_i => cpol_c,
+      cpha_i => cpha_c,
+
+      rdata_i => dummy_tx_data_s,
+      rready_o => dummy_tx_ready_s,
+
+      wdata_o => dummy_rx_data_s,
+      wvalid_o => dummy_rx_valid_s
+      );
+
   simdrv: nsl_simulation.driver.simulation_driver
     generic map(
       clock_count => 1,

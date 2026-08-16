@@ -11,7 +11,8 @@ entity spi_memory_controller is
   generic(
     addr_bytes_c   : natural range 1 to 4 := 1;
     data_bytes_c   : natural range 1 to 4 := 1;
-    write_opcode_c : byte := x"0b"
+    write_opcode_c : byte := x"0b";
+    dummy_bytes_c  : natural := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -43,6 +44,7 @@ architecture rtl of spi_memory_controller is
     ST_IDLE,
     ST_CMD,
     ST_ADDR,
+    ST_DUMMY,
     ST_WRITE,
     ST_READ
     );
@@ -51,6 +53,7 @@ architecture rtl of spi_memory_controller is
   record
     state : st_t;
     addr_left : natural range 0 to addr_bytes_c-1;
+    dummy_left : natural range 0 to dummy_bytes_c;
     data_left : natural range 0 to data_bytes_c-1;
     addr : byte_string(0 to addr_bytes_c-1);
     data : byte_string(0 to data_bytes_c-1);
@@ -106,15 +109,29 @@ begin
               rin.state <= ST_WRITE;
             else
               rin.data_left <= data_bytes_c - 1;
-              rin.state <= ST_READ;
               rin.mem_read_pending <= true;
+              if dummy_bytes_c = 0 then
+                rin.state <= ST_READ;
+              else
+                rin.state <= ST_DUMMY;
+                rin.dummy_left <= dummy_bytes_c - 1;
+              end if;
             end if;
           else
             rin.addr_left <= r.addr_left - 1;
           end if;
           rin.addr <= shift_left(r.addr, from_spi_data_s);
         end if;
-        
+
+      when ST_DUMMY =>
+        if from_spi_valid_s = '1' then
+          if r.dummy_left = 0 then
+            rin.state <= ST_READ;
+          else
+            rin.dummy_left <= r.dummy_left - 1;
+          end if;
+        end if;
+
       when ST_READ =>
         if to_spi_ready_s = '1' then
           if r.data_left = 0 then
