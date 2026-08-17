@@ -4,6 +4,7 @@ vhdl-sources += sgmii_pcs_rx.vhd
 vhdl-sources += sgmii_pcs_tx.vhd
 vhdl-sources += sgmii_autoneg.vhd
 vhdl-sources += sgmii_serdes_backend.vhd
+vhdl-sources += sgmii_transceiver_backend.vhd
 
 deps += nsl_data.bytestream
 deps += nsl_bnoc.committed

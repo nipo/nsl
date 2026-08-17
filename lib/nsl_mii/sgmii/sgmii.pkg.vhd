@@ -107,11 +107,35 @@ package sgmii is
 
   component sgmii_serdes_backend is
     port (
-      reset_n_i   : in  std_ulogic;
-      clock125_i  : in  std_ulogic;
-      clock625_i  : in  std_ulogic;
-      sgmii_i     : in  sgmii_m2p;
-      sgmii_o     : out sgmii_p2m;
+      reset_n_i  : in std_ulogic;
+      clock125_i : in std_ulogic;
+      clock625_i : in std_ulogic;
+
+      sgmii_i : in  sgmii_m2p;
+      sgmii_o : out sgmii_p2m;
+
+      pair_diff_i : in  nsl_io.diff.diff_pair;
+      pair_diff_o : out nsl_io.diff.diff_pair
+      );
+  end component;
+
+  component sgmii_transceiver_backend is
+    port (
+      gt_ref_clk_pair_i : in nsl_io.diff.diff_pair;
+      stable_clk_i      : in std_ulogic;
+      stable_rst_n_i    : in std_ulogic;
+
+      clk62_5_o : out std_ulogic;
+      clk125_o  : out std_ulogic;
+      rst_n_o   : out std_ulogic;
+
+      pll_0_clk_o    : out std_ulogic;
+      pll_0_outref_o : out std_ulogic;
+      pll_0_locked_o : out std_ulogic;
+
+      sgmii_i : in  sgmii_m2p;
+      sgmii_o : out sgmii_p2m;
+
       pair_diff_i : in  nsl_io.diff.diff_pair;
       pair_diff_o : out nsl_io.diff.diff_pair
       );
