@@ -58,6 +58,14 @@ package testing is
                           pid : pid_t;
                           data : byte_string := null_byte_string);
 
+  -- Receive one packet and hand it over as it came, PID byte and CRC
+  -- included, so a caller may decide for itself what a mismatch means. An
+  -- empty stream is a timeout: the device transmitted nothing.
+  procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
+                                signal p2s: out utmi8_p2s;
+                                variable packet : inout byte_stream;
+                                timeout_cycles : integer := 1024);
+
   procedure utmi_packet_receive(signal s2p: in utmi8_s2p;
                                 signal p2s: out utmi8_p2s;
                                 packet : byte_string;
