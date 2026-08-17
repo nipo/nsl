@@ -20,12 +20,23 @@ package slave is
   -- word is issued as soon as the address is complete, so the dummy bytes
   -- are turnaround time for a memory that cannot answer at line rate.
   -- Writes have no dummy byte.
+  --
+  -- If discovery_data_c is not empty, discovery_command_c becomes an
+  -- opcode of its own, SPI-flash identification style: the payload is
+  -- streamed raw on MISO from its first byte, starting on the byte slot
+  -- that follows the opcode. There is no address phase, no dummy byte
+  -- (the payload is local, it needs no turnaround), and no memory access.
+  -- Bytes past the end of the payload are zeros. The payload is opaque to
+  -- this entity. If discovery_data_c is empty, no opcode is reserved and
+  -- discovery_command_c is a plain read command like any other.
   component spi_memory_controller is
     generic(
       addr_bytes_c   : natural range 1 to 4 := 1;
       data_bytes_c   : natural range 1 to 4 := 1;
       write_opcode_c : byte := x"0b";
-      dummy_bytes_c  : natural := 0
+      dummy_bytes_c  : natural := 0;
+      discovery_command_c : byte := x"9f";
+      discovery_data_c : byte_string := null_byte_string
       );
     port(
       clock_i : in std_ulogic;

@@ -20,8 +20,12 @@ architecture sim of tb is
   -- second controller.
   constant dummy_bytes_c: natural := 2;
 
+  -- Discovery payload of the third controller, shorter than the reads
+  -- the bench does of it.
+  constant discovery_data_c: byte_string := from_hex("112233445566");
+
   signal clock_s, reset_n_s: std_ulogic;
-  signal done_s: std_ulogic_vector(0 to 3);
+  signal done_s: std_ulogic_vector(0 to 5);
 
   signal addr_s: unsigned(15 downto 0);
   signal tx_data_s, rx_data_s: byte_string(0 to 3);
@@ -38,6 +42,14 @@ architecture sim of tb is
 
   signal dummy_spi_m: nsl_spi.spi.spi_slave_i;
   signal dummy_spi_s: nsl_spi.spi.spi_slave_o;
+
+  signal disco_addr_s: unsigned(15 downto 0);
+  signal disco_tx_data_s, disco_rx_data_s: byte_string(0 to 3);
+  signal disco_tx_ready_s, disco_rx_valid_s: std_ulogic;
+  signal disco_active_s : std_ulogic;
+
+  signal disco_spi_m: nsl_spi.spi.spi_slave_i;
+  signal disco_spi_s: nsl_spi.spi.spi_slave_o;
 
   procedure spi_io(signal m: out nsl_spi.spi.spi_slave_i;
                    signal s: in nsl_spi.spi.spi_slave_o;
@@ -81,7 +93,7 @@ architecture sim of tb is
         end if;
       end loop;
 
-      assert_equal("SPI MISO Data", shreg, rxs(off), warning);
+      assert_equal("SPI MISO Data", shreg, rxs(off), failure);
     end loop;
 
     wait for half_cycle;
@@ -112,7 +124,7 @@ architecture sim of tb is
       data <= tx(i to i + datas'length - 1);
       if ready = '0' then
         wait until ready = '1';
-        assert_equal("Parallel TX addr", address, expected_addr, warning);
+        assert_equal("Parallel TX addr", address, expected_addr, failure);
       end if;
       wait until ready = '0';
 
@@ -144,8 +156,8 @@ architecture sim of tb is
     while i < rxs'length
     loop
       wait until valid = '1';
-      assert_equal("Parallel RX addr", address, expected_addr, warning);
-      assert_equal("Parallel RX", datas, rxs(i to i + datas'length - 1), warning);
+      assert_equal("Parallel RX addr", address, expected_addr, failure);
+      assert_equal("Parallel RX", datas, rxs(i to i + datas'length - 1), failure);
       wait until valid = '0';
 
       expected_addr := expected_addr + 1;
@@ -165,6 +177,9 @@ begin
 
     spi_io(spi_m, spi_s, from_hex("031234----------------"), from_hex("------deadbeefdecafbad"), cpol_c, cpha_c);
     spi_io(spi_m, spi_s, from_hex("0b45679876543219876541"), from_hex("----------------------"), cpol_c, cpha_c);
+    -- No discovery payload here, so the discovery opcode is a read like
+    -- any other opcode.
+    spi_io(spi_m, spi_s, from_hex("9f1234----------------"), from_hex("------deadbeefdecafbad"), cpol_c, cpha_c);
 
     done_s(0) <= '1';
     wait;
@@ -176,6 +191,7 @@ begin
 
     parallel_tx(tx_data_s, tx_ready_s, active_s, addr_s, x"1234", from_hex("deadbeefdecafbad"));
     parallel_rx(rx_data_s, rx_valid_s, active_s, addr_s, x"4567", from_hex("9876543219876541"));
+    parallel_tx(tx_data_s, tx_ready_s, active_s, addr_s, x"1234", from_hex("deadbeefdecafbad"));
 
     done_s(1) <= '1';
     wait;
@@ -211,7 +227,51 @@ begin
     done_s(3) <= '1';
     wait;
   end process;
-  
+
+  -- Memory access on a controller that also answers discovery, then the
+  -- discovery command itself, twice: the payload is streamed from its
+  -- first byte, and the read runs past its end, where zeros come out.
+  disco_spi_trx: process
+  begin
+    disco_spi_m.cs_n <= '1';
+    done_s(4) <= '0';
+
+    spi_io(disco_spi_m, disco_spi_s,
+           from_hex("031234----------------"),
+           from_hex("------deadbeefdecafbad"), cpol_c, cpha_c);
+    spi_io(disco_spi_m, disco_spi_s,
+           from_hex("0b45679876543219876541"),
+           from_hex("----------------------"), cpol_c, cpha_c);
+    spi_io(disco_spi_m, disco_spi_s,
+           from_hex("9f" & "----------------------"),
+           from_hex("--" & "112233445566" & "0000000000"), cpol_c, cpha_c);
+    spi_io(disco_spi_m, disco_spi_s,
+           from_hex("9f--------"),
+           from_hex("--11223344"), cpol_c, cpha_c);
+    -- A memory read still works after discovery transactions.
+    spi_io(disco_spi_m, disco_spi_s,
+           from_hex("031234----------------"),
+           from_hex("------deadbeefdecafbad"), cpol_c, cpha_c);
+
+    done_s(4) <= '1';
+    wait;
+  end process;
+
+  disco_par_trx: process
+  begin
+    done_s(5) <= '0';
+
+    parallel_tx(disco_tx_data_s, disco_tx_ready_s, disco_active_s, disco_addr_s,
+                x"1234", from_hex("deadbeefdecafbad"));
+    parallel_rx(disco_rx_data_s, disco_rx_valid_s, disco_active_s, disco_addr_s,
+                x"4567", from_hex("9876543219876541"));
+    parallel_tx(disco_tx_data_s, disco_tx_ready_s, disco_active_s, disco_addr_s,
+                x"1234", from_hex("deadbeefdecafbad"));
+
+    done_s(5) <= '1';
+    wait;
+  end process;
+
   dut: nsl_spi.slave.spi_memory_controller
     generic map(
       addr_bytes_c => addr_s'length/8,
@@ -265,6 +325,34 @@ begin
 
       wdata_o => dummy_rx_data_s,
       wvalid_o => dummy_rx_valid_s
+      );
+
+  disco_dut: nsl_spi.slave.spi_memory_controller
+    generic map(
+      addr_bytes_c => disco_addr_s'length/8,
+      data_bytes_c => disco_tx_data_s'length,
+      write_opcode_c => x"0b",
+      discovery_data_c => discovery_data_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      spi_i => disco_spi_m,
+      spi_o => disco_spi_s,
+
+      selected_o => disco_active_s,
+
+      addr_o => disco_addr_s,
+
+      cpol_i => cpol_c,
+      cpha_i => cpha_c,
+
+      rdata_i => disco_tx_data_s,
+      rready_o => disco_tx_ready_s,
+
+      wdata_o => disco_rx_data_s,
+      wvalid_o => disco_rx_valid_s
       );
 
   simdrv: nsl_simulation.driver.simulation_driver

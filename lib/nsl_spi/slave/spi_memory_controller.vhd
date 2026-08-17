@@ -12,7 +12,9 @@ entity spi_memory_controller is
     addr_bytes_c   : natural range 1 to 4 := 1;
     data_bytes_c   : natural range 1 to 4 := 1;
     write_opcode_c : byte := x"0b";
-    dummy_bytes_c  : natural := 0
+    dummy_bytes_c  : natural := 0;
+    discovery_command_c : byte := x"9f";
+    discovery_data_c : byte_string := null_byte_string
     );
   port(
     clock_i : in std_ulogic;
@@ -40,13 +42,28 @@ end entity;
 
 architecture rtl of spi_memory_controller is
 
+  constant discovery_length_c : natural := discovery_data_c'length;
+  constant discovery_c : byte_string(0 to discovery_length_c-1) := discovery_data_c;
+
+  -- Discovery payload byte at index, zero once the payload is exhausted.
+  function discovery_byte(index: natural) return byte
+  is
+  begin
+    if index < discovery_length_c then
+      return discovery_c(index);
+    end if;
+
+    return x"00";
+  end function;
+
   type st_t is (
     ST_IDLE,
     ST_CMD,
     ST_ADDR,
     ST_DUMMY,
     ST_WRITE,
-    ST_READ
+    ST_READ,
+    ST_DISCOVERY
     );
 
   type regs_t is
@@ -55,6 +72,7 @@ architecture rtl of spi_memory_controller is
     addr_left : natural range 0 to addr_bytes_c-1;
     dummy_left : natural range 0 to dummy_bytes_c;
     data_left : natural range 0 to data_bytes_c-1;
+    discovery_index : natural range 0 to discovery_length_c;
     addr : byte_string(0 to addr_bytes_c-1);
     data : byte_string(0 to data_bytes_c-1);
 
@@ -95,9 +113,14 @@ begin
 
       when ST_CMD =>
         if from_spi_valid_s = '1' then
-          rin.writing <= from_spi_data_s = write_opcode_c;
-          rin.state <= ST_ADDR;
-          rin.addr_left <= addr_bytes_c - 1;
+          if discovery_length_c /= 0 and from_spi_data_s = discovery_command_c then
+            rin.state <= ST_DISCOVERY;
+            rin.discovery_index <= 0;
+          else
+            rin.writing <= from_spi_data_s = write_opcode_c;
+            rin.state <= ST_ADDR;
+            rin.addr_left <= addr_bytes_c - 1;
+          end if;
         end if;
 
       when ST_ADDR =>
@@ -144,6 +167,11 @@ begin
           end if;
         end if;
 
+      when ST_DISCOVERY =>
+        if to_spi_ready_s = '1' and r.discovery_index /= discovery_length_c then
+          rin.discovery_index <= r.discovery_index + 1;
+        end if;
+
       when ST_WRITE =>
         if from_spi_valid_s = '1' then
           rin.data <= shift_left(r.data, from_spi_data_s);
@@ -180,7 +208,9 @@ begin
   wvalid_o <= to_logic(r.mem_write_pending);
   wdata_o <= r.data;
   selected_o <= to_logic(r.state /= ST_IDLE);
-  to_spi_data_s <= first_left(r.data) when r.state = ST_READ else dontcare_byte_c;
+  to_spi_data_s <= first_left(r.data) when r.state = ST_READ
+                   else discovery_byte(r.discovery_index) when r.state = ST_DISCOVERY
+                   else dontcare_byte_c;
 
   shreg: nsl_spi.shift_register.slave_shift_register_oversampled
     generic map(
