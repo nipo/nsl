@@ -48,7 +48,6 @@ architecture beh of sgmii_driver is
   signal s_symbol_expected : std_ulogic;
   signal s_valid_symbol    : std_ulogic;
 
-  signal s_align_ready : std_ulogic;
   signal s_align_rst   : std_ulogic;
 
   signal s_loss_connect_rst_n : std_ulogic;
