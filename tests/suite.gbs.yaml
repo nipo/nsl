@@ -230,6 +230,9 @@ projects:
   - name: ibm_8b10b_stream
     path: ibm_8b10b/stream
     tags: [ghdl, simulation]
+  - name: ibm_8b10b_stream_idle_filter
+    path: ibm_8b10b/stream_idle_filter
+    tags: [ghdl, simulation]
   - name: ibm_8b10b_synchronous
     path: ibm_8b10b/synchronous
     tags: [ghdl, simulation]

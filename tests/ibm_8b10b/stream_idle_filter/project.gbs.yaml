@@ -1,0 +1,22 @@
+name: ibm_8b10b_stream_idle_filter
+
+root:
+  name: top
+  deps:
+    - nsl_data.text
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+    - nsl_line_coding.ibm_8b10b
+    - nsl_line_coding.ibm_8b10b_stream
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log
