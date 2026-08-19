@@ -4,6 +4,7 @@ vhdl-sources += sgmii_pcs_rx.vhd
 vhdl-sources += sgmii_pcs_tx.vhd
 vhdl-sources += sgmii_autoneg.vhd
 vhdl-sources += sgmii_serdes_backend.vhd
+vhdl-sources += sgmii_serdes_backend_series7.vhd
 vhdl-sources += sgmii_transceiver_backend.vhd
 
 deps += nsl_data.bytestream
@@ -17,3 +18,4 @@ deps += nsl_io.pad
 deps += nsl_io.serdes
 deps += nsl_io.ddr
 deps += nsl_io.delay
+deps += nsl_clocking.async

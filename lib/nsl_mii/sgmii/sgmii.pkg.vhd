@@ -119,6 +119,27 @@ package sgmii is
       );
   end component;
 
+  -- Xilinx series 7 backend that handles the clocking scheme
+  -- needed for the SERDES primitives (MMCM + BUFR + BUFIO, etc)
+  component sgmii_serdes_backend_series7 is
+    generic (
+      refclk_hz_c : positive := 25000000
+      );    
+    port (
+      ref_clk_i   : in std_ulogic;
+      ref_rst_n_i : in std_ulogic;
+
+      clk125_o : out std_ulogic;
+      rst_n_o  : out std_ulogic;
+
+      sgmii_i : in  sgmii_m2p;
+      sgmii_o : out sgmii_p2m;
+
+      pair_diff_i : in  nsl_io.diff.diff_pair;
+      pair_diff_o : out nsl_io.diff.diff_pair
+      );
+  end component;
+
   component sgmii_transceiver_backend is
     port (
       gt_ref_clk_pair_i : in nsl_io.diff.diff_pair;
