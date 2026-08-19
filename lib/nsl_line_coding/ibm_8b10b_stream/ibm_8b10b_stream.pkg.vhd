@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 
 library nsl_amba, nsl_data, nsl_line_coding;
 use nsl_data.bytestream.all;
+use nsl_data.text.all;
 use nsl_line_coding.ibm_8b10b.all;
 
 -- This package carries IBM 8b/10b symbol streams over AXI4-Stream.
@@ -93,6 +94,38 @@ package ibm_8b10b_stream is
                     dest: std_ulogic_vector := na_suv;
                     valid: boolean := true;
                     last: boolean := false) return master_t;
+
+  function transfer_defaults(cfg: config_t) return master_t;
+
+  function accept(cfg: config_t;
+                  ready: boolean := false) return slave_t;
+
+  -- Send a packet of 8b10b words, split into beats of word_count
+  -- words. When packet length is not a multiple of word_count, last
+  -- beat is padded with words that are neither strobed nor kept.
+  -- strobe and keep default to all-ones over the packet length.
+  -- Last is asserted on the final beat.
+  procedure packet_send(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: nsl_line_coding.ibm_8b10b.data_vector;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv);
+
+  -- Receive a fixed-size packet of 8b10b words. packet length must be
+  -- a multiple of word_count, strobe length must match packet length.
+  -- Every lane is returned along with its strobe bit; non-strobed
+  -- lanes carry whatever word is on the bus. When configuration has
+  -- last, framing is checked against packet size.
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet: out nsl_line_coding.ibm_8b10b.data_vector;
+                           variable strobe: out std_ulogic_vector);
 
   -- Replaces any strobed word matching idle_c with a non-strobed
   -- word. All other beat elements pass through unchanged. Output is
@@ -338,5 +371,121 @@ package body ibm_8b10b_stream is
                     valid => valid,
                     last => last);
   end function;
+
+  function transfer_defaults(cfg: config_t) return master_t
+  is
+  begin
+    return nsl_amba.axi4_stream.transfer_defaults(as_stream_config(cfg));
+  end function;
+
+  function accept(cfg: config_t;
+                  ready: boolean := false) return slave_t
+  is
+  begin
+    return nsl_amba.axi4_stream.accept(as_stream_config(cfg), ready);
+  end function;
+
+  procedure packet_send(constant cfg: config_t;
+                        signal clock: in std_ulogic;
+                        signal stream_i: in slave_t;
+                        signal stream_o: out master_t;
+                        constant packet: nsl_line_coding.ibm_8b10b.data_vector;
+                        constant strobe: std_ulogic_vector := na_suv;
+                        constant keep: std_ulogic_vector := na_suv;
+                        constant id: std_ulogic_vector := na_suv;
+                        constant dest: std_ulogic_vector := na_suv)
+  is
+    constant padding_len: integer := (-packet'length) mod cfg.word_count;
+    constant padding: data_vector(1 to padding_len)
+      := (others => (data => (others => '-'), control => '-'));
+    constant padded: data_vector(0 to packet'length+padding_len-1) := packet & padding;
+    variable word_strobe: std_ulogic_vector(0 to padded'length-1) := (others => '0');
+    variable word_keep: std_ulogic_vector(0 to padded'length-1) := (others => '0');
+    variable index: natural;
+  begin
+    if strobe'length /= 0 then
+      word_strobe(0 to strobe'length-1) := strobe;
+    else
+      word_strobe(0 to packet'length-1) := (others => '1');
+    end if;
+
+    if keep'length /= 0 then
+      word_keep(0 to keep'length-1) := keep;
+    else
+      word_keep(0 to packet'length-1) := (others => '1');
+    end if;
+
+    index := 0;
+    while index < padded'length
+    loop
+      nsl_amba.axi4_stream.send(
+        cfg => as_stream_config(cfg),
+        clock => clock,
+        stream_i => stream_i,
+        stream_o => stream_o,
+        beat => transfer(cfg => cfg,
+                         words => padded(index to index + cfg.word_count - 1),
+                         strobe => word_strobe(index to index + cfg.word_count - 1),
+                         keep => word_keep(index to index + cfg.word_count - 1),
+                         id => id,
+                         dest => dest,
+                         valid => true,
+                         last => index >= padded'length - cfg.word_count));
+      index := index + cfg.word_count;
+    end loop;
+  end procedure;
+
+  procedure packet_receive(constant cfg: config_t;
+                           signal clock: in std_ulogic;
+                           signal stream_i: in master_t;
+                           signal stream_o: out slave_t;
+                           variable packet: out nsl_line_coding.ibm_8b10b.data_vector;
+                           variable strobe: out std_ulogic_vector)
+  is
+    variable xpacket: data_vector(0 to packet'length-1);
+    variable xstrobe: std_ulogic_vector(0 to packet'length-1);
+    variable beat: master_t;
+    variable w: data_vector(0 to cfg.word_count-1);
+    variable s: std_ulogic_vector(0 to cfg.word_count-1);
+    variable offset: integer := 0;
+  begin
+    assert packet'length mod cfg.word_count = 0
+      report "Packet length must be a multiple of word count"
+      severity failure;
+    assert strobe'length = packet'length
+      report "Strobe length must match packet length"
+      severity failure;
+
+    while offset < xpacket'length
+    loop
+      nsl_amba.axi4_stream.receive(
+        cfg => as_stream_config(cfg),
+        clock => clock,
+        stream_i => stream_i,
+        stream_o => stream_o,
+        beat => beat);
+
+      w := words(cfg, beat);
+      s := work.ibm_8b10b_stream.strobe(cfg, beat);
+
+      for i in 0 to cfg.word_count - 1
+      loop
+        xpacket(offset + i) := w(i);
+        xstrobe(offset + i) := s(i);
+      end loop;
+
+      if cfg.has_last then
+        assert (offset + cfg.word_count >= xpacket'length) = is_last(cfg, beat)
+          report "Bad last placement for expected packet length "
+          & to_string(xpacket'length) & " at offset " & to_string(offset)
+          severity failure;
+      end if;
+
+      offset := offset + cfg.word_count;
+    end loop;
+
+    packet := xpacket;
+    strobe := xstrobe;
+  end procedure;
 
 end package body;
