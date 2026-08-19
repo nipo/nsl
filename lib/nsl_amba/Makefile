@@ -20,4 +20,5 @@ packages += stream_to_udp
 packages += stream_to_tcp
 packages += stream_meta
 packages += stream_sized
+packages += stream_processing
 nsl_amba-ghdl-flags += -Wno-hide

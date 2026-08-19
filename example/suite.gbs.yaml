@@ -26,6 +26,9 @@ projects:
   - name: tang_console_60k_blink
     path: sipeed_tang_console_60k/blink
     tags: [gowin, tang_console_60k]
+  - name: stream_packer
+    path: stream_packer
+    tags: [gowin, tang_25k]
 
   - name: simulation_socket_simulation_socket_udp
     path: simulation_socket/simulation_socket/udp

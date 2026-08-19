@@ -107,6 +107,9 @@ projects:
   - name: amba_axi4_stream_widener
     path: amba/axi4_stream_widener
     tags: [ghdl, simulation]
+  - name: amba_stream_packer
+    path: amba/stream_packer
+    tags: [ghdl, simulation]
   - name: avalon_axi4_stream_adapter
     path: avalon/axi4_stream_adapter
     tags: [ghdl, simulation]
