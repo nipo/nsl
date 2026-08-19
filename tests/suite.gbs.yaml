@@ -227,6 +227,9 @@ projects:
   - name: ibm_8b10b_serdes
     path: ibm_8b10b/serdes
     tags: [ghdl, simulation]
+  - name: ibm_8b10b_stream
+    path: ibm_8b10b/stream
+    tags: [ghdl, simulation]
   - name: ibm_8b10b_synchronous
     path: ibm_8b10b/synchronous
     tags: [ghdl, simulation]

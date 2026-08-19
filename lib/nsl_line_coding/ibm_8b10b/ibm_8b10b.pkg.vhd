@@ -44,7 +44,9 @@ package ibm_8b10b is
     data : byte;
     control: std_ulogic;
   end record;
-  
+
+  type data_vector is array (integer range <>) of data_t;
+
   -- Data word expressed as pair of integers. Suitable for matching
   -- D/Kx.y notation.
   function data(x : integer range 0 to 31;
