@@ -94,6 +94,27 @@ package ibm_8b10b_stream is
                     valid: boolean := true;
                     last: boolean := false) return master_t;
 
+  -- Replaces any strobed word matching idle_c with a non-strobed
+  -- word. All other beat elements pass through unchanged. Output is
+  -- register-sliced, there is no combinatorial path from input to
+  -- output. Configuration must have strobe enabled.
+  component ibm_8b10b_stream_idle_filter is
+    generic(
+      config_c : config_t;
+      idle_c : nsl_line_coding.ibm_8b10b.data_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
 end package;
 
 package body ibm_8b10b_stream is
