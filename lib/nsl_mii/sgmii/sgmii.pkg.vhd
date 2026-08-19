@@ -140,7 +140,7 @@ package sgmii is
       );
   end component;
 
-  component sgmii_transceiver_backend is
+  component sgmii_transceiver_backend_series7 is
     port (
       gt_ref_clk_pair_i : in nsl_io.diff.diff_pair;
       stable_clk_i      : in std_ulogic;
