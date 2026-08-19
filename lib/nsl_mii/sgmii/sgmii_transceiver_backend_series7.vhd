@@ -11,7 +11,7 @@ use work.sgmii.all;
 library unisim;
 use unisim.vcomponents.all;
 
-entity sgmii_transceiver_backend is
+entity sgmii_transceiver_backend_series7 is
   port (
     gt_ref_clk_pair_i : in nsl_io.diff.diff_pair;
     stable_clk_i      : in std_ulogic;
@@ -31,9 +31,9 @@ entity sgmii_transceiver_backend is
     pair_diff_i : in  nsl_io.diff.diff_pair;
     pair_diff_o : out nsl_io.diff.diff_pair
     );
-end entity sgmii_transceiver_backend;
+end entity sgmii_transceiver_backend_series7;
 
-architecture beh of sgmii_transceiver_backend is
+architecture beh of sgmii_transceiver_backend_series7 is
 
   -- Transceiver signals
   signal s_pll_0_out        : std_logic;
