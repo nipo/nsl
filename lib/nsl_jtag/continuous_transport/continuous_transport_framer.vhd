@@ -18,7 +18,7 @@ use nsl_jtag.continuous_transport.all;
 -- The budget opens each batch at zero (capture) and is set absolutely by the
 -- ATE's credit grants; every emitted byte (signalled by byte_ready_i) spends
 -- one unit until it reaches zero (danger zone), after which only filler flows.
--- A data frame is only started when the whole frame fits the remaining budget,
+-- A data frame is sized so that header and body both fit the remaining budget,
 -- so payload never lands in the untransmitted tail of a batch.
 entity continuous_transport_framer is
   port(
@@ -54,6 +54,11 @@ entity continuous_transport_framer is
 end entity;
 
 architecture beh of continuous_transport_framer is
+
+  -- Budget spent by a data frame on top of its body: the header byte, plus the
+  -- filler byte that may still be latched out of SENDER_IDLE in the cycle the
+  -- frame is decided.
+  constant frame_overhead_c : integer := 2;
 
   type chunker_state_t is (
     CHUNKER_START,
@@ -184,10 +189,16 @@ begin
         -- Dont wait for byte_ready_i here. We may move out of this
         -- state any time.
         if r.chunker_state = CHUNKER_FLUSH then
-          if r.budget /= 0 then
+          -- A data frame spends budget on its header as well as on its body,
+          -- and one more filler byte may still be latched out of this state
+          -- before the header reaches byte_o. So a body of n bytes needs a
+          -- budget of n+2; anything above that would be emitted past the
+          -- guarantee and land in the untransmitted tail of the batch.
+          if r.budget > frame_overhead_c then
             rin.sender_state <= SENDER_DATA_OP;
-            if r.chunk_len_m1 > r.budget then
-              rin.sender_left_m1 <= to_unsigned(r.budget, r.sender_left_m1'length);
+            if r.chunk_len_m1 > r.budget - frame_overhead_c - 1 then
+              rin.sender_left_m1 <= to_unsigned(r.budget - frame_overhead_c - 1,
+                                                r.sender_left_m1'length);
               rin.sender_last <= '0';
             else
               rin.sender_left_m1 <= resize(r.chunk_len_m1, r.sender_left_m1'length);
