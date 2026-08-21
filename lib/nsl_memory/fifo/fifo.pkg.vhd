@@ -60,6 +60,36 @@ package fifo is
 
   end component;
 
+  -- Shallow FIFO made of shifting registers steered by a one-hot fill
+  -- register. Cheaper than fifo_homogeneous for depths of a few
+  -- words, at the price of moving every stored word on each pop.
+  -- Handshake is fully registered: in_ready_o and out_valid_o only
+  -- depend on internal state, there is no combinational path between
+  -- the input and the output port.
+  component fifo_shift_register is
+    generic(
+      data_width_c: natural;
+      word_count_c: natural range 1 to 16
+      );
+    port(
+      reset_n_i: in std_ulogic;
+      clock_i: in std_ulogic;
+
+      in_data_i: in std_ulogic_vector(data_width_c-1 downto 0);
+      in_valid_i: in std_ulogic;
+      in_ready_o: out std_ulogic;
+
+      out_data_o: out std_ulogic_vector(data_width_c-1 downto 0);
+      out_valid_o: out std_ulogic;
+      out_ready_i: in std_ulogic;
+
+      -- Registered one-hot fill level. fill_o(k) is set when the FIFO
+      -- holds k words. Test single bits of it instead of comparing a
+      -- count.
+      fill_o: out std_ulogic_vector(0 to word_count_c)
+      );
+  end component;
+
   component fifo_pointer is
     generic(
       ptr_width_c         : natural;

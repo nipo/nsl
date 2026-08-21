@@ -5,7 +5,7 @@ FIFOs
 Generic fifo component
 ======================
 
-Only one model of fifo exists in NSL: `fifo_homogeneous`_. It may have
+The general-purpose fifo of NSL is `fifo_homogeneous`_. It may have
 one or two ports depending on the `clock_count_c`` generic.  Data
 width is homogeneous between input and output ports.  Optionally, one
 may add a fifo slice at input and/or output port.
@@ -31,6 +31,19 @@ actually implemented as a 2-deep fifo using registers.
 .. _fifo_register_slice:
 
 .. vhdl:autocomponent:: nsl_memory.fifo.fifo_register_slice
+
+Shallow fifo
+============
+
+`fifo_shift_register`_ is a fifo for depths of a few words, made of a shifting
+chain of registers steered by a one-hot fill register.  It has neither
+RAM nor fill counter, and its output data comes directly out of a
+register.  Its fill level is exposed as the one-hot register itself,
+so conditions such as "at least K words held" are single bit tests.
+
+.. _fifo_shift_register:
+
+.. vhdl:autocomponent:: nsl_memory.fifo.fifo_shift_register
 
 Width conversion
 ================

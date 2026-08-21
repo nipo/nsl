@@ -1,0 +1,23 @@
+name: fifo_shift_register
+
+root:
+  name: top
+  deps:
+    - nsl_memory.fifo
+    - nsl_data.prbs
+    - nsl_data.text
+    - nsl_logic.bool
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log
