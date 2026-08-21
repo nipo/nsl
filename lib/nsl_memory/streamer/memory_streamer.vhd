@@ -180,18 +180,25 @@ begin
       end if;
     end if;
 
-    if push and not out_free then
-      rin.buffer_fillness <= r.buffer_fillness + 1;
-      rin.buffer_empty <= false;
-    elsif out_free and not push and not r.buffer_empty then
-      rin.buffer_fillness <= r.buffer_fillness - 1;
-      rin.buffer_empty <= r.buffer_fillness = 1;
-    end if;
+    -- Fillness and its empty flag only make sense together, which the
+    -- reset establishes and the running flag guards until then: a peer
+    -- holding data_ready_i asserted from the very first delta cycle
+    -- would otherwise take the decrement branch on the default value
+    -- of the flag, before the reset even applies.
+    if r.running then
+      if push and not out_free then
+        rin.buffer_fillness <= r.buffer_fillness + 1;
+        rin.buffer_empty <= false;
+      elsif out_free and not push and not r.buffer_empty then
+        rin.buffer_fillness <= r.buffer_fillness - 1;
+        rin.buffer_empty <= r.buffer_fillness = 1;
+      end if;
 
-    if push and not pop then
-      rin.fillness <= r.fillness + 1;
-    elsif pop and not push then
-      rin.fillness <= r.fillness - 1;
+      if push and not pop then
+        rin.fillness <= r.fillness + 1;
+      elsif pop and not push then
+        rin.fillness <= r.fillness - 1;
+      end if;
     end if;
   end process;
 
