@@ -45,7 +45,9 @@ Two facts drive the whole design:
    The TAP knows neither and cannot stall TCK. Therefore **the TAP is
    purely reactive**: every decision that needs geometry or "when does
    the batch end" is made by the ATE and pushed to the TAP as protocol
-   state.
+   state. The ATE may also suspend a batch at any bit position
+   (Pause-DR) for as long as it likes; a batch is a run of *shifted
+   bits*, and TCK spent outside Shift-DR moves nothing on either side.
 
 2. **The trailing U/D bits of a batch are never clocked through.** When
    the ATE stops, the last U bits it shifted are stranded in upstream
@@ -206,7 +208,7 @@ with the ATE already holding credit and sending data immediately.
 The ATE has no RX-overflow problem (it reads everything it clocks); the
 budget exists only to keep payload out of the untransmitted tail
 (section 2, fact 2). A budget grant of N (credit frame on TDI) means:
-*"I, the ATE, guarantee at least `N*8 + margin` further TCK cycles
+*"I, the ATE, guarantee at least `N*8 + margin` further shift cycles
 before I leave Shift-DR,"* where `margin >= U + D + tap_tx_latency_c`
 covers the grant's flight to the TAP, the TAP's internal latency, and
 the return flight of the emitted bytes. Every byte the TAP emits

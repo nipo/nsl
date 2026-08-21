@@ -13,6 +13,11 @@ use nsl_jtag.continuous_transport.all;
 -- bytes pulled from the framer. byte_ready_o strobes when a payload byte is
 -- latched, asking the framer for the next one; the framer must keep the next
 -- byte to send on byte_i (it always has one -- idle at worst).
+--
+-- Everything advances on shift only. A batch may therefore be suspended for
+-- any number of TCK cycles (Pause-DR) at any bit position, including in the
+-- middle of a byte: the stream resumes on the very bit it stopped on and the
+-- prefetched byte is neither dropped nor latched twice.
 entity continuous_transport_serializer is
   generic(
     preamble_count_c : positive := preamble_min_c
@@ -69,45 +74,51 @@ begin
   begin
     rin <= r;
 
-    case r.state is
-      when ST_IDLE =>
-        null;
+    -- Only an asserted shift moves the bit stream. A TCK spent anywhere else
+    -- in the TAP state machine (Pause-DR, Exit1-DR, Update-DR, ...) leaves the
+    -- shift register and the byte prefetch untouched, so the bit currently on
+    -- tdo_o stays presented until it is actually clocked out.
+    if shift_i = '1' then
+      case r.state is
+        when ST_IDLE =>
+          null;
 
-      when ST_PAD =>
-        rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
-        if r.bit_left = 0 then
-          rin.state <= ST_PRE;
-          rin.pre_left <= preamble_count_c - 1;
-          rin.shreg <= preamble_byte_c;
-          rin.bit_left <= 7;
-        else
-          rin.bit_left <= r.bit_left - 1;
-        end if;
-
-      when ST_PRE =>
-        rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
-        if r.bit_left = 0 then
-          if r.pre_left /= 0 then
-            rin.pre_left <= r.pre_left - 1;
+        when ST_PAD =>
+          rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
+          if r.bit_left = 0 then
+            rin.state <= ST_PRE;
+            rin.pre_left <= preamble_count_c - 1;
             rin.shreg <= preamble_byte_c;
+            rin.bit_left <= 7;
           else
-            rin.state <= ST_PAY;
-            rin.shreg <= sof_byte_c;
+            rin.bit_left <= r.bit_left - 1;
           end if;
-          rin.bit_left <= 7;
-        else
-          rin.bit_left <= r.bit_left - 1;
-        end if;
 
-      when ST_PAY =>
-        rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
-        if r.bit_left = 0 then
-          rin.shreg <= byte_i;
-          rin.bit_left <= 7;
-        else
-          rin.bit_left <= r.bit_left - 1;
-        end if;
-    end case;
+        when ST_PRE =>
+          rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
+          if r.bit_left = 0 then
+            if r.pre_left /= 0 then
+              rin.pre_left <= r.pre_left - 1;
+              rin.shreg <= preamble_byte_c;
+            else
+              rin.state <= ST_PAY;
+              rin.shreg <= sof_byte_c;
+            end if;
+            rin.bit_left <= 7;
+          else
+            rin.bit_left <= r.bit_left - 1;
+          end if;
+
+        when ST_PAY =>
+          rin.shreg <= '-' & r.shreg(r.shreg'left downto 1);
+          if r.bit_left = 0 then
+            rin.shreg <= byte_i;
+            rin.bit_left <= 7;
+          else
+            rin.bit_left <= r.bit_left - 1;
+          end if;
+      end case;
+    end if;
 
     if capture_i = '1' then
       rin.bit_left <= pad_i;
@@ -121,6 +132,10 @@ begin
   end process;
 
   tdo_o <= r.shreg(0);
-  byte_ready_o <= '1' when r.bit_left = 0 and r.state = ST_PAY else '0';
+  -- The last bit of the current byte is on tdo_o and this TCK clocks it out,
+  -- so the next byte is latched now. Qualified by shift so a byte is only ever
+  -- consumed against a bit that actually leaves on the wire.
+  byte_ready_o <= '1' when shift_i = '1' and r.bit_left = 0 and r.state = ST_PAY
+                  else '0';
 
 end architecture;
