@@ -302,6 +302,9 @@ projects:
   - name: jtag_continuous_transport_loopback
     path: jtag_continuous_transport/loopback
     tags: [ghdl, simulation, jtag_continuous_transport]
+  - name: jtag_continuous_transport_pause_loopback
+    path: jtag_continuous_transport/pause_loopback
+    tags: [ghdl, simulation, jtag_continuous_transport]
   - name: jtag_continuous_transport_rx
     path: jtag_continuous_transport/rx
     tags: [ghdl, simulation, jtag_continuous_transport]
