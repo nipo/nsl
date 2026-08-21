@@ -20,21 +20,24 @@ package fifo is
       out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
       out_ready_i         : in  std_ulogic;
       out_valid_o         : out std_ulogic;
-      -- Pessimistic fill count as seen from the output side. This counter may
-      -- never reach actual fill count of fifo.
+      -- Fill count as seen from the output side, minus the word
+      -- currently presented on the port, if any.
       out_available_min_o : out integer range 0 to word_count_c;
-      -- Corrected fill count as seen from the output side. This
-      -- counter eventually reaches actual fill count of fifo, but
-      -- takes more resources to calculate.  Actual fill count may be
-      -- word_count_c + 1 because of the output register of backing RAM
-      -- block.
+      -- Fill count as seen from the output side: exact for the input
+      -- position the output side knows of, hence never overstated,
+      -- and reaching the actual fill count when input traffic
+      -- pauses. Total capacity is word_count_c, wherever the words
+      -- sit.
       out_available_o     : out integer range 0 to word_count_c+1;
 
       in_data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
       in_valid_i : in  std_ulogic;
       in_ready_o : out std_ulogic;
-      -- Pessimistic availability count as seen from the input
-      -- side. This counter may never reach actual free count of fifo.
+      -- Free capacity as seen from the input side: exact for the
+      -- output position the input side knows of, hence never
+      -- overstated, and reaching the actual free capacity when
+      -- output traffic pauses. Nonzero if and only if in_ready_o is
+      -- asserted.
       in_free_o  : out integer range 0 to word_count_c
       );
   end component;
