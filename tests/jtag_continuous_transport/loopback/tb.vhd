@@ -22,8 +22,8 @@ use nsl_simulation.assertions.all;
 -- a framed_fifo. It honours dynamic RX credit: it never sends more data bytes
 -- than the TAP's last advertised RX free space, holding a packet that does not
 -- fit until echoes drain the RX FIFO. The RX FIFO is deliberately small so the
--- credit loop binds; the idle padding is kept large so the TAP's echo is not
--- truncated.
+-- credit loop binds; the TX budget it grants the TAP is derived from the batch
+-- length so no echoed byte lands in the batch tail.
 entity tb is
 end entity;
 
@@ -127,7 +127,7 @@ begin
   -- JTAG driver: batches packets onto the wire and reassembles the echoes.
   host: process
     variable rx_partial : byte_stream := null;
-    variable pb, received : byte_stream;
+    variable pb, batch_body, received : byte_stream;
     -- A packet pulled from ate_tx_q but not yet sent (held when RX credit is
     -- too low to fit it).
     variable pending : byte_stream := null;
@@ -136,7 +136,7 @@ begin
     -- Latest RX free space advertised by the TAP, and the budget left to spend
     -- on data this batch.
     variable rx_credit : integer := 0;
-    variable credit_left : integer;
+    variable credit_left, budget : integer;
     variable throttled_ever : boolean := false;
 
     procedure do_io(response : out byte_stream; command : in byte_string) is
@@ -243,6 +243,12 @@ begin
             write(rx_partial, data(pos));
             pos := pos + 1;
           end loop;
+          -- The TAP only emits a data frame it can finish within the TX budget
+          -- granted for this batch, so a body cut short by the end of the
+          -- batch means the grant was too large: those bytes are gone for good.
+          assert got_all
+            report "data frame body truncated by the end of the batch"
+            severity failure;
           if got_all and hdr(hdr_last_bit_c) = '1' then
             framed_queue_put(ate_rx_q, rx_partial.all);
             deallocate(rx_partial);
@@ -279,9 +285,9 @@ begin
     ir_set(user0_instruction_c);
 
     while not test_done loop
-      pb := null;
-      -- Grant a generous TX budget (how much the TAP may send us).
-      write(pb, byte_string'(ctl_credit_c, x"c8", x"00"));
+      -- Batch body: data frames, then idle padding. Built before the batch
+      -- header because the TX budget granted there is derived from its length.
+      batch_body := null;
 
       -- Send queued packets, but never more data bytes than the TAP's last
       -- advertised RX free space: hold a packet that does not fit and let
@@ -296,7 +302,7 @@ begin
           throttled_ever := true;
           exit;
         end if;
-        append_data_frames(pb, pending.all);
+        append_data_frames(batch_body, pending.all);
         credit_left := credit_left - pending.all'length;
         deallocate(pending);
         pending := null;
@@ -305,8 +311,25 @@ begin
       -- Varying idle padding -> varying TDO room.
       pad := 48 + (batch_no mod 4) * 8;
       for i in 0 to pad - 1 loop
-        write(pb, ctl_idle_c);
+        write(batch_body, ctl_idle_c);
       end loop;
+
+      -- TX budget (spec 6.2): granting N is a promise of at least N*8 + margin
+      -- further TCK cycles in this Shift-DR, with margin >= U + D +
+      -- tap_tx_latency_c. The grant is the first three protocol bytes of the
+      -- batch, so exactly 8 * batch_body'length shift cycles follow it, and
+      -- the chain holds no other device (U = D = 0). Over-granting would have
+      -- the TAP emit payload into the tail of the batch, which is latched by
+      -- its serializer but never clocked out.
+      budget := batch_body.all'length - (tap_tx_latency_c + 7) / 8;
+      assert budget > 0
+        report "batch too short to grant any TX budget" severity failure;
+
+      pb := null;
+      write(pb, ctl_credit_c);
+      write(pb, to_le(to_unsigned(budget, 16)));
+      write(pb, batch_body.all);
+      deallocate(batch_body);
 
       exchange(pb.all, received);
       if received /= null then
