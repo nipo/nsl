@@ -5,3 +5,4 @@ packages += arp
 packages += func
 packages += testing
 packages += checksum
+packages += switching
