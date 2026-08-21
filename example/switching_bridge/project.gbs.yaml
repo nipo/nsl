@@ -1,0 +1,36 @@
+name: switching_bridge
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_data.bytestream
+    - nsl_data.prbs
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_inet.switching
+    - nsl_logic.logic
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../sipeed_tang_25k/pinout/done_led.cst
+    - file_type: gowin-sdc
+      files:
+        - constraints/timing.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: switching_bridge.fs
