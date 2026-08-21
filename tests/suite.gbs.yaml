@@ -263,6 +263,18 @@ projects:
   - name: inet_rmii
     path: inet/rmii
     tags: [ghdl, simulation]
+  - name: inet_switching_bridge
+    path: inet/switching/bridge
+    tags: [ghdl, simulation]
+  - name: inet_switching_fabric
+    path: inet/switching/fabric
+    tags: [ghdl, simulation]
+  - name: inet_switching_ingress
+    path: inet/switching/ingress
+    tags: [ghdl, simulation]
+  - name: inet_switching_mac_table
+    path: inet/switching/mac_table
+    tags: [ghdl, simulation]
   - name: jtag
     path: jtag
     tags: [ghdl, simulation]
