@@ -54,6 +54,11 @@ package link_monitor is
 
   -- RGMII in-band interframe status
   -- This is not supported by all Phys.
+  --
+  -- rx_flit_i is sampled on every rx_clock_i cycle, it must be
+  -- synchronous to rx_clock_i and must retain the last received flit
+  -- between receptions. It may not be a flow-controlled stream where
+  -- data is only meaningful along a valid signal.
   component link_monitor_inband_status is
     generic(
       debounce_count_c : integer := 4

@@ -20,6 +20,10 @@ entity link_monitor_inband_status is
 
     link_status_o: out link_status_t;
 
+    -- rx_flit_i is sampled on every rx_clock_i cycle, it must be
+    -- synchronous to rx_clock_i and must retain the last received flit
+    -- between receptions. It may not be a flow-controlled stream where
+    -- data is only meaningful along a valid signal.
     rx_clock_i : in std_ulogic;
     rx_flit_i : in mii_flit_t
     );

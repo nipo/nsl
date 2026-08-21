@@ -43,14 +43,16 @@ end entity;
 architecture beh of rgmii_axi4_stream_driver is
 
     signal rx_flit_s, tx_flit_s : mii_flit_t;
-    signal rx_sdr_s, tx_sdr_s : rgmii_sdr_io_t;
+    signal rx_sdr_s, rx_monitor_sdr_s, tx_sdr_s : rgmii_sdr_io_t;
     signal rx_valid_s, tx_ready_s, rx_clock_s : std_ulogic;
     signal rx_reset_n_s, rx_sfd_s : std_ulogic;
 
 begin
 
     rx_clock_o <= rx_clock_s;
-    rx_flit_o <= rx_flit_s;
+    rx_flit_o.data <= rx_monitor_sdr_s.data;
+    rx_flit_o.valid <= rx_monitor_sdr_s.dv;
+    rx_flit_o.error <= rx_monitor_sdr_s.er;
 
     rgmii_rx : work.rgmii.rgmii_rx_driver
     generic map(
@@ -65,6 +67,8 @@ begin
         mode_i  => mode_i,
         rgmii_i => rgmii_i,
         sfd_o   => rx_sfd_s,
+
+        rx_flit_o => rx_monitor_sdr_s,
 
         flit_o  => rx_sdr_s,
         valid_o => rx_valid_s

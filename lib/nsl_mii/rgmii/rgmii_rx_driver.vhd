@@ -22,6 +22,11 @@ entity rgmii_rx_driver is
     mode_i : in link_speed_t;
     rgmii_i : in  work.rgmii.rgmii_io_group_t;
 
+    -- Last captured flit, synchronous to rx_clock_o. Retains its value
+    -- between captures, it is meaningful on every rx_clock_o cycle.
+    -- Meant for in-band status monitoring, not for datapath.
+    rx_flit_o : out rgmii_sdr_io_t;
+
     flit_o : out rgmii_sdr_io_t;
     valid_o : out std_ulogic
     );
@@ -287,5 +292,6 @@ begin
       );
 
   sfd_o <= to_logic(r.is_sfd);
+  rx_flit_o <= r.flit;
   
 end architecture;
