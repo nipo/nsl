@@ -1,0 +1,27 @@
+name: fifo_paced
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_amba.stream_traffic
+    - nsl_memory.fifo
+    - nsl_data.bytestream
+    - nsl_data.prbs
+    - nsl_data.text
+    - nsl_logic.bool
+    - nsl_math.fixed
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    outputs:
+      - type: simulation-log
+        path: simulation.log

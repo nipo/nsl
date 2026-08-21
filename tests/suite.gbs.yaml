@@ -194,6 +194,9 @@ projects:
   - name: fifo_count
     path: fifo_count
     tags: [ghdl, simulation]
+  - name: fifo_paced
+    path: fifo_paced
+    tags: [ghdl, simulation]
   - name: fifo_shift_register
     path: fifo_shift_register
     tags: [ghdl, simulation]

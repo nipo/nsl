@@ -15,4 +15,5 @@ deps += nsl_clocking.async
 deps += nsl_math.arith
 deps += nsl_math.gray
 deps += nsl_memory.ram
+deps += nsl_memory.streamer
 deps += nsl_logic.bool

@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_math, nsl_memory;
+library nsl_clocking, nsl_logic, nsl_math, nsl_memory;
+use nsl_logic.bool.all;
 
 entity fifo_homogeneous is
   generic(
@@ -31,54 +32,140 @@ entity fifo_homogeneous is
 
 end fifo_homogeneous;
 
+-- Fifo backed by a dual-port memory holding one word per address.
+--
+-- Both sides run a binary counter that wraps at word_count_c, with an
+-- extra bit toggling on every wrap. Comparing two such positions tells
+-- apart the empty and the full case, and subtracting them yields a
+-- word count without further state.
+--
+-- The input side counter addresses the memory write port and moves on
+-- every accepted word. It stops when its position matches the peer
+-- position on another wrap, which is the full condition.
+--
+-- Positions cross to the peer side through gray-coded pointer
+-- synchronizers when each side has its own clock, through a couple of
+-- registers otherwise. A received position is always late, never
+-- early, so both sides err on the safe side: the input side sees at
+-- most the room there is, the output side sees at most the words there
+-- are.
+--
+-- The output side counter feeds addresses to a memory streamer, which
+-- hides memory latency behind a prefetch and only issues reads it has
+-- room to land. An address is issued for every position the input side
+-- is known to have passed. The position that goes along with each
+-- address travels through the streamer as sideband, so it comes back
+-- aligned with its data word: the position of the word sitting at the
+-- output port is known exactly, whatever the streamer holds behind it.
+--
+-- Fill level on the output side is the difference between the
+-- resynchronized input position and the position of that word. Because
+-- positions carry the wrap bit, this counts the words still in memory,
+-- the words held in the prefetch and the one in the output register
+-- alike, with no correction term. That same position is what crosses
+-- back to the input side, so a memory word only frees its address once
+-- it left the output port. The fifo therefore holds exactly
+-- word_count_c words, wherever they sit, and both fill counts are
+-- exact for the peer position each side sees.
 architecture ram2 of fifo_homogeneous is
 
-  constant ptr_width : natural := nsl_math.arith.log2(word_count_c);
-  subtype mem_ptr_t is unsigned(ptr_width-1 downto 0);
-  subtype peer_pos_t is std_ulogic_vector(ptr_width downto 0);
+  constant ptr_width_c: natural := nsl_math.arith.log2(word_count_c);
+  subtype mem_ptr_t is unsigned(ptr_width_c-1 downto 0);
+  -- Memory index on the LSBs, wrap bit on the MSB.
+  subtype position_t is unsigned(ptr_width_c downto 0);
   subtype data_t is std_ulogic_vector(data_width_c-1 downto 0);
-  constant c_idx_high : mem_ptr_t := to_unsigned(word_count_c-1, ptr_width);
-  constant c_is_pow2 : boolean := c_idx_high = (c_idx_high'range => '1');
-  constant is_synchronous: boolean := clock_count_c = 1;
-  constant is_bisynchronous: boolean := clock_count_c = 2;
 
-  signal s_resetn: std_ulogic_vector(0 to clock_count_c-1);
+  constant last_index_c: mem_ptr_t := to_unsigned(word_count_c-1, ptr_width_c);
+  constant is_pow2_c: boolean := last_index_c = (last_index_c'range => '1');
+  constant is_synchronous_c: boolean := clock_count_c = 1;
 
-  type side_info_t is
+  function position_next(position: position_t) return position_t is
+    variable ret: position_t;
+  begin
+    if position(mem_ptr_t'range) = last_index_c then
+      ret := (not position(position_t'left)) & to_unsigned(0, ptr_width_c);
+    else
+      ret := position(position_t'left) & (position(mem_ptr_t'range) + 1);
+    end if;
+    return ret;
+  end function;
+
+  -- Word count from tail (included) to head (excluded). Both positions
+  -- must come from the same counter, head being the one ahead. A pair
+  -- that does not compare yields /disjoint/ instead, and every caller
+  -- passes the count that promises nothing: this happens while the two
+  -- sides are not out of reset together, where announcing a wrong
+  -- count would be worse than announcing an empty fifo on one side and
+  -- a full one on the other.
+  function position_diff(head, tail: position_t; disjoint: natural) return natural is
+    constant h: position_t := to_01(head);
+    constant t: position_t := to_01(tail);
+    variable count: unsigned(ptr_width_c downto 0);
+  begin
+    count := ("0" & h(mem_ptr_t'range)) - ("0" & t(mem_ptr_t'range));
+    if h(position_t'left) /= t(position_t'left) then
+      count := count + to_unsigned(word_count_c, count'length);
+    end if;
+
+    if to_integer(count) > word_count_c then
+      return disjoint;
+    end if;
+
+    return to_integer(count);
+  end function;
+
+  signal reset_n_s: std_ulogic_vector(0 to clock_count_c-1);
+
+  signal in_data_s: data_t;
+  signal in_valid_s, in_ready_s: std_ulogic;
+  signal out_data_s: data_t;
+  signal out_valid_s, out_ready_s: std_ulogic;
+
+  -- Input side, in clock_i(0)
+  type in_regs_t is
   record
-    -- Position (gray if async), resynchronized and compared for full/empty.
-    local_pos, peer_pos : peer_pos_t;
-    -- pointers
-    used, free : unsigned(ptr_width downto 0);
-    -- Memory pointer
-    mem_ptr : mem_ptr_t;
-    -- Memory and pointer logic control signals
-    mem_en : std_ulogic;
-    inc_req : std_ulogic;
-    inc_ack : std_ulogic;
+    running: boolean;
+    position: position_t;
   end record;
 
-  signal s_left, s_right: side_info_t;
+  signal in_r, in_rin: in_regs_t;
 
-  signal s_read_data: data_t;
-
-  type regs_t is record
-    direct, valid: std_logic;
-    addr: mem_ptr_t;
-    data: data_t;
+  -- Output side, in clock_i(clock_count_c-1)
+  type out_regs_t is
+  record
+    -- Next position to hand over to the streamer.
+    read: position_t;
+    -- Position of the next word to leave the streamer.
+    output: position_t;
   end record;
 
-  signal r, rin: regs_t;
+  signal out_r, out_rin: out_regs_t;
 
-  signal int_in_data_i       : std_ulogic_vector(data_width_c-1 downto 0);
-  signal int_in_valid_i      : std_ulogic;
-  signal int_in_ready_o      : std_ulogic;
+  -- Input side position, and the same after crossing to the output side.
+  signal in_position_s, in_position_resync_s: position_t;
+  -- Output side position, and the same after crossing to the input side.
+  signal out_position_s, out_position_resync_s: position_t;
 
-  signal int_out_data_o       : std_ulogic_vector(data_width_c-1 downto 0);
-  signal int_out_valid_o      : std_ulogic;
-  signal int_out_ready_i      : std_ulogic;
+  -- Input side sees the memory as full, output side sees it as empty.
+  signal in_full_s, out_empty_s: boolean;
+
+  signal mem_write_en_s: std_ulogic;
+  signal mem_write_address_s: mem_ptr_t;
+  signal mem_read_en_s: std_ulogic;
+  signal mem_read_address_s: mem_ptr_t;
+  signal mem_read_data_s: data_t;
+
+  signal addr_valid_s, addr_ready_s: std_ulogic;
+  signal addr_s: mem_ptr_t;
+  signal sideband_in_s, sideband_out_s: std_ulogic_vector(position_t'length-1 downto 0);
+
+  signal available_s, available_min_s, free_s: integer range 0 to word_count_c;
 
 begin
+
+  assert is_synchronous_c or is_pow2_c
+    report "Bisynchronous fifos can only work for power-of-two depths"
+    severity failure;
 
   with_input_slice: if input_slice_c
   generate
@@ -88,11 +175,11 @@ begin
         )
       port map(
         clock_i => clock_i(0),
-        reset_n_i => s_resetn(0),
+        reset_n_i => reset_n_s(0),
 
-        out_data_o => int_in_data_i,
-        out_ready_i => int_in_ready_o,
-        out_valid_o => int_in_valid_i,
+        out_data_o => in_data_s,
+        out_ready_i => in_ready_s,
+        out_valid_o => in_valid_s,
 
         in_data_i => in_data_i,
         in_valid_i => in_valid_i,
@@ -102,9 +189,9 @@ begin
 
   without_input_slice: if not input_slice_c
   generate
-    int_in_data_i <= in_data_i;
-    int_in_valid_i <= in_valid_i;
-    in_ready_o <= int_in_ready_o;
+    in_data_s <= in_data_i;
+    in_valid_s <= in_valid_i;
+    in_ready_o <= in_ready_s;
   end generate;
 
   with_output_slice: if output_slice_c
@@ -115,30 +202,26 @@ begin
         )
       port map(
         clock_i => clock_i(clock_count_c-1),
-        reset_n_i => s_resetn(clock_count_c-1),
+        reset_n_i => reset_n_s(clock_count_c-1),
 
         out_data_o => out_data_o,
         out_ready_i => out_ready_i,
         out_valid_o => out_valid_o,
 
-        in_data_i => int_out_data_o,
-        in_valid_i => int_out_valid_o,
-        in_ready_o => int_out_ready_i
+        in_data_i => out_data_s,
+        in_valid_i => out_valid_s,
+        in_ready_o => out_ready_s
         );
   end generate;
 
   without_output_slice: if not output_slice_c
   generate
-    out_data_o <= int_out_data_o;
-    out_valid_o <= int_out_valid_o;
-    int_out_ready_i <= out_ready_i;
+    out_data_o <= out_data_s;
+    out_valid_o <= out_valid_s;
+    out_ready_s <= out_ready_i;
   end generate;
-  
-  assert is_synchronous or c_is_pow2
-    report "Bisynchronous fifos can only work for power-of-two depths"
-    severity failure;
 
-  async: if not is_synchronous generate
+  async: if not is_synchronous_c generate
     reset_sync: nsl_clocking.async.async_multi_reset
       generic map(
         debounce_count_c => 4,
@@ -147,129 +230,102 @@ begin
       port map(
         clock_i => clock_i,
         master_i => reset_n_i,
-        slave_o => s_resetn
+        slave_o => reset_n_s
         );
 
-    out_wptr: nsl_clocking.interdomain.interdomain_counter
+    in_to_out: nsl_clocking.interdomain.interdomain_counter
       generic map(
-        data_width_c => peer_pos_t'length,
-        input_is_gray_c => true,
-        output_is_gray_c => true
+        data_width_c => position_t'length,
+        decode_stage_count_c => (position_t'length + 3) / 4
         )
       port map(
         clock_in_i => clock_i(0),
         clock_out_i => clock_i(clock_count_c-1),
-        data_i => unsigned(s_left.local_pos),
-        peer_pos_t(data_o) => s_right.peer_pos
+        data_i => in_position_s,
+        data_o => in_position_resync_s
         );
 
-    in_rptr: nsl_clocking.interdomain.interdomain_counter
+    out_to_in: nsl_clocking.interdomain.interdomain_counter
       generic map(
-        data_width_c => peer_pos_t'length,
-        decode_stage_count_c => (peer_pos_t'length + 3) / 4,
-        input_is_gray_c => true,
-        output_is_gray_c => true
+        data_width_c => position_t'length,
+        decode_stage_count_c => (position_t'length + 3) / 4
         )
       port map(
         clock_in_i => clock_i(clock_count_c-1),
         clock_out_i => clock_i(0),
-        data_i => unsigned(s_right.local_pos),
-        peer_pos_t(data_o) => s_left.peer_pos
+        data_i => out_position_s,
+        data_o => out_position_resync_s
         );
   end generate;
 
-  sync: if is_synchronous generate
-    s_resetn(0) <= reset_n_i;
+  sync: if is_synchronous_c generate
+    reset_n_s(0) <= reset_n_i;
 
-    -- only insert a 2-cycle delay (ram latency)
+    -- Only insert a 2-cycle delay, enough to keep the memory ahead of
+    -- the reader and to leave both position paths registered.
 
-    out_wptr: nsl_clocking.intradomain.intradomain_multi_reg
+    in_to_out: nsl_clocking.intradomain.intradomain_multi_reg
       generic map(
-        data_width_c => peer_pos_t'length
+        data_width_c => position_t'length
         )
       port map(
         clock_i => clock_i(0),
-        data_i => std_ulogic_vector(s_left.local_pos),
-        peer_pos_t(data_o) => s_right.peer_pos
+        data_i => std_ulogic_vector(in_position_s),
+        unsigned(data_o) => in_position_resync_s
         );
 
-    in_rptr: nsl_clocking.intradomain.intradomain_multi_reg
+    out_to_in: nsl_clocking.intradomain.intradomain_multi_reg
       generic map(
-        data_width_c => peer_pos_t'length
+        data_width_c => position_t'length
         )
       port map(
         clock_i => clock_i(0),
-        data_i => std_ulogic_vector(s_right.local_pos),
-        peer_pos_t(data_o) => s_left.peer_pos
+        data_i => std_ulogic_vector(out_position_s),
+        unsigned(data_o) => out_position_resync_s
         );
   end generate;
 
-  ctr_in: nsl_memory.fifo.fifo_pointer
-    generic map(
-      ptr_width_c => mem_ptr_t'length,
-      wrap_count_c => word_count_c,
-      equal_can_move_c => true,
-      gray_position_c => is_bisynchronous,
-      peer_ahead_c => true
-      )
-    port map(
-      reset_n_i => s_resetn(0),
-      clock_i => clock_i(0),
-      inc_i => s_left.inc_req,
-      ack_o => s_left.inc_ack,
-      peer_position_i => s_left.peer_pos,
-      local_position_o => s_left.local_pos,
-      mem_ptr_o => s_left.mem_ptr,
-      used_count_o => s_left.used,
-      free_count_o => s_left.free
-      );
-
-  ctr_out: nsl_memory.fifo.fifo_pointer
-    generic map(
-      ptr_width_c => mem_ptr_t'length,
-      wrap_count_c => word_count_c,
-      equal_can_move_c => false,
-      gray_position_c => is_bisynchronous,
-      peer_ahead_c => false
-      )
-    port map(
-      reset_n_i => s_resetn(clock_count_c-1),
-      clock_i => clock_i(clock_count_c-1),
-      inc_i => s_right.inc_req,
-      ack_o => s_right.inc_ack,
-      peer_position_i => s_right.peer_pos,
-      local_position_o => s_right.local_pos,
-      mem_ptr_o => s_right.mem_ptr,
-      used_count_o => s_right.used,
-      free_count_o => s_right.free
-      );
-
-  registered_counters: if register_counters_c
-  generate
+  in_regs: process(clock_i(0), reset_n_s(0)) is
   begin
-    in_counter: process(clock_i(0)) is
-    begin
-      if rising_edge(clock_i(0)) then
-        in_free_o <= to_integer(to_01(s_left.free));
-      end if;
-    end process;
+    if rising_edge(clock_i(0)) then
+      in_r <= in_rin;
+    end if;
 
-    out_counter: process(clock_i(clock_count_c-1)) is
-    begin
-      if rising_edge(clock_i(clock_count_c-1)) then
-        out_available_min_o <= to_integer(to_01(s_right.used));
-        out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
-      end if;
-    end process;
-  end generate;
+    if reset_n_s(0) = '0' then
+      in_r.running <= false;
+      in_r.position <= (others => '0');
+    end if;
+  end process;
 
-  non_registered_counters: if not register_counters_c
-  generate
-    in_free_o <= to_integer(to_01(s_left.free));
-    out_available_min_o <= to_integer(to_01(s_right.used));
-    out_available_o <= to_integer(to_01(s_right.used) + unsigned(std_ulogic_vector'("") & (r.valid or r.direct)));
-  end generate;
-  
+  -- Same index on another wrap means the input side caught up with the
+  -- output side from behind.
+  in_full_s <= in_r.position(mem_ptr_t'range) = out_position_resync_s(mem_ptr_t'range)
+               and in_r.position(position_t'left) /= out_position_resync_s(position_t'left);
+
+  in_transition: process(in_r, in_valid_s, in_full_s) is
+  begin
+    in_rin <= in_r;
+
+    in_rin.running <= true;
+
+    if in_r.running and in_valid_s = '1' and not in_full_s then
+      in_rin.position <= position_next(in_r.position);
+    end if;
+  end process;
+
+  in_moore: process(in_r, in_valid_s, in_full_s, out_position_resync_s) is
+  begin
+    -- Peer position is only meaningful once out of reset, hold the
+    -- input side back until then rather than acknowledge a word the
+    -- position counter would not account for.
+    in_ready_s <= to_logic(in_r.running and not in_full_s);
+    mem_write_en_s <= to_logic(in_r.running and not in_full_s) and in_valid_s;
+    mem_write_address_s <= in_r.position(mem_ptr_t'range);
+    free_s <= word_count_c
+              - position_diff(in_r.position, out_position_resync_s, word_count_c);
+    in_position_s <= in_r.position;
+  end process;
+
   ram: nsl_memory.ram.ram_2p_r_w
     generic map(
       addr_size_c => mem_ptr_t'length,
@@ -279,52 +335,115 @@ begin
     port map(
       clock_i => clock_i,
 
-      write_address_i => s_left.mem_ptr,
-      write_en_i => s_left.mem_en,
-      write_data_i => int_in_data_i,
+      write_address_i => mem_write_address_s,
+      write_en_i => mem_write_en_s,
+      write_data_i => in_data_s,
 
-      read_address_i => s_right.mem_ptr,
-      read_en_i => s_right.mem_en,
-      read_data_o => s_read_data
+      read_address_i => mem_read_address_s,
+      read_en_i => mem_read_en_s,
+      read_data_o => mem_read_data_s
       );
 
-  int_in_ready_o <= s_left.inc_ack;
-  s_left.mem_en <= s_left.inc_ack and int_in_valid_i;
-  s_left.inc_req <= int_in_valid_i;
-
-  regs: process (clock_i, s_resetn)
+  out_regs: process(clock_i(clock_count_c-1), reset_n_s(clock_count_c-1)) is
   begin
-    if clock_i(clock_count_c-1)'event and clock_i(clock_count_c-1) = '1' then
-      if s_resetn(clock_count_c-1) = '0' then
-        r.valid <= '0';
-        r.direct <= '0';
-        r.data <= (others => '-');
-      else
-        r <= rin;
+    if rising_edge(clock_i(clock_count_c-1)) then
+      out_r <= out_rin;
+    end if;
+
+    if reset_n_s(clock_count_c-1) = '0' then
+      out_r.read <= (others => '0');
+      out_r.output <= (others => '0');
+    end if;
+  end process;
+
+  -- Nothing left to read as long as the output side did not see the
+  -- input side move past its own position.
+  out_empty_s <= out_r.read = in_position_resync_s;
+
+  out_transition: process(out_r, out_empty_s, addr_ready_s,
+                          out_valid_s, out_ready_s, sideband_out_s) is
+  begin
+    out_rin <= out_r;
+
+    if not out_empty_s and addr_ready_s = '1' then
+      out_rin.read <= position_next(out_r.read);
+    end if;
+
+    -- The word leaving the output port carries the position it was
+    -- read from, next one to leave is the one after it.
+    if out_valid_s = '1' and out_ready_s = '1' then
+      out_rin.output <= position_next(unsigned(sideband_out_s));
+    end if;
+  end process;
+
+  out_moore: process(out_r, out_empty_s, in_position_resync_s, out_valid_s) is
+    variable available: integer range 0 to word_count_c;
+  begin
+    available := position_diff(in_position_resync_s, out_r.output, 0);
+
+    addr_valid_s <= to_logic(not out_empty_s);
+    addr_s <= out_r.read(mem_ptr_t'range);
+    sideband_in_s <= std_ulogic_vector(out_r.read);
+    out_position_s <= out_r.output;
+
+    available_s <= available;
+    if out_valid_s = '1' and available /= 0 then
+      available_min_s <= available - 1;
+    else
+      available_min_s <= available;
+    end if;
+  end process;
+
+  reader: nsl_memory.streamer.memory_streamer
+    generic map(
+      addr_width_c => mem_ptr_t'length,
+      data_width_c => data_t'length,
+      memory_latency_c => 1,
+      sideband_width_c => position_t'length
+      )
+    port map(
+      clock_i => clock_i(clock_count_c-1),
+      reset_n_i => reset_n_s(clock_count_c-1),
+
+      addr_valid_i => addr_valid_s,
+      addr_ready_o => addr_ready_s,
+      addr_i => addr_s,
+      sideband_i => sideband_in_s,
+
+      data_valid_o => out_valid_s,
+      data_ready_i => out_ready_s,
+      data_o => out_data_s,
+      sideband_o => sideband_out_s,
+
+      mem_enable_o => mem_read_en_s,
+      mem_address_o => mem_read_address_s,
+      mem_sideband_o => open,
+      mem_data_i => mem_read_data_s
+      );
+
+  registered_counters: if register_counters_c
+  generate
+    in_counter: process(clock_i(0)) is
+    begin
+      if rising_edge(clock_i(0)) then
+        in_free_o <= free_s;
       end if;
-    end if;
-  end process;
+    end process;
 
-  transition: process(int_out_ready_i, r, s_right.mem_ptr, s_read_data, s_right.inc_ack)
-  begin
-    rin <= r;
+    out_counter: process(clock_i(clock_count_c-1)) is
+    begin
+      if rising_edge(clock_i(clock_count_c-1)) then
+        out_available_min_o <= available_min_s;
+        out_available_o <= available_s;
+      end if;
+    end process;
+  end generate;
 
-    rin.direct <= s_right.inc_ack;
-
-    if r.valid = '0' and int_out_ready_i = '0' then
-      rin.valid <= r.direct;
-      rin.data <= s_read_data;
-      rin.addr <= s_right.mem_ptr;
-    elsif r.valid = '1' and int_out_ready_i = '1' then
-      rin.valid <= '0';
-      rin.data <= (others => '-');
-      rin.addr <= (others => '-');
-    end if;
-  end process;
-
-  s_right.inc_req <= int_out_ready_i or (not r.valid and not r.direct);
-  s_right.mem_en <= s_right.inc_ack and (int_out_ready_i or not r.valid);
-  int_out_valid_o <= r.valid or r.direct;
-  int_out_data_o <= r.data when r.valid = '1' else s_read_data;
+  non_registered_counters: if not register_counters_c
+  generate
+    in_free_o <= free_s;
+    out_available_min_o <= available_min_s;
+    out_available_o <= available_s;
+  end generate;
 
 end ram2;
