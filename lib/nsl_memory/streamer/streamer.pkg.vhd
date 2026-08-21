@@ -3,6 +3,20 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package streamer is
+
+  -- Latency-hiding front-end for a read-only memory port.
+  --
+  -- Every address accepted on addr_valid_i/addr_ready_o yields exactly
+  -- one beat on data_valid_o/data_ready_i, in order, carrying the
+  -- sideband that came with the address. Addresses are only accepted
+  -- while there is room to land the data they will return, so a
+  -- stalled data side never loses a beat.
+  --
+  -- mem_address_o is presented one cycle after the address is
+  -- accepted and mem_data_i is expected memory_latency_c cycles
+  -- later. mem_enable_o stays asserted for as long as reads are in
+  -- flight, so a memory with registered outputs keeps clocking its
+  -- pipeline until the data comes out.
   component memory_streamer is
     generic (
       addr_width_c : natural;

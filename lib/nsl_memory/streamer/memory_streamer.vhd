@@ -34,6 +34,16 @@ entity memory_streamer is
     );
 end memory_streamer;
 
+-- Beats coming back from the memory are held in a circular buffer
+-- followed by an output register.
+--
+-- The buffer is not a shifting structure: a beat is written to the
+-- slot the one-hot write pointer designates and stays there. Slot
+-- data inputs are therefore driven straight from mem_data_i and slot
+-- clock enables are one AND away from flip-flops. The one-hot read
+-- pointer selects the slot that refills the output register. Fillness
+-- counters take part in flow control and in the empty/bypass flag
+-- only, never in data steering.
 architecture beh of memory_streamer is
 
   subtype data_t is std_ulogic_vector(data_width_c-1 downto 0);
@@ -41,20 +51,58 @@ architecture beh of memory_streamer is
   subtype sideband_t is std_ulogic_vector(sideband_width_c-1 downto 0);
   type sideband_vector is array(integer range <>) of sideband_t;
 
-  constant sideband_pad: sideband_t := (others => '-');
-  constant pad: data_t := (others => '-');
+  -- Addresses are accepted as long as less than fifo_depth_c beats
+  -- are held, so up to memory_latency_c+1 more reads may be in flight
+  -- and land afterwards.
   constant fifo_depth_c : integer := 2;
   constant total_fifo_depth_c : integer := fifo_depth_c+memory_latency_c+1;
-  
+  -- One of the held beats sits in the output register.
+  constant buffer_depth_c : integer := total_fifo_depth_c-1;
+
+  subtype pointer_t is std_ulogic_vector(0 to buffer_depth_c-1);
+  constant pointer_init_c : pointer_t := (0 => '1', others => '0');
+
+  function mux(sel : pointer_t; d : data_vector) return data_t is
+    variable ret : data_t := (others => '0');
+  begin
+    for i in d'range loop
+      if sel(i) = '1' then
+        ret := ret or d(i);
+      end if;
+    end loop;
+    return ret;
+  end function;
+
+  function mux(sel : pointer_t; d : sideband_vector) return sideband_t is
+    variable ret : sideband_t := (others => '0');
+  begin
+    for i in d'range loop
+      if sel(i) = '1' then
+        ret := ret or d(i);
+      end if;
+    end loop;
+    return ret;
+  end function;
+
   type regs_t is
   record
     running: boolean;
     address : unsigned(addr_width_c-1 downto 0);
-    output_fifo: data_vector(0 to total_fifo_depth_c-1);
-    sideband_fifo: sideband_vector(0 to total_fifo_depth_c-1);
-    output_fillness: integer range 0 to total_fifo_depth_c;
     has_read: std_ulogic_vector(0 to memory_latency_c);
     sideband: sideband_vector(0 to memory_latency_c);
+
+    fifo_data: data_vector(0 to buffer_depth_c-1);
+    fifo_sideband: sideband_vector(0 to buffer_depth_c-1);
+    wptr: pointer_t;
+    rptr: pointer_t;
+    buffer_fillness: integer range 0 to buffer_depth_c;
+    buffer_empty: boolean;
+
+    out_data: data_t;
+    out_sideband: sideband_t;
+    out_valid: std_ulogic;
+
+    fillness: integer range 0 to total_fifo_depth_c;
   end record;
 
   signal r, rin: regs_t;
@@ -68,19 +116,25 @@ begin
     end if;
 
     if reset_n_i = '0' then
-      r.output_fillness <= 0;
+      r.fillness <= 0;
+      r.buffer_fillness <= 0;
+      r.buffer_empty <= true;
+      r.wptr <= pointer_init_c;
+      r.rptr <= pointer_init_c;
+      r.out_valid <= '0';
       r.has_read <= (others => '0');
       r.running <= false;
     end if;
   end process;
 
   transition: process(r, addr_valid_i, addr_i, data_ready_i, mem_data_i, sideband_i) is
-    variable push, pop: boolean;
+    variable push, pop, out_free: boolean;
   begin
     rin <= r;
 
     push := false;
-    pop := false;
+    pop := r.out_valid = '1' and data_ready_i = '1';
+    out_free := r.out_valid = '0' or data_ready_i = '1';
 
     rin.running <= true;
 
@@ -89,42 +143,71 @@ begin
       rin.address <= addr_i;
       rin.has_read <= r.has_read(1 to r.has_read'right) & '0';
       rin.has_read(rin.has_read'right)
-        <= to_logic(r.output_fillness < fifo_depth_c and addr_valid_i = '1');
+        <= to_logic(r.fillness < fifo_depth_c and addr_valid_i = '1');
 
       push := r.has_read(0) = '1';
-      pop := r.output_fillness /= 0 and data_ready_i = '1';
     end if;
 
-    if push and pop then
-      rin.output_fifo <= r.output_fifo(1 to r.output_fifo'right) & pad;
-      rin.output_fifo(r.output_fillness-1) <= mem_data_i;
-      rin.sideband_fifo <= r.sideband_fifo(1 to r.sideband_fifo'right) & sideband_pad;
-      rin.sideband_fifo(r.output_fillness-1) <= r.sideband(0);
-    elsif push then
-      rin.output_fifo(r.output_fillness) <= mem_data_i;
-      rin.sideband_fifo(r.output_fillness) <= r.sideband(0);
-      rin.output_fillness <= r.output_fillness + 1;
-    elsif pop then
-      rin.output_fifo <= r.output_fifo(1 to r.output_fifo'right) & pad;
-      rin.sideband_fifo <= r.sideband_fifo(1 to r.sideband_fifo'right) & sideband_pad;
-      rin.output_fillness <= r.output_fillness - 1;
+    -- Returning data always lands in the slot the write pointer
+    -- designates. The pointer only moves for a beat that is actually
+    -- retained there, i.e. one that did not go straight through to
+    -- the output register.
+    if push then
+      for i in pointer_t'range loop
+        if r.wptr(i) = '1' then
+          rin.fifo_data(i) <= mem_data_i;
+          rin.fifo_sideband(i) <= r.sideband(0);
+        end if;
+      end loop;
+
+      if not r.buffer_empty or not out_free then
+        rin.wptr <= r.wptr(r.wptr'right) & r.wptr(r.wptr'left to r.wptr'right-1);
+      end if;
+    end if;
+
+    if out_free then
+      if not r.buffer_empty then
+        rin.out_data <= mux(r.rptr, r.fifo_data);
+        rin.out_sideband <= mux(r.rptr, r.fifo_sideband);
+        rin.out_valid <= '1';
+        rin.rptr <= r.rptr(r.rptr'right) & r.rptr(r.rptr'left to r.rptr'right-1);
+      elsif push then
+        rin.out_data <= mem_data_i;
+        rin.out_sideband <= r.sideband(0);
+        rin.out_valid <= '1';
+      else
+        rin.out_valid <= '0';
+      end if;
+    end if;
+
+    if push and not out_free then
+      rin.buffer_fillness <= r.buffer_fillness + 1;
+      rin.buffer_empty <= false;
+    elsif out_free and not push and not r.buffer_empty then
+      rin.buffer_fillness <= r.buffer_fillness - 1;
+      rin.buffer_empty <= r.buffer_fillness = 1;
+    end if;
+
+    if push and not pop then
+      rin.fillness <= r.fillness + 1;
+    elsif pop and not push then
+      rin.fillness <= r.fillness - 1;
     end if;
   end process;
 
   moore: process(r) is
   begin
     if r.running then
-      addr_ready_o <= to_logic(r.output_fillness < fifo_depth_c);
-      data_valid_o <= to_logic(r.output_fillness /= 0);
+      addr_ready_o <= to_logic(r.fillness < fifo_depth_c);
     else
       addr_ready_o <= '0';
-      data_valid_o <= '0';
     end if;
-    data_o <= r.output_fifo(0);
-    sideband_o <= r.sideband_fifo(0);
+    data_valid_o <= r.out_valid;
+    data_o <= r.out_data;
+    sideband_o <= r.out_sideband;
     mem_sideband_o <= r.sideband(r.sideband'right);
     mem_address_o <= r.address;
     mem_enable_o <= or_reduce(r.has_read);
   end process;
-  
+
 end architecture;
