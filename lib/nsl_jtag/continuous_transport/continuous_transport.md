@@ -22,6 +22,13 @@ protocol.
 The system-side interface is `nsl_bnoc.framed`
 (`{data[7:0], last, valid}` + `ready`); `last` marks end-of-packet.
 
+The byte-level frame and credit protocol is `nsl_bnoc.chunked_link`
+(see `lib/nsl_bnoc/chunked_link/chunked_link.md`), shared with other
+master-clocked transports; the ATE is the chunked_link master and the
+TAP the slave. This document covers the JTAG-specific transport
+underneath (batches, preamble/SOF, alignment pad, TLR) and how the
+generic credit rules map onto chain geometry.
+
 ## 2. Topology, latency, and who knows what
 
 During Shift-DR the whole scan path is one shift register:
@@ -115,51 +122,18 @@ preamble / `0xD5` SFD.)
 
 ### 4.1 Frame encoding
 
-Header byte; the top bit selects payload vs control. Direction column:
-`TDI` = ATE -> TAP only, `TDO` = TAP -> ATE only, `both` = either.
+The frame encoding is specified in
+`lib/nsl_bnoc/chunked_link/chunked_link.md` section 2. Its
+direction column maps onto JTAG as master -> slave = TDI and
+slave -> master = TDO. JTAG-specific points:
 
-| Header        | Dir  | Meaning                                | Follows           |
-|---------------|------|----------------------------------------|-------------------|
-| `0b00nnnnnn`  | both | **Data, not last**, `n+1` bytes        | 1..64 data bytes  |
-| `0b01nnnnnn`  | both | **Data, last** (end-of-packet)         | 1..64 data bytes  |
-| `0b11110000`  | both | **Idle** (one byte of filler)          | -                 |
-| `0b11110001`  | both | **Credit** (absolute balance)          | 2 bytes, LE       |
-| `0b11110010`  | TDO  | **TX fill level** (absolute, bytes)    | 2 bytes, LE       |
-| `0b11111ppp`  | TDI  | **Set TDO alignment pad** = `ppp`      | - (pad 0..7)      |
-| else          | both | **Reserved** (receiver: treat as Idle) | -                 |
-
-The data/control split is bit 7 (`0` = data, `1` = control). Defined
-control opcodes are clustered under the `0b1111xxxx` prefix on purpose,
-so the large blocks `0b10xxxxxx` (64), `0b110xxxxx` (32) and
-`0b1110xxxx` (16) stay fully reserved and aligned — a future opcode can
-then carry an inline value in its low bits (as the pad already does)
-without fragmenting them.
-
-Notes:
-
-- `last` is folded into the data header, so a packet boundary is atomic
-  with its data. There is no zero-length-packet marker: `nsl_bnoc.framed`
-  and AXI4-Stream cannot express a zero-byte frame, so it would have no
-  source semantic.
-- Data body is contiguous: the host `memcpy`s the run directly.
-- **Credit** means different things by direction but uses one opcode:
-  on TDI it grants the TAP a TX budget (section 6.2); on TDO it grants
-  the ATE RX buffer credit (section 6.1). Absolute, little-endian.
-- **TX fill level** gives the ATE visibility of the TAP's pending TX
-  backlog so it knows whether to keep clocking. Absolute; a value of 0
-  means "nothing to send" (so no separate empty marker is needed).
-  Safely lost. The TAP emits it (a) after each end-of-packet chunk, as an
-  early "here is what remains" hint the ATE can use to size the next
-  batch, and (b) in place of idle when the backlog is empty, so the
-  "you can stop" signal is re-advertised reliably even if the
-  end-of-packet one fell in a truncated batch tail.
-- Credit and fill-level fields are 16-bit, little-endian; a single batch
-  payload stays well under that (4-8 KiB is ample), so the width is
-  headroom, not a target.
-- **Set TDO alignment pad** encodes the 3-bit pad directly in the
-  opcode (no payload byte). It updates a shadow register; the value
-  transfers to the active pad on the next **Update-DR** (batch close)
-  and applies from the following batch's preamble (section 7).
+- **Set alignment pad** controls the TDO alignment pad of section 7.
+  It updates a shadow register; the value transfers to the active pad
+  on the next **Update-DR** (batch close) and applies from the
+  following batch's preamble.
+- Batch payload stays well under the 16-bit credit field range
+  (4-8 KiB per batch is ample), so the field width is headroom, not a
+  target.
 
 ## 5. Idempotency of control
 

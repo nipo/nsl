@@ -1,9 +1,9 @@
-name: jtag_continuous_transport_deframer
+name: chunked_link_deframer
 
 root:
   name: top
   deps:
-    - nsl_jtag.continuous_transport
+    - nsl_bnoc.chunked_link
     - nsl_clocking.async
     - nsl_simulation.assertions
     - nsl_simulation.logging

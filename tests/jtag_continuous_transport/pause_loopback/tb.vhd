@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_jtag, nsl_memory, nsl_simulation, nsl_data;
+library nsl_clocking, nsl_bnoc, nsl_jtag, nsl_memory, nsl_simulation, nsl_data;
+use nsl_bnoc.chunked_link.all;
 use nsl_jtag.continuous_transport.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_jtag, nsl_data, nsl_bnoc, nsl_hwdep, nsl_clocking, nsl_memory;
 use nsl_data.bytestream.all;
+use nsl_bnoc.chunked_link.all;
 use nsl_jtag.continuous_transport.all;
 
 entity jtag_continuous_transport_tap is

@@ -4,6 +4,7 @@ root:
   name: top
   deps:
     - nsl_jtag.continuous_transport
+    - nsl_bnoc.chunked_link
     - nsl_memory.fifo
     - nsl_clocking.async
     - nsl_data.bytestream

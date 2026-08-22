@@ -6,6 +6,7 @@ library nsl_clocking, nsl_bnoc, nsl_jtag, nsl_simulation, nsl_data;
 use nsl_jtag.jtag.all;
 use nsl_jtag.transactor.all;
 use nsl_jtag.continuous_transport.all;
+use nsl_bnoc.chunked_link.all;
 use nsl_bnoc.testing.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;

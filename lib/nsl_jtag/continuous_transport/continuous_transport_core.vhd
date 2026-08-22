@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_data;
+library nsl_jtag, nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
+use nsl_bnoc.chunked_link.all;
 use nsl_jtag.continuous_transport.all;
 
 -- TCK-domain protocol core for continuous_transport.
@@ -76,7 +77,7 @@ begin
       byte_valid_o => des_byte_valid
       );
 
-  deframer: nsl_jtag.continuous_transport.continuous_transport_deframer
+  deframer: nsl_bnoc.chunked_link.chunked_link_deframer
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
@@ -85,17 +86,19 @@ begin
       rx_data_o => rx_data_o,
       rx_last_o => rx_last_o,
       rx_valid_o => rx_valid_o,
-      budget_o => budget,
-      budget_set_o => budget_set,
+      credit_o => budget,
+      credit_set_o => budget_set,
+      level_o => open,
+      level_set_o => open,
       pad_o => pad,
       pad_set_o => pad_set
       );
 
-  framer: nsl_jtag.continuous_transport.continuous_transport_framer
+  framer: nsl_bnoc.chunked_link.chunked_link_slave_framer
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
-      capture_i => capture_i,
+      batch_start_i => capture_i,
       byte_ready_i => byte_ready,
       byte_o => frame_byte,
       budget_set_i => budget_set,

@@ -2,14 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_clocking, nsl_simulation, nsl_data;
+library nsl_bnoc, nsl_clocking, nsl_simulation, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
 
--- Unit test for the continuous_transport receive deframer: a hand-built byte
--- stream (credit, set-pad, two data frames, idle) is pushed in, and the
--- decoded payload, last flags, budget grant and pad are checked.
+-- Unit test for the chunked_link receive deframer: a hand-built byte stream
+-- (credit, set-pad, two data frames, tx-level, idle) is pushed in, and the
+-- decoded payload, last flags, credit, level and pad are checked.
 entity tb is
 end entity;
 
@@ -27,6 +27,8 @@ architecture arch of tb is
   signal rx_valid : std_ulogic;
   signal budget     : unsigned(15 downto 0);
   signal budget_set : std_ulogic;
+  signal level      : unsigned(15 downto 0);
+  signal level_set  : std_ulogic;
   signal pad        : std_ulogic_vector(2 downto 0);
   signal pad_set    : std_ulogic;
 
@@ -39,13 +41,15 @@ architecture arch of tb is
   signal last_budget : unsigned(15 downto 0) := (others => '0');
   signal pad_seen    : natural := 0;
   signal last_pad    : std_ulogic_vector(2 downto 0) := (others => '0');
+  signal level_seen  : natural := 0;
+  signal last_level  : unsigned(15 downto 0) := (others => '0');
 
 begin
 
   reset_sync: nsl_clocking.async.async_edge
     port map(clock_i => clock, data_i => reset_n_async, data_o => reset_n);
 
-  dut: nsl_jtag.continuous_transport.continuous_transport_deframer
+  dut: nsl_bnoc.chunked_link.chunked_link_deframer
     port map(
       clock_i => clock,
       reset_n_i => reset_n,
@@ -54,8 +58,10 @@ begin
       rx_data_o => rx_data,
       rx_last_o => rx_last,
       rx_valid_o => rx_valid,
-      budget_o => budget,
-      budget_set_o => budget_set,
+      credit_o => budget,
+      credit_set_o => budget_set,
+      level_o => level,
+      level_set_o => level_set,
       pad_o => pad,
       pad_set_o => pad_set
       );
@@ -79,6 +85,10 @@ begin
       if pad_set = '1' then
         last_pad <= pad;
         pad_seen <= pad_seen + 1;
+      end if;
+      if level_set = '1' then
+        last_level <= level;
+        level_seen <= level_seen + 1;
       end if;
     end if;
   end process;
@@ -105,6 +115,8 @@ begin
     send(x"03"); send(x"aa"); send(x"bb"); send(x"cc"); send(x"dd");
     -- Data frame, 2 bytes, last
     send(x"41"); send(x"ee"); send(x"ff");
+    -- TX fill level = 5 (LE: 0x05, 0x00)
+    send(x"f2"); send(x"05"); send(x"00");
     -- Idle
     send(x"f0");
 
@@ -126,8 +138,10 @@ begin
     assert_equal("deframer", "budget", std_ulogic_vector(last_budget), x"0010", failure);
     assert pad_seen = 1 report "expected one pad update" severity failure;
     assert_equal("deframer", "pad", last_pad, "011", failure);
+    assert level_seen = 1 report "expected one tx-level" severity failure;
+    assert_equal("deframer", "level", std_ulogic_vector(last_level), x"0005", failure);
 
-    log_info("continuous_transport deframer OK");
+    log_info("chunked_link deframer OK");
     done <= '1';
     wait;
   end process;

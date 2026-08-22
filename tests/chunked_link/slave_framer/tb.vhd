@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_clocking, nsl_data, nsl_simulation;
-use nsl_jtag.continuous_transport.all;
+library nsl_bnoc, nsl_clocking, nsl_data, nsl_simulation;
+use nsl_bnoc.chunked_link.all;
 use nsl_data.bytestream.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
 
--- Unit test for the continuous_transport TX framer. A 5-byte packet is offered
+-- Unit test for the chunked_link slave framer. A 5-byte packet is offered
 -- on the TX FIFO read side, a generous budget is granted, and the emitted byte
 -- stream is captured. It must contain a single data frame (header 0x44 = 5
 -- bytes, last) carrying the packet, surrounded by credit-refresh filler.
@@ -52,11 +52,11 @@ begin
       data_o => reset_n
       );
 
-  dut: nsl_jtag.continuous_transport.continuous_transport_framer
+  dut: nsl_bnoc.chunked_link.chunked_link_slave_framer
     port map(
       clock_i => clock,
       reset_n_i => reset_n,
-      capture_i => capture,
+      batch_start_i => capture,
       byte_ready_i => byte_ready,
       byte_o => byte_out,
       budget_set_i => budget_set,
@@ -149,7 +149,7 @@ begin
     assert credit_seen
       report "no credit refresh emitted" severity failure;
 
-    log_info("continuous_transport framer OK");
+    log_info("chunked_link slave framer OK");
     done <= '1';
     wait;
   end process;

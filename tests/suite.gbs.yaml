@@ -155,8 +155,14 @@ projects:
   - name: cbor_codec
     path: cbor/codec
     tags: [ghdl, simulation]
+  - name: chunked_link_deframer
+    path: chunked_link/deframer
+    tags: [ghdl, simulation, chunked_link]
   - name: chunked_link_master_framer
     path: chunked_link/master_framer
+    tags: [ghdl, simulation, chunked_link]
+  - name: chunked_link_slave_framer
+    path: chunked_link/slave_framer
     tags: [ghdl, simulation, chunked_link]
   - name: clock_div
     path: clock_div
@@ -295,12 +301,6 @@ projects:
     tags: [ghdl, simulation]
   - name: jtag_continuous_transport_bit_loopback
     path: jtag_continuous_transport/bit_loopback
-    tags: [ghdl, simulation, jtag_continuous_transport]
-  - name: jtag_continuous_transport_deframer
-    path: jtag_continuous_transport/deframer
-    tags: [ghdl, simulation, jtag_continuous_transport]
-  - name: jtag_continuous_transport_framer
-    path: jtag_continuous_transport/framer
     tags: [ghdl, simulation, jtag_continuous_transport]
   - name: jtag_continuous_transport_loopback
     path: jtag_continuous_transport/loopback

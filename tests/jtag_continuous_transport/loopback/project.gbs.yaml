@@ -4,6 +4,7 @@ root:
   name: top
   deps:
     - nsl_jtag.continuous_transport
+    - nsl_bnoc.chunked_link
     - nsl_jtag.transactor
     - nsl_jtag.jtag
     - nsl_simulation.jtag
