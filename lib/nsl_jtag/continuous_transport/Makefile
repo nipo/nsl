@@ -4,9 +4,12 @@ vhdl-sources += continuous_transport_serializer.vhd
 vhdl-sources += jtag_continuous_transport_tap.vhd
 vhdl-sources += continuous_transport_slave.vhd
 vhdl-sources += continuous_transport_core.vhd
+vhdl-sources += continuous_transport_master.vhd
 
 deps += nsl_bnoc.framed
 deps += nsl_bnoc.chunked_link
+deps += nsl_jtag.transactor
+deps += nsl_math.arith
 deps += nsl_hwdep.jtag
 deps += nsl_memory.fifo
 deps += nsl_clocking.async

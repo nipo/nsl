@@ -81,6 +81,47 @@ package continuous_transport is
       );
   end component;
 
+  -- Host-side master: drives a framed_ate to exchange chunked_link frames
+  -- with a continuous_transport_slave. Each framed_ate command frame is one
+  -- complete, interleavable batch: IR selection (with pre/post BYPASS
+  -- padding), one continuous Shift-DR run, return to Run-Test/Idle.
+  component continuous_transport_master is
+    generic(
+      ir_len_max_c : positive;
+      ir_pre_max_c : natural := 8;
+      ir_post_max_c : natural := 8;
+      flight_margin_c : natural := 16;
+      batch_bytes_max_c : positive := 1024;
+      idle_grant_c : positive := 16;
+      backoff_width_c : positive := 16;
+      divisor_m1_c : natural range 0 to 255 := 0
+      );
+    port(
+      clock_i   : in  std_ulogic;
+      reset_n_i : in  std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      poll_backoff_i : in unsigned(backoff_width_c-1 downto 0) := (others => '0');
+
+      ir_i : in std_ulogic_vector(ir_len_max_c-1 downto 0);
+      ir_len_m1_i : in integer range 0 to ir_len_max_c-1;
+      ir_pre_len_i : in integer range 0 to ir_pre_max_c := 0;
+      ir_post_len_i : in integer range 0 to ir_post_max_c := 0;
+
+      cmd_o : out nsl_bnoc.framed.framed_req_t;
+      cmd_i : in  nsl_bnoc.framed.framed_ack_t;
+      rsp_i : in  nsl_bnoc.framed.framed_req_t;
+      rsp_o : out nsl_bnoc.framed.framed_ack_t;
+
+      tx_i : in  nsl_bnoc.framed.framed_req_t;
+      tx_o : out nsl_bnoc.framed.framed_ack_t;
+
+      rx_o : out nsl_bnoc.framed.framed_req_t;
+      rx_i : in  nsl_bnoc.framed.framed_ack_t;
+      rx_room_i : in unsigned(credit_bits_c-1 downto 0)
+      );
+  end component;
+
   component continuous_transport_core is
     generic(
       preamble_count_c : positive := preamble_min_c
