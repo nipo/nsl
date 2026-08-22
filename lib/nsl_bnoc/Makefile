@@ -10,3 +10,4 @@ packages += pipe
 packages += crc
 packages += packetizer
 packages += axi_adapter
+packages += chunked_link

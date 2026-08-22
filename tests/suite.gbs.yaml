@@ -155,6 +155,9 @@ projects:
   - name: cbor_codec
     path: cbor/codec
     tags: [ghdl, simulation]
+  - name: chunked_link_master_framer
+    path: chunked_link/master_framer
+    tags: [ghdl, simulation, chunked_link]
   - name: clock_div
     path: clock_div
     tags: [ghdl, simulation]
