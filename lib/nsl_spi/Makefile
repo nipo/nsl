@@ -9,3 +9,4 @@ packages += io_extender
 packages += flash
 packages += testing
 packages += source
+packages += chunked_link

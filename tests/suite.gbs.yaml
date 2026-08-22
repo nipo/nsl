@@ -368,6 +368,9 @@ projects:
   - name: spi_cbor_full_test
     path: spi_cbor/full_test
     tags: [ghdl, simulation]
+  - name: spi_chunked_link_loopback
+    path: spi_chunked_link/loopback
+    tags: [ghdl, simulation, chunked_link]
   - name: spi_slave
     path: spi_slave
     tags: [ghdl, simulation]
