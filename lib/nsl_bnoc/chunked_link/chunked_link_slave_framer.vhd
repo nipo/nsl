@@ -47,8 +47,8 @@ entity chunked_link_slave_framer is
     rx_free_i : in  unsigned(credit_bits_c-1 downto 0);
 
     -- TX backlog to advertise to the master (tx-level frames): after each
-    -- end-of-packet, and as the idle filler when empty so the master
-    -- reliably learns it can stop clocking.
+    -- end-of-packet, and in place of idle whenever the value changed
+    -- since last advertised.
     tx_level_i : in  unsigned(credit_bits_c-1 downto 0)
     );
 end entity;

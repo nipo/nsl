@@ -158,6 +158,9 @@ projects:
   - name: chunked_link_deframer
     path: chunked_link/deframer
     tags: [ghdl, simulation, chunked_link]
+  - name: chunked_link_framed_chunker
+    path: chunked_link/framed_chunker
+    tags: [ghdl, simulation, chunked_link]
   - name: chunked_link_master_framer
     path: chunked_link/master_framer
     tags: [ghdl, simulation, chunked_link]
@@ -214,9 +217,6 @@ projects:
     tags: [ghdl, simulation]
   - name: float
     path: float
-    tags: [ghdl, simulation]
-  - name: framed_chunker
-    path: framed_chunker
     tags: [ghdl, simulation]
   - name: ftdi
     path: ftdi

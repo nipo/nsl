@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data;
+library nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 
 -- Credit-based chunk framing for full-duplex byte pipes. See
@@ -77,9 +77,9 @@ package chunked_link is
   -- Slave-side frame sender. Emits data frames gated by the TX budget
   -- granted by the master (absolute grants, every emitted byte spends
   -- one unit); when no data frame can be started it emits credit
-  -- refreshes advertising rx_free_i, or tx-level frames when the
-  -- backlog is empty. byte_o must be latched by the transport exactly
-  -- once per byte_ready_i pulse.
+  -- refreshes advertising rx_free_i, or tx-level frames whenever the
+  -- backlog changed since last advertised. byte_o must be latched by
+  -- the transport exactly once per byte_ready_i pulse.
   component chunked_link_slave_framer is
     port(
       clock_i   : in  std_ulogic;
@@ -107,8 +107,8 @@ package chunked_link is
       rx_free_i : in  unsigned(credit_bits_c-1 downto 0);
 
       -- TX backlog to advertise to the master (tx-level frames): after
-      -- each end-of-packet, and as the idle filler when empty so the
-      -- master reliably learns it can stop clocking.
+      -- each end-of-packet, and in place of idle whenever the value
+      -- changed since last advertised.
       tx_level_i : in  unsigned(credit_bits_c-1 downto 0)
       );
   end component;
@@ -199,6 +199,61 @@ package chunked_link is
       level_set_o  : out std_ulogic;
       pad_o        : out std_ulogic_vector(2 downto 0);
       pad_set_o    : out std_ulogic
+      );
+  end component;
+
+  -- Chunking.
+  --
+  -- Transports frames (with boundary information) over a pipe (continuous data
+  -- stream). Interleaves data with a 2-byte header that contains size-1 and
+  -- the EOF information. Max frame size is 2**14 (16 KiB).
+  --
+  -- Header: [0lnnnnnn nnnnnnnn] (in transmission order, MSB first).
+  -- * l: last (active high),
+  -- * n: size (MSB first), off by one.
+  --
+  -- Special values for unchunker's header parser:
+  -- * [11--------] (= 0xc0) is a reset marker and does not take another byte
+  -- of header
+  -- * [10--------] (= 0x80) is a reset release marker.
+  --
+  -- In the RX path (from chunked pipe to framed), can handle arbitrarily long
+  -- frames.
+  -- In the TX path (from framed to pipe), it needs a fifo to get the size of
+  -- coming chunk before sending. That limits the chunk size (but still allows
+  -- to convey arbitrarily long frames).
+  --
+  -- Typically, on initialization, if peer sends 16KiB+1 byte of 0xc0
+  -- to the unchunker, it has the certitude any pending frame has been flushed
+  -- and that RX state is synchronized. Then one 0x80 terminates the reset.
+  component framed_unchunker is
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      in_i : in  nsl_bnoc.pipe.pipe_req_t;
+      in_o : out nsl_bnoc.pipe.pipe_ack_t;
+
+      reset_n_o : out std_ulogic;
+      
+      out_o : out nsl_bnoc.framed.framed_req_t;
+      out_i : in nsl_bnoc.framed.framed_ack_t
+      );
+  end component;
+
+  component framed_chunker is
+    generic(
+      max_txn_length_l2_c : natural range 2 to 14 := 10
+      );
+    port(
+      reset_n_i   : in  std_ulogic;
+      clock_i     : in  std_ulogic;
+
+      in_i : in nsl_bnoc.framed.framed_req_t;
+      in_o : out nsl_bnoc.framed.framed_ack_t;
+
+      out_o : out nsl_bnoc.pipe.pipe_req_t;
+      out_i : in nsl_bnoc.pipe.pipe_ack_t
       );
   end component;
 

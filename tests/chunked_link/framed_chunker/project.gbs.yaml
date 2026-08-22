@@ -1,9 +1,10 @@
-name: framed_chunker
+name: chunked_link_framed_chunker
 
 root:
   name: top
   deps:
     - nsl_bnoc.framed
+    - nsl_bnoc.chunked_link
     - nsl_bnoc.pipe
     - nsl_bnoc.testing
     - nsl_data.text

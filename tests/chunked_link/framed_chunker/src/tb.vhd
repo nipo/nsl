@@ -59,7 +59,7 @@ begin
     wait;
   end process;
 
-  chunker: nsl_bnoc.framed.framed_chunker
+  chunker: nsl_bnoc.chunked_link.framed_chunker
     generic map(
       max_txn_length_l2_c => max_txn_length_l2_c
       )
@@ -74,7 +74,7 @@ begin
       out_i => pipe_s.ack
       );
 
-  unchunker: nsl_bnoc.framed.framed_unchunker
+  unchunker: nsl_bnoc.chunked_link.framed_unchunker
     port map(
       reset_n_i => reset_n_s,
       clock_i => clock_s,

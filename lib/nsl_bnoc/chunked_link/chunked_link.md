@@ -172,3 +172,8 @@ Senders present exactly one byte at all times (idle at worst) and
 advance on the transport's `byte_ready` strobe, so a transport may
 latch bytes at any pace, including not at all while a batch is
 suspended.
+
+The subset also hosts `framed_chunker` / `framed_unchunker`, an
+independent pair transporting frames over a plain `nsl_bnoc.pipe`
+stream with 2-byte size headers (16 KiB max chunk). They share the
+chunking idea but none of the wire format or credit machinery above.
