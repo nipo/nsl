@@ -32,7 +32,7 @@ end entity;
 
 library nsl_data, nsl_inet, nsl_logic, nsl_math, nsl_memory;
 use nsl_data.bytestream.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_logic.bool.all;
 
 architecture beh of switching_ingress is

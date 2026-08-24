@@ -12,6 +12,7 @@ use nsl_mii.rgmii.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_mii.testing.all;
+use nsl_inet.mac.all;
 use nsl_inet.ethernet.all;
 use nsl_bnoc.testing.all;
 

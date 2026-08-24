@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_amba, nsl_data, nsl_inet, nsl_logic, nsl_math;
 use nsl_data.bytestream.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 
 -- Store-and-forward Ethernet switching (802.1D-style transparent
 -- bridge) over AXI4-Stream.

@@ -7,13 +7,13 @@ use nsl_logic.bool.all;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use work.mac.all;
 use work.ethernet.all;
 
 entity ethernet_receiver is
   generic(
     ethertype_c : ethertype_vector;
-    l1_has_fcs_c : boolean := true;
-    l1_header_length_c : integer := 0
+    header_length_c : integer := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -21,8 +21,8 @@ entity ethernet_receiver is
 
     local_address_i : in mac48_t;
 
-    l1_i : in nsl_bnoc.committed.committed_req;
-    l1_o : out nsl_bnoc.committed.committed_ack;
+    l2_i : in nsl_bnoc.committed.committed_req;
+    l2_o : out nsl_bnoc.committed.committed_ack;
 
     -- Valid at least on first word of frame on l3_o.
     l3_type_index_o : out integer range 0 to ethertype_c'length - 1;
@@ -32,7 +32,7 @@ entity ethernet_receiver is
 end entity;
 
 architecture beh of ethernet_receiver is
-  
+
   type in_state_t is (
     IN_RESET,
     IN_HEADER,
@@ -45,7 +45,7 @@ architecture beh of ethernet_receiver is
     IN_COMMIT,
     IN_CANCEL
     );
-  
+
   type out_state_t is (
     OUT_RESET,
     OUT_IDLE,
@@ -58,8 +58,8 @@ architecture beh of ethernet_receiver is
     );
 
   constant fifo_depth_c : integer := 2;
-  constant left_max: integer := nsl_math.arith.max(6, l1_header_length_c)-1;
-  
+  constant left_max: integer := nsl_math.arith.max(6, header_length_c)-1;
+
   type regs_t is
   record
     in_state : in_state_t;
@@ -67,7 +67,7 @@ architecture beh of ethernet_receiver is
     local_addr, saddr : mac48_t;
 
     type_len : byte_string(0 to 1);
-    header : byte_string(0 to nsl_math.arith.max(l1_header_length_c-1, 1));
+    header : byte_string(0 to nsl_math.arith.max(header_length_c-1, 1));
     addr_context : byte;
     l3_type_index : integer range 0 to ethertype_c'length - 1;
 
@@ -80,9 +80,6 @@ architecture beh of ethernet_receiver is
 
   signal r, rin: regs_t;
 
-  signal crced_i : nsl_bnoc.committed.committed_req;
-  signal crced_o : nsl_bnoc.committed.committed_ack;
-  
 begin
 
   regs: process(clock_i, reset_n_i) is
@@ -97,7 +94,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, crced_i, l3_i, local_address_i) is
+  transition: process(r, l2_i, l3_i, local_address_i) is
     variable fifo_pop, fifo_push: boolean;
   begin
     rin <= r;
@@ -108,18 +105,18 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        if l1_header_length_c /= 0 then
+        if header_length_c /= 0 then
           rin.in_state <= IN_HEADER;
-          rin.in_ctr <= l1_header_length_c-1;
+          rin.in_ctr <= header_length_c-1;
         else
           rin.in_state <= IN_DADDR;
           rin.in_ctr <= 5;
         end if;
 
       when IN_HEADER =>
-        if crced_i.valid = '1' then
-          rin.header <= shift_left(r.header, crced_i.data);
-          if crced_i.last = '1' then
+        if l2_i.valid = '1' then
+          rin.header <= shift_left(r.header, l2_i.data);
+          if l2_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr = 0 then
             rin.in_state <= IN_DADDR;
@@ -128,11 +125,11 @@ begin
             rin.in_ctr <= r.in_ctr - 1;
           end if;
         end if;
-        
+
       when IN_DADDR =>
-        if crced_i.valid = '1' then
-          rin.saddr <= shift_left(r.saddr, crced_i.data);
-          if crced_i.last = '1' then
+        if l2_i.valid = '1' then
+          rin.saddr <= shift_left(r.saddr, l2_i.data);
+          if l2_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
             rin.in_ctr <= r.in_ctr - 1;
@@ -141,9 +138,9 @@ begin
             rin.in_state <= IN_SADDR;
           end if;
         end if;
-        
+
       when IN_SADDR =>
-        if crced_i.valid = '1' then
+        if l2_i.valid = '1' then
           if r.in_ctr = 5 then
             -- First cycle of SADDR, r.saddr contains full DADDR
             if r.saddr = ethernet_broadcast_addr_c then
@@ -155,8 +152,8 @@ begin
             end if;
           end if;
 
-          rin.saddr <= shift_left(r.saddr, crced_i.data);
-          if crced_i.last = '1' then
+          rin.saddr <= shift_left(r.saddr, l2_i.data);
+          if l2_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
             rin.in_ctr <= r.in_ctr - 1;
@@ -167,9 +164,9 @@ begin
         end if;
 
       when IN_TYPE =>
-        if crced_i.valid = '1' then
-          rin.type_len <= shift_left(r.type_len, crced_i.data);
-          if crced_i.last = '1' then
+        if l2_i.valid = '1' then
+          rin.type_len <= shift_left(r.type_len, l2_i.data);
+          if l2_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_ctr /= 0 then
             rin.in_ctr <= r.in_ctr - 1;
@@ -190,10 +187,10 @@ begin
         end loop;
 
       when IN_DATA =>
-        if r.fifo_fillness < fifo_depth_c and crced_i.valid = '1' then
-          if crced_i.last = '0' then
+        if r.fifo_fillness < fifo_depth_c and l2_i.valid = '1' then
+          if l2_i.last = '0' then
             fifo_push := true;
-          elsif crced_i.data(0) = '1' then
+          elsif l2_i.data(0) = '1' then
             rin.in_state <= IN_COMMIT;
           else
             rin.in_state <= IN_CANCEL;
@@ -206,7 +203,7 @@ begin
         end if;
 
       when IN_DROP =>
-        if crced_i.valid = '1' and crced_i.last = '1' then
+        if l2_i.valid = '1' and l2_i.last = '1' then
           rin.in_state <= IN_RESET;
         end if;
     end case;
@@ -221,9 +218,9 @@ begin
           loop
             if to_unsigned(ethertype_c(i), 16) = from_be(r.type_len) then
               rin.l3_type_index <= i;
-              if l1_header_length_c /= 0 then
+              if header_length_c /= 0 then
                 rin.out_state <= OUT_HEADER;
-                rin.out_ctr <= l1_header_length_c - 1;
+                rin.out_ctr <= header_length_c - 1;
               else
                 rin.out_state <= OUT_SADDR;
                 rin.out_ctr <= 5;
@@ -252,12 +249,12 @@ begin
             rin.saddr <= shift_left(r.saddr);
           end if;
         end if;
-        
+
       when OUT_CONTEXT =>
         if l3_i.ready = '1' then
           rin.out_state <= OUT_DATA;
         end if;
-        
+
       when OUT_DATA =>
         if l3_i.ready = '1' and r.fifo_fillness > 0 then
           fifo_pop := true;
@@ -280,12 +277,12 @@ begin
 
     if fifo_push and fifo_pop then
       rin.fifo <= shift_left(r.fifo);
-      rin.fifo(r.fifo_fillness-1) <= crced_i.data;
+      rin.fifo(r.fifo_fillness-1) <= l2_i.data;
     elsif fifo_pop then
       rin.fifo <= shift_left(r.fifo);
       rin.fifo_fillness <= r.fifo_fillness - 1;
     elsif fifo_push then
-      rin.fifo(r.fifo_fillness) <= crced_i.data;
+      rin.fifo(r.fifo_fillness) <= l2_i.data;
       rin.fifo_fillness <= r.fifo_fillness + 1;
     end if;
   end process;
@@ -296,13 +293,13 @@ begin
 
     case r.in_state is
       when IN_RESET | IN_DECIDE | IN_COMMIT | IN_CANCEL =>
-        crced_o.ready <= '0';
+        l2_o.ready <= '0';
 
       when IN_HEADER | IN_DADDR | IN_SADDR | IN_TYPE | IN_DROP =>
-        crced_o.ready <= '1';
+        l2_o.ready <= '1';
 
       when IN_DATA =>
-        crced_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
+        l2_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
     end case;
 
     case r.out_state is
@@ -310,7 +307,7 @@ begin
         l3_o.valid <= '0';
         l3_o.last <= '-';
         l3_o.data <= (others => '-');
-        
+
       when OUT_HEADER =>
         l3_o.valid <= '1';
         l3_o.last <= '0';
@@ -342,28 +339,5 @@ begin
         l3_o.data <= x"00";
     end case;
   end process;
-
-  has_fcs: if l1_has_fcs_c
-  generate
-    crc: nsl_bnoc.crc.crc_committed_checker
-      generic map(
-        header_length_c => l1_header_length_c,
-        params_c => work.ethernet.fcs_params_c
-        )
-      port map(
-        clock_i => clock_i,
-        reset_n_i => reset_n_i,
-        in_i => l1_i,
-        in_o => l1_o,
-        out_o => crced_i,
-        out_i => crced_o
-        );
-  end generate;
-
-  no_fcs: if not l1_has_fcs_c
-  generate
-    crced_i <= l1_i;
-    l1_o <= crced_o;
-  end generate;
 
 end architecture;

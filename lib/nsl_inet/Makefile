@@ -1,3 +1,4 @@
+packages += mac
 packages += ethernet
 packages += ipv4
 packages += udp

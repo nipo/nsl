@@ -6,7 +6,7 @@ root:
     - nsl_simulation.driver
     - nsl_bnoc.framed
     - nsl_bnoc.testing
-    - nsl_inet.ethernet
+    - nsl_inet.mac
     - nsl_inet.ipv4
     - nsl_inet.testing
     - nsl_inet.func

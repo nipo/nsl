@@ -34,7 +34,7 @@ architecture arch of tb is
 begin
 
   ieee_802_3: process
-    constant params_c : nsl_data.crc.crc_params_t := nsl_inet.ethernet.fcs_params_c;
+    constant params_c : nsl_data.crc.crc_params_t := nsl_inet.mac.fcs_params_c;
     constant ctxt: log_context := "IEEE-802.3";
     -- Packet dump from some documentation ?
     constant data : byte_string := from_hex( "20cf301acea16238e0c2bd3008060001"
@@ -214,7 +214,7 @@ begin
   end process;
 
   usb3_data: process
-    constant params_c : nsl_data.crc.crc_params_t := nsl_inet.ethernet.fcs_params_c;
+    constant params_c : nsl_data.crc.crc_params_t := nsl_inet.mac.fcs_params_c;
     constant ctxt: log_context := "USB3 Data";
     variable tmp : crc_state_t;
   begin

@@ -8,7 +8,7 @@ use nsl_bnoc.committed.all;
 use nsl_mii.link.all;
 use nsl_mii.mii.all;
 use nsl_mii.rgmii.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 
 package root is
 

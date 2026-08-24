@@ -6,15 +6,14 @@ library nsl_bnoc, nsl_data, work, nsl_math;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
+use work.mac.all;
 use work.ethernet.all;
 
 entity ethernet_layer is
   generic(
     ethertype_c : ethertype_vector;
-    l1_has_fcs_c : boolean := true;
     -- Flit count to pass through at the start of a frame
-    l1_header_length_c : integer := 0;
-    min_frame_size_c : natural := 64; --bytes
+    header_length_c : integer := 0;
     mtu_c : natural := 1500;
     filter_inbound_packets_c : boolean := true
     );
@@ -29,10 +28,10 @@ entity ethernet_layer is
     from_l3_i : in nsl_bnoc.committed.committed_req_array(0 to ethertype_c'length-1);
     from_l3_o : out nsl_bnoc.committed.committed_ack_array(0 to ethertype_c'length-1);
 
-    to_l1_o : out nsl_bnoc.committed.committed_req;
-    to_l1_i : in nsl_bnoc.committed.committed_ack;
-    from_l1_i : in nsl_bnoc.committed.committed_req;
-    from_l1_o : out nsl_bnoc.committed.committed_ack
+    to_l2_o : out nsl_bnoc.committed.committed_req;
+    to_l2_i : in nsl_bnoc.committed.committed_ack;
+    from_l2_i : in nsl_bnoc.committed.committed_req;
+    from_l2_o : out nsl_bnoc.committed.committed_ack
     );
 end entity;
 
@@ -42,8 +41,8 @@ architecture beh of ethernet_layer is
 
   signal s_to_l3_index, s_from_l3_index: integer range 0 to ethertype_l_c'length - 1;
   signal s_from_l3_type : ethertype_t;
-  signal s_from_l1, s_to_l3, s_to_l3_valid, s_from_l3: nsl_bnoc.committed.committed_bus;
-  
+  signal s_from_l2, s_to_l3, s_to_l3_valid, s_from_l3: nsl_bnoc.committed.committed_bus;
+
 begin
 
   receiver_fifo: nsl_bnoc.framed.framed_fifo
@@ -55,25 +54,24 @@ begin
       p_resetn => reset_n_i,
       p_clk(0) => clock_i,
 
-      p_in_val => from_l1_i,
-      p_in_ack => from_l1_o,
+      p_in_val => from_l2_i,
+      p_in_ack => from_l2_o,
 
-      p_out_val => s_from_l1.req,
-      p_out_ack => s_from_l1.ack
+      p_out_val => s_from_l2.req,
+      p_out_ack => s_from_l2.ack
       );
-  
+
   receiver: work.ethernet.ethernet_receiver
     generic map(
       ethertype_c => ethertype_l_c,
-      l1_has_fcs_c => l1_has_fcs_c,
-      l1_header_length_c => l1_header_length_c
+      header_length_c => header_length_c
       )
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
       local_address_i => local_address_i,
-      l1_i => s_from_l1.req,
-      l1_o => s_from_l1.ack,
+      l2_i => s_from_l2.req,
+      l2_o => s_from_l2.ack,
 
       l3_type_index_o => s_to_l3_index,
       l3_o => s_to_l3.req,
@@ -87,7 +85,7 @@ begin
     filter: nsl_bnoc.committed.committed_filter
       generic map(
         max_size_c => nsl_math.arith.align_up(mtu_c)
-        )        
+        )
       port map(
         reset_n_i => reset_n_i,
         clock_i => clock_i,
@@ -105,7 +103,7 @@ begin
         in_o => s_tmp.ack,
         out_o => s_to_l3_valid.req,
         out_i => s_to_l3_valid.ack
-        );        
+        );
   end generate;
 
   no_filter: if not filter_inbound_packets_c
@@ -149,12 +147,10 @@ begin
       );
 
   s_from_l3_type <= ethertype_l_c(s_from_l3_index);
-  
+
   transmitter: work.ethernet.ethernet_transmitter
     generic map(
-      l1_header_length_c => l1_header_length_c,
-      l1_has_fcs_c => l1_has_fcs_c,
-      min_frame_size_c => min_frame_size_c
+      header_length_c => header_length_c
       )
     port map(
       clock_i => clock_i,
@@ -165,8 +161,8 @@ begin
       l3_i => s_from_l3.req,
       l3_o => s_from_l3.ack,
 
-      l1_o => to_l1_o,
-      l1_i => to_l1_i
+      l2_o => to_l2_o,
+      l2_i => to_l2_i
       );
 
 end architecture;

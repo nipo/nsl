@@ -3,7 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_data, work, nsl_math;
-use work.ethernet.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
 use nsl_data.bytestream.all;

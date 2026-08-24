@@ -1,7 +1,7 @@
 vhdl-sources += testing.pkg.vhd
 deps += nsl_simulation.logging
 deps += nsl_math.arith
-deps += nsl_inet.ethernet
+deps += nsl_inet.mac
 deps += nsl_inet.ipv4
 deps += nsl_inet.udp
 deps += nsl_data.text

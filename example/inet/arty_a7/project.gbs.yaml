@@ -3,7 +3,7 @@ name: inet_arty_a7
 root:
   name: top
   deps:
-    - nsl_inet.ethernet
+    - nsl_inet.mac
     - nsl_inet.func
     - nsl_inet.ipv4
     - nsl_inet.udp

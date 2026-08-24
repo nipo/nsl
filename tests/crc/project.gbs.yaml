@@ -9,7 +9,7 @@ root:
     - nsl_data.text
     - nsl_simulation.assertions
     - nsl_simulation.logging
-    - nsl_inet.ethernet
+    - nsl_inet.mac
     - nsl_spdif.spdif
     - nsl_usb.usb
     - nsl_line_coding.hdlc

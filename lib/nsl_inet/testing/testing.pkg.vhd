@@ -8,7 +8,7 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
 use nsl_data.binary_io.all;
-use work.ethernet.all;
+use work.mac.all;
 use work.ipv4.all;
 use work.checksum.all;
 use work.udp.all;

@@ -2,30 +2,25 @@
  Ethernet
 ==========
 
-Ethernet MAC layer (layer 2).  Handles addressing, FCS and ethertype
-dispatch.  Local unicast and broadcast destination addresses are
-accepted; multicast is not supported.
+Ethernet host adaptation — the addressing half of layer 2.  Stacked
+on `mac <../mac/index>`_ (or on one branch of a VLAN demux), it
+interprets what mac forwards transparently: destination address
+filtering, compression of the wire addressing into a peer/context
+header, and ethertype dispatch.  Local unicast and broadcast
+destination addresses are accepted; multicast is not supported.
 
 Components:
 
-* a `receiver <ethernet_receiver.vhd>`_, checking FCS and destination
+* a `receiver <ethernet_receiver.vhd>`_, filtering on destination
   address, dropping frames with unhandled ethertypes, and exposing
   the index of the matched ethertype alongside the frame;
 
-* a `transmitter <ethernet_transmitter.vhd>`_, crafting the MAC
-  header, padding frames to a minimal size and appending FCS;
+* a `transmitter <ethernet_transmitter.vhd>`_, expanding the
+  peer/context header back to destination/source addresses and
+  inserting the ethertype;
 
 * a `layer <ethernet_layer.vhd>`_, union of the two above with one
-  bidirectional frame pipe per declared ethertype;
-
-* a `router <ethernet_router.vhd>`_, dispatching frames to one of
-  several output ports based on a destination address lookup
-  performed by an external resolver.
-
-The package also defines the ``mac48_t`` address type, well-known
-ethertype constants, the FCS CRC parameters, and frame
-packing/inspection functions (``frame_pack()``,
-``frame_daddr_get()``, etc.) usable in testbenches.
+  bidirectional frame pipe per declared ethertype.
 
 Frame structures at the layer boundaries are documented in
 `ethernet.pkg.vhd <ethernet.pkg.vhd>`_.

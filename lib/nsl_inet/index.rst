@@ -49,7 +49,8 @@ All layers share the same interface contract:
 For instance, with an optional layer-1 pre-header, the frame handed
 upwards at each boundary of the receive path is::
 
-  from L1:   | L1 pre-header | MAC header, payload, FCS            | status |
+  from L1:   | L1 pre-header | DA, SA, ethertype | payload | FCS    | status |
+  mac:       | L1 pre-header | DA, SA, ethertype | payload          | status |
   ethernet:  | L1 pre-header | peer MAC, ctx | L3 PDU              | status |
   IPv4:      | ... | peer MAC, ctx | peer IP, ctx, proto, size | L4 PDU | status |
   UDP layer: | ... | peer MAC, ctx | peer IP, ctx, proto | remote port | data | status |
@@ -82,8 +83,11 @@ Contents
 
 * the protocol layers:
 
-  * `ethernet <ethernet/index>`_: MAC addressing, FCS, ethertype
-    dispatch;
+  * `mac <mac/index>`_: FCS and minimal frame size, transparent to
+    addresses and ethertype;
+
+  * `ethernet <ethernet/index>`_: host adaptation — destination
+    address filtering, peer/context compression, ethertype dispatch;
 
   * `arp <arp/index>`_: IPv4-over-ethernet address resolution, with
     cache and default-gateway diversion;
@@ -104,6 +108,7 @@ Contents
 
 .. toctree::
 
+   mac/index
    ethernet/index
    arp/index
    ipv4/index

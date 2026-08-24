@@ -40,6 +40,7 @@ use ieee.numeric_std.all;
 --    Read/Write: Cache storage
 
 library nsl_bnoc, work, nsl_data, nsl_memory, nsl_math, nsl_logic;
+use work.mac.all;
 use work.ethernet.all;
 use work.ipv4.all;
 use nsl_bnoc.committed.all;

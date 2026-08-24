@@ -8,7 +8,7 @@ root:
     - nsl_data.text
     - nsl_simulation.driver
     - nsl_bnoc.testing
-    - nsl_inet.ethernet
+    - nsl_inet.mac
   sources:
     - file_type: vhdl
       files:

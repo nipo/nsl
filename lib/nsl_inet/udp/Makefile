@@ -8,3 +8,4 @@ deps += nsl_data.endian
 deps += nsl_inet.ipv4
 deps += nsl_inet.checksum
 deps += nsl_bnoc.committed
+deps += nsl_data.text

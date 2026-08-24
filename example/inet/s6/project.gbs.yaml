@@ -3,7 +3,7 @@ name: inet_s6
 root:
   name: top
   deps:
-    - nsl_inet.ethernet
+    - nsl_inet.mac
     - nsl_inet.ipv4
     - nsl_inet.udp
     - nsl_bnoc.framed

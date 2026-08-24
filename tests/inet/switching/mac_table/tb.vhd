@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_data, nsl_inet, nsl_simulation;
 use nsl_data.bytestream.all;
 use nsl_data.text.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_inet.switching.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;

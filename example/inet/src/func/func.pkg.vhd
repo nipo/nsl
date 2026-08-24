@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_inet, nsl_data, nsl_uart, nsl_mii, nsl_smi;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_data.bytestream.all;
 
 package func is

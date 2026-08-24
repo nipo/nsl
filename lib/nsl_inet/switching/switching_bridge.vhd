@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_amba, nsl_inet;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_inet.switching.all;
 
 entity switching_bridge is

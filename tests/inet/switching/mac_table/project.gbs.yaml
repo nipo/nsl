@@ -4,7 +4,7 @@ root:
   name: top
   deps:
     - nsl_inet.switching
-    - nsl_inet.ethernet
+    - nsl_inet.mac
     - nsl_data.bytestream
     - nsl_data.text
     - nsl_simulation.assertions

@@ -9,7 +9,7 @@ library nsl_simulation, nsl_bnoc, nsl_clocking, nsl_inet, nsl_data, nsl_mii;
 use nsl_simulation.logging.all;
 use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
 use nsl_bnoc.testing.all;

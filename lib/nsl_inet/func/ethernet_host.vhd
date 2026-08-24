@@ -6,6 +6,7 @@ library nsl_bnoc, work, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
+use work.mac.all;
 use work.ethernet.all;
 use work.arp.all;
 use work.ipv4.all;
@@ -104,6 +105,7 @@ architecture beh of ethernet_host is
   signal arp_backend_s : arp_api;
   signal arp_api_s : arp_api_vector(0 to 0);
   constant arp_api_udp_index_c: natural := 0;
+  signal l2_s: committed_trx;
   signal ipv4_s, arp_s, arp2_s, udp_s: committed_trx;
   signal ip_rx_req_s, ip_tx_req_s : committed_req_array(0 to ip_proto_l_c'length-1);
   signal ip_rx_ack_s, ip_tx_ack_s : committed_ack_array(0 to ip_proto_l_c'length-1);
@@ -118,11 +120,42 @@ begin
     ip_tx_req_s(i) <= ip_tx_i(i);
   end generate;
   
+  mac_rx: work.mac.mac_receiver
+    generic map(
+      l1_has_fcs_c => l1_has_fcs_c,
+      l1_header_length_c => 0
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+
+      l1_i => l1_rx_i,
+      l1_o => l1_rx_o,
+
+      l2_o => l2_s.rx.req,
+      l2_i => l2_s.rx.ack
+      );
+
+  mac_tx: work.mac.mac_transmitter
+    generic map(
+      l1_has_fcs_c => l1_has_fcs_c,
+      l1_header_length_c => 0
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+
+      l2_i => l2_s.tx.req,
+      l2_o => l2_s.tx.ack,
+
+      l1_o => l1_tx_o,
+      l1_i => l1_tx_i
+      );
+
   eth: work.ethernet.ethernet_layer
     generic map(
       ethertype_c => ethertype_list_c,
-      l1_has_fcs_c => l1_has_fcs_c,
-      l1_header_length_c => 0
+      header_length_c => 0
       )
     port map(
       clock_i => clock_i,
@@ -139,10 +172,10 @@ begin
       from_l3_o(0) => ipv4_s.tx.ack,
       from_l3_o(1) => arp_s.tx.ack,
 
-      to_l1_o => l1_tx_o,
-      to_l1_i => l1_tx_i,
-      from_l1_i => l1_rx_i,
-      from_l1_o => l1_rx_o
+      to_l2_o => l2_s.tx.req,
+      to_l2_i => l2_s.tx.ack,
+      from_l2_i => l2_s.rx.req,
+      from_l2_o => l2_s.rx.ack
       );
 
   ipv4: work.ipv4.ipv4_layer

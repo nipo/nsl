@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, work;
 use nsl_bnoc.committed.all;
-use work.ethernet.all;
+use work.mac.all;
 use work.ipv4.all;
 use work.udp.all;
 

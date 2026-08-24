@@ -7,7 +7,7 @@ use nsl_bnoc.committed.all;
 use nsl_mii.link.all;
 use nsl_mii.rgmii.all;
 use nsl_inet.func.all;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
 

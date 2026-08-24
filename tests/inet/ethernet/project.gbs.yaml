@@ -3,6 +3,7 @@ name: inet_ethernet
 root:
   name: top
   deps:
+    - nsl_inet.mac
     - nsl_inet.ethernet
     - nsl_mii.link_monitor
     - nsl_mii.rgmii

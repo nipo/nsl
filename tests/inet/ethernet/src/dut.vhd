@@ -11,6 +11,7 @@ use nsl_mii.rgmii.all;
 use nsl_data.bytestream.all;
 use nsl_data.crc.all;
 use nsl_mii.testing.all;
+use nsl_inet.mac.all;
 use nsl_inet.ethernet.all;
 
 entity dut is
@@ -42,6 +43,7 @@ architecture beh of dut is
   constant ethertype_list_c : ethertype_vector(0 to 0) := (0 => 16#dead#);
   
   signal l1_l2_s, l2_l1_s : nsl_bnoc.committed.committed_bus;
+  signal mac_eth_s, eth_mac_s : nsl_bnoc.committed.committed_bus;
 
   signal ibs_s : link_status_t;
   signal rx_clock_s: std_ulogic;
@@ -88,10 +90,40 @@ begin
       tx_o => l2_l1_s.ack
       );
   
+  mac_rx: nsl_inet.mac.mac_receiver
+    generic map(
+      l1_header_length_c => 0
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_s,
+
+      l1_i => l1_l2_s.req,
+      l1_o => l1_l2_s.ack,
+
+      l2_o => mac_eth_s.req,
+      l2_i => mac_eth_s.ack
+      );
+
+  mac_tx: nsl_inet.mac.mac_transmitter
+    generic map(
+      l1_header_length_c => 0
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_s,
+
+      l2_i => eth_mac_s.req,
+      l2_o => eth_mac_s.ack,
+
+      l1_o => l2_l1_s.req,
+      l1_i => l2_l1_s.ack
+      );
+
   eth: nsl_inet.ethernet.ethernet_layer
     generic map(
       ethertype_c => ethertype_list_c,
-      l1_header_length_c => 0
+      header_length_c => 0
       )
     port map(
       clock_i => clock_i,
@@ -104,10 +136,10 @@ begin
       from_l3_i(0) => l3_dead_tx_i,
       from_l3_o(0) => l3_dead_tx_o,
 
-      to_l1_o => l2_l1_s.req,
-      to_l1_i => l2_l1_s.ack,
-      from_l1_i => l1_l2_s.req,
-      from_l1_o => l1_l2_s.ack
+      to_l2_o => eth_mac_s.req,
+      to_l2_i => eth_mac_s.ack,
+      from_l2_i => mac_eth_s.req,
+      from_l2_o => mac_eth_s.ack
       );
 
 end architecture;

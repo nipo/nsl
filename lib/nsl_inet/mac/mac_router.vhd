@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, work, nsl_math;
+library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use work.ethernet.all;
+use work.mac.all;
 
-entity ethernet_router is
+entity mac_router is
   generic(
     destination_count_c : natural;
     -- Flit count to pass through at the start of a frame
@@ -32,7 +32,7 @@ entity ethernet_router is
     );
 end entity;
 
-architecture beh of ethernet_router is
+architecture beh of mac_router is
 
   signal s_in: nsl_bnoc.committed.committed_bus;
   signal s_daddr : byte_string(0 to 5);
@@ -64,7 +64,7 @@ begin
     s_out_i(i) <= out_i(i);
     out_o(i) <= s_out_o(i);
   end generate;
-  
+
   router: nsl_bnoc.framed.framed_router
     generic map(
       in_count_c => 1,

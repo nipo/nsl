@@ -7,8 +7,8 @@ use nsl_data.bytestream.all;
 use nsl_simulation.logging.all;
 use nsl_simulation.assertions.all;
 use nsl_bnoc.testing.all;
-use nsl_inet.ethernet.fcs_params_c;
-use nsl_inet.ethernet.frame_pack;
+use nsl_inet.mac.fcs_params_c;
+use nsl_inet.mac.frame_pack;
 
 entity tb is
 end tb;

@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_inet, nsl_data, nsl_uart, nsl_smi, nsl_indication,
   nsl_math;
-use nsl_inet.ethernet.all;
+use nsl_inet.mac.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
 use nsl_data.bytestream.all;

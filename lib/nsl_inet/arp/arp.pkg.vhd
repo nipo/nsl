@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_bnoc, nsl_data, work;
 use nsl_bnoc.committed.all;
 use nsl_bnoc.framed.all;
-use work.ethernet.all;
+use work.mac.all;
 use work.ipv4.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;

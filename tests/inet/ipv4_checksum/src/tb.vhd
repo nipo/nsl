@@ -7,7 +7,6 @@ end tb;
 
 library nsl_simulation, nsl_bnoc, nsl_clocking, nsl_inet, nsl_data;
 use nsl_simulation.logging.all;
-use nsl_inet.ethernet.all;
 use nsl_inet.ipv4.all;
 use nsl_inet.udp.all;
 use nsl_inet.testing.all;
