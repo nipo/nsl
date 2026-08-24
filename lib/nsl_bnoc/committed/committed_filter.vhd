@@ -22,8 +22,9 @@ end entity;
 
 architecture beh of committed_filter is
 
-  constant word_count_l2_c : natural := nsl_math.arith.log2(max_size_c-1);
-  
+  constant word_count_c : natural := 2 ** nsl_math.arith.log2(max_size_c-1);
+
+
   type state_t is (
     ST_RESET,
     ST_FILL,
@@ -40,18 +41,19 @@ architecture beh of committed_filter is
   signal r, rin: regs_t;
 
   signal in_ready_s, in_valid_s, do_commit_s, do_rollback_s : std_ulogic;
-  signal in_free_s : unsigned(word_count_l2_c downto 0);
-  
+
 begin
 
-  fifo: nsl_memory.fifo.fifo_cancellable
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
       data_width_c => 9,
-      word_count_l2_c => word_count_l2_c
+      word_count_c => word_count_c,
+      clock_count_c => 1,
+      in_cancellable_c => true
       )
     port map(
       reset_n_i => reset_n_i,
-      clock_i => clock_i,
+      clock_i(0) => clock_i,
 
       out_data_o(7 downto 0) => out_o.data,
       out_data_o(8) => out_o.last,
@@ -62,8 +64,6 @@ begin
       in_data_i(8) => in_i.last,
       in_ready_o => in_ready_s,
       in_valid_i => in_valid_s,
-
-      in_free_o => in_free_s,
 
       in_commit_i => do_commit_s,
       in_rollback_i => do_rollback_s
@@ -89,9 +89,7 @@ begin
 
       when ST_FILL =>
         -- in_ready_s tracks the speculative write pointer, so it goes low as
-        -- soon as a single in-progress frame fills the buffer. in_free_s is
-        -- measured from the committed write pointer, which does not move
-        -- during a fill, so it must not gate overflow detection: a frame
+        -- soon as a single in-progress frame fills the buffer. A frame
         -- larger than the buffer would otherwise wedge ST_FILL forever.
         --
         -- Overflow always routes through ST_OVERFLOW, even when the
@@ -121,6 +119,9 @@ begin
     end case;
   end process;
 
+  -- Commit and rollback take the beat of their own cycle into account.
+  -- ST_COMMIT and ST_CANCEL hold in_valid_s low, so the frame boundary
+  -- lies where the last beat of ST_FILL left it.
   mealy: process(r, in_i, in_ready_s) is
   begin
     do_rollback_s <= '0';
