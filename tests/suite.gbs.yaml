@@ -347,6 +347,9 @@ projects:
   - name: pwm
     path: pwm
     tags: [ghdl, simulation]
+  - name: publish_counter
+    path: publish_counter
+    tags: [ghdl, simulation]
   - name: sc202
     path: sc202
     tags: [ghdl, simulation]

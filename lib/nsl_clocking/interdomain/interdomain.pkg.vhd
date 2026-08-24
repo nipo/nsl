@@ -53,6 +53,49 @@ package interdomain is
       );
   end component;
 
+  -- Publishes an arbitrarily moving value to another clock domain
+  -- through a gray-coded counter crossing.
+  --
+  -- interdomain_counter above is only safe as long as its input moves
+  -- by at most one step per input clock cycle, as gray coding only
+  -- guarantees one bit changes at a time for consecutive values. This
+  -- component lifts that constraint by inserting a register that
+  -- chases /target_i/ at one step per cycle, and crossing that
+  -- register instead.
+  --
+  -- Chasing direction is given by /backward_i/: publish steps by +1
+  -- when low, by -1 when high, until it reaches the target, then
+  -- holds. As increments wrap, direction cannot be inferred from
+  -- values, caller has to tell which way target moved.
+  --
+  -- Consequences:
+  -- - published value lags behind the target, it never leads it,
+  -- - published value only takes values on the path from its previous
+  --   value to the target, in the chasing direction,
+  -- - published value reaches the target only if target rests, or
+  --   moves by at most one step per input clock cycle on average.
+  component interdomain_publish_counter is
+    generic(
+      data_width_c : integer;
+      cycle_count_c : natural := 2;
+      decode_stage_count_c : natural := 1
+      );
+    port(
+      -- Input domain reset
+      reset_n_i : in std_ulogic;
+      clock_in_i : in std_ulogic;
+      clock_out_i : in std_ulogic;
+
+      -- Input domain
+      target_i : in unsigned(data_width_c-1 downto 0);
+      backward_i : in std_ulogic := '0';
+      publish_o : out unsigned(data_width_c-1 downto 0);
+
+      -- Output domain
+      data_o : out unsigned(data_width_c-1 downto 0)
+      );
+  end component;
+
   -- Clocks input data to a register (clock is from the input domain),
   -- and ignores all timing constraints on the output side. This is
   -- mostly for configuration data that is not supposed to change
