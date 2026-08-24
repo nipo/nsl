@@ -51,12 +51,13 @@ architecture beh of memory_streamer is
   subtype sideband_t is std_ulogic_vector(sideband_width_c-1 downto 0);
   type sideband_vector is array(integer range <>) of sideband_t;
 
-  -- Addresses are accepted as long as less than fifo_depth_c beats
-  -- are held, so up to memory_latency_c+1 more reads may be in flight
-  -- and land afterwards.
-  constant fifo_depth_c : integer := 2;
-  constant total_fifo_depth_c : integer := fifo_depth_c+memory_latency_c+1;
-  -- One of the held beats sits in the output register.
+  -- An address is accepted as long as there is a landing spot left for
+  -- every beat already owed, be it in flight or held. A read takes
+  -- memory_latency_c+1 cycles to come back and the output register
+  -- takes one more, so this many spots let the output run at one beat
+  -- per cycle without ever running dry.
+  constant total_fifo_depth_c : integer := memory_latency_c+3;
+  -- One of the owed beats sits in the output register.
   constant buffer_depth_c : integer := total_fifo_depth_c-1;
 
   subtype pointer_t is std_ulogic_vector(0 to buffer_depth_c-1);
@@ -102,6 +103,8 @@ architecture beh of memory_streamer is
     out_sideband: sideband_t;
     out_valid: std_ulogic;
 
+    -- Beats owed to the output port: issued, in flight or held, minus
+    -- the ones handed over.
     fillness: integer range 0 to total_fifo_depth_c;
   end record;
 
@@ -128,10 +131,11 @@ begin
   end process;
 
   transition: process(r, addr_valid_i, addr_i, data_ready_i, mem_data_i, sideband_i) is
-    variable push, pop, out_free: boolean;
+    variable issue, push, pop, out_free: boolean;
   begin
     rin <= r;
 
+    issue := false;
     push := false;
     pop := r.out_valid = '1' and data_ready_i = '1';
     out_free := r.out_valid = '0' or data_ready_i = '1';
@@ -139,11 +143,12 @@ begin
     rin.running <= true;
 
     if r.running then
+      issue := r.fillness < total_fifo_depth_c and addr_valid_i = '1';
+
       rin.sideband <= r.sideband(1 to r.sideband'right) & sideband_i;
       rin.address <= addr_i;
       rin.has_read <= r.has_read(1 to r.has_read'right) & '0';
-      rin.has_read(rin.has_read'right)
-        <= to_logic(r.fillness < fifo_depth_c and addr_valid_i = '1');
+      rin.has_read(rin.has_read'right) <= to_logic(issue);
 
       push := r.has_read(0) = '1';
     end if;
@@ -194,9 +199,9 @@ begin
         rin.buffer_empty <= r.buffer_fillness = 1;
       end if;
 
-      if push and not pop then
+      if issue and not pop then
         rin.fillness <= r.fillness + 1;
-      elsif pop and not push then
+      elsif pop and not issue then
         rin.fillness <= r.fillness - 1;
       end if;
     end if;
@@ -205,7 +210,7 @@ begin
   moore: process(r) is
   begin
     if r.running then
-      addr_ready_o <= to_logic(r.fillness < fifo_depth_c);
+      addr_ready_o <= to_logic(r.fillness < total_fifo_depth_c);
     else
       addr_ready_o <= '0';
     end if;
