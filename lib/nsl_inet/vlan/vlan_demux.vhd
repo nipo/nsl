@@ -13,7 +13,8 @@ use work.vlan.all;
 entity vlan_demux is
   generic(
     header_length_c : integer := 0;
-    vlan_id_c : vlan_id_vector
+    vlan_id_c : vlan_id_vector;
+    native_vlan_id_c : vlan_id_t := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -22,11 +23,8 @@ entity vlan_demux is
     in_i : in nsl_bnoc.committed.committed_req;
     in_o : out nsl_bnoc.committed.committed_ack;
 
-    untagged_o : out nsl_bnoc.committed.committed_req;
-    untagged_i : in nsl_bnoc.committed.committed_ack;
-
-    tagged_o : out nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
-    tagged_i : in nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1)
+    vlan_o : out nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
+    vlan_i : in nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1)
     );
 end entity;
 
@@ -34,8 +32,22 @@ architecture beh of vlan_demux is
 
   alias vlan_id_l_c : vlan_id_vector(0 to vlan_id_c'length-1) is vlan_id_c;
 
-  -- Destination 0 is the untagged pipe, i+1 maps to vlan_id_l_c(i)
-  constant destination_count_c : integer := vlan_id_c'length + 1;
+  constant destination_count_c : integer := vlan_id_c'length;
+
+  function vlan_index(v: vlan_id_vector; vid: vlan_id_t) return integer
+  is
+  begin
+    for i in v'range
+    loop
+      if v(i) = vid then
+        return i;
+      end if;
+    end loop;
+    return -1;
+  end function;
+
+  -- Destination of untagged frames, -1 if they are to be dropped
+  constant native_index_c : integer := vlan_index(vlan_id_l_c, native_vlan_id_c);
 
   type in_state_t is (
     IN_RESET,
@@ -86,8 +98,6 @@ architecture beh of vlan_demux is
   signal r, rin: regs_t;
 
   signal parsed_s : nsl_bnoc.committed.committed_bus;
-  signal dispatch_req_s : committed_req_array(0 to destination_count_c-1);
-  signal dispatch_ack_s : committed_ack_array(0 to destination_count_c-1);
 
 begin
 
@@ -165,8 +175,10 @@ begin
         if to_unsigned(ethertype_vlan, 16) = from_be(r.type_buf) then
           rin.in_state <= IN_TCI;
           rin.in_ctr <= 1;
-        else
+        elsif native_index_c >= 0 then
           rin.in_state <= IN_DATA;
+        else
+          rin.in_state <= IN_DROP;
         end if;
 
       when IN_TCI =>
@@ -220,8 +232,9 @@ begin
 
       when OUT_IDLE =>
         if r.in_state = IN_DECIDE
-          and to_unsigned(ethertype_vlan, 16) /= from_be(r.type_buf) then
-          rin.destination <= 0;
+          and to_unsigned(ethertype_vlan, 16) /= from_be(r.type_buf)
+          and native_index_c >= 0 then
+          rin.destination <= native_index_c;
           rin.emit_type <= true;
           if header_length_c /= 0 then
             rin.out_state <= OUT_HEADER;
@@ -236,7 +249,7 @@ begin
           for i in vlan_id_l_c'range
           loop
             if vlan_id_l_c(i) = vid then
-              rin.destination <= i + 1;
+              rin.destination <= i;
               rin.emit_type <= false;
               if header_length_c /= 0 then
                 rin.out_state <= OUT_HEADER;
@@ -381,17 +394,8 @@ begin
       in_i => parsed_s.req,
       in_o => parsed_s.ack,
 
-      out_o => dispatch_req_s,
-      out_i => dispatch_ack_s
+      out_o => vlan_o,
+      out_i => vlan_i
       );
-
-  untagged_o <= dispatch_req_s(0);
-  dispatch_ack_s(0) <= untagged_i;
-
-  tagged_map: for i in 0 to vlan_id_c'length-1
-  generate
-    tagged_o(i) <= dispatch_req_s(i+1);
-    dispatch_ack_s(i+1) <= tagged_i(i);
-  end generate;
 
 end architecture;

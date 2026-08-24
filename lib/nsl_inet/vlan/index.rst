@@ -4,23 +4,28 @@
 
 802.1Q VLAN tagging.  Both components operate on the transparent
 `mac <../mac/index>`_ boundary and return it: every pipe carries
-``pre-header | DA | SA | ethertype | payload | status`` frames.
+``pre-header | DA | SA | ethertype | payload | status`` frames, one
+pipe per configured VID.
 
-* the `demux <vlan_demux.vhd>`_ inspects the ethertype: frames
-  carrying the 802.1Q TPID have TPID and TCI consumed and are routed
-  on VID, one pipe per configured VID; frames without a tag are
-  forwarded untouched to the untagged pipe; tagged frames with an
-  unconfigured VID are dropped;
+Untagged frames belong to the native VLAN, selected by generic:
+
+* the `demux <vlan_demux.vhd>`_ routes frames on their 802.1Q tag,
+  consuming TPID and TCI; untagged frames are merged, untouched, into
+  the pipe whose VID matches the native VLAN.  Tagged frames with an
+  unconfigured VID are dropped, and so are untagged frames when the
+  native VID is not part of the configured list — which is the
+  default, as VID 0 is reserved by 802.1Q;
 
 * the `mux <vlan_mux.vhd>`_ does the reverse, inserting TPID and TCI
-  on frames coming from a VID pipe.
+  on frames from every pipe but the native one, whose frames are
+  forwarded untouched.
 
 Because every pipe speaks the mac boundary format, each branch
 composes freely:
 
 * stack `ethernet <../ethernet/index>`_ host adaptation on a branch
-  to terminate that VLAN (plus the untagged branch for native
-  traffic), giving one ARP/IP stack per broadcast domain;
+  to terminate that VLAN, giving one ARP/IP stack per broadcast
+  domain;
 
 * stack another vlan demux for 802.1ad-style double tagging;
 

@@ -18,11 +18,13 @@ use work.mac.all;
 --   [0]   Whether frame is valid
 --   [7:1] Reserved
 --
--- The demux inspects the ethertype: frames carrying the 802.1Q TPID
--- have TPID and TCI consumed and are routed on VID, one pipe per
--- configured VID; other frames are forwarded untouched to the
--- untagged pipe.  The mux does the reverse, inserting TPID and TCI
--- on frames coming from a VID pipe.
+-- There is one pipe per configured VID.  Untagged frames belong to
+-- the native VLAN: on the demux they are merged, tag-less, into the
+-- pipe whose VID matches native_vlan_id_c; on the mux, frames from
+-- that pipe are sent without a 802.1Q header.  If native_vlan_id_c
+-- is not part of vlan_id_c, untagged frames are dropped like any
+-- unconfigured VID.  As VID 0 is reserved by 802.1Q, the default
+-- native VLAN drops untagged frames.
 --
 -- As every pipe speaks the mac boundary format, per-VID branches may
 -- be stacked with nsl_inet.ethernet host adaptation, another vlan
@@ -38,14 +40,14 @@ package vlan is
 
   -- Routes frames on their 802.1Q tag.  Tagged frames matching a
   -- configured VID have TPID and TCI consumed and go to the matching
-  -- tagged_o pipe.  Frames with no 802.1Q TPID are forwarded
-  -- untouched to the untagged pipe.  Tagged frames with an
-  -- unconfigured VID are dropped.
+  -- vlan_o pipe.  Untagged frames go, untouched, to the pipe
+  -- matching native_vlan_id_c.  Other frames are dropped.
   component vlan_demux is
     generic(
       -- Flit count to pass through at the start of a frame
       header_length_c : integer := 0;
-      vlan_id_c : vlan_id_vector
+      vlan_id_c : vlan_id_vector;
+      native_vlan_id_c : vlan_id_t := 0
       );
     port(
       clock_i : in std_ulogic;
@@ -54,33 +56,28 @@ package vlan is
       in_i : in nsl_bnoc.committed.committed_req;
       in_o : out nsl_bnoc.committed.committed_ack;
 
-      untagged_o : out nsl_bnoc.committed.committed_req;
-      untagged_i : in nsl_bnoc.committed.committed_ack;
-
-      tagged_o : out nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
-      tagged_i : in nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1)
+      vlan_o : out nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
+      vlan_i : in nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1)
       );
   end component;
 
-  -- Merges per-VID pipes and an untagged pipe to a single MAC
-  -- boundary stream.  Frames from a tagged_i pipe get TPID and TCI
-  -- inserted after the source address, with the VID matching the
-  -- pipe.  Frames from the untagged pipe are forwarded untouched.
+  -- Merges per-VID pipes to a single MAC boundary stream.  Frames
+  -- get TPID and TCI inserted after the source address, with the VID
+  -- matching the pipe, except for the pipe matching
+  -- native_vlan_id_c, whose frames are forwarded untouched.
   component vlan_mux is
     generic(
       -- Flit count to pass through at the start of a frame
       header_length_c : integer := 0;
-      vlan_id_c : vlan_id_vector
+      vlan_id_c : vlan_id_vector;
+      native_vlan_id_c : vlan_id_t := 0
       );
     port(
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      untagged_i : in nsl_bnoc.committed.committed_req;
-      untagged_o : out nsl_bnoc.committed.committed_ack;
-
-      tagged_i : in nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
-      tagged_o : out nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1);
+      vlan_i : in nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
+      vlan_o : out nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1);
 
       out_o : out nsl_bnoc.committed.committed_req;
       out_i : in nsl_bnoc.committed.committed_ack

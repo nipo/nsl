@@ -13,17 +13,15 @@ use work.vlan.all;
 entity vlan_mux is
   generic(
     header_length_c : integer := 0;
-    vlan_id_c : vlan_id_vector
+    vlan_id_c : vlan_id_vector;
+    native_vlan_id_c : vlan_id_t := 0
     );
   port(
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    untagged_i : in nsl_bnoc.committed.committed_req;
-    untagged_o : out nsl_bnoc.committed.committed_ack;
-
-    tagged_i : in nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
-    tagged_o : out nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1);
+    vlan_i : in nsl_bnoc.committed.committed_req_array(0 to vlan_id_c'length-1);
+    vlan_o : out nsl_bnoc.committed.committed_ack_array(0 to vlan_id_c'length-1);
 
     out_o : out nsl_bnoc.committed.committed_req;
     out_i : in nsl_bnoc.committed.committed_ack
@@ -34,8 +32,7 @@ architecture beh of vlan_mux is
 
   alias vlan_id_l_c : vlan_id_vector(0 to vlan_id_c'length-1) is vlan_id_c;
 
-  -- Source 0 is the untagged pipe, i+1 maps to vlan_id_l_c(i)
-  constant source_count_c : integer := vlan_id_c'length + 1;
+  constant source_count_c : integer := vlan_id_c'length;
 
   type state_t is (
     ST_RESET,
@@ -55,21 +52,10 @@ architecture beh of vlan_mux is
 
   signal r, rin: regs_t;
 
-  signal funnel_req_s : committed_req_array(0 to source_count_c-1);
-  signal funnel_ack_s : committed_ack_array(0 to source_count_c-1);
   signal selected_s : integer range 0 to source_count_c - 1;
   signal merged_s : nsl_bnoc.committed.committed_bus;
 
 begin
-
-  funnel_req_s(0) <= untagged_i;
-  untagged_o <= funnel_ack_s(0);
-
-  tagged_map: for i in 0 to vlan_id_c'length-1
-  generate
-    funnel_req_s(i+1) <= tagged_i(i);
-    tagged_o(i) <= funnel_ack_s(i+1);
-  end generate;
 
   funnel: nsl_bnoc.committed.committed_funnel
     generic map(
@@ -81,8 +67,8 @@ begin
 
       selected_o => selected_s,
 
-      in_i => funnel_req_s,
-      in_o => funnel_ack_s,
+      in_i => vlan_i,
+      in_o => vlan_o,
 
       out_o => merged_s.req,
       out_i => merged_s.ack
@@ -106,11 +92,9 @@ begin
     case r.state is
       when ST_RESET =>
         if merged_s.req.valid = '1' then
-          rin.tagged <= selected_s /= 0;
-          if selected_s /= 0 then
-            rin.tag <= to_be(to_unsigned(ethertype_vlan, 16))
-                       & to_be(to_unsigned(vlan_id_l_c(selected_s-1), 16));
-          end if;
+          rin.tagged <= vlan_id_l_c(selected_s) /= native_vlan_id_c;
+          rin.tag <= to_be(to_unsigned(ethertype_vlan, 16))
+                     & to_be(to_unsigned(vlan_id_l_c(selected_s), 16));
           if header_length_c /= 0 then
             rin.state <= ST_HEADER;
             rin.ctr <= header_length_c - 1;
