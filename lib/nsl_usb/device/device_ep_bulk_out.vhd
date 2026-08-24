@@ -32,6 +32,7 @@ architecture beh of device_ep_bulk_out is
 
   constant mps_l2_c : integer := if_else(hs_supported_c, 9, fs_mps_l2_c);
   constant fifo_word_count_l2_c: integer := mps_l2_c + mps_count_l2_c;
+  constant fifo_word_count_c: integer := 2 ** fifo_word_count_l2_c;
 
   subtype ptr_t is unsigned(fifo_word_count_l2_c downto 0);
   constant mps_max_c : integer := 2 ** mps_l2_c;
@@ -69,7 +70,11 @@ architecture beh of device_ep_bulk_out is
   signal r, rin : regs_t;
 
   signal fifo_in_data : std_ulogic_vector(7 downto 0);
-  signal fifo_in_free : unsigned(fifo_word_count_l2_c downto 0);
+  -- Words of an in-flight transaction count as used here. States that
+  -- look at the free count either run before a transaction starts or
+  -- after it committed, so this only ever shows settled room.
+  signal fifo_in_free : integer range 0 to fifo_word_count_c;
+  signal fifo_out_available : integer range 0 to fifo_word_count_c + 1;
   signal fifo_in_valid : std_ulogic;
 
 begin
@@ -99,7 +104,7 @@ begin
       rin.mps_mask <= not to_ptr(2 ** fs_mps_l2_c - 1);
     end if;
 
-    rin.can_take_mps <= (r.mps_mask and fifo_in_free) /= (ptr_t'range => '0');
+    rin.can_take_mps <= (r.mps_mask and to_ptr(fifo_in_free)) /= (ptr_t'range => '0');
 
     case r.state is
       when ST_RESET =>
@@ -198,24 +203,30 @@ begin
     end if;
   end process;
 
+  -- Commit and rollback take the beat of their own cycle into
+  -- account. Both are only ever asserted once ST_TAKE is left, where
+  -- no more byte is handed to the fifo, so a transaction ends on the
+  -- last byte the host sent.
   fifo_in_valid <= to_logic(transaction_i.phase = PHASE_DATA
                             and r.state = ST_TAKE
                             and transaction_i.nxt = '1');
   fifo_in_data <= transaction_i.data;
 
-  fifo: nsl_memory.fifo.fifo_cancellable
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      word_count_l2_c => fifo_word_count_l2_c,
-      data_width_c => 8
+      word_count_c => fifo_word_count_c,
+      data_width_c => 8,
+      clock_count_c => 1,
+      in_cancellable_c => true
       )
     port map(
-      clock_i => clock_i,
+      clock_i(0) => clock_i,
       reset_n_i => reset_n_i,
 
       out_data_o      => data_o.data,
       out_ready_i     => data_i.ready,
       out_valid_o     => data_o.valid,
-      out_available_o => available_o,
+      out_available_o => fifo_out_available,
 
       in_data_i       => fifo_in_data,
       in_valid_i      => fifo_in_valid,
@@ -223,6 +234,8 @@ begin
       in_rollback_i   => r.do_rollback,
       in_free_o       => fifo_in_free
       );
+
+  available_o <= to_unsigned(fifo_out_available, available_o'length);
 
   moore: process(r) is
   begin

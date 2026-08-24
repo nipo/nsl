@@ -35,6 +35,7 @@ architecture beh of device_ep_bulk_in is
 
   constant mps_l2_c : integer := if_else(hs_supported_c, 9, fs_mps_l2_c);
   constant fifo_word_count_l2_c: integer := mps_l2_c + mps_count_l2_c;
+  constant fifo_word_count_c: integer := 2 ** fifo_word_count_l2_c;
 
   subtype ptr_t is unsigned(fifo_word_count_l2_c downto 0);
   constant mps_max_c : integer := 2 ** mps_l2_c;
@@ -73,7 +74,9 @@ architecture beh of device_ep_bulk_in is
   signal r, rin : regs_t;
 
   signal fifo_out_data : std_ulogic_vector(7 downto 0);
-  signal fifo_out_available : unsigned(fifo_word_count_l2_c downto 0);
+  -- Words the endpoint took but the host did not acknowledge yet still
+  -- count as used here, they are only released on commit.
+  signal fifo_in_free : integer range 0 to fifo_word_count_c;
   signal fifo_out_valid, fifo_out_ready : std_ulogic;
 
 begin
@@ -99,7 +102,7 @@ begin
   end process;
 
   transition: process(r, transaction_i, flush_i,
-                      fifo_out_available, fifo_out_valid, fifo_out_data) is
+                      fifo_out_valid, fifo_out_data) is
     variable max_txsize : ptr_t;
   begin
     rin <= r;
@@ -228,13 +231,15 @@ begin
     end if;
   end process;
 
-  fifo: nsl_memory.fifo.fifo_cancellable
+  fifo: nsl_memory.fifo.fifo_homogeneous
     generic map(
-      word_count_l2_c => fifo_word_count_l2_c,
-      data_width_c => 8
+      word_count_c => fifo_word_count_c,
+      data_width_c => 8,
+      clock_count_c => 1,
+      out_cancellable_c => true
       )
     port map(
-      clock_i => clock_i,
+      clock_i(0) => clock_i,
       reset_n_i => reset_n_i,
 
       out_data_o      => fifo_out_data,
@@ -242,14 +247,19 @@ begin
       out_ready_i     => fifo_out_ready,
       out_commit_i     => r.do_commit,
       out_rollback_i   => r.do_rollback,
-      out_available_o => fifo_out_available,
 
       in_data_i       => data_i.data,
       in_valid_i      => data_i.valid,
       in_ready_o      => data_o.ready,
-      in_free_o       => room_o
+      in_free_o       => fifo_in_free
       );
 
+  room_o <= to_unsigned(fifo_in_free, room_o'length);
+
+  -- Commit and rollback take the beat of their own cycle into
+  -- account. Both are only ever asserted from ST_IDLE, where the
+  -- output port is left alone, so a transaction ends on the last byte
+  -- the endpoint took.
   fifo_out_ready <= to_logic(r.state = ST_FILL)
                     or to_logic(r.state = ST_SEND
                                 and transaction_i.phase = PHASE_DATA
