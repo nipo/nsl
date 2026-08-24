@@ -64,6 +64,10 @@ architecture beh of fifo_cancellable is
   
 begin
 
+  assert false
+    report "fifo_cancellable is deprecated, use fifo_homogeneous with in_cancellable_c/out_cancellable_c"
+    severity warning;
+
   regs: process(reset_n_i, clock_i) is
   begin
     if rising_edge(clock_i) then

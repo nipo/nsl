@@ -212,6 +212,10 @@ package fifo is
   --
   -- When issuing rollback, port may not be ready the next cycle. Handshaking
   -- will be correct, though.
+  -- Deprecated, superseded by fifo_homogeneous with in_cancellable_c
+  -- and out_cancellable_c. Note commit takes the beats accepted
+  -- strictly before its own cycle there, where fifo_homogeneous takes
+  -- the beat of the commit cycle as well.
   component fifo_cancellable
     generic(
       data_width_c    : integer;
