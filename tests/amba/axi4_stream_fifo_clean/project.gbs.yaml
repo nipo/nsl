@@ -1,0 +1,36 @@
+name: amba_axi4_stream_fifo_clean
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_logic.bool
+    - nsl_simulation.assertions
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_bnoc.framed
+    - nsl_mii.rgmii
+    - nsl_mii.link
+    - nsl_mii.mii
+    - nsl_mii.flit
+    - nsl_mii.testing
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_amba.stream_traffic
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

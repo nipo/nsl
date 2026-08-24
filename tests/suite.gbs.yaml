@@ -83,6 +83,12 @@ projects:
   - name: amba_axi4_stream_fifo
     path: amba/axi4_stream_fifo
     tags: [ghdl, simulation]
+  - name: amba_axi4_stream_fifo_cancellable
+    path: amba/axi4_stream_fifo_cancellable
+    tags: [ghdl, simulation]
+  - name: amba_axi4_stream_fifo_clean
+    path: amba/axi4_stream_fifo_clean
+    tags: [ghdl, simulation]
   - name: amba_axi4_stream_flusher
     path: amba/axi4_stream_flusher
     tags: [ghdl, simulation]
