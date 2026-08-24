@@ -33,38 +33,47 @@ architecture beh of axi4_stream_fifo_cancellable is
 
   constant fifo_elements_c : string := "idskoul";
   constant data_fifo_width_c: positive := vector_length(config_c, fifo_elements_c);
+  constant word_count_c : integer := 2 ** word_count_l2_c;
   subtype data_fifo_word_t is std_ulogic_vector(0 to data_fifo_width_c-1);
 
   signal in_data_s, out_data_s : data_fifo_word_t;
   signal out_data_ready_s, out_data_valid_s : std_ulogic;
   signal in_data_ready_s, in_data_valid_s : std_ulogic;
+  signal in_free_s : integer range 0 to word_count_c;
+  signal out_available_s : integer range 0 to word_count_c + 1;
 
 begin
 
-  impl : nsl_memory.fifo.fifo_cancellable
+  impl : nsl_memory.fifo.fifo_homogeneous
     generic map(
-      data_width_c    => data_fifo_width_c,
-      word_count_l2_c => word_count_l2_c
+      data_width_c => data_fifo_width_c,
+      word_count_c => word_count_c,
+      clock_count_c => 1,
+      in_cancellable_c => true,
+      out_cancellable_c => true
       )
     port map(
       reset_n_i => reset_n_i,
-      clock_i   => clock_i,
+      clock_i(0) => clock_i,
 
       out_data_o      => out_data_s,
       out_ready_i     => out_data_ready_s,
       out_valid_o     => out_data_valid_s,
       out_commit_i    => out_commit_i,
       out_rollback_i  => out_rollback_i,
-      out_available_o => out_available_o,
+      out_available_o => out_available_s,
 
       in_data_i     => in_data_s,
       in_valid_i    => in_data_valid_s,
       in_ready_o    => in_data_ready_s,
       in_commit_i   => in_commit_i,
       in_rollback_i => in_rollback_i,
-      in_free_o     => in_free_o
+      in_free_o     => in_free_s
       );
-  
+
+  in_free_o <= to_unsigned(in_free_s, in_free_o'length);
+  out_available_o <= to_unsigned(out_available_s, out_available_o'length);
+
   in_data_s <= vector_pack(config_c, fifo_elements_c, in_i);
   in_data_valid_s <= to_logic(is_valid(config_c, in_i));
   in_o <= accept(config_c, in_data_ready_s = '1');

@@ -33,19 +33,17 @@ architecture beh of axi4_stream_fifo_clean is
 
     type state_t is (
         IN_RESET,
-        IN_DATA,
-        IN_COMMIT_OR_CANCEL
+        IN_DATA
     );
 
     type regs_t is record
         state : state_t;
         in_error : std_ulogic;
-
-        do_commit, do_rollback : std_ulogic;
     end record;
 
     signal r, rin : regs_t;
     signal fifo_o : slave_t;
+    signal do_commit_s, do_rollback_s : std_ulogic;
 
 begin
 
@@ -60,12 +58,9 @@ begin
         end if;
     end process;
 
-    transition : process (r, in_i, out_i, in_error_i) is
+    transition : process (r, in_i, fifo_o, in_error_i) is
     begin
         rin <= r;
-
-        rin.do_rollback <= '0';
-        rin.do_commit <= '0';
 
         case r.state is
             when IN_RESET =>
@@ -73,22 +68,30 @@ begin
                 rin.state <= IN_DATA;
 
             when IN_DATA =>
-                if is_valid(config_c, in_i) then
-                    if in_error_i = '1' then
+                if is_valid(config_c, in_i) and is_ready(config_c, fifo_o) then
+                    if is_last(config_c, in_i) then
+                        rin.in_error <= '0';
+                    elsif in_error_i = '1' then
                         rin.in_error <= '1';
                     end if;
-                    if is_last(config_c, in_i) then
-                        rin.state <= IN_COMMIT_OR_CANCEL;
-                    end if;
                 end if;
-
-            when IN_COMMIT_OR_CANCEL =>
-                rin.do_commit <= not r.in_error;
-                rin.do_rollback <= r.in_error;
-                rin.in_error <= '0';
-                rin.state <= IN_DATA;
-
         end case;
+    end process;
+
+    -- Commit and rollback take the beat of their own cycle in, so the
+    -- last beat of a packet is the one that publishes it, or the one
+    -- that takes the whole packet back.
+    mealy : process (r, in_i, fifo_o, in_error_i) is
+        variable packet_done, packet_error : boolean;
+    begin
+        packet_done := r.state = IN_DATA
+                       and is_valid(config_c, in_i)
+                       and is_ready(config_c, fifo_o)
+                       and is_last(config_c, in_i);
+        packet_error := r.in_error = '1' or in_error_i = '1';
+
+        do_commit_s <= to_logic(packet_done and not packet_error);
+        do_rollback_s <= to_logic(packet_done and packet_error);
     end process;
 
     out_fifo : nsl_amba.stream_fifo.axi4_stream_fifo_cancellable
@@ -102,16 +105,15 @@ begin
 
         in_i          => in_i,
         in_o          => fifo_o,
-        in_commit_i   => r.do_commit,
-        in_rollback_i => r.do_rollback,
-        in_free_o     => open,
+        in_commit_i   => do_commit_s,
+        in_rollback_i => do_rollback_s,
+        in_free_o     => in_free_o,
 
         out_o           => out_o,
         out_i           => out_i,
-        out_available_o => open
+        out_available_o => out_available_o
     );
 
-    in_o <= accept(config_c, r.state /= IN_COMMIT_OR_CANCEL and
-            is_ready(config_c, fifo_o));
+    in_o <= accept(config_c, r.state = IN_DATA and is_ready(config_c, fifo_o));
 
 end architecture;
