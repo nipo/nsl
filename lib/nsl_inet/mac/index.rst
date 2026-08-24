@@ -19,7 +19,9 @@ Address interpretation, filtering and ethertype dispatch belong to
   external resolver.
 
 Because nothing is filtered or rewritten here, this boundary is also
-the one transparent forwarding devices build on.
+the one transparent forwarding devices build on: a VLAN fan-out
+router is a set of per-port MAC layers around `vlan <../vlan/index>`_
+demux/mux, with no host adaptation anywhere.
 
 The package also defines the ``mac48_t`` address type, well-known
 ethertype constants, the FCS CRC parameters, and frame

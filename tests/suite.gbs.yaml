@@ -257,6 +257,9 @@ projects:
   - name: inet_ethernet
     path: inet/ethernet
     tags: [ghdl, simulation]
+  - name: inet_vlan
+    path: inet/vlan
+    tags: [ghdl, simulation]
   - name: inet_ipv4
     path: inet/ipv4
     tags: [ghdl, simulation]

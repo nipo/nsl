@@ -1,5 +1,6 @@
 packages += mac
 packages += ethernet
+packages += vlan
 packages += ipv4
 packages += udp
 packages += arp

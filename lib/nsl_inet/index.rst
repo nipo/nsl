@@ -89,6 +89,9 @@ Contents
   * `ethernet <ethernet/index>`_: host adaptation — destination
     address filtering, peer/context compression, ethertype dispatch;
 
+  * `vlan <vlan/index>`_: 802.1Q tag insertion/removal and per-VID
+    dispatch, between mac and ethernet;
+
   * `arp <arp/index>`_: IPv4-over-ethernet address resolution, with
     cache and default-gateway diversion;
 
@@ -110,6 +113,7 @@ Contents
 
    mac/index
    ethernet/index
+   vlan/index
    arp/index
    ipv4/index
    udp/index
