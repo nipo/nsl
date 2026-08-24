@@ -203,6 +203,12 @@ projects:
   - name: fifo4
     path: fifo4
     tags: [ghdl, simulation]
+  - name: fifo_cancel
+    path: fifo_cancel
+    tags: [ghdl, simulation]
+  - name: fifo_cancel_async
+    path: fifo_cancel_async
+    tags: [ghdl, simulation]
   - name: fifo_count
     path: fifo_count
     tags: [ghdl, simulation]

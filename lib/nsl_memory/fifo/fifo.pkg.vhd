@@ -4,6 +4,33 @@ use ieee.numeric_std.all;
 
 package fifo is
 
+  -- Fifo backed by a dual-port memory, with an optional second clock
+  -- domain on the output side.
+  --
+  -- Either side may be made cancellable through its *_cancellable_c
+  -- generic. A cancellable side hands its beats over speculatively:
+  -- the peer only gets to see them, and the fifo only gets to reuse
+  -- their storage, once commit is asserted; rollback takes all
+  -- uncommitted beats back.
+  --
+  -- Commit and rollback are symmetric in time: both apply to every
+  -- beat accepted up to and including the cycle they are asserted
+  -- on. Asserting commit along with the last beat of a packet commits
+  -- that beat too, asserting rollback along with a beat cancels that
+  -- beat too. Neither needs a beat to be flowing.
+  --
+  -- Asserting commit and rollback on the same cycle is a usage error,
+  -- and simulation fails on it.
+  --
+  -- Rollback on the output side takes the port down for the cycle it
+  -- is asserted on: out_valid_o falls as soon as out_rollback_i rises,
+  -- and the words come again on the cycles after it.
+  --
+  -- On a side that is not cancellable, commit and rollback inputs are
+  -- ignored, every beat is committed as it is accepted.
+  --
+  -- A cancellable side may not be sliced: a word held in a register
+  -- slice cannot be taken back.
   component fifo_homogeneous
     generic(
       data_width_c   : integer;
@@ -11,7 +38,9 @@ package fifo is
       clock_count_c    : natural range 1 to 2;
       input_slice_c : boolean := false;
       output_slice_c : boolean := false;
-      register_counters_c : boolean := false
+      register_counters_c : boolean := false;
+      in_cancellable_c : boolean := false;
+      out_cancellable_c : boolean := false
       );
     port(
       reset_n_i   : in  std_ulogic;
@@ -20,24 +49,41 @@ package fifo is
       out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
       out_ready_i         : in  std_ulogic;
       out_valid_o         : out std_ulogic;
+      -- Marks every word taken from the port so far as delivered.
+      -- Their memory space is released to the input side.
+      out_commit_i        : in  std_ulogic := '1';
+      -- Takes back every word taken from the port since the last
+      -- commit. They are handed over again, in order, starting from
+      -- the committed position.
+      out_rollback_i      : in  std_ulogic := '0';
       -- Fill count as seen from the output side, minus the word
       -- currently presented on the port, if any.
       out_available_min_o : out integer range 0 to word_count_c;
-      -- Fill count as seen from the output side: exact for the input
-      -- position the output side knows of, hence never overstated,
-      -- and reaching the actual fill count when input traffic
-      -- pauses. Total capacity is word_count_c, wherever the words
-      -- sit.
+      -- Count of words the input side committed and the output port
+      -- did not hand over yet: exact for the input position the
+      -- output side knows of, hence never overstated, and reaching
+      -- the actual fill count when input traffic pauses. Words a
+      -- rollback would hand over again are not counted, so this only
+      -- counts what a reader that never rolls back will see. Total
+      -- capacity is word_count_c, wherever the words sit.
       out_available_o     : out integer range 0 to word_count_c+1;
 
       in_data_i  : in  std_ulogic_vector(data_width_c-1 downto 0);
       in_valid_i : in  std_ulogic;
       in_ready_o : out std_ulogic;
-      -- Free capacity as seen from the input side: exact for the
-      -- output position the input side knows of, hence never
-      -- overstated, and reaching the actual free capacity when
-      -- output traffic pauses. Nonzero if and only if in_ready_o is
-      -- asserted.
+      -- Marks every word given to the port so far as written. The
+      -- output side gets to see them.
+      in_commit_i : in  std_ulogic := '1';
+      -- Takes back every word given to the port since the last
+      -- commit. Their memory space is reused by the words to come.
+      in_rollback_i : in  std_ulogic := '0';
+      -- Free capacity as seen from the input side, with speculative
+      -- words counted as used: exact for the output position it knows
+      -- of, hence never overstated, and reaching the actual free
+      -- capacity when output traffic pauses. Nonzero if and only if
+      -- in_ready_o is asserted. Note that a packet longer than
+      -- word_count_c can never be written, as an uncommitted packet
+      -- holds its own space.
       in_free_o  : out integer range 0 to word_count_c
       );
   end component;

@@ -12,7 +12,9 @@ entity fifo_homogeneous is
     clock_count_c    : natural range 1 to 2;
     input_slice_c : boolean := false;
     output_slice_c : boolean := false;
-    register_counters_c : boolean := false
+    register_counters_c : boolean := false;
+    in_cancellable_c : boolean := false;
+    out_cancellable_c : boolean := false
     );
   port(
     reset_n_i : in  std_ulogic;
@@ -21,12 +23,16 @@ entity fifo_homogeneous is
     out_data_o          : out std_ulogic_vector(data_width_c-1 downto 0);
     out_ready_i         : in  std_ulogic;
     out_valid_o         : out std_ulogic;
+    out_commit_i        : in  std_ulogic := '1';
+    out_rollback_i      : in  std_ulogic := '0';
     out_available_min_o : out integer range 0 to word_count_c;
     out_available_o     : out integer range 0 to word_count_c + 1;
 
     in_data_i       : in  std_ulogic_vector(data_width_c-1 downto 0);
     in_valid_i      : in  std_ulogic;
     in_ready_o      : out std_ulogic;
+    in_commit_i     : in  std_ulogic := '1';
+    in_rollback_i   : in  std_ulogic := '0';
     in_free_o       : out integer range 0 to word_count_c
     );
 
@@ -67,6 +73,37 @@ end fifo_homogeneous;
 -- it left the output port. The fifo therefore holds exactly
 -- word_count_c words, wherever they sit, and both fill counts are
 -- exact for the peer position each side sees.
+--
+-- A cancellable side keeps a second position, the committed one,
+-- besides the one that moves with the port beats. The moving position
+-- stays in charge of the memory accesses and of the local flow
+-- control, it is speculative. The committed position only moves when
+-- commit is asserted, and rollback rewinds the speculative position
+-- onto it. Rollback is therefore purely local to its side.
+--
+-- Only the committed position crosses to the peer. This is what keeps
+-- the peer from ever seeing a word that may still be taken back: the
+-- input side may not overwrite a memory word before the output side
+-- committed having read it, and the output side may not read a word
+-- before the input side committed having written it. Committed
+-- positions only ever move forward, so the reasoning about a received
+-- position being late but never early holds unchanged.
+--
+-- Crossing a committed position through the gray-coded pointer
+-- synchronizer needs care: a commit moves the position by a whole
+-- packet at once, where gray coding only tolerates one step per
+-- cycle. The bisynchronous case therefore crosses a cancellable
+-- position through a publishing counter, which chases the committed
+-- position one step per cycle before crossing it. As a side ingests
+-- or drains at most one word per cycle, the chase converges; a commit
+-- only becomes visible to the peer progressively. The synchronous
+-- case crosses whole words atomically and takes the jump as is.
+--
+-- Rolling the output side back also has to void what the memory
+-- streamer holds, as those words were read past the committed
+-- position. Asserting the streamer reset for the rollback cycle does
+-- exactly that: prefetched words vanish and addresses are issued
+-- afresh from the committed position on the next cycle.
 architecture ram2 of fifo_homogeneous is
 
   constant ptr_width_c: natural := nsl_math.arith.log2(word_count_c);
@@ -125,7 +162,11 @@ architecture ram2 of fifo_homogeneous is
   type in_regs_t is
   record
     running: boolean;
+    -- Position the next accepted word is written to.
     position: position_t;
+    -- Position the last commit left behind, only meaningful when
+    -- in_cancellable_c.
+    committed: position_t;
   end record;
 
   signal in_r, in_rin: in_regs_t;
@@ -137,6 +178,9 @@ architecture ram2 of fifo_homogeneous is
     read: position_t;
     -- Position of the next word to leave the streamer.
     output: position_t;
+    -- Position the last commit left behind, only meaningful when
+    -- out_cancellable_c.
+    committed: position_t;
   end record;
 
   signal out_r, out_rin: out_regs_t;
@@ -161,10 +205,24 @@ architecture ram2 of fifo_homogeneous is
 
   signal available_s, available_min_s, free_s: integer range 0 to word_count_c;
 
+  -- Streamer reset, output side reset with the rollback flush folded in.
+  signal streamer_reset_n_s: std_ulogic;
+
 begin
 
   assert is_synchronous_c or is_pow2_c
     report "Bisynchronous fifos can only work for power-of-two depths"
+    severity failure;
+
+  -- A word held in a slice left the position domain: nothing tells the
+  -- position counter apart from the beat that carried the word, so a
+  -- rollback could not take it back.
+  assert not (in_cancellable_c and input_slice_c)
+    report "Input side cannot be both cancellable and sliced"
+    severity failure;
+
+  assert not (out_cancellable_c and output_slice_c)
+    report "Output side cannot be both cancellable and sliced"
     severity failure;
 
   with_input_slice: if input_slice_c
@@ -233,29 +291,71 @@ begin
         slave_o => reset_n_s
         );
 
-    in_to_out: nsl_clocking.interdomain.interdomain_counter
-      generic map(
-        data_width_c => position_t'length,
-        decode_stage_count_c => (position_t'length + 3) / 4
-        )
-      port map(
-        clock_in_i => clock_i(0),
-        clock_out_i => clock_i(clock_count_c-1),
-        data_i => in_position_s,
-        data_o => in_position_resync_s
-        );
+    in_stepping: if not in_cancellable_c
+    generate
+      in_to_out: nsl_clocking.interdomain.interdomain_counter
+        generic map(
+          data_width_c => position_t'length,
+          decode_stage_count_c => (position_t'length + 3) / 4
+          )
+        port map(
+          clock_in_i => clock_i(0),
+          clock_out_i => clock_i(clock_count_c-1),
+          data_i => in_position_s,
+          data_o => in_position_resync_s
+          );
+    end generate;
 
-    out_to_in: nsl_clocking.interdomain.interdomain_counter
-      generic map(
-        data_width_c => position_t'length,
-        decode_stage_count_c => (position_t'length + 3) / 4
-        )
-      port map(
-        clock_in_i => clock_i(clock_count_c-1),
-        clock_out_i => clock_i(0),
-        data_i => out_position_s,
-        data_o => out_position_resync_s
-        );
+    in_jumping: if in_cancellable_c
+    generate
+      in_to_out: nsl_clocking.interdomain.interdomain_publish_counter
+        generic map(
+          data_width_c => position_t'length,
+          decode_stage_count_c => (position_t'length + 3) / 4
+          )
+        port map(
+          reset_n_i => reset_n_s(0),
+          clock_in_i => clock_i(0),
+          clock_out_i => clock_i(clock_count_c-1),
+          target_i => in_position_s,
+          backward_i => '0',
+          publish_o => open,
+          data_o => in_position_resync_s
+          );
+    end generate;
+
+    out_stepping: if not out_cancellable_c
+    generate
+      out_to_in: nsl_clocking.interdomain.interdomain_counter
+        generic map(
+          data_width_c => position_t'length,
+          decode_stage_count_c => (position_t'length + 3) / 4
+          )
+        port map(
+          clock_in_i => clock_i(clock_count_c-1),
+          clock_out_i => clock_i(0),
+          data_i => out_position_s,
+          data_o => out_position_resync_s
+          );
+    end generate;
+
+    out_jumping: if out_cancellable_c
+    generate
+      out_to_in: nsl_clocking.interdomain.interdomain_publish_counter
+        generic map(
+          data_width_c => position_t'length,
+          decode_stage_count_c => (position_t'length + 3) / 4
+          )
+        port map(
+          reset_n_i => reset_n_s(clock_count_c-1),
+          clock_in_i => clock_i(clock_count_c-1),
+          clock_out_i => clock_i(0),
+          target_i => out_position_s,
+          backward_i => '0',
+          publish_o => open,
+          data_o => out_position_resync_s
+          );
+    end generate;
   end generate;
 
   sync: if is_synchronous_c generate
@@ -294,6 +394,7 @@ begin
     if reset_n_s(0) = '0' then
       in_r.running <= false;
       in_r.position <= (others => '0');
+      in_r.committed <= (others => '0');
     end if;
   end process;
 
@@ -302,14 +403,33 @@ begin
   in_full_s <= in_r.position(mem_ptr_t'range) = out_position_resync_s(mem_ptr_t'range)
                and in_r.position(position_t'left) /= out_position_resync_s(position_t'left);
 
-  in_transition: process(in_r, in_valid_s, in_full_s) is
+  in_transition: process(in_r, in_valid_s, in_full_s,
+                         in_commit_i, in_rollback_i) is
+    variable position_after: position_t;
   begin
     in_rin <= in_r;
 
     in_rin.running <= true;
 
     if in_r.running and in_valid_s = '1' and not in_full_s then
-      in_rin.position <= position_next(in_r.position);
+      position_after := position_next(in_r.position);
+    else
+      position_after := in_r.position;
+    end if;
+
+    in_rin.position <= position_after;
+
+    if in_cancellable_c then
+      -- Commit and rollback both take the beat of the very cycle they
+      -- are asserted on into account: commit publishes the position
+      -- after it, rollback drops it along with the others.
+      if to_x01(in_rollback_i) = '1' then
+        -- A memory write taking place this cycle lands past the
+        -- rewound position, where a later word overwrites it.
+        in_rin.position <= in_r.committed;
+      elsif to_x01(in_commit_i) = '1' then
+        in_rin.committed <= position_after;
+      end if;
     end if;
   end process;
 
@@ -323,8 +443,27 @@ begin
     mem_write_address_s <= in_r.position(mem_ptr_t'range);
     free_s <= word_count_c
               - position_diff(in_r.position, out_position_resync_s, word_count_c);
-    in_position_s <= in_r.position;
+
+    if in_cancellable_c then
+      in_position_s <= in_r.committed;
+    else
+      in_position_s <= in_r.position;
+    end if;
   end process;
+
+  in_cancel_check: if in_cancellable_c
+  generate
+    checker: process(clock_i(0)) is
+    begin
+      if rising_edge(clock_i(0)) then
+        if to_x01(reset_n_s(0)) = '1' then
+          assert not (to_x01(in_commit_i) = '1' and to_x01(in_rollback_i) = '1')
+            report "Input side commit and rollback asserted on the same cycle"
+            severity failure;
+        end if;
+      end if;
+    end process;
+  end generate;
 
   ram: nsl_memory.ram.ram_2p_r_w
     generic map(
@@ -353,6 +492,7 @@ begin
     if reset_n_s(clock_count_c-1) = '0' then
       out_r.read <= (others => '0');
       out_r.output <= (others => '0');
+      out_r.committed <= (others => '0');
     end if;
   end process;
 
@@ -361,7 +501,9 @@ begin
   out_empty_s <= out_r.read = in_position_resync_s;
 
   out_transition: process(out_r, out_empty_s, addr_ready_s,
-                          out_valid_s, out_ready_s, sideband_out_s) is
+                          out_valid_s, out_ready_s, sideband_out_s,
+                          out_commit_i, out_rollback_i) is
+    variable output_after: position_t;
   begin
     out_rin <= out_r;
 
@@ -372,7 +514,25 @@ begin
     -- The word leaving the output port carries the position it was
     -- read from, next one to leave is the one after it.
     if out_valid_s = '1' and out_ready_s = '1' then
-      out_rin.output <= position_next(unsigned(sideband_out_s));
+      output_after := position_next(unsigned(sideband_out_s));
+    else
+      output_after := out_r.output;
+    end if;
+
+    out_rin.output <= output_after;
+
+    if out_cancellable_c then
+      -- Commit and rollback both take the beat of the very cycle they
+      -- are asserted on into account: commit publishes the position
+      -- after it, rollback replays it along with the others.
+      if to_x01(out_rollback_i) = '1' then
+        -- Words the streamer holds were read past the committed
+        -- position, its reset drops them all.
+        out_rin.read <= out_r.committed;
+        out_rin.output <= out_r.committed;
+      elsif to_x01(out_commit_i) = '1' then
+        out_rin.committed <= output_after;
+      end if;
     end if;
   end process;
 
@@ -384,7 +544,12 @@ begin
     addr_valid_s <= to_logic(not out_empty_s);
     addr_s <= out_r.read(mem_ptr_t'range);
     sideband_in_s <= std_ulogic_vector(out_r.read);
-    out_position_s <= out_r.output;
+
+    if out_cancellable_c then
+      out_position_s <= out_r.committed;
+    else
+      out_position_s <= out_r.output;
+    end if;
 
     available_s <= available;
     if out_valid_s = '1' and available /= 0 then
@@ -393,6 +558,30 @@ begin
       available_min_s <= available;
     end if;
   end process;
+
+  out_cancel: if out_cancellable_c
+  generate
+    -- Reset is asynchronous inside the streamer, so a rollback voids
+    -- it on the spot, and it starts over from the reissued addresses
+    -- on the next cycle.
+    streamer_reset_n_s <= reset_n_s(clock_count_c-1) and not to_x01(out_rollback_i);
+
+    checker: process(clock_i(clock_count_c-1)) is
+    begin
+      if rising_edge(clock_i(clock_count_c-1)) then
+        if to_x01(reset_n_s(clock_count_c-1)) = '1' then
+          assert not (to_x01(out_commit_i) = '1' and to_x01(out_rollback_i) = '1')
+            report "Output side commit and rollback asserted on the same cycle"
+            severity failure;
+        end if;
+      end if;
+    end process;
+  end generate;
+
+  out_no_cancel: if not out_cancellable_c
+  generate
+    streamer_reset_n_s <= reset_n_s(clock_count_c-1);
+  end generate;
 
   reader: nsl_memory.streamer.memory_streamer
     generic map(
@@ -403,7 +592,7 @@ begin
       )
     port map(
       clock_i => clock_i(clock_count_c-1),
-      reset_n_i => reset_n_s(clock_count_c-1),
+      reset_n_i => streamer_reset_n_s,
 
       addr_valid_i => addr_valid_s,
       addr_ready_o => addr_ready_s,
