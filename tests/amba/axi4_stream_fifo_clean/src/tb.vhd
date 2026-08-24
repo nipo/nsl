@@ -25,6 +25,26 @@ architecture arch of tb is
     1 => config(2, user => 1,  last => true),
     2 => config(4, user => 1, last => true));
 
+  -- Small enough for a packet to reach the bottom of the fifo in a
+  -- reasonable simulation time.
+  constant fifo_word_count_l2_c : natural := 5;
+
+  -- Longer than the fifo is deep, whatever the beat width in use, and
+  -- a whole number of beats for every one of them.
+  function ramp(count : natural) return byte_string
+  is
+    variable ret : byte_string(0 to count-1);
+  begin
+    for i in ret'range
+    loop
+      ret(i) := byte(to_unsigned(i mod 256, 8));
+    end loop;
+    return ret;
+  end function;
+
+  constant oversized_c : byte_string
+    := ramp(4 * (2 ** fifo_word_count_l2_c + 4));
+
   signal clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to nbr_scenario - 1);
 
@@ -93,8 +113,18 @@ begin
       log_info("===== Scenario : " & to_string(i) & " Test 6: Normal packet to verify errors were filtered =====");
       send_and_check_packet(clock_s, in_axi_q, out_axi_q, user_flip_s, user_flip_beat_s, data => from_hex("55555555555555555555555555555555"));
       
+      -- Test 7: Packet longer than the fifo (should be dropped)
+      log_info("===== Scenario : " & to_string(i) & " Test 7: Packet longer than the fifo (should be dropped) =====");
+      frame_queue_put(in_axi_q, data => oversized_c, user => "0");
+      wait for 20 us;
+
+      -- Test 8: Normal packet after overflow, checks the input side
+      -- came back to a packet boundary
+      log_info("===== Scenario : " & to_string(i) & " Test 8: Normal packet after overflow =====");
+      send_and_check_packet(clock_s, in_axi_q, out_axi_q, user_flip_s, user_flip_beat_s, data => from_hex("0f1e2d3c"));
+
       -- Final normal packet
-      log_info("===== Scenario : " & to_string(i) & " Test 8: Final normal packet =====");
+      log_info("===== Scenario : " & to_string(i) & " Test 9: Final normal packet =====");
       send_and_check_packet(clock_s, in_axi_q, out_axi_q, user_flip_s, user_flip_beat_s, data => from_hex("cafebabe"));
 
       log_info("===== All tests from scenario " & to_string(i) & " completed successfully =====");
@@ -106,6 +136,7 @@ begin
 
     dut: nsl_amba.stream_fifo.axi4_stream_fifo_clean
       generic map (
+        fifo_word_count_l2 => fifo_word_count_l2_c,
         config_c => config_c(i)
       )
       port map(
