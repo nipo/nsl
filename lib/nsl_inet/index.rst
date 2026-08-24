@@ -1,28 +1,114 @@
-================
- Network stack
-================
+=========================
+ Internet protocol stack
+=========================
 
-Network stack uses `bnoc committed <../nsl_bnoc/committed>`_ bus
-framework as a transport. It allows for late cancellation of frame, in
-order to be able to do worm-hole handling of packets with optional
-late-cancellation.
+Overview
+========
 
-Multiple layers are implemented:
+``nsl_inet`` is an Ethernet/ARP/IPv4/UDP protocol stack.  Frames are
+carried over the `bnoc committed <../nsl_bnoc/committed/index>`_
+transport, and every layer processes them in a cut-through manner: a
+frame is never stored for examination, it flows through each layer
+with minimal delay.  This drives the two main design points of the
+stack:
 
-* All MII-related interfaces are in `nsl_mii <../nsl_mii>`_ library.
+* frames can be cancelled late, after they started flowing.  This is
+  what the committed transport provides: the last byte of every frame
+  carries a validity bit, and a frame that fails a check (bad FCS,
+  bad header, unhandled destination) is forwarded with the validity
+  bit cleared rather than being cancelled in place;
 
-* `Ethernet <ethernet>`_ layer takes packet from MII to handle FCS and
-  ethertype.
+* frame context must be known as early as possible.  The context a
+  layer extracts on receive (peer addresses, protocol selection) is
+  summarized at the head of the frame handed to the upper layer, so
+  the upper layer can take its decisions before the payload flows.
 
-* `IPv4 <ipv4>`_ and `ARP <arp>`_ come above ethernet.
+Layer-1 interfaces (MII, RMII, GMII) are not part of this library,
+see `nsl_mii <../nsl_mii/index>`_.
 
-* `UDP <udp>`_ can be stacked over IP.
+Layer composition
+=================
 
-* `Checksum <checksum>`_ calculation module implements inet suite
-  checksum. It can help to implement all protocols relying on it.
+All layers share the same interface contract:
 
-* `Testing framework <testing>`_ can craft packet for test-benches.
+* a layer receives frames prefixed with a fixed-length header it does
+  not interpret.  The header length is set by a generic; the layer
+  passes the header through untouched;
 
-Unimplemented protocols can be plugged in at all the layers, any
-ethertype may be used above Ethernet layer, any protocol may be
-handled in IP packets, etc.
+* on the receive path, a layer strips its own protocol fields and
+  appends its resolved context to the pass-through header, so the
+  upper layer sees a longer header;
+
+* on the transmit path, the reverse happens: the layer consumes the
+  context appended by the upper layer and crafts its protocol fields
+  from it;
+
+* the last byte of every frame is a status byte whose bit 0 is the
+  committed validity bit.
+
+For instance, with an optional layer-1 pre-header, the frame handed
+upwards at each boundary of the receive path is::
+
+  from L1:   | L1 pre-header | MAC header, payload, FCS            | status |
+  ethernet:  | L1 pre-header | peer MAC, ctx | L3 PDU              | status |
+  IPv4:      | ... | peer MAC, ctx | peer IP, ctx, proto, size | L4 PDU | status |
+  UDP layer: | ... | peer MAC, ctx | peer IP, ctx, proto | remote port | data | status |
+
+This contract makes the stack composable: a layer only needs to know
+the total length of the headers below it, not their meaning.  New
+ethertypes can be plugged next to IPv4, new IP protocols next to UDP.
+
+The exact frame structure at each boundary is documented in every
+subset's ``*.pkg.vhd`` file; those comments are the reference.
+
+Checksum handling
+=================
+
+The internet checksum is the one place where pure cut-through cannot
+hold: the checksum sits in the header of a packet but covers data
+that comes after it.  `checksum <checksum/index>`_ implements the
+checksum computation itself; `ipv4 <ipv4/index>`_ hosts
+``ipv4_checksum_inserter``, which computes IP/ICMP/UDP/TCP checksums
+while the packet traverses a fifo and rewrites the header fields on
+the way out.  Only the checksums bypass the storage; the rest of the
+design stays cut-through.
+
+Contents
+========
+
+* `func <func/index>`_ is the turnkey entry point: ``ethernet_host``
+  bundles the whole stack and exposes one committed pipe pair per UDP
+  service port or IP protocol declared through generics;
+
+* the protocol layers:
+
+  * `ethernet <ethernet/index>`_: MAC addressing, FCS, ethertype
+    dispatch;
+
+  * `arp <arp/index>`_: IPv4-over-ethernet address resolution, with
+    cache and default-gateway diversion;
+
+  * `ipv4 <ipv4/index>`_: IPv4, ICMP echo responder, checksum
+    inserter;
+
+  * `udp <udp/index>`_: UDP with per-port dispatch;
+
+* `checksum <checksum/index>`_: internet checksum functions;
+
+* `testing <testing/index>`_: packet crafting, decoding and PCAP
+  reading for testbenches;
+
+* `switching <switching/index>`_ is the odd one out: a
+  store-and-forward 802.1D transparent bridge over AXI4-Stream, not a
+  committed cut-through component.
+
+.. toctree::
+
+   ethernet/index
+   arp/index
+   ipv4/index
+   udp/index
+   func/index
+   checksum/index
+   testing/index
+   switching/index
