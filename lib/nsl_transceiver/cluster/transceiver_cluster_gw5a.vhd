@@ -6,6 +6,7 @@ library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, gowin;
 use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
+use nsl_transceiver.lane.all;
 
 entity transceiver_cluster is
   generic(
