@@ -22,6 +22,7 @@ package cluster is
   record
     enabled : boolean;
     ref_clock_index : natural;
+    ref_clock_mhz : natural;
     target_vco_mhz : natural;
   end record;
 
@@ -30,6 +31,7 @@ package cluster is
   constant disabled_pll_c : pll_config_t := (
     enabled => false,
     ref_clock_index => 0,
+    ref_clock_mhz => 0,
     target_vco_mhz => 0
     );
 
