@@ -7,5 +7,5 @@ endif
 endif
 
 ifeq ($(hwdep),xilinx)
-vhdl-sources += target_series7_serdes.vhd
+vhdl-sources += target_gtpe2.vhd
 endif

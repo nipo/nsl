@@ -16,16 +16,10 @@ endif
 endif
 
 ifeq ($(hwdep),xilinx)
-vhdl-sources += transceiver_cluster_series7_serdes.vhd
+vhdl-sources += transceiver_cluster_gtpe2.vhd
 deps += nsl_data.bytestream
-deps += nsl_hwconfig.xc7_config
-deps += nsl_clocking.pll
-deps += nsl_io.pad
-deps += nsl_io.serdes
-deps += nsl_io.delay
-deps += nsl_line_coding.ibm_8b10b
+deps += nsl_hwdep.xc7_config
 deps += nsl_logic.gearbox
 deps += nsl_clocking.distribution
 deps += nsl_clocking.async
-deps += nsl_synthesis.assertion
 endif
