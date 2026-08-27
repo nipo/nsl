@@ -52,9 +52,10 @@ architecture gtpe2 of transceiver_cluster is
 
   -- Signal declarations --------------------------------------------------------------
   -- Transceiver signals
-  signal s_pll_0_out    : std_logic;
-  signal s_pll_0_outref : std_logic;
-  signal s_pll_0_locked : std_logic;
+  signal s_pll_0_out      : std_logic;
+  signal s_pll_0_outref   : std_logic;
+  signal s_pll_0_locked   : std_logic;
+  signal s_pll_reset_done : std_logic;
 
   -- Clock signals
   signal s_refclk_vec : std_ulogic_vector(0 to 6);  -- 7 total clock signals
@@ -248,26 +249,31 @@ begin
     count500 : process (s_stableclk, reset_n_i) is
     begin  -- process count500
       if reset_n_i = '0' then
-        s_count500val <= 0;
-        s_countdone   <= '0';
-        s_pll0_pd     <= '1';
+        s_count500val    <= 0;
+        s_countdone      <= '0';
+        s_pll0_pd        <= '1';
+        s_pll_reset_done <= '0';
       elsif rising_edge(s_stableclk) then
         if s_count500val = 50 then
-          s_countdone   <= '0';
-          s_count500val <= s_count500val + 1;
-          s_pll0_pd     <= '0';
+          s_countdone      <= '0';
+          s_count500val    <= s_count500val + 1;
+          s_pll0_pd        <= '0';
+          s_pll_reset_done <= '0';
         elsif s_count500val = 100 then
-          s_countdone   <= '1';
-          s_count500val <= s_count500val + 1;
-          s_pll0_pd     <= '0';
+          s_countdone      <= '1';
+          s_count500val    <= s_count500val + 1;
+          s_pll0_pd        <= '0';
+          s_pll_reset_done <= '0';
         elsif s_count500val = 105 then
-          s_countdone   <= '0';
-          s_count500val <= 105;
-          s_pll0_pd     <= '0';
+          s_countdone      <= '0';
+          s_count500val    <= 105;
+          s_pll0_pd        <= '0';
+          s_pll_reset_done <= '1';
         else
-          s_countdone   <= s_countdone;
-          s_count500val <= s_count500val + 1;
-          s_pll0_pd     <= s_pll0_pd;
+          s_countdone      <= s_countdone;
+          s_count500val    <= s_count500val + 1;
+          s_pll0_pd        <= s_pll0_pd;
+          s_pll_reset_done <= s_pll_reset_done;
         end if;
       end if;
     end process count500;
@@ -495,22 +501,22 @@ begin
     s_drp_addr    <= B"000010001";
     s_drp_en      <= r.drp_en;
     s_drp_wr      <= r.drp_wr;
-    s_rx_ready    <= s_pll_0_locked;
+    s_rx_ready    <= s_pll_reset_done;
     s_tx_ready    <= s_rx_ready;
 
-    reg : process(s_parallel_reset_sync_n, s_parallel_clock_buff)
+    reg : process(reset_n_i, s_stableclk)
     begin
-      if rising_edge(s_parallel_clock_buff) then
+      if rising_edge(s_stableclk) then
         r <= rin;
       end if;
 
-      if s_parallel_reset_sync_n = '0' then
+      if reset_n_i = '0' then
         r.state <= ST_RESET;
       end if;
     end process;
 
-    transition : process(s_drp_data_out, s_drp_rdy, s_pll_0_locked,
-                         s_pma_rst_done, r) is
+    transition : process(r, s_drp_data_out, s_drp_rdy, s_pll_0_locked,
+                         s_pll_reset_done, s_pma_rst_done) is
 
     begin
       rin <= r;
@@ -525,7 +531,7 @@ begin
           rin.drp_out <= (others => '0');
         when ST_WAIT_PLL =>
           rin.gtp_rst <= '0';
-          if s_pll_0_locked = '1' then
+          if s_pll_0_locked = '1' and s_pll_reset_done = '1' then
             rin.state <= ST_WAIT_PMA_LOW;
           end if;
         when ST_WAIT_PMA_LOW =>
@@ -743,7 +749,7 @@ begin
           clock_o => s_txoutclk_buff
           );    
 
-      s_domain_a_pll_reset <= not s_pll_0_locked;
+      s_domain_a_pll_reset <= not s_pma_rst_done;
 
       mmcm_gen : if data_width_ratio_c /= 1 generate
 
@@ -1257,7 +1263,7 @@ begin
         TSTIN                      => "11111111111111111111",
         ---------------------------- Channel - DRP Ports  --------------------------
         DRPADDR                    => s_drp_addr,
-        DRPCLK                     => s_parallel_clock_buff,
+        DRPCLK                     => s_stableclk,
         DRPDI                      => s_drp_data_in,
         DRPDO                      => s_drp_data_out,
         DRPEN                      => s_drp_en,
@@ -1525,8 +1531,7 @@ begin
         TXOUTCLK                   => s_tx_out_clock,
         TXOUTCLKFABRIC             => open,
         TXOUTCLKPCS                => open,
-        TXOUTCLKSEL                => "100",  -- FIXME: we want this to be 010
-                                              -- longterm, does not work yet
+        TXOUTCLKSEL                => "010",
         TXRATEDONE                 => open,
         --------------------- Transmit Ports - TX Gearbox Ports --------------------
         TXGEARBOXREADY             => open,
