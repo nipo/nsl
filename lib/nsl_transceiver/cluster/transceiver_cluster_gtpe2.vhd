@@ -201,8 +201,8 @@ architecture gtpe2 of transceiver_cluster is
 
 begin
 
-  assert config_c.lane_count = 4
-    report "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive requires exactly 4 lanes"
+  assert config_c.lane_count <= 4
+    report "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes"
     severity failure;
   assert config_c.pll_count <= 2
     report "transceiver_cluster/gtpe2: GTPE2_COMMON exposes at most 2 quad-shared PLLs (PLL0/PLL1)"
