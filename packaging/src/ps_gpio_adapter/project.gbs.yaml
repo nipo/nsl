@@ -1,0 +1,33 @@
+name: ps_gpio_adapter
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ps_gpio_adapter.vhd
+    - file_type: vivado-bus-definition
+      files:
+        - ../../vivado_repository/interface/tristated.xml
+        - ../../vivado_repository/interface/tristated_rtl.xml
+
+output:
+  - name: ip_package
+    topcell: ps_gpio_adapter
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: io
+        name: ps_gpio_adapter
+        version: "1.0"
+        taxonomy: /NSL/IO
+        display_name: "Zynq-7 PS GPIO block adapter"
+        description: Wraps PS gpios to NSL tristated IOs
+        supported_families:
+          - zynq
+    outputs:
+      - type: vivado-ip-zip
+        path: ps_gpio_adapter_1.0.zip

@@ -1,0 +1,34 @@
+name: tristated_driver
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - tristated_driver.vhd
+    - file_type: vivado-bus-definition
+      files:
+        - ../../nsl/packaging/vivado_repository/interface/tristated.xml
+        - ../../nsl/packaging/vivado_repository/interface/tristated_rtl.xml
+
+output:
+  - name: ip_package
+    topcell: tristated_driver
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: io
+        name: tristated_driver
+        version: "1.0"
+        taxonomy: /NSL/IO
+        display_name: "Tristated vector driver"
+        description: Transforms a tristated into inout
+        supported_families:
+          - zynq
+          - artix
+    outputs:
+      - type: vivado-ip-zip
+        path: tristated_driver_1.0.zip

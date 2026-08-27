@@ -1,0 +1,19 @@
+name: nsl-packaging
+description: NSL IP Packaging
+
+settings:
+  max_parallel_projects: 4
+  stop_on_failure: false
+  output:
+    junit_xml: build-results/junit.xml
+    summary_json: build-results/summary.json
+    log_dir: build-results/logs
+    save_logs: true
+
+projects:
+  - name: ps_gpio_adapter
+    path: ps_gpio_adapter
+  - name: tristated_chunker
+    path: tristated_chunker
+  - name: tristated_driver
+    path: tristated_driver

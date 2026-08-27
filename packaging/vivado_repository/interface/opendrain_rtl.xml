@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spirit:abstractionDefinition xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <spirit:vendor>nsl</spirit:vendor>
+  <spirit:library>io</spirit:library>
+  <spirit:name>opendrain_rtl</spirit:name>
+  <spirit:version>1.0</spirit:version>
+  <spirit:busType spirit:vendor="nsl" spirit:library="io" spirit:name="opendrain" spirit:version="1.0"/>
+  <spirit:ports>
+    <spirit:port>
+      <spirit:logicalName>drain_n</spirit:logicalName>
+      <spirit:description>Drain netaged driver</spirit:description>
+      <spirit:wire>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onSlave>
+        <spirit:defaultValue>1</spirit:defaultValue>
+      </spirit:wire>
+    </spirit:port>
+    <spirit:port>
+      <spirit:logicalName>value</spirit:logicalName>
+      <spirit:description>Value</spirit:description>
+      <spirit:wire>
+        <spirit:onMaster>
+          <spirit:presence>required</spirit:presence>
+          <spirit:direction>in</spirit:direction>
+        </spirit:onMaster>
+        <spirit:onSlave>
+          <spirit:presence>required</spirit:presence>
+        </spirit:onSlave>
+        <spirit:defaultValue>1</spirit:defaultValue>
+      </spirit:wire>
+    </spirit:port>
+  </spirit:ports>
+</spirit:abstractionDefinition>

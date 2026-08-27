@@ -1,0 +1,40 @@
+name: tristated_chunker
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - tristated_chunker.vhd
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+    - file_type: vivado-xgui-tcl
+      files:
+        - xgui.tcl
+    - file_type: vivado-bus-definition
+      files:
+        - ../../vivado_repository/interface/tristated.xml
+        - ../../vivado_repository/interface/tristated_rtl.xml
+
+output:
+  - name: ip_package
+    topcell: tristated_chunker
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: io
+        name: tristated_chunker
+        version: "1.0"
+        taxonomy: /NSL/IO
+        display_name: "Tristated vector splitter"
+        description: Splits vectors of tristated to smaller pieces
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: tristated_chunker_1.0.zip
