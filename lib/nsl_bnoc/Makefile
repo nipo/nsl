@@ -10,4 +10,5 @@ packages += pipe
 packages += crc
 packages += packetizer
 packages += axi_adapter
+packages += axi_wrapper
 packages += chunked_link
