@@ -17,6 +17,7 @@ endif
 
 ifeq ($(hwdep),xilinx)
 vhdl-sources += transceiver_cluster_gtpe2.vhd
+vhdl-sources += transceiver_config_gtpe2.vhd
 deps += nsl_data.bytestream
 deps += nsl_hwdep.xc7_config
 deps += nsl_logic.gearbox
