@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;       
 
-library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic, nsl_event, nsl_signal_generator;
+library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic, nsl_event, nsl_signal_generator, nsl_math;
 use nsl_data.cbor.all;
 
 entity axi4stream_cbor_uart_transactor is
@@ -116,8 +116,7 @@ architecture rtl of axi4stream_cbor_uart_transactor is
 
   signal bnoc_tx_s, bnoc_rx_s: nsl_bnoc.pipe.pipe_bus_t;
 
-  signal baudrate_x2_s : unsigned(24 downto 0);
-  signal baudratex2_s, tick_s: std_ulogic;
+  signal tick_s: std_ulogic;
 begin
   
   reg: process(clock_i, reset_n_i)
@@ -508,26 +507,24 @@ begin
       handshake_active_i => r.hs
     );
 
-    tick: nsl_event.tick.tick_extractor_clock
+  uart_ticker: block is
+    signal baudrate_f_s : nsl_math.fixed.ufixed(r.baudrate'range);
+    constant system_clock_d2_l_c : integer := nsl_math.arith.log2(system_clock_c/2);
+    constant system_clock_d2_f_c : nsl_math.fixed.ufixed(system_clock_d2_l_c-1 downto 0)
+      := nsl_math.fixed.to_ufixed(real(system_clock_c)/2.0, system_clock_d2_l_c-1, 0);
+  begin
+    baudrate_f_s <= nsl_math.fixed.ufixed(r.baudrate);
+    
+    tick: nsl_event.tick.tick_generator_frac
       port map(
         clock_i => clock_i,
         reset_n_i => reset_n_i,
 
-        signal_i => baudratex2_s,
+        freq_num_i => baudrate_f_s,
+        freq_denom_i => system_clock_d2_f_c,
+
         tick_o => tick_s
       );
-
-    baudrate_x2_s <= shift_left(resize(r.baudrate, 25), 1);
-
-    baudrate_x2: nsl_signal_generator.frequency.frequency_generator
-      generic map(
-        clock_rate_c => system_clock_c
-      )
-      port map(
-        clock_i => clock_i,
-        reset_n_i => reset_n_i,
-        frequency_i => baudrate_x2_s,
-        value_o => baudratex2_s
-      );
+  end block;
 
 end architecture;
