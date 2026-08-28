@@ -434,6 +434,7 @@ begin
       drp_wr  : std_ulogic;
       drp_val : std_ulogic_vector(15 downto 0);
       drp_out : std_ulogic_vector(15 downto 0);
+      timeout : natural;
     end record;
 
     signal r, rin : regs_t;
@@ -508,6 +509,9 @@ begin
     begin
       if rising_edge(s_stableclk) then
         r <= rin;
+        if r.timeout = 0 then
+          r.state <= ST_RESET;
+        end if;
       end if;
 
       if reset_n_i = '0' then
@@ -519,7 +523,8 @@ begin
                          s_pll_reset_done, s_pma_rst_done) is
 
     begin
-      rin <= r;
+      rin         <= r;
+      rin.timeout <= r.timeout - 1;
 
       case r.state is
         when ST_RESET =>
@@ -529,6 +534,7 @@ begin
           rin.drp_wr  <= '0';
           rin.drp_val <= (others => '0');
           rin.drp_out <= (others => '0');
+          rin.timeout <= 65000000;
         when ST_WAIT_PLL =>
           rin.gtp_rst <= '0';
           if s_pll_0_locked = '1' and s_pll_reset_done = '1' then
@@ -588,8 +594,9 @@ begin
             rin.state <= ST_DONE;
           end if;
         when ST_DONE =>
-          rin.drp_en <= '0';
-          rin.drp_wr <= '0';
+          rin.drp_en  <= '0';
+          rin.drp_wr  <= '0';
+          rin.timeout <= 65000000;
       end case;
 
     end process;
