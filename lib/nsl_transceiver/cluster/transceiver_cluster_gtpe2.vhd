@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_hwdep, nsl_logic, nsl_clocking;
+library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_hwdep, nsl_logic, nsl_clocking, nsl_synthesis;
 use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
@@ -65,31 +65,104 @@ architecture gtpe2 of transceiver_cluster is
 
   constant pll_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
 
+  -- Error message constants
+  constant lane_count_msg_c      : string := "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes";
+  constant pll_count_msg_c       : string := "transceiver_cluster/gtpe2: GTPE2_COMMON exposes at most 2 quad-shared PLLs (PLL0/PLL1)";
+  constant ref_clk_count_msg_c   : string := "transceiver_cluster/gtpe2: GTPE2_CHANNEL exposes at most 7 reference clock inputs (gtrefclk0, gtwestrefclk0, etc.)";
+  constant cluster_valid_msg_c   : string := "transceiver_cluster/gtpe2: configuration failed target-agnostic consistency check";
+  constant encoding_valid_msg_c  : string := "transceiver_cluster/gtpe2: lane encoding not supported by this backend yet";
+  constant data_byte_count_msg_c : string := "transceiver_cluster/gtpe2: lane data_byte_count must be between >= 1 and <= 4";
+
 begin
 
   assert config_c.lane_count <= 4
-    report "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes"
+    report lane_count_msg_c
     severity failure;
+  
+  lane_count_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => lane_count_msg_c,
+      condition_c => config_c.lane_count <= 4
+      )
+    port map(
+      unused_i => '0'
+      );  
+
   assert config_c.pll_count <= 2
-    report "transceiver_cluster/gtpe2: GTPE2_COMMON exposes at most 2 quad-shared PLLs (PLL0/PLL1)"
+    report pll_count_msg_c
     severity failure;
+
+  pll_count_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => pll_count_msg_c,
+      condition_c => config_c.pll_count <= 2
+      )
+    port map(
+      unused_i => '0'
+      );
+
   assert ref_clock_c'length <= 7
-    report "transceiver_cluster/gtpe2: GTPE2_CHANNEL exposes at most 7 reference clock inputs (gtrefclk0, gtwestrefclk0, etc.)"
+    report ref_clk_count_msg_c
     severity failure;
+
+  ref_clk_count_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => ref_clk_count_msg_c,
+      condition_c => ref_clock_c'length <= 7
+      )
+    port map(
+      unused_i => '0'
+      );  
+
   assert nsl_transceiver.cluster.is_valid(config_c)
-    report "transceiver_cluster/gtpe2: configuration failed target-agnostic consistency check"
+    report cluster_valid_msg_c
     severity failure;
+
+  cluster_valid_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => cluster_valid_msg_c,
+      condition_c => nsl_transceiver.cluster.is_valid(config_c)
+      )
+    port map(
+      unused_i => '0'
+      );    
 
   encoding_check : for lane_idx in 0 to config_c.lane_count-1 generate
     encoding_supported : if config_c.lanes(lane_idx).enabled generate
-      assert config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
-          or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B
-        report "transceiver_cluster/gtpe2: lane encoding not supported by this backend yet"
-        severity failure;
-      assert config_c.lanes(lane_idx).data_byte_count >= 1
-          or config_c.lanes(lane_idx).data_byte_count <= 4
-        report "transceiver_cluster/gtpe2: lane data_byte_count must be between >= 1 and <= 4"
-        severity failure;
+
+      constant encoding_condition_c : boolean := config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
+                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B;
+      constant data_byte_count_condition_c : boolean := config_c.lanes(lane_idx).data_byte_count >= 1
+                                                        or config_c.lanes(lane_idx).data_byte_count <= 4;
+
+      begin
+      
+        assert encoding_condition_c
+          report encoding_valid_msg_c
+          severity failure;
+
+        cluster_valid_check : nsl_synthesis.assertion.synth_assert
+          generic map(
+            message_c   => encoding_valid_msg_c,
+            condition_c => encoding_condition_c
+            )
+          port map(
+            unused_i => '0'
+            );          
+
+        assert data_byte_count_condition_c
+          report data_byte_count_msg_c
+          severity failure;
+
+        data_byte_check : nsl_synthesis.assertion.synth_assert
+          generic map(
+            message_c   => data_byte_count_msg_c,
+            condition_c => data_byte_count_condition_c
+            )
+          port map(
+            unused_i => '0'
+            );
+
     end generate;
   end generate;
 

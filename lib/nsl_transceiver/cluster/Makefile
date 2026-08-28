@@ -23,4 +23,5 @@ deps += nsl_hwdep.xc7_config
 deps += nsl_logic.gearbox
 deps += nsl_clocking.distribution
 deps += nsl_clocking.async
+deps += nsl_synthesis.assertion
 endif
