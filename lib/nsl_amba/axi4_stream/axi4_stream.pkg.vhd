@@ -886,7 +886,7 @@ package body axi4_stream is
       return cfg.data_width;
     end if;
 
-    for i in 0 to cfg.data_width
+    for i in 0 to cfg.data_width-1
     loop
       count := count + if_else(m.keep(i) = '1', 1, 0);
     end loop;
