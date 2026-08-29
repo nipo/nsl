@@ -104,6 +104,9 @@ projects:
   - name: amba_axi4_stream_router
     path: amba/axi4_stream_router
     tags: [ghdl, simulation]
+  - name: amba_axi4_stream_router_linerate
+    path: amba/axi4_stream_router_linerate
+    tags: [ghdl, simulation]
   - name: amba_axi4_stream_sized
     path: amba/axi4_stream_sized
     tags: [ghdl, simulation]

@@ -7,13 +7,41 @@ use nsl_amba.axi4_stream.all;
 use nsl_data.bytestream.all;
 use nsl_logic.bool.all;
 
+-- Multi-input, multi-output packet router with header rewrite.
+--
+-- Every input port peels a fixed-length header off each incoming
+-- packet and queues a routing request for the external routing logic
+-- while the packet payload keeps streaming into an internal fifo:
+-- the input port never stalls while a routing decision is pending,
+-- as long as the fifo (sized by fifo_depth_c) does not overflow.  A
+-- packet is captured, and its routing decision taken, while the
+-- previous packet from the same input port is still being delivered.
+--
+-- The routing request presents the extracted header and source port;
+-- the response selects a destination port and the header to emit in
+-- front of the payload, or asks for the packet to be dropped.  All
+-- response signals are sampled on the cycle route_ready_i is
+-- asserted.
+--
+-- Packets shorter than the input header are silently dropped.
+-- Packets consisting of the header alone are routed with an empty
+-- payload.  Headers are expected to be a whole number of beats; when
+-- the header length is not a multiple of the data width, the bytes
+-- sharing a beat with the end of the header are lost.
 entity axi4_stream_router is
   generic(
     config_c : config_t;
     in_count_c : positive;
     out_count_c : positive;
     in_header_length_c : natural := 0;
-    out_header_length_c : natural := 0
+    out_header_length_c : natural := 0;
+    -- Per-input-port payload fifo depth, in beats.  This is the
+    -- elasticity available to absorb the routing decision latency and
+    -- the output header emission without stalling the input.  For an
+    -- input port that must never stall, size it to at least the
+    -- output header length in beats, plus the routing decision
+    -- latency and half a dozen beats of arbitration overhead.
+    fifo_depth_c : positive := 4
     );
   port(
     reset_n_i : in  std_ulogic;
@@ -38,36 +66,73 @@ end entity;
 
 architecture rtl of axi4_stream_router is
 
-  constant in_header_config_c : buffer_config_t := buffer_config(config_c, in_header_length_c);
-  constant out_header_config_c : buffer_config_t := buffer_config(config_c, out_header_length_c);
-  constant fifo_depth_c : natural := 2;
+  -- The buffer configurations are only used when the matching header
+  -- length is non-zero, but they elaborate unconditionally and
+  -- buffer_config() does not accept a zero size.
+  constant in_header_config_c : buffer_config_t
+    := buffer_config(config_c, if_else(in_header_length_c = 0, 1, in_header_length_c));
+  constant out_header_config_c : buffer_config_t
+    := buffer_config(config_c, if_else(out_header_length_c = 0, 1, out_header_length_c));
+  constant out_fifo_depth_c : natural := 2;
+  constant in_header_storage_c : natural := if_else(in_header_length_c > 0, in_header_length_c, 1);
+  constant out_header_storage_c : natural := if_else(out_header_length_c > 0, out_header_length_c, 1);
 
-  type input_port_state_t is (
-    IS_RESET,
-    IS_HEADER,
-    IS_ROUTE_REQ,
-    IS_DATA,
-    IS_DRAIN_HEADER,  -- Draining previous frame while accepting next frame header
-    IS_DROP
+  -- Packet lifecycle, tracked per input port in a two-entry queue so
+  -- that a packet gets captured and routed while the previous one
+  -- drains.
+  type slot_state_t is (
+    SLOT_IDLE,
+    -- Header captured, waiting for the routing decision
+    SLOT_PENDING,
+    -- Decision taken, payload to forward to out_index
+    SLOT_ROUTED,
+    -- Decision taken, payload to discard
+    SLOT_DROPPED
     );
 
-  type data_fifo_t is array(0 to fifo_depth_c-1) of master_t;
+  type slot_t is
+  record
+    state: slot_state_t;
+    header: byte_string(0 to in_header_storage_c-1);
+    -- Packet has no beat beyond its header.  The user bits of its
+    -- last beat are only meaningful then: with no payload beat to
+    -- carry them through, they ride the response header instead.
+    empty: boolean;
+    last_user: user_t;
+    out_index: natural range 0 to out_count_c-1;
+  end record;
+
+  type slot_vector is array(0 to 1) of slot_t;
+
+  type capture_state_t is (
+    CS_RESET,
+    CS_HEADER,
+    CS_BODY
+    );
 
   type input_port_regs_t is
   record
-    state : input_port_state_t;
+    state : capture_state_t;
     header : buffer_t;
-    out_index: natural range 0 to out_count_c-1;
-    -- FIFO for pipelining
-    fifo: data_fifo_t;
-    fifo_fillness: natural range 0 to fifo_depth_c;
-    last_seen: boolean;  -- Tracks if last beat was pushed
+    slots : slot_vector;
+    -- Index of the oldest busy slot
+    slot_head : natural range 0 to 1;
+    in_packet : boolean;
+    fifo : master_vector(0 to fifo_depth_c-1);
+    fifo_fillness : natural range 0 to fifo_depth_c;
   end record;
 
+  -- Output port production state.  It only tracks what gets pushed
+  -- into the output fifo; emission is driven by the fifo alone, so a
+  -- port goes back to OS_IDLE, and may take a new grant, while the
+  -- tail of the previous packet is still draining.  Packet ordering
+  -- on the output is guaranteed by the fifo itself.
   type output_port_state_t is (
-    OS_RESET,
+    -- No packet in production
     OS_IDLE,
+    -- Pushing the response header beats
     OS_HEADER,
+    -- Pushing payload beats pulled from the source input port fifo
     OS_DATA
     );
 
@@ -75,92 +140,105 @@ architecture rtl of axi4_stream_router is
   record
     state : output_port_state_t;
     header : buffer_t;
-    in_index: natural range 0 to in_count_c-1;
-    -- FIFO for output pipelining
-    fifo: data_fifo_t;
-    fifo_fillness: natural range 0 to fifo_depth_c;
+    in_index : natural range 0 to in_count_c-1;
+    empty : boolean;
+    empty_user : user_t;
+    fifo : master_vector(0 to out_fifo_depth_c-1);
+    fifo_fillness : natural range 0 to out_fifo_depth_c;
   end record;
 
   type input_port_regs_vector is array (natural range <>) of input_port_regs_t;
   type output_port_regs_vector is array (natural range <>) of output_port_regs_t;
 
-  type state_t is (
+  type arbiter_state_t is (
     ST_RESET,
     ST_IN_SELECT,
     ST_ROUTE_REQ,
     ST_OUT_SELECT,
-    ST_OUT_GRANT,
-    ST_OUT_DROP
+    ST_OUT_GRANT
     );
 
   type regs_t is
   record
     ip : input_port_regs_vector(0 to in_count_c-1);
     op : output_port_regs_vector(0 to out_count_c-1);
-    state: state_t;
+    state: arbiter_state_t;
     in_index: natural range 0 to in_count_c-1;
+    route_slot: natural range 0 to 1;
+    route_header : byte_string(0 to in_header_storage_c-1);
     out_index: natural range 0 to out_count_c-1;
-    route_header : byte_string(0 to in_header_length_c-1);
+    granted_header : byte_string(0 to out_header_storage_c-1);
+    granted_empty : boolean;
+    granted_user : user_t;
   end record;
 
   signal r, rin: regs_t;
 
-  -- FIFO management: handles simultaneous push and pop
-  function fifo_shift_data(
-    fifo: data_fifo_t;
-    fillness: natural;
-    push: boolean;
-    push_data: master_t;
-    pop: boolean
-  ) return data_fifo_t is
-    variable ret: data_fifo_t;
-    variable can_push: boolean;
-    variable can_pop: boolean;
+  type in_boolean_vector is array(0 to in_count_c-1) of boolean;
+  type out_boolean_vector is array(0 to out_count_c-1) of boolean;
+
+  -- Slot the next packet should be allocated to, in queue order, -1
+  -- when both slots are busy.
+  function slot_alloc_index(p: input_port_regs_t) return integer
+  is
   begin
-    ret := fifo;
-    can_push := push and fillness < fifo_depth_c;
+    if p.slots(p.slot_head).state = SLOT_IDLE then
+      return p.slot_head;
+    elsif p.slots(1 - p.slot_head).state = SLOT_IDLE then
+      return 1 - p.slot_head;
+    else
+      return -1;
+    end if;
+  end function;
+
+  function fifo_shift_data(fifo: master_vector;
+                           fillness: natural;
+                           push: boolean;
+                           push_data: master_t;
+                           pop: boolean) return master_vector
+  is
+    variable ret: master_vector(0 to fifo'length-1) := fifo;
+    variable can_push, can_pop: boolean;
+  begin
+    can_push := push and fillness < ret'length;
     can_pop := pop and fillness > 0;
 
-    if can_pop and can_push then
-      -- Shift and insert simultaneously
-      for i in 0 to fifo_depth_c-2 loop
-        ret(i) := fifo(i+1);
+    if can_pop then
+      for i in 0 to ret'length-2
+      loop
+        ret(i) := ret(i+1);
       end loop;
-      ret(fillness-1) := push_data;
-    elsif can_pop then
-      -- Just shift
-      for i in 0 to fifo_depth_c-2 loop
-        ret(i) := fifo(i+1);
-      end loop;
-      ret(fifo_depth_c-1) := transfer_defaults(config_c);
-    elsif can_push then
-      -- Just insert
-      ret(fillness) := push_data;
+      ret(ret'length-1) := transfer_defaults(config_c);
+    end if;
+
+    if can_push then
+      if can_pop then
+        ret(fillness-1) := push_data;
+      else
+        ret(fillness) := push_data;
+      end if;
     end if;
 
     return ret;
   end function;
 
-  function fifo_shift_fillness(
-    fillness: natural;
-    push: boolean;
-    pop: boolean
-  ) return natural is
-    variable ret: natural;
-    variable can_push: boolean;
-    variable can_pop: boolean;
+  function fifo_shift_fillness(fillness: natural;
+                               depth: natural;
+                               push: boolean;
+                               pop: boolean) return natural
+  is
+    variable can_push, can_pop: boolean;
   begin
-    ret := fillness;
-    can_push := push and fillness < fifo_depth_c;
+    can_push := push and fillness < depth;
     can_pop := pop and fillness > 0;
 
     if can_push and not can_pop then
-      ret := fillness + 1;
+      return fillness + 1;
     elsif can_pop and not can_push then
-      ret := fillness - 1;
+      return fillness - 1;
+    else
+      return fillness;
     end if;
-
-    return ret;
   end function;
 
 begin
@@ -178,12 +256,15 @@ begin
     if reset_n_i = '0' then
       for i in r.ip'range
       loop
-        r.ip(i).state <= IS_RESET;
+        r.ip(i).state <= CS_RESET;
       end loop;
 
       for i in r.op'range
       loop
-        r.op(i).state <= OS_RESET;
+        r.op(i).state <= OS_IDLE;
+        -- Output validity is a function of the fifo fillness alone,
+        -- reset has to clear it here.
+        r.op(i).fifo_fillness <= 0;
       end loop;
 
       r.state <= ST_RESET;
@@ -193,21 +274,68 @@ begin
   transition: process(r, in_i, out_i,
                       route_ready_i, route_header_i,
                       route_destination_i, route_drop_i) is
-    variable push_v : boolean;
-    variable pop_v : boolean;
+    variable pull_v : out_boolean_vector;
+    variable ip_pop_v : in_boolean_vector;
+    variable push_v, pop_v, drop_pop_v : boolean;
+    variable header_push_v : boolean;
+    variable push_data_v : master_t;
+    variable complete_v, last_v : boolean;
+    variable src_v : natural range 0 to in_count_c-1;
+    variable head_v : natural range 0 to 1;
+    variable alloc_v : integer range -1 to 1;
+    variable shifted_v : buffer_t;
   begin
     rin <= r;
 
-    -- Central arbiter state machine
+    -- Output ports pulling a beat from their source input port fifo
+    -- this cycle.  A pull is only allowed for the packet at the head
+    -- of the input port queue, granted to this precise output port.
+    -- The header phase does not pull: the output fifo is the single
+    -- emission path and it carries the header beats then.
+    for i in 0 to out_count_c-1
+    loop
+      pull_v(i) := false;
+      if r.op(i).state = OS_DATA
+        and r.op(i).fifo_fillness < out_fifo_depth_c then
+        src_v := r.op(i).in_index;
+        head_v := r.ip(src_v).slot_head;
+        if r.ip(src_v).slots(head_v).state = SLOT_ROUTED
+          and r.ip(src_v).slots(head_v).out_index = i
+          and r.ip(src_v).fifo_fillness > 0 then
+          pull_v(i) := true;
+        end if;
+      end if;
+    end loop;
+
+    for i in 0 to in_count_c-1
+    loop
+      ip_pop_v(i) := false;
+    end loop;
+
+    for i in 0 to out_count_c-1
+    loop
+      if pull_v(i) then
+        ip_pop_v(r.op(i).in_index) := true;
+      end if;
+    end loop;
+
+    -- Central routing arbiter
     case r.state is
       when ST_RESET =>
         rin.state <= ST_IN_SELECT;
         rin.in_index <= 0;
 
       when ST_IN_SELECT =>
-        if r.ip(r.in_index).state = IS_ROUTE_REQ then
+        head_v := r.ip(r.in_index).slot_head;
+        if r.ip(r.in_index).slots(head_v).state = SLOT_PENDING then
+          rin.route_slot <= head_v;
+          rin.route_header <= r.ip(r.in_index).slots(head_v).header;
           rin.state <= ST_ROUTE_REQ;
-          rin.route_header <= bytes(in_header_config_c, r.ip(r.in_index).header);
+        elsif r.ip(r.in_index).slots(head_v).state /= SLOT_IDLE
+          and r.ip(r.in_index).slots(1 - head_v).state = SLOT_PENDING then
+          rin.route_slot <= 1 - head_v;
+          rin.route_header <= r.ip(r.in_index).slots(1 - head_v).header;
+          rin.state <= ST_ROUTE_REQ;
         elsif r.in_index = in_count_c-1 then
           rin.in_index <= 0;
         else
@@ -217,10 +345,23 @@ begin
       when ST_ROUTE_REQ =>
         if route_ready_i = '1' then
           if route_drop_i = '1' then
-            rin.state <= ST_OUT_DROP;
+            rin.ip(r.in_index).slots(r.route_slot).state <= SLOT_DROPPED;
+            rin.state <= ST_IN_SELECT;
+            if r.in_index = in_count_c-1 then
+              rin.in_index <= 0;
+            else
+              rin.in_index <= r.in_index + 1;
+            end if;
           else
-            rin.state <= ST_OUT_SELECT;
+            rin.ip(r.in_index).slots(r.route_slot).state <= SLOT_ROUTED;
+            rin.ip(r.in_index).slots(r.route_slot).out_index <= route_destination_i;
             rin.out_index <= route_destination_i;
+            if out_header_length_c /= 0 then
+              rin.granted_header(0 to out_header_length_c-1) <= route_header_i;
+            end if;
+            rin.granted_empty <= r.ip(r.in_index).slots(r.route_slot).empty;
+            rin.granted_user <= r.ip(r.in_index).slots(r.route_slot).last_user;
+            rin.state <= ST_OUT_SELECT;
           end if;
         end if;
 
@@ -228,218 +369,227 @@ begin
         if r.op(r.out_index).state = OS_IDLE then
           rin.state <= ST_OUT_GRANT;
         end if;
-        -- Wait in this state until output becomes idle
 
-      when ST_OUT_GRANT | ST_OUT_DROP =>
+      when ST_OUT_GRANT =>
+        -- Header-only packets have no beat to drain, retire the slot
+        -- at grant time.
+        if r.granted_empty then
+          rin.ip(r.in_index).slots(r.route_slot).state <= SLOT_IDLE;
+          if r.route_slot = r.ip(r.in_index).slot_head then
+            rin.ip(r.in_index).slot_head <= 1 - r.route_slot;
+          end if;
+        end if;
         rin.state <= ST_IN_SELECT;
+        if r.in_index = in_count_c-1 then
+          rin.in_index <= 0;
+        else
+          rin.in_index <= r.in_index + 1;
+        end if;
     end case;
 
-    -- Input port state machines
-    for i in r.ip'range
+    -- Input ports
+    for i in 0 to in_count_c-1
     loop
+      head_v := r.ip(i).slot_head;
+
+      -- Discarding of a dropped packet, one beat per cycle off the
+      -- fifo front.  Beats of the packet may still be arriving.
+      drop_pop_v := false;
+      if r.ip(i).slots(head_v).state = SLOT_DROPPED then
+        if r.ip(i).slots(head_v).empty then
+          rin.ip(i).slots(head_v).state <= SLOT_IDLE;
+          rin.ip(i).slot_head <= 1 - head_v;
+        elsif r.ip(i).fifo_fillness > 0 then
+          drop_pop_v := true;
+          if is_last(config_c, r.ip(i).fifo(0)) then
+            rin.ip(i).slots(head_v).state <= SLOT_IDLE;
+            rin.ip(i).slot_head <= 1 - head_v;
+          end if;
+        end if;
+      end if;
+
+      -- Retire the head slot when its last beat leaves for an output
+      -- port.
+      if ip_pop_v(i) and is_last(config_c, r.ip(i).fifo(0)) then
+        rin.ip(i).slots(head_v).state <= SLOT_IDLE;
+        rin.ip(i).slot_head <= 1 - head_v;
+      end if;
+
+      pop_v := drop_pop_v or ip_pop_v(i);
+
+      push_v := r.ip(i).state = CS_BODY
+        and is_valid(config_c, in_i(i))
+        and r.ip(i).fifo_fillness < fifo_depth_c
+        and (in_header_length_c /= 0
+             or r.ip(i).in_packet
+             or slot_alloc_index(r.ip(i)) >= 0);
+
+      rin.ip(i).fifo <= fifo_shift_data(r.ip(i).fifo, r.ip(i).fifo_fillness,
+                                        push_v, in_i(i), pop_v);
+      rin.ip(i).fifo_fillness <= fifo_shift_fillness(r.ip(i).fifo_fillness, fifo_depth_c,
+                                                     push_v, pop_v);
+
+      -- Capture
       case r.ip(i).state is
-        when IS_RESET =>
+        when CS_RESET =>
           rin.ip(i).header <= reset(in_header_config_c);
+          for s in 0 to 1
+          loop
+            rin.ip(i).slots(s).state <= SLOT_IDLE;
+          end loop;
+          rin.ip(i).slot_head <= 0;
+          rin.ip(i).in_packet <= false;
           rin.ip(i).fifo_fillness <= 0;
-          rin.ip(i).last_seen <= false;
           if in_header_length_c /= 0 then
-            rin.ip(i).state <= IS_HEADER;
-          elsif is_valid(config_c, in_i(i)) then
-            rin.ip(i).state <= IS_ROUTE_REQ;
+            rin.ip(i).state <= CS_HEADER;
+          else
+            rin.ip(i).state <= CS_BODY;
           end if;
 
-        when IS_HEADER =>
-          if is_valid(config_c, in_i(i)) then
-            rin.ip(i).header <= shift(in_header_config_c, r.ip(i).header, in_i(i));
-            if is_last(in_header_config_c, r.ip(i).header) then
-              rin.ip(i).state <= IS_ROUTE_REQ;
-            end if;
+        when CS_HEADER =>
+          alloc_v := slot_alloc_index(r.ip(i));
+          if is_valid(config_c, in_i(i)) and alloc_v >= 0 then
+            last_v := is_last(config_c, in_i(i));
+            complete_v := is_last(in_header_config_c, r.ip(i).header)
+              and byte_count(config_c, in_i(i)) = config_c.data_width;
+            shifted_v := shift(in_header_config_c, r.ip(i).header, in_i(i));
 
-            if is_last(config_c, in_i(i)) then
-              rin.ip(i).state <= IS_RESET;
-            end if;
-          end if;
-
-        when IS_ROUTE_REQ =>
-          if r.in_index = i then
-            case r.state is
-              when ST_OUT_GRANT =>
-                rin.ip(i).state <= IS_DATA;
-                rin.ip(i).out_index <= r.out_index;
-
-              when ST_OUT_DROP =>
-                rin.ip(i).state <= IS_DROP;
-
-              when others =>
-                null;
-            end case;
-          end if;
-
-        when IS_DROP =>
-          if is_valid(config_c, in_i(i)) and is_last(config_c, in_i(i)) then
-            rin.ip(i).state <= IS_RESET;
-          end if;
-
-        when IS_DATA =>
-          -- FIFO operations
-          push_v := is_valid(config_c, in_i(i)) and r.ip(i).fifo_fillness < fifo_depth_c;
-          -- Pop when output port pulls data (not when final output is ready)
-          pop_v := r.op(r.ip(i).out_index).state = OS_DATA
-                   and r.ip(i).fifo_fillness > 0
-                   and r.op(r.ip(i).out_index).fifo_fillness < fifo_depth_c;
-
-          rin.ip(i).fifo <= fifo_shift_data(r.ip(i).fifo, r.ip(i).fifo_fillness,
-                                            push_v, in_i(i), pop_v);
-          rin.ip(i).fifo_fillness <= fifo_shift_fillness(r.ip(i).fifo_fillness,
-                                                         push_v, pop_v);
-
-          -- When last beat is pushed, transition to draining state
-          if push_v and is_last(config_c, in_i(i)) then
-            if in_header_length_c /= 0 then
-              rin.ip(i).state <= IS_DRAIN_HEADER;
+            if complete_v then
+              rin.ip(i).slots(alloc_v).state <= SLOT_PENDING;
+              rin.ip(i).slots(alloc_v).header <= bytes(in_header_config_c, shifted_v);
+              rin.ip(i).slots(alloc_v).empty <= last_v;
+              rin.ip(i).slots(alloc_v).last_user <= in_i(i).user;
+              rin.ip(i).header <= reset(in_header_config_c);
+              if not last_v then
+                rin.ip(i).state <= CS_BODY;
+                rin.ip(i).in_packet <= true;
+              end if;
+            elsif last_v then
+              -- Packet shorter than the header, discard
               rin.ip(i).header <= reset(in_header_config_c);
             else
-              rin.ip(i).last_seen <= true;
+              rin.ip(i).header <= shifted_v;
             end if;
           end if;
 
-          -- For zero-length headers: transition when FIFO drains
-          if r.ip(i).last_seen
-            and fifo_shift_fillness(r.ip(i).fifo_fillness, push_v, pop_v) = 0 then
-            rin.ip(i).last_seen <= false;
-            rin.ip(i).state <= IS_ROUTE_REQ;
-          end if;
-
-        when IS_DRAIN_HEADER =>
-          -- Continue draining FIFO while accepting next frame's header
-          pop_v := r.op(r.ip(i).out_index).state = OS_DATA
-                   and r.ip(i).fifo_fillness > 0
-                   and r.op(r.ip(i).out_index).fifo_fillness < fifo_depth_c;
-
-          rin.ip(i).fifo <= fifo_shift_data(r.ip(i).fifo, r.ip(i).fifo_fillness,
-                                            false, in_i(i), pop_v);
-          rin.ip(i).fifo_fillness <= fifo_shift_fillness(r.ip(i).fifo_fillness,
-                                                         false, pop_v);
-
-          -- Accept header bytes
-          if is_valid(config_c, in_i(i)) then
-            rin.ip(i).header <= shift(in_header_config_c, r.ip(i).header, in_i(i));
-            if is_last(in_header_config_c, r.ip(i).header) then
-              if r.ip(i).fifo_fillness = 0 or (r.ip(i).fifo_fillness = 1 and pop_v) then
-                -- FIFO drained, go directly to route request
-                rin.ip(i).state <= IS_ROUTE_REQ;
-              else
-                -- Still draining, but header complete - wait for drain
-                rin.ip(i).last_seen <= true;
-              end if;
+        when CS_BODY =>
+          if push_v then
+            if in_header_length_c = 0 and not r.ip(i).in_packet then
+              alloc_v := slot_alloc_index(r.ip(i));
+              rin.ip(i).slots(alloc_v).state <= SLOT_PENDING;
+              rin.ip(i).slots(alloc_v).empty <= false;
             end if;
 
             if is_last(config_c, in_i(i)) then
-              -- Frame ended prematurely
-              rin.ip(i).state <= IS_RESET;
+              rin.ip(i).in_packet <= false;
+              if in_header_length_c /= 0 then
+                rin.ip(i).state <= CS_HEADER;
+              end if;
+            else
+              rin.ip(i).in_packet <= true;
             end if;
-          elsif r.ip(i).last_seen
-            and (r.ip(i).fifo_fillness = 0 or (r.ip(i).fifo_fillness = 1 and pop_v)) then
-            -- Header was complete, FIFO now drained
-            rin.ip(i).last_seen <= false;
-            rin.ip(i).state <= IS_ROUTE_REQ;
           end if;
-
       end case;
     end loop;
 
-    -- Output port state machines
-    for i in r.op'range
+    -- Output ports
+    for i in 0 to out_count_c-1
     loop
-      case r.op(i).state is
-        when OS_RESET =>
-          rin.op(i).state <= OS_IDLE;
-          rin.op(i).header <= reset(out_header_config_c);
-          rin.op(i).fifo_fillness <= 0;
+      src_v := r.op(i).in_index;
 
+      -- Response header beats and payload beats are produced by
+      -- mutually exclusive states, one push port is enough.
+      header_push_v := r.op(i).state = OS_HEADER
+        and r.op(i).fifo_fillness < out_fifo_depth_c;
+
+      if header_push_v then
+        push_data_v := next_beat(out_header_config_c, r.op(i).header,
+                                 user => r.op(i).empty_user(config_c.user_width-1 downto 0),
+                                 last => r.op(i).empty);
+      else
+        push_data_v := r.ip(src_v).fifo(0);
+      end if;
+
+      -- Emission is unconditional: whatever sits at the fifo front is
+      -- valid on the output, no state takes part in the decision.
+      pop_v := r.op(i).fifo_fillness > 0
+        and is_ready(config_c, out_i(i));
+
+      rin.op(i).fifo <= fifo_shift_data(r.op(i).fifo, r.op(i).fifo_fillness,
+                                        header_push_v or pull_v(i), push_data_v, pop_v);
+      rin.op(i).fifo_fillness <= fifo_shift_fillness(r.op(i).fifo_fillness, out_fifo_depth_c,
+                                                     header_push_v or pull_v(i), pop_v);
+
+      case r.op(i).state is
         when OS_IDLE =>
-          if r.state = ST_OUT_SELECT and r.out_index = i then
+          if r.state = ST_OUT_GRANT and r.out_index = i then
+            rin.op(i).in_index <= r.in_index;
+            rin.op(i).empty <= r.granted_empty;
+            rin.op(i).empty_user <= r.granted_user;
             if out_header_length_c /= 0 then
+              rin.op(i).header <= reset(out_header_config_c,
+                                        r.granted_header(0 to out_header_length_c-1));
               rin.op(i).state <= OS_HEADER;
-              rin.op(i).header <= reset(out_header_config_c, route_header_i);
-            else
+            elsif not r.granted_empty then
               rin.op(i).state <= OS_DATA;
             end if;
-            rin.op(i).in_index <= r.in_index;
           end if;
 
         when OS_HEADER =>
-          if is_ready(config_c, out_i(i)) then
+          if header_push_v then
             rin.op(i).header <= shift(out_header_config_c, r.op(i).header);
             if is_last(out_header_config_c, r.op(i).header) then
-              rin.op(i).state <= OS_DATA;
+              if r.op(i).empty then
+                rin.op(i).state <= OS_IDLE;
+              else
+                rin.op(i).state <= OS_DATA;
+              end if;
             end if;
           end if;
 
         when OS_DATA =>
-          -- Transfer data from input FIFO to output FIFO
-          push_v := r.ip(r.op(i).in_index).fifo_fillness > 0
-                    and r.op(i).fifo_fillness < fifo_depth_c;
-          pop_v := r.op(i).fifo_fillness > 0
-                   and is_ready(config_c, out_i(i));
-
-          if push_v then
-            rin.op(i).fifo <= fifo_shift_data(r.op(i).fifo, r.op(i).fifo_fillness,
-                                              push_v, r.ip(r.op(i).in_index).fifo(0), pop_v);
-            rin.op(i).fifo_fillness <= fifo_shift_fillness(r.op(i).fifo_fillness,
-                                                           push_v, pop_v);
-          elsif pop_v then
-            rin.op(i).fifo <= fifo_shift_data(r.op(i).fifo, r.op(i).fifo_fillness,
-                                              false, transfer_defaults(config_c), pop_v);
-            rin.op(i).fifo_fillness <= fifo_shift_fillness(r.op(i).fifo_fillness,
-                                                           false, pop_v);
-          end if;
-
-          -- Transition to IDLE when last beat is output
-          if pop_v and is_last(config_c, r.op(i).fifo(0)) then
+          -- Production ends on the push of the last beat, the fifo
+          -- carries the packet boundary from there on.
+          if pull_v(i) and is_last(config_c, r.ip(src_v).fifo(0)) then
             rin.op(i).state <= OS_IDLE;
           end if;
-
       end case;
     end loop;
   end process;
 
-  moore: process(r, in_i, out_i) is
+  moore: process(r) is
   begin
     route_valid_o <= to_logic(r.state = ST_ROUTE_REQ);
-    route_header_o <= r.route_header;
+    route_header_o <= r.route_header(0 to in_header_length_c-1);
     route_source_o <= r.in_index;
 
     for i in r.ip'range
     loop
       case r.ip(i).state is
-        when IS_RESET | IS_ROUTE_REQ =>
+        when CS_RESET =>
           in_o(i) <= accept(config_c, false);
-        when IS_HEADER | IS_DROP | IS_DRAIN_HEADER =>
-          in_o(i) <= accept(config_c, true);
-        when IS_DATA =>
-          -- Accept when FIFO not full (breaks combinatorial path to output)
-          in_o(i) <= accept(config_c, r.ip(i).fifo_fillness < fifo_depth_c);
+
+        when CS_HEADER =>
+          in_o(i) <= accept(config_c, slot_alloc_index(r.ip(i)) >= 0);
+
+        when CS_BODY =>
+          if in_header_length_c = 0 and not r.ip(i).in_packet then
+            in_o(i) <= accept(config_c,
+                              slot_alloc_index(r.ip(i)) >= 0
+                              and r.ip(i).fifo_fillness < fifo_depth_c);
+          else
+            in_o(i) <= accept(config_c, r.ip(i).fifo_fillness < fifo_depth_c);
+          end if;
       end case;
     end loop;
 
     for i in r.op'range
     loop
-      case r.op(i).state is
-        when OS_RESET | OS_IDLE =>
-          out_o(i) <= transfer_defaults(config_c);
-
-        when OS_HEADER =>
-          out_o(i) <= next_beat(out_header_config_c, r.op(i).header, last => false);
-
-        when OS_DATA =>
-          -- Output from output FIFO (fully pipelined)
-          if r.op(i).fifo_fillness > 0 then
-            out_o(i) <= r.op(i).fifo(0);
-          else
-            out_o(i) <= transfer_defaults(config_c);
-          end if;
-      end case;
+      if r.op(i).fifo_fillness /= 0 then
+        out_o(i) <= r.op(i).fifo(0);
+      else
+        out_o(i) <= transfer_defaults(config_c);
+      end if;
     end loop;
   end process;
 

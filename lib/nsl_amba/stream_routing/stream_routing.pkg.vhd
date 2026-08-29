@@ -48,13 +48,22 @@ package stream_routing is
   -- Extracts fixed-length header from input frames, presents to external
   -- routing logic, then inserts output header and forwards data to
   -- selected output port.
+  --
+  -- An input port keeps accepting payload beats into an internal
+  -- fifo, sized by fifo_depth_c, while the routing decision for its
+  -- packet is pending, and captures a packet while the previous one
+  -- is still being delivered.  Routing response signals are sampled
+  -- on the cycle route_ready_i is asserted.  Packets shorter than the
+  -- input header are silently dropped; packets consisting of the
+  -- header alone are routed with an empty payload.
   component axi4_stream_router is
     generic(
       config_c : config_t;
       in_count_c : positive;
       out_count_c : positive;
       in_header_length_c : natural := 0;
-      out_header_length_c : natural := 0
+      out_header_length_c : natural := 0;
+      fifo_depth_c : positive := 4
       );
     port(
       reset_n_i : in  std_ulogic;
