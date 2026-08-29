@@ -307,7 +307,9 @@ package axi4_stream is
 
   -- This extracts a header of fixed size from the stream. Header is
   -- diverted to signals and extra data in a packet are forwarded to
-  -- the output.
+  -- the output.  A packet shorter than the header is silently
+  -- discarded; a packet ending exactly at the header end strobes the
+  -- header and forwards nothing.
   component axi4_stream_header_extractor is
     generic(
       config_c : config_t

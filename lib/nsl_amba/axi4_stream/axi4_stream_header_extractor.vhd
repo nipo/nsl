@@ -32,6 +32,7 @@ architecture beh of axi4_stream_header_extractor is
   type state_t is (
     ST_RESET,
     ST_HEADER,
+    ST_EMPTY,
     ST_DATA
     );
   
@@ -70,12 +71,28 @@ begin
 
       when ST_HEADER =>
         if is_valid(config_c, in_i) then
-          rin.header <= shift(header_config_c, r.header, in_i);
-          if is_last(header_config_c, r.header) then
-            rin.state <= ST_DATA;
-            rin.header_valid <= true;
+          if is_last(config_c, in_i, default => false) then
+            if is_last(header_config_c, r.header) then
+              -- Packet ends exactly at header end
+              rin.header <= shift(header_config_c, r.header, in_i);
+              rin.header_valid <= true;
+              rin.state <= ST_EMPTY;
+            else
+              -- Packet shorter than header, discard
+              rin.header <= reset(header_config_c);
+            end if;
+          else
+            rin.header <= shift(header_config_c, r.header, in_i);
+            if is_last(header_config_c, r.header) then
+              rin.state <= ST_DATA;
+              rin.header_valid <= true;
+            end if;
           end if;
         end if;
+
+      when ST_EMPTY =>
+        rin.header <= reset(header_config_c);
+        rin.state <= ST_HEADER;
 
       when ST_DATA =>
         if is_valid(config_c, in_i) and is_last(config_c, in_i) and is_ready(config_c, out_i) then
@@ -93,7 +110,7 @@ begin
     header_o <= bytes(header_config_c, r.header);
 
     case r.state is
-      when ST_RESET =>
+      when ST_RESET | ST_EMPTY =>
         null;
 
       when ST_HEADER =>
