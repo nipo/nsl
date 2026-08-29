@@ -262,6 +262,27 @@ package axi4_stream is
       );
   end component;
 
+  -- This asserts that the monitored interface never backpressures:
+  -- once reset is released and the grace period has elapsed, ready
+  -- must be high on every clock cycle where enable_i is set.  This
+  -- enforces the ingress contract of line-rate components, where the
+  -- data source cannot be stalled.
+  component axi4_stream_backpressure_assertions is
+    generic(
+      config_c : config_t;
+      prefix_c : string := "AXIS";
+      grace_cycles_c : natural := 0;
+      severity_c : severity_level := failure
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      bus_i : in bus_t
+      );
+  end component;
+
   -- This inserts a header of fixed size to the stream. Header is
   -- inserted at every begin of packet. Module waits for at least one
   -- packet beat to appear on input port before inserting a header.
