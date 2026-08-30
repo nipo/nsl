@@ -10,3 +10,4 @@ packages += checksum
 packages += switching
 packages += stream
 packages += stream_mac
+packages += stream_ethernet

@@ -108,6 +108,10 @@ Contents
 * `stream_mac <stream_mac/index>`_: AXI4-Stream mac layer, FCS and
   minimal frame size;
 
+* `stream_ethernet <stream_ethernet/index>`_: AXI4-Stream ethernet
+  layer, address filtering, context compression and ethertype
+  dispatch;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -127,5 +131,6 @@ Contents
    checksum/index
    stream/index
    stream_mac/index
+   stream_ethernet/index
    testing/index
    switching/index
