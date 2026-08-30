@@ -1,0 +1,79 @@
+name: stream_host
+
+root:
+  - name: gowin_top
+    deps:
+      - nsl_amba.axi4_stream
+      - nsl_data.bytestream
+      - nsl_data.prbs
+      - nsl_hwdep.clock
+      - nsl_hwdep.reset
+      - nsl_inet.mac
+      - nsl_inet.ipv4
+      - nsl_inet.stream
+      - nsl_inet.stream_host
+      - nsl_logic.logic
+      - nsl_math.int_ext
+    sources:
+      - file_type: vhdl
+        files:
+          - src/boundary.vhd
+      - file_type: gowin-cst
+        files:
+          - ../sipeed_tang_console_60k/pinout/done_led.cst
+      - file_type: gowin-sdc
+        files:
+          - constraints/timing.sdc
+
+  - name: xilinx_top
+    deps:
+      - nsl_amba.axi4_stream
+      - nsl_data.bytestream
+      - nsl_data.prbs
+      - nsl_hwdep.clock
+      - nsl_hwdep.reset
+      - nsl_inet.mac
+      - nsl_inet.ipv4
+      - nsl_inet.stream
+      - nsl_inet.stream_host
+      - nsl_logic.logic
+      - nsl_math.int_ext
+    sources:
+      - file_type: vhdl
+        files:
+          - src/boundary.vhd
+      - file_type: xilinx-xdc
+        files:
+          - constraints/xc7.xdc
+
+output:
+  - name: gowin
+    partition: gowin_top
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: stream_host.fs
+      - type: gowin-pnr-report
+        path: gowin-pnr-report.html
+
+  - name: xilinx
+    partition: xilinx_top
+    topcell: boundary
+    target:
+      part: xc7a35t-1csg324
+    outputs:
+      - type: bitstream
+        path: stream_host.bit
+      - type: vivado-timing-report
+        path: xilinx-timing.rpt
+      - type: vivado-usage-report
+        path: xilinx-usage.rpt
+      - type: pnr-report
+        path: xilinx-pnr-report.html
