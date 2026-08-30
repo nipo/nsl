@@ -5,12 +5,18 @@
 Overview
 ========
 
-``nsl_inet`` is an Ethernet/ARP/IPv4/UDP protocol stack.  Frames are
-carried over the `bnoc committed <../nsl_bnoc/committed/index>`_
-transport, and every layer processes them in a cut-through manner: a
-frame is never stored for examination, it flows through each layer
-with minimal delay.  This drives the two main design points of the
-stack:
+``nsl_inet`` is an Ethernet/ARP/IPv4/UDP protocol stack.  Two
+implementations coexist: the historical one over the `bnoc committed
+<../nsl_bnoc/committed/index>`_ transport, described below, and a
+sibling set of ``stream_*`` subsets over AXI4-Stream, described in
+`The AXI4-Stream stack`_, which adds multi-byte data paths and a
+line-rate ingress contract.
+
+Frames are carried over the `bnoc committed
+<../nsl_bnoc/committed/index>`_ transport, and every layer processes
+them in a cut-through manner: a frame is never stored for
+examination, it flows through each layer with minimal delay.  This
+drives the two main design points of the stack:
 
 * frames can be cancelled late, after they started flowing.  This is
   what the committed transport provides: the last byte of every frame
@@ -73,6 +79,49 @@ checksum computation itself; `ipv4 <ipv4/index>`_ hosts
 while the packet traverses a fifo and rewrites the header fields on
 the way out.  Only the checksums bypass the storage; the rest of the
 design stays cut-through.
+
+The AXI4-Stream stack
+=====================
+
+The ``stream_*`` subsets reimplement the suite over `nsl_amba
+AXI4-Stream <../nsl_amba/axi4_stream/index>`_, at data widths of 1, 2
+or 4 bytes, keeping the cut-through philosophy while targeting
+multi-gigabit line rates.  The conventions live in `stream
+<stream/index>`_; the main points:
+
+* inter-layer streams are sequences of beat-aligned *blocks*: the
+  uninterpreted headers of the layers below, the boundary's own
+  context, then the payload.  A layer forwards the listed blocks
+  verbatim and only ever consumes its own header, so layers compose
+  the way the bnoc stack composes, at any width, with no
+  realignment logic anywhere;
+
+* late cancellation maps to a single user bit carried on the last
+  beat.  Only whole-packet validators (FCS, internet checksum over a
+  full PDU) set it; every other rejection happens by not forwarding
+  the packet.  The mac transmitter turns the flag into a corrupted
+  FCS, so cancellation reaches the wire;
+
+* a layer never originates slowdown: receive-side ready only follows
+  output-side backpressure, beyond a bounded per-packet fixed cost.
+  Test benches enforce this with a backpressure assertion component;
+
+* address resolution follows an oracle model (`stream_resolver
+  <stream_resolver/index>`_): applications hand the stack entry
+  point their peer information, layer context and PDU; the entry
+  queries a resolver — `ARP <stream_arp/index>`_ or a static table —
+  and prepends the response blocks.  Protocol layers stay
+  resolution-agnostic, and responders simply echo the symmetrical
+  context of the packets they answer.
+
+`stream_host <stream_host/index>`_ bundles the whole stack;
+protocol layers are instances of the ``nsl_amba`` stream router,
+which peels a header, consults external decision logic and inserts
+a response header while the payload keeps streaming.
+
+Compared to the bnoc stack, fragmentation, IPv4 options and
+multicast are not handled, the UDP transmit checksum is sent as
+zero, and TCP-oriented buffering is out of scope.
 
 Contents
 ========
