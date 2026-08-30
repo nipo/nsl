@@ -6,6 +6,7 @@ library nsl_data, nsl_simulation, nsl_inet, nsl_spdif, nsl_usb, nsl_line_coding,
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
+use nsl_data.prbs.all;
 use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
@@ -29,6 +30,67 @@ architecture arch of tb is
       log_info(ctxt&" "&to_string(params, b));
     end if;
     assert_equal(ctxt, prefix, as, bs, sev);
+  end procedure;
+
+  -- Chains pseudo-random data through the three ways of spelling an
+  -- update: over a byte string, over the bit string the byte string
+  -- amounts to, and one bit at a time in the order the parameters say
+  -- bits are consumed.  All three must agree at every step.
+  procedure check_equivalence(ctxt: log_context;
+                              params: crc_params_t)
+  is
+    constant max_length_c: natural := 8;
+    variable state, from_bytes, from_word, from_bits: crc_state_t;
+    variable seed: prbs_state(30 downto 0);
+    variable data: byte_string(0 to max_length_c-1);
+    variable word: std_ulogic_vector(max_length_c*8-1 downto 0);
+  begin
+    for length in 1 to max_length_c
+    loop
+      state := crc_init(params);
+      seed := (0 => '1', others => '0');
+
+      for iteration in 0 to 63
+      loop
+        data := prbs_byte_string(seed, prbs31, data'length);
+        seed := prbs_forward(seed, prbs31, 8 * data'length);
+
+        -- Byte 0 goes to the end the bit string update starts from.
+        if params.byte_bit_order = BIT_ORDER_ASCENDING then
+          word(length*8-1 downto 0) := std_ulogic_vector(from_le(data(0 to length-1)));
+        else
+          word(length*8-1 downto 0) := std_ulogic_vector(from_be(data(0 to length-1)));
+        end if;
+
+        from_bytes := crc_update(params, state, data(0 to length-1));
+        from_word := crc_update(params, state, word(length*8-1 downto 0));
+
+        from_bits := state;
+        for i in 0 to length-1
+        loop
+          if params.byte_bit_order = BIT_ORDER_ASCENDING then
+            for b in 0 to 7
+            loop
+              from_bits := crc_update(params, from_bits, data(i)(b));
+            end loop;
+          else
+            for b in 7 downto 0
+            loop
+              from_bits := crc_update(params, from_bits, data(i)(b));
+            end loop;
+          end if;
+        end loop;
+
+        assert_equal(ctxt,
+                     "bit string of "&to_string(length)&" bytes",
+                     params, from_bytes, from_word, failure);
+        assert_equal(ctxt,
+                     "bit at a time over "&to_string(length)&" bytes",
+                     params, from_bytes, from_bits, failure);
+
+        state := from_bytes;
+      end loop;
+    end loop;
   end procedure;
 
 begin
@@ -273,5 +335,19 @@ begin
     log_info(ctxt, "done");
     wait;
   end process;
-  
+
+  equivalence: process
+    constant ctxt: log_context := "Equivalence";
+  begin
+    check_equivalence(ctxt, nsl_inet.mac.fcs_params_c);
+    check_equivalence(ctxt, nsl_spdif.spdif.aesebu_crc_params_c);
+    check_equivalence(ctxt, nsl_usb.usb.token_crc_params_c);
+    check_equivalence(ctxt, nsl_usb.usb.data_crc_params_c);
+    check_equivalence(ctxt, nsl_line_coding.hdlc.fcs_params_c);
+    check_equivalence(ctxt, nsl_ble.ble.crc_params_c);
+
+    log_info(ctxt, "done");
+    wait;
+  end process;
+
 end;

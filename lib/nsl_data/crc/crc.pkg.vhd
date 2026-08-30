@@ -5,6 +5,7 @@ use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.text.all;
 use nsl_logic.bool.all;
+use nsl_logic.logic.all;
 
 -- Generic CRC implementation
 --
@@ -142,12 +143,16 @@ package crc is
                       state : crc_state_t;
                       v : std_ulogic) return crc_state_t;
 
-  -- Update function for a bit string
+  -- Update function for a bit string.  Every output bit is expressed
+  -- as a function of the state and data bits given here, so the
+  -- generated logic is one XOR network per output bit, whatever the
+  -- word length.
   function crc_update(params : crc_params_t;
                       state : crc_state_t;
                       word : std_ulogic_vector) return crc_state_t;
 
-  -- Update function for a byte string
+  -- Update function for a byte string, with the same properties as
+  -- the bit string one above.
   function crc_update(params : crc_params_t;
                       state : crc_state_t;
                       data : byte_string) return crc_state_t;
@@ -189,7 +194,7 @@ package crc is
 
   -- Length of check value
   function crc_byte_length(params : crc_params_t) return natural;
-  
+
 end package crc;
 
 package body crc is
@@ -394,26 +399,86 @@ package body crc is
                   state : crc_state_t;
                   word : std_ulogic_vector) return crc_state_t
   is
-    constant p: std_ulogic_vector(0 to params.order-1) := params.poly(0 to params.order-1);
+    -- Operand of the parallel form: the state bits, then the data bits
+    -- in the order they are consumed, then a constant '1' bit carrying
+    -- the affine part of the recurrence.
+    constant span_c: natural := params.order + word'length + 1;
+    subtype mask_t is std_ulogic_vector(0 to span_c-1);
+    type mask_vector is array(natural range <>) of mask_t;
+
+    -- Running the single-bit recurrence over masks rather than over
+    -- values yields, for every output bit, the set of operand bits it
+    -- reduces.  Masks depend on the parameters and the word length
+    -- only, so they hold no signal and fold away at elaboration.
+    function update_get_masks(parms: crc_params_t; wl: integer) return mask_vector
+    is
+      constant p: std_ulogic_vector(0 to parms.order-1) := parms.poly(0 to parms.order-1);
+      variable ret: mask_vector(0 to parms.order-1);
+      variable fb: mask_t;
+    begin
+      for i in ret'range
+      loop
+        ret(i) := (others => '0');
+        ret(i)(i) := '1';
+      end loop;
+
+      for k in 0 to wl-1
+      loop
+        -- Feedback of the step: the outgoing state bit, the data bit
+        -- entering here, and the input complement.  The data bit is
+        -- fresh, so it cannot already be part of the mask.
+        fb := ret(parms.order-1);
+        fb(parms.order + k) := '1';
+        if parms.complement_input then
+          fb(span_c-1) := not fb(span_c-1);
+        end if;
+
+        -- Assigning downwards keeps the not-yet-shifted masks readable.
+        for i in parms.order-1 downto 1
+        loop
+          if p(i) = '1' then
+            ret(i) := ret(i-1) xor fb;
+          else
+            ret(i) := ret(i-1);
+          end if;
+        end loop;
+
+        if p(0) = '1' then
+          ret(0) := fb;
+        else
+          ret(0) := (others => '0');
+        end if;
+      end loop;
+
+      return ret;
+    end function;
+
+    constant mask_c: mask_vector(0 to params.order-1) := update_get_masks(params, word'length);
+
+    alias wa: std_ulogic_vector(word'length-1 downto 0) is word;
     variable s: std_ulogic_vector(0 to params.order-1) := state.remainder(0 to params.order-1);
     variable pad: std_ulogic_vector(params.order to crc_word_t'length-1) := (others => '-');
-    alias wa: std_ulogic_vector(word'length-1 downto 0) is word;
+    variable operand: mask_t;
   begin
     if params.complement_state then
       s := not s;
     end if;
 
-    if params.byte_bit_order = BIT_ORDER_ASCENDING then
-      for i in 0 to wa'length-1
-      loop
-        s := update(p, s, wa(i), params.complement_input);
-      end loop;
-    else
-      for i in wa'length-1 downto 0
-      loop
-        s := update(p, s, wa(i), params.complement_input);
-      end loop;
-    end if;
+    operand(0 to params.order-1) := s;
+    for k in 0 to word'length-1
+    loop
+      if params.byte_bit_order = BIT_ORDER_ASCENDING then
+        operand(params.order + k) := wa(k);
+      else
+        operand(params.order + k) := wa(wa'length-1 - k);
+      end if;
+    end loop;
+    operand(span_c-1) := '1';
+
+    for i in 0 to params.order-1
+    loop
+      s(i) := xor_reduce(operand and mask_c(i));
+    end loop;
 
     if params.complement_state then
       s := not s;
@@ -423,20 +488,26 @@ package body crc is
       remainder => s & pad
       );
   end function;
-  
+
   function crc_update(params : crc_params_t;
                   state : crc_state_t;
                   data : byte_string) return crc_state_t
   is
-    alias xd: byte_string(0 to data'length-1) is data;
-    variable s : crc_state_t := state;
+    -- Bits must reach the update in the order bytes are consumed:
+    -- byte 0 first, and within a byte, from bit 0 up for an ascending
+    -- bit order, from bit 7 down otherwise.  The bit string update
+    -- consumes its argument from the right for an ascending bit order
+    -- and from the left otherwise, so byte 0 goes to the end it starts
+    -- from.
+    variable word: std_ulogic_vector(data'length*8-1 downto 0);
   begin
-    for i in xd'range
-    loop
-      s := crc_update(params, s, xd(i));
-    end loop;
+    if params.byte_bit_order = BIT_ORDER_ASCENDING then
+      word := std_ulogic_vector(from_le(data));
+    else
+      word := std_ulogic_vector(from_be(data));
+    end if;
 
-    return s;
+    return crc_update(params, state, word);
   end function;
 
   function crc_spill_vector(params : crc_params_t;

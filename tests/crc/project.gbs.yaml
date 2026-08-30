@@ -6,6 +6,7 @@ root:
     - nsl_data.bytestream
     - nsl_data.endian
     - nsl_data.crc
+    - nsl_data.prbs
     - nsl_data.text
     - nsl_simulation.assertions
     - nsl_simulation.logging
