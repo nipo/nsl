@@ -308,6 +308,9 @@ projects:
   - name: inet_stream_arp
     path: inet/stream_arp
     tags: [ghdl, simulation]
+  - name: inet_stream_arp_ping
+    path: inet/stream_arp_ping
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]

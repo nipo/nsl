@@ -115,6 +115,13 @@ Contents
 * `stream_ipv4 <stream_ipv4/index>`_: AXI4-Stream IPv4 layer with
   protocol dispatch, and the ICMP echo responder;
 
+* `stream_resolver <stream_resolver/index>`_: address resolution
+  service keeping the protocol layers resolution-agnostic, with the
+  stack entry point and a static resolver;
+
+* `stream_arp <stream_arp/index>`_: ARP, the dynamic implementation
+  of the resolution contract;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -136,5 +143,7 @@ Contents
    stream_mac/index
    stream_ethernet/index
    stream_ipv4/index
+   stream_resolver/index
+   stream_arp/index
    testing/index
    switching/index
