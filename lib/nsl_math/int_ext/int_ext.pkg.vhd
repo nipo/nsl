@@ -3,6 +3,9 @@ library work;
 package int_ext is
 
   type integer_vector is array (integer range <>) of integer;
+
+  constant null_integer_vector : integer_vector(1 to 0) := (others => 0);
+
   function max(v : integer_vector;
                default : integer := integer'low) return integer;
   function min(v : integer_vector;
