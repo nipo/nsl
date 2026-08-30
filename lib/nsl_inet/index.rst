@@ -112,6 +112,9 @@ Contents
   layer, address filtering, context compression and ethertype
   dispatch;
 
+* `stream_ipv4 <stream_ipv4/index>`_: AXI4-Stream IPv4 layer with
+  protocol dispatch, and the ICMP echo responder;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -132,5 +135,6 @@ Contents
    stream/index
    stream_mac/index
    stream_ethernet/index
+   stream_ipv4/index
    testing/index
    switching/index
