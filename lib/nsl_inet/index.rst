@@ -105,6 +105,9 @@ Contents
 * `stream <stream/index>`_: transport conventions for the
   AXI4-Stream implementations of the suite;
 
+* `stream_mac <stream_mac/index>`_: AXI4-Stream mac layer, FCS and
+  minimal frame size;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -123,5 +126,6 @@ Contents
    func/index
    checksum/index
    stream/index
+   stream_mac/index
    testing/index
    switching/index

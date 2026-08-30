@@ -9,3 +9,4 @@ packages += testing
 packages += checksum
 packages += switching
 packages += stream
+packages += stream_mac

@@ -281,6 +281,12 @@ projects:
   - name: inet_stream_checksum
     path: inet/stream_checksum
     tags: [ghdl, simulation]
+  - name: inet_stream_fcs
+    path: inet/stream_fcs
+    tags: [ghdl, simulation]
+  - name: inet_stream_mac
+    path: inet/stream_mac
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]

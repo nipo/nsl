@@ -1,0 +1,33 @@
+name: inet_stream_mac
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.crc
+    - nsl_data.endian
+    - nsl_data.text
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+    - nsl_amba.axi4_stream
+    - nsl_math.int_ext
+    - nsl_inet.stream
+    - nsl_inet.mac
+    - nsl_inet.stream_mac
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
