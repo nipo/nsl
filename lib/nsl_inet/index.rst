@@ -102,6 +102,9 @@ Contents
 
 * `checksum <checksum/index>`_: internet checksum functions;
 
+* `stream <stream/index>`_: transport conventions for the
+  AXI4-Stream implementations of the suite;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -119,5 +122,6 @@ Contents
    udp/index
    func/index
    checksum/index
+   stream/index
    testing/index
    switching/index

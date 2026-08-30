@@ -8,3 +8,4 @@ packages += func
 packages += testing
 packages += checksum
 packages += switching
+packages += stream

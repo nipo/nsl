@@ -272,6 +272,9 @@ projects:
   - name: inet_ethernet
     path: inet/ethernet
     tags: [ghdl, simulation]
+  - name: inet_stream_types
+    path: inet/stream_types
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]
