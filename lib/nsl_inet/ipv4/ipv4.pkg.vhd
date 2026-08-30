@@ -292,7 +292,7 @@ package body ipv4 is
     ttl : integer := 64) return byte_string
   is
     variable header : byte_string(0 to 19) := (others => x"00");
-    variable chk : checksum_acc_t := checksum_acc_init_c;
+    variable chk : checksum_state_t := checksum_init(checksum_byte_config_c);
   begin
     header(ip_off_type_len) := x"45";
     header(ip_off_len_h to ip_off_len_l) := to_be(to_unsigned(header'length + data'length, 16));
@@ -302,8 +302,9 @@ package body ipv4 is
     header(ip_off_src0 to ip_off_src3) := source;
     header(ip_off_dst0 to ip_off_dst3) := destination;
 
-    chk := checksum_update(chk, header);
-    header(ip_off_chk_h to ip_off_chk_l) := checksum_spill(chk);
+    chk := checksum_update(checksum_byte_config_c, chk, header);
+    header(ip_off_chk_h to ip_off_chk_l)
+      := checksum_spill(checksum_byte_config_c, chk);
 
     return header & data;
   end function;
@@ -313,7 +314,6 @@ package body ipv4 is
   is
     alias xd: byte_string(0 to datagram'length-1) is datagram;
     variable header_size : integer;
-    variable chk : checksum_acc_t := checksum_acc_init_c;
   begin
     header_size := to_integer(unsigned(xd(ip_off_type_len)(4 downto 0)));
     if header_size < 5 then
@@ -344,16 +344,23 @@ package body ipv4 is
     return byte_string
   is
     variable hdr: byte_string(0 to 7) := (others => x"00");
-    variable chk : checksum_acc_t := checksum_acc_init_c;
+    variable chk : checksum_state_t := checksum_init(checksum_byte_config_c);
   begin
     hdr(0) := to_byte(typ);
     hdr(1) := to_byte(code);
     hdr(4 to 7) := header;
 
-    chk := checksum_update(chk, hdr);
-    chk := checksum_update(chk, data);
+    chk := checksum_update(checksum_byte_config_c, chk, hdr);
+    chk := checksum_update(checksum_byte_config_c, chk, data);
 
-    hdr(2 to 3) := checksum_spill(chk, data'length mod 2 = 1);
+    -- An odd count of covered bytes leaves the accumulated value
+    -- scaled by 256, one zero byte takes the scaling back.
+    if data'length mod 2 = 1 then
+      chk := checksum_update(checksum_byte_config_c, chk,
+                             byte_string'(0 => x"00"));
+    end if;
+
+    hdr(2 to 3) := checksum_spill(checksum_byte_config_c, chk);
 
     return hdr & data;
   end function;

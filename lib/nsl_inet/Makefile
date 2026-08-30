@@ -11,3 +11,4 @@ packages += switching
 packages += stream
 packages += stream_mac
 packages += stream_ethernet
+packages += stream_ipv4

@@ -90,7 +90,7 @@ architecture beh of icmpv4 is
     in_left : integer range 0 to max_step_c-1;
 
     header: byte_string(0 to header_length_c+1);
-    in_checksum : checksum_acc_t;
+    in_checksum : checksum_state_t;
     fifo: byte_string(0 to fifo_depth_c-1);
     fifo_fillness: integer range 0 to fifo_depth_c;
 
@@ -124,7 +124,7 @@ begin
 
     case r.in_state is
       when IN_RESET =>
-        rin.in_checksum <= checksum_acc_init_c;
+        rin.in_checksum <= checksum_init(checksum_byte_config_c);
         rin.in_state <= IN_HEADER;
         rin.in_left <= header_length_c + 1;
 
@@ -143,7 +143,9 @@ begin
 
       when IN_TYPE =>
         if from_l3_i.valid = '1' then
-          rin.in_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
+          rin.in_checksum <= checksum_update(checksum_byte_config_c,
+                                             r.in_checksum,
+                                             byte_string'(0 => from_l3_i.data));
           if from_l3_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif from_l3_i.data /= to_byte(icmp_type_echo_request_c) then
@@ -155,7 +157,9 @@ begin
 
       when IN_CODE =>
         if from_l3_i.valid = '1' then
-          rin.in_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
+          rin.in_checksum <= checksum_update(checksum_byte_config_c,
+                                             r.in_checksum,
+                                             byte_string'(0 => from_l3_i.data));
           if from_l3_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif from_l3_i.data /= x"00" then
@@ -168,7 +172,9 @@ begin
 
       when IN_CHK =>
         if from_l3_i.valid = '1' then
-          rin.in_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
+          rin.in_checksum <= checksum_update(checksum_byte_config_c,
+                                             r.in_checksum,
+                                             byte_string'(0 => from_l3_i.data));
           if from_l3_i.last = '1' then
             rin.in_state <= IN_RESET;
           elsif r.in_left /= 0 then
@@ -184,12 +190,14 @@ begin
             rin.in_state <= IN_CHK_ASSESS;
           else
             fifo_push := true;
-            rin.in_checksum <= checksum_update(r.in_checksum, from_l3_i.data);
+            rin.in_checksum <= checksum_update(checksum_byte_config_c,
+                                               r.in_checksum,
+                                               byte_string'(0 => from_l3_i.data));
           end if;
         end if;
 
       when IN_CHK_ASSESS =>
-        if checksum_acc_is_valid(r.in_checksum) then
+        if checksum_is_valid(checksum_byte_config_c, r.in_checksum) then
           rin.in_state <= IN_COMMIT;
         else
           rin.in_state <= IN_CANCEL;

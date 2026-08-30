@@ -77,7 +77,7 @@ architecture beh of ipv4_receiver is
     -- Use this counter MSB as an enable. When counter wraps, we are
     -- in padding. Still read input, but dont push to fifo
     pdu_len, total_len : unsigned(15 downto 0);
-    header_chk : checksum_acc_t;
+    header_chk : checksum_state_t;
     header_left : unsigned(5 downto 0);
     proto : byte;
 
@@ -115,7 +115,7 @@ begin
     case r.in_state is
       when IN_RESET =>
         rin.fifo_fillness <= 0;
-        rin.header_chk <= checksum_acc_init_c;
+        rin.header_chk <= checksum_init(checksum_byte_config_c);
         if header_length_c /= 0 then
           rin.in_state <= IN_HEADER;
           rin.in_left <= header_length_c - 1;
@@ -145,7 +145,9 @@ begin
             rin.in_state <= IN_DROP;
           else
             rin.header_left <= (unsigned(l2_i.data(3 downto 0)) - 1) & "10";
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
 
             rin.in_state <= IN_TOS;
           end if;
@@ -157,7 +159,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
 
             rin.in_state <= IN_TOTAL_LEN;
             rin.in_left <= 1;
@@ -170,7 +174,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
 
             rin.total_len <= r.total_len(7 downto 0) & unsigned(l2_i.data);
             if r.in_left /= 0 then
@@ -188,7 +194,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
 
             if r.in_left /= 0 then
               rin.in_left <= r.in_left - 1;
@@ -206,7 +214,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             if l2_i.data /= x"00" and r.in_left = 0 then
@@ -227,7 +237,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             rin.in_state <= IN_PROTO;
@@ -240,7 +252,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             rin.proto <= l2_i.data;
@@ -255,7 +269,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             if r.in_left /= 0 then
@@ -280,7 +296,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
             
             if r.in_left /= 0 then
@@ -298,7 +316,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             rin.is_bcast <= r.is_bcast and l2_i.data = r.bcast_addr(0);
@@ -324,7 +344,9 @@ begin
             rin.in_state <= IN_CANCEL;
           else
             rin.header_left <= r.header_left - 1;
-            rin.header_chk <= checksum_update(r.header_chk, l2_i.data);
+            rin.header_chk <= checksum_update(checksum_byte_config_c,
+                                              r.header_chk,
+                                              byte_string'(0 => l2_i.data));
             rin.total_len <= r.total_len - 1;
 
             if r.header_left = 0 then
@@ -341,7 +363,8 @@ begin
               rin.total_len <= r.total_len - 1;
               fifo_push := true;
             end if;
-          elsif l2_i.data = x"01" and checksum_acc_is_valid(r.header_chk)
+          elsif l2_i.data = x"01"
+            and checksum_is_valid(checksum_byte_config_c, r.header_chk)
             and (r.is_unicast or r.is_bcast)
             and (r.total_len(15) = '1') then
             rin.in_state <= IN_COMMIT;

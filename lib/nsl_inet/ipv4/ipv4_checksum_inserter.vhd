@@ -67,7 +67,7 @@ begin
     record
       state : state_t;
       total_offset, offset, ipv4_last : offset_t;
-      ipv4_checksum, pdu_checksum : checksum_acc_t;
+      ipv4_checksum, pdu_checksum : checksum_state_t;
       ip_header_size_correction: byte;
       ipv4_checksum_offset, pdu_checksum_offset : offset_t;
       ip_proto : ip_proto_t;
@@ -105,8 +105,8 @@ begin
       
       case r.state is
         when ST_RESET =>
-          rin.ipv4_checksum <= checksum_acc_init_c;
-          rin.pdu_checksum <= checksum_acc_init_c;
+          rin.ipv4_checksum <= checksum_init(checksum_byte_config_c);
+          rin.pdu_checksum <= checksum_init(checksum_byte_config_c);
 
           rin.total_offset <= (others => '0');
           rin.offset <= (others => '0');
@@ -136,7 +136,9 @@ begin
             rin.total_offset <= r.total_offset + 1;
             rin.offset <= r.offset + 1;
             
-            rin.ipv4_checksum <= checksum_update(r.ipv4_checksum, data);
+            rin.ipv4_checksum <= checksum_update(checksum_byte_config_c,
+                                                 r.ipv4_checksum,
+                                                 byte_string'(0 => data));
 
             case to_integer(r.offset) is
               when ip_off_type_len =>
@@ -154,30 +156,40 @@ begin
               when ip_off_chk_h =>
                 rin.ipv4_checksum_offset <= r.total_offset;
                 -- Apply correction factor to checksum (high order)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, x"ff");
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => x"ff"));
                 -- Do not update IPv4 checksum with current checksum field
                 rin.ipv4_checksum <= r.ipv4_checksum;
 
               when ip_off_chk_l =>
                 -- Apply correction factor to checksum (low order)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, r.ip_header_size_correction);
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => r.ip_header_size_correction));
                 -- Do not update IPv4 checksum with current checksum field
                 rin.ipv4_checksum <= r.ipv4_checksum;
 
               when ip_off_ttl =>
                 -- TCP/UDP a pseudo-header, protocol number (high)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, x"00");
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => x"00"));
 
               when ip_off_proto =>
                 -- TCP/UDP a pseudo-header, protocol number (low)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => data));
                 rin.ip_proto <= to_integer(unsigned(data));
 
               when ip_off_len_h | ip_off_len_l
                 | ip_off_src0 | ip_off_src1 | ip_off_src2 | ip_off_src3
                 | ip_off_dst0 | ip_off_dst1 | ip_off_dst2 | ip_off_dst3 =>
                 -- TCP/UDP a pseudo-header (address, len)
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => data));
 
               when others =>
                 null;
@@ -196,7 +208,7 @@ begin
                   rin.state <= ST_ICMP;
                   rin.pdu_checksum_offset <= r.ipv4_last + 1 + 2;
                   -- ICMP does not have a pseudo-header
-                  rin.pdu_checksum <= checksum_acc_init_c;
+                  rin.pdu_checksum <= checksum_init(checksum_byte_config_c);
                 when others =>
                   rin.state <= ST_OTHER;
               end case;
@@ -216,7 +228,9 @@ begin
               rin.offset <= r.offset + 1;
 
               if r.pdu_checksum_offset /= r.total_offset and r.pdu_checksum_offset + 1 /= r.total_offset then
-                rin.pdu_checksum <= checksum_update(r.pdu_checksum, data);
+                rin.pdu_checksum <= checksum_update(checksum_byte_config_c,
+                                                    r.pdu_checksum,
+                                                    byte_string'(0 => data));
               end if;
             end if;
           end if;
@@ -244,6 +258,7 @@ begin
     end process;
 
     moore: process(r) is
+      variable pdu_checksum_v : checksum_state_t;
     begin
       to_fifo_en_s <= '0';
       patch_fifo_input_valid_s <= '0';
@@ -254,7 +269,8 @@ begin
           patch_fifo_input_valid_s <= '1';
           patch_fifo_input_data_s <= std_ulogic_vector("0"
                                                        & r.ipv4_checksum_offset
-                                                       & from_be(checksum_spill(r.ipv4_checksum)));
+                                                       & from_be(checksum_spill(checksum_byte_config_c,
+                                                                                r.ipv4_checksum)));
 
           case r.ip_proto is
             when ip_proto_tcp | ip_proto_udp | ip_proto_icmp =>
@@ -264,11 +280,21 @@ begin
           end case;
 
         when ST_PUT_PDU_INFO =>
+          -- An odd count of covered bytes leaves the accumulated value
+          -- scaled by 256, one zero byte takes the scaling back.
+          if r.offset(0) = '1' then
+            pdu_checksum_v := checksum_update(checksum_byte_config_c,
+                                              r.pdu_checksum,
+                                              byte_string'(0 => x"00"));
+          else
+            pdu_checksum_v := r.pdu_checksum;
+          end if;
+
           patch_fifo_input_valid_s <= '1';
           patch_fifo_input_data_s <= std_ulogic_vector("1"
                                                        & r.pdu_checksum_offset
-                                                       & from_be(checksum_spill(r.pdu_checksum,
-                                                                                r.offset(0) = '1')));
+                                                       & from_be(checksum_spill(checksum_byte_config_c,
+                                                                                pdu_checksum_v)));
 
         when ST_PUT_DONE =>
           patch_fifo_input_valid_s <= '1';

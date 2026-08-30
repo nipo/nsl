@@ -293,6 +293,9 @@ projects:
   - name: inet_stream_mac_ethernet
     path: inet/stream_mac_ethernet
     tags: [ghdl, simulation]
+  - name: inet_stream_ipv4
+    path: inet/stream_ipv4
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]
