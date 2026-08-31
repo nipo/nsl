@@ -53,9 +53,12 @@ architecture gtpe2 of transceiver_cluster is
 
   -- Signal declarations --------------------------------------------------------------
   -- Transceiver signals
-  signal s_pll_0_out      : std_logic;
-  signal s_pll_0_outref   : std_logic;
-  signal s_pll_0_locked   : std_logic;
+  signal s_pll0_out       : std_logic;
+  signal s_pll0_outref    : std_logic;
+  signal s_pll0_locked    : std_logic;
+  signal s_pll1_out       : std_logic;
+  signal s_pll1_outref    : std_logic;
+  signal s_pll1_locked    : std_logic;
   signal s_pll_reset_done : std_logic;
 
   -- Clock signals
@@ -63,8 +66,9 @@ architecture gtpe2 of transceiver_cluster is
                                                     -- to assign
   signal s_stableclk  : std_ulogic;
 
-  constant pll_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
-  constant stable_clk_ref_mhz_c  : natural        := config_c.refclks(0).ref_clock_mhz;
+  constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
+  constant pll1_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(1).line_rate_mbps, config_c.plls(1).target_vco_mhz, config_c.plls(1).ref_clock_mhz);
+  constant stable_clk_ref_mhz_c   : natural        := config_c.refclks(0).ref_clock_mhz;
 
   -- Error message constants
   constant lane_count_msg_c      : string := "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes";
@@ -178,6 +182,10 @@ begin
 
     signal s_pll_rst : std_logic;
     signal s_pll_pd  : std_logic;
+    signal s_pll0_rst : std_logic;
+    signal s_pll0_pd  : std_logic;
+    signal s_pll1_rst : std_logic;
+    signal s_pll1_pd  : std_logic;    
 
     -- 500ns + a little more to play it safe
     constant delay500ns_c    : natural := stable_clk_ref_mhz_c / 2 + stable_clk_ref_mhz_c / 4;
@@ -256,6 +264,23 @@ begin
 
     end process;
 
+    -- PLL0 or PLL1 Mux
+    -- If more than one PLL config present then use both
+    pll_mux : if config_c.pll_count > 1 generate
+      s_pll0_pd  <= s_pll_pd;
+      s_pll1_pd  <= s_pll_pd;
+      s_pll0_rst <= s_pll_rst;
+      s_pll1_rst <= s_pll_rst;
+    end generate;
+
+    -- Only one PLL in use
+    one_pll : if config_c.pll_count = 1 generate
+      s_pll0_pd  <= s_pll_pd;
+      s_pll1_pd  <= '1';
+      s_pll0_rst <= s_pll_rst;
+      s_pll1_rst <= '0';
+    end generate;
+
     gtpe2_common_i : GTPE2_COMMON
       generic map
       (
@@ -265,12 +290,12 @@ begin
         -- SIM_PLL1REFCLK_SEL   => SIM_PLL1REFCLK_SEL,
         -- SIM_VERSION          => ("2.0"),
 
-        PLL0_FBDIV      => pll_mult_div_config_c.N2,
-        PLL0_FBDIV_45   => pll_mult_div_config_c.N1,
-        PLL0_REFCLK_DIV => pll_mult_div_config_c.M,
-        PLL1_FBDIV      => (1),
-        PLL1_FBDIV_45   => (4),
-        PLL1_REFCLK_DIV => (1),
+        PLL0_FBDIV      => pll0_mult_div_config_c.N2,
+        PLL0_FBDIV_45   => pll0_mult_div_config_c.N1,
+        PLL0_REFCLK_DIV => pll0_mult_div_config_c.M,
+        PLL1_FBDIV      => pll1_mult_div_config_c.N2,
+        PLL1_FBDIV_45   => pll1_mult_div_config_c.N1,
+        PLL1_REFCLK_DIV => pll1_mult_div_config_c.M,
 
         ------------------COMMON BLOCK Attributes---------------
         BIAS_CFG   => (x"0000000000050001"),
@@ -312,27 +337,27 @@ begin
         GTREFCLK1         => s_refclk_vec(clock_id("gtrefclk1")),
         GTWESTREFCLK0     => s_refclk_vec(clock_id("gtwestrefclk0")),
         GTWESTREFCLK1     => s_refclk_vec(clock_id("gtwestrefclk1")),
-        PLL0OUTCLK        => s_pll_0_out,
-        PLL0OUTREFCLK     => s_pll_0_outref,
-        PLL1OUTCLK        => open,
-        PLL1OUTREFCLK     => open,
+        PLL0OUTCLK        => s_pll0_out,
+        PLL0OUTREFCLK     => s_pll0_outref,
+        PLL1OUTCLK        => s_pll1_out,
+        PLL1OUTREFCLK     => s_pll1_outref,
         -------------------------- Common Block - PLL Ports ------------------------
         PLL0FBCLKLOST     => open,
-        PLL0LOCK          => s_pll_0_locked,
+        PLL0LOCK          => s_pll0_locked,
         PLL0LOCKDETCLK    => '0',
         PLL0LOCKEN        => '1',
-        PLL0PD            => s_pll_pd,
+        PLL0PD            => s_pll0_pd,
         PLL0REFCLKLOST    => open,
         PLL0REFCLKSEL     => "001",
-        PLL0RESET         => s_pll_rst,
+        PLL0RESET         => s_pll0_rst,
         PLL1FBCLKLOST     => open,
-        PLL1LOCK          => open,
+        PLL1LOCK          => s_pll1_locked,
         PLL1LOCKDETCLK    => '0',
         PLL1LOCKEN        => '1',
-        PLL1PD            => '1',
+        PLL1PD            => s_pll1_pd,
         PLL1REFCLKLOST    => open,
         PLL1REFCLKSEL     => "001",
-        PLL1RESET         => '0',
+        PLL1RESET         => s_pll1_rst,
         ---------------------------- Common Block - Ports --------------------------
         BGRCALOVRDENB     => '1',
         GTGREFCLK0        => '0',
@@ -371,6 +396,12 @@ begin
     signal s_parallel_reset_sync_n : std_ulogic;
     signal s_txusrclk2             : std_ulogic;
     signal s_txusrclk2_buff        : std_ulogic;
+
+    signal s_pll_locked  : std_logic;
+    signal s_pll0_clk    : std_logic;
+    signal s_pll0_refclk : std_logic;
+    signal s_pll1_clk    : std_logic;
+    signal s_pll1_refclk : std_logic;
 
     signal s_rx_ready      : std_logic;
     signal s_tx_ready      : std_logic;
@@ -417,7 +448,8 @@ begin
 
     signal r, rin : regs_t;
 
-    constant loopback_config_c : loopback_config_t := loopback_configure(config_c.lanes(lane_idx).loopback);
+    constant loopback_config_c     : loopback_config_t := loopback_configure(config_c.lanes(lane_idx).loopback);
+    constant pll_mult_div_config_c : pll_mult_div_t    := pll0_mult_div_config_c when config_c.lanes(lane_idx).pll_index = 0 else pll1_mult_div_config_c;
 
     constant data_byte_count_c   : natural      := config_c.lanes(lane_idx).data_byte_count;
     constant data_width_config_c : data_width_t := determine_data_width(data_byte_count_c);
@@ -435,6 +467,23 @@ begin
       s_tx_data_from_adapter(8*i + 7 downto 8*i) <= tx_m_i(lane_idx).data(i);
       rx_m_o(lane_idx).data(i)                   <= s_rx_data_to_adapter(8*i + 7 downto 8*i);
     end generate;
+
+    -- PLL Mux ----------------------------------------------------------------------
+    use_pll0 : if config_c.lanes(lane_idx).pll_index = 0 generate
+      s_pll0_clk    <= s_pll0_out;
+      s_pll0_refclk <= s_pll0_outref;
+      s_pll1_clk    <= '0';
+      s_pll1_refclk <= '0';
+      s_pll_locked  <= s_pll0_locked;      
+    end generate;
+
+    use_pll1 : if config_c.lanes(lane_idx).pll_index = 1 generate
+      s_pll0_clk    <= '0';
+      s_pll0_refclk <= '0';
+      s_pll1_clk    <= s_pll1_out;
+      s_pll1_refclk <= s_pll1_outref;
+      s_pll_locked  <= s_pll1_locked;      
+    end generate;    
 
     -- GTP reset -----------------------------------------------------------------
     s_gtp_rst     <= r.gtp_rst;
@@ -459,7 +508,7 @@ begin
       end if;
     end process;
 
-    transition : process(r, s_drp_data_out, s_drp_rdy, s_pll_0_locked,
+    transition : process(r, s_drp_data_out, s_drp_rdy, s_pll_locked,
                          s_pll_reset_done, s_pma_rst_done) is
 
     begin
@@ -477,7 +526,7 @@ begin
           rin.timeout <= timeout_delay_c;
         when ST_WAIT_PLL =>
           rin.gtp_rst <= '0';
-          if s_pll_0_locked = '1' and s_pll_reset_done = '1' then
+          if s_pll_locked = '1' and s_pll_reset_done = '1' then
             rin.state <= ST_WAIT_PMA_LOW;
           end if;
         when ST_WAIT_PMA_LOW =>
@@ -761,7 +810,7 @@ begin
           -- No MMCM needed
           s_parallel_clock_buff <= s_txoutclk_buff;
           s_txusrclk2_buff      <= s_txoutclk_buff;
-          s_domain_a_pll_locked <= s_pll_0_locked;
+          s_domain_a_pll_locked <= s_pll_locked;
         
         end generate;
 
@@ -1132,10 +1181,10 @@ begin
         ----------------- FPGA TX Interface Datapath Configuration  ----------------
         TX8B10BEN                  => '1',
         ------------------------ GTPE2_CHANNEL Clocking Ports ----------------------
-        PLL0CLK                    => s_pll_0_out,
-        PLL0REFCLK                 => s_pll_0_outref,
-        PLL1CLK                    => '0',
-        PLL1REFCLK                 => '0',
+        PLL0CLK                    => s_pll0_clk,
+        PLL0REFCLK                 => s_pll0_refclk,
+        PLL1CLK                    => s_pll1_clk,
+        PLL1REFCLK                 => s_pll1_refclk,
         ------------------------------- Loopback Ports -----------------------------
         LOOPBACK                   => loopback_config_c,
         ----------------------------- PCI Express Ports ----------------------------
