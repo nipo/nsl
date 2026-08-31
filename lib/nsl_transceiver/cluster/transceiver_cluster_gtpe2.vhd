@@ -35,6 +35,9 @@ entity transceiver_cluster is
     rx_m_o : out nsl_transceiver.lane.rx_master_vector(0 to config_c.lane_count-1);
     rx_s_i : in  nsl_transceiver.lane.rx_slave_vector(0 to config_c.lane_count-1);
 
+    -- This port is unused for the GTPE2 architecture. Resetting the PMA for a
+    -- GTPE2 channel is equivalent to a full channel reset, use reset_n_i
+    -- instead
     pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
 
     -- APB clock for the user-facing master. Sourced internally from
