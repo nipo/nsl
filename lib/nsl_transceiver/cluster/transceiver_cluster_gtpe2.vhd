@@ -64,6 +64,7 @@ architecture gtpe2 of transceiver_cluster is
   signal s_stableclk  : std_ulogic;
 
   constant pll_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
+  constant stable_clk_ref_mhz_c  : natural        := config_c.refclks(0).ref_clock_mhz;
 
   -- Error message constants
   constant lane_count_msg_c      : string := "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes";
@@ -175,47 +176,85 @@ begin
   -- GTPE2 Common ----------------------------------------------------------------------
   gtpe2_common_gen : if config_c.lane_count >= 1 generate
 
-    signal s_pll0_rst    : std_logic;
-    signal s_pll0_pd     : std_logic;
-    signal s_count500val : integer;
-    signal s_countdone   : std_logic;
+    signal s_pll_rst : std_logic;
+    signal s_pll_pd  : std_logic;
+
+    -- 500ns + a little more to play it safe
+    constant delay500ns_c    : natural := stable_clk_ref_mhz_c / 2 + stable_clk_ref_mhz_c / 4;
+    -- A few clock cycles for PLL reset
+    constant delay_pll_rst_c : natural := 5;
+
+    type reset_state_t is (
+      ST_RESET,
+      ST_WAIT_500,
+      ST_WAIT_1000,
+      ST_HOLD_RST,
+      ST_DONE);
+
+    type regs_t is
+    record
+      state     : reset_state_t;
+      pll_count : natural;
+      pll_pd    : std_logic;
+      pll_rst   : std_logic;
+      pll_done  : std_ulogic;
+    end record;
+
+    signal r, rin : regs_t;
 
   begin
 
-    -- PLL reset
-    s_pll0_rst <= s_countdone;
+    s_pll_rst        <= r.pll_rst;
+    s_pll_pd         <= r.pll_pd;
+    s_pll_reset_done <= r.pll_done;
 
-    count500 : process (s_stableclk, reset_n_i) is
-    begin  -- process count500
-      if reset_n_i = '0' then
-        s_count500val    <= 0;
-        s_countdone      <= '0';
-        s_pll0_pd        <= '1';
-        s_pll_reset_done <= '0';
-      elsif rising_edge(s_stableclk) then
-        if s_count500val = 50 then
-          s_countdone      <= '0';
-          s_count500val    <= s_count500val + 1;
-          s_pll0_pd        <= '0';
-          s_pll_reset_done <= '0';
-        elsif s_count500val = 100 then
-          s_countdone      <= '1';
-          s_count500val    <= s_count500val + 1;
-          s_pll0_pd        <= '0';
-          s_pll_reset_done <= '0';
-        elsif s_count500val = 105 then
-          s_countdone      <= '0';
-          s_count500val    <= 105;
-          s_pll0_pd        <= '0';
-          s_pll_reset_done <= '1';
-        else
-          s_countdone      <= s_countdone;
-          s_count500val    <= s_count500val + 1;
-          s_pll0_pd        <= s_pll0_pd;
-          s_pll_reset_done <= s_pll_reset_done;
-        end if;
+    -- PLL Reset
+    reg : process(reset_n_i, s_stableclk)
+    begin
+      if rising_edge(s_stableclk) then
+        r <= rin;
       end if;
-    end process count500;
+
+      if reset_n_i = '0' then
+        r.state <= ST_RESET;
+      end if;
+    end process;
+
+    transition : process(r) is
+
+    begin
+      rin <= r;
+
+      case r.state is
+        when ST_RESET =>
+          rin.pll_count <= 0;
+          rin.pll_pd    <= '1';
+          rin.pll_rst   <= '0';
+          rin.pll_done  <= '0';
+          rin.state     <= ST_WAIT_500;
+        when ST_WAIT_500 =>
+          rin.pll_count <= r.pll_count + 1;
+          if r.pll_count = delay500ns_c then
+            rin.state <= ST_WAIT_1000;
+          end if;
+        when ST_WAIT_1000 =>
+          rin.pll_count <= r.pll_count + 1;
+          rin.pll_pd    <= '0';
+          if r.pll_count = delay500ns_c * 2 then
+            rin.state <= ST_HOLD_RST;
+          end if;
+        when ST_HOLD_RST =>
+          rin.pll_count <= r.pll_count + 1;
+          rin.pll_rst   <= '1';
+          if r.pll_count = (delay500ns_c * 2) + delay_pll_rst_c then
+            rin.state <= ST_DONE;
+          end if;
+        when ST_DONE =>
+          rin.pll_rst  <= '0';
+          rin.pll_done <= '1';
+      end case;
+
+    end process;
 
     gtpe2_common_i : GTPE2_COMMON
       generic map
@@ -282,10 +321,10 @@ begin
         PLL0LOCK          => s_pll_0_locked,
         PLL0LOCKDETCLK    => '0',
         PLL0LOCKEN        => '1',
-        PLL0PD            => s_pll0_pd,
+        PLL0PD            => s_pll_pd,
         PLL0REFCLKLOST    => open,
         PLL0REFCLKSEL     => "001",
-        PLL0RESET         => s_pll0_rst,
+        PLL0RESET         => s_pll_rst,
         PLL1FBCLKLOST     => open,
         PLL1LOCK          => open,
         PLL1LOCKDETCLK    => '0',
