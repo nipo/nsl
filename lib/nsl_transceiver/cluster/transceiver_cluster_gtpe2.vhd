@@ -423,6 +423,7 @@ begin
     constant data_width_config_c : data_width_t := determine_data_width(data_byte_count_c);
     constant data_bit_count_c    : natural      := config_c.lanes(lane_idx).data_byte_count * 8;
     constant data_width_ratio_c  : natural      := data_width_config_c.interface_width / data_bit_count_c;
+    constant timeout_delay_c     : natural      := stable_clk_ref_mhz_c * 1_000_000;
 
     signal s_rx_data_to_adapter   : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
@@ -473,7 +474,7 @@ begin
           rin.drp_wr  <= '0';
           rin.drp_val <= (others => '0');
           rin.drp_out <= (others => '0');
-          rin.timeout <= 65000000;
+          rin.timeout <= timeout_delay_c;
         when ST_WAIT_PLL =>
           rin.gtp_rst <= '0';
           if s_pll_0_locked = '1' and s_pll_reset_done = '1' then
@@ -535,7 +536,7 @@ begin
         when ST_DONE =>
           rin.drp_en  <= '0';
           rin.drp_wr  <= '0';
-          rin.timeout <= 65000000;
+          rin.timeout <= timeout_delay_c;
       end case;
 
     end process;
