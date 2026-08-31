@@ -383,7 +383,7 @@ begin
     constant data_byte_count_c   : natural      := config_c.lanes(lane_idx).data_byte_count;
     constant data_width_config_c : data_width_t := determine_data_width(data_byte_count_c);
     constant data_bit_count_c    : natural      := config_c.lanes(lane_idx).data_byte_count * 8;
-    constant data_width_ratio_c  : natural      := (data_bit_count_c) / data_width_config_c.interface_width;
+    constant data_width_ratio_c  : natural      := data_width_config_c.interface_width / data_bit_count_c;
 
     signal s_rx_data_to_adapter   : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
@@ -662,7 +662,7 @@ begin
 
         constant input_hz_c        : natural := config_c.lanes(lane_idx).line_rate_mbps * 50000;
         constant input_period_ns_c : real    := 1.0e9 / real(input_hz_c);
-        constant output_hz_c       : natural := config_c.lanes(lane_idx).line_rate_mbps * 100000;
+        constant output_hz_c       : natural := input_hz_c * data_width_ratio_c;
 
         constant p : params := pll_params_calc(input_hz_c, output_hz_c, S7_MMCM);
 
