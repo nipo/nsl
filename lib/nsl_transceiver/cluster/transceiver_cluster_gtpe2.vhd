@@ -180,12 +180,12 @@ begin
   -- GTPE2 Common ----------------------------------------------------------------------
   gtpe2_common_gen : if config_c.lane_count >= 1 generate
 
-    signal s_pll_rst : std_logic;
-    signal s_pll_pd  : std_logic;
+    signal s_pll_rst  : std_logic;
+    signal s_pll_pd   : std_logic;
     signal s_pll0_rst : std_logic;
     signal s_pll0_pd  : std_logic;
     signal s_pll1_rst : std_logic;
-    signal s_pll1_pd  : std_logic;    
+    signal s_pll1_pd  : std_logic;
 
     -- 500ns + a little more to play it safe
     constant delay500ns_c    : natural := stable_clk_ref_mhz_c / 2 + stable_clk_ref_mhz_c / 4;
@@ -381,14 +381,16 @@ begin
   -- Lanes --------------------------------------------------------------------------------
   instantiate_lanes : for lane_idx in 0 to config_c.lane_count-1 generate
 
-    signal s_gtp_rst      : std_logic;
-    signal s_drp_data_in  : std_logic_vector(15 downto 0);
-    signal s_drp_data_out : std_logic_vector(15 downto 0);
-    signal s_drp_addr     : std_logic_vector(8 downto 0);
-    signal s_drp_en       : std_logic;
-    signal s_drp_wr       : std_logic;
-    signal s_drp_rdy      : std_logic;
-    signal s_pma_rst_done : std_logic;
+    signal s_gtp_rst             : std_logic;
+    signal s_drp_data_in         : std_logic_vector(15 downto 0);
+    signal s_drp_data_out        : std_logic_vector(15 downto 0);
+    signal s_drp_addr            : std_logic_vector(8 downto 0);
+    signal s_drp_en              : std_logic;
+    signal s_drp_wr              : std_logic;
+    signal s_drp_rdy             : std_logic;
+    signal s_pma_rst_done        : std_logic;
+    signal s_pll_locked_sync     : std_logic;
+    signal s_pma_rst_done_sync   : std_logic;
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock        : std_ulogic;
@@ -474,7 +476,7 @@ begin
       s_pll0_refclk <= s_pll0_outref;
       s_pll1_clk    <= '0';
       s_pll1_refclk <= '0';
-      s_pll_locked  <= s_pll0_locked;      
+      s_pll_locked  <= s_pll0_locked;
     end generate;
 
     use_pll1 : if config_c.lanes(lane_idx).pll_index = 1 generate
@@ -482,8 +484,8 @@ begin
       s_pll0_refclk <= '0';
       s_pll1_clk    <= s_pll1_out;
       s_pll1_refclk <= s_pll1_outref;
-      s_pll_locked  <= s_pll1_locked;      
-    end generate;    
+      s_pll_locked  <= s_pll1_locked;
+    end generate;
 
     -- GTP reset -----------------------------------------------------------------
     s_gtp_rst     <= r.gtp_rst;
@@ -494,6 +496,22 @@ begin
     s_rx_ready    <= s_pll_reset_done;
     s_tx_ready    <= s_rx_ready;
 
+    -- De-glitch asynchronous signals
+    pll_locked_sync : nsl_clocking.async.async_deglitcher
+      port map(
+        clock_i => s_stableclk,
+        data_i  => s_pll_locked,
+        data_o => s_pll_locked_sync
+        );
+
+    pma_rst_done_sync : nsl_clocking.async.async_deglitcher
+      port map(
+        clock_i => s_stableclk,
+        data_i  => s_pma_rst_done,
+        data_o => s_pma_rst_done_sync
+        );            
+
+    -- Reset FSM
     reg : process(reset_n_i, s_stableclk)
     begin
       if rising_edge(s_stableclk) then
@@ -508,8 +526,8 @@ begin
       end if;
     end process;
 
-    transition : process(r, s_drp_data_out, s_drp_rdy, s_pll_locked,
-                         s_pll_reset_done, s_pma_rst_done) is
+    transition : process(r, s_drp_data_out, s_drp_rdy, s_pll_locked_sync,
+                         s_pll_reset_done, s_pma_rst_done_sync) is
 
     begin
       rin         <= r;
@@ -526,12 +544,12 @@ begin
           rin.timeout <= timeout_delay_c;
         when ST_WAIT_PLL =>
           rin.gtp_rst <= '0';
-          if s_pll_locked = '1' and s_pll_reset_done = '1' then
+          if s_pll_locked_sync = '1' and s_pll_reset_done = '1' then
             rin.state <= ST_WAIT_PMA_LOW;
           end if;
         when ST_WAIT_PMA_LOW =>
           rin.gtp_rst <= '1';
-          if s_pma_rst_done = '0' then
+          if s_pma_rst_done_sync = '0' then
             rin.state <= ST_READ_DRP;
           end if;
         when ST_READ_DRP =>
@@ -560,15 +578,15 @@ begin
           rin.drp_en  <= '0';
           rin.drp_wr  <= '0';
           rin.gtp_rst <= '0';
-          if s_pma_rst_done = '0' then
+          if s_pma_rst_done_sync = '0' then
             rin.state <= ST_WAIT_PMA_HIGH;
           end if;
         when ST_WAIT_PMA_HIGH =>
-          if s_pma_rst_done = '1' then
+          if s_pma_rst_done_sync = '1' then
             rin.state <= ST_WAIT_PMA_FALL;
           end if;
         when ST_WAIT_PMA_FALL =>
-          if s_pma_rst_done = '0' then
+          if s_pma_rst_done_sync = '0' then
             rin.state <= ST_RESTORE_DRP;
           end if;
         when ST_RESTORE_DRP =>
@@ -745,7 +763,7 @@ begin
           clock_o => s_txoutclk_buff
           );    
 
-      s_domain_a_pll_reset <= not s_pma_rst_done;
+      s_domain_a_pll_reset <= not s_pma_rst_done_sync;
 
       mmcm_gen : if data_width_ratio_c /= 1 generate
 
@@ -810,7 +828,7 @@ begin
           -- No MMCM needed
           s_parallel_clock_buff <= s_txoutclk_buff;
           s_txusrclk2_buff      <= s_txoutclk_buff;
-          s_domain_a_pll_locked <= s_pll_locked;
+          s_domain_a_pll_locked <= s_pll_locked_sync;
         
         end generate;
 
@@ -1373,7 +1391,7 @@ begin
         TXPIPPMSEL                 => '1',
         TXPIPPMSTEPSIZE            => "00000",
         ---------------------- Transceiver Reset Mode Operation --------------------
-        GTRESETSEL                 => '0',    -- Sequential mode
+        GTRESETSEL                 => '0',  -- Sequential mode
         RESETOVRD                  => '0',
         ------------------------------- Transmit Ports -----------------------------
         TXPMARESETDONE             => open,
