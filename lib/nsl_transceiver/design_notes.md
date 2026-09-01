@@ -1,6 +1,6 @@
 # nsl_transceiver — intent and state
 
-State snapshot: as of "nsl_transceiver/cluster: Replace IDELAYCTRL with nsl_io.delay.delay_reference".
+State snapshot: as of "nsl_transceiver/cluster: Add comment to document unused port for GTPE2 backend".
 
 ## Purpose
 
@@ -180,6 +180,7 @@ acceptable.
 | `cluster` | Portable component + config types + `is_valid()`. GW5A backend implemented. |
 | `dynamic_reconfig` | **Declaration only** — `apb_arbiter` component is declared with no entity behind it. |
 | `cuff` | `cuff_adapter` entity, covered by `tests/transceiver/cuff_adapter`. |
+| `sgmii` | `sgmii_adapter` entity |
 
 Note that the package is `cuff` and the entity inside it is
 `cuff_adapter`: packages and entities share one namespace per VHDL
@@ -293,6 +294,41 @@ While this backend targets 7 Series Xilinx FPGAs, a rewrite of the multi_pll
 block could allow this to be portable across any backend implemented in
 the rest of the nsl library--The only architecture-specific components are
 the clock buffers used in the design (BUFR and BUFIO). 
+## GTPE2 backend
+This wraps the `GTPE2_COMMON` and `GTPE2_CHANNEL` primitives. One
+`GTPE2_COMMON` primitive is instantiated per cluster whereas one channel
+corresponds to one lane. Therefore, the cluster configuration instantiates
+one `GTPE2_CHANNEL` per lane. The common block contains the PLL's used by one
+or more channels (see UG482). 
+
+Various features have been implemented thus far although in a somewhat 
+limited use-case for now. Features include:
+
+* Using any reference clock pin (east, west, etc.)
+* Use up to all four lanes in the quad (each with their own configuration)
+* 8B/10B encoding (built-in feature of the GTP transceiver)
+* Loopback configuration (any mode)
+* Integrated reset state machines (for `GTPE2_COMMON` and `GTPE2_CHANNEL`)
+* Configuration-based PLL0/1 routing from `GTPE2_COMMON` to the corresponding 
+  lane (one or more lanes can use the same PLL output)
+* Automatic resolution of PLL/MMCM parameters given the user-specified reference 
+  clock frequency, PLL frequency, and line rate
+* Variable data width on user-end (automatic placement of gearboxes and MMCM 
+  depending on the data width)
+* Automatic alignment management (not used when in loopback mode)
+
+Some features remain to be implemented:
+
+* Other encoding schemes such as 64B/66B (supported natively by the GTP transceiver)
+* APB to DRP bridge
+* More flexible clocking scheme. Currently assumptions are made regarding the clock rate.
+  The clock rate is automatically calculated based on user-side data width and GTP
+  interface data width. No RX clock is provided since the elastic buffer inside the GTP
+  transceiver crosses the recovered clock domain for the user. `TXOUTCLK2` is therefore the
+  only clock currently being used. Future implementations may desire more flexibility. 
+
+The current implementation has been tested on hardware along with the SGMII adapter and driver. 
+Various data rates work, along with various PLL configurations. 
 
 ## Adapters
 
