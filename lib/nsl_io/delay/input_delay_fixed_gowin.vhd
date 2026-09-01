@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_hwdep;
+library nsl_hwconfig;
 
 entity input_delay_fixed is
   generic(
@@ -16,7 +16,7 @@ end entity;
 
 architecture gowin of input_delay_fixed is
 
-  constant tap_count_i : integer := integer(real(delay_ps_c) / nsl_hwdep.gowin_config.iodelay_step_ps);
+  constant tap_count_i : integer := integer(real(delay_ps_c) / nsl_hwconfig.gowin_config.iodelay_step_ps);
 
   component IODELAY is
     GENERIC (  C_STATIC_DLY : integer := 0);

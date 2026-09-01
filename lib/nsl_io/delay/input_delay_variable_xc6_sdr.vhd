@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep;
+library nsl_hwconfig;
 
 entity input_delay_variable_sdr is
   port (
@@ -55,7 +55,7 @@ architecture xc6 of input_delay_variable_sdr is
   attribute BOX_TYPE of
     IODELAY2 : component is "PRIMITIVE";
 
-  constant tap_delay_ps_c   : integer := nsl_hwdep.xc6_config.iodelay2_tap_ps;
+  constant tap_delay_ps_c   : integer := nsl_hwconfig.xc6_config.iodelay2_tap_ps;
   constant tap_step_count_c : integer := 256;
   signal step_count_s       : integer range 0 to tap_step_count_c - 1;
 

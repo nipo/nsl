@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_hwdep;
+library nsl_hwconfig;
 
 entity output_delay_variable is
   port(
@@ -53,7 +53,7 @@ architecture xc6 of output_delay_variable is
   attribute BOX_TYPE of
     IODELAY2 : component is "PRIMITIVE";
 
-  constant tap_delay_ps_c : integer := nsl_hwdep.xc6_config.iodelay2_tap_ps;
+  constant tap_delay_ps_c : integer := nsl_hwconfig.xc6_config.iodelay2_tap_ps;
   constant tap_step_count_c : integer := 256;
   signal step_count_s: integer range 0 to tap_step_count_c-1;
   signal reset_s: std_ulogic;

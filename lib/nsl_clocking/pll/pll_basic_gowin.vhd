@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_hwdep, nsl_synthesis, work;
+library nsl_data, nsl_hwconfig, nsl_synthesis, work;
 use nsl_data.text.all;
-use nsl_hwdep.gowin_config.all;
+use nsl_hwconfig.gowin_config.all;
 
 entity pll_basic is
   generic(
@@ -160,10 +160,10 @@ architecture gw1n of pll_basic is
 
   constant gowin_params : string := str_param_extract(hw_variant_c, "gowin");
   constant pll_constraints : gowin_pll_constraints := (
-    vcomin => nsl_hwdep.gowin_config.pll_vco_fmin,
-    vcomax => nsl_hwdep.gowin_config.pll_vco_fmax,
-    pfdmin => nsl_hwdep.gowin_config.pll_pfd_fmin,
-    pfdmax => nsl_hwdep.gowin_config.pll_pfd_fmax);
+    vcomin => nsl_hwconfig.gowin_config.pll_vco_fmin,
+    vcomax => nsl_hwconfig.gowin_config.pll_vco_fmax,
+    pfdmin => nsl_hwconfig.gowin_config.pll_pfd_fmin,
+    pfdmax => nsl_hwconfig.gowin_config.pll_pfd_fmax);
 
   constant params : gowin_pll_params := gowin_pll_params_generate(input_hz_c,
                                                                   output_hz_c,
@@ -200,7 +200,7 @@ begin
         clock_o => clockout_buffered_s
         );
 
-    use_rpll: if nsl_hwdep.gowin_config.pll_type = "rpll"
+    use_rpll: if nsl_hwconfig.gowin_config.pll_type = "rpll"
     generate
       component rpll is
         generic(
@@ -250,7 +250,7 @@ begin
       inst: rpll
         generic map(
           fclkin => fin_mhz_str,
-          device => nsl_hwdep.gowin_config.device_name,
+          device => nsl_hwconfig.gowin_config.device_name,
           idiv_sel => params.idiv - 1,
           fbdiv_sel => params.fbdiv - 1,
           odiv_sel => params.odiv,
@@ -276,7 +276,7 @@ begin
           );
     end generate;
 
-    use_pll: if nsl_hwdep.gowin_config.pll_type = "pll"
+    use_pll: if nsl_hwconfig.gowin_config.pll_type = "pll"
     generate
       COMPONENT PLL
         GENERIC(
@@ -329,7 +329,7 @@ begin
       inst: pll
         generic map(
           fclkin => fin_mhz_str,
-          device => nsl_hwdep.gowin_config.device_name,
+          device => nsl_hwconfig.gowin_config.device_name,
           idiv_sel => params.idiv - 1,
           fbdiv_sel => params.fbdiv - 1,
           odiv_sel => params.odiv,
@@ -355,7 +355,7 @@ begin
           );
     end generate;
 
-    use_plla: if nsl_hwdep.gowin_config.pll_type = "plla"
+    use_plla: if nsl_hwconfig.gowin_config.pll_type = "plla"
     generate
       COMPONENT PLLA
         generic(

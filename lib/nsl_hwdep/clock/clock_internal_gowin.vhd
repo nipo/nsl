@@ -1,7 +1,7 @@
  library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_hwdep;
+library nsl_hwconfig;
 
 entity clock_internal is
   port(
@@ -22,7 +22,7 @@ architecture gw of clock_internal is
 
 begin
 
-  has_osc: if nsl_hwdep.gowin_config.internal_osc = "osc"
+  has_osc: if nsl_hwconfig.gowin_config.internal_osc = "osc"
   generate
     component OSC is
       generic (
@@ -38,14 +38,14 @@ begin
     inst: OSC
       generic map (
         FREQ_DIV => divisor_c,
-        DEVICE => nsl_hwdep.gowin_config.device_name
+        DEVICE => nsl_hwconfig.gowin_config.device_name
         )
       port map (
         OSCOUT => clock_o
         );
   end generate;
 
-  has_osch: if nsl_hwdep.gowin_config.internal_osc = "osch"
+  has_osch: if nsl_hwconfig.gowin_config.internal_osc = "osch"
   generate
     component OSCH is
       generic (
@@ -66,7 +66,7 @@ begin
         );
   end generate;
 
-  has_osca: if nsl_hwdep.gowin_config.internal_osc = "osca"
+  has_osca: if nsl_hwconfig.gowin_config.internal_osc = "osca"
   generate
     component OSCA is
       generic (

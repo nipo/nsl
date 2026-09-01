@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_data, nsl_hwdep;
+library nsl_data, nsl_hwconfig;
 use nsl_data.text.if_else;
 
 entity input_delay_fixed is
@@ -53,7 +53,7 @@ architecture xc6 of input_delay_fixed is
   attribute BOX_TYPE of
     IODELAY2 : component is "PRIMITIVE";
 
-  constant tap_delay_ps_c : integer := nsl_hwdep.xc6_config.iodelay2_tap_ps;
+  constant tap_delay_ps_c : integer := nsl_hwconfig.xc6_config.iodelay2_tap_ps;
   constant tap_count_i : integer := delay_ps_c / tap_delay_ps_c;
   constant data_rate: string := if_else(is_ddr_c, "DDR", "SDR");
 

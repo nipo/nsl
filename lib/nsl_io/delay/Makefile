@@ -20,7 +20,7 @@ vhdl-sources += output_delay_fixed_xc6.vhd
 vhdl-sources += input_delay_variable_xc6.vhd
 vhdl-sources += input_delay_variable_xc6_sdr.vhd
 vhdl-sources += output_delay_variable_xc6.vhd
-deps += nsl_hwdep.xc6_config
+deps += nsl_hwconfig.xc6_config
 else
 ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += input_delay_fixed_xc7.vhd
@@ -40,5 +40,5 @@ else
 vhdl-sources += input_delay_fixed_gowin.vhd
 endif
 vhdl-sources += output_delay_fixed_symmetrical.vhd
-deps += nsl_hwdep.gowin_config
+deps += nsl_hwconfig.gowin_config
 endif

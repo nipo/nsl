@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_hwdep;
+library nsl_hwconfig;
 
 package body pll_config_series67 is
 
@@ -19,12 +19,12 @@ package body pll_config_series67 is
         
   function constraints_get(mode: pll_variant) return constraints
   is
-    variable ret: nsl_hwdep.xc6_config.pll_constraints;
+    variable ret: nsl_hwconfig.xc6_config.pll_constraints;
   begin
     if mode = S6_DCM then
-      ret := nsl_hwdep.xc6_config.pll_constraints_get(nsl_hwdep.xc6_config.DCM);
+      ret := nsl_hwconfig.xc6_config.pll_constraints_get(nsl_hwconfig.xc6_config.DCM);
     elsif mode = S6_PLL then
-      ret := nsl_hwdep.xc6_config.pll_constraints_get(nsl_hwdep.xc6_config.PLL);
+      ret := nsl_hwconfig.xc6_config.pll_constraints_get(nsl_hwconfig.xc6_config.PLL);
     else
       report "Unsupported mode" severity failure;
     end if;
