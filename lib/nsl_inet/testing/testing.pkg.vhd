@@ -195,7 +195,11 @@ package body testing is
     end if;
 
     if not checksum_is_valid(xpacket(0 to header_len-1)) then
-      log_error(prefix&"IP bad header checksum:" & to_string(checksum_spill(checksum_update(checksum_acc_init_c, xpacket(0 to header_len-1)))));
+      log_error(prefix&"IP bad header checksum:"
+                & to_string(checksum_spill(checksum_byte_config_c,
+                                           checksum_update(checksum_byte_config_c,
+                                                           checksum_init(checksum_byte_config_c),
+                                                           xpacket(0 to header_len-1)))));
       return;
     end if;
 
