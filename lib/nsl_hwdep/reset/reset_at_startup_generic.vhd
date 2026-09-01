@@ -11,6 +11,9 @@ end entity;
 architecture gen of reset_at_startup is
 
   signal sh : std_ulogic_vector(0 to 7) := (others => '0');
+  signal reset_n_s : std_ulogic;
+  signal reset_fanout_s : std_ulogic;
+
   attribute keep : string;
   attribute keep of sh : signal is "TRUE";
   attribute syn_srlstyle:string;
@@ -25,10 +28,12 @@ begin
     if rising_edge(clock_i) then
       sh <= sh(1 to 7) & not sh(7);
       if sh = "01010101" or sh = "10101010" then
-        reset_n_o <= '1';
+        reset_n_s <= '1';
       else
-        reset_n_o <= '0';
+        reset_n_s <= '0';
       end if;
+      reset_fanout_s <= reset_n_s;
+      reset_n_o <= reset_fanout_s;
     end if;
   end process;
 
