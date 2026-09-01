@@ -122,6 +122,9 @@ Contents
 * `stream_arp <stream_arp/index>`_: ARP, the dynamic implementation
   of the resolution contract;
 
+* `stream_udp <stream_udp/index>`_: AXI4-Stream UDP layer with port
+  dispatch;
+
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
 
@@ -145,5 +148,6 @@ Contents
    stream_ipv4/index
    stream_resolver/index
    stream_arp/index
+   stream_udp/index
    testing/index
    switching/index

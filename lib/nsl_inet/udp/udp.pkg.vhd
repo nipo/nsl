@@ -141,20 +141,34 @@ package body udp is
     destination_ip, source_ip: ipv4_t := to_ipv4(0,0,0,0)) return byte_string
   is
     variable dp, sp, len, c: unsigned(15 downto 0);
-    variable check : checksum_acc_t := (others => '0');
+    -- Accumulation starts on a null residue, which stands for the same
+    -- value the all-ones one does through another encoding.
+    variable check : checksum_state_t
+      := checksum_seed(checksum_byte_config_c, checksum_acc_t'(others => '0'));
   begin
     dp := to_unsigned(destination, 16);
     sp := to_unsigned(source, 16);
     len := to_unsigned(data'length + 8, 16);
 
-    check := checksum_update(check, source_ip);
-    check := checksum_update(check, destination_ip);
-    check := checksum_update(check, x"00");
-    check := checksum_update(check, to_byte(ip_proto_udp));
-    check := checksum_update(check, to_be(len));
-    check := checksum_update(check, to_be(sp) & to_be(dp) & to_be(len) & x"00" & x"00" & data);
+    check := checksum_update(checksum_byte_config_c, check, source_ip);
+    check := checksum_update(checksum_byte_config_c, check, destination_ip);
+    check := checksum_update(checksum_byte_config_c, check,
+                             byte_string'(0 => x"00"));
+    check := checksum_update(checksum_byte_config_c, check,
+                             byte_string'(0 => to_byte(ip_proto_udp)));
+    check := checksum_update(checksum_byte_config_c, check, to_be(len));
+    check := checksum_update(checksum_byte_config_c, check,
+                             to_be(sp) & to_be(dp) & to_be(len) & x"00" & x"00" & data);
 
-    return to_be(sp) & to_be(dp) & to_be(len) & checksum_spill(check, (data'length mod 2) = 1) & data;
+    -- An odd count of covered bytes leaves the accumulated value
+    -- scaled by 256, one zero byte takes the scaling back.
+    if (data'length mod 2) = 1 then
+      check := checksum_update(checksum_byte_config_c, check,
+                               byte_string'(0 => x"00"));
+    end if;
+
+    return to_be(sp) & to_be(dp) & to_be(len)
+      & checksum_spill(checksum_byte_config_c, check) & data;
   end function;
 
   function udp_source_get(datagram: byte_string) return udp_port_t
