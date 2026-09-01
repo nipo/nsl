@@ -187,6 +187,35 @@ package stream_ipv4 is
       );
   end component;
 
+  -- ICMP echo responder, an endpoint for the ICMP protocol pipe of
+  -- the IPv4 layer.  header_length_c lists every block preceding the
+  -- ICMP PDU, the IPv4 context included; blocks are echoed verbatim
+  -- into the reply, which reaches the requester through the context
+  -- symmetry.
+  --
+  -- Echo requests are answered cut-through: the reply streams while
+  -- the request is still being received, with the type rewritten and
+  -- the checksum adjusted.  A request whose checksum does not verify,
+  -- or arriving with the reject flag set, yields a reply with the
+  -- reject flag set on its last beat.  ICMP messages other than echo
+  -- requests are consumed silently.
+  component stream_ipv4_icmp_echo is
+    generic(
+      config_c : config_t;
+      header_length_c : integer_vector := null_integer_vector
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
 end package;
 
 package body stream_ipv4 is

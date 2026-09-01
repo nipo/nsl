@@ -296,6 +296,9 @@ projects:
   - name: inet_stream_ipv4
     path: inet/stream_ipv4
     tags: [ghdl, simulation]
+  - name: inet_stream_icmp_echo
+    path: inet/stream_icmp_echo
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]
