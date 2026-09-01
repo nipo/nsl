@@ -15,3 +15,4 @@ packages += stream_ipv4
 packages += stream_resolver
 packages += stream_arp
 packages += stream_udp
+packages += stream_host

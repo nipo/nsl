@@ -314,6 +314,9 @@ projects:
   - name: inet_stream_udp
     path: inet/stream_udp
     tags: [ghdl, simulation]
+  - name: inet_stream_host
+    path: inet/stream_host
+    tags: [ghdl, simulation]
   - name: inet_vlan
     path: inet/vlan
     tags: [ghdl, simulation]
