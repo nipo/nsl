@@ -9,7 +9,6 @@ use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
 use nsl_transceiver.lane.all;
 use nsl_transceiver.transceiver_config_gtpe2.all;
-use nsl_mii.sgmii_probe.all;
 
 library unisim;
 use unisim.vcomponents.all;
