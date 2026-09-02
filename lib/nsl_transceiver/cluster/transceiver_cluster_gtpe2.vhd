@@ -713,7 +713,8 @@ begin
 
   -- Aligner --------------------------------------------------------------------------------
 
-    not_loopback : if config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NONE generate
+    need_alignment : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NONE) or
+                        (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS) generate
       -- Alignment done
       s_pcomma_align_en                                                               <= not(s_align_ready(0));
       s_mcomma_align_en                                                               <= not(s_align_ready(0));
@@ -738,7 +739,9 @@ begin
           );
     end generate;
 
-    loopback_align_gen : if config_c.lanes(lane_idx).loopback /= nsl_transceiver.lane.LOOPBACK_NONE generate
+    no_align : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA) or
+                  (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA) or
+                  (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) generate
       s_pcomma_align_en                                                               <= '1';
       s_mcomma_align_en                                                               <= '1';
       s_cdr_hold                                                                      <= '1';
