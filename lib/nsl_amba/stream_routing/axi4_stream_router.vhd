@@ -23,6 +23,11 @@ use nsl_logic.bool.all;
 -- response signals are sampled on the cycle route_ready_i is
 -- asserted.
 --
+-- Payload beats reach the destination port through a per-input-port
+-- staging register, so that no port computes its fifo enables from
+-- another input port's state.  It sustains one beat per cycle and
+-- costs one cycle of delivery latency.
+--
 -- Packets shorter than the input header are silently dropped.
 -- Packets consisting of the header alone are routed with an empty
 -- payload.  Headers are expected to be a whole number of beats; when
@@ -40,7 +45,11 @@ entity axi4_stream_router is
     -- the output header emission without stalling the input.  For an
     -- input port that must never stall, size it to at least the
     -- output header length in beats, plus the routing decision
-    -- latency and half a dozen beats of arbitration overhead.
+    -- latency and half a dozen beats of arbitration overhead.  The
+    -- per-port staging register downstream of the fifo adds a beat of
+    -- elasticity of its own and starts draining the fifo as soon as
+    -- the packet is routed, before the destination port is granted,
+    -- so it does not add to this budget.
     fifo_depth_c : positive := 4
     );
   port(
@@ -120,6 +129,17 @@ architecture rtl of axi4_stream_router is
     in_packet : boolean;
     fifo : master_vector(0 to fifo_depth_c-1);
     fifo_fillness : natural range 0 to fifo_depth_c;
+    -- Beat staged for the output port, popped off the fifo front by
+    -- the input port itself as soon as the head slot is routed.  It
+    -- decouples the two sides: the fifo clock enables are computed
+    -- from this port's own state and from the state of the one output
+    -- port xfer_out_index designates, never from another input port.
+    -- xfer outlives the slot it came from, hence the registered
+    -- destination: the head slot retires as soon as its last beat is
+    -- staged.
+    xfer : master_t;
+    xfer_valid : boolean;
+    xfer_out_index : natural range 0 to out_count_c-1;
   end record;
 
   -- Output port production state.  It only tracks what gets pushed
@@ -132,7 +152,7 @@ architecture rtl of axi4_stream_router is
     OS_IDLE,
     -- Pushing the response header beats
     OS_HEADER,
-    -- Pushing payload beats pulled from the source input port fifo
+    -- Pushing payload beats staged by the source input port
     OS_DATA
     );
 
@@ -173,9 +193,6 @@ architecture rtl of axi4_stream_router is
   end record;
 
   signal r, rin: regs_t;
-
-  type in_boolean_vector is array(0 to in_count_c-1) of boolean;
-  type out_boolean_vector is array(0 to out_count_c-1) of boolean;
 
   -- Slot the next packet should be allocated to, in queue order, -1
   -- when both slots are busy.
@@ -274,50 +291,18 @@ begin
   transition: process(r, in_i, out_i,
                       route_ready_i, route_header_i,
                       route_destination_i, route_drop_i) is
-    variable pull_v : out_boolean_vector;
-    variable ip_pop_v : in_boolean_vector;
     variable push_v, pop_v, drop_pop_v : boolean;
+    variable load_v, taken_v, take_v : boolean;
     variable header_push_v : boolean;
     variable push_data_v : master_t;
     variable complete_v, last_v : boolean;
     variable src_v : natural range 0 to in_count_c-1;
+    variable dst_v : natural range 0 to out_count_c-1;
     variable head_v : natural range 0 to 1;
     variable alloc_v : integer range -1 to 1;
     variable shifted_v : buffer_t;
   begin
     rin <= r;
-
-    -- Output ports pulling a beat from their source input port fifo
-    -- this cycle.  A pull is only allowed for the packet at the head
-    -- of the input port queue, granted to this precise output port.
-    -- The header phase does not pull: the output fifo is the single
-    -- emission path and it carries the header beats then.
-    for i in 0 to out_count_c-1
-    loop
-      pull_v(i) := false;
-      if r.op(i).state = OS_DATA
-        and r.op(i).fifo_fillness < out_fifo_depth_c then
-        src_v := r.op(i).in_index;
-        head_v := r.ip(src_v).slot_head;
-        if r.ip(src_v).slots(head_v).state = SLOT_ROUTED
-          and r.ip(src_v).slots(head_v).out_index = i
-          and r.ip(src_v).fifo_fillness > 0 then
-          pull_v(i) := true;
-        end if;
-      end if;
-    end loop;
-
-    for i in 0 to in_count_c-1
-    loop
-      ip_pop_v(i) := false;
-    end loop;
-
-    for i in 0 to out_count_c-1
-    loop
-      if pull_v(i) then
-        ip_pop_v(r.op(i).in_index) := true;
-      end if;
-    end loop;
 
     -- Central routing arbiter
     case r.state is
@@ -391,31 +376,55 @@ begin
     for i in 0 to in_count_c-1
     loop
       head_v := r.ip(i).slot_head;
+      dst_v := r.ip(i).xfer_out_index;
+
+      -- The staged beat is consumed when the output port it is routed
+      -- to is producing data for this input port and has room.  Only
+      -- that one output port is looked at, through a mux this input
+      -- port drives itself.
+      taken_v := r.ip(i).xfer_valid
+        and r.op(dst_v).state = OS_DATA
+        and r.op(dst_v).in_index = i
+        and r.op(dst_v).fifo_fillness < out_fifo_depth_c;
+
+      -- Staging of a routed packet, one beat per cycle off the fifo
+      -- front, as soon as the decision is taken and independently of
+      -- the destination being granted yet.  Header-only packets have
+      -- no beat of their own at the fifo front, they must not stage
+      -- anything.  Loading while the staged beat is taken sustains one
+      -- beat per cycle.
+      load_v := r.ip(i).slots(head_v).state = SLOT_ROUTED
+        and not r.ip(i).slots(head_v).empty
+        and r.ip(i).fifo_fillness > 0
+        and (not r.ip(i).xfer_valid or taken_v);
 
       -- Discarding of a dropped packet, one beat per cycle off the
       -- fifo front.  Beats of the packet may still be arriving.
-      drop_pop_v := false;
-      if r.ip(i).slots(head_v).state = SLOT_DROPPED then
-        if r.ip(i).slots(head_v).empty then
-          rin.ip(i).slots(head_v).state <= SLOT_IDLE;
-          rin.ip(i).slot_head <= 1 - head_v;
-        elsif r.ip(i).fifo_fillness > 0 then
-          drop_pop_v := true;
-          if is_last(config_c, r.ip(i).fifo(0)) then
-            rin.ip(i).slots(head_v).state <= SLOT_IDLE;
-            rin.ip(i).slot_head <= 1 - head_v;
-          end if;
-        end if;
+      drop_pop_v := r.ip(i).slots(head_v).state = SLOT_DROPPED
+        and not r.ip(i).slots(head_v).empty
+        and r.ip(i).fifo_fillness > 0;
+
+      if load_v then
+        rin.ip(i).xfer <= r.ip(i).fifo(0);
+        rin.ip(i).xfer_valid <= true;
+        rin.ip(i).xfer_out_index <= r.ip(i).slots(head_v).out_index;
+      elsif taken_v then
+        rin.ip(i).xfer_valid <= false;
       end if;
 
-      -- Retire the head slot when its last beat leaves for an output
-      -- port.
-      if ip_pop_v(i) and is_last(config_c, r.ip(i).fifo(0)) then
+      -- Retire the head slot when its last beat is staged, or when the
+      -- last beat of a dropped packet is discarded.  A dropped
+      -- header-only packet has no beat at all.
+      if (load_v or drop_pop_v) and is_last(config_c, r.ip(i).fifo(0)) then
+        rin.ip(i).slots(head_v).state <= SLOT_IDLE;
+        rin.ip(i).slot_head <= 1 - head_v;
+      elsif r.ip(i).slots(head_v).state = SLOT_DROPPED
+        and r.ip(i).slots(head_v).empty then
         rin.ip(i).slots(head_v).state <= SLOT_IDLE;
         rin.ip(i).slot_head <= 1 - head_v;
       end if;
 
-      pop_v := drop_pop_v or ip_pop_v(i);
+      pop_v := drop_pop_v or load_v;
 
       push_v := r.ip(i).state = CS_BODY
         and is_valid(config_c, in_i(i))
@@ -440,6 +449,7 @@ begin
           rin.ip(i).slot_head <= 0;
           rin.ip(i).in_packet <= false;
           rin.ip(i).fifo_fillness <= 0;
+          rin.ip(i).xfer_valid <= false;
           if in_header_length_c /= 0 then
             rin.ip(i).state <= CS_HEADER;
           else
@@ -497,6 +507,17 @@ begin
     loop
       src_v := r.op(i).in_index;
 
+      -- Taking of the beat staged by the source input port.  The
+      -- staged destination tells whether the beat belongs to the
+      -- packet this port was granted: an input port may have a packet
+      -- for another output port ahead of the one this port waits for.
+      -- Only the staged bits of the input ports take part here, no
+      -- fifo state of theirs.
+      take_v := r.op(i).state = OS_DATA
+        and r.op(i).fifo_fillness < out_fifo_depth_c
+        and r.ip(src_v).xfer_valid
+        and r.ip(src_v).xfer_out_index = i;
+
       -- Response header beats and payload beats are produced by
       -- mutually exclusive states, one push port is enough.
       header_push_v := r.op(i).state = OS_HEADER
@@ -507,7 +528,7 @@ begin
                                  user => r.op(i).empty_user(config_c.user_width-1 downto 0),
                                  last => r.op(i).empty);
       else
-        push_data_v := r.ip(src_v).fifo(0);
+        push_data_v := r.ip(src_v).xfer;
       end if;
 
       -- Emission is unconditional: whatever sits at the fifo front is
@@ -516,9 +537,9 @@ begin
         and is_ready(config_c, out_i(i));
 
       rin.op(i).fifo <= fifo_shift_data(r.op(i).fifo, r.op(i).fifo_fillness,
-                                        header_push_v or pull_v(i), push_data_v, pop_v);
+                                        header_push_v or take_v, push_data_v, pop_v);
       rin.op(i).fifo_fillness <= fifo_shift_fillness(r.op(i).fifo_fillness, out_fifo_depth_c,
-                                                     header_push_v or pull_v(i), pop_v);
+                                                     header_push_v or take_v, pop_v);
 
       case r.op(i).state is
         when OS_IDLE =>
@@ -550,7 +571,7 @@ begin
         when OS_DATA =>
           -- Production ends on the push of the last beat, the fifo
           -- carries the packet boundary from there on.
-          if pull_v(i) and is_last(config_c, r.ip(src_v).fifo(0)) then
+          if take_v and is_last(config_c, r.ip(src_v).xfer) then
             rin.op(i).state <= OS_IDLE;
           end if;
       end case;
