@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: tristated
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [tristated.yaml]
+
+output:
+  - name: tristated
+    topcell: tristated
+    outputs:
+      - type: vivado-bus-zip
+        path: tristated.zip

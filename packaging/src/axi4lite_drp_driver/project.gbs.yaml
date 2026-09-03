@@ -1,0 +1,34 @@
+name: axi4lite_drp_driver
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_amba.axi4_mm
+   - nsl_amba.packer
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: xilinx
+        name: axi4lite_drp_driver
+        version: "1.0"
+        taxonomy: /Xilinx/DRP
+        display_name: AXI4-Lite DRP Driver
+        description: |
+          A component that drives a Xilinx DRP bus from an AXI4-Lite register map
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4lite_drp_driver_1.0.zip

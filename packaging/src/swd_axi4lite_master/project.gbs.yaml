@@ -1,0 +1,42 @@
+name: swd_axi4lite_master
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - swd_axi4lite_master.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/swd.zip
+  deps:
+   - nsl_clocking.async
+   - nsl_hwdep.clock
+   - nsl_coresight.swd
+   - nsl_coresight.ap
+   - nsl_coresight.dapbus
+   - nsl_coresight.dp
+   - nsl_amba.axi4_mm
+   - nsl_amba.packer
+
+output:
+  - name: ip_package
+    topcell: swd_axi4lite_master
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: coresight
+        name: swd_axi4lite_master
+        version: "1.0"
+        taxonomy: /SWD/Transactor
+        display_name: "SWD to AXI4-Lite bridge"
+        description: SWD and Mem-AP controller
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: swd_axi4lite_master_1.0.zip

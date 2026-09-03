@@ -1,0 +1,35 @@
+name: framed_jtag_controller
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-bus-zip
+      files: [../interface/framed/framed.zip]
+  deps:
+   - nsl_bnoc.framed
+   - nsl_jtag.transactor
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: jtag
+        name: framed_jtag_controller
+        version: "1.0"
+        taxonomy: /JTAG/Transactor
+        display_name: Framed JTAG ATE
+        description: A JTAG ATE using a framed network
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: framed_jtag_controller_1.0.zip

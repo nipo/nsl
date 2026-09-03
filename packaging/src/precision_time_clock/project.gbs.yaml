@@ -1,0 +1,44 @@
+name: precision_time_clock
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - phc_main.vhd
+        - ip_top.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/phc_timestamp.zip
+  deps:
+    - nsl_amba.axi4_mm
+    - nsl_time.timestamp
+    - nsl_time.clock
+    - nsl_math.fixed
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: time
+        name: precision_time_clock
+        version: "1.0"
+        taxonomy: /PrecisionTiming
+        display_name: Precision time clock
+        description: |-
+          AXI4-Lite component that generates an absolute precision
+          timestamp.  Timestamp can be adjusted absolutely or
+          relatively. Nanosecond increment per cycle can be set in a
+          fractional manner so that user can adapt to actual reference
+          clock rate.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: precision_time_clock_1.0.zip

@@ -1,0 +1,38 @@
+name: axi4lite_stream_endpoint
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_amba.axi4_mm
+   - nsl_amba.axi4_stream
+   - nsl_amba.packer
+   - nsl_amba.stream_endpoint
+   - nsl_logic.bool
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: amba
+        name: axi_stream_endpoint
+        version: "1.0"
+        taxonomy: /AXI4/Stream/Endpoint
+        display_name: AXI4-Lite to AXI4-Stream Endpoint
+        description: |
+          A component that exposes a pair of AXI4 Stream fifos to a set
+          of AXI4-Lite registers.  All transfers are initiated by the CPU.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4lite_stream_endpoint_1.0.zip

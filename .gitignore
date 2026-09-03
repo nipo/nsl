@@ -56,3 +56,4 @@ vivado_*.str
 \#*\#
 .\#*
 .Xil
+build-results

@@ -1,0 +1,37 @@
+name: axi4lite_clock_measurer
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+  deps:
+   - nsl_amba.axi4_mm
+   - nsl_amba.packer
+   - nsl_clocking.interdomain
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: clocking
+        name: axi4lite_clock_measurer
+        version: "1.0"
+        taxonomy: /Clocking/Measurement
+        display_name: AXI4-Lite Clock Measurer
+        description: A component that can measure up to 16 clocks using local clock as reference.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4lite_clock_measurer_1.0.zip

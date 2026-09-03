@@ -1,0 +1,35 @@
+name: axis_ws2812_column_driver
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_ws.transactor
+   - nsl_color.rgb
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: ws
+        name: axis_ws2812_column_driver
+        version: "1.0"
+        taxonomy: /PixelLed/Driver
+        display_name: AXI4-Stream to indexed WS2812 column controller
+        description: |
+          A WS2812 column driver receiving RGB data over
+          AXI-Stream where TDEST designates an output.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axis_ws2812_column_driver_1.0.zip

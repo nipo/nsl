@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: swd
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [swd.yaml]
+
+output:
+  - name: swd
+    topcell: swd
+    outputs:
+      - type: vivado-bus-zip
+        path: swd.zip

@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: opendrain
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [opendrain.yaml]
+
+output:
+  - name: opendrain
+    topcell: opendrain
+    outputs:
+      - type: vivado-bus-zip
+        path: opendrain.zip

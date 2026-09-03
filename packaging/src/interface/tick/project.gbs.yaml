@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: tick
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [tick.yaml]
+
+output:
+  - name: tick
+    topcell: tick
+    outputs:
+      - type: vivado-bus-zip
+        path: tick.zip

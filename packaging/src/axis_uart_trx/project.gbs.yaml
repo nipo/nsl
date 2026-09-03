@@ -1,0 +1,37 @@
+name: axi4_stream_hdlc
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_amba.axi4_stream
+   - nsl_uart.flow_control
+   - nsl_uart.transactor
+   - nsl_line_coding.hdlc
+   - nsl_bnoc.framed
+   - nsl_bnoc.committed
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: transport
+        name: axis_uart_trx
+        version: "1.0"
+        taxonomy: /AXI4/Stream/Transport
+        display_name: AXI4-Stream UART/HDLC TRX
+        description: AXI4-Stream transport over HDLC with backpressure
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4_stream_hdlc_1.0.zip

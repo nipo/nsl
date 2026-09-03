@@ -1,0 +1,32 @@
+name: activity_monitor
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_indication.activity
+
+output:
+  - name: ip_package
+    topcell: activity_monitor
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: indication
+        name: activity_monitor
+        version: "1.0"
+        taxonomy: /Indication
+        display_name: Activity Monitor
+        description: Monitors activity of a signal to drive a LED
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: activity_monitor_1.0.zip

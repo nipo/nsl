@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: phc_timestamp
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [phc_timestamp.yaml]
+
+output:
+  - name: phc_timestamp
+    topcell: phc_timestamp
+    outputs:
+      - type: vivado-bus-zip
+        path: phc_timestamp.zip

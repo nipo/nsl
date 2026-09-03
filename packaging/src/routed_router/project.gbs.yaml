@@ -1,0 +1,39 @@
+name: routed_router
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - routed_router.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/routed.zip
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+  deps:
+   - nsl_bnoc.framed
+   - nsl_bnoc.routed
+
+output:
+  - name: ip_package
+    topcell: routed_router
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: bnoc
+        name: routed_router
+        version: "1.0"
+        taxonomy: /BNOC/Routed
+        display_name: Routed router
+        description: Routed router with explicit routing table
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: routed_router_1.0.zip

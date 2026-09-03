@@ -1,0 +1,37 @@
+name: routed_endpoint
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - routed_endpoint.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/routed.zip
+        - ../interface/framed/framed.zip
+  deps:
+   - nsl_bnoc.framed
+   - nsl_bnoc.routed
+
+output:
+  - name: ip_package
+    topcell: routed_endpoint
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: bnoc
+        name: routed_endpoint
+        version: "1.0"
+        taxonomy: /BNOC/Routed
+        display_name: Routed endpoint
+        description: Routed endpoint to a framed port
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: routed_endpoint_1.0.zip

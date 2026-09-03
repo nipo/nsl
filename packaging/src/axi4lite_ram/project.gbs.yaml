@@ -1,0 +1,33 @@
+name: axi4lite_ram
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_amba.ram
+   - nsl_amba.packer
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: amba
+        name: axi4lite_ram
+        version: "1.0"
+        taxonomy: /AXI4/Storage
+        display_name: AXI4-Lite RAM block
+        description: A memory bank
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4lite_ram_1.0.zip

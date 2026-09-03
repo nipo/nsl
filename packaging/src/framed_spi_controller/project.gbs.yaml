@@ -1,0 +1,37 @@
+name: framed_spi_controller
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/framed.zip
+        - ../interface/framed/spi.zip
+  deps:
+   - nsl_bnoc.framed
+   - nsl_spi.transactor
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: spi
+        name: framed_spi_controller
+        version: "1.0"
+        taxonomy: /SPI/Transactor
+        display_name: Framed SPI Master
+        description: A SPI Master using a framed network
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: framed_spi_controller_1.0.zip

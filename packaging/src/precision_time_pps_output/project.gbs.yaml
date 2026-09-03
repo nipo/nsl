@@ -1,0 +1,38 @@
+name: precision_time_pps_output
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/phc_timestamp.zip
+  deps:
+    - nsl_time.timestamp
+    - nsl_time.pps
+    - nsl_time.skew
+    - nsl_event.tick
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: time
+        name: precision_time_pps_output
+        version: "1.0"
+        taxonomy: /PrecisionTiming
+        display_name: Precision time PPS output
+        description: Timestamp network PPS generator
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: precision_time_pps_output_1.0.zip

@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: framed
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [framed.yaml]
+
+output:
+  - name: framed
+    topcell: framed
+    outputs:
+      - type: vivado-bus-zip
+        path: framed.zip

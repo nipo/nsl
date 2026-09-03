@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: routed
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [routed.yaml]
+
+output:
+  - name: routed
+    topcell: routed
+    outputs:
+      - type: vivado-bus-zip
+        path: routed.zip

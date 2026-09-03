@@ -1,0 +1,37 @@
+name: framed_swd_controller
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-bus-zip
+      files:
+        - ../interface/framed/framed.zip
+        - ../interface/framed/swd.zip
+  deps:
+   - nsl_bnoc.framed
+   - nsl_coresight.transactor
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: coresight
+        name: framed_swd_controller
+        version: "1.0"
+        taxonomy: /SWD/Transactor
+        display_name: Framed SWD Transactor Controller
+        description: A SWD master transactor
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: framed_swd_controller_1.0.zip

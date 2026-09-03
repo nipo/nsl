@@ -12,10 +12,9 @@ root:
     - file_type: vivado-xgui-tcl
       files:
         - xgui.tcl
-    - file_type: vivado-bus-definition
+    - file_type: vivado-bus-zip
       files:
-        - ../../vivado_repository/interface/tristated.xml
-        - ../../vivado_repository/interface/tristated_rtl.xml
+        - ../interface/framed/tristated.zip
 
 output:
   - name: ip_package

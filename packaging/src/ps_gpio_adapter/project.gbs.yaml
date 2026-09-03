@@ -6,10 +6,9 @@ root:
     - file_type: vhdl
       files:
         - ps_gpio_adapter.vhd
-    - file_type: vivado-bus-definition
+    - file_type: vivado-bus-zip
       files:
-        - ../../vivado_repository/interface/tristated.xml
-        - ../../vivado_repository/interface/tristated_rtl.xml
+        - ../interface/framed/tristated.zip
 
 output:
   - name: ip_package
@@ -20,10 +19,10 @@ output:
       gbs.builtin.vivado-ip:
         tool: vivado
         vendor: nsl
-        library: io
+        library: xilinx
         name: ps_gpio_adapter
         version: "1.0"
-        taxonomy: /NSL/IO
+        taxonomy: /Xilinx/PS7
         display_name: "Zynq-7 PS GPIO block adapter"
         description: Wraps PS gpios to NSL tristated IOs
         supported_families:

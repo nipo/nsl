@@ -6,10 +6,9 @@ root:
     - file_type: vhdl
       files:
         - tristated_driver.vhd
-    - file_type: vivado-bus-definition
+    - file_type: vivado-bus-zip
       files:
-        - ../../nsl/packaging/vivado_repository/interface/tristated.xml
-        - ../../nsl/packaging/vivado_repository/interface/tristated_rtl.xml
+        - ../interface/framed/tristated.zip
 
 output:
   - name: ip_package

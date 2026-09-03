@@ -1,0 +1,36 @@
+name: axi4lite_jtag_transactor
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+  deps:
+   - nsl_jtag.axi4lite_transactor
+   - nsl_amba.packer
+   - nsl_logic.bool
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: jtag
+        name: axi_jtag_transactor
+        version: "1.0"
+        taxonomy: /JTAG/Transactor
+        display_name: AXI4-Lite JTAG ATE
+        description: |
+          A component that drives a JTAG chain from a set of registers
+          exposed through AXI4-Lite.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4lite_jtag_transactor_1.0.zip

@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: spi
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [spi.yaml]
+
+output:
+  - name: spi
+    topcell: spi
+    outputs:
+      - type: vivado-bus-zip
+        path: spi.zip

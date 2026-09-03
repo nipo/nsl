@@ -11,9 +11,93 @@ settings:
     save_logs: true
 
 projects:
+  - name: framed
+    path: interface/framed
+    tags: [vivado-interface]
+  - name: opendrain
+    path: interface/opendrain
+    tags: [vivado-interface]
+  - name: phc_timestamp
+    path: interface/phc_timestamp
+    tags: [vivado-interface]
+  - name: routed
+    path: interface/routed
+    tags: [vivado-interface]
+  - name: spi
+    path: interface/spi
+    tags: [vivado-interface]
+  - name: swd
+    path: interface/swd
+    tags: [vivado-interface]
+  - name: tick
+    path: interface/tick
+    tags: [vivado-interface]
+  - name: tristated
+    path: interface/tristated
+    tags: [vivado-interface]
+  - name: activity_monitor
+    path: activity_monitor
+    tags: [vivado-ip]
+  - name: axi4lite_clock_measurer
+    path: axi4lite_clock_measurer
+    tags: [vivado-ip]
+  - name: axi4lite_drp_driver
+    path: axi4lite_drp_driver
+    tags: [vivado-ip]
+  - name: axi4lite_jtag_transactor
+    path: axi4lite_jtag_transactor
+    tags: [vivado-ip]
+  - name: axi4lite_ram
+    path: axi4lite_ram
+    tags: [vivado-ip]
+  - name: axi4lite_stream_endpoint
+    path: axi4lite_stream_endpoint
+    tags: [vivado-ip]
+  - name: axis_uart_trx
+    path: axis_uart_trx
+    tags: [vivado-ip]
+  - name: axis_ws2812
+    path: axis_ws2812
+    tags: [vivado-ip]
+  - name: axis_ws2812_column_driver
+    path: axis_ws2812_column_driver
+    tags: [vivado-ip]
+  - name: framed_i2c_controller
+    path: framed_i2c_controller
+    tags: [vivado-ip]
+  - name: framed_jtag_controller
+    path: framed_jtag_controller
+    tags: [vivado-ip]
+  - name: framed_spi_controller
+    path: framed_spi_controller
+    tags: [vivado-ip]
+  - name: framed_swd_controller
+    path: framed_swd_controller
+    tags: [vivado-ip]
+  - name: i2c_input_deglitcher
+    path: i2c_input_deglitcher
+    tags: [vivado-ip]
+  - name: precision_time_clock
+    path: precision_time_clock
+    tags: [vivado-ip]
+  - name: precision_time_pps_output
+    path: precision_time_pps_output
+    tags: [vivado-ip]
   - name: ps_gpio_adapter
     path: ps_gpio_adapter
+    tags: [vivado-ip]
+  - name: routed_endpoint
+    path: routed_endpoint
+    tags: [vivado-ip]
+  - name: routed_router
+    path: routed_router
+    tags: [vivado-ip]
+  - name: swd_axi4lite_master
+    path: swd_axi4lite_master
+    tags: [vivado-ip]
   - name: tristated_chunker
     path: tristated_chunker
+    tags: [vivado-ip]
   - name: tristated_driver
     path: tristated_driver
+    tags: [vivado-ip]
