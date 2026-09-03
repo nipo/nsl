@@ -174,8 +174,11 @@ Contents
 * `stream_udp <stream_udp/index>`_: AXI4-Stream UDP layer with port
   dispatch;
 
+* `stream_dhcp <stream_dhcp/index>`_: DHCPv4 client, an
+  application-contract endpoint on UDP port 68;
+
 * `stream_host <stream_host/index>`_: turnkey AXI4-Stream IPv4 host
-  bundling the whole stack;
+  bundling the whole stack, with optional DHCP address acquisition;
 
 * `testing <testing/index>`_: packet crafting, decoding and PCAP
   reading for testbenches;
@@ -201,6 +204,7 @@ Contents
    stream_resolver/index
    stream_arp/index
    stream_udp/index
+   stream_dhcp/index
    stream_host/index
    testing/index
    switching/index
