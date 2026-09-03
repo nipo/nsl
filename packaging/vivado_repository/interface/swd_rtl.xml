@@ -16,6 +16,7 @@
         <spirit:onMaster>
           <spirit:presence>required</spirit:presence>
           <spirit:width>1</spirit:width>
+          <spirit:direction>out</spirit:direction>
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>

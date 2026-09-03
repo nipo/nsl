@@ -1,0 +1,25 @@
+library: interface
+name: phc_timestamp
+
+roles:
+  broadcast:
+    base: m2s
+    slave:
+      presence: optional
+
+ports:
+  second:
+    role: broadcast
+    width: 32
+    qualifier: data
+    description: Seconds
+  nanosecond:
+    role: broadcast
+    width: 30
+    qualifier: data
+    description: Nanoseconds
+  abs_change:
+    role: broadcast
+    width: 1
+    qualifier: data
+    description: Jump is because of an absolute date change (not an offset)

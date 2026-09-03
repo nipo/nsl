@@ -16,6 +16,7 @@
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>
+          <spirit:direction>out</spirit:direction>
         </spirit:onSlave>
         <spirit:defaultValue>0</spirit:defaultValue>
       </spirit:wire>
@@ -26,6 +27,7 @@
       <spirit:wire>
         <spirit:onMaster>
           <spirit:presence>required</spirit:presence>
+          <spirit:direction>out</spirit:direction>
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>
@@ -40,6 +42,7 @@
       <spirit:wire>
         <spirit:onMaster>
           <spirit:presence>required</spirit:presence>
+          <spirit:direction>out</spirit:direction>
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>

@@ -1,0 +1,34 @@
+library: interface
+name: routed
+description: NSL Routed bus
+display_name: Routed bus
+
+ports:
+  req_valid:
+    role: m2s
+    description: Request path valid
+  req_ready:
+    role: s2m
+    description: Request path ready
+  req_data:
+    role: m2s
+    width: 8
+    qualifier: data
+    description: Request data
+  req_last:
+    role: m2s
+    description: Request last flit indicator
+  rsp_valid:
+    role: s2m
+    description: Response path valid
+  rsp_ready:
+    role: m2s
+    description: Response path ready
+  rsp_data:
+    role: s2m
+    width: 8
+    qualifier: data
+    description: Response data
+  rsp_last:
+    role: s2m
+    description: Response last flit indicator

@@ -1,0 +1,13 @@
+library: io
+name: opendrain
+description: Open-drain IO
+
+ports:
+  drain_n:
+    role: m2s
+    default: 1
+    description: Drain negated driver
+  value:
+    role: s2m
+    default: 1
+    description: Value

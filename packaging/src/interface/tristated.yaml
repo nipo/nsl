@@ -1,0 +1,16 @@
+library: io
+name: tristated
+
+ports:
+  i:
+    role: s2m
+    default: 0
+    description: Input value
+  o:
+    role: m2s
+    default: 0
+    description: Output value
+  oe:
+    role: m2s
+    default: 0
+    description: Output Enable

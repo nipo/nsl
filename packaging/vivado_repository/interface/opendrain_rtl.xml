@@ -8,10 +8,11 @@
   <spirit:ports>
     <spirit:port>
       <spirit:logicalName>drain_n</spirit:logicalName>
-      <spirit:description>Drain netaged driver</spirit:description>
+      <spirit:description>Drain negated driver</spirit:description>
       <spirit:wire>
         <spirit:onMaster>
           <spirit:presence>required</spirit:presence>
+          <spirit:direction>out</spirit:direction>
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>
@@ -30,6 +31,7 @@
         </spirit:onMaster>
         <spirit:onSlave>
           <spirit:presence>required</spirit:presence>
+          <spirit:direction>out</spirit:direction>
         </spirit:onSlave>
         <spirit:defaultValue>1</spirit:defaultValue>
       </spirit:wire>

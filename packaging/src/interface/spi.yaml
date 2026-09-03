@@ -1,0 +1,25 @@
+library: interface
+name: spi
+description: Serial Peripheral Interface
+display_name: SPI
+
+ports:
+  sck:
+    role: m2s
+    width: 1
+    qualifier: clock
+    description: Serial Clock
+  mosi:
+    role: m2s
+    width: 1
+    qualifier: data
+    description: Master Out Slave In
+  miso:
+    role: s2m
+    width: 1
+    qualifier: data
+    description: Master In Slave Out
+  cs_n:
+    role: m2s
+    width: 1
+    description: Chip Select

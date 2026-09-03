@@ -1,0 +1,49 @@
+library: interface
+name: swd
+
+# dio nets model a tri-stated pad split into out/enable/in legs; the
+# out/enable legs deliberately carry no direction constraint, the in leg
+# is an input on both ends.
+roles:
+  pad_drive:
+    master:
+      presence: required
+    slave:
+      presence: required
+  pad_sense:
+    master:
+      presence: required
+      direction: in
+    slave:
+      presence: required
+      direction: in
+
+ports:
+  clk:
+    role: m2s
+    width: 1
+    qualifier: clock
+    description: Clock
+  dio_t:
+    role: pad_drive
+    width: 1
+    description: Data tri-state
+    tristate:
+      role: tristate
+      group: dio
+  dio_o:
+    role: pad_drive
+    width: 1
+    qualifier: data
+    description: Data output
+    tristate:
+      role: out
+      group: dio
+  dio_i:
+    role: pad_sense
+    width: 1
+    qualifier: data
+    description: Data Input
+    tristate:
+      role: in
+      group: dio

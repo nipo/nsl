@@ -1,0 +1,9 @@
+library: interface
+name: tick
+
+ports:
+  tick:
+    role: m2s
+    width: 1
+    qualifier: data
+    description: Tick
