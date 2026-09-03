@@ -28,3 +28,10 @@ the internet protocol suite:
 
 * fixed-size, symmetrical context blocks handed between layers, with
   their serialization functions.
+
+``stream_block_resizer`` repacks packets between two widths of the
+suite, re-deriving the block padding for the output width, so
+byte-position parsers (control-plane endpoints like `DHCP
+<../stream_dhcp/index>`_) can be written once at width one and sit
+behind any stack width.  It moves one byte per cycle and is not
+meant for forwarding paths.

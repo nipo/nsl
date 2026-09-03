@@ -131,6 +131,37 @@ package stream is
   function context_head(header: byte_string;
                         size: natural) return byte_string;
 
+  -- Repacks packets from one stream width to another, re-deriving
+  -- the block padding: the header_length_c blocks are tail-padded to
+  -- whole beats of the output configuration instead of the input
+  -- one, and the payload that follows is repacked contiguously, so a
+  -- byte-position parser behind this component sees the same offsets
+  -- whatever the width in front.  The reject flag is carried to the
+  -- output last beat.  A packet ending before its listed blocks
+  -- complete ends rejected on the output; its produced content up to
+  -- the truncation is preserved.
+  --
+  -- The engine moves one byte per cycle: it does not sustain line
+  -- rate at widths above one byte and is meant for control-plane
+  -- endpoints behind a port dispatch, not for forwarding paths.
+  component stream_block_resizer is
+    generic(
+      in_config_c : config_t;
+      out_config_c : config_t;
+      header_length_c : integer_vector := null_integer_vector
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      in_i : in master_t;
+      in_o : out slave_t;
+
+      out_o : out master_t;
+      out_i : in slave_t
+      );
+  end component;
+
 end package;
 
 package body stream is
