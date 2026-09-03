@@ -1,0 +1,39 @@
+name: inet_stream_host_dhcp
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_data.text
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_simulation.driver
+    - nsl_amba.axi4_stream
+    - nsl_math.int_ext
+    - nsl_inet.mac
+    - nsl_inet.ipv4
+    - nsl_inet.checksum
+    - nsl_inet.stream
+    - nsl_inet.stream_mac
+    - nsl_inet.stream_ethernet
+    - nsl_inet.stream_ipv4
+    - nsl_inet.stream_udp
+    - nsl_inet.stream_dhcp
+    - nsl_inet.stream_host
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

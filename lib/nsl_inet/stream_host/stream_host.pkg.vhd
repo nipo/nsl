@@ -29,6 +29,16 @@ use work.ipv4.all;
 --   context blocks back turns a received datagram into its reply.
 --
 -- The host answers ICMP echo requests and ARP requests on its own.
+--
+-- With dhcp_c set, the host runs a DHCP client on an internal UDP
+-- port 68 pipe and takes its address from the lease instead of
+-- local_address_i, which is then ignored: the stack runs as 0.0.0.0
+-- until an address is acquired, and falls back there when the lease
+-- is lost.  The lease information is reported on the dhcp_*_o ports,
+-- all zero while dhcp_valid_o is deasserted, and permanently so when
+-- dhcp_c is unset.  clock_i_hz_c paces the DHCP protocol timers and
+-- hostname_c, when not empty, is sent to the server as the host
+-- name.
 package stream_host is
 
   component stream_ipv4_host is
@@ -39,14 +49,23 @@ package stream_host is
       ttl_c : integer range 0 to 255 := 64;
       cache_count_l2_c : natural := 3;
       timeout_c : natural := 125000000;
-      retry_count_c : natural := 3
+      retry_count_c : natural := 3;
+      dhcp_c : boolean := false;
+      clock_i_hz_c : natural := 125000000;
+      hostname_c : string := ""
       );
     port(
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
       local_hwaddr_i : in mac48_t;
-      local_address_i : in ipv4_t;
+      local_address_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+
+      dhcp_address_o : out ipv4_t;
+      dhcp_netmask_o : out ipv4_t;
+      dhcp_router_o : out ipv4_t;
+      dhcp_dns_o : out ipv4_t;
+      dhcp_valid_o : out std_ulogic;
 
       l1_header_i : in byte_string;
 
