@@ -401,6 +401,9 @@ projects:
   - name: ssd1331_terminal
     path: ssd1331_terminal
     tags: [ghdl, simulation]
+  - name: st7735
+    path: st7735
+    tags: [ghdl, simulation]
   - name: swd_cbor_full_test
     path: swd_cbor/full_test
     tags: [ghdl, simulation]
