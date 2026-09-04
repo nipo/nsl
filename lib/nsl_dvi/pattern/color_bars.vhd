@@ -6,6 +6,9 @@ library nsl_color;
 use nsl_color.rgb.all;
 
 entity color_bars is
+    generic(
+      bar_width_c : natural := 128
+      );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
@@ -23,7 +26,7 @@ architecture beh of color_bars is
   type regs_t is
   record
     color: unsigned(2 downto 0);
-    bar_left: natural range 0 to 127;
+    bar_left: natural range 0 to bar_width_c - 1;
   end record;
 
   signal r, rin: regs_t;
@@ -50,13 +53,13 @@ begin
       if r.bar_left /= 0 then
         rin.bar_left <= r.bar_left - 1;
       else
-        rin.bar_left <= 127;
+        rin.bar_left <= bar_width_c - 1;
         rin.color <= r.color + 1;
       end if;
     end if;
 
     if sol_i = '1' then
-      rin.bar_left <= 127;
+      rin.bar_left <= bar_width_c - 1;
       rin.color <= "000";
     end if;
   end process;

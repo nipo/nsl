@@ -11,6 +11,9 @@ package pattern is
   -- data as RGB.  If you're looking for a valid HDMI stream, you should look
   -- for nsl_hdmi.pattern.
   component color_bars is
+    generic(
+      bar_width_c : natural := 128
+      );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
