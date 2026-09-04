@@ -268,7 +268,8 @@ package body font is
     constant glyph_bytes_w_c: positive := (glyph_w + 7) / 8;
     constant glyph_bytes_c: positive := glyph_bytes_w_c * font_height(fnt);
     alias xfont: byte_string(0 to fnt'length-1) is fnt;
-    constant glyph_line_offset_c: natural := 2+glyph_bytes_c*glyph_index;
+    constant glyph_line_offset_c: natural
+      := 2 + glyph_bytes_c*glyph_index + glyph_bytes_w_c*glyph_line;
     variable line_data_v
       : std_ulogic_vector(8*glyph_bytes_w_c-1 downto 0)
       := (others => '0');
