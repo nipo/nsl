@@ -29,6 +29,12 @@ package text is
   function to_hex_string(v: in std_logic_vector) return string;
   function to_hex_string(v: in bit_vector) return string;
 
+  -- Decimal stringifier with a fixed digit count, most significant
+  -- digit first, zero padded, keeping the low digits of a value that
+  -- does not fit.  Binary to BCD by shift and add-3, so it
+  -- synthesizes without a divider.
+  function to_decimal_string(v : unsigned; digit_count : positive) return string;
+
   -- String ternary operation
   function if_else(v: boolean; a,b: string) return string;
   
@@ -251,6 +257,45 @@ package body text is
   function to_hex_string(v: in std_logic_vector) return string is
   begin
     return to_hex_string(std_ulogic_vector(v));
+  end function;
+
+  function to_decimal_string(v : unsigned; digit_count : positive) return string
+  is
+    alias vv : unsigned(v'length-1 downto 0) is v;
+    variable bcd : unsigned(digit_count*4-1 downto 0) := (others => '0');
+    variable digit : unsigned(3 downto 0);
+    variable ret : string(1 to digit_count);
+  begin
+    for i in vv'range
+    loop
+      for d in 0 to digit_count-1
+      loop
+        digit := bcd(d*4+3 downto d*4);
+        if digit >= 5 then
+          bcd(d*4+3 downto d*4) := digit + 3;
+        end if;
+      end loop;
+      bcd := bcd(bcd'left-1 downto 0) & vv(i);
+    end loop;
+
+    for d in 0 to digit_count-1
+    loop
+      digit := bcd(d*4+3 downto d*4);
+      case digit is
+        when "0000" => ret(digit_count - d) := '0';
+        when "0001" => ret(digit_count - d) := '1';
+        when "0010" => ret(digit_count - d) := '2';
+        when "0011" => ret(digit_count - d) := '3';
+        when "0100" => ret(digit_count - d) := '4';
+        when "0101" => ret(digit_count - d) := '5';
+        when "0110" => ret(digit_count - d) := '6';
+        when "0111" => ret(digit_count - d) := '7';
+        when "1000" => ret(digit_count - d) := '8';
+        when others => ret(digit_count - d) := '9';
+      end case;
+    end loop;
+
+    return ret;
   end function;
 
   function to_string(v: in boolean) return string
