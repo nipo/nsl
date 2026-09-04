@@ -1,0 +1,22 @@
+name: synthesis
+
+root:
+  name: top
+  deps:
+    - nsl_synthesis.assertion
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "assertion.pkg.vhd:29"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
