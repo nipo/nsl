@@ -177,6 +177,9 @@ Contents
 * `stream_dhcp <stream_dhcp/index>`_: DHCPv4 client, an
   application-contract endpoint on UDP port 68;
 
+* `stream_sntp <stream_sntp/index>`_: SNTP client maintaining a
+  running wall-clock time from a unicast server;
+
 * `stream_host <stream_host/index>`_: turnkey AXI4-Stream IPv4 host
   bundling the whole stack, with optional DHCP address acquisition;
 
@@ -205,6 +208,7 @@ Contents
    stream_arp/index
    stream_udp/index
    stream_dhcp/index
+   stream_sntp/index
    stream_host/index
    testing/index
    switching/index
