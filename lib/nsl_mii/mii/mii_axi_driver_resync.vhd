@@ -116,7 +116,11 @@ begin
                 end if;
 
             when RX_PREAMBLE =>
+                -- An SFD received with RX_ER asserted must not count: the
+                -- flit converter drops the frame, and the SFD strobe would
+                -- have no matching packet.
                 if rx_r.pipe(0).dv = '1' and rx_r.pipe(1).dv = '1' and
+                    rx_r.pipe(0).er = '0' and rx_r.pipe(1).er = '0' and
                     rx_r.pipe(0).d = x"5" and rx_r.pipe(1).d = x"d" then
                     rx_rin.is_sfd <= true;
                     rx_rin.state <= RX_FRAME;
