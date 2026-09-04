@@ -54,6 +54,7 @@ package stream_dhcp is
   constant dhcp_option_router_c : dhcp_option_t := to_byte(3);
   constant dhcp_option_dns_c : dhcp_option_t := to_byte(6);
   constant dhcp_option_hostname_c : dhcp_option_t := to_byte(12);
+  constant dhcp_option_ntp_servers_c : dhcp_option_t := to_byte(42);
   constant dhcp_option_requested_address_c : dhcp_option_t := to_byte(50);
   constant dhcp_option_lease_time_c : dhcp_option_t := to_byte(51);
   constant dhcp_option_message_type_c : dhcp_option_t := to_byte(53);
@@ -88,10 +89,11 @@ package stream_dhcp is
   -- clock_i_hz_c paces the one-second protocol ticker.  When
   -- hostname_c is not empty it is sent as the host name option.
   --
-  -- address_o, netmask_o, router_o and dns_o hold the lease
-  -- information while valid_o is asserted and read 0.0.0.0
-  -- otherwise; an absent option reads 0.0.0.0.  Deasserting
-  -- enable_i drops the lease silently and idles the engine.
+  -- address_o, netmask_o, router_o, dns_o and ntp_server_o hold the
+  -- lease information while valid_o is asserted and read 0.0.0.0
+  -- otherwise; an absent option reads 0.0.0.0.  ntp_server_o is the
+  -- first address of the NTP servers option.  Deasserting enable_i
+  -- drops the lease silently and idles the engine.
   component stream_dhcp_client is
     generic(
       config_c : config_t;
@@ -115,6 +117,7 @@ package stream_dhcp is
       netmask_o : out ipv4_t;
       router_o : out ipv4_t;
       dns_o : out ipv4_t;
+      ntp_server_o : out ipv4_t;
       valid_o : out std_ulogic
       );
   end component;

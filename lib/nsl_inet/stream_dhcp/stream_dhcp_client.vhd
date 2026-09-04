@@ -39,6 +39,7 @@ entity stream_dhcp_client is
     netmask_o : out ipv4_t;
     router_o : out ipv4_t;
     dns_o : out ipv4_t;
+    ntp_server_o : out ipv4_t;
     valid_o : out std_ulogic
     );
 end entity;
@@ -75,7 +76,7 @@ architecture beh of stream_dhcp_client is
   constant opt_requested_off_c : natural := opt_hostname_off_c + hostname_size_c;
   constant opt_server_id_off_c : natural := opt_requested_off_c + 6;
   constant opt_prl_off_c : natural := opt_server_id_off_c + 6;
-  constant opt_end_off_c : natural := opt_prl_off_c + 5;
+  constant opt_end_off_c : natural := opt_prl_off_c + 6;
 
   constant payload_length_c : natural
     := max(integer_vector'(0 => dhcp_min_payload_length_c,
@@ -123,6 +124,7 @@ architecture beh of stream_dhcp_client is
     netmask: option4_t;
     router: option4_t;
     dns: option4_t;
+    ntp_server: option4_t;
     lease: option4_t;
     t1: option4_t;
     t2: option4_t;
@@ -136,6 +138,7 @@ architecture beh of stream_dhcp_client is
     netmask => option4_none_c,
     router => option4_none_c,
     dns => option4_none_c,
+    ntp_server => option4_none_c,
     lease => option4_none_c,
     t1 => option4_none_c,
     t2 => option4_none_c
@@ -266,13 +269,15 @@ architecture beh of stream_dhcp_client is
     elsif pos = opt_prl_off_c then
       return dhcp_option_parameter_request_c;
     elsif pos = opt_prl_off_c + 1 then
-      return to_byte(3);
+      return to_byte(4);
     elsif pos = opt_prl_off_c + 2 then
       return dhcp_option_netmask_c;
     elsif pos = opt_prl_off_c + 3 then
       return dhcp_option_router_c;
     elsif pos = opt_prl_off_c + 4 then
       return dhcp_option_dns_c;
+    elsif pos = opt_prl_off_c + 5 then
+      return dhcp_option_ntp_servers_c;
     elsif pos = opt_end_off_c then
       return dhcp_option_end_c;
     end if;
@@ -568,6 +573,8 @@ begin
                 rin.parsed.router.present <= true;
               elsif r.opt_code = dhcp_option_dns_c then
                 rin.parsed.dns.present <= true;
+              elsif r.opt_code = dhcp_option_ntp_servers_c then
+                rin.parsed.ntp_server.present <= true;
               elsif r.opt_code = dhcp_option_lease_time_c then
                 rin.parsed.lease.present <= true;
               elsif r.opt_code = dhcp_option_renewal_time_c then
@@ -589,6 +596,8 @@ begin
                 rin.parsed.router.value(r.opt_index) <= rx_data;
               elsif r.opt_code = dhcp_option_dns_c then
                 rin.parsed.dns.value(r.opt_index) <= rx_data;
+              elsif r.opt_code = dhcp_option_ntp_servers_c then
+                rin.parsed.ntp_server.value(r.opt_index) <= rx_data;
               elsif r.opt_code = dhcp_option_lease_time_c then
                 rin.parsed.lease.value(r.opt_index) <= rx_data;
               elsif r.opt_code = dhcp_option_renewal_time_c then
@@ -650,7 +659,7 @@ begin
       timer: integer range 0 to timer_max_c;
       retries: integer range 0 to request_retry_c;
       lease, t1, t2: unsigned(31 downto 0);
-      offered, address, netmask, router, dns, server_id: ipv4_t;
+      offered, address, netmask, router, dns, ntp_server, server_id: ipv4_t;
       valid: boolean;
       msg_ack: boolean;
     end record;
@@ -813,6 +822,7 @@ begin
               rin.netmask <= address_of(msg_s.netmask);
               rin.router <= address_of(msg_s.router);
               rin.dns <= address_of(msg_s.dns);
+              rin.ntp_server <= address_of(msg_s.ntp_server);
               rin.lease <= lease_of(msg_s);
               rin.t1 <= t1_of(msg_s);
               rin.t2 <= t2_of(msg_s);
@@ -826,6 +836,7 @@ begin
               rin.netmask <= address_of(msg_s.netmask);
               rin.router <= address_of(msg_s.router);
               rin.dns <= address_of(msg_s.dns);
+              rin.ntp_server <= address_of(msg_s.ntp_server);
               rin.lease <= lease_of(msg_s);
               rin.t1 <= t1_of(msg_s);
               rin.t2 <= t2_of(msg_s);
@@ -848,6 +859,9 @@ begin
               end if;
               if msg_s.dns.present then
                 rin.dns <= msg_s.dns.value;
+              end if;
+              if msg_s.ntp_server.present then
+                rin.ntp_server <= msg_s.ntp_server.value;
               end if;
               rin.lease <= lease_of(msg_s);
               rin.t1 <= t1_of(msg_s);
@@ -927,11 +941,13 @@ begin
         netmask_o <= r.netmask;
         router_o <= r.router;
         dns_o <= r.dns;
+        ntp_server_o <= r.ntp_server;
       else
         address_o <= ipv4_any_c;
         netmask_o <= ipv4_any_c;
         router_o <= ipv4_any_c;
         dns_o <= ipv4_any_c;
+        ntp_server_o <= ipv4_any_c;
       end if;
       valid_o <= to_logic(r.valid);
     end process;

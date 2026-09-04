@@ -52,6 +52,7 @@ architecture arch of tb is
   constant netmask_c : ipv4_t := to_ipv4(255, 255, 255, 0);
   constant router_c : ipv4_t := to_ipv4(192, 168, 1, 254);
   constant dns_c : ipv4_t := to_ipv4(192, 168, 1, 53);
+  constant ntp_c : ipv4_t := to_ipv4(10, 9, 9, 123);
   constant decoy_ip_c : ipv4_t := to_ipv4(10, 9, 9, 9);
   constant decoy_netmask_c : ipv4_t := to_ipv4(255, 0, 0, 0);
   constant any_ip_c : ipv4_t := to_ipv4(0, 0, 0, 0);
@@ -64,11 +65,11 @@ architecture arch of tb is
   signal done_s : std_ulogic_vector(0 to 1);
 
   signal rx_s, tx_s : bus_t;
-  signal address_s, netmask_s, router_s, dns_s : ipv4_t;
+  signal address_s, netmask_s, router_s, dns_s, ntp_s : ipv4_t;
   signal valid_s : std_ulogic;
 
   signal rx2_s, tx2_s : bus_t;
-  signal address2_s, netmask2_s, router2_s, dns2_s : ipv4_t;
+  signal address2_s, netmask2_s, router2_s, dns2_s, ntp2_s : ipv4_t;
   signal valid2_s : std_ulogic;
 
   function opt(code: byte; data: byte_string) return byte_string
@@ -122,6 +123,7 @@ architecture arch of tb is
       & opt(dhcp_option_netmask_c, netmask_c)
       & opt(dhcp_option_router_c, router_c)
       & opt(dhcp_option_dns_c, dns_c)
+      & opt(dhcp_option_ntp_servers_c, ntp_c)
       & opt32(dhcp_option_lease_time_c, lease)
       & opt32(dhcp_option_renewal_time_c, t1)
       & opt32(dhcp_option_rebinding_time_c, t2);
@@ -215,6 +217,7 @@ begin
     -- returns the offset of the message type option.
     impure function check_common(constant what: string) return integer is
       variable o: integer;
+      variable ntp_asked_v: boolean;
     begin
       assert_equal(what & " udp peer port",
                    to_integer(from_be(cs(ip_context_length_c,
@@ -238,8 +241,19 @@ begin
       assert_equal(what & " client id", ps(o+2, o+8),
                    to_byte(1) & client_mac_c, failure);
 
-      assert opt_at(dhcp_option_parameter_request_c) >= 0
+      o := opt_at(dhcp_option_parameter_request_c);
+      assert o >= 0
         report what & ": parameter request list is missing"
+        severity failure;
+      ntp_asked_v := false;
+      for i in o+2 to o+1+to_integer(unsigned(pb(o+1)))
+      loop
+        if pb(i) = dhcp_option_ntp_servers_c then
+          ntp_asked_v := true;
+        end if;
+      end loop;
+      assert ntp_asked_v
+        report what & ": parameter request list must ask for NTP servers"
         severity failure;
 
       assert opt_at(dhcp_option_hostname_c) >= 0
@@ -259,6 +273,9 @@ begin
     tx_s.s <= accept(cfg_c, false);
     rx_s.m <= transfer_defaults(cfg_c);
     wait for 100 ns;
+
+    wait until rising_edge(clock_s);
+    assert_equal("ntp server before lease", ntp_s, any_ip_c, failure);
 
     -- Discovery
     tx_get;
@@ -286,7 +303,9 @@ begin
                 packet => prefix_c & reply(xid_v, dhcp_msg_offer_c,
                                            client_ip_c,
                                            opt(dhcp_option_server_id_c,
-                                               server_ip_c)),
+                                               server_ip_c)
+                                           & opt(dhcp_option_ntp_servers_c,
+                                                 ntp_c)),
                 user => "0");
 
     -- Selection
@@ -323,6 +342,8 @@ begin
                                            & opt(dhcp_option_router_c,
                                                  router_c)
                                            & opt(dhcp_option_dns_c, dns_c)
+                                           & opt(dhcp_option_ntp_servers_c,
+                                                 ntp_c)
                                            & opt32(dhcp_option_lease_time_c,
                                                    20)),
                 user => "0");
@@ -334,6 +355,9 @@ begin
     assert_equal("netmask", netmask_s, netmask_c, failure);
     assert_equal("router", router_s, router_c, failure);
     assert_equal("dns", dns_s, dns_c, failure);
+
+    wait until rising_edge(clock_s);
+    assert_equal("ntp server", ntp_s, ntp_c, failure);
 
     -- Renewal
     tx_get;
@@ -364,6 +388,7 @@ begin
     wait for 2 us;
     assert_equal("lease held after renewal", valid_s, '1', failure);
     assert_equal("address after renewal", address_s, client_ip_c, failure);
+    assert_equal("ntp server after renewal", ntp_s, ntp_c, failure);
 
     -- A rejected reply carries no information
     tx_get;
@@ -421,6 +446,7 @@ begin
     assert_equal("netmask dropped", netmask_s, any_ip_c, failure);
     assert_equal("router dropped", router_s, any_ip_c, failure);
     assert_equal("dns dropped", dns_s, any_ip_c, failure);
+    assert_equal("ntp server dropped", ntp_s, any_ip_c, failure);
 
     tx_get;
     pos_v := check_common("rediscover");
@@ -512,6 +538,7 @@ begin
       netmask_o => netmask_s,
       router_o => router_s,
       dns_o => dns_s,
+      ntp_server_o => ntp_s,
       valid_o => valid_s
       );
 
@@ -537,6 +564,7 @@ begin
       netmask_o => netmask2_s,
       router_o => router2_s,
       dns_o => dns2_s,
+      ntp_server_o => ntp2_s,
       valid_o => valid2_s
       );
 
