@@ -69,18 +69,20 @@ begin
 
       when ST_EMPTY =>
         if color_valid_i = '1' then
-          rin.color <= color_i;
+          rin.pixel <= palette_i(to_integer(color_i));
           rin.state <= ST_PIPE;
         end if;
 
       when ST_PIPE =>
-        if color_valid_i = '1' and pixel_ready_i = '1' then
-          rin.pixel <= palette_i(to_integer(color_i));
-        elsif color_valid_i = '1' and pixel_ready_i = '0' then
+        if pixel_ready_i = '1' then
+          if color_valid_i = '1' then
+            rin.pixel <= palette_i(to_integer(color_i));
+          else
+            rin.state <= ST_EMPTY;
+          end if;
+        elsif color_valid_i = '1' then
           rin.color <= color_i;
           rin.state <= ST_FULL;
-        elsif color_valid_i = '0' and pixel_ready_i = '0' then
-          rin.state <= ST_EMPTY;
         end if;
 
       when ST_FULL =>
