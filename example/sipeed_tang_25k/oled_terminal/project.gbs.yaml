@@ -1,0 +1,41 @@
+name: tang_25k_oled_terminal
+
+root:
+  name: top
+  deps:
+    - nsl_digilent.pmod_oled_rgb
+    - nsl_dvi.terminal
+    - nsl_indication.font_6x8
+    - nsl_color.rgb
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/j4_pmod_double_lvcmos33.cst
+        - ../pinout/clk.cst
+        - ../pinout/done_led.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: oled_terminal.fs
