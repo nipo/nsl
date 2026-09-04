@@ -55,4 +55,34 @@ package gearbox is
       );
   end component;
 
+  -- Constant-to-constant width gearbox
+  --
+  -- Accepts fixed-width input and produces fixed-width output.
+  -- input_width_c must be two times the size of output_width_c or
+  -- vice versa. clock_i must be faster by an even multiple than the clock
+  -- used in the data domain which is larger
+  --
+  -- Example: 16 bits in, 8 bits out, clock_i at 125MHz and new
+  -- 16 bit value every clock cycle at 62.5MHz (Gigabit ethernet).
+  -- In this case the input is sampled twice every cycle as seen
+  -- from the 62.5MHz clock. 
+  --
+  component gearbox_c2c is
+    generic(
+      input_width_c : positive;
+      output_width_c    : positive;
+      left_to_right_c : boolean := false      
+      );
+    port(
+      clock_i    : in  std_ulogic;
+      reset_n_i  : in  std_ulogic;
+
+      in_i       : in  std_ulogic_vector(0 to input_width_c - 1);
+      ready_o   : out std_ulogic;      
+
+      out_o       : out std_ulogic_vector(0 to output_width_c - 1);
+      valid_o   : out std_ulogic      
+      );
+  end component;  
+
 end package gearbox;
