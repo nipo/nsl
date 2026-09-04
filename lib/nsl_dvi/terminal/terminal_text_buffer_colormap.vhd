@@ -238,6 +238,7 @@ begin
         type regs_t is
         record
           state: state_t;
+          frame_start: boolean;
           row: integer range 0 to 2**row_count_l2_c-1;
           column: integer range 0 to 2**column_count_l2_c-1;
           glyph_line: integer range 0 to font_height_c-1;
@@ -254,6 +255,7 @@ begin
 
           if video_reset_n_i = '0' then
             r.state <= ST_WAIT_SOF;
+            r.frame_start <= true;
           end if;
         end process;
 
@@ -274,7 +276,11 @@ begin
               rin.state <= ST_STREAMING;
               rin.column <= 0;
 
-              if r.glyph_subline /= font_vscale_c-1 then
+              -- First line of the frame is scanned with the counters
+              -- as reset by sof, advance only happens on later lines.
+              if r.frame_start then
+                rin.frame_start <= false;
+              elsif r.glyph_subline /= font_vscale_c-1 then
                 rin.glyph_subline <= r.glyph_subline + 1;
               elsif r.glyph_line /= font_height_c-1 then
                 rin.glyph_line <= r.glyph_line + 1;
@@ -301,10 +307,11 @@ begin
 
           if sof_i = '1' then
             rin.state <= ST_WAIT_SOL;
+            rin.frame_start <= true;
             rin.glyph_line <= 0;
             rin.glyph_subline <= 0;
             rin.row <= 0;
-          end if;          
+          end if;
         end process;
 
         moore: process(r) is
@@ -489,8 +496,10 @@ begin
               rin.glyph_column <= r.glyph_column + 1;
               rin.glyph_subcolumn <= 0;
               rin.pixels <= r.pixels(1 to r.pixels'right) & '-';
-            else
+            elsif glyph_line_valid_s = '1' then
               ingress := true;
+            else
+              rin.state <= ST_FILL;
             end if;
           end if;
       end case;
@@ -509,15 +518,13 @@ begin
       end if;          
     end process;
 
-    moore: process(r, glyph_line_sideband_s) is
+    moore: process(r) is
     begin
-      glyph_line_ready_s <= '0';
       color_o <= to_unsigned(0, color_o'length);
 
       case r.state is
         when ST_FILL =>
           color_valid_o <= '0';
-          glyph_line_ready_s <= '1';
 
         when ST_RENDER =>
           color_valid_o <= '1';
@@ -526,8 +533,22 @@ begin
           else
             color_o <= r.bg;
           end if;
+      end case;
+    end process;
 
-          if r.glyph_subcolumn = font_hscale_c-1
+    -- Glyph line stream may only be popped on the exact cycle its
+    -- data is ingested, gate it with the color handshake.
+    mealy: process(r, color_ready_i) is
+    begin
+      glyph_line_ready_s <= '0';
+
+      case r.state is
+        when ST_FILL =>
+          glyph_line_ready_s <= '1';
+
+        when ST_RENDER =>
+          if color_ready_i = '1'
+            and r.glyph_subcolumn = font_hscale_c-1
             and r.glyph_column = font_width_c-1 then
             glyph_line_ready_s <= '1';
           end if;
