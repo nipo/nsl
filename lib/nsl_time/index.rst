@@ -13,3 +13,6 @@ In the library, there are:
 * A `skew <skew>`_ package that allows to do timestamp operations,
 
 * PPS interoperability, including `PPS generation <pps>`_ and `PPS extraction <clock>`_ blocks.
+
+* A `calendar <calendar>`_ package converting a second count into
+  date and time of day.

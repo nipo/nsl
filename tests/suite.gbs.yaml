@@ -441,3 +441,6 @@ projects:
   - name: wishbone_base
     path: wishbone/base
     tags: [ghdl, simulation]
+  - name: time_calendar
+    path: time/calendar
+    tags: [ghdl, simulation]
