@@ -17,3 +17,5 @@ set_property -dict { PACKAGE_PIN H14   IOSTANDARD LVCMOS33 } [get_ports { eth_tx
 set_property -dict { PACKAGE_PIN J14   IOSTANDARD LVCMOS33 } [get_ports { eth_txd_o[1] }];
 set_property -dict { PACKAGE_PIN J13   IOSTANDARD LVCMOS33 } [get_ports { eth_txd_o[2] }];
 set_property -dict { PACKAGE_PIN H17   IOSTANDARD LVCMOS33 } [get_ports { eth_txd_o[3] }];
+create_clock -add -name eth_rx_clk -period 40.00 -waveform {0 20} [get_ports { eth_rx_clk_i }];
+create_clock -add -name eth_tx_clk -period 40.00 -waveform {0 20} [get_ports { eth_tx_clk_i }];

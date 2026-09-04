@@ -1,0 +1,68 @@
+name: observer.observer_core
+
+communication:
+  mode: jtag
+
+instruments:
+  mii_rx: !logic-analyzer
+    storage:
+      buffer_depth_l2: 10
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      rx:
+        clock: rx_clock
+        frequency: 25_000_000
+
+        signals:
+          d: !bus
+            width: 4
+            trigger: false
+          dv:
+            trigger: true
+          er:
+            trigger: false
+
+  mii_tx: !logic-analyzer
+    storage:
+      buffer_depth_l2: 10
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      tx:
+        clock: tx_clock
+        frequency: 25_000_000
+
+        signals:
+          d: !bus
+            width: 4
+            trigger: false
+          en:
+            trigger: true
+
+  panel: !control-status
+    clock: mac_clock
+
+    status:
+      link_up: 1
+      dhcp_lease: 1
+      sntp_valid: 1
+      address:
+        width: 32
+      ntp_server:
+        width: 32
+      ntp_date:
+        width: 32
+
+    tick-out:
+      - [ reset ]

@@ -1,0 +1,72 @@
+name: arty_a7_sntp_clock
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_bnoc.framed
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_math.int_ext
+    - nsl_inet.mac
+    - nsl_inet.ipv4
+    - nsl_inet.stream
+    - nsl_inet.stream_ethernet
+    - nsl_inet.stream_ipv4
+    - nsl_inet.stream_udp
+    - nsl_inet.stream_sntp
+    - nsl_inet.stream_host
+    - nsl_mii.mii
+    - nsl_mii.flit
+    - nsl_mii.link
+    - nsl_mii.link_monitor
+    - nsl_smi.smi
+    - nsl_smi.transactor
+    - nsl_digilent.pmod
+    - nsl_digilent.pmod_oled_rgb
+    - nsl_dvi.terminal
+    - nsl_indication.font_6x8
+    - nsl_color.rgb
+    - nsl_data.text
+    - nsl_time.calendar
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_io.clock
+    - nsl_hwdep.reset
+    - gatecap_generated.observer
+  sources:
+    - file_type: vhdl
+      files:
+        - src/func/func.pkg.vhd
+        - src/func/func_main.vhd
+        - src/func/screen_text.vhd
+        - src/boundary/fpga_io.vhd
+    - file_type: xilinx-xdc
+      files:
+        - compress.xdc
+        - ../pinout/leds.xdc
+        - ../pinout/buttons.xdc
+        - ../pinout/clk100.xdc
+        - ../pinout/ethernet.xdc
+        - ../pinout/ja_lvcmos33.xdc
+
+output:
+  - name: synthesis
+    topcell: fpga_io
+    target:
+      part: xc7a35t-1csg324
+    outputs:
+      - type: bitstream
+        path: sntp_clock.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
