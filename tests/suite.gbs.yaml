@@ -347,6 +347,9 @@ projects:
   - name: inet_mii
     path: inet/mii
     tags: [ghdl, simulation]
+  - name: inet_mii_timestamping
+    path: inet/mii_timestamping
+    tags: [ghdl, simulation]
   - name: inet_rmii
     path: inet/rmii
     tags: [ghdl, simulation]

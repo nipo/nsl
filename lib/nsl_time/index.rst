@@ -16,3 +16,7 @@ In the library, there are:
 
 * A `calendar <calendar>`_ package converting a second count into
   date and time of day.
+
+* A `capture <capture>`_ package sampling the current time into a
+  small register file on frame timestamping sidebands (see
+  `nsl_mii.timestamping <../nsl_mii/index>`_).

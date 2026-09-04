@@ -3,3 +3,4 @@ packages += clock
 packages += pps
 packages += skew
 packages += calendar
+packages += capture

@@ -15,3 +15,9 @@ MII library covers:
 
 `Link status <link_monitor>`_ can be monitored either through SMI
 (MDIO) interface, or through in-band status.
+
+Drivers also expose SFD strobes for frame timestamping:
+`timestamping <timestamping>`_ turns them into a per-frame identifier
+sideband and a one-byte layer-1 pre-header tag, so consumers sample
+their own time base (`nsl_time.capture <../nsl_time/index>`_) without
+time ever entering the packet path.
