@@ -4,3 +4,4 @@ packages += pps
 packages += skew
 packages += calendar
 packages += capture
+packages += discipline

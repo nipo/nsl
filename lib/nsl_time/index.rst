@@ -20,3 +20,10 @@ In the library, there are:
 * A `capture <capture>`_ package sampling the current time into a
   small register file on frame timestamping sidebands (see
   `nsl_mii.timestamping <../nsl_mii/index>`_).
+
+* A `discipline <discipline>`_ package steering the local clock from
+  offset measurements: a PI servo turning the
+  `skew <skew>`_-currency measurement stream into a frequency
+  correction, and drivers applying it to `clock <clock>`_'s
+  adjustable increment or to a DAC pulling a VCTCXO.  Sources (PTP,
+  PPS, custom protocols) and sinks stay interchangeable.

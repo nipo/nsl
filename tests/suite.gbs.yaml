@@ -413,6 +413,9 @@ projects:
   - name: nco
     path: nco
     tags: [ghdl, simulation]
+  - name: precise_clock_discipline
+    path: precise_clock/discipline
+    tags: [ghdl, simulation]
   - name: precise_clock_offset
     path: precise_clock/offset
     tags: [ghdl, simulation]
