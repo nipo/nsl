@@ -1,6 +1,6 @@
+vhdl-sources += terminal.pkg.vhd
 vhdl-sources += terminal_text_buffer.vhd
 vhdl-sources += terminal_text_buffer_colormap.vhd
-vhdl-sources += terminal.pkg.vhd
 
 deps += nsl_memory.ram
 deps += nsl_memory.streamer
