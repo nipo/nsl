@@ -43,6 +43,7 @@ architecture arch of tb is
   constant mask_c : ipv4_t := to_ipv4(255, 255, 255, 0);
   constant router_c : ipv4_t := to_ipv4(10, 0, 0, 254);
   constant dns_c : ipv4_t := to_ipv4(10, 0, 0, 53);
+  constant ntp_c : ipv4_t := to_ipv4(10, 0, 0, 123);
   constant bcast_ip_c : ipv4_t := to_ipv4(255, 255, 255, 255);
   constant zero_ip_c : ipv4_t := to_ipv4(0, 0, 0, 0);
   constant l1_content_c : byte_string(0 to 4) := from_hex("b1b2b3b4b5");
@@ -170,6 +171,7 @@ architecture arch of tb is
     opt4(dhcp_option_netmask_c, mask_c);
     opt4(dhcp_option_router_c, router_c);
     opt4(dhcp_option_dns_c, dns_c);
+    opt4(dhcp_option_ntp_servers_c, ntp_c);
     opt4(dhcp_option_lease_time_c, to_be(to_unsigned(600, 32)));
     ret(o) := dhcp_option_end_c;
     return ret;
@@ -192,7 +194,7 @@ begin
     signal from_app_s : master_vector(0 to 0);
     signal from_app_ack_s : slave_vector(0 to 0);
     signal dhcp_address_s, dhcp_netmask_s : ipv4_t;
-    signal dhcp_router_s, dhcp_dns_s : ipv4_t;
+    signal dhcp_router_s, dhcp_dns_s, dhcp_ntp_s : ipv4_t;
     signal dhcp_valid_s : std_ulogic;
 
     function wire_frame(dest: mac48_t; ethertype: ethertype_t;
@@ -433,6 +435,8 @@ begin
                    dhcp_router_s, router_c, failure);
       assert_equal("W" & to_string(width_c) & " leased dns",
                    dhcp_dns_s, dns_c, failure);
+      assert_equal("W" & to_string(width_c) & " leased ntp server",
+                   dhcp_ntp_s, ntp_c, failure);
 
       -- Ping the leased address
       packet_send(cfg_c, clock_s, wire_in_s.s, wire_in_s.m,
@@ -507,6 +511,7 @@ begin
         dhcp_netmask_o => dhcp_netmask_s,
         dhcp_router_o => dhcp_router_s,
         dhcp_dns_o => dhcp_dns_s,
+        dhcp_ntp_server_o => dhcp_ntp_s,
         dhcp_valid_o => dhcp_valid_s,
 
         l1_header_i => l1_padded_c,

@@ -39,6 +39,11 @@ use work.ipv4.all;
 -- dhcp_c is unset.  clock_i_hz_c paces the DHCP protocol timers and
 -- hostname_c, when not empty, is sent to the server as the host
 -- name.
+--
+-- Peers outside the local subnet resolve through the gateway: from
+-- the lease netmask and router with dhcp_c, from local_netmask_i
+-- and local_gateway_i otherwise.  An all-zero netmask treats every
+-- peer as on-link.
 package stream_host is
 
   component stream_ipv4_host is
@@ -60,11 +65,14 @@ package stream_host is
 
       local_hwaddr_i : in mac48_t;
       local_address_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+      local_netmask_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+      local_gateway_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
 
       dhcp_address_o : out ipv4_t;
       dhcp_netmask_o : out ipv4_t;
       dhcp_router_o : out ipv4_t;
       dhcp_dns_o : out ipv4_t;
+      dhcp_ntp_server_o : out ipv4_t;
       dhcp_valid_o : out std_ulogic;
 
       l1_header_i : in byte_string;

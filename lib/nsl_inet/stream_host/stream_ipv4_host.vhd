@@ -33,11 +33,14 @@ entity stream_ipv4_host is
 
     local_hwaddr_i : in mac48_t;
     local_address_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+    local_netmask_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+    local_gateway_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
 
     dhcp_address_o : out ipv4_t;
     dhcp_netmask_o : out ipv4_t;
     dhcp_router_o : out ipv4_t;
     dhcp_dns_o : out ipv4_t;
+    dhcp_ntp_server_o : out ipv4_t;
     dhcp_valid_o : out std_ulogic;
 
     l1_header_i : in byte_string;
@@ -64,6 +67,7 @@ architecture beh of stream_ipv4_host is
     := hdr_l2_c & ip_context_length_c;
 
   signal local_address_s : ipv4_t;
+  signal netmask_s, gateway_s : ipv4_t;
 
   signal mac_to_eth_s, eth_to_mac_s : bus_t;
   signal eth_to_ip_s, ip_to_eth_s : bus_t;
@@ -191,6 +195,8 @@ begin
 
       local_hwaddr_i => local_hwaddr_i,
       local_address_i => local_address_s,
+      netmask_i => netmask_s,
+      gateway_i => gateway_s,
 
       l1_header_i => l1_header_i,
 
@@ -218,10 +224,13 @@ begin
     signal query_a_s, response_a_s : slave_vector(0 to app_count_c-1);
   begin
     local_address_s <= local_address_i;
+    netmask_s <= local_netmask_i;
+    gateway_s <= local_gateway_i;
     dhcp_address_o <= to_ipv4(0, 0, 0, 0);
     dhcp_netmask_o <= to_ipv4(0, 0, 0, 0);
     dhcp_router_o <= to_ipv4(0, 0, 0, 0);
     dhcp_dns_o <= to_ipv4(0, 0, 0, 0);
+    dhcp_ntp_server_o <= to_ipv4(0, 0, 0, 0);
     dhcp_valid_o <= '0';
 
     udp: nsl_inet.stream_udp.stream_udp_layer
@@ -307,10 +316,14 @@ begin
     signal query_a_s, response_a_s : slave_vector(0 to port_count_c-1);
     signal dhcp_to_entry_s : bus_t;
     signal rx_narrow_s, tx_narrow_s : bus_t;
-    signal address_s : ipv4_t;
+    signal address_s, lease_netmask_s, lease_router_s : ipv4_t;
   begin
     local_address_s <= address_s;
     dhcp_address_o <= address_s;
+    netmask_s <= lease_netmask_s;
+    gateway_s <= lease_router_s;
+    dhcp_netmask_o <= lease_netmask_s;
+    dhcp_router_o <= lease_router_s;
 
     udp: nsl_inet.stream_udp.stream_udp_layer
       generic map(
@@ -476,9 +489,10 @@ begin
         tx_i => tx_narrow_s.s,
 
         address_o => address_s,
-        netmask_o => dhcp_netmask_o,
-        router_o => dhcp_router_o,
+        netmask_o => lease_netmask_s,
+        router_o => lease_router_s,
         dns_o => dhcp_dns_o,
+        ntp_server_o => dhcp_ntp_server_o,
         valid_o => dhcp_valid_o
         );
   end generate;

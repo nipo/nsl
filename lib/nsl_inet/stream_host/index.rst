@@ -15,3 +15,7 @@ With the ``dhcp_c`` generic set, the host runs a `DHCP client
 <../stream_dhcp/index>`_ on an internal port 68 pipe and takes its
 address from the lease instead of ``local_address_i``, reporting the
 lease on the ``dhcp_*_o`` ports.
+
+Peers outside the local subnet resolve through the gateway, taken
+from the lease with DHCP or from the ``local_netmask_i`` /
+``local_gateway_i`` ports otherwise.
