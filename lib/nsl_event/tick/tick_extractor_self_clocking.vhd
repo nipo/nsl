@@ -119,7 +119,15 @@ begin
       rin.to_180 <= 0;
     else
       if changed = '1' then
-        rin.to_180 <= r.ref_period / 2 - 1;
+        -- ref_period can briefly degenerate to a very small value
+        -- when the input signal is non-periodic (e.g. during a
+        -- consumer-driven reset between two carrier configs); guard
+        -- against an underflow when ref_period < 2.
+        if r.ref_period < 2 then
+          rin.to_180 <= 0;
+        else
+          rin.to_180 <= r.ref_period / 2 - 1;
+        end if;
       elsif r.to_180 = 0 then
         rin.to_180 <= r.ref_period - 1;
       else
