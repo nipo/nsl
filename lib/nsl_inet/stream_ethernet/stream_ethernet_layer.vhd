@@ -11,7 +11,8 @@ entity stream_ethernet_layer is
   generic(
     config_c : config_t;
     header_length_c : integer_vector := null_integer_vector;
-    ethertype_c : ethertype_vector
+    ethertype_c : ethertype_vector;
+    multicast_c : mac48_vector := null_mac48_vector
     );
   port(
     clock_i : in std_ulogic;
@@ -39,7 +40,8 @@ begin
     generic map(
       config_c => config_c,
       header_length_c => header_length_c,
-      ethertype_c => ethertype_c
+      ethertype_c => ethertype_c,
+      multicast_c => multicast_c
       )
     port map(
       clock_i => clock_i,
@@ -58,7 +60,8 @@ begin
     generic map(
       config_c => config_c,
       header_length_c => header_length_c,
-      ethertype_c => ethertype_c
+      ethertype_c => ethertype_c,
+      multicast_c => multicast_c
       )
     port map(
       clock_i => clock_i,

@@ -21,16 +21,18 @@ is one layer-3 stream pair per entry of the ``ethertype_c`` generic,
 and that table alone decides ethertypes, in both directions.
 
 * ``stream_ethernet_receiver`` filters frames on destination address
-  (local address, reported as unicast, or broadcast; multicast group
-  addresses are dropped), dispatches them on ethertype, and replaces
-  the frame block by the context block carrying the frame source
-  address.  Mac padding is left in place for the layer above to
-  ignore;
+  (local address, reported as unicast, broadcast, or an entry of the
+  ``multicast_c`` table, reported as the multicast casting of its
+  index; other multicast group addresses are dropped), dispatches them
+  on ethertype, and replaces the frame block by the context block
+  carrying the frame source address.  Mac padding is left in place for
+  the layer above to ignore;
 
 * ``stream_ethernet_transmitter`` funnels frames from every layer-3
-  port, crafting the ethernet header from the context peer, the local
-  address, and the ethertype of the port the frame came from.  The
-  context casting field is ignored;
+  port, crafting the ethernet header from the local address, the
+  ethertype of the port the frame came from, and, as destination, the
+  ``multicast_c`` entry the context casting names, or the context peer
+  for any other casting;
 
 * ``stream_ethernet_layer`` pairs the two.
 

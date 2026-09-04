@@ -17,7 +17,8 @@ entity stream_ethernet_transmitter is
   generic(
     config_c : config_t;
     header_length_c : integer_vector := null_integer_vector;
-    ethertype_c : ethertype_vector
+    ethertype_c : ethertype_vector;
+    multicast_c : mac48_vector := null_mac48_vector
     );
   port(
     clock_i : in std_ulogic;
@@ -50,6 +51,22 @@ architecture beh of stream_ethernet_transmitter is
   constant out_header_length_c : natural := pre_size_c + frame_block_c;
   constant frame_pad_c : byte_string(0 to frame_offset_c-1) := (others => x"00");
   constant ethertype_l_c : ethertype_vector(0 to in_count_c-1) := ethertype_c;
+  constant multicast_l_c : mac48_vector(0 to multicast_c'length-1) := multicast_c;
+
+  -- Destination address a context designates: the multicast table
+  -- entry its casting names, the context peer otherwise.  A multicast
+  -- casting naming a group beyond the table falls back to the peer as
+  -- well: the table is the only place a group address is known here.
+  function destination_of(ctx: l2_context_t) return mac48_t
+  is
+  begin
+    if is_multicast(ctx.casting)
+      and multicast_group(ctx.casting) < multicast_l_c'length then
+      return multicast_l_c(multicast_group(ctx.casting));
+    end if;
+
+    return ctx.peer;
+  end function;
 
   type state_t is (
     ST_RESET,
@@ -102,7 +119,7 @@ begin
           rin.state <= ST_RESPOND;
           rin.header <= route_in_header_s(0 to pre_size_c-1)
                         & frame_pad_c
-                        & context_v.peer
+                        & destination_of(context_v)
                         & local_address_i
                         & to_be(to_unsigned(ethertype_l_c(route_source_s), 16));
         end if;

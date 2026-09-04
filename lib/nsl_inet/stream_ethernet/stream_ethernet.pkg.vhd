@@ -57,12 +57,26 @@ package stream_ethernet is
   -- Context block produced and consumed by this layer.  Ethertype
   -- does not appear here: streams above the ethernet layer exist
   -- after ethertype dispatch, one per handled type.  Casting reports
-  -- how the frame was addressed on receive and is ignored on
-  -- transmit, where the frame is always sent to peer.
-  type l2_casting_t is (
-    L2_CAST_UNICAST,
-    L2_CAST_BROADCAST
-    );
+  -- how the frame was addressed on receive; on transmit it selects
+  -- the destination for multicast castings and is ignored otherwise,
+  -- where the frame goes to peer.
+  --
+  -- The casting encoding is private: build values from the constants
+  -- and l2_multicast(), read them through the predicates, so the
+  -- representation can change without touching consumers.
+  subtype l2_casting_t is byte;
+
+  constant L2_CAST_UNICAST : l2_casting_t := to_byte(16#00#);
+  constant L2_CAST_BROADCAST : l2_casting_t := to_byte(16#01#);
+
+  -- Casting of the multicast group at the given index of the
+  -- receiver and transmitter multicast_c table.  At most 16 groups.
+  function l2_multicast(index: natural) return l2_casting_t;
+
+  function is_unicast(c: l2_casting_t) return boolean;
+  function is_broadcast(c: l2_casting_t) return boolean;
+  function is_multicast(c: l2_casting_t) return boolean;
+  function multicast_group(c: l2_casting_t) return natural;
 
   type l2_context_t is
   record
@@ -76,9 +90,10 @@ package stream_ethernet is
   function from_bytes(data: byte_string) return l2_context_t;
 
   -- Address filtering keeps frames whose destination address is
-  -- local_address_i, reported as L2_CAST_UNICAST, or the broadcast
-  -- address, reported as L2_CAST_BROADCAST.  Multicast group
-  -- addresses are dropped.
+  -- local_address_i, reported as L2_CAST_UNICAST, the broadcast
+  -- address, reported as L2_CAST_BROADCAST, or an entry of the
+  -- multicast_c table, reported as l2_multicast(entry index).  Other
+  -- multicast group addresses are dropped.
   --
   -- The ethertype of an accepted frame is looked up in ethertype_c;
   -- the frame is forwarded on the output port of matching index, or
@@ -88,7 +103,8 @@ package stream_ethernet is
     generic(
       config_c : config_t;
       header_length_c : integer_vector := null_integer_vector;
-      ethertype_c : ethertype_vector
+      ethertype_c : ethertype_vector;
+      multicast_c : mac48_vector := null_mac48_vector
       );
     port(
       clock_i : in std_ulogic;
@@ -106,14 +122,15 @@ package stream_ethernet is
 
   -- Frames from any input port are funneled to the mac side with a
   -- crafted ethernet header: destination address is the context peer,
-  -- source address is local_address_i, ethertype is the ethertype_c
-  -- entry of the input port the frame came from.  The context casting
-  -- field is ignored, a frame always goes to peer.
+  -- or the multicast_c entry the context casting designates when it
+  -- is a multicast one; source address is local_address_i, ethertype
+  -- is the ethertype_c entry of the input port the frame came from.
   component stream_ethernet_transmitter is
     generic(
       config_c : config_t;
       header_length_c : integer_vector := null_integer_vector;
-      ethertype_c : ethertype_vector
+      ethertype_c : ethertype_vector;
+      multicast_c : mac48_vector := null_mac48_vector
       );
     port(
       clock_i : in std_ulogic;
@@ -135,7 +152,8 @@ package stream_ethernet is
     generic(
       config_c : config_t;
       header_length_c : integer_vector := null_integer_vector;
-      ethertype_c : ethertype_vector
+      ethertype_c : ethertype_vector;
+      multicast_c : mac48_vector := null_mac48_vector
       );
     port(
       clock_i : in std_ulogic;
@@ -159,15 +177,48 @@ end package;
 
 package body stream_ethernet is
 
+  -- Casting byte encoding, private to these functions: 0x00 unicast,
+  -- 0x01 broadcast, 0x10 to 0x1f multicast with the group index in
+  -- the low nibble.
+  constant casting_multicast_flag_c : byte := to_byte(16#10#);
+
+  function l2_multicast(index: natural) return l2_casting_t
+  is
+  begin
+    assert index < 16
+      report "At most 16 multicast groups"
+      severity failure;
+    return to_byte(16#10# + index);
+  end function;
+
+  function is_unicast(c: l2_casting_t) return boolean
+  is
+  begin
+    return c = L2_CAST_UNICAST;
+  end function;
+
+  function is_broadcast(c: l2_casting_t) return boolean
+  is
+  begin
+    return c = L2_CAST_BROADCAST;
+  end function;
+
+  function is_multicast(c: l2_casting_t) return boolean
+  is
+  begin
+    return c(7 downto 4) = casting_multicast_flag_c(7 downto 4);
+  end function;
+
+  function multicast_group(c: l2_casting_t) return natural
+  is
+  begin
+    return to_integer(unsigned(c(3 downto 0)));
+  end function;
+
   function to_bytes(ctx: l2_context_t) return byte_string
   is
   begin
-    case ctx.casting is
-      when L2_CAST_UNICAST =>
-        return ctx.peer & to_byte(0);
-      when L2_CAST_BROADCAST =>
-        return ctx.peer & to_byte(1);
-    end case;
+    return ctx.peer & ctx.casting;
   end function;
 
   function from_bytes(data: byte_string) return l2_context_t
@@ -180,13 +231,7 @@ package body stream_ethernet is
       severity failure;
 
     ret.peer := xd(0 to 5);
-    -- Unknown casting values read as unicast: the field is ignored
-    -- on transmit and the receive side only emits values above.
-    if xd(6) = to_byte(1) then
-      ret.casting := L2_CAST_BROADCAST;
-    else
-      ret.casting := L2_CAST_UNICAST;
-    end if;
+    ret.casting := xd(6);
     return ret;
   end function;
 

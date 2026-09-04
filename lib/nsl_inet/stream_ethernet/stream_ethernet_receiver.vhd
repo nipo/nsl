@@ -17,7 +17,8 @@ entity stream_ethernet_receiver is
   generic(
     config_c : config_t;
     header_length_c : integer_vector := null_integer_vector;
-    ethertype_c : ethertype_vector
+    ethertype_c : ethertype_vector;
+    multicast_c : mac48_vector := null_mac48_vector
     );
   port(
     clock_i : in std_ulogic;
@@ -53,6 +54,7 @@ architecture beh of stream_ethernet_receiver is
   constant sa_offset_c : natural := da_offset_c + 6;
   constant et_offset_c : natural := da_offset_c + 12;
   constant ethertype_l_c : ethertype_vector(0 to out_count_c-1) := ethertype_c;
+  constant multicast_l_c : mac48_vector(0 to multicast_c'length-1) := multicast_c;
 
   -- Cycles between the routing request and the response: address and
   -- ethertype comparisons on one, the output they select on the next.
@@ -71,13 +73,23 @@ architecture beh of stream_ethernet_receiver is
     ST_RESPOND
     );
 
-  -- Casting the destination address stands for.
+  -- Casting the destination address stands for.  An address the
+  -- multicast table does not list stands for unicast, whether it is a
+  -- group address or not: the address filter then only lets it
+  -- through if it names the local address.
   function casting_of(da: mac48_t) return l2_casting_t
   is
   begin
     if is_broadcast(da) then
       return L2_CAST_BROADCAST;
     end if;
+
+    for i in multicast_l_c'range
+    loop
+      if multicast_l_c(i) = da then
+        return l2_multicast(i);
+      end if;
+    end loop;
 
     return L2_CAST_UNICAST;
   end function;
@@ -163,6 +175,7 @@ begin
   transition: process(r, local_address_i, route_valid_s, route_in_header_s) is
     variable da_v, sa_v: mac48_t;
     variable ethertype_v: ethertype_t;
+    variable casting_v: l2_casting_t;
   begin
     rin <= r;
 
@@ -175,15 +188,17 @@ begin
           da_v := route_in_header_s(da_offset_c to da_offset_c+5);
           sa_v := route_in_header_s(sa_offset_c to sa_offset_c+5);
           ethertype_v := to_integer(from_be(route_in_header_s(et_offset_c to et_offset_c+1)));
+          casting_v := casting_of(da_v);
 
-          -- A broadcast frame is addressed to everyone, any other one
-          -- has to name the local address.
+          -- A broadcast frame is addressed to everyone and a listed
+          -- multicast group to whoever subscribed to it, any other
+          -- frame has to name the local address.
           rin.state <= ST_DECIDE;
           rin.header <= route_in_header_s(0 to pre_size_c-1)
                         & context_pad(config_c,
                                       to_bytes(l2_context_t'(peer => sa_v,
-                                                             casting => casting_of(da_v))));
-          rin.addressed <= is_broadcast(da_v) or da_v = local_address_i;
+                                                             casting => casting_v)));
+          rin.addressed <= not is_unicast(casting_v) or da_v = local_address_i;
           rin.match <= ethertype_match(ethertype_v);
         end if;
 

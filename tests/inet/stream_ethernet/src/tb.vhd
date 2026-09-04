@@ -23,16 +23,23 @@ use nsl_inet.mac.all;
 -- tail padding also run with a single 5-byte block, filled with a
 -- pattern that must reach the other side untouched, padding included.
 --
+-- All instances but one carry a two-entry multicast table; the
+-- remaining one keeps the default empty table, where the frames the
+-- table would accept must be dropped like any other unknown address.
+--
 -- The receive phase feeds frames to the mac side: accepted unicast
 -- and broadcast frames, a frame for a foreign address, a frame with
--- an unhandled ethertype, a frame carrying the reject flag, then a
--- burst of minimum-size frames at line rate with a backpressure
--- monitor armed on the mac-side input.
+-- an unhandled ethertype, a frame carrying the reject flag, one frame
+-- per listed multicast group, a frame for an unlisted group address,
+-- then a burst of minimum-size frames at line rate with a
+-- backpressure monitor armed on the mac-side input.
 --
 -- The transmit phase feeds the layer-3 pipes, including a packet
 -- whose forwarded and context blocks are the ones extracted from the
 -- first received frame, so that the crafted destination address is
--- checked against the source address of that frame.
+-- checked against the source address of that frame, and packets whose
+-- context casting names a multicast group, whose destination must
+-- come from the table rather than from the context peer.
 entity tb is
 end tb;
 
@@ -52,16 +59,33 @@ architecture arch of tb is
   constant peer_b_c : mac48_t := from_hex("020000000003");
   constant foreign_c : mac48_t := from_hex("0200000000fe");
 
+  constant group_a_c : mac48_t := from_hex("011b19000000");
+  constant group_b_c : mac48_t := from_hex("01005e000016");
+  constant group_unlisted_c : mac48_t := from_hex("01005e7ffffa");
+  constant multicast_list_c : mac48_vector(0 to 1) := (group_a_c, group_b_c);
+
+  -- Instance 3 keeps the generic default, so that the empty table is
+  -- exercised too.  Every width the bench sweeps still gets a table.
+  function instance_multicast(inst: integer) return mac48_vector
+  is
+  begin
+    if inst = 3 then
+      return null_mac48_vector;
+    end if;
+
+    return multicast_list_c;
+  end function;
+
   constant ethertype_list_c : ethertype_vector(0 to 1)
     := (ethertype_ipv4, ethertype_arp);
   constant ethertype_unhandled_c : ethertype_t := ethertype_ipv6;
 
-  constant directed_count_c : natural := 5;
+  constant directed_count_c : natural := 8;
   constant linerate_count_c : natural := 24;
   constant rx_count_c : natural := directed_count_c + linerate_count_c;
   constant max_payload_c : natural := 60;
 
-  constant tx_count_c : natural := 4;
+  constant tx_count_c : natural := 6;
   -- Index of the transmit packet whose blocks are echoed back from
   -- the receive path
   constant tx_echo_c : natural := 2;
@@ -84,14 +108,31 @@ architecture arch of tb is
     case idx is
       when 1 => return ethernet_broadcast_addr_c;
       when 2 => return foreign_c;
+      when 5 => return group_a_c;
+      when 6 => return group_b_c;
+      when 7 => return group_unlisted_c;
       when others => return local_c;
+    end case;
+  end function;
+
+  -- Frames whose fate the multicast table decides: accepted by an
+  -- instance listing the group, dropped by one that does not.
+  function rx_group(idx: integer) return integer
+  is
+  begin
+    case idx is
+      when 5 => return 0;
+      when 6 => return 1;
+      when others => return -1;
     end case;
   end function;
 
   function rx_casting(idx: integer) return l2_casting_t
   is
   begin
-    if is_broadcast(rx_da(idx)) then
+    if rx_group(idx) >= 0 then
+      return l2_multicast(rx_group(idx));
+    elsif is_broadcast(rx_da(idx)) then
       return L2_CAST_BROADCAST;
     else
       return L2_CAST_UNICAST;
@@ -111,7 +152,7 @@ architecture arch of tb is
   function rx_ethertype(idx: integer) return ethertype_t
   is
   begin
-    if idx = 1 then
+    if idx = 1 or idx = 6 then
       return ethertype_arp;
     elsif idx = 3 then
       return ethertype_unhandled_c;
@@ -155,8 +196,9 @@ architecture arch of tb is
   is
   begin
     -- Frame 2 goes to a foreign address, frame 3 carries an
-    -- ethertype not in the table.
-    return idx /= 2 and idx /= 3;
+    -- ethertype not in the table, frame 7 names a group address no
+    -- instance lists.
+    return idx /= 2 and idx /= 3 and idx /= 7;
   end function;
 
   function rx_pipe(idx: integer) return natural
@@ -175,6 +217,7 @@ architecture arch of tb is
     case idx is
       when 0 => return 1;
       when 3 => return 1;
+      when 5 => return 1;
       when others => return 0;
     end case;
   end function;
@@ -186,19 +229,24 @@ architecture arch of tb is
       when 0 => return peer_b_c;
       when 1 => return peer_a_c;
       when 3 => return ethernet_broadcast_addr_c;
+      when 4 => return peer_a_c;
+      when 5 => return peer_b_c;
       -- Context echoed back from the first received frame
       when others => return rx_sa(0);
     end case;
   end function;
 
-  -- The casting field is meaningless on transmit: packet 0 claims
-  -- broadcast towards a unicast peer, packet 3 claims unicast towards
-  -- the broadcast address.  Both must reach their peer field.
+  -- Only a multicast casting has a say in the destination: packet 0
+  -- claims broadcast towards a unicast peer, packet 3 claims unicast
+  -- towards the broadcast address, both must reach their peer field,
+  -- while packets 4 and 5 must reach their group address instead.
   function tx_casting(idx: integer) return l2_casting_t
   is
   begin
     case idx is
       when 0 => return L2_CAST_BROADCAST;
+      when 4 => return l2_multicast(0);
+      when 5 => return l2_multicast(1);
       when others => return L2_CAST_UNICAST;
     end case;
   end function;
@@ -243,6 +291,17 @@ begin
     assert from_bytes(b).casting = L2_CAST_UNICAST
       report "Casting should survive the round trip"
       severity failure;
+
+    ctx.casting := l2_multicast(1);
+    b := to_bytes(ctx);
+    assert_equal("multicast casting byte", b(6), to_byte(16#11#), failure);
+    assert is_multicast(from_bytes(b).casting)
+      and multicast_group(from_bytes(b).casting) = 1
+      report "Multicast casting should survive the round trip"
+      severity failure;
+    assert not is_unicast(ctx.casting) and not is_broadcast(ctx.casting)
+      report "A multicast casting is neither unicast nor broadcast"
+      severity failure;
     wait;
   end process;
 
@@ -250,6 +309,7 @@ begin
     constant width_c : natural := width_list_c(inst);
     constant cfg_c : config_t := stream_config(width_c);
     constant lengths_c : integer_vector := block_lengths(block_list_c(inst));
+    constant mcast_c : mac48_vector := instance_multicast(inst);
     -- Transported size of the blocks the layer forwards verbatim
     constant pre_c : natural := context_byte_count(cfg_c, lengths_c);
     constant frame_off_c : natural := ethernet_frame_offset(cfg_c);
@@ -280,6 +340,14 @@ begin
     signal echo_valid_s : std_ulogic;
     signal echo_blocks_s : byte_string(0 to pre_c + ctx_c - 1);
 
+    -- Group frames only reach the layer-3 side of an instance whose
+    -- multicast table lists them.
+    function accepted(idx: integer) return boolean
+    is
+    begin
+      return rx_accepted(idx) and (rx_group(idx) < mcast_c'length);
+    end function;
+
     function rx_wire(idx: integer) return byte_string
     is
     begin
@@ -307,11 +375,26 @@ begin
         & tx_payload(idx);
     end function;
 
+    -- Destination the layer is expected to craft.  A group the table
+    -- does not hold leaves the peer in place, which is what the
+    -- instance with the default empty table sees.
+    function tx_da(idx: integer) return mac48_t
+    is
+      constant casting_c : l2_casting_t := tx_casting(idx);
+    begin
+      if is_multicast(casting_c)
+        and multicast_group(casting_c) < mcast_c'length then
+        return multicast_list_c(multicast_group(casting_c));
+      end if;
+
+      return tx_peer(idx);
+    end function;
+
     function tx_frame(idx: integer) return byte_string
     is
     begin
       return pre_pat_c & frame_pad_c
-        & tx_peer(idx) & local_c
+        & tx_da(idx) & local_c
         & to_be(to_unsigned(tx_ethertype(idx), 16))
         & tx_payload(idx);
     end function;
@@ -331,7 +414,7 @@ begin
 
       for idx in 0 to rx_count_c-1
       loop
-        next when not rx_accepted(idx);
+        next when not accepted(idx);
         next when rx_pipe(idx) /= pipe;
 
         clear(rx_v);
@@ -575,7 +658,8 @@ begin
       generic map(
         config_c => cfg_c,
         header_length_c => lengths_c,
-        ethertype_c => ethertype_list_c
+        ethertype_c => ethertype_list_c,
+        multicast_c => mcast_c
         )
       port map(
         clock_i => clock_s,

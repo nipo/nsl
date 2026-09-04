@@ -28,6 +28,8 @@ package mac is
   --@-- convert python:str, serialize:'value', convert:nsl_inet.mac.to_mac48({})
   subtype mac48_t is byte_string(0 to 5);
   type mac48_vector is array(integer range <>) of mac48_t;
+  constant null_mac48_vector : mac48_vector(1 to 0)
+    := (others => (others => x"00"));
   constant ethernet_broadcast_addr_c : mac48_t := from_hex("ffffffffffff");
 
   function is_broadcast(mac: mac48_t) return boolean;
