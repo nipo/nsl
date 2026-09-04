@@ -25,6 +25,13 @@ use work.ipv4.all;
 -- cache misses.  A miss is retried up to retry_count_c times,
 -- timeout_c clock cycles apart; exhaustion answers the query with
 -- the reject flag set, so a resolver client never hangs.
+--
+-- When netmask_i is non-zero, a queried peer outside the local
+-- subnet is diverted to the gateway: gateway_i drives the lookup,
+-- the cache and the requests on the wire, while the query block is
+-- still echoed untouched.  The all-zero netmask (the default)
+-- treats every peer as on-link; an off-subnet peer with no gateway
+-- configured resolves 0.0.0.0 and fails like any unanswered lookup.
 package stream_arp is
 
   component stream_arp_resolver is
@@ -41,6 +48,8 @@ package stream_arp is
 
       local_hwaddr_i : in mac48_t;
       local_address_i : in ipv4_t;
+      netmask_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+      gateway_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
 
       l1_header_i : in byte_string;
 

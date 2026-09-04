@@ -29,6 +29,11 @@ use nsl_inet.ipv4.all;
 -- The ethernet transmit side is watched by a monitor process
 -- publishing every frame it collects with its timestamp, which lets
 -- the stimulus check both frame contents and the absence of traffic.
+--
+-- The netmask and the gateway are driven by the stimulus: the first
+-- half of the script runs with an all-zero netmask, the second half
+-- configures a subnet and a gateway and checks the diversion of
+-- off-subnet peers.
 entity tb is
 end tb;
 
@@ -65,8 +70,20 @@ architecture arch of tb is
   constant peer_g_ip_c : ipv4_t := to_ipv4(192, 168, 1, 8);
   -- Address of no interest to the local station
   constant foreign_ip_c : ipv4_t := to_ipv4(192, 168, 1, 9);
+  -- On-subnet peer resolved while a gateway is configured
+  constant peer_h_mac_c : mac48_t := from_hex("020000000009");
+  constant peer_h_ip_c : ipv4_t := to_ipv4(192, 168, 1, 10);
+
+  -- Subnet configuration of the second half of the script, and the
+  -- two off-subnet peers reached through the gateway
+  constant netmask_c : ipv4_t := to_ipv4(255, 255, 255, 0);
+  constant gateway_mac_c : mac48_t := from_hex("02000000000a");
+  constant gateway_ip_c : ipv4_t := to_ipv4(192, 168, 1, 254);
+  constant remote_a_ip_c : ipv4_t := to_ipv4(10, 0, 0, 1);
+  constant remote_b_ip_c : ipv4_t := to_ipv4(10, 1, 2, 3);
 
   constant mac_zero_c : mac48_t := (others => x"00");
+  constant ipv4_zero_c : ipv4_t := (others => x"00");
 
   constant header_lengths_c : integer_vector(0 to 0) := (0 => 5);
   constant cache_count_l2_c : natural := 2;
@@ -175,6 +192,7 @@ begin
     end function;
 
     signal from_l2_s, to_l2_s, query_s, response_s : bus_t;
+    signal netmask_s, gateway_s : ipv4_t;
 
     signal wire_count_s : natural;
     signal wire_frame_s : byte_string(0 to tx_len_c-1);
@@ -400,6 +418,10 @@ begin
       from_l2_s.m <= transfer_defaults(cfg_c);
       query_s.m <= transfer_defaults(cfg_c);
       response_s.s <= accept(cfg_c, false);
+      -- All-zero netmask: every peer is on-link, as if neither input
+      -- were connected
+      netmask_s <= ipv4_zero_c;
+      gateway_s <= ipv4_zero_c;
 
       wait for 200 ns;
       wait until falling_edge(clock_s);
@@ -546,6 +568,50 @@ begin
                  oper_reply_c, local_mac_c, local_ip_c,
                  peer_f_mac_c, peer_f_ip_c);
 
+      -- From here on, a subnet and a gateway are configured
+      netmask_s <= netmask_c;
+      gateway_s <= gateway_ip_c;
+      settle(4);
+
+      -- Off-subnet peer: the request goes to the gateway, and the
+      -- response carries the gateway hardware address while the
+      -- echoed query block still holds the original peer
+      query_v := query_block(remote_a_ip_c, IP_CAST_UNICAST, 47, 8);
+      query_send(query_v);
+      wire_get("request for gateway", wire_v, stamp_v);
+      wire_check("request for gateway", wire_v,
+                 ethernet_broadcast_addr_c, L2_CAST_BROADCAST,
+                 oper_request_c, local_mac_c, local_ip_c,
+                 mac_zero_c, gateway_ip_c);
+      l2_send(rx_frame(gateway_mac_c, L2_CAST_UNICAST,
+                       arp_pdu(oper_reply_c, gateway_mac_c, gateway_ip_c,
+                               local_mac_c, local_ip_c), 0),
+              false);
+      response_check("diverted response", gateway_mac_c, L2_CAST_UNICAST,
+                     false, query_v);
+
+      -- Another off-subnet peer hits the very same gateway entry
+      query_v := query_block(remote_b_ip_c, IP_CAST_UNICAST, 48, 9);
+      query_send(query_v);
+      response_check("second diverted response", gateway_mac_c,
+                     L2_CAST_UNICAST, false, query_v);
+      no_traffic("second diverted response");
+
+      -- An on-subnet peer is still resolved directly
+      query_v := query_block(peer_h_ip_c, IP_CAST_UNICAST, 49, 10);
+      query_send(query_v);
+      wire_get("request for h", wire_v, stamp_v);
+      wire_check("request for h", wire_v,
+                 ethernet_broadcast_addr_c, L2_CAST_BROADCAST,
+                 oper_request_c, local_mac_c, local_ip_c,
+                 mac_zero_c, peer_h_ip_c);
+      l2_send(rx_frame(peer_h_mac_c, L2_CAST_UNICAST,
+                       arp_pdu(oper_reply_c, peer_h_mac_c, peer_h_ip_c,
+                               local_mac_c, local_ip_c), 0),
+              false);
+      response_check("on-subnet response", peer_h_mac_c, L2_CAST_UNICAST,
+                     false, query_v);
+
       no_traffic("end of test");
 
       log_info(to_string(cfg_c) & " ARP resolver OK");
@@ -577,6 +643,8 @@ begin
 
         local_hwaddr_i => local_mac_c,
         local_address_i => local_ip_c,
+        netmask_i => netmask_s,
+        gateway_i => gateway_s,
 
         l1_header_i => l1_pat_c,
 

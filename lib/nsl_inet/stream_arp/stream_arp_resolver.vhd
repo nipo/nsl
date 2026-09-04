@@ -28,6 +28,8 @@ entity stream_arp_resolver is
 
     local_hwaddr_i : in mac48_t;
     local_address_i : in ipv4_t;
+    netmask_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
+    gateway_i : in ipv4_t := to_ipv4(0, 0, 0, 0);
 
     l1_header_i : in byte_string;
 
@@ -55,6 +57,12 @@ end entity;
 -- the most recently learnt addresses whatever their usage.  Entries
 -- never expire: a stale entry only heals when its peer talks to us
 -- again.
+--
+-- A query for a peer outside the local subnet resolves against
+-- gateway_i instead: the diversion is decided as the query context
+-- is parsed, and only the lookup target changes.  The query block
+-- itself is echoed as received, so the client still addresses the
+-- original peer at layer 3.
 --
 -- Both the reply to a peer request and the request of a pending
 -- resolution reach the wire through the transmitter, which serves
@@ -119,8 +127,18 @@ architecture beh of stream_arp_resolver is
   constant arp_oper_reply_c : byte_string(0 to 1) := from_hex("0002");
 
   constant mac_null_c : mac48_t := (others => x"00");
+  constant ipv4_null_c : ipv4_t := (others => x"00");
   constant l2_null_c : byte_string(0 to l2_context_length_c-1)
     := (others => x"00");
+
+  -- A zero netmask disables the test altogether, so that a station
+  -- with no subnet configured treats every peer as on-link.
+  function off_subnet(peer, address, netmask: ipv4_t) return boolean
+  is
+  begin
+    return netmask /= ipv4_null_c
+      and ((peer xor address) and netmask) /= ipv4_null_c;
+  end function;
 
   function arp_pdu(oper: byte_string;
                    sha: mac48_t; spa: ipv4_t;
@@ -263,6 +281,8 @@ architecture beh of stream_arp_resolver is
     resolve_state: resolve_state_t;
     resolve_left: natural range 0 to query_beats_c + resp_beats_c;
     resolve_query: byte_string(0 to ip_block_c-1);
+    -- Address the resolution runs against: the queried peer, or the
+    -- gateway when the peer sits outside the local subnet
     resolve_target: ipv4_t;
     -- Layer-2 context block the query resolved to, as decided by
     -- RESOLVE_DECIDE, RESOLVE_LOOKUP or RESOLVE_WAIT
@@ -312,7 +332,8 @@ begin
   end process;
 
   transition: process(r, from_l2_i, to_l2_i, query_i, response_i,
-                      local_hwaddr_i, local_address_i, l1_header_i) is
+                      local_hwaddr_i, local_address_i, netmask_i, gateway_i,
+                      l1_header_i) is
     -- Parsed contents of the last received ARP payload, latched at
     -- the end of the process, only meaningful one cycle later
     variable rx_sha_v: mac48_t;
@@ -324,6 +345,8 @@ begin
     variable tx_reply_v, tx_request_v: boolean;
 
     variable query_context_v: ip_context_t;
+    -- Address the query resolves against, latched by RESOLVE_DECIDE
+    variable query_target_v: ipv4_t;
     variable resolve_match_v: match_t;
   begin
     rin <= r;
@@ -366,6 +389,11 @@ begin
                     and r.resolve_state = RESOLVE_REQUEST;
 
     query_context_v := from_bytes(r.resolve_query(0 to ip_context_length_c-1));
+    if off_subnet(query_context_v.peer, local_address_i, netmask_i) then
+      query_target_v := gateway_i;
+    else
+      query_target_v := query_context_v.peer;
+    end if;
 
     case r.rx_state is
       when RX_RESET =>
@@ -512,7 +540,7 @@ begin
           rin.resolve_rejected <= false;
           rin.resolve_state <= RESOLVE_BUILD;
         else
-          rin.resolve_target <= query_context_v.peer;
+          rin.resolve_target <= query_target_v;
           rin.resolve_retry <= retry_count_c;
           rin.resolve_state <= RESOLVE_SETTLE;
         end if;
