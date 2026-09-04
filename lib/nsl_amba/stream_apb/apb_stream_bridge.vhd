@@ -92,6 +92,22 @@ architecture rtl of apb_stream_bridge is
 
   signal r, rin : regs_t;
 
+  -- Replaces byte idx of a little-endian field, bit by bit with
+  -- constant indices: synthesis refuses a slice whose bounds depend on
+  -- a register.  Bits beyond the field's top are left out.
+  function byte_set(field : unsigned; idx : natural; b : byte) return unsigned
+  is
+    variable ret : unsigned(field'length-1 downto 0) := field;
+  begin
+    for i in ret'range
+    loop
+      if i / 8 = idx then
+        ret(i) := b(i mod 8);
+      end if;
+    end loop;
+    return ret;
+  end function;
+
 begin
 
   regs: process(clock_i, reset_n_i)
@@ -108,7 +124,6 @@ begin
     variable ib : byte;
     variable addr_v : unsigned(apb_config_c.address_width-1 downto 0);
     variable cnt_v : unsigned(count_bytes_c*8-1 downto 0);
-    variable lo, hi : natural;
   begin
     rin <= r;
     ib := bytes(stream_config_c, rx_i)(0);
@@ -171,10 +186,7 @@ begin
 
       when ST_ADDR =>
         if is_valid(stream_config_c, rx_i) then
-          addr_v := r.addr;
-          lo := 8*r.field_idx;
-          hi := nsl_math.arith.min(8*r.field_idx+7, apb_config_c.address_width-1);
-          addr_v(hi downto lo) := unsigned(ib(hi-lo downto 0));
+          addr_v := byte_set(r.addr, r.field_idx, ib);
           rin.addr <= addr_v;
           if r.field_idx = addr_bytes_c - 1 then
             rin.field_idx <= 0;
@@ -203,8 +215,7 @@ begin
 
       when ST_COUNT =>
         if is_valid(stream_config_c, rx_i) then
-          cnt_v := r.count_acc;
-          cnt_v(8*r.field_idx+7 downto 8*r.field_idx) := unsigned(ib);
+          cnt_v := byte_set(r.count_acc, r.field_idx, ib);
           rin.count_acc <= cnt_v;
           if r.field_idx = count_bytes_c - 1 then
             rin.field_idx <= 0;
