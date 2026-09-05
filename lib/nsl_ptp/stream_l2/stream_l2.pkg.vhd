@@ -8,6 +8,7 @@ use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_mii.timestamping.all;
 use nsl_time.timestamp.all;
+use work.ptp.all;
 
 -- PTP over ethernet (IEEE 1588-2019 annex E), ordinary clocks on the
 -- AXI4-Stream protocol suite.  An engine owns a 0x88F7 ethertype
@@ -106,6 +107,18 @@ package stream_l2 is
   -- origin timestamp; answers every Delay_Req with a Delay_Resp
   -- carrying the requester's receive time from the capture file and
   -- its port identity.
+  --
+  -- With announce_c, an Announce goes out every announce_period_c
+  -- seconds, behind everything else in the send order: third-party
+  -- slaves will not adopt a master without it, while the sibling
+  -- slave engine ignores it.  The grandmaster identity is
+  -- clock_identity_i, priorities come from the generics, steps
+  -- removed is zero, accuracy and variance are sent unknown, and
+  -- the origin timestamp is zero.  clock_class_i and time_source_i
+  -- follow the state of the time source: a GPS-disciplined
+  -- grandmaster advertises ptp_clock_class_locked_c and
+  -- ptp_time_source_gps_c while locked, holdover values otherwise,
+  -- sampled at each emission.
   component ptp_l2_master is
     generic(
       config_c : config_t;
@@ -113,6 +126,10 @@ package stream_l2 is
       clock_i_hz_c : natural;
       domain_c : natural := 0;
       sync_period_c : natural := 1;
+      announce_c : boolean := false;
+      announce_period_c : natural := 2;
+      priority1_c : natural := 128;
+      priority2_c : natural := 128;
       multicast_group_c : natural := 0
       );
     port(
@@ -121,6 +138,9 @@ package stream_l2 is
 
       enable_i : in std_ulogic := '1';
       clock_identity_i : in byte_string(0 to 7);
+      clock_class_i : in unsigned(7 downto 0)
+        := to_unsigned(ptp_clock_class_default_c, 8);
+      time_source_i : in byte := ptp_time_source_internal_c;
 
       capture_id_o : out tag_id_t;
       capture_time_i : in timestamp_t;

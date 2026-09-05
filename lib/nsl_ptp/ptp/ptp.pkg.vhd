@@ -42,7 +42,25 @@ package ptp is
   -- Delay_Resp only.
   constant ptp_off_requesting_port_identity_c : natural := 44;
 
+  -- Announce body, after the (zero) origin timestamp.
+  constant ptp_off_utc_offset_c : natural := 44;
+  constant ptp_off_gm_priority1_c : natural := 47;
+  -- clockClass, clockAccuracy, then offsetScaledLogVariance.
+  constant ptp_off_gm_quality_c : natural := 48;
+  constant ptp_off_gm_priority2_c : natural := 52;
+  constant ptp_off_gm_identity_c : natural := 53;
+  constant ptp_off_steps_removed_c : natural := 61;
+  constant ptp_off_time_source_c : natural := 63;
+
+  constant ptp_clock_class_locked_c : natural := 6;
+  constant ptp_clock_class_holdover_c : natural := 7;
+  constant ptp_clock_class_default_c : natural := 248;
+
+  constant ptp_time_source_gps_c : byte := to_byte(16#20#);
+  constant ptp_time_source_internal_c : byte := to_byte(16#a0#);
+
   constant ptp_sync_length_c : natural := 44;
+  constant ptp_announce_length_c : natural := 64;
   constant ptp_delay_req_length_c : natural := 44;
   constant ptp_follow_up_length_c : natural := 44;
   constant ptp_delay_resp_length_c : natural := 54;

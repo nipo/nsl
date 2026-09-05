@@ -23,6 +23,10 @@ entity ptp_l2_master is
     clock_i_hz_c : natural;
     domain_c : natural := 0;
     sync_period_c : natural := 1;
+    announce_c : boolean := false;
+    announce_period_c : natural := 2;
+    priority1_c : natural := 128;
+    priority2_c : natural := 128;
     multicast_group_c : natural := 0
     );
   port(
@@ -31,6 +35,9 @@ entity ptp_l2_master is
 
     enable_i : in std_ulogic := '1';
     clock_identity_i : in byte_string(0 to 7);
+    clock_class_i : in unsigned(7 downto 0)
+      := to_unsigned(ptp_clock_class_default_c, 8);
+    time_source_i : in byte := ptp_time_source_internal_c;
 
     capture_id_o : out tag_id_t;
     capture_time_i : in timestamp_t;
@@ -64,6 +71,8 @@ architecture beh of ptp_l2_master is
   constant rx_max_pos_c : natural := hdr_size_c + ptp_delay_req_length_c;
   constant tx_short_c : natural := hdr_size_c + ptp_sync_length_c;
   constant tx_long_c : natural := hdr_size_c + ptp_delay_resp_length_c;
+  constant tx_announce_c : natural := hdr_size_c + ptp_announce_length_c;
+  constant tx_max_c : natural := if_else(announce_c, tx_announce_c, tx_long_c);
 
   constant l2_ctx_c : byte_string(0 to l2_context_length_c-1)
     := to_bytes(l2_context_t'(peer => ptp_multicast_addr_c,
@@ -147,14 +156,21 @@ architecture beh of ptp_l2_master is
     ts: timestamp_t;
     req_id: ptp_port_identity_t;
     source_id: ptp_port_identity_t;
+    clock_class: byte;
+    time_source: byte;
     strobe: boolean;
   end record;
 
   function tx_length(req: tx_request_t) return natural
   is
+    variable mt_v: natural;
   begin
-    if to_integer(unsigned(req.msg_type(3 downto 0))) = ptp_msg_delay_resp_c then
+    mt_v := to_integer(unsigned(req.msg_type(3 downto 0)));
+
+    if mt_v = ptp_msg_delay_resp_c then
       return tx_long_c;
+    elsif mt_v = ptp_msg_announce_c then
+      return tx_announce_c;
     end if;
 
     return tx_short_c;
@@ -193,16 +209,39 @@ architecture beh of ptp_l2_master is
         return to_byte(0);
       elsif mt_v = ptp_msg_follow_up_c then
         return to_byte(2);
+      elsif mt_v = ptp_msg_announce_c then
+        return to_byte(5);
       end if;
       return to_byte(3);
     elsif pos = ptp_off_log_interval_c then
-      if mt_v = ptp_msg_delay_resp_c then
+      if mt_v = ptp_msg_delay_resp_c or mt_v = ptp_msg_announce_c then
         return to_byte(16#7f#);
       end if;
       return to_byte(0);
     elsif pos >= ptp_off_timestamp_c
       and pos < ptp_off_timestamp_c + ptp_timestamp_bytes_t'length then
       return ts_v(pos - ptp_off_timestamp_c);
+    elsif mt_v = ptp_msg_announce_c then
+      -- The Announce body shares its offsets with the Delay_Resp
+      -- requesting port identity, so it is decoded on its own.
+      if pos = ptp_off_gm_priority1_c then
+        return to_byte(priority1_c);
+      elsif pos = ptp_off_gm_quality_c then
+        return req.clock_class;
+      elsif pos = ptp_off_gm_quality_c + 1 then
+        -- accuracy unknown, then a maximal offsetScaledLogVariance.
+        return to_byte(16#fe#);
+      elsif pos >= ptp_off_gm_quality_c + 2
+        and pos < ptp_off_gm_quality_c + 4 then
+        return to_byte(16#ff#);
+      elsif pos = ptp_off_gm_priority2_c then
+        return to_byte(priority2_c);
+      elsif pos >= ptp_off_gm_identity_c and pos < ptp_off_gm_identity_c + 8 then
+        return req.source_id(pos - ptp_off_gm_identity_c);
+      elsif pos = ptp_off_time_source_c then
+        return req.time_source;
+      end if;
+      return to_byte(0);
     elsif pos >= ptp_off_requesting_port_identity_c
       and pos < ptp_off_requesting_port_identity_c
       + ptp_port_identity_t'length then
@@ -259,6 +298,10 @@ begin
     report "PTP master sync period must be at least one second"
     severity failure;
 
+  assert announce_period_c >= 1
+    report "PTP master announce period must be at least one second"
+    severity failure;
+
   ticker: block is
     constant tick_div_c : natural := clock_i_hz_c;
 
@@ -313,8 +356,8 @@ begin
     record
       state: state_t;
       req: tx_request_t;
-      len: integer range 1 to tx_long_c;
-      pos: integer range 0 to tx_long_c-1;
+      len: integer range 1 to tx_max_c;
+      pos: integer range 0 to tx_max_c-1;
     end record;
 
     signal r, rin: regs_t;
@@ -521,7 +564,8 @@ begin
       ST_SYNC,
       ST_SYNC_WAIT,
       ST_FOLLOW_UP,
-      ST_RESP
+      ST_RESP,
+      ST_ANNOUNCE
       );
 
     type regs_t is
@@ -531,6 +575,12 @@ begin
       seq: unsigned(15 downto 0);
       sync_pending: boolean;
       sync_timer: integer range 0 to sync_period_c;
+
+      announce_seq: unsigned(15 downto 0);
+      announce_pending: boolean;
+      announce_timer: integer range 0 to announce_period_c;
+      announce_class: byte;
+      announce_source: byte;
 
       t1: timestamp_t;
       t1_wait: boolean;
@@ -558,6 +608,9 @@ begin
         r.seq <= (others => '0');
         r.sync_pending <= false;
         r.sync_timer <= sync_period_c - 1;
+        r.announce_seq <= (others => '0');
+        r.announce_pending <= false;
+        r.announce_timer <= announce_period_c - 1;
         r.t1_wait <= false;
         r.t1_valid <= false;
         r.resp_pending <= false;
@@ -565,7 +618,8 @@ begin
       end if;
     end process;
 
-    transition: process(r, enable_i, clock_identity_i, tx_capture_time_i,
+    transition: process(r, enable_i, clock_identity_i, clock_class_i,
+                        time_source_i, tx_capture_time_i,
                         tx_strobe_i, tick_s, send_done_s,
                         msg_valid_s, msg_s) is
       variable mt_v: natural;
@@ -593,6 +647,13 @@ begin
           rin.sync_timer <= sync_period_c - 1;
           rin.sync_pending <= true;
         end if;
+
+        if r.announce_timer /= 0 then
+          rin.announce_timer <= r.announce_timer - 1;
+        else
+          rin.announce_timer <= announce_period_c - 1;
+          rin.announce_pending <= announce_c;
+        end if;
       end if;
 
       case r.state is
@@ -603,7 +664,8 @@ begin
           -- The response goes first: when the Sync cycle lasts longer
           -- than the Sync period, a pending Sync is otherwise always
           -- there and responses starve.  Delaying a Sync is harmless,
-          -- its T1 is latched at the actual strobe.
+          -- its T1 is latched at the actual strobe.  The Announce
+          -- carries no timing at all and comes last.
           if r.resp_pending then
             rin.state <= ST_RESP;
           elsif r.sync_pending then
@@ -611,6 +673,11 @@ begin
             rin.t1_wait <= true;
             rin.t1_valid <= false;
             rin.state <= ST_SYNC;
+          elsif r.announce_pending then
+            rin.announce_pending <= false;
+            rin.announce_class <= byte(clock_class_i);
+            rin.announce_source <= time_source_i;
+            rin.state <= ST_ANNOUNCE;
           end if;
 
         when ST_SYNC =>
@@ -641,6 +708,12 @@ begin
             rin.resp_pending <= false;
             rin.state <= ST_IDLE;
           end if;
+
+        when ST_ANNOUNCE =>
+          if send_done_s = '1' then
+            rin.announce_seq <= r.announce_seq + 1;
+            rin.state <= ST_IDLE;
+          end if;
       end case;
 
       -- A request landing on the cycle the previous answer completes
@@ -660,6 +733,7 @@ begin
 
       if enable_i = '0' then
         rin.sync_pending <= false;
+        rin.announce_pending <= false;
         rin.resp_pending <= false;
         rin.t1_wait <= false;
         rin.t1_valid <= false;
@@ -676,10 +750,13 @@ begin
     begin
       send_req_s <= to_logic(r.state = ST_SYNC
                              or r.state = ST_FOLLOW_UP
-                             or r.state = ST_RESP);
+                             or r.state = ST_RESP
+                             or r.state = ST_ANNOUNCE);
       msg_ack_s <= to_logic(r.msg_ack);
 
       tx_req_s.source_id <= r.own_id;
+      tx_req_s.clock_class <= r.announce_class;
+      tx_req_s.time_source <= r.announce_source;
 
       case r.state is
         when ST_SYNC =>
@@ -693,6 +770,13 @@ begin
           tx_req_s.msg_type <= to_byte(ptp_msg_follow_up_c);
           tx_req_s.seq <= to_be(r.seq);
           tx_req_s.ts <= r.t1;
+          tx_req_s.req_id <= (others => (others => '0'));
+          tx_req_s.strobe <= false;
+
+        when ST_ANNOUNCE =>
+          tx_req_s.msg_type <= to_byte(ptp_msg_announce_c);
+          tx_req_s.seq <= to_be(r.announce_seq);
+          tx_req_s.ts <= timestamp_zero_c;
           tx_req_s.req_id <= (others => (others => '0'));
           tx_req_s.strobe <= false;
 

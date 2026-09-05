@@ -42,10 +42,15 @@ architecture arch of tb is
 
   constant slave_group_c : natural := 2;
   constant master_group_c : natural := 3;
+  constant announce_group_c : natural := 5;
 
   constant master_clock_c : byte_string(0 to 7) := from_hex("0011223344556677");
   constant master2_clock_c : byte_string(0 to 7) := from_hex("00aabbccddee0102");
   constant slave_clock_c : byte_string(0 to 7) := from_hex("1000000000000001");
+  constant announce_clock_c : byte_string(0 to 7) := from_hex("a1b2c3d4e5f60708");
+
+  constant announce_prio1_c : natural := 33;
+  constant announce_prio2_c : natural := 77;
 
   constant base_sec_c : natural := 5;
   constant ns_per_second_c : natural := 1000000000;
@@ -61,6 +66,8 @@ architecture arch of tb is
     return ret;
   end function;
 
+  constant announce_id_c : ptp_port_identity_t
+    := port_identity(announce_clock_c);
   constant master_id_c : ptp_port_identity_t := port_identity(master_clock_c);
   constant master2_id_c : ptp_port_identity_t := port_identity(master2_clock_c);
   constant slave_id_c : ptp_port_identity_t := port_identity(slave_clock_c);
@@ -150,7 +157,7 @@ architecture arch of tb is
   end function;
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 2);
+  signal done_s : std_ulogic_vector(0 to 3);
 
   -- Value the transmit capture file holds outside the window where a
   -- strobed frame's departure time is presented.
@@ -183,6 +190,22 @@ architecture arch of tb is
   signal m_txbuf_s : byte_string(0 to 63) := (others => x"00");
   signal m_txlen_s : natural := 0;
   signal m_txcnt_s : natural := 0;
+
+  -- Announcing master
+  signal a_rx_s, a_tx_s : bus_t;
+  signal a_cap_s : timestamp_t := timestamp_zero_c;
+  signal a_t1_s : timestamp_t := timestamp_zero_c;
+  signal a_txcap_s : timestamp_t := decoy_ts_c;
+  signal a_strobe_s : std_ulogic := '0';
+  signal a_txbuf_s : byte_string(0 to 79) := (others => x"00");
+  signal a_txlen_s : natural := 0;
+  signal a_txcnt_s : natural := 0;
+  -- Transmit backpressure, so a message can be pinned in the emitter
+  -- while requests pile up behind it.
+  signal a_hold_s : std_ulogic := '0';
+  signal a_class_s : unsigned(7 downto 0)
+    := to_unsigned(ptp_clock_class_default_c, 8);
+  signal a_source_s : byte := ptp_time_source_internal_c;
 
   -- Back to back pair
   constant bb_delay_c : integer := 1200;
@@ -657,6 +680,291 @@ begin
     wait;
   end process;
 
+  -- Announcing master: bench sink
+  ----------------------------------------------------------------
+
+  -- Hand rolled rather than built on receive(), which commits to
+  -- accepting before a frame shows up: readiness must track the hold
+  -- request on every cycle for a stall to catch a message the engine
+  -- is already offering.
+  announce_tx_mon: process is
+    variable buf_v: byte_string(0 to 79) := (others => x"00");
+    variable n_v: natural := 0;
+    variable ready_v: boolean;
+  begin
+    a_tx_s.s <= accept(cfg_c, false);
+    a_strobe_s <= '0';
+    a_txcap_s <= decoy_ts_c;
+
+    loop
+      wait until falling_edge(clock_s);
+      ready_v := a_hold_s = '0';
+      a_tx_s.s <= accept(cfg_c, ready_v);
+      wait until rising_edge(clock_s);
+
+      next when not ready_v or not is_valid(cfg_c, a_tx_s.m);
+
+      buf_v(n_v) := a_tx_s.m.data(0);
+      n_v := n_v + 1;
+
+      next when not is_last(cfg_c, a_tx_s.m);
+
+      a_txbuf_s <= buf_v;
+      a_txlen_s <= n_v;
+      a_txcnt_s <= a_txcnt_s + 1;
+
+      if tag_strobes(buf_v(0)) then
+        a_tx_s.s <= accept(cfg_c, false);
+        a_txcap_s <= a_t1_s;
+        wait until rising_edge(clock_s);
+        a_strobe_s <= '1';
+        wait until rising_edge(clock_s);
+        a_strobe_s <= '0';
+        a_txcap_s <= decoy_ts_c;
+      end if;
+
+      n_v := 0;
+      buf_v := (others => x"00");
+    end loop;
+  end process;
+
+  announce_script: process is
+    constant a_t1_c : timestamp_t := ts_of(base_sec_c, 123000);
+    constant a_t4_c : timestamp_t := ts_of(base_sec_c, 456000);
+    constant dreq_seq_c : natural := 7777;
+
+    variable txn_v: natural := 0;
+    variable type_v: natural := 0;
+    variable ann_first_v: natural := 0;
+    variable ann_count_v: natural := 0;
+    variable sync_seq_v: natural := 0;
+    variable sync_pairs_v: natural := 0;
+    -- Announces seen since the last Follow_Up.
+    variable since_sync_v: natural := 0;
+    variable in_sync_v: boolean := false;
+    variable exp_class_v: byte := to_byte(ptp_clock_class_default_c);
+    variable exp_source_v: byte := ptp_time_source_internal_c;
+
+    impure function pb(k: integer) return byte is
+    begin
+      return a_txbuf_s(hdr_size_c + k);
+    end function;
+
+    impure function ps(f, l: integer) return byte_string is
+    begin
+      return a_txbuf_s(hdr_size_c + f to hdr_size_c + l);
+    end function;
+
+    impure function seq return natural is
+    begin
+      return to_integer(from_be(ps(ptp_off_sequence_id_c,
+                                   ptp_off_sequence_id_c+1)));
+    end function;
+
+    procedure msg_get is
+    begin
+      if a_txcnt_s = txn_v then
+        wait until a_txcnt_s /= txn_v;
+      end if;
+      txn_v := a_txcnt_s;
+      wait until rising_edge(clock_s);
+      type_v := to_integer(unsigned(pb(ptp_off_type_c)(3 downto 0)));
+    end procedure;
+
+    procedure check_announce is
+    begin
+      assert_equal("announce total length", a_txlen_s,
+                   hdr_size_c + ptp_announce_length_c, failure);
+      assert_equal("announce length field",
+                   to_integer(from_be(ps(ptp_off_length_c,
+                                         ptp_off_length_c+1))),
+                   ptp_announce_length_c, failure);
+      assert_equal("announce version", pb(ptp_off_version_c), to_byte(2),
+                   failure);
+      assert_equal("announce domain", pb(ptp_off_domain_c), to_byte(0),
+                   failure);
+      assert_equal("announce peer",
+                   a_txbuf_s(tag_length_c to tag_length_c+5),
+                   ptp_multicast_addr_c, failure);
+      assert_equal("announce casting", a_txbuf_s(tag_length_c+6),
+                   l2_multicast(announce_group_c), failure);
+      assert not tag_strobes(a_txbuf_s(0))
+        report "Announce must not request the transmit strobe"
+        severity failure;
+      assert_equal("announce source",
+                   ps(ptp_off_source_port_identity_c,
+                      ptp_off_source_port_identity_c+9),
+                   announce_id_c, failure);
+      assert_equal("announce control", pb(ptp_off_control_c), to_byte(5),
+                   failure);
+      assert_equal("announce origin timestamp",
+                   ps(ptp_off_timestamp_c, ptp_off_timestamp_c+9),
+                   to_ptp_timestamp(timestamp_zero_c), failure);
+      assert_equal("announce utc offset",
+                   ps(ptp_off_utc_offset_c, ptp_off_utc_offset_c+1),
+                   byte_string'(x"00", x"00"), failure);
+      assert_equal("announce priority1", pb(ptp_off_gm_priority1_c),
+                   to_byte(announce_prio1_c), failure);
+      assert_equal("announce clock class", pb(ptp_off_gm_quality_c),
+                   exp_class_v, failure);
+      assert_equal("announce clock accuracy", pb(ptp_off_gm_quality_c+1),
+                   to_byte(16#fe#), failure);
+      assert_equal("announce offset scaled log variance",
+                   ps(ptp_off_gm_quality_c+2, ptp_off_gm_quality_c+3),
+                   byte_string'(x"ff", x"ff"), failure);
+      assert_equal("announce priority2", pb(ptp_off_gm_priority2_c),
+                   to_byte(announce_prio2_c), failure);
+      assert_equal("announce grandmaster identity",
+                   ps(ptp_off_gm_identity_c, ptp_off_gm_identity_c+7),
+                   announce_clock_c, failure);
+      assert_equal("announce steps removed",
+                   ps(ptp_off_steps_removed_c, ptp_off_steps_removed_c+1),
+                   byte_string'(x"00", x"00"), failure);
+      assert_equal("announce time source", pb(ptp_off_time_source_c),
+                   exp_source_v, failure);
+
+      assert not in_sync_v
+        report "Announce must not split a Sync from its Follow_Up"
+        severity failure;
+
+      if ann_count_v = 0 then
+        ann_first_v := seq;
+      end if;
+      assert_equal("announce sequence", seq, ann_first_v + ann_count_v,
+                   failure);
+
+      ann_count_v := ann_count_v + 1;
+      since_sync_v := since_sync_v + 1;
+    end procedure;
+
+    procedure check_sync is
+    begin
+      assert_equal("announcing master sync length", a_txlen_s,
+                   hdr_size_c + ptp_sync_length_c, failure);
+      assert tag_strobes(a_txbuf_s(0))
+        report "Sync must request the transmit strobe"
+        severity failure;
+      assert not in_sync_v
+        report "Sync while a Follow_Up is still due"
+        severity failure;
+
+      if sync_pairs_v = 0 then
+        sync_seq_v := seq;
+      end if;
+      assert_equal("announcing master sync sequence", seq, sync_seq_v,
+                   failure);
+
+      in_sync_v := true;
+    end procedure;
+
+    procedure check_follow_up is
+    begin
+      assert in_sync_v
+        report "Follow_Up without a Sync"
+        severity failure;
+      assert_equal("announcing master follow up sequence", seq, sync_seq_v,
+                   failure);
+      assert_equal("announcing master follow up timestamp",
+                   ps(ptp_off_timestamp_c, ptp_off_timestamp_c+9),
+                   to_ptp_timestamp(a_t1_c), failure);
+
+      in_sync_v := false;
+      since_sync_v := 0;
+      sync_seq_v := sync_seq_v + 1;
+      sync_pairs_v := sync_pairs_v + 1;
+    end procedure;
+
+    procedure check_current is
+    begin
+      if type_v = ptp_msg_announce_c then
+        check_announce;
+      elsif type_v = ptp_msg_sync_c then
+        check_sync;
+      elsif type_v = ptp_msg_follow_up_c then
+        check_follow_up;
+      else
+        assert false
+          report "Unexpected message from the announcing master"
+          severity failure;
+      end if;
+    end procedure;
+  begin
+    a_rx_s.m <= transfer_defaults(cfg_c);
+    a_t1_s <= a_t1_c;
+    wait for 100 ns;
+
+    -- Announces at the default advertisement, until a Sync pair has
+    -- gone by and the Announce it deferred has followed it.
+    loop
+      msg_get;
+      check_current;
+      exit when sync_pairs_v /= 0 and type_v = ptp_msg_announce_c;
+    end loop;
+
+    -- A source state change reaches the next emission, not the ones
+    -- already sent.
+    exp_class_v := to_byte(ptp_clock_class_locked_c);
+    exp_source_v := ptp_time_source_gps_c;
+    a_class_s <= to_unsigned(ptp_clock_class_locked_c, 8);
+    a_source_s <= ptp_time_source_gps_c;
+
+    loop
+      msg_get;
+      check_current;
+      exit when type_v = ptp_msg_announce_c;
+    end loop;
+
+    -- Pin the next Announce in the emitter, land a Delay_Req behind
+    -- it and let one more Announce period expire: the answer must
+    -- take the slot the stalled Announce frees.
+    a_hold_s <= '1';
+    wait for 12 us;
+
+    a_cap_s <= a_t4_c;
+    wait until rising_edge(clock_s);
+    packet_send(cfg_c, clock_s, a_rx_s.s, a_rx_s.m,
+                packet => rx_prefix_c
+                          & ptp_message(ptp_msg_delay_req_c, dreq_seq_c,
+                                        slave_id_c, timestamp_zero_c),
+                user => "0");
+    wait for 10 us;
+    a_hold_s <= '0';
+
+    msg_get;
+    assert_equal("stalled message type", type_v, ptp_msg_announce_c, failure);
+    check_announce;
+
+    msg_get;
+    assert_equal("message after the stall", type_v, ptp_msg_delay_resp_c,
+                 failure);
+    assert_equal("deferred response length", a_txlen_s,
+                 hdr_size_c + ptp_delay_resp_length_c, failure);
+    assert_equal("deferred response sequence", seq, dreq_seq_c, failure);
+    assert_equal("deferred response requester",
+                 ps(ptp_off_requesting_port_identity_c,
+                    ptp_off_requesting_port_identity_c+9),
+                 slave_id_c, failure);
+    assert_equal("deferred response receive timestamp",
+                 ps(ptp_off_timestamp_c, ptp_off_timestamp_c+9),
+                 to_ptp_timestamp(a_t4_c), failure);
+
+    msg_get;
+    assert_equal("message after the response", type_v, ptp_msg_announce_c,
+                 failure);
+    check_announce;
+
+    -- The Sync cadence survives the Announce traffic
+    loop
+      msg_get;
+      check_current;
+      exit when sync_pairs_v = 2;
+    end loop;
+
+    log_info("PTP announce OK");
+    done_s(3) <= '1';
+    wait;
+  end process;
+
   -- Back to back pair over a constant delay wire, slave clock skewed
   ----------------------------------------------------------------
 
@@ -820,6 +1128,37 @@ begin
       rx_o => m_rx_s.s,
       tx_o => m_tx_s.m,
       tx_i => m_tx_s.s
+      );
+
+  announce_dut: nsl_ptp.stream_l2.ptp_l2_master
+    generic map(
+      config_c => cfg_c,
+      header_length_c => hdr_c,
+      clock_i_hz_c => engine_hz_c,
+      sync_period_c => 4,
+      announce_c => true,
+      announce_period_c => 1,
+      priority1_c => announce_prio1_c,
+      priority2_c => announce_prio2_c,
+      multicast_group_c => announce_group_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      clock_identity_i => announce_clock_c,
+      clock_class_i => a_class_s,
+      time_source_i => a_source_s,
+
+      capture_time_i => a_cap_s,
+
+      tx_strobe_i => a_strobe_s,
+      tx_capture_time_i => a_txcap_s,
+
+      rx_i => a_rx_s.m,
+      rx_o => a_rx_s.s,
+      tx_o => a_tx_s.m,
+      tx_i => a_tx_s.s
       );
 
   bb_slave: nsl_ptp.stream_l2.ptp_l2_slave
