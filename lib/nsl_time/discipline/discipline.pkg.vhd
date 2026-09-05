@@ -126,6 +126,34 @@ package discipline is
       );
   end component;
 
+  -- Names the seconds of a clock whose boundary alignment the PPS
+  -- source already owns.  A time-of-day source describing the epoch
+  -- that began at the PREVIOUS tick arms the setter with
+  -- second_i/second_valid_i; at the next tick, when armed since the
+  -- last one, the local second must read second_i + 1: when it does
+  -- not, the second field is set to it, the nanosecond field kept,
+  -- so the phase alignment is not disturbed.  The correction only
+  -- fires while the nanosecond field is in the first quarter second
+  -- -- before alignment, naming the second would race the boundary.
+  -- The arming is consumed either way: a stale label never fires.
+  component discipline_second_setter is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+
+      second_i : in unsigned(31 downto 0);
+      second_valid_i : in std_ulogic;
+
+      tick_i : in std_ulogic;
+
+      timestamp_i : in timestamp_t;
+      timestamp_o : out timestamp_t;
+      timestamp_set_o : out std_ulogic
+      );
+  end component;
+
   -- Carries an absolute time step to the clock.  The source hands,
   -- on the command clock, the master time reference_i of an event it
   -- captured at local time sync_i; the applier sets the clock, in

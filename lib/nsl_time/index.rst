@@ -27,3 +27,6 @@ In the library, there are:
   correction, and drivers applying it to `clock <clock>`_'s
   adjustable increment or to a DAC pulling a VCTCXO.  Sources (PTP,
   PPS, custom protocols) and sinks stay interchangeable.
+
+The discipline blocks pair with a GNSS receiver through
+`nsl_ublox <../nsl_ublox/index>`_ for a GPS-disciplined grandmaster.

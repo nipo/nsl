@@ -27,7 +27,7 @@ architecture arch of tb is
   constant step_ns_c : integer := 250000;
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 1);
+  signal done_s : std_ulogic_vector(0 to 2);
 
   -- The resynchronizer, the pipeline of the source and the time base
   -- all answer a few cycles after the pulse, and nothing else moves in
@@ -115,6 +115,36 @@ architecture arch of tb is
   signal b_offset_valid_s, b_adj_valid_s, b_tick_s : std_ulogic;
   signal b_ppb_s : frequency_ppb_t;
   signal b_drv_inc_s, b_inc_s : inc_t;
+
+  -- Naming: a pps_source owning the phase, a second setter naming the
+  -- seconds and the time base taking both.  The reference second is
+  -- 5 ms longer than a simulation second, so the source realigns at
+  -- every pulse and the time base always crosses the boundary a few
+  -- milliseconds before the tick: the nanosecond field read at the
+  -- tick is far from zero, which is what tells a kept nanosecond
+  -- field apart from a zeroed one.
+  constant c_threshold_c : natural := 2000000;
+  constant c_period_c : time := 1 sec + 5 ms;
+  constant c_first_delay_c : time := 200137 us;
+  -- Where the guard phase parks the nanosecond field, past the
+  -- quarter second the setter refuses to name across.
+  constant c_guard_ns_c : integer := 400000000;
+  constant c_guard_bound_c : integer := 250000000;
+  -- Whatever the time base counts from, it is not the timescale the
+  -- time-of-day model speaks.
+  constant c_wrong_second_c : integer := 7;
+  constant c_epoch_base_c : integer := 1000;
+
+  signal c_pps_s : std_ulogic;
+  signal c_align_en_s, c_enable_s : std_ulogic;
+  signal c_time_s, c_force_s : timestamp_t;
+  signal c_force_set_s : std_ulogic;
+  signal c_adj_s : timestamp_nanosecond_offset_t;
+  signal c_adj_valid_s, c_adj_gated_s, c_tick_s : std_ulogic;
+  signal c_second_s : unsigned(31 downto 0);
+  signal c_second_valid_s : std_ulogic;
+  signal c_set_ts_s, c_clock_ts_s : timestamp_t;
+  signal c_set_valid_s, c_clock_set_s : std_ulogic;
 
 begin
 
@@ -487,6 +517,283 @@ begin
       timestamp_i => b_force_s,
       timestamp_set_i => b_force_set_s,
       timestamp_o => b_time_s
+      );
+
+  -- Scenario 5: naming the seconds of a clock the source already keeps
+  -- in phase.  The bench plays the time-of-day source of a receiver:
+  -- shortly after each pulse it says which second the epoch that pulse
+  -- opened carries, and the setter has to make the time base agree.
+  naming_test: process is
+    constant ctxt : log_context := "naming";
+    variable epoch : integer;
+    variable ticks, sets : integer;
+    variable ns_at_tick, sec_at_tick : integer;
+    variable set_ns, set_second : integer;
+    variable set_abs : std_ulogic;
+
+    procedure set_phase(constant sec : in integer;
+                        constant ns : in integer) is
+    begin
+      wait until falling_edge(clock_s);
+      c_force_s.second <= to_unsigned(sec, c_force_s.second'length);
+      c_force_s.nanosecond <= to_unsigned(ns, c_force_s.nanosecond'length);
+      c_force_set_s <= '1';
+      wait until falling_edge(clock_s);
+      c_force_set_s <= '0';
+      c_force_s.second <= (others => '-');
+      c_force_s.nanosecond <= (others => '-');
+    end procedure;
+
+    -- The time-of-day message of a receiver: it names the second the
+    -- pulse just opened, so it can only be sent once the pulse is
+    -- gone.
+    procedure tod(constant sec : in integer) is
+    begin
+      wait until falling_edge(clock_s);
+      c_second_s <= to_unsigned(sec, c_second_s'length);
+      c_second_valid_s <= '1';
+      wait until falling_edge(clock_s);
+      c_second_valid_s <= '0';
+      c_second_s <= (others => '-');
+    end procedure;
+
+    procedure pps(constant labelled : in boolean) is
+      variable t0 : time;
+    begin
+      ticks := 0;
+      sets := 0;
+      ns_at_tick := -1;
+      sec_at_tick := -1;
+      set_ns := -1;
+      set_second := -1;
+      set_abs := '0';
+      epoch := epoch + 1;
+
+      t0 := now;
+      c_pps_s <= '1';
+      for i in 1 to watch_cycles_c loop
+        wait until rising_edge(clock_s);
+        if c_tick_s = '1' then
+          ticks := ticks + 1;
+          ns_at_tick := to_integer(c_time_s.nanosecond);
+          sec_at_tick := to_integer(c_time_s.second);
+        end if;
+        if c_set_valid_s = '1' then
+          sets := sets + 1;
+          set_ns := to_integer(c_set_ts_s.nanosecond);
+          set_second := to_integer(c_set_ts_s.second);
+          set_abs := c_set_ts_s.abs_change;
+        end if;
+      end loop;
+      wait for clock_period_c / 3;
+      c_pps_s <= '0';
+      if labelled then
+        tod(epoch);
+      end if;
+      wait for c_period_c - (now - t0);
+    end procedure;
+
+    procedure check_quiet(constant what : in string) is
+    begin
+      assert_equal(ctxt, what & ", ticks", ticks, 1, failure);
+      assert_equal(ctxt, what & ", sets", sets, 0, failure);
+    end procedure;
+
+    procedure check_set(constant what : in string) is
+    begin
+      assert_equal(ctxt, what & ", ticks", ticks, 1, failure);
+      assert_equal(ctxt, what & ", sets", sets, 1, failure);
+      assert_equal(ctxt, what & ", second named", set_second, epoch, failure);
+      assert_equal(ctxt, what & ", nanosecond kept", set_ns, ns_at_tick,
+                   failure);
+      assert_equal(ctxt, what & ", absolute change", set_abs, '1', failure);
+      assert ns_at_tick > step_ns_c
+        report what & ": the time base was only "
+        & integer'image(ns_at_tick)
+        & " ns past the boundary, too close to tell a kept nanosecond"
+        & " field from a zeroed one"
+        severity failure;
+    end procedure;
+
+    -- Quiet because the time base already carries the name it would
+    -- have been given.
+    procedure check_named(constant what : in string) is
+    begin
+      check_quiet(what);
+      assert_equal(ctxt, what & ", second at tick", sec_at_tick, epoch,
+                   failure);
+    end procedure;
+
+    -- Quiet although the name is wrong and nothing but the guard could
+    -- excuse it.
+    procedure check_unnamed(constant what : in string) is
+    begin
+      check_quiet(what);
+      assert sec_at_tick /= epoch
+        report what & ": the time base already reads second "
+        & integer'image(epoch) & ", there is nothing left to name"
+        severity failure;
+      assert ns_at_tick < c_guard_bound_c
+        report what & ": the time base stood " & integer'image(ns_at_tick)
+        & " ns into the second, the guard is what kept the setter quiet"
+        severity failure;
+    end procedure;
+
+    -- Quiet because the nanosecond field says the second field cannot
+    -- be trusted.
+    procedure check_guarded(constant what : in string) is
+    begin
+      check_quiet(what);
+      assert sec_at_tick /= epoch
+        report what & ": the time base already reads second "
+        & integer'image(epoch) & ", there is nothing left to name"
+        severity failure;
+      assert ns_at_tick > c_guard_bound_c
+        report what & ": the time base stood only "
+        & integer'image(ns_at_tick)
+        & " ns into the second, the guard is not what is being tested"
+        severity failure;
+    end procedure;
+  begin
+    done_s(2) <= '0';
+    epoch := c_epoch_base_c;
+    c_pps_s <= '0';
+    c_align_en_s <= '1';
+    c_enable_s <= '1';
+    c_force_set_s <= '0';
+    c_force_s.abs_change <= '1';
+    c_force_s.second <= (others => '-');
+    c_force_s.nanosecond <= (others => '-');
+    c_second_s <= (others => '-');
+    c_second_valid_s <= '0';
+
+    wait until reset_n_s = '1';
+    wait for clock_period_c * 4;
+
+    -- A time base counting from an unrelated second, a fifth of a
+    -- second out of phase: the source has the phase back on the first
+    -- pulse, the second stays wrong until something names it.
+    set_phase(c_wrong_second_c, 0);
+    wait for c_first_delay_c;
+
+    pps(false);
+    check_quiet("acquisition pulse");
+
+    pps(true);
+    check_unnamed("first labelled pulse");
+
+    pps(true);
+    check_set("first armed tick");
+    log_info(ctxt, "named second " & integer'image(set_second)
+             & " with the time base " & integer'image(set_ns)
+             & " ns into it");
+
+    pps(true);
+    check_named("first pulse after naming");
+    pps(true);
+    check_named("second pulse after naming");
+
+    -- With the phase adjustments held off the time base is left deep
+    -- in the second at the tick, where the second field it shows says
+    -- nothing about which side of the boundary it stands on.
+    wait until falling_edge(clock_s);
+    c_align_en_s <= '0';
+    set_phase(c_wrong_second_c, c_guard_ns_c);
+
+    pps(true);
+    check_guarded("labelled tick past the guard");
+    pps(false);
+    check_guarded("second tick past the guard");
+
+    wait until falling_edge(clock_s);
+    c_align_en_s <= '1';
+
+    pps(false);
+    check_quiet("realignment pulse");
+
+    -- The time-of-day source went silent: the ticks keep coming, the
+    -- second stays wrong, and the setter has nothing to say.
+    pps(false);
+    check_unnamed("first pulse without a label");
+    pps(false);
+    check_unnamed("second pulse without a label");
+
+    pps(true);
+    check_unnamed("pulse arming before gating");
+
+    wait until falling_edge(clock_s);
+    c_enable_s <= '0';
+    pps(false);
+    check_unnamed("armed tick while disabled");
+
+    wait until falling_edge(clock_s);
+    c_enable_s <= '1';
+    pps(false);
+    check_unnamed("first pulse after re-enable");
+
+    pps(true);
+    check_unnamed("pulse arming after re-enable");
+    pps(true);
+    check_set("first armed tick after re-enable");
+    log_info(ctxt, "named second " & integer'image(set_second)
+             & " with the time base " & integer'image(set_ns)
+             & " ns into it");
+
+    pps(true);
+    check_named("pulse after the second naming");
+
+    log_info(ctxt, "second naming done");
+    done_s(2) <= '1';
+    wait;
+  end process;
+
+  c_source: nsl_time.discipline.discipline_pps_source
+    generic map(
+      align_threshold_ns_c => c_threshold_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      enable_i => '1',
+      pps_i => c_pps_s,
+      timestamp_i => c_time_s,
+      offset_o => open,
+      offset_valid_o => open,
+      adj_o => c_adj_s,
+      adj_valid_o => c_adj_valid_s,
+      tick_o => c_tick_s
+      );
+
+  c_adj_gated_s <= c_adj_valid_s and c_align_en_s;
+
+  c_dut: nsl_time.discipline.discipline_second_setter
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      enable_i => c_enable_s,
+      second_i => c_second_s,
+      second_valid_i => c_second_valid_s,
+      tick_i => c_tick_s,
+      timestamp_i => c_time_s,
+      timestamp_o => c_set_ts_s,
+      timestamp_set_o => c_set_valid_s
+      );
+
+  -- The bench seeds the time base the same way the setter names it,
+  -- and only when the setter is not talking.
+  c_clock_ts_s <= c_force_s when c_force_set_s = '1' else c_set_ts_s;
+  c_clock_set_s <= c_force_set_s or c_set_valid_s;
+
+  c_clock: nsl_time.clock.clock_adjustable
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      sub_nanosecond_inc_i => inc_nominal_c,
+      nanosecond_adj_i => c_adj_s,
+      nanosecond_adj_set_i => c_adj_gated_s,
+      timestamp_i => c_clock_ts_s,
+      timestamp_set_i => c_clock_set_s,
+      timestamp_o => c_time_s
       );
 
   driver: nsl_simulation.driver.simulation_driver
