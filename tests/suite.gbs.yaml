@@ -413,6 +413,9 @@ projects:
   - name: nco
     path: nco
     tags: [ghdl, simulation]
+  - name: ublox_nav_timegps
+    path: ublox/nav_timegps
+    tags: [ghdl, simulation]
   - name: ptp_stream_l2
     path: ptp/stream_l2
     tags: [ghdl, simulation]
