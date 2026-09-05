@@ -3,11 +3,26 @@ use ieee.std_logic_1164.all;
 
 package assertion is
 
-  -- Hacky procedure for failing elaboration if condition is not true.
-  procedure synth_assert(constant condition_c : in boolean);
-  
   function resolve(c: boolean) return integer;
-  
+
+  -- Fails elaboration with the message when the condition does not
+  -- hold; elaborates to nothing otherwise.  Instantiable, so
+  -- generated code can drop it in an instantiation list.
+  component synth_assert is
+    generic(
+      message_c : string;
+      condition_c : boolean
+      );
+    port(
+      unused_i : in std_ulogic
+      );
+  end component;
+
+  -- Variant with a procedure
+  procedure synth_assert_proc(
+    constant condition_c : in boolean;
+    constant msg_c: in string);
+
 end package;
 
 package body assertion is
@@ -20,12 +35,18 @@ package body assertion is
     else
       return 1;
     end if;
-  end function;  
+  end function;
 
-  procedure synth_assert(constant condition_c : in boolean)
+  procedure synth_assert_proc(
+    constant condition_c : in boolean;
+    constant msg_c: in string)
   is
     variable assert_fail: std_ulogic_vector(0 to 0);
   begin
+    assert condition_c
+      report msg_c
+      severity failure;
+
     assert_fail(resolve(condition_c)) := '-';
   end procedure;
 
