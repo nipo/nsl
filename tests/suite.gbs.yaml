@@ -434,6 +434,8 @@ projects:
   - name: precise_clock_pps
     path: precise_clock/pps
     tags: [ghdl, simulation]
+  - name: precise_clock_pps_source
+    path: precise_clock/pps_source
   - name: mii_ipg
     path: mii_ipg
     tags: [ghdl, simulation]

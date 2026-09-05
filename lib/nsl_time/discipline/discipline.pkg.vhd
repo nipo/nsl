@@ -89,6 +89,43 @@ package discipline is
       );
   end component;
 
+  -- Turns an asynchronous PPS into discipline material, in the time
+  -- base clock domain: the pulse is resynchronized, the local time
+  -- sampled at its edge, and the signed distance from the nearest
+  -- second boundary becomes either a measurement on
+  -- offset_o/offset_valid_o (local minus reference, servo currency)
+  -- or, beyond align_threshold_ns_c, a one-shot phase adjustment on
+  -- adj_o/adj_valid_o for clock_adjustable's nanosecond_adj port,
+  -- aligning the nanosecond field to the pulse without touching the
+  -- second count -- naming the second is the job of a time-of-day
+  -- source.  tick_o repeats the resynchronized pulse.  The
+  -- synchronizer adds a constant few-cycle latency the loop cannot
+  -- observe; calibrating it out is the consumer's business.
+  -- Deasserting enable_i silences every output, for gating on the
+  -- receiver's fix status.
+  component discipline_pps_source is
+    generic(
+      align_threshold_ns_c : natural := 10000
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      enable_i : in std_ulogic := '1';
+      pps_i : in std_ulogic;
+
+      timestamp_i : in timestamp_t;
+
+      offset_o : out timestamp_nanosecond_offset_t;
+      offset_valid_o : out std_ulogic;
+
+      adj_o : out timestamp_nanosecond_offset_t;
+      adj_valid_o : out std_ulogic;
+
+      tick_o : out std_ulogic
+      );
+  end component;
+
   -- Carries an absolute time step to the clock.  The source hands,
   -- on the command clock, the master time reference_i of an event it
   -- captured at local time sync_i; the applier sets the clock, in
