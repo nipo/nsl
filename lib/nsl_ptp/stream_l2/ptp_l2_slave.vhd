@@ -14,6 +14,7 @@ use nsl_math.int_ext.all;
 use nsl_mii.timestamping.all;
 use nsl_time.timestamp.all;
 use work.ptp.all;
+use work.stream_l2.all;
 
 entity ptp_l2_slave is
   generic(
@@ -33,13 +34,11 @@ entity ptp_l2_slave is
     enable_i : in std_ulogic := '1';
     clock_identity_i : in byte_string(0 to 7);
 
-    timestamp_i : in timestamp_t;
-
     capture_id_o : out tag_id_t;
     capture_time_i : in timestamp_t;
 
     tx_strobe_i : in std_ulogic;
-    tx_id_i : in tag_id_t;
+    tx_capture_time_i : in timestamp_t;
 
     rx_i : in master_t;
     rx_o : out slave_t;
@@ -49,6 +48,7 @@ entity ptp_l2_slave is
     offset_o : out timestamp_nanosecond_offset_t;
     offset_valid_o : out std_ulogic;
     step_o : out timestamp_t;
+    step_sync_o : out timestamp_t;
     step_valid_o : out std_ulogic;
     path_delay_o : out timestamp_nanosecond_offset_t;
     locked_o : out std_ulogic
@@ -71,10 +71,6 @@ architecture beh of ptp_l2_slave is
   constant l2_ctx_c : byte_string(0 to l2_context_length_c-1)
     := to_bytes(l2_context_t'(peer => ptp_multicast_addr_c,
                              casting => l2_multicast(multicast_group_c)));
-
-  -- Only one event frame is outstanding at a time, so any fixed
-  -- identifier designates it unambiguously.
-  constant tx_tag_id_c : tag_id_t := "0000";
 
   -- Nanosecond arithmetic domain, wide enough for the sum of two
   -- in-range differences plus a wire correction.
@@ -236,7 +232,7 @@ architecture beh of ptp_l2_slave is
     variable ret: byte_string(0 to config_c.data_width-1);
   begin
     if pos < tag_length_c then
-      ret(0) := tag_build(true, tx_tag_id_c);
+      ret(0) := tag_build(true, ptp_tx_tag_id_c);
     elsif pos < tag_length_c + l2_context_length_c then
       ret(0) := l2_ctx_c(pos - tag_length_c);
     elsif pos < hdr_size_c then
@@ -577,7 +573,6 @@ begin
       ST_A_READY,
       ST_DECIDE,
       ST_STEP,
-      ST_STEP_LAG,
       ST_STEP_READY,
       -- Delay request exchange
       ST_D_READY,
@@ -621,6 +616,7 @@ begin
       offset: ns_t;
       offset_valid: boolean;
       step: timestamp_t;
+      step_sync: timestamp_t;
       step_valid: boolean;
 
       sync_timer: integer range 0 to sync_timeout_c;
@@ -666,7 +662,7 @@ begin
       end if;
     end process;
 
-    transition: process(r, enable_i, clock_identity_i, timestamp_i,
+    transition: process(r, enable_i, clock_identity_i, tx_capture_time_i,
                         tx_strobe_i, tick_s, send_done_s,
                         msg_valid_s, msg_s) is
       variable mpd_v: ns_t;
@@ -690,11 +686,13 @@ begin
       mt_v := msg_type(msg_s);
 
       -- The transmit strobe of the only outstanding event frame gives
-      -- T3, whatever the state the rest of the engine is in.
+      -- T3, whatever the state the rest of the engine is in.  The
+      -- strobe reports the capture register already written, so its
+      -- read port is sampled on the same cycle.
       if tx_strobe_i = '1' and r.t3_wait then
         rin.t3_wait <= false;
         rin.t3_valid <= true;
-        rin.t3 <= timestamp_i;
+        rin.t3 <= tx_capture_time_i;
       end if;
 
       if tick_s = '1' and r.locked then
@@ -872,29 +870,18 @@ begin
           end if;
 
         when ST_STEP =>
-          -- The step must land as master time at application, not at
-          -- the Sync's departure: the local time elapsed since the
-          -- Sync arrived is measured and added on top of T1 and the
-          -- path delay, compensating the frames and the processing
-          -- in between.
-          rin.ts_a <= timestamp_i;
-          rin.ts_b <= r.t2;
-          rin.state <= ST_DIFF0;
-          rin.ret <= ST_STEP_LAG;
-
-        when ST_STEP_LAG =>
+          -- The step is the master time of the Sync's departure plus
+          -- the path delay; T2 travels with it so the applier can add
+          -- the local time elapsed since the Sync arrived.
           rin.ts_a <= r.t1;
-          if r.res_ok then
-            rin.delta <= resize(mpd_v + r.res, 32);
-          else
-            rin.delta <= resize(mpd_v, 32);
-          end if;
+          rin.delta <= resize(mpd_v, 32);
           rin.state <= ST_ADD0;
           rin.ret <= ST_STEP_READY;
 
         when ST_STEP_READY =>
           rin.step <= r.ts_r;
           rin.step.abs_change <= '1';
+          rin.step_sync <= r.t2;
           rin.step_valid <= true;
           rin.state <= ST_IDLE;
 
@@ -964,6 +951,7 @@ begin
       offset_o <= resize(r.offset, timestamp_nanosecond_offset_t'length);
       offset_valid_o <= to_logic(r.offset_valid);
       step_o <= r.step;
+      step_sync_o <= r.step_sync;
       step_valid_o <= to_logic(r.step_valid);
       path_delay_o <= resize(r.pdelay, timestamp_nanosecond_offset_t'length);
       locked_o <= to_logic(r.locked);

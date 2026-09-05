@@ -16,14 +16,20 @@ use nsl_time.timestamp.all;
 --
 -- Packets on the pipes carry the header_length_c blocks, then the
 -- PTP message; the FIRST block must be the timestamping tag of
--- nsl_mii.timestamping.  On receive the engine claims the capture
--- register the tag designates through the capture_id_o /
--- capture_time_i read port the moment the tag byte enters, giving
--- the frame's SFD time.  On transmit the engine fills the tag
--- itself, requesting the strobe on its event messages, and latches
--- timestamp_i when tx_strobe_i fires; only the engine's event
--- messages request strobes, so no identifier bookkeeping is needed
--- beyond one outstanding event frame, which the protocol
+-- nsl_mii.timestamping.  The engines never observe the time base:
+-- every timestamp reaches them as a captured value, so the clock
+-- may live in any domain.
+--
+-- On receive the engine claims the capture register the tag
+-- designates through the capture_id_o / capture_time_i read port
+-- the moment the tag byte enters, giving the frame's SFD time.  On
+-- transmit the engine fills the tag itself with ptp_tx_tag_id_c,
+-- requesting the strobe on its event messages; tx_strobe_i must
+-- pulse once that event's capture register is written (the a_done_o
+-- of the transmit timestamping_sideband_resync), and the engine
+-- then claims tx_capture_time_i, the transmit capture file read at
+-- ptp_tx_tag_id_c.  Only the engine's event messages request
+-- strobes, and one is outstanding at a time, which the protocol
 -- guarantees.
 --
 -- The layer-2 context of transmitted messages carries multicast
@@ -37,16 +43,23 @@ use nsl_time.timestamp.all;
 -- it.  Engines are byte-wide only.
 package stream_l2 is
 
+  -- Identifier the engines put in the tag of their event messages:
+  -- the transmit capture file is read at this identifier.
+  constant ptp_tx_tag_id_c : tag_id_t := (others => '0');
+
   -- Slave ordinary clock.  Collects T1/T2 from Sync (and Follow_Up
   -- when two-step, correction fields folded in), T3/T4 from a
   -- Delay_Req exchange every delay_req_period_c seconds, and streams
   -- discipline measurements: offset_o qualified by offset_valid_o is
   -- local time minus master time (nsl_time.discipline currency).
   -- When the offset magnitude exceeds step_threshold_ns_c or
-  -- overflows the offset range, step_o qualified by step_valid_o
-  -- requests an absolute clock set to the estimated master time
-  -- instead.  path_delay_o holds the last mean path delay.
-  -- locked_o reports a master is being tracked.
+  -- overflows the offset range, a step is requested instead:
+  -- step_o, qualified by step_valid_o, is the master time of the
+  -- Sync's departure plus the path delay, and step_sync_o the local
+  -- capture time of its arrival; hand both to
+  -- nsl_time.discipline.discipline_step_applier, which adds the
+  -- local time elapsed since.  path_delay_o holds the last mean
+  -- path delay.  locked_o reports a master is being tracked.
   component ptp_l2_slave is
     generic(
       config_c : config_t;
@@ -65,13 +78,11 @@ package stream_l2 is
       enable_i : in std_ulogic := '1';
       clock_identity_i : in byte_string(0 to 7);
 
-      timestamp_i : in timestamp_t;
-
       capture_id_o : out tag_id_t;
       capture_time_i : in timestamp_t;
 
       tx_strobe_i : in std_ulogic;
-      tx_id_i : in tag_id_t;
+      tx_capture_time_i : in timestamp_t;
 
       rx_i : in master_t;
       rx_o : out slave_t;
@@ -81,6 +92,7 @@ package stream_l2 is
       offset_o : out timestamp_nanosecond_offset_t;
       offset_valid_o : out std_ulogic;
       step_o : out timestamp_t;
+      step_sync_o : out timestamp_t;
       step_valid_o : out std_ulogic;
       path_delay_o : out timestamp_nanosecond_offset_t;
       locked_o : out std_ulogic
@@ -88,11 +100,12 @@ package stream_l2 is
   end component;
 
   -- Master ordinary clock, static: emits a two-step Sync every
-  -- sync_period_c seconds with the strobe-requesting tag, latches
-  -- timestamp_i at the strobe and follows up with the precise origin
-  -- timestamp; answers every Delay_Req with a Delay_Resp carrying
-  -- the requester's receive time from the capture file and its port
-  -- identity.
+  -- sync_period_c seconds with the strobe-requesting tag, claims
+  -- its departure time from the transmit capture file once
+  -- tx_strobe_i reports it written, and follows up with the precise
+  -- origin timestamp; answers every Delay_Req with a Delay_Resp
+  -- carrying the requester's receive time from the capture file and
+  -- its port identity.
   component ptp_l2_master is
     generic(
       config_c : config_t;
@@ -109,13 +122,11 @@ package stream_l2 is
       enable_i : in std_ulogic := '1';
       clock_identity_i : in byte_string(0 to 7);
 
-      timestamp_i : in timestamp_t;
-
       capture_id_o : out tag_id_t;
       capture_time_i : in timestamp_t;
 
       tx_strobe_i : in std_ulogic;
-      tx_id_i : in tag_id_t;
+      tx_capture_time_i : in timestamp_t;
 
       rx_i : in master_t;
       rx_o : out slave_t;

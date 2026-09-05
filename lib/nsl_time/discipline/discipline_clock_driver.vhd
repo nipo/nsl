@@ -2,20 +2,21 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, work;
+library nsl_clocking, nsl_math, work;
 use work.discipline.all;
 use nsl_math.fixed.all;
 
 entity discipline_clock_driver is
   generic(
-    clock_i_hz_c : natural
+    clock_hz_c : natural
     );
   port(
-    clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
+    clock_i : in std_ulogic;
     freq_offset_ppb_i : in frequency_ppb_t;
 
+    rtc_clock_i : in std_ulogic;
     sub_nanosecond_inc_o : out ufixed
     );
 end entity;
@@ -28,7 +29,7 @@ architecture beh of discipline_clock_driver is
   -- correction happens once, on the output.
   constant inner_right_c : integer := inc_right_c - 4;
 
-  constant nominal_ns_c : real := 1.0e9 / real(clock_i_hz_c);
+  constant nominal_ns_c : real := 1.0e9 / real(clock_hz_c);
   -- Nanoseconds per cycle per part per billion.
   constant ppb_ns_c : real := nominal_ns_c * 1.0e-9;
 
@@ -66,40 +67,78 @@ architecture beh of discipline_clock_driver is
   constant nominal_inc_c : ufixed(inc_left_c downto inc_right_c)
     := to_ufixed_saturate(nominal_c, inc_left_c, inc_right_c);
 
-  type regs_t is
-  record
-    inc : ufixed(inc_left_c downto inc_right_c);
-  end record;
-
-  signal r, rin : regs_t;
+  -- What crosses is the correction, not the increment it maps to: the
+  -- crossing is then 24 bits whatever resolution the time base asks
+  -- from sub_nanosecond_inc_o, and the arithmetic lands in the domain
+  -- that consumes it.  The input register of the slice is the sampling
+  -- point in the command domain, so freq_offset_ppb_i is wired to it
+  -- directly.
+  signal cross_data_s, crossed_data_s
+    : std_ulogic_vector(frequency_ppb_t'length-1 downto 0);
+  signal crossed_valid_s : std_ulogic;
 
 begin
 
-  regs: process(clock_i, reset_n_i) is
+  cross_data_s <= std_ulogic_vector(freq_offset_ppb_i);
+
+  crossing: nsl_clocking.interdomain.interdomain_fifo_slice
+    generic map(
+      data_width_c => frequency_ppb_t'length
+      )
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i(0) => clock_i,
+      clock_i(1) => rtc_clock_i,
+
+      in_data_i => cross_data_s,
+      in_valid_i => '1',
+      in_ready_o => open,
+
+      out_data_o => crossed_data_s,
+      out_ready_i => '1',
+      out_valid_o => crossed_valid_s
+      );
+
+  rtc_side: block is
+    type regs_t is
+    record
+      inc : ufixed(inc_left_c downto inc_right_c);
+    end record;
+
+    signal r, rin : regs_t;
   begin
-    if rising_edge(clock_i) then
-      r <= rin;
-    end if;
+    regs: process(rtc_clock_i, reset_n_i) is
+    begin
+      if rising_edge(rtc_clock_i) then
+        r <= rin;
+      end if;
 
-    if reset_n_i = '0' then
-      r.inc <= nominal_inc_c;
-    end if;
-  end process;
+      if reset_n_i = '0' then
+        r.inc <= nominal_inc_c;
+      end if;
+    end process;
 
-  transition: process(r, freq_offset_ppb_i) is
-    variable correction : inner_t;
-  begin
-    rin <= r;
+    -- An increment that is a mixture of two corrections is a wrong
+    -- frequency, and one cycle of it is a time error the time base
+    -- never gives back.  The register therefore only ever loads from a
+    -- word the crossing has committed.
+    transition: process(r, crossed_data_s, crossed_valid_s) is
+      variable correction : inner_t;
+    begin
+      rin <= r;
 
-    correction := mul(to_sfixed(freq_offset_ppb_i), ppb_scale_c,
-                      inner_t'left, inner_t'right);
-    rin.inc <= to_ufixed_saturate(add_saturate(nominal_c, correction),
-                                  inc_left_c, inc_right_c);
-  end process;
+      correction := mul(to_sfixed(signed(crossed_data_s)), ppb_scale_c,
+                        inner_t'left, inner_t'right);
+      if crossed_valid_s = '1' then
+        rin.inc <= to_ufixed_saturate(add_saturate(nominal_c, correction),
+                                      inc_left_c, inc_right_c);
+      end if;
+    end process;
 
-  moore: process(r) is
-  begin
-    sub_nanosecond_inc_o <= r.inc;
-  end process;
+    moore: process(r) is
+    begin
+      sub_nanosecond_inc_o <= r.inc;
+    end process;
+  end block;
 
 end architecture;

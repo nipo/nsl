@@ -15,6 +15,7 @@ use nsl_inet.mac.all;
 use nsl_inet.stream.all;
 use nsl_inet.stream_ethernet.all;
 use nsl_ptp.ptp.all;
+use nsl_ptp.stream_l2.all;
 use nsl_time.timestamp.all;
 
 -- PTP ordinary clocks against scripted peers.  A slave is driven by a
@@ -151,27 +152,33 @@ architecture arch of tb is
   signal clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to 2);
 
+  -- Value the transmit capture file holds outside the window where a
+  -- strobed frame's departure time is presented.
+  constant decoy_ts_c : timestamp_t := ts_of(9, 999999999);
+
   -- Scripted slave
   signal s_rx_s, s_tx_s : bus_t;
-  signal s_cap_s, s_t3_s : timestamp_t := timestamp_zero_c;
+  signal s_cap_s : timestamp_t := timestamp_zero_c;
+  -- Departure time the bench will present for the next strobed frame
+  signal s_t3_s : timestamp_t := timestamp_zero_c;
+  signal s_txcap_s : timestamp_t := decoy_ts_c;
   signal s_strobe_s : std_ulogic := '0';
   signal s_txbuf_s : byte_string(0 to 63) := (others => x"00");
   signal s_txlen_s : natural := 0;
   signal s_txcnt_s : natural := 0;
   signal s_offset_s, s_pdelay_s : timestamp_nanosecond_offset_t;
   signal s_offset_valid_s, s_step_valid_s, s_locked_s : std_ulogic;
-  signal s_step_s : timestamp_t;
+  signal s_step_s, s_step_sync_s : timestamp_t;
   signal s_off_last_s : timestamp_nanosecond_offset_t;
   signal s_off_cnt_s : natural := 0;
-  signal s_step_last_s : timestamp_t;
+  signal s_step_last_s, s_step_sync_last_s : timestamp_t;
   signal s_step_cnt_s : natural := 0;
 
   -- Scripted master
-  constant decoy_ts_c : timestamp_t := ts_of(9, 999999999);
   signal m_rx_s, m_tx_s : bus_t;
   signal m_cap_s : timestamp_t := timestamp_zero_c;
   signal m_t1_s : timestamp_t := timestamp_zero_c;
-  signal m_ts_s : timestamp_t := decoy_ts_c;
+  signal m_txcap_s : timestamp_t := decoy_ts_c;
   signal m_strobe_s : std_ulogic := '0';
   signal m_txbuf_s : byte_string(0 to 63) := (others => x"00");
   signal m_txlen_s : natural := 0;
@@ -182,11 +189,11 @@ architecture arch of tb is
   constant bb_skew_c : integer := 3500;
   signal bb_m2s_s, bb_s2m_s : bus_t;
   signal bb_scap_s, bb_mcap_s : timestamp_t := timestamp_zero_c;
-  signal bb_sts_s, bb_mts_s : timestamp_t := timestamp_zero_c;
+  signal bb_stxcap_s, bb_mtxcap_s : timestamp_t := timestamp_zero_c;
   signal bb_sstrobe_s, bb_mstrobe_s : std_ulogic := '0';
   signal bb_offset_s, bb_pdelay_s : timestamp_nanosecond_offset_t;
   signal bb_offset_valid_s, bb_step_valid_s, bb_locked_s : std_ulogic;
-  signal bb_step_s : timestamp_t;
+  signal bb_step_s, bb_step_sync_s : timestamp_t;
   signal bb_off_last_s : timestamp_nanosecond_offset_t;
   signal bb_off_cnt_s : natural := 0;
 
@@ -202,6 +209,7 @@ begin
   begin
     s_tx_s.s <= accept(cfg_c, false);
     s_strobe_s <= '0';
+    s_txcap_s <= decoy_ts_c;
     wait for 100 ns;
 
     loop
@@ -219,10 +227,16 @@ begin
       s_txcnt_s <= s_txcnt_s + 1;
 
       if tag_strobes(buf_v(0)) then
+        -- The capture register is written first, the done strobe
+        -- follows.  The value is only presented for the strobe cycle,
+        -- so an engine reading the capture file at any other time
+        -- cannot pass unnoticed.
+        s_txcap_s <= s_t3_s;
         wait until rising_edge(clock_s);
         s_strobe_s <= '1';
         wait until rising_edge(clock_s);
         s_strobe_s <= '0';
+        s_txcap_s <= decoy_ts_c;
       end if;
     end loop;
   end process;
@@ -237,6 +251,7 @@ begin
 
       if s_step_valid_s = '1' then
         s_step_last_s <= s_step_s;
+        s_step_sync_last_s <= s_step_sync_s;
         s_step_cnt_s <= s_step_cnt_s + 1;
       end if;
     end if;
@@ -333,6 +348,8 @@ begin
     assert tag_strobes(s_txbuf_s(0))
       report "Delay_Req must request the transmit strobe"
       severity failure;
+    assert_equal("delay request tag id", tag_id(s_txbuf_s(0)),
+                 ptp_tx_tag_id_c, failure);
     assert_equal("delay request peer", s_txbuf_s(tag_length_c
                                                  to tag_length_c+5),
                  ptp_multicast_addr_c, failure);
@@ -406,11 +423,9 @@ begin
     rx_send(ptp_message(ptp_msg_follow_up_c, 5, master_id_c, t1e_c), t2e_c);
     offset_expect("resequenced sync", 5, 3050, 950);
 
-    -- Beyond the step threshold, a clock set is requested instead.
-    -- The engine adds the local time elapsed since the Sync arrived
-    -- on top of T1 and the path delay; holding the local clock at T2
-    -- makes that term zero.
-    s_t3_s <= t2f_c;
+    -- Beyond the step threshold, a clock set is requested instead:
+    -- the master time of the Sync's departure plus the path delay,
+    -- with the local arrival time of that Sync alongside.
     assert_equal("no step yet", s_step_cnt_s, 0, failure);
     rx_send(ptp_message(ptp_msg_sync_c, 6, master_id_c, timestamp_zero_c,
                         two_step => true),
@@ -426,7 +441,10 @@ begin
     assert_equal("step nanosecond", to_integer(s_step_last_s.nanosecond),
                  100000950, failure);
     assert_equal("step is absolute", s_step_last_s.abs_change, '1', failure);
-    s_t3_s <= t3a_c;
+    assert_equal("step sync second", s_step_sync_last_s.second,
+                 t2f_c.second, failure);
+    assert_equal("step sync nanosecond", s_step_sync_last_s.nanosecond,
+                 t2f_c.nanosecond, failure);
 
     -- Delay request sequence numbers move on
     dreq_get;
@@ -466,7 +484,7 @@ begin
   begin
     m_tx_s.s <= accept(cfg_c, false);
     m_strobe_s <= '0';
-    m_ts_s <= decoy_ts_c;
+    m_txcap_s <= decoy_ts_c;
     wait for 100 ns;
 
     loop
@@ -484,15 +502,16 @@ begin
       m_txcnt_s <= m_txcnt_s + 1;
 
       if tag_strobes(buf_v(0)) then
-        -- The strobe time is only presented for the strobe cycle, so a
-        -- follow up sending its input rather than the latched time
-        -- cannot pass unnoticed.
-        m_ts_s <= m_t1_s;
+        -- The capture register is written first, the done strobe
+        -- follows.  The value is only presented for the strobe cycle,
+        -- so a follow up sending the capture file's current contents
+        -- rather than the latched time cannot pass unnoticed.
+        m_txcap_s <= m_t1_s;
         wait until rising_edge(clock_s);
         m_strobe_s <= '1';
         wait until rising_edge(clock_s);
         m_strobe_s <= '0';
-        m_ts_s <= decoy_ts_c;
+        m_txcap_s <= decoy_ts_c;
       end if;
     end loop;
   end process;
@@ -560,6 +579,8 @@ begin
     assert tag_strobes(m_txbuf_s(0))
       report "Sync must request the transmit strobe"
       severity failure;
+    assert_equal("sync tag id", tag_id(m_txbuf_s(0)), ptp_tx_tag_id_c,
+                 failure);
     assert m_txbuf_s(hdr_size_c + ptp_off_flags_c)(ptp_flag0_two_step_c) = '1'
       report "Sync must carry the two step flag"
       severity failure;
@@ -668,7 +689,9 @@ begin
       if is_last(cfg_c, bb_s2m_s.m) then
         started_v := false;
         if strobes_v then
-          bb_sts_s <= ts_of_ns(start_v + bb_skew_c);
+          -- Capture register written, then the done strobe: both
+          -- reach the engine on the same cycle, the value first.
+          bb_stxcap_s <= ts_of_ns(start_v + bb_skew_c);
           bb_sstrobe_s <= '1';
           wait until rising_edge(clock_s);
           bb_sstrobe_s <= '0';
@@ -694,7 +717,7 @@ begin
       if is_last(cfg_c, bb_m2s_s.m) then
         started_v := false;
         if strobes_v then
-          bb_mts_s <= ts_of_ns(start_v);
+          bb_mtxcap_s <= ts_of_ns(start_v);
           bb_mstrobe_s <= '1';
           wait until rising_edge(clock_s);
           bb_mstrobe_s <= '0';
@@ -755,12 +778,10 @@ begin
 
       clock_identity_i => slave_clock_c,
 
-      timestamp_i => s_t3_s,
-
       capture_time_i => s_cap_s,
 
       tx_strobe_i => s_strobe_s,
-      tx_id_i => "0000",
+      tx_capture_time_i => s_txcap_s,
 
       rx_i => s_rx_s.m,
       rx_o => s_rx_s.s,
@@ -770,6 +791,7 @@ begin
       offset_o => s_offset_s,
       offset_valid_o => s_offset_valid_s,
       step_o => s_step_s,
+      step_sync_o => s_step_sync_s,
       step_valid_o => s_step_valid_s,
       path_delay_o => s_pdelay_s,
       locked_o => s_locked_s
@@ -789,12 +811,10 @@ begin
 
       clock_identity_i => master_clock_c,
 
-      timestamp_i => m_ts_s,
-
       capture_time_i => m_cap_s,
 
       tx_strobe_i => m_strobe_s,
-      tx_id_i => "0000",
+      tx_capture_time_i => m_txcap_s,
 
       rx_i => m_rx_s.m,
       rx_o => m_rx_s.s,
@@ -817,12 +837,10 @@ begin
 
       clock_identity_i => slave_clock_c,
 
-      timestamp_i => bb_sts_s,
-
       capture_time_i => bb_scap_s,
 
       tx_strobe_i => bb_sstrobe_s,
-      tx_id_i => "0000",
+      tx_capture_time_i => bb_stxcap_s,
 
       rx_i => bb_m2s_s.m,
       rx_o => bb_m2s_s.s,
@@ -832,6 +850,7 @@ begin
       offset_o => bb_offset_s,
       offset_valid_o => bb_offset_valid_s,
       step_o => bb_step_s,
+      step_sync_o => bb_step_sync_s,
       step_valid_o => bb_step_valid_s,
       path_delay_o => bb_pdelay_s,
       locked_o => bb_locked_s
@@ -851,12 +870,10 @@ begin
 
       clock_identity_i => master_clock_c,
 
-      timestamp_i => bb_mts_s,
-
       capture_time_i => bb_mcap_s,
 
       tx_strobe_i => bb_mstrobe_s,
-      tx_id_i => "0000",
+      tx_capture_time_i => bb_mtxcap_s,
 
       rx_i => bb_s2m_s.m,
       rx_o => bb_s2m_s.s,

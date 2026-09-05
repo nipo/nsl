@@ -30,6 +30,13 @@ use nsl_ptp.stream_l2.all;
 -- drivers cross-connected, timestamping shims, mac and ethernet
 -- layers, a master ordinary clock on one side and, on the other, a
 -- slave closing the discipline loop on its own adjustable clock.
+--
+-- The slave's time base lives in its own clock domain, unrelated to
+-- the network stack: captures cross through the sideband
+-- resynchronizers, the frequency correction through the two-clock
+-- driver, the step through the applier.  The master keeps everything
+-- on one clock, proving the degenerate case of the same components.
+--
 -- The slave starts a hundred seconds behind: the first Sync makes it
 -- step near the master, then measurements keep it there.  A skew
 -- measurer between the two clocks is the truth metric the bench
@@ -56,7 +63,7 @@ architecture arch of tb is
   constant slave_identity_c : byte_string(0 to 7)
     := from_hex("0221cafeffdec100");
 
-  signal clock_s, mii_clock_s, reset_n_s : std_ulogic;
+  signal clock_s, mii_clock_s, rtc_clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to 0);
 
   type mii_wire_t is
@@ -73,7 +80,7 @@ architecture arch of tb is
 
   signal locked_s, offset_valid_s, step_valid_s : std_ulogic;
   signal offset_meas_s, path_delay_s : timestamp_nanosecond_offset_t;
-  signal step_s : timestamp_t;
+  signal step_s, step_sync_s : timestamp_t;
 
   signal skew_s : timestamp_nanosecond_offset_t;
 
@@ -92,8 +99,9 @@ begin
     signal rx_sfd_s, tx_sfd_s : std_ulogic;
     signal rx_tag_sfd_s : std_ulogic;
     signal rx_tag_id_s, tx_strobe_id_s, capture_id_s : tag_id_t;
-    signal tx_strobe_s : std_ulogic;
-    signal capture_time_s : timestamp_t;
+    signal tx_strobe_s, tx_cap_strobe_s, tx_done_s : std_ulogic;
+    signal tx_cap_id_s : tag_id_t;
+    signal capture_time_s, tx_capture_time_s : timestamp_t;
     signal tx_er_s : std_ulogic;
   begin
     mii: nsl_mii.mii.mii_axi_driver_resync
@@ -170,6 +178,33 @@ begin
         out_i => strober_to_prefill_s.s
         );
 
+    tx_resync: nsl_mii.timestamping.timestamping_sideband_resync
+      port map(
+        reset_n_i => reset_n_s,
+
+        a_clock_i => clock_s,
+        a_strobe_i => tx_strobe_s,
+        a_id_i => tx_strobe_id_s,
+        a_done_o => tx_done_s,
+
+        b_clock_i => clock_s,
+        b_strobe_o => tx_cap_strobe_s,
+        b_id_o => tx_cap_id_s
+        );
+
+    tx_capture: nsl_time.capture.timestamp_capture
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        timestamp_i => master_time_s,
+        strobe_i => tx_cap_strobe_s,
+        id_i => tx_cap_id_s,
+
+        read_id_i => ptp_tx_tag_id_c,
+        read_timestamp_o => tx_capture_time_s
+        );
+
     prefill: nsl_amba.axi4_stream.axi4_stream_prefill_buffer
       generic map(
         config_c => axi4_flit_cfg,
@@ -199,11 +234,8 @@ begin
         out_i => mac_to_eth_s.s
         );
 
-    -- The transmit path of the ethernet layer feeds the strober
-    -- through the mac transmitter: the tag block crafted by the
-    -- engine rides in front of the frame.
     mac_eth: block is
-      signal eth_to_mactx_s, mactx_out_s : bus_t;
+      signal eth_to_mactx_s : bus_t;
     begin
       eth: nsl_inet.stream_ethernet.stream_ethernet_layer
         generic map(
@@ -257,13 +289,11 @@ begin
 
         clock_identity_i => master_identity_c,
 
-        timestamp_i => master_time_s,
-
         capture_id_o => capture_id_s,
         capture_time_i => capture_time_s,
 
-        tx_strobe_i => tx_strobe_s,
-        tx_id_i => tx_strobe_id_s,
+        tx_strobe_i => tx_done_s,
+        tx_capture_time_i => tx_capture_time_s,
 
         rx_i => eth_to_ptp_s.m,
         rx_o => eth_to_ptp_s.s,
@@ -290,8 +320,12 @@ begin
     signal rx_sfd_s, tx_sfd_s : std_ulogic;
     signal rx_tag_sfd_s : std_ulogic;
     signal rx_tag_id_s, tx_strobe_id_s, capture_id_s : tag_id_t;
-    signal tx_strobe_s : std_ulogic;
-    signal capture_time_s : timestamp_t;
+    signal rx_cap_strobe_s, tx_cap_strobe_s : std_ulogic;
+    signal rx_cap_id_s, tx_cap_id_s : tag_id_t;
+    signal tx_strobe_s, tx_done_s : std_ulogic;
+    signal capture_time_s, tx_capture_time_s : timestamp_t;
+    signal step_apply_s : timestamp_t;
+    signal step_apply_set_s : std_ulogic;
     signal tx_er_s : std_ulogic;
   begin
     mii: nsl_mii.mii.mii_axi_driver_resync
@@ -337,14 +371,28 @@ begin
         out_i => tag_to_mac_s.s
         );
 
+    rx_resync: nsl_mii.timestamping.timestamping_sideband_resync
+      port map(
+        reset_n_i => reset_n_s,
+
+        a_clock_i => clock_s,
+        a_strobe_i => rx_tag_sfd_s,
+        a_id_i => rx_tag_id_s,
+        a_done_o => open,
+
+        b_clock_i => rtc_clock_s,
+        b_strobe_o => rx_cap_strobe_s,
+        b_id_o => rx_cap_id_s
+        );
+
     capture: nsl_time.capture.timestamp_capture
       port map(
-        clock_i => clock_s,
+        clock_i => rtc_clock_s,
         reset_n_i => reset_n_s,
 
         timestamp_i => slave_time_s,
-        strobe_i => rx_tag_sfd_s,
-        id_i => rx_tag_id_s,
+        strobe_i => rx_cap_strobe_s,
+        id_i => rx_cap_id_s,
 
         read_id_i => capture_id_s,
         read_timestamp_o => capture_time_s
@@ -366,6 +414,33 @@ begin
         in_o => eth_to_mac_s.s,
         out_o => strober_to_prefill_s.m,
         out_i => strober_to_prefill_s.s
+        );
+
+    tx_resync: nsl_mii.timestamping.timestamping_sideband_resync
+      port map(
+        reset_n_i => reset_n_s,
+
+        a_clock_i => clock_s,
+        a_strobe_i => tx_strobe_s,
+        a_id_i => tx_strobe_id_s,
+        a_done_o => tx_done_s,
+
+        b_clock_i => rtc_clock_s,
+        b_strobe_o => tx_cap_strobe_s,
+        b_id_o => tx_cap_id_s
+        );
+
+    tx_capture: nsl_time.capture.timestamp_capture
+      port map(
+        clock_i => rtc_clock_s,
+        reset_n_i => reset_n_s,
+
+        timestamp_i => slave_time_s,
+        strobe_i => tx_cap_strobe_s,
+        id_i => tx_cap_id_s,
+
+        read_id_i => ptp_tx_tag_id_c,
+        read_timestamp_o => tx_capture_time_s
         );
 
     prefill: nsl_amba.axi4_stream.axi4_stream_prefill_buffer
@@ -453,13 +528,11 @@ begin
 
         clock_identity_i => slave_identity_c,
 
-        timestamp_i => slave_time_s,
-
         capture_id_o => capture_id_s,
         capture_time_i => capture_time_s,
 
-        tx_strobe_i => tx_strobe_s,
-        tx_id_i => tx_strobe_id_s,
+        tx_strobe_i => tx_done_s,
+        tx_capture_time_i => tx_capture_time_s,
 
         rx_i => eth_to_ptp_s.m,
         rx_o => eth_to_ptp_s.s,
@@ -469,6 +542,7 @@ begin
         offset_o => offset_meas_s,
         offset_valid_o => offset_valid_s,
         step_o => step_s,
+        step_sync_o => step_sync_s,
         step_valid_o => step_valid_s,
         path_delay_o => path_delay_s,
         locked_o => locked_s
@@ -487,28 +561,46 @@ begin
 
     inc_driver: nsl_time.discipline.discipline_clock_driver
       generic map(
-        clock_i_hz_c => 100000000
+        clock_hz_c => 156250000
         )
       port map(
-        clock_i => clock_s,
         reset_n_i => reset_n_s,
 
+        clock_i => clock_s,
         freq_offset_ppb_i => freq_ppb_s,
 
+        rtc_clock_i => rtc_clock_s,
         sub_nanosecond_inc_o => slave_inc_s
+        );
+
+    stepper: nsl_time.discipline.discipline_step_applier
+      port map(
+        reset_n_i => reset_n_s,
+
+        clock_i => clock_s,
+        reference_i => step_s,
+        sync_i => step_sync_s,
+        valid_i => step_valid_s,
+
+        rtc_clock_i => rtc_clock_s,
+        timestamp_i => slave_time_s,
+        timestamp_o => step_apply_s,
+        timestamp_set_o => step_apply_set_s
         );
 
     time_base: nsl_time.clock.clock_adjustable
       port map(
-        clock_i => clock_s,
+        clock_i => rtc_clock_s,
         reset_n_i => reset_n_s,
         sub_nanosecond_inc_i => slave_inc_s,
-        timestamp_i => step_s,
-        timestamp_set_i => step_valid_s,
+        timestamp_i => step_apply_s,
+        timestamp_set_i => step_apply_set_s,
         timestamp_o => slave_time_s
         );
   end block;
 
+  -- Truth metric; the slave time enters unsynchronized, torn samples
+  -- are discarded by the check.
   truth: nsl_time.skew.skew_measurer
     port map(
       clock_i => clock_s,
@@ -562,13 +654,17 @@ begin
       meas_count_v := meas_count_v + 1;
       wait until falling_edge(clock_s);
       v := to_integer(abs(skew_s));
-      if v > worst_v then
-        worst_v := v;
+      -- A sample torn across a second boundary reads around a second
+      -- off; the truth crossing is unsynchronized by design here.
+      if v < 500000000 then
+        if v > worst_v then
+          worst_v := v;
+        end if;
+        log_info("skew " & to_string(to_integer(skew_s))
+                 & " ns, offset " & to_string(to_integer(offset_meas_s))
+                 & " ns, path delay " & to_string(to_integer(path_delay_s))
+                 & " ns");
       end if;
-      log_info("skew " & to_string(to_integer(skew_s))
-               & " ns, offset " & to_string(to_integer(offset_meas_s))
-               & " ns, path delay " & to_string(to_integer(path_delay_s))
-               & " ns");
       wait for 1 us;
     end loop;
 
@@ -588,16 +684,18 @@ begin
 
   simdrv: nsl_simulation.driver.simulation_driver
     generic map(
-      clock_count => 2,
+      clock_count => 3,
       reset_count => 1,
       done_count => 1
       )
     port map(
       clock_period(0) => 10 ns,
       clock_period(1) => 40 ns,
+      clock_period(2) => 6400 ps,
       reset_duration => (others => 1 us),
       clock_o(0) => clock_s,
       clock_o(1) => mii_clock_s,
+      clock_o(2) => rtc_clock_s,
       reset_n_o(0) => reset_n_s,
       done_i => done_s
       );

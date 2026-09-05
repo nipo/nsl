@@ -6,6 +6,7 @@ root:
    - nsl_simulation.assertions
    - nsl_simulation.logging
    - nsl_simulation.driver
+   - nsl_clocking.interdomain
    - nsl_math.fixed
    - nsl_math.timing
    - nsl_time.timestamp

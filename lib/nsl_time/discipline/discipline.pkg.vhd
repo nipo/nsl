@@ -24,10 +24,15 @@ use nsl_math.fixed.all;
 -- nsl_time.clock.clock_adjustable, discipline_dac_driver computes
 -- the code of a DAC pulling a VCTCXO.
 --
--- Absolute time steps do not go through the servo: the source
--- requests them straight at the clock (clock_adjustable set ports),
--- and the servo's integrator, which estimates frequency error, stays
--- valid across a phase step.
+-- Absolute time steps do not go through the servo:
+-- discipline_step_applier carries them to the clock, and the servo's
+-- integrator, which estimates frequency error, stays valid across a
+-- phase step.
+--
+-- The clock may live in its own domain: the servo and the protocol
+-- engines run on the command clock, and the two drivers and the
+-- step applier carry coherent values across, so a single-domain
+-- system simply ties both clocks together.
 package discipline is
 
   subtype frequency_ppb_t is signed(23 downto 0);
@@ -61,22 +66,50 @@ package discipline is
   end component;
 
   -- Computes the sub-nanosecond increment of
-  -- nsl_time.clock.clock_adjustable running at clock_i_hz_c:
-  -- (1e9 / clock_i_hz_c) * (1 + freq_offset_ppb_i * 1e-9)
-  -- nanoseconds per cycle, registered.  The output range is taken
-  -- from the actual signal, which must hold the nominal increment
-  -- with headroom for the clamp of the servo in front.
+  -- nsl_time.clock.clock_adjustable running at clock_hz_c:
+  -- (1e9 / clock_hz_c) * (1 + freq_offset_ppb_i * 1e-9) nanoseconds
+  -- per cycle.  The correction enters on the command clock; the
+  -- output is registered in the clock domain of the time base and
+  -- always coherent, so it can drive sub_nanosecond_inc_i directly.
+  -- The output range is taken from the actual signal, which must
+  -- hold the nominal increment with headroom for the clamp of the
+  -- servo in front.
   component discipline_clock_driver is
     generic(
-      clock_i_hz_c : natural
+      clock_hz_c : natural
       );
     port(
-      clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
+      clock_i : in std_ulogic;
       freq_offset_ppb_i : in frequency_ppb_t;
 
+      rtc_clock_i : in std_ulogic;
       sub_nanosecond_inc_o : out ufixed
+      );
+  end component;
+
+  -- Carries an absolute time step to the clock.  The source hands,
+  -- on the command clock, the master time reference_i of an event it
+  -- captured at local time sync_i; the applier sets the clock, in
+  -- the time base domain, to reference_i plus the local time elapsed
+  -- since sync_i, so the step lands as master time at application
+  -- whatever crossing and processing happened in between.
+  -- timestamp_i and the set pair connect to the clock_adjustable of
+  -- the time base.
+  component discipline_step_applier is
+    port(
+      reset_n_i : in std_ulogic;
+
+      clock_i : in std_ulogic;
+      reference_i : in timestamp_t;
+      sync_i : in timestamp_t;
+      valid_i : in std_ulogic;
+
+      rtc_clock_i : in std_ulogic;
+      timestamp_i : in timestamp_t;
+      timestamp_o : out timestamp_t;
+      timestamp_set_o : out std_ulogic
       );
   end component;
 

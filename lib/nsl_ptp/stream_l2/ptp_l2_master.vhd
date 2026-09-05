@@ -14,6 +14,7 @@ use nsl_math.int_ext.all;
 use nsl_mii.timestamping.all;
 use nsl_time.timestamp.all;
 use work.ptp.all;
+use work.stream_l2.all;
 
 entity ptp_l2_master is
   generic(
@@ -31,13 +32,11 @@ entity ptp_l2_master is
     enable_i : in std_ulogic := '1';
     clock_identity_i : in byte_string(0 to 7);
 
-    timestamp_i : in timestamp_t;
-
     capture_id_o : out tag_id_t;
     capture_time_i : in timestamp_t;
 
     tx_strobe_i : in std_ulogic;
-    tx_id_i : in tag_id_t;
+    tx_capture_time_i : in timestamp_t;
 
     rx_i : in master_t;
     rx_o : out slave_t;
@@ -69,10 +68,6 @@ architecture beh of ptp_l2_master is
   constant l2_ctx_c : byte_string(0 to l2_context_length_c-1)
     := to_bytes(l2_context_t'(peer => ptp_multicast_addr_c,
                              casting => l2_multicast(multicast_group_c)));
-
-  -- Only one event frame is outstanding at a time, so any fixed
-  -- identifier designates it unambiguously.
-  constant tx_tag_id_c : tag_id_t := "0000";
 
   type message_t is
   record
@@ -222,7 +217,7 @@ architecture beh of ptp_l2_master is
     variable ret: byte_string(0 to config_c.data_width-1);
   begin
     if pos < tag_length_c then
-      ret(0) := tag_build(req.strobe, tx_tag_id_c);
+      ret(0) := tag_build(req.strobe, ptp_tx_tag_id_c);
     elsif pos < tag_length_c + l2_context_length_c then
       ret(0) := l2_ctx_c(pos - tag_length_c);
     elsif pos < hdr_size_c then
@@ -570,7 +565,7 @@ begin
       end if;
     end process;
 
-    transition: process(r, enable_i, clock_identity_i, timestamp_i,
+    transition: process(r, enable_i, clock_identity_i, tx_capture_time_i,
                         tx_strobe_i, tick_s, send_done_s,
                         msg_valid_s, msg_s) is
       variable mt_v: natural;
@@ -582,11 +577,13 @@ begin
       mt_v := msg_type(msg_s);
 
       -- The transmit strobe of the only outstanding event frame gives
-      -- T1, whatever the state the rest of the engine is in.
+      -- T1, whatever the state the rest of the engine is in.  The
+      -- strobe reports the capture register already written, so its
+      -- read port is sampled on the same cycle.
       if tx_strobe_i = '1' and r.t1_wait then
         rin.t1_wait <= false;
         rin.t1_valid <= true;
-        rin.t1 <= timestamp_i;
+        rin.t1 <= tx_capture_time_i;
       end if;
 
       if tick_s = '1' then
