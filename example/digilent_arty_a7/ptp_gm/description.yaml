@@ -1,0 +1,96 @@
+name: observer.observer_core
+
+communication:
+  mode: jtag
+
+instruments:
+  rates: !clock-measurer
+    reference: sys
+    frequency: 100_000_000
+    clocks: [rtc, vcxo, vcxo_a, mii_rx, mii_tx]
+    max_rate: 150_000_000
+
+  panel: !control-status
+    clock: sys_clock
+
+    control:
+      dac_force_en: 1
+      dac_force:
+        width: 12
+
+    status:
+      link_up: 1
+      gps_locked: 1
+      second:
+        width: 32
+      tacc:
+        width: 32
+      freq_ppb:
+        width: 24
+      dac:
+        width: 12
+      pps_offset:
+        width: 32
+      aux_offset:
+        width: 32
+      xo_sda: 1
+      xo_scl: 1
+
+    tick-out:
+      - [ reset ]
+
+    tick-in:
+      - [ gps_pps, local_pps, gps_byte, ubx_frame, pps_tick, pps_adj, pps_offset_valid, second_set,
+          init_frame, update_frame, dac_response, aux_pps ]
+
+  # The DAC bus, sampled on the PHY receive clock: slow enough for a
+  # whole write to fit the buffer, fast enough to read the bits.
+  i2c: !logic-analyzer
+    storage:
+      buffer_depth_l2: 14
+      packed: true
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      phy:
+        clock: phy_clock
+        frequency: 25_000_000
+
+        signals:
+          scl:
+            trigger: true
+          sda:
+            trigger: true
+
+  mii: !logic-analyzer
+    storage:
+      buffer_depth_l2: 12
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      mii:
+        clock: clock
+        frequency: 50_000_000
+
+        signals:
+          rxd: !bus
+            trigger: false
+            width: 4
+          rxen:
+            trigger: true
+
+          txd: !bus
+            trigger: false
+            width: 4
+          txen:
+            trigger: true

@@ -1,0 +1,32 @@
+name: ptp_gm_screen
+
+root:
+  name: top
+  deps:
+   - nsl_simulation.driver
+   - nsl_amba.axi4_stream
+   - nsl_i2c.i2c
+   - nsl_smi.smi
+   - nsl_time.timestamp
+   - nsl_time.discipline
+   - nsl_time.calendar
+   - nsl_data.text
+   - nsl_dvi.terminal
+  sources:
+    - file_type: vhdl
+      files:
+        - ../../example/digilent_arty_a7/ptp_gm/src/func/func.pkg.vhd
+        - ../../example/digilent_arty_a7/ptp_gm/src/func/screen_text.vhd
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

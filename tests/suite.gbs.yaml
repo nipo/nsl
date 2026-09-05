@@ -425,6 +425,9 @@ projects:
   - name: ptp_master_fields
     path: ptp/master_fields
     tags: [ghdl, simulation]
+  - name: ptp_gm_screen
+    path: ptp_gm_screen
+    tags: [ghdl, simulation]
   - name: precise_clock_discipline
     path: precise_clock/discipline
     tags: [ghdl, simulation]

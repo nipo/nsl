@@ -1,0 +1,87 @@
+name: arty_a7_ptp_gm
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_bnoc.framed
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - nsl_logic.bool
+    - nsl_math.int_ext
+    - nsl_math.fixed
+    - nsl_inet.mac
+    - nsl_inet.stream
+    - nsl_inet.stream_mac
+    - nsl_inet.stream_ethernet
+    - nsl_mii.mii
+    - nsl_mii.flit
+    - nsl_mii.link
+    - nsl_mii.link_monitor
+    - nsl_mii.timestamping
+    - nsl_smi.smi
+    - nsl_smi.transactor
+    - nsl_i2c.i2c
+    - nsl_i2c.transactor
+    - nsl_i2c.mcp4726
+    - nsl_bnoc.framed_transactor
+    - nsl_time.timestamp
+    - nsl_time.clock
+    - nsl_time.capture
+    - nsl_time.pps
+    - nsl_time.discipline
+    - nsl_ptp.ptp
+    - nsl_ptp.stream_l2
+    - nsl_ublox.ubx
+    - nsl_uart.serdes
+    - nsl_digilent.pmod
+    - nsl_digilent.pmod_oled_rgb
+    - nsl_dvi.terminal
+    - nsl_indication.font_6x8
+    - nsl_color.rgb
+    - nsl_data.text
+    - nsl_time.calendar
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_clocking.interdomain
+    - nsl_clocking.pll
+    - nsl_io.clock
+    - nsl_hwdep.reset
+    - gatecap_generated.observer
+  sources:
+    - file_type: vhdl
+      files:
+        - src/func/func.pkg.vhd
+        - src/func/func_main.vhd
+        - src/func/screen_text.vhd
+        - src/boundary/fpga_io.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/leds.xdc
+        - ../pinout/buttons.xdc
+        - ../pinout/clk100.xdc
+        - ../pinout/ethernet.xdc
+        - ../pinout/artysync.xdc
+        - ../pinout/ja_lvcmos33.xdc
+        # After clk100.xdc: the clock group references sys_clk_pin.
+        - clocks.xdc
+
+output:
+  - name: synthesis
+    topcell: fpga_io
+    target:
+      part: xc7a35t-1csg324
+    outputs:
+      - type: bitstream
+        path: ptp_gm.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml

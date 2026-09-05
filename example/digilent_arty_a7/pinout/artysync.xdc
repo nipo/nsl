@@ -18,10 +18,18 @@ set_property -dict { PACKAGE_PIN R17   IOSTANDARD LVCMOS33 } [get_ports { gps_re
 # the region's MMCM.  Position A (shield D11, package U18) is not
 # clock-capable on the A7 and stays unused.
 set_property -dict { PACKAGE_PIN D5    IOSTANDARD LVCMOS33 } [get_ports { vcxo_clock_i }];
+# JP1 is a three-way solder bridge closed between pads 1 and 2 as
+# fabricated, which is position A: the VCXO lands on U18 until the
+# bridge is reworked to pads 2-3.
+set_property -dict { PACKAGE_PIN U18   IOSTANDARD LVCMOS33 } [get_ports { vcxo_a_clock_i }];
 
 # MCP4726 DAC pulling the VCXO, on the dedicated I2C header pins.
 set_property -dict { PACKAGE_PIN M18   IOSTANDARD LVCMOS33 } [get_ports { xo_sda_io }];
 set_property -dict { PACKAGE_PIN L18   IOSTANDARD LVCMOS33 } [get_ports { xo_scl_io }];
+# The shield has no pull-up on that pair; the Arty's header pull-ups
+# are switched in by driving these two pins high.
+set_property -dict { PACKAGE_PIN A14   IOSTANDARD LVCMOS33 } [get_ports { xo_scl_pu_o }];
+set_property -dict { PACKAGE_PIN A13   IOSTANDARD LVCMOS33 } [get_ports { xo_sda_pu_o }];
 
 # 10 MHz reference port: dir high (board pull-up default) drives the
 # FIN1019 line side from the SMA toward ref10m_p/n, low reverses it.
