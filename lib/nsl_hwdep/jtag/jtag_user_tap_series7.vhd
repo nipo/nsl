@@ -103,5 +103,7 @@ begin
   update_o <= update_s(0);
   selected_o <= selected_s;
   tlr_o <= reset_s(0);
-  
+
+  chip_tdo_o <= '0';
+
 end architecture;
