@@ -18,7 +18,7 @@ end tb;
 architecture arch of tb is
 
   constant nbr_scenario : integer := 3;
-  constant config_c : stream_cfg_array_t :=
+  constant config_c : config_vector :=
     (0 => config(1, last => true),
      1 => config(2, last => true),
      2 => config(4, last => true));
@@ -76,7 +76,7 @@ begin
     dut: nsl_amba.axi4_stream.axi4_stream_prefill_buffer
       generic map(
         config_c => config_c(i),
-        prefill_count_c => 40
+        prefill_count_c => 12
         )
       port map(
         clock_i => clock_s,
@@ -89,29 +89,29 @@ begin
         out_i => output_s.s
         );
 
-    -- dumper_in: nsl_amba.axi4_stream.axi4_stream_dumper
-    --   generic map(
-    --     config_c => config_c(i),
-    --     prefix_c => "IN SCENARIO " & to_string(i)
-    --     )
-    --   port map(
-    --     clock_i => clock_s,
-    --     reset_n_i => reset_n_s,
+    -- dumpers: if i = 0 generate
+    --   dumper_in: nsl_amba.axi4_stream.axi4_stream_dumper
+    --     generic map(
+    --       config_c => config_c(i),
+    --       prefix_c => "IN"
+    --       )
+    --     port map(
+    --       clock_i => clock_s,
+    --       reset_n_i => reset_n_s,
+    --       bus_i => input_s
+    --       );
 
-    --     bus_i => input_s
-    --     );
-
-    -- dumper_out: nsl_amba.axi4_stream.axi4_stream_dumper
-    --   generic map(
-    --     config_c => config_c(i),
-    --     prefix_c => "OUT SCENARIO " & to_string(i)
-    --     )
-    --   port map(
-    --     clock_i => clock_s,
-    --     reset_n_i => reset_n_s,
-
-    --     bus_i => output_s
-    --     );
+    --   dumper_out: nsl_amba.axi4_stream.axi4_stream_dumper
+    --     generic map(
+    --       config_c => config_c(i),
+    --       prefix_c => "OUT"
+    --       )
+    --     port map(
+    --       clock_i => clock_s,
+    --       reset_n_i => reset_n_s,
+    --       bus_i => output_s
+    --       );
+    -- end generate;
         
   end generate;
 

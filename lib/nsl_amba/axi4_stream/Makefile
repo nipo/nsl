@@ -8,6 +8,7 @@ vhdl-sources += axi4_stream_backpressure_assertions.vhd
 vhdl-sources += axi4_stream_prefill_buffer.vhd
 
 deps += nsl_math.arith
+deps += nsl_memory.fifo
 deps += nsl_logic.bool
 deps += nsl_logic.logic
 deps += nsl_data.bytestream

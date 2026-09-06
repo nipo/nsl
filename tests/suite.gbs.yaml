@@ -98,6 +98,9 @@ projects:
   - name: amba_axi4_stream_narrower
     path: amba/axi4_stream_narrower
     tags: [ghdl, simulation]
+  - name: amba_axi4_stream_prefill_buffer
+    path: amba/axi4_stream_prefill_buffer
+    tags: [ghdl, simulation]
   - name: amba_axi4_stream_random_pkt_checker
     path: amba/axi4_stream_random_pkt_checker
     tags: [ghdl, simulation]

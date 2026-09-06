@@ -1,10 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_amba, nsl_data, nsl_math, nsl_logic;
+library nsl_amba, nsl_logic, nsl_memory;
 use nsl_logic.bool.all;
 use nsl_amba.axi4_stream.all;
-use nsl_data.bytestream.all;
 
 entity axi4_stream_prefill_buffer is
     generic (
@@ -25,153 +24,201 @@ end entity;
 
 architecture beh of axi4_stream_prefill_buffer is
 
-    type in_state_t is (
-        IN_RESET,
-        IN_DATA,
-        IN_DONE
+  -- This is an elasticity buffer meant to absorb short upstream
+  -- bubbles before a flow-control-less consumer, not a
+  -- store-and-forward fifo. Storage is a shift-register fifo capped
+  -- at 16 words; designs needing whole-frame buffering should use a
+  -- RAM-backed fifo instead.
+  constant fifo_depth_c : integer := prefill_count_c + 2;
+
+  -- Beats are stored packed; last is not stored, it is regenerated on
+  -- the final beat of the flush.
+  constant elements_c : string := "idskou";
+  constant word_width_c : natural := vector_length(config_c, elements_c);
+
+  type in_state_t is (
+    IN_RESET,
+    IN_DATA,
+    IN_DONE
     );
 
-    type out_state_t is (
-        OUT_RESET,
-        OUT_PREFILL,
-        OUT_DATA,
-        OUT_FLUSH,
-        OUT_DONE
+  type out_state_t is (
+    OUT_RESET,
+    OUT_PREFILL,
+    OUT_DATA,
+    OUT_FLUSH,
+    OUT_DONE
     );
 
-    constant fifo_depth_c : integer := prefill_count_c + 2;
+  type regs_t is
+  record
+    in_state : in_state_t;
+    out_state : out_state_t;
+  end record;
 
-    type regs_t is record
-        in_state : in_state_t;
+  signal r, rin : regs_t;
 
-        fifo : master_vector(0 to fifo_depth_c - 1);
-        fifo_fillness : integer range 0 to fifo_depth_c;
+  signal fifo_in_data_s, fifo_out_data_s : std_ulogic_vector(0 to word_width_c-1);
+  signal fifo_in_valid_s, fifo_in_ready_s : std_ulogic;
+  signal fifo_out_valid_s, fifo_out_ready_s : std_ulogic;
+  signal fifo_fill_s : std_ulogic_vector(0 to fifo_depth_c);
 
-        out_state : out_state_t;
-    end record;
-
-    signal r, rin : regs_t;
+  function fill_at_least(fill : std_ulogic_vector;
+                         count : integer) return boolean
+  is
+  begin
+    for i in fill'range
+    loop
+      if i >= count and fill(i) = '1' then
+        return true;
+      end if;
+    end loop;
+    return false;
+  end function;
 
 begin
 
-    regs : process (clock_i, reset_n_i) is
-    begin
-        if rising_edge(clock_i) then
-            r <= rin;
+  assert prefill_count_c >= 1 and prefill_count_c <= 14
+    report "prefill_count_c must be in 1 to 14, this is an elasticity "
+    & "buffer, not a store-and-forward fifo"
+    severity failure;
+
+  regs : process (clock_i, reset_n_i) is
+  begin
+    if rising_edge(clock_i) then
+      r <= rin;
+    end if;
+
+    if reset_n_i = '0' then
+      r.in_state <= IN_RESET;
+      r.out_state <= OUT_RESET;
+    end if;
+  end process;
+
+  -- Guarded so that an oversized prefill_count_c reaches the assert
+  -- above instead of the generic bound check of the fifo.
+  depth_ok : if fifo_depth_c <= 16 generate
+    fifo : nsl_memory.fifo.fifo_shift_register
+      generic map(
+        data_width_c => word_width_c,
+        word_count_c => fifo_depth_c
+        )
+      port map(
+        reset_n_i => reset_n_i,
+        clock_i => clock_i,
+
+        in_data_i => fifo_in_data_s,
+        in_valid_i => fifo_in_valid_s,
+        in_ready_o => fifo_in_ready_s,
+
+        out_data_o => fifo_out_data_s,
+        out_valid_o => fifo_out_valid_s,
+        out_ready_i => fifo_out_ready_s,
+
+        fill_o => fifo_fill_s
+        );
+  end generate;
+
+  fifo_in_data_s <= vector_pack(config_c, elements_c, in_i);
+
+  transition : process (r, in_i, out_i,
+                        fifo_in_ready_s, fifo_fill_s) is
+  begin
+    rin <= r;
+
+    case r.in_state is
+      when IN_RESET =>
+        rin.in_state <= IN_DATA;
+
+      when IN_DATA =>
+        if is_valid(config_c, in_i) and fifo_in_ready_s = '1'
+          and is_last(config_c, in_i) then
+          rin.in_state <= IN_DONE;
         end if;
 
-        if reset_n_i = '0' then
-            r.fifo <= (others => transfer_defaults(config_c));
-            r.in_state <= IN_RESET;
-            r.out_state <= OUT_RESET;
+      when IN_DONE =>
+        if r.out_state = OUT_DONE then
+          rin.in_state <= IN_RESET;
         end if;
-    end process;
+    end case;
 
-    transition : process (r, in_i, out_i) is
-        variable fifo_push, fifo_pop : boolean;
-    begin
-        rin <= r;
+    case r.out_state is
+      when OUT_RESET =>
+        rin.out_state <= OUT_PREFILL;
 
-        fifo_pop := false;
-        fifo_push := false;
-
-        case r.in_state is
-            when IN_RESET =>
-                rin.fifo_fillness <= 0;
-                rin.in_state <= IN_DATA;
-
-            when IN_DATA =>
-                if r.fifo_fillness < fifo_depth_c and is_valid(config_c, in_i) then
-                    fifo_push := true;
-                    if is_last(config_c, in_i) then
-                        rin.in_state <= IN_DONE;
-                    end if;
-                end if;
-
-            when IN_DONE =>
-                if r.out_state = OUT_DONE then
-                    rin.in_state <= IN_RESET;
-                end if;
-        end case;
-
-        case r.out_state is
-            when OUT_RESET =>
-                rin.out_state <= OUT_PREFILL;
-
-            when OUT_PREFILL =>
-                if r.fifo_fillness >= prefill_count_c then
-                    rin.out_state <= OUT_DATA;
-                end if;
-                if r.in_state = IN_DONE then
-                    rin.out_state <= OUT_FLUSH;
-                end if;
-
-            when OUT_DATA =>
-                if r.fifo_fillness > 1 and out_i.ready = '1' then
-                    fifo_pop := true;
-                end if;
-
-                if r.in_state = IN_DONE then
-                    rin.out_state <= OUT_FLUSH;
-                end if;
-
-            when OUT_FLUSH =>
-                if r.fifo_fillness > 0 and out_i.ready = '1' then
-                    fifo_pop := true;
-                end if;
-
-                if r.fifo_fillness = 0
-                    or (r.fifo_fillness = 1 and out_i.ready = '1') then
-                    rin.out_state <= OUT_DONE;
-                end if;
-
-            when OUT_DONE =>
-                if r.in_state = IN_DONE then
-                    rin.out_state <= OUT_RESET;
-                end if;
-        end case;
-
-        if fifo_push and fifo_pop then
-            rin.fifo <= shift_left(config_c, r.fifo);
-            rin.fifo(r.fifo_fillness - 1) <= in_i;
-        elsif fifo_push then
-            rin.fifo(r.fifo_fillness) <= in_i;
-            rin.fifo_fillness <= r.fifo_fillness + 1;
-        elsif fifo_pop then
-            rin.fifo <= shift_left(config_c, r.fifo);
-            rin.fifo_fillness <= r.fifo_fillness - 1;
+      when OUT_PREFILL =>
+        if fill_at_least(fifo_fill_s, prefill_count_c) then
+          rin.out_state <= OUT_DATA;
         end if;
-    end process;
+        if r.in_state = IN_DONE then
+          rin.out_state <= OUT_FLUSH;
+        end if;
 
-    moore : process (r) is
-    begin
-        out_o <= transfer_defaults(config_c);
+      when OUT_DATA =>
+        if r.in_state = IN_DONE then
+          rin.out_state <= OUT_FLUSH;
+        end if;
 
-        case r.out_state is
+      when OUT_FLUSH =>
+        if fifo_fill_s(0) = '1'
+          or (fifo_fill_s(1) = '1' and out_i.ready = '1') then
+          rin.out_state <= OUT_DONE;
+        end if;
 
-            when OUT_DATA =>
-                out_o <= transfer(config_c,
-                         src => r.fifo(0),
-                         valid => r.fifo_fillness > 1,
-                         last => false);
-                        
-            when OUT_FLUSH =>
-                    out_o <= transfer(config_c,
-                            src => r.fifo(0),
-                            valid => r.fifo_fillness > 0,
-                            last => r.fifo_fillness = 1);
+      when OUT_DONE =>
+        if r.in_state = IN_DONE then
+          rin.out_state <= OUT_RESET;
+        end if;
+    end case;
+  end process;
 
-            when others =>
-                null;
+  mealy : process (r, in_i, out_i,
+                   fifo_in_ready_s, fifo_out_valid_s,
+                   fifo_out_data_s, fifo_fill_s) is
+  begin
+    out_o <= transfer_defaults(config_c);
+    fifo_out_ready_s <= '0';
 
-        end case;
+    case r.out_state is
+      when OUT_DATA =>
+        -- Hold the newest beat back so that the final beat of the
+        -- packet is only ever emitted in OUT_FLUSH, where it gets its
+        -- last flag.
+        out_o <= transfer(config_c,
+                          src => vector_unpack(config_c, elements_c,
+                                               fifo_out_data_s),
+                          force_valid => true,
+                          valid => fifo_fill_s(0) = '0'
+                                   and fifo_fill_s(1) = '0',
+                          force_last => true,
+                          last => false);
+        if fifo_fill_s(0) = '0' and fifo_fill_s(1) = '0' then
+          fifo_out_ready_s <= out_i.ready;
+        end if;
 
-        case r.in_state is
-            when IN_RESET | IN_DONE =>
-                in_o.ready <= '0';
+      when OUT_FLUSH =>
+        out_o <= transfer(config_c,
+                          src => vector_unpack(config_c, elements_c,
+                                               fifo_out_data_s),
+                          force_valid => true,
+                          valid => fifo_out_valid_s = '1',
+                          force_last => true,
+                          last => fifo_fill_s(1) = '1');
+        fifo_out_ready_s <= out_i.ready;
 
-            when IN_DATA =>
-                in_o.ready <= to_logic(r.fifo_fillness < fifo_depth_c);
-        end case;
-    end process;
+      when others =>
+        null;
+    end case;
+
+    case r.in_state is
+      when IN_RESET | IN_DONE =>
+        in_o.ready <= '0';
+        fifo_in_valid_s <= '0';
+
+      when IN_DATA =>
+        in_o.ready <= fifo_in_ready_s;
+        fifo_in_valid_s <= to_logic(is_valid(config_c, in_i));
+    end case;
+  end process;
+
 end architecture;
