@@ -215,11 +215,13 @@ begin
 
   monitor: process(clock_i) is
   begin
-    if rising_edge(clock_i) and reset_n_i = '1' then
-      if is_valid(config_c, in_i) then
-        assert is_packed(config_c, in_i)
-          report "Sparse keep pattern, not supported"
-          severity failure;
+    if rising_edge(clock_i) then
+      if reset_n_i = '1' then
+        if is_valid(config_c, in_i) then
+          assert is_packed(config_c, in_i)
+            report "Sparse keep pattern, not supported"
+            severity failure;
+        end if;
       end if;
     end if;
   end process;

@@ -122,12 +122,14 @@ begin
   -- block is the packet's last beat, and no beat before it is.
   monitor: process(clock_i) is
   begin
-    if rising_edge(clock_i) and reset_n_i = '1' then
-      if r.state = ST_QUERY and is_valid(config_c, query_i) then
-        assert (r.fillness + config_c.data_width = query_bytes_c)
-          = is_last(config_c, query_i)
-          report "Query packet size does not match the query block size"
-          severity failure;
+    if rising_edge(clock_i) then
+      if reset_n_i = '1' then
+        if r.state = ST_QUERY and is_valid(config_c, query_i) then
+          assert (r.fillness + config_c.data_width = query_bytes_c)
+            = is_last(config_c, query_i)
+            report "Query packet size does not match the query block size"
+            severity failure;
+        end if;
       end if;
     end if;
   end process;

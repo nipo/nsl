@@ -223,18 +223,20 @@ begin
 
   monitor: process(clock_i) is
   begin
-    if rising_edge(clock_i) and reset_n_i = '1' then
-      if is_valid(config_c, in_i) then
-        assert is_packed(config_c, in_i)
-          report "Sparse keep pattern, not supported"
-          severity failure;
-        -- Once the cut distance is resolved, it is tracked by beats of
-        -- a constant size.
-        assert r.state = ST_FIELD
-          or is_last(config_c, in_i)
-          or byte_count(config_c, in_i) = width_c
-          report "Partial beat before the last one, not supported"
-          severity failure;
+    if rising_edge(clock_i) then
+      if reset_n_i = '1' then
+        if is_valid(config_c, in_i) then
+          assert is_packed(config_c, in_i)
+            report "Sparse keep pattern, not supported"
+            severity failure;
+          -- Once the cut distance is resolved, it is tracked by beats of
+          -- a constant size.
+          assert r.state = ST_FIELD
+            or is_last(config_c, in_i)
+            or byte_count(config_c, in_i) = width_c
+            report "Partial beat before the last one, not supported"
+            severity failure;
+        end if;
       end if;
     end if;
   end process;
