@@ -186,51 +186,66 @@ begin
         end if;
     end process;
 
-    moore : process (r)
-        variable last_v : boolean;
+    moore: process (r)
     begin
-        underrun_o <= '0';
-        last_v := ((r.fifo_fillness = 1 and ready_i = '1') or r.fifo_fillness = 0) and r.in_state = IN_COMMIT;
+      underrun_o <= '0';
 
-        case r.in_state is
-            when IN_RESET | IN_COMMIT =>
-                in_o <= accept(axi4_flit_cfg, false);
+      case r.in_state is
+        when IN_RESET | IN_COMMIT =>
+          in_o <= accept(axi4_flit_cfg, false);
 
-            when IN_IDLE | IN_DATA =>
-                in_o <= accept(axi4_flit_cfg, r.fifo_fillness < fifo_depth_c);
-        end case;
+        when IN_IDLE | IN_DATA =>
+          in_o <= accept(axi4_flit_cfg, r.fifo_fillness < fifo_depth_c);
+      end case;
 
-        case r.out_state is
-            when OUT_RESET | OUT_IPG | OUT_IDLE =>
-                flit_o.valid <= '0';
-                flit_o.error <= '0';
-                flit_o.data <= x"00";
-                packet_o <= '0';
+      case r.out_state is
+        when OUT_RESET | OUT_IPG | OUT_IDLE =>
+          flit_o.valid <= '0';
+          flit_o.error <= '0';
+          flit_o.data <= x"00";
 
-            when OUT_DATA =>
-                if r.fifo_underrun and handle_underrun_c then
-                    flit_o.error <= '1';
-                    flit_o.data <= x"1f";
-                    flit_o.valid <= '0';
-                else
-                    flit_o.error <= r.tx_err;
-                    flit_o.data <= r.fifo(0);
-                    flit_o.valid <= to_logic(r.fifo_fillness /= 0);
-                end if;
-                packet_o <= to_logic(not last_v);
+        when OUT_DATA =>
+          if r.fifo_underrun and handle_underrun_c then
+            flit_o.error <= '1';
+            flit_o.data <= x"1f";
+            flit_o.valid <= '0';
+          else
+            flit_o.error <= r.tx_err;
+            flit_o.data <= r.fifo(0);
+            flit_o.valid <= to_logic(r.fifo_fillness /= 0);
+          end if;
 
-            when OUT_PRE =>
-                flit_o.valid <= '1';
-                flit_o.error <= '0';
-                flit_o.data <= x"55";
-                packet_o <= '1';
+        when OUT_PRE =>
+          flit_o.valid <= '1';
+          flit_o.error <= '0';
+          flit_o.data <= x"55";
 
-            when OUT_SFD =>
-                flit_o.valid <= '1';
-                flit_o.error <= '0';
-                flit_o.data <= x"d5";
-                packet_o <= '1';
+        when OUT_SFD =>
+          flit_o.valid <= '1';
+          flit_o.error <= '0';
+          flit_o.data <= x"d5";
 
-        end case;
+      end case;
     end process;
+
+    mealy: process (r, ready_i)
+      variable last_v : boolean;
+    begin
+      last_v := ((r.fifo_fillness = 1 and ready_i = '1')
+                 or r.fifo_fillness = 0)
+                and r.in_state = IN_COMMIT;
+
+      case r.out_state is
+        when OUT_RESET | OUT_IPG | OUT_IDLE =>
+          packet_o <= '0';
+
+        when OUT_DATA =>
+          packet_o <= to_logic(not last_v);
+
+        when OUT_PRE | OUT_SFD =>
+          packet_o <= '1';
+
+      end case;
+    end process;
+
 end architecture;
