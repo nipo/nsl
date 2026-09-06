@@ -30,8 +30,8 @@ constraints_paylaod = r"""# -*- tcl -*-
 # Apply cross-region paths for registers named *cross_region_reg_d*
 # Apply read-clock timings for TDP-Ram that were demoted to Registers
 
-set_false_path -quiet -through [get_pins -quiet -hier *tig_reg_clr*/CLR]
-set_false_path -quiet -through [get_pins -quiet -hier *tig_reg_pre*/PRE]
+set_false_path -quiet -through [get_pins -quiet -hier -filter {NAME =~ *tig_reg_clr*/CLR}]
+set_false_path -quiet -through [get_pins -quiet -hier -filter {NAME =~ *tig_reg_pre*/PRE}]
 set_false_path -quiet -through [get_pins -quiet -hier -regexp -filter {name=~".*tig_reg_(q.*/[OQ]|d.*/[ID])"}]
 set_false_path -quiet -through [get_nets -quiet -hier {*_async_net*}]
 set_false_path -quiet -through [get_pins -quiet -hier -regexp -filter {name=~".*tig_static_reg_d(.*/[OQ]|.*/[ID])"}]
@@ -89,7 +89,7 @@ set dpram_output_pins [get_pins -quiet -hier -regexp -filter {name=~".*dpram_reg
 common::send_msg_id "NSL-2-01" "INFO" "Found [llength $dpram_output_pins] pins for FF-Ram cross region"
     
 if {[version -short] < 2022} {
-    set dpram_cells [get_cells -of_objects $dpram_output_pins]
+    set dpram_cells [get_cells -quiet -of_objects $dpram_output_pins]
     
     foreach {source_clock} [get_clocks -quiet -of_objects $dpram_cells] {
         set dest_clocks [get_clocks -quiet -of_objects [all_fanout -flat -only_cells $dpram_output_pins]]
@@ -128,7 +128,7 @@ if {[version -short] < 2022} {
     }
 }
 
-foreach {bscan} [get_cells -hier {jtag_bscane2_inst}] {
+foreach {bscan} [get_cells -quiet -hier -filter {NAME =~ *jtag_bscane2_inst*}] {
     common::send_msg_id "NSL-3-02" "INFO" "Adding TCK clock for $bscan"
     create_clock -period 20.000 [get_pins -filter {REF_PIN_NAME=~TCK} -of $bscan]
 }
