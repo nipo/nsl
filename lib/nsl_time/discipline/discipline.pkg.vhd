@@ -105,7 +105,10 @@ package discipline is
   -- receiver's fix status.
   component discipline_pps_source is
     generic(
-      align_threshold_ns_c : natural := 10000
+      align_threshold_ns_c : natural := 10000;
+      -- Latency from the pulse edge on the pin to its detection, taken
+      -- off the sampled time.
+      input_delay_ns_c : natural := 0
       );
     port(
       clock_i : in std_ulogic;

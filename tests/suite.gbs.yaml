@@ -442,6 +442,9 @@ projects:
   - name: precise_clock_second_setter
     path: precise_clock/second_setter
     tags: [ghdl, simulation]
+  - name: precise_clock_pps_latency
+    path: precise_clock/pps_latency
+    tags: [ghdl, simulation]
   - name: precise_clock_phc
     path: precise_clock/phc
     tags: [ghdl, simulation]

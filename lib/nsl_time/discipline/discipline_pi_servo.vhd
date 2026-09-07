@@ -34,6 +34,24 @@ architecture beh of discipline_pi_servo is
 
   constant clamp_c : acc_t := to_signed(freq_clamp_ppb_c, acc_t'length);
 
+  -- The integrator accumulates the raw offset and is only scaled when
+  -- summed, so it keeps ki_l2_c fractional bits of ppb: an offset
+  -- smaller than 2**ki_l2_c nanoseconds still moves it.
+  subtype integrator_t is signed(acc_left_c + ki_l2_c downto 0);
+  constant integrator_clamp_c : integrator_t
+    := shift_left(to_signed(freq_clamp_ppb_c, integrator_t'length), ki_l2_c);
+
+  function integrator_clamped(value : integrator_t) return integrator_t
+  is
+  begin
+    if value > integrator_clamp_c then
+      return integrator_clamp_c;
+    elsif value < -integrator_clamp_c then
+      return -integrator_clamp_c;
+    end if;
+    return value;
+  end function;
+
   function clamped(value : acc_t) return acc_t
   is
   begin
@@ -47,7 +65,7 @@ architecture beh of discipline_pi_servo is
 
   type regs_t is
   record
-    integrator : acc_t;
+    integrator : integrator_t;
     proportional : acc_t;
     sum_pending : std_ulogic;
     freq_offset : frequency_ppb_t;
@@ -86,12 +104,15 @@ begin
 
     if offset_valid_i = '1' then
       rin.proportional <= -shift_right(offset, kp_l2_c);
-      rin.integrator <= clamped(r.integrator - shift_right(offset, ki_l2_c));
+      rin.integrator <= integrator_clamped(
+        r.integrator - resize(offset, integrator_t'length));
     end if;
 
     if r.sum_pending = '1' then
-      rin.freq_offset <= resize(clamped(r.proportional + r.integrator),
-                                frequency_ppb_t'length);
+      rin.freq_offset <= resize(
+        clamped(r.proportional
+                + resize(shift_right(r.integrator, ki_l2_c), acc_t'length)),
+        frequency_ppb_t'length);
     end if;
 
     if clear_i = '1' then

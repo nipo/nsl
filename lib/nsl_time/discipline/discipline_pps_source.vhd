@@ -8,7 +8,11 @@ use work.discipline.all;
 
 entity discipline_pps_source is
   generic(
-    align_threshold_ns_c : natural := 10000
+    align_threshold_ns_c : natural := 10000;
+    -- Latency from the pulse edge on the pin to its detection here,
+    -- taken off the sampled time: the input resynchronizer alone is
+    -- five cycles of clock_i.
+    input_delay_ns_c : natural := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -109,7 +113,8 @@ begin
     rin.tick <= '0';
 
     if pps_rising_s = '1' then
-      rin.sampled <= signed(resize(timestamp_i.nanosecond, offset_t'length));
+      rin.sampled <= signed(resize(timestamp_i.nanosecond, offset_t'length))
+                     - to_signed(input_delay_ns_c, offset_t'length);
       rin.sampled_valid <= '1';
       rin.tick <= '1';
     end if;

@@ -17,6 +17,10 @@ package pps is
   -- work properly. Second non-monotomic behavior is permitted when
   -- reference.abs_change is asserted.
   component pps_ticker is
+    generic(
+      -- The tick fires this early before the second boundary.
+      lead_ns_c : natural := 0
+      );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
