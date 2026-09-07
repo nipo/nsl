@@ -1,3 +1,4 @@
+packages += blender
 packages += dvi
 packages += encoder
 packages += pattern
