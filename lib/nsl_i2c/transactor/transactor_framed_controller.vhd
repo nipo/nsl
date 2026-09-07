@@ -75,9 +75,9 @@ architecture rtl of transactor_framed_controller is
   signal i2c_filt_i : nsl_i2c.i2c.i2c_i;
   signal i2c_clocker_o, i2c_shifter_o : nsl_i2c.i2c.i2c_o;
   signal start_i, stop_i : std_ulogic;
-  signal clocker_owned_i, clocker_ready_i : std_ulogic;
+  signal clocker_owned_i, clocker_ready_i, clocker_fail_i : std_ulogic;
   signal clocker_cmd_o : i2c_bus_cmd_t;
-  signal shift_enable_o, shift_send_data_o, shift_arb_ok_i : std_ulogic;
+  signal shift_enable_o, shift_send_data_o, shift_arb_ok_i, shift_abort_o : std_ulogic;
   signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
   signal shift_r_valid_i, shift_r_ready_o : std_ulogic;
   signal shift_w_data_o, shift_r_data_i : std_ulogic_vector(7 downto 0);
@@ -113,7 +113,8 @@ begin
       cmd_i => clocker_cmd_o,
 
       ready_o => clocker_ready_i,
-      owned_o => clocker_owned_i
+      owned_o => clocker_owned_i,
+      fail_o => clocker_fail_i
       );
   
   shifter: nsl_i2c.master.master_shift_register
@@ -126,6 +127,8 @@ begin
 
       start_i => start_i,
       arb_ok_o  => shift_arb_ok_i,
+
+      abort_i => shift_abort_o,
 
       enable_i => shift_enable_o,
       send_mode_i => shift_send_data_o,
@@ -149,7 +152,7 @@ begin
     end if;
   end process;
 
-  transition : process (clocker_owned_i, clocker_ready_i,
+  transition : process (clocker_owned_i, clocker_ready_i, clocker_fail_i,
                         cmd_i, r, rsp_i,
                         shift_r_data_i, shift_r_valid_i, shift_w_ready_i,
                         shift_arb_ok_i)
@@ -159,7 +162,7 @@ begin
     if clocker_ready_i = '1' then
       rin.owned <= clocker_owned_i;
     end if;
-    if shift_arb_ok_i = '0' then
+    if shift_arb_ok_i = '0' or clocker_fail_i = '1' then
       rin.owned <= '0';
     end if;
     
@@ -208,32 +211,49 @@ begin
         end if;
 
       when ST_START | ST_STOP =>
+        -- When ready and fail are both set, fail is stale from a
+        -- previous command and the clocker is accepting this one right
+        -- now, clearing it.
         if clocker_ready_i = '1' then
           rin.state <= ST_START_STOP_WAIT;
+        elsif clocker_fail_i = '1' then
+          rin.state <= ST_RSP_PUT_FAILED;
         end if;
 
       when ST_START_STOP_WAIT =>
-        if clocker_ready_i = '1' then
+        if clocker_fail_i = '1' then
+          rin.state <= ST_RSP_PUT_FAILED;
+        elsif clocker_ready_i = '1' then
           if clocker_owned_i = '1' or r.cmd = I2C_CMD_STOP then
             rin.state <= ST_RSP_PUT;
-          else 
+          else
             rin.state <= ST_RSP_PUT_FAILED;
           end if;
         end if;
-      
+
       when ST_READ_RUN =>
-        if clocker_ready_i = '1' then
-          rin.state <= ST_READ_DATA;
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif clocker_ready_i = '1' then
+          if clocker_owned_i = '1' then
+            rin.state <= ST_READ_DATA;
+          else
+            rin.state <= ST_IO_FLUSH_PUT;
+          end if;
         end if;
 
       when ST_READ_DATA =>
-        if shift_r_valid_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif shift_r_valid_i = '1' then
           rin.state <= ST_READ_ACK;
           rin.data <= shift_r_data_i;
         end if;
 
       when ST_READ_ACK =>
-        if shift_w_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif shift_w_ready_i = '1' then
           rin.state <= ST_READ_PUT;
         end if;
 
@@ -255,17 +275,27 @@ begin
         end if;
 
       when ST_WRITE_RUN =>
-        if clocker_ready_i = '1' then
-          rin.state <= ST_WRITE_DATA;
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif clocker_ready_i = '1' then
+          if clocker_owned_i = '1' then
+            rin.state <= ST_WRITE_DATA;
+          else
+            rin.state <= ST_IO_FLUSH_PUT;
+          end if;
         end if;
 
       when ST_WRITE_DATA =>
-        if shift_w_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif shift_w_ready_i = '1' then
           rin.state <= ST_WRITE_ACK;
         end if;
 
       when ST_WRITE_ACK =>
-        if shift_r_valid_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.state <= ST_IO_FLUSH_PUT;
+        elsif shift_r_valid_i = '1' then
           rin.state <= ST_WRITE_PUT;
           rin.data <= (0 => not shift_r_data_i(0), others => '0');
         end if;
@@ -317,6 +347,7 @@ begin
     shift_w_valid_o <= '0';
     shift_r_ready_o <= '0';
     shift_w_data_o <= (others => '-');
+    shift_abort_o <= '0';
 
     if r.owned = '1' then
       clocker_cmd_o <= I2C_BUS_HOLD;
@@ -361,7 +392,7 @@ begin
         shift_w_valid_o <= '1';
         shift_w_data_o <= r.data;
 
-      when ST_READ_PUT | ST_WRITE_PUT | ST_IO_FLUSH_PUT =>
+      when ST_READ_PUT | ST_WRITE_PUT =>
         rsp_o.valid <= '1';
         rsp_o.data <= r.data;
         if r.word_count = 0 then
@@ -369,7 +400,22 @@ begin
         else
           rsp_o.last <= '0';
         end if;
-        
+
+      when ST_IO_FLUSH_PUT =>
+        rsp_o.valid <= '1';
+        if std_match(r.cmd, I2C_CMD_WRITE) then
+          -- Write status byte, failed
+          rsp_o.data <= (others => '0');
+        else
+          -- Read data byte filler
+          rsp_o.data <= (others => '1');
+        end if;
+        if r.word_count = 0 then
+          rsp_o.last <= r.last;
+        else
+          rsp_o.last <= '0';
+        end if;
+
       when ST_RSP_PUT =>
         rsp_o.valid <= '1';
         rsp_o.data <= (others => '0');
@@ -390,6 +436,9 @@ begin
       when ST_READ_RUN | ST_READ_DATA | ST_READ_ACK =>
         shift_enable_o <= '1';
         shift_send_data_o <= '0';
+
+      when ST_IO_FLUSH_GET | ST_IO_FLUSH_PUT | ST_RSP_PUT_FAILED =>
+        shift_abort_o <= '1';
 
       when others =>
         null;

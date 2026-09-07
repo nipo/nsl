@@ -257,6 +257,9 @@ projects:
   - name: i2c_cbor_full_test
     path: i2c_cbor/full_test
     tags: [ghdl, simulation]
+  - name: i2c_transactor_stuck_abort
+    path: i2c_transactor/stuck_abort
+    tags: [ghdl, simulation]
   - name: i2s
     path: i2s
     tags: [ghdl, simulation]

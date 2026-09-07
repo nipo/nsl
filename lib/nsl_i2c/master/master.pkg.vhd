@@ -43,7 +43,13 @@ package master is
 
       ready_o : out std_ulogic;
       -- Only meaningful when ready_o is set
-      owned_o : out std_ulogic
+      owned_o : out std_ulogic;
+      -- Last accepted command was aborted because a bus line did not
+      -- follow within the stuck timeout. Sticky until next command is
+      -- accepted. Commander should watch this while waiting for a
+      -- command to complete, as ready_o will not come back before the
+      -- bus is seen free again.
+      fail_o : out std_ulogic
       );
   end component;
   
@@ -60,6 +66,11 @@ package master is
       -- Arbitration lost
       -- Driver should deassert enable_i and wait subsequent start/stop
       arb_ok_o : out std_ulogic;
+
+      -- Abort current word cycle, release the bus and go back to
+      -- idle. To be used by commander when the clock provider gave up
+      -- mid-byte, as the word cycle would never complete.
+      abort_i : in std_ulogic := '0';
 
       -- Whether to drive the bus for next word cycle
       enable_i : in std_ulogic;

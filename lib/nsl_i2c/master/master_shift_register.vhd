@@ -15,6 +15,9 @@ entity master_shift_register is
     start_i : in std_ulogic;
     arb_ok_o : out std_ulogic;
 
+    -- Abort current word cycle, release the bus and go back to idle
+    abort_i : in std_ulogic := '0';
+
     enable_i : in std_ulogic;
     send_mode_i : in std_ulogic;
 
@@ -80,7 +83,7 @@ begin
     end if;
   end process;
 
-  transition : process (i2c_i, r, start_i,
+  transition : process (i2c_i, r, start_i, abort_i,
                         enable_i, send_mode_i,
                         send_valid_i, send_data_i,
                         recv_ready_i)
@@ -194,6 +197,10 @@ begin
       if enable_i = '1' then
         rin.state <= ST_NEXT;
       end if;
+    end if;
+
+    if abort_i = '1' and r.state /= ST_RESET then
+      rin.state <= ST_IDLE;
     end if;
   end process;
 

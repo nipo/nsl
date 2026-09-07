@@ -18,7 +18,11 @@ entity master_clock_driver is
     cmd_i : in i2c_bus_cmd_t;
 
     ready_o : out std_ulogic;
-    owned_o : out std_ulogic
+    owned_o : out std_ulogic;
+    -- Last accepted command was aborted because a bus line did not
+    -- follow within the stuck timeout. Sticky until next command is
+    -- accepted.
+    fail_o : out std_ulogic
     );
 end entity;
 
@@ -70,6 +74,7 @@ architecture beh of master_clock_driver is
     bus_state : bus_state_t;
     cmd : i2c_bus_cmd_t;
     bit_count : natural range 0 to 8;
+    failed    : std_ulogic;
     idle_timeout : unsigned(idle_timeout_clock_count_i'range);
     half_cycle : unsigned(half_cycle_clock_count_i'range);
     stuck_timeout : unsigned(stuck_timeout_clock_count_i'range);
@@ -90,6 +95,7 @@ begin
     if reset_n_i = '0' then
       r.state <= ST_RESET;
       r.bus_state <= BUS_FREE;
+      r.failed <= '0';
     end if;
   end process;
 
@@ -131,6 +137,7 @@ begin
         case r.bus_state is
           when BUS_OWNED | BUS_FREE =>
             rin.cmd <= cmd_i;
+            rin.failed <= '0';
             rin.state <= ST_ROUTE;
 
           when others =>
@@ -191,6 +198,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -209,6 +217,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -235,6 +244,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -253,6 +263,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -283,6 +294,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -301,6 +313,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -327,6 +340,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -345,6 +359,7 @@ begin
         elsif r.stuck_timeout /= 0 then
           rin.stuck_timeout <= r.stuck_timeout - 1;
         else
+          rin.failed <= '1';
           rin.state <= ST_IDLE;
           rin.bus_state <= BUS_BUSY;
         end if;
@@ -364,6 +379,7 @@ begin
     i2c_o.scl.drain_n <= '1';
     i2c_o.sda.drain_n <= '1';
     owned_o <= '0';
+    fail_o <= r.failed;
     
     case r.state is
       when ST_RESET =>
