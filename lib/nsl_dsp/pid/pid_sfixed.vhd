@@ -21,6 +21,9 @@ entity pid_sfixed is
     ki_i: in sfixed := nasf;
     kd_i: in sfixed := nasf;
 
+    control_min_i: in sfixed := nasf;
+    control_max_i: in sfixed := nasf;
+
     changed_o: out std_ulogic;
     control_o : out sfixed
     );
@@ -40,6 +43,10 @@ architecture beh of pid_sfixed is
   --                               d1  |      ^         d2
   --                                   \->[R]-/
   --                                      da2
+  --
+  -- The derivative acts on the error, so a set point step kicks it;
+  -- the history registers reset to zero, so the first sample after
+  -- reset kicks it too.
   --
   -- Register mantissa:
   -- Re0: set_point + 1[msb]
@@ -63,6 +70,34 @@ architecture beh of pid_sfixed is
   subtype rp3_t is sfixed(rc4_t'left+1 downto rc4_t'right-2);
   subtype rdi3_t is rp3_t;
 
+  -- An omitted coefficient port (nasf default) degrades the
+  -- controller: the branch is never computed and contributes zero.
+  constant has_i_c : boolean := ki_i'length /= 0;
+  constant has_d_c : boolean := kd_i'length /= 0;
+
+  -- With limit ports connected, the integrator clamps to the output
+  -- window (it accumulates post-gain, in control currency, so the
+  -- limits apply to it directly whatever the gains) and the output
+  -- clamps to the same window instead of its numeric range.
+  constant has_limits_c : boolean :=
+    control_min_i'length /= 0 and control_max_i'length /= 0;
+
+  function bounded(v, lo, hi : sfixed) return sfixed
+  is
+    constant l : sfixed(v'left downto v'right)
+      := resize_saturate(lo, v'left, v'right);
+    constant h : sfixed(v'left downto v'right)
+      := resize_saturate(hi, v'left, v'right);
+    alias vv : sfixed(v'left downto v'right) is v;
+  begin
+    if vv < l then
+      return l;
+    elsif vv > h then
+      return h;
+    end if;
+    return vv;
+  end function;
+
   type regs_t is
   record
     stage: std_ulogic_vector(0 to 5);
@@ -81,6 +116,15 @@ architecture beh of pid_sfixed is
 
   signal r, rin: regs_t;
 begin
+
+  assert set_point_i'left = measure_i'left
+    and set_point_i'right = measure_i'right
+    report "Set point and measurement ranges must be the same"
+    severity failure;
+
+  assert (control_min_i'length /= 0) = (control_max_i'length /= 0)
+    report "Control limits must be given both or not at all"
+    severity failure;
 
   regs: process(clock_i, reset_n_i) is
   begin
@@ -104,13 +148,11 @@ begin
     end if;
   end process;
 
-  transition: process(r, valid_i, kp_i, ki_i, kd_i, set_point_i, measure_i) is
+  transition: process(r, valid_i, kp_i, ki_i, kd_i,
+                      control_min_i, control_max_i,
+                      set_point_i, measure_i) is
     variable en: std_ulogic_vector(r.stage'range);
   begin
-    assert set_point_i'left = measure_i'left and set_point_i'right = measure_i'right
-      report "Set point and measurement magniture should be the same"
-      severity failure;
-
     rin <= r;
 
     en := valid_i & r.stage(0 to r.stage'right-1);
@@ -122,16 +164,30 @@ begin
 
     if en(1) = '1' then
       rin.p1 <= mul(r.e0, kp_i, rin.p1'left, rin.p1'right);
-      rin.i1 <= mul(r.e0, ki_i, rin.i1'left, rin.i1'right);
-      rin.d1 <= mul(r.e0, kd_i, rin.d1'left, rin.d1'right);
+      if has_i_c then
+        rin.i1 <= mul(r.e0, ki_i, rin.i1'left, rin.i1'right);
+      end if;
+      if has_d_c then
+        rin.d1 <= mul(r.e0, kd_i, rin.d1'left, rin.d1'right);
+      end if;
     end if;
 
     if en(2) = '1' then
       rin.p2 <= r.p1;
 
-      rin.i2 <= add_saturate(r.i2, resize(r.i1, r.i2'left, r.i2'right));
-      rin.da2 <= r.d1;
-      rin.d2 <= resize_saturate(add_saturate(r.da2, r.d1), rin.d2'left, rin.d2'right);
+      if has_i_c then
+        if has_limits_c then
+          rin.i2 <= bounded(add_saturate(r.i2, resize(r.i1, r.i2'left, r.i2'right)),
+                            control_min_i, control_max_i);
+        else
+          rin.i2 <= add_saturate(r.i2, resize(r.i1, r.i2'left, r.i2'right));
+        end if;
+      end if;
+      if has_d_c then
+        rin.da2 <= r.d1;
+        rin.d2 <= resize_saturate(sub_extend(r.d1, r.da2),
+                                  rin.d2'left, rin.d2'right);
+      end if;
     end if;
 
     if en(3) = '1' then
@@ -141,7 +197,14 @@ begin
     end if;
 
     if en(4) = '1' then
-      rin.c4 <= resize_saturate(add_saturate(r.p3, r.di3), rin.c4'left, rin.c4'right);
+      if has_limits_c then
+        rin.c4 <= resize_saturate(bounded(add_saturate(r.p3, r.di3),
+                                          control_min_i, control_max_i),
+                                  rin.c4'left, rin.c4'right);
+      else
+        rin.c4 <= resize_saturate(add_saturate(r.p3, r.di3),
+                                  rin.c4'left, rin.c4'right);
+      end if;
     end if;
   end process;
 

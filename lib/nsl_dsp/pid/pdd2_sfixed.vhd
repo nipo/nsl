@@ -91,6 +91,13 @@ architecture beh of pdd2_sfixed is
   signal r, rin: regs_t;
 begin
 
+  assert set_point_i'length = 0
+    or (set_point_i'left = measure_i'left
+        and set_point_i'right = measure_i'right)
+    report "Set point and measurement ranges must be the same, "
+    & "or set point must be a null range for a zero set point"
+    severity failure;
+
   regs: process(clock_i, reset_n_i) is
   begin
     if rising_edge(clock_i) then
@@ -120,11 +127,6 @@ begin
   transition: process(r, valid_i, kp_i, kd_i, kd2_i, set_point_i, measure_i) is
     variable en: std_ulogic_vector(r.stage'range);
   begin
-    assert set_point_i'length = 0
-      or (set_point_i'left = measure_i'left and set_point_i'right = measure_i'right)
-      report "Set point and measurement magniture should be the same or set point should be zero"
-      severity failure;
-
     rin <= r;
 
     en := valid_i & r.stage(0 to r.stage'right-1);
@@ -154,7 +156,7 @@ begin
     if en(3) = '1' then
       rin.p3 <= r.p2;
       rin.d3 <= resize_saturate(r.d2, r.d3'left, r.d3'right);
-      rin.d23 <= mul(r.d22, kd_i, rin.d23'left, rin.d23'right);
+      rin.d23 <= mul(r.d22, kd2_i, rin.d23'left, rin.d23'right);
     end if;
 
     if en(4) = '1' then
