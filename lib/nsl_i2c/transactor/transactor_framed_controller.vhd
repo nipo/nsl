@@ -34,6 +34,8 @@ architecture rtl of transactor_framed_controller is
   constant pre_div_l2_c : natural := nsl_math.arith.log2(pre_div_c);
   constant pre_div_u_c : unsigned(pre_div_l2_c-2 downto 0) := (others => '1');
   subtype div_u_t is unsigned(pre_div_l2_c-2+6 downto 0);
+  -- 64 SCL half-cycles at the current divisor
+  subtype start_timeout_u_t is unsigned(div_u_t'high+6 downto 0);
   
   type state_t is (
     ST_RESET,
@@ -71,6 +73,7 @@ architecture rtl of transactor_framed_controller is
     data       : std_ulogic_vector(7 downto 0);
     word_count : natural range 0 to 63;
     divisor    : unsigned(5 downto 0);
+    timeout    : start_timeout_u_t;
   end record;
 
   signal r, rin : regs_t;
@@ -206,9 +209,11 @@ begin
           rin.divisor <= unsigned(r.cmd(5 downto 0));
 
         elsif std_match(r.cmd, I2C_CMD_START) then
+          rin.timeout <= r.divisor & pre_div_u_c & "000000";
           rin.state <= ST_START;
 
         elsif std_match(r.cmd, I2C_CMD_STOP) then
+          rin.timeout <= r.divisor & pre_div_u_c & "000000";
           if r.owned = '1' then
             rin.state <= ST_STOP;
           else
@@ -224,10 +229,13 @@ begin
       when ST_START | ST_STOP =>
         -- When ready and fail are both set, fail is stale from a
         -- previous command and the clocker is accepting this one right
-        -- now, clearing it.
+        -- now, clearing it. The timeout bounds the wait for a bus
+        -- that never gets seen free (e.g. a device latched with SDA
+        -- low).
+        rin.timeout <= r.timeout - 1;
         if clocker_ready_i = '1' then
           rin.state <= ST_START_STOP_WAIT;
-        elsif clocker_fail_i = '1' then
+        elsif clocker_fail_i = '1' or r.timeout = 0 then
           rin.state <= ST_RSP_PUT_FAILED;
         end if;
 
