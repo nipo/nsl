@@ -157,7 +157,11 @@ begin
         case r.cmd is
           when I2C_BUS_RELEASE =>
             rin.state <= ST_IDLE;
-            rin.bus_state <= BUS_FREE;
+            -- Only give up an owned bus. Overriding the busy tracking
+            -- would make an externally-held bus look free.
+            if r.bus_state = BUS_OWNED then
+              rin.bus_state <= BUS_FREE;
+            end if;
 
           when I2C_BUS_HOLD =>
             rin.state <= ST_IDLE;
@@ -169,7 +173,9 @@ begin
                 rin.bus_state <= BUS_OWNED;
 
               when BUS_BUSY | BUS_RESET =>
-                null;
+                -- Bus got busy between command acceptance and routing
+                rin.failed <= '1';
+                rin.state <= ST_IDLE;
             end case;
 
           when I2C_BUS_RUN =>
