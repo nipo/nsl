@@ -203,6 +203,9 @@ projects:
   - name: ddr_io
     path: ddr_io
     tags: [ghdl, simulation]
+  - name: dsp_pid
+    path: dsp/pid
+    tags: [ghdl, simulation]
   - name: easyscale
     path: easyscale
     tags: [ghdl, simulation]
