@@ -25,13 +25,23 @@ package mcp4726 is
     POWER_OFF_500k
     );
   
+  -- Configuration byte of the volatile memory write command: command
+  -- code, reference selection, power mode and gain.
+  function mcp4726_config(vref: vref_t;
+                          power: power_t;
+                          gain: integer range 1 to 2) return byte;
+
+  -- Data bytes of a memory write, the 12-bit code left-justified.
+  function mcp4726_data(value: unsigned(11 downto 0)) return byte_string;
+
   function mcp4726_init(saddr: unsigned;
                         vref: vref_t;
                         power: power_t;
                         gain: integer range 1 to 2;
                         value: unsigned(11 downto 0)) return byte_string;
 
-  -- MCP4726 writer
+  -- MCP4726 writer, through the volatile DAC register write: the
+  -- configuration set at initialization is left alone.
   component mcp4726_updater is
     generic(
       i2c_addr_c    : unsigned(6 downto 0)
@@ -67,11 +77,9 @@ package body mcp4726 is
     return to_unsigned((sel mod 8) + 16#60#, 7);
   end function;
 
-  function mcp4726_init(saddr: unsigned;
-                        vref: vref_t;
-                        power: power_t;
-                        gain: integer range 1 to 2;
-                        value: unsigned(11 downto 0)) return byte_string
+  function mcp4726_config(vref: vref_t;
+                          power: power_t;
+                          gain: integer range 1 to 2) return byte
   is
     variable vref_u, pd_u : unsigned(1 downto 0);
     variable g_u: unsigned(0 downto 0);
@@ -99,9 +107,25 @@ package body mcp4726 is
       g_u := "1";
     end if;
     
+    return byte(std_ulogic_vector("010" & vref_u & pd_u & g_u));
+  end function;
+
+  function mcp4726_data(value: unsigned(11 downto 0)) return byte_string
+  is
+  begin
+    return to_be(value & "0000");
+  end function;
+
+  function mcp4726_init(saddr: unsigned;
+                        vref: vref_t;
+                        power: power_t;
+                        gain: integer range 1 to 2;
+                        value: unsigned(11 downto 0)) return byte_string
+  is
+  begin
     return null_byte_string
-      & i2c_write(saddr, to_be("010" & vref_u & pd_u & g_u
-                               & "0000" & value))
+      & i2c_write(saddr, mcp4726_config(vref, power, gain)
+                  & mcp4726_data(value))
       ;
   end function;
 

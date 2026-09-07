@@ -153,6 +153,7 @@ begin
             rin.cmd_byte_count <= addr_byte_count_c - 1;
             rin.cmd <= CMD_ADDR_PUT;
           else
+            rin.cmd_byte_count <= r.data_byte_count - 1;
             rin.cmd <= CMD_DATA_PUT;
           end if;
         end if;

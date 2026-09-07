@@ -1,0 +1,28 @@
+name: i2c_mcp4726
+
+root:
+  name: top
+  deps:
+   - nsl_simulation.driver
+   - nsl_bnoc.framed
+   - nsl_bnoc.framed_transactor
+   - nsl_i2c.i2c
+   - nsl_i2c.transactor
+   - nsl_i2c.mcp4726
+   - nsl_i2c.clockfree
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

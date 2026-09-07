@@ -485,6 +485,9 @@ projects:
   - name: tick
     path: tick
     tags: [ghdl, simulation]
+  - name: i2c_mcp4726
+    path: i2c_mcp4726
+    tags: [ghdl, simulation]
   - name: tla202x
     path: tla202x
     tags: [ghdl, simulation]

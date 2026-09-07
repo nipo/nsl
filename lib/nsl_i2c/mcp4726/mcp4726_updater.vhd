@@ -54,6 +54,8 @@ architecture beh of mcp4726_updater is
   signal r, rin : regs_t;
 
   signal cmd_valid_s, cmd_ready_s, rsp_valid_s : std_ulogic;
+  -- Volatile DAC register write: power-down bits clear, the code
+  -- right-justified over the two bytes.
   signal cmd_data_s : byte_string(0 to 1);
 
 begin
