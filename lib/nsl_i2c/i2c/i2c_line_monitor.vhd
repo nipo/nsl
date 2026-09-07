@@ -26,7 +26,8 @@ begin
 
   scl: nsl_clocking.async.async_input
     generic map(
-      debounce_count_c => debounce_count_c
+      debounce_count_c => debounce_count_c,
+      reset_value_c => '1'
       )
     port map(
       clock_i => clock_i,
@@ -39,7 +40,8 @@ begin
 
   sda: nsl_clocking.async.async_input
     generic map(
-      debounce_count_c => debounce_count_c
+      debounce_count_c => debounce_count_c,
+      reset_value_c => '1'
       )
     port map(
       clock_i => clock_i,

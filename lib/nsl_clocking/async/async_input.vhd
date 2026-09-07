@@ -6,7 +6,10 @@ library nsl_clocking;
 entity async_input is
   generic (
     sample_count_c: natural := 2;
-    debounce_count_c: natural := 2
+    debounce_count_c: natural := 2;
+    -- Debounced value presented while in reset and until the input
+    -- settles for the first time.
+    reset_value_c: std_ulogic := '0'
   );
   port (
     clock_i: in std_ulogic;
@@ -51,8 +54,8 @@ begin
         r <= rin;
       end if;
       if reset_n_i = '0' then
-        r.cur <= '0';
-        r.prev <= '0';
+        r.cur <= reset_value_c;
+        r.prev <= reset_value_c;
         r.debouncer <= 0;
       end if;
     end process;
