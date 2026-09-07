@@ -47,9 +47,9 @@ Architecture
     |
     | time_o(63:32) - unix offset
     |
-  screen_text (calendar_from_seconds, to_decimal_string, 16x8 cells)
-    | terminal text buffer write port
-  terminal_text_buffer (nsl_dvi, 6x8 font) -> pmod_oled_rgb_driver on JA
+  screen_text (calendar_from_seconds, to_decimal_string)
+    | 128-character string and 5 color indices
+  terminal_labels (nsl_dvi, 16x8 label layout, 6x8 font) -> pmod_oled_rgb_driver on JA
 
   link_monitor_smi (PHY_DP83xxx) -> smi_framed_transactor -> MDIO
 

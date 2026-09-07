@@ -65,11 +65,8 @@ architecture beh of fpga_io is
 
   signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
   signal pixel_s : rgb24;
-  signal term_row_s : unsigned(2 downto 0);
-  signal term_column_s : unsigned(3 downto 0);
-  signal term_write_s : std_ulogic;
-  signal term_character_s : unsigned(7 downto 0);
-  signal term_foreground_s : unsigned(2 downto 0);
+  signal screen_text_s : string(1 to work.func.screen_text_length_c);
+  signal screen_colors_s : nsl_dvi.terminal.label_color_vector(0 to work.func.screen_color_count_c-1);
 
 begin
 
@@ -283,20 +280,19 @@ begin
       pmod_io => ja_io
       );
 
-  terminal: nsl_dvi.terminal.terminal_text_buffer
+  terminal: nsl_dvi.terminal.terminal_labels
     generic map(
       row_count_l2_c => 3,
       column_count_l2_c => 4,
       character_count_l2_c => 8,
       color_palette_c => color_palette_c,
       font_c => nsl_indication.font_6x8.font_6x8_c,
-      underline_support_c => false,
-      font_hscale_c => 1,
-      font_vscale_c => 1
+      labels_c => work.func.screen_labels_c,
+      blank_color_c => work.func.screen_color_background_c
       )
     port map(
-      video_clock_i => clock_100_s,
-      video_reset_n_i => reset_n_s,
+      clock_i => clock_100_s,
+      reset_n_i => reset_n_s,
 
       sof_i => sof_s,
       sol_i => sol_s,
@@ -304,16 +300,8 @@ begin
       pixel_valid_o => pixel_valid_s,
       pixel_o => pixel_s,
 
-      term_clock_i => clock_100_s,
-      term_reset_n_i => reset_n_s,
-
-      row_i => term_row_s,
-      column_i => term_column_s,
-      enable_i => term_write_s,
-      write_i => term_write_s,
-      character_i => term_character_s,
-      foreground_i => term_foreground_s,
-      background_i => "000"
+      text_i => screen_text_s,
+      color_i => screen_colors_s
       );
 
   screen: work.func.screen_text
@@ -328,11 +316,8 @@ begin
       ntp_server_i => ntp_server_s,
       seconds_i => seconds_s,
 
-      row_o => term_row_s,
-      column_o => term_column_s,
-      write_o => term_write_s,
-      character_o => term_character_s,
-      foreground_o => term_foreground_s
+      text_o => screen_text_s,
+      colors_o => screen_colors_s
       );
 
 end architecture;

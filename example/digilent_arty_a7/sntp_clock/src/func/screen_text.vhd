@@ -2,13 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_time;
-use nsl_data.bytestream.all;
+library nsl_data, nsl_dvi, nsl_time, work;
 use nsl_data.text.all;
+use nsl_dvi.terminal.all;
 use nsl_time.calendar.all;
+use work.func.all;
 
--- Renders the stack status as a 16x8 text screen and streams it to
--- the terminal text buffer, one cell per cycle, forever.
+-- Composes the stack status as the text and colors of the label
+-- screen described by screen_labels_c.
 entity screen_text is
   port(
     clock_i : in std_ulogic;
@@ -21,52 +22,31 @@ entity screen_text is
     ntp_server_i : in unsigned(31 downto 0);
     seconds_i : in unsigned(31 downto 0);
 
-    row_o : out unsigned(2 downto 0);
-    column_o : out unsigned(3 downto 0);
-    write_o : out std_ulogic;
-    character_o : out unsigned(7 downto 0);
-    foreground_o : out unsigned(2 downto 0)
+    text_o : out string(1 to screen_text_length_c);
+    colors_o : out label_color_vector(0 to screen_color_count_c-1)
     );
 end entity;
 
 architecture beh of screen_text is
 
-  constant column_count_c : natural := 16;
-  constant row_count_c : natural := 8;
-
-  subtype line_t is byte_string(0 to column_count_c-1);
-  type screen_t is array (0 to row_count_c-1) of line_t;
-
-  subtype color_t is unsigned(2 downto 0);
-  type color_vector is array (0 to row_count_c-1) of color_t;
-
   -- Indices in the palette of the top level
-  constant color_red_c : color_t := "001";
-  constant color_green_c : color_t := "010";
-  constant color_yellow_c : color_t := "100";
-  constant color_cyan_c : color_t := "101";
-  constant color_white_c : color_t := "111";
+  constant color_black_c : label_color_t := x"00";
+  constant color_red_c : label_color_t := x"01";
+  constant color_green_c : label_color_t := x"02";
+  constant color_yellow_c : label_color_t := x"04";
+  constant color_cyan_c : label_color_t := x"05";
+  constant color_white_c : label_color_t := x"07";
 
-  function dotted(address : unsigned(31 downto 0)) return line_t
+  function dotted(address : unsigned(31 downto 0)) return string
   is
   begin
-    return to_byte_string(to_decimal_string(address(31 downto 24), 3) & "."
-                          & to_decimal_string(address(23 downto 16), 3) & "."
-                          & to_decimal_string(address(15 downto 8), 3) & "."
-                          & to_decimal_string(address(7 downto 0), 3) & " ");
+    return to_decimal_string(address(31 downto 24), 3) & "."
+      & to_decimal_string(address(23 downto 16), 3) & "."
+      & to_decimal_string(address(15 downto 8), 3) & "."
+      & to_decimal_string(address(7 downto 0), 3) & " ";
   end function;
 
-  type regs_t is
-  record
-    row : unsigned(2 downto 0);
-    column : unsigned(3 downto 0);
-  end record;
-
-  signal r, rin : regs_t;
-
   signal date_time_s : date_time_t;
-  signal screen_s : screen_t;
-  signal colors_s : color_vector;
 
 begin
 
@@ -82,67 +62,27 @@ begin
       date_time_o => date_time_s
       );
 
-  screen_s(0) <= to_byte_string("NSL SNTP CLOCK  ");
-  screen_s(1) <= to_byte_string("LINK " & if_else(link_up_i = '1', "up", "- ")
-                                & "  DHCP " & if_else(dhcp_valid_i = '1', "ok", "- "));
-  screen_s(2) <= to_byte_string("IP ADDRESS      ");
-  screen_s(3) <= dotted(address_i);
-  screen_s(4) <= to_byte_string("NTP SERVER      ");
-  screen_s(5) <= dotted(ntp_server_i);
-  screen_s(6) <= to_byte_string(to_decimal_string(date_time_s.year, 4) & "-"
-                                & to_decimal_string(date_time_s.month, 2) & "-"
-                                & to_decimal_string(date_time_s.day, 2) & "   UTC");
-  screen_s(7) <= to_byte_string(to_decimal_string(date_time_s.hour, 2) & ":"
-                                & to_decimal_string(date_time_s.minute, 2) & ":"
-                                & to_decimal_string(date_time_s.second, 2)
-                                & " SNTP " & if_else(sntp_valid_i = '1', "ok", "- "));
+  text_o <= "NSL SNTP CLOCK  "
+            & "LINK " & if_else(link_up_i = '1', "up", "- ")
+            & "  DHCP " & if_else(dhcp_valid_i = '1', "ok", "- ")
+            & "IP ADDRESS      "
+            & dotted(address_i)
+            & "NTP SERVER      "
+            & dotted(ntp_server_i)
+            & to_decimal_string(date_time_s.year, 4) & "-"
+            & to_decimal_string(date_time_s.month, 2) & "-"
+            & to_decimal_string(date_time_s.day, 2) & "   UTC"
+            & to_decimal_string(date_time_s.hour, 2) & ":"
+            & to_decimal_string(date_time_s.minute, 2) & ":"
+            & to_decimal_string(date_time_s.second, 2)
+            & " SNTP " & if_else(sntp_valid_i = '1', "ok", "- ");
 
-  colors_s(0) <= color_white_c;
-  colors_s(1) <= color_green_c when link_up_i = '1' and dhcp_valid_i = '1'
-                 else color_yellow_c when link_up_i = '1'
-                 else color_red_c;
-  colors_s(2) <= color_white_c;
-  colors_s(3) <= color_cyan_c;
-  colors_s(4) <= color_white_c;
-  colors_s(5) <= color_cyan_c;
-  colors_s(6) <= color_white_c;
-  colors_s(7) <= color_green_c when sntp_valid_i = '1' else color_red_c;
-
-  regs: process(clock_i, reset_n_i) is
-  begin
-    if rising_edge(clock_i) then
-      r <= rin;
-    end if;
-
-    if reset_n_i = '0' then
-      r.row <= (others => '0');
-      r.column <= (others => '0');
-    end if;
-  end process;
-
-  transition: process(r) is
-  begin
-    rin <= r;
-
-    if r.column /= column_count_c - 1 then
-      rin.column <= r.column + 1;
-    else
-      rin.column <= (others => '0');
-      if r.row /= row_count_c - 1 then
-        rin.row <= r.row + 1;
-      else
-        rin.row <= (others => '0');
-      end if;
-    end if;
-  end process;
-
-  output: process(r, screen_s, colors_s) is
-  begin
-    row_o <= r.row;
-    column_o <= r.column;
-    write_o <= '1';
-    character_o <= unsigned(screen_s(to_integer(r.row))(to_integer(r.column)));
-    foreground_o <= colors_s(to_integer(r.row));
-  end process;
+  colors_o(screen_color_background_c) <= color_black_c;
+  colors_o(screen_color_title_c) <= color_white_c;
+  colors_o(screen_color_value_c) <= color_cyan_c;
+  colors_o(screen_color_link_c) <= color_green_c when link_up_i = '1' and dhcp_valid_i = '1'
+                                   else color_yellow_c when link_up_i = '1'
+                                   else color_red_c;
+  colors_o(screen_color_sntp_c) <= color_green_c when sntp_valid_i = '1' else color_red_c;
 
 end architecture;
