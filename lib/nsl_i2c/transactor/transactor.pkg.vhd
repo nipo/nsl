@@ -27,7 +27,10 @@ package transactor is
 
   component transactor_framed_controller
     generic(
-      clock_i_hz_c : natural
+      clock_i_hz_c : natural;
+      -- Number of SCL half-cycles a device may stretch the clock (or
+      -- otherwise hold a line) before the current command is aborted.
+      stuck_timeout_half_cycles_c : natural := 8
       );
     port(
       clock_i    : in std_ulogic;

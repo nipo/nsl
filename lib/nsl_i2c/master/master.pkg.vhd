@@ -29,6 +29,13 @@ package master is
     );
   
   component master_clock_driver is
+    generic(
+      -- Number of SCL half-cycles a device may stretch the clock (or
+      -- otherwise hold a line) before the current command is aborted.
+      -- I2C puts no upper bound on clock stretching; size this for
+      -- the worst device on the bus (SMBus allows up to 25 ms).
+      stuck_timeout_half_cycles_c : natural := 8
+      );
     port(
       clock_i    : in std_ulogic;
       reset_n_i : in std_ulogic;

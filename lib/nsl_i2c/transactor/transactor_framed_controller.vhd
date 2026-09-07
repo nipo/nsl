@@ -9,7 +9,10 @@ use nsl_i2c.master.all;
 
 entity transactor_framed_controller is
   generic(
-    clock_i_hz_c : natural
+    clock_i_hz_c : natural;
+    -- Number of SCL half-cycles a device may stretch the clock (or
+    -- otherwise hold a line) before the current command is aborted.
+    stuck_timeout_half_cycles_c : natural := 8
     );
   port(
     clock_i    : in std_ulogic;
@@ -101,6 +104,9 @@ begin
       );
 
   clock_driver: nsl_i2c.master.master_clock_driver
+    generic map(
+      stuck_timeout_half_cycles_c => stuck_timeout_half_cycles_c
+      )
     port map(
       clock_i   => clock_i,
       reset_n_i => reset_n_i,

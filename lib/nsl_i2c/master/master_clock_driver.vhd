@@ -2,10 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_i2c;
+library nsl_i2c, nsl_math;
 use nsl_i2c.master.all;
 
 entity master_clock_driver is
+  generic(
+    -- Number of SCL half-cycles a device may stretch the clock (or
+    -- otherwise hold a line) before the current command is aborted.
+    stuck_timeout_half_cycles_c : natural := 8
+    );
   port(
     clock_i    : in std_ulogic;
     reset_n_i : in std_ulogic;
@@ -67,7 +72,7 @@ architecture beh of master_clock_driver is
     );
   
   signal idle_timeout_clock_count_i : unsigned(half_cycle_clock_count_i'length + 3 downto 0);
-  signal stuck_timeout_clock_count_i : unsigned(half_cycle_clock_count_i'length + 2 downto 0);
+  signal stuck_timeout_clock_count_i : unsigned(half_cycle_clock_count_i'length + nsl_math.arith.log2(stuck_timeout_half_cycles_c + 1) - 1 downto 0);
   
   type regs_t is record
     state     : state_t;
@@ -85,7 +90,10 @@ architecture beh of master_clock_driver is
 begin
 
   idle_timeout_clock_count_i <= half_cycle_clock_count_i & "1000";
-  stuck_timeout_clock_count_i <= half_cycle_clock_count_i & "100";
+  stuck_timeout_clock_count_i <= resize(
+    half_cycle_clock_count_i
+    * nsl_math.arith.to_unsigned_auto(stuck_timeout_half_cycles_c),
+    stuck_timeout_clock_count_i'length);
   
   ck : process (clock_i, reset_n_i)
   begin
