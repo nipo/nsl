@@ -25,11 +25,15 @@ end entity;
 
 architecture beh of discipline_second_setter is
 
-  -- Past this point in the second, the nanosecond field no longer
-  -- tells which side of the boundary the time base stands on, so the
-  -- second field it shows cannot be compared to the label.
+  -- Within this much of a boundary, the nanosecond field tells which
+  -- side of it the time base stands on: just after, the second field
+  -- shown is the epoch the tick opened; just before, it is the
+  -- previous one and the boundary about to pass is the tick's.
+  -- Further away the second field cannot be compared to the label.
   constant guard_ns_c : timestamp_nanosecond_t
     := to_unsigned(250000000, timestamp_nanosecond_t'length);
+  constant second_ns_c : timestamp_nanosecond_t
+    := to_unsigned(1000000000, timestamp_nanosecond_t'length);
 
   type regs_t is
   record
@@ -68,13 +72,22 @@ begin
     if tick_i = '1' then
       rin.armed <= '0';
 
-      if r.armed = '1'
-        and timestamp_i.second /= r.expected
-        and timestamp_i.nanosecond < guard_ns_c then
-        rin.timestamp.abs_change <= '1';
-        rin.timestamp.second <= r.expected;
-        rin.timestamp.nanosecond <= timestamp_i.nanosecond;
-        rin.set <= '1';
+      if r.armed = '1' then
+        if timestamp_i.nanosecond < guard_ns_c then
+          if timestamp_i.second /= r.expected then
+            rin.timestamp.abs_change <= '1';
+            rin.timestamp.second <= r.expected;
+            rin.timestamp.nanosecond <= timestamp_i.nanosecond;
+            rin.set <= '1';
+          end if;
+        elsif timestamp_i.nanosecond >= second_ns_c - guard_ns_c then
+          if timestamp_i.second /= r.expected - 1 then
+            rin.timestamp.abs_change <= '1';
+            rin.timestamp.second <= r.expected - 1;
+            rin.timestamp.nanosecond <= timestamp_i.nanosecond;
+            rin.set <= '1';
+          end if;
+        end if;
       end if;
     end if;
 

@@ -439,6 +439,9 @@ projects:
   - name: mii_ipg
     path: mii_ipg
     tags: [ghdl, simulation]
+  - name: precise_clock_second_setter
+    path: precise_clock/second_setter
+    tags: [ghdl, simulation]
   - name: precise_clock_phc
     path: precise_clock/phc
     tags: [ghdl, simulation]
