@@ -208,6 +208,11 @@ begin
           else
             rin.state <= ST_RSP_PUT_FAILED;
           end if;
+
+        else
+          -- Unknown command byte, answer failure rather than stalling
+          -- the frame
+          rin.state <= ST_RSP_PUT_FAILED;
         end if;
 
       when ST_START | ST_STOP =>

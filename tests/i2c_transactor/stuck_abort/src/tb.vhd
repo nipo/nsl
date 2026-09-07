@@ -114,6 +114,9 @@ begin
     -- Start, write memory device address, stop. Must complete
     -- normally now the bus recovered.
     framed_put(cmd_s.req, cmd_s.ack, clock_s, from_hex("2040a021"));
+
+    -- Unknown command byte, must be answered, not swallowed.
+    framed_put(cmd_s.req, cmd_s.ack, clock_s, from_hex("30"));
     wait;
   end process;
 
@@ -129,6 +132,9 @@ begin
 
     framed_check("recovered", rsp_s.req, rsp_s.ack, clock_s,
                  from_hex("000100"), LOG_LEVEL_FATAL);
+
+    framed_check("invalid", rsp_s.req, rsp_s.ack, clock_s,
+                 from_hex("ff"), LOG_LEVEL_FATAL);
 
     done_s(0) <= '1';
     wait;
