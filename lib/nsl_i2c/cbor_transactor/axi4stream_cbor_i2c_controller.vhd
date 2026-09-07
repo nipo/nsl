@@ -12,6 +12,9 @@ entity axi4stream_cbor_i2c_controller is
     generic(
         clock_i_hz_c    : natural range 0 to 100000000;
         target_scl_hz_c : natural range 0 to 400000 := 400000;
+        -- Number of SCL half-cycles a device may stretch the clock (or
+        -- otherwise hold a line) before the current command is aborted.
+        stuck_timeout_half_cycles_c : natural := 8;
         stream_config_c     : nsl_amba.axi4_stream.config_t
     );
     port(
@@ -33,6 +36,8 @@ architecture beh of axi4stream_cbor_i2c_controller is
     constant cbr_hdr_max_size_c    : natural := 4;
     constant buffer_cfg_c          : nsl_amba.axi4_stream.buffer_config_t := nsl_amba.axi4_stream.buffer_config(stream_config_c, cbr_hdr_max_size_c);
     constant clock_cycles_per_us_c : natural := clock_i_hz_c / 1000000;
+    -- 64 SCL half-cycles, bounds the wait for a free bus on start
+    constant start_timeout_c       : natural := 64 * (clock_i_hz_c / target_scl_hz_c);
 
   
     type state_t is (
@@ -94,8 +99,6 @@ architecture beh of axi4stream_cbor_i2c_controller is
         ST_RSP_BREAK_PREP,
         ST_RSP_BREAK_PUT,
 
-        ST_IO_FLUSH_GET,
-        ST_IO_FLUSH_PUT,
         ST_ERROR_DRAIN,
 
         -- 10-bit addressing: second address byte
@@ -131,6 +134,7 @@ architecture beh of axi4stream_cbor_i2c_controller is
         
         timeout       : natural range 0 to 2**27-1; -- max possible value is 1000000 us ->
                                                     -- at 100MHz it would be 100000000 cycles
+        start_timeout : natural range 0 to start_timeout_c;
     end record;
 
     signal r, rin : regs_t;
@@ -138,9 +142,9 @@ architecture beh of axi4stream_cbor_i2c_controller is
     signal i2c_filt_i : nsl_i2c.i2c.i2c_i;
     signal i2c_clocker_o, i2c_shifter_o : nsl_i2c.i2c.i2c_o;
     signal start_i, stop_i : std_ulogic;
-    signal clocker_owned_i, clocker_ready_i : std_ulogic;
+    signal clocker_owned_i, clocker_ready_i, clocker_fail_i : std_ulogic;
     signal clocker_cmd_o : i2c_bus_cmd_t;
-    signal shift_enable_o, shift_send_data_o, shift_arb_ok_i : std_ulogic;
+    signal shift_enable_o, shift_send_data_o, shift_arb_ok_i, shift_abort_o : std_ulogic;
     signal shift_w_valid_o, shift_w_ready_i : std_ulogic;
     signal shift_r_valid_i, shift_r_ready_o : std_ulogic;
     signal shift_w_data_o, shift_r_data_i : std_ulogic_vector(7 downto 0);
@@ -203,8 +207,6 @@ architecture beh of axi4stream_cbor_i2c_controller is
         when ST_RSP_BSTR_HDR_PUT   => return "ST_RSP_BSTR_HDR_PUT";
         when ST_RSP_BREAK_PREP     => return "ST_RSP_BREAK_PREP";
         when ST_RSP_BREAK_PUT      => return "ST_RSP_BREAK_PUT";
-        when ST_IO_FLUSH_GET       => return "ST_IO_FLUSH_GET";
-        when ST_IO_FLUSH_PUT       => return "ST_IO_FLUSH_PUT";
         when ST_ERROR_DRAIN        => return "ST_ERROR_DRAIN";
         when ST_ADDR2_RUN          => return "ST_ADDR2_RUN";
         when ST_ADDR2_DATA         => return "ST_ADDR2_DATA";
@@ -253,6 +255,9 @@ begin
       );
 
     clock_driver: nsl_i2c.master.master_clock_driver
+    generic map(
+      stuck_timeout_half_cycles_c => stuck_timeout_half_cycles_c
+      )
     port map(
       clock_i   => clock_i,
       reset_n_i => reset_n_i,
@@ -265,7 +270,8 @@ begin
       cmd_i => clocker_cmd_o,
 
       ready_o => clocker_ready_i,
-      owned_o => clocker_owned_i
+      owned_o => clocker_owned_i,
+      fail_o => clocker_fail_i
       );
 
 
@@ -279,6 +285,8 @@ begin
 
       start_i => start_i,
       arb_ok_o  => shift_arb_ok_i,
+
+      abort_i => shift_abort_o,
 
       enable_i => shift_enable_o,
       send_mode_i => shift_send_data_o,
@@ -314,7 +322,7 @@ begin
       end if;
     end process;
 
-    transition : process (clocker_owned_i, clocker_ready_i,
+    transition : process (clocker_owned_i, clocker_ready_i, clocker_fail_i,
                           cmd_i, r, rsp_i,
                           shift_r_data_i, shift_r_valid_i, shift_w_ready_i,
                           shift_arb_ok_i)
@@ -322,11 +330,11 @@ begin
     begin
       rin <= r;
       clr_timeout_cnt_s <= '0';
-  
+
       if clocker_ready_i = '1' then
         rin.owned <= clocker_owned_i;
       end if;
-      if shift_arb_ok_i = '0' then
+      if shift_arb_ok_i = '0' or clocker_fail_i = '1' then
         rin.owned <= '0';
       end if;
       
@@ -434,6 +442,7 @@ begin
         
         when ST_ADDR_SET_W_R =>
           rin.state <= ST_START;
+          rin.start_timeout <= start_timeout_c;
           if nsl_data.cbor.kind(r.parser) = KIND_POSITIVE then
             -- READ OPERATION
             rin.rw <= '1';
@@ -451,21 +460,39 @@ begin
           end if;
 
         when ST_START =>
+          -- When ready and fail are both set, fail is stale from a
+          -- previous command and the clocker is accepting this one
+          -- right now, clearing it. The timeout bounds the wait for a
+          -- bus that never gets seen free.
+          if r.start_timeout /= 0 then
+            rin.start_timeout <= r.start_timeout - 1;
+          end if;
           if clocker_ready_i = '1' then
             rin.state <= ST_START_WAIT;
+          elsif clocker_fail_i = '1' or r.start_timeout = 0 then
+            rin.cmd_cancelled <= true;
+            rin.data <= nsl_data.cbor.cbor_false(0);
+            rin.state <= ST_RSP_ANACK_PUT;
           end if;
 
         when ST_START_WAIT =>
-          if clocker_ready_i = '1' then
+          if clocker_fail_i = '1' then
+            rin.cmd_cancelled <= true;
+            rin.state <= ST_RSP_ANACK_PREP;
+          elsif clocker_ready_i = '1' then
             if clocker_owned_i = '1' then
               rin.state <= ST_ADDR_RUN;
-            else 
-              rin.state <= ST_IO_FLUSH_GET;
+            else
+              rin.cmd_cancelled <= true;
+              rin.state <= ST_RSP_ANACK_PREP;
             end if;
           end if;
 
         when ST_ADDR_RUN =>
-          if clocker_ready_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.state <= ST_RSP_ANACK_PREP;
+          elsif clocker_ready_i = '1' then
             rin.state <= ST_ADDR_DATA;
             if r.addr(9 downto 7) /= "000" then
               -- 10-bit mode: send header with R/W=0 (write direction for address phase)
@@ -477,12 +504,18 @@ begin
           end if;
 
         when ST_ADDR_DATA =>
-          if shift_w_ready_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.state <= ST_RSP_ANACK_PREP;
+          elsif shift_w_ready_i = '1' then
             rin.state <= ST_ADDR_ACK;
           end if;
 
         when ST_ADDR_ACK =>
-          if shift_r_valid_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.state <= ST_RSP_ANACK_PREP;
+          elsif shift_r_valid_i = '1' then
             rin.data <= (0 => not shift_r_data_i(0), others => '0');
             if shift_r_data_i(0) = '0' then -- ACK OK
               if r.addr(9 downto 7) /= "000" then
@@ -507,18 +540,34 @@ begin
           end if;
         
         when ST_READ_RUN =>
-          if clocker_ready_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            -- The byte string length is already announced, fill it
+            rin.cmd_cancelled <= true;
+            rin.data <= (others => '1');
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_READ_PUT;
+          elsif clocker_ready_i = '1' then
             rin.state <= ST_READ_DATA;
           end if;
-        
+
         when ST_READ_DATA =>
-          if shift_r_valid_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.data <= (others => '1');
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_READ_PUT;
+          elsif shift_r_valid_i = '1' then
             rin.state <= ST_READ_ACK;
             rin.data <= shift_r_data_i;
           end if;
 
         when ST_READ_ACK =>
-          if shift_w_ready_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.data <= (others => '1');
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_READ_PUT;
+          elsif shift_w_ready_i = '1' then
             rin.word_count <= r.word_count - 1;
             rin.state <= ST_READ_PUT;
           end if;
@@ -531,6 +580,10 @@ begin
         when ST_READ_END =>
           if r.word_count = 0 then
             rin.state <= ST_CMD_END;
+          elsif r.cmd_cancelled then
+            rin.data <= (others => '1');
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_READ_PUT;
           else
             rin.state <= ST_READ_RUN;
           end if;
@@ -546,18 +599,30 @@ begin
             end if;
           end if;
 
-          when ST_WRITE_RUN =>
-            if clocker_ready_i = '1' then
+        when ST_WRITE_RUN =>
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_RSP_DNACK_PREP;
+          elsif clocker_ready_i = '1' then
             rin.state <= ST_WRITE_DATA;
-            end if;
+          end if;
 
         when ST_WRITE_DATA =>
-          if shift_w_ready_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_RSP_DNACK_PREP;
+          elsif shift_w_ready_i = '1' then
             rin.state <= ST_WRITE_ACK;
           end if;
 
         when ST_WRITE_ACK =>
-          if shift_r_valid_i = '1' then
+          if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+            rin.cmd_cancelled <= true;
+            rin.word_count <= r.word_count - 1;
+            rin.state <= ST_RSP_DNACK_PREP;
+          elsif shift_r_valid_i = '1' then
             rin.word_count <= r.word_count - 1;
             if shift_r_data_i(0) = '1' then -- NACK
               rin.state <= ST_RSP_DNACK_PREP;
@@ -614,30 +679,17 @@ begin
           rin.parser <= nsl_data.cbor.reset;
 
 
-        when ST_IO_FLUSH_GET =>
-          if nsl_amba.axi4_stream.is_valid(stream_config_c, cmd_i) then
-            rin.state <= ST_IO_FLUSH_PUT;
-          end if;
-
-        when ST_IO_FLUSH_PUT =>
-          if nsl_amba.axi4_stream.is_ready(stream_config_c, rsp_i) then
-            if r.word_count = 0 then
-              rin.state <= ST_CMD_GET;
-            else
-              rin.word_count <= r.word_count - 1;
-            end if;
-          end if;
-        
         when ST_STOP =>
-          if clocker_ready_i = '1' then
+          if clocker_ready_i = '1' or clocker_fail_i = '1' then
             rin.state <= ST_STOP_WAIT;
           end if;
 
         when ST_STOP_WAIT =>
-        if clocker_ready_i = '1' then
+        if clocker_ready_i = '1' or clocker_fail_i = '1' then
           if r.timeout = 0 then
             rin.state <= ST_CMD_END;
           else
+            rin.start_timeout <= start_timeout_c;
             rin.state <= ST_START;
           end if;
         end if;
@@ -652,7 +704,7 @@ begin
           end if;
         
         when ST_RSP_ANACK_PREP =>
-          if clocker_ready_i = '1' then
+          if clocker_ready_i = '1' or clocker_fail_i = '1' then
             rin.data  <= nsl_data.cbor.cbor_false(0);
             rin.state <= ST_RSP_ANACK_PUT;
           end if;
@@ -669,7 +721,7 @@ begin
           end if;
         
         when ST_RSP_DNACK_PREP =>
-          if clocker_ready_i = '1' then
+          if clocker_ready_i = '1' or clocker_fail_i = '1' then
             rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tagged(tag => 2, item => nsl_data.cbor.cbor_positive(value => to_unsigned(r.word_total - r.word_count - 1 , 10 ) )) );
             rin.state <= ST_RSP_DNACK_PUT;
             rin.last  <= false;
@@ -733,18 +785,27 @@ begin
 
       -- 10-bit addressing: second address byte
       when ST_ADDR2_RUN =>
-        if clocker_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif clocker_ready_i = '1' then
           rin.state <= ST_ADDR2_DATA;
           rin.data <= r.addr(7 downto 0);  -- A7..A0
         end if;
 
       when ST_ADDR2_DATA =>
-        if shift_w_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif shift_w_ready_i = '1' then
           rin.state <= ST_ADDR2_ACK;
         end if;
 
       when ST_ADDR2_ACK =>
-        if shift_r_valid_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif shift_r_valid_i = '1' then
           if shift_r_data_i(0) = '0' then -- ACK OK
             if r.rw = '1' then
               -- 10-bit READ: need repeated START then header with R/W=1
@@ -767,32 +828,48 @@ begin
       when ST_RESTART =>
         if clocker_ready_i = '1' then
           rin.state <= ST_RESTART_WAIT;
+        elsif clocker_fail_i = '1' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
         end if;
 
       when ST_RESTART_WAIT =>
-        if clocker_ready_i = '1' then
+        if clocker_fail_i = '1' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif clocker_ready_i = '1' then
           if clocker_owned_i = '1' then
             rin.state <= ST_ADDR_RD_RUN;
           else
             -- Lost arbitration during repeated START
-            rin.state <= ST_IO_FLUSH_GET;
+            rin.cmd_cancelled <= true;
+            rin.state <= ST_RSP_ANACK_PREP;
           end if;
         end if;
 
       when ST_ADDR_RD_RUN =>
-        if clocker_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif clocker_ready_i = '1' then
           rin.state <= ST_ADDR_RD_DATA;
           -- 10-bit header with R/W=1 (read direction)
           rin.data <= "11110" & r.addr(9 downto 8) & '1';
         end if;
 
       when ST_ADDR_RD_DATA =>
-        if shift_w_ready_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif shift_w_ready_i = '1' then
           rin.state <= ST_ADDR_RD_ACK;
         end if;
 
       when ST_ADDR_RD_ACK =>
-        if shift_r_valid_i = '1' then
+        if clocker_fail_i = '1' or shift_arb_ok_i = '0' then
+          rin.cmd_cancelled <= true;
+          rin.state <= ST_RSP_ANACK_PREP;
+        elsif shift_r_valid_i = '1' then
           if shift_r_data_i(0) = '0' then -- ACK OK
             clr_timeout_cnt_s <= '1';
             rin.state <= ST_RSP_BSTR_HDR_PREP;
@@ -821,6 +898,7 @@ begin
       shift_w_valid_o   <= '0';
       shift_r_ready_o   <= '0';
       shift_w_data_o    <= (others => '-');
+      shift_abort_o     <= '0';
 
       if r.owned = '1' then
         clocker_cmd_o <= I2C_BUS_HOLD;
@@ -851,6 +929,7 @@ begin
 
         when ST_RSP_ANACK_PREP | ST_RSP_DNACK_PREP  =>
           clocker_cmd_o <= I2C_BUS_RELEASE;
+          shift_abort_o <= '1';
           
         when ST_ADDR_RUN | ST_WRITE_RUN | ST_READ_RUN | ST_ADDR2_RUN | ST_ADDR_RD_RUN =>
           clocker_cmd_o <= I2C_BUS_RUN;
@@ -892,9 +971,6 @@ begin
 
         when ST_RSP_BSTR_HDR_PUT | ST_RSP_ARRAY_HDR_PUT | ST_RSP_DNACK_PUT =>
           rsp_o <= nsl_amba.axi4_stream.next_beat(cfg => buffer_cfg_c, b => r.encoded, last => r.last);
-       
-        when ST_IO_FLUSH_GET =>
-        when ST_IO_FLUSH_PUT =>      
       end case;
 
     case r.state is
@@ -908,6 +984,11 @@ begin
       when ST_READ_RUN | ST_READ_DATA | ST_READ_ACK =>
         shift_enable_o <= '1';
         shift_send_data_o <= '0';
+
+      when ST_READ_PUT | ST_READ_END =>
+        if r.cmd_cancelled then
+          shift_abort_o <= '1';
+        end if;
 
       when others =>
         null;

@@ -18,7 +18,8 @@ architecture arch of tb is
   signal s_rsp_pre       : nsl_amba.axi4_stream.bus_t;
   
   signal s_i2c           : nsl_i2c.i2c.i2c_i;
-  signal s_i2c_slave1, s_i2c_slave2, s_i2c_slave3, s_i2c_slave4, s_i2c_slave5, s_i2c_master : nsl_i2c.i2c.i2c_o;
+  signal s_i2c_slave1, s_i2c_slave2, s_i2c_slave3, s_i2c_slave4, s_i2c_slave5, s_i2c_stall, s_i2c_master : nsl_i2c.i2c.i2c_o;
+  signal s_enable_stall  : std_ulogic := '0';
 
   signal s_clk, s_resetn : std_ulogic;
   signal s_done : std_ulogic_vector(0 to 0);
@@ -38,7 +39,7 @@ begin
 
   resolver: nsl_i2c.i2c.i2c_resolver
     generic map(
-      port_count => 6
+      port_count => 7
       )
     port map(
       bus_i(0) => s_i2c_slave1,
@@ -46,9 +47,32 @@ begin
       bus_i(2) => s_i2c_slave3,
       bus_i(3) => s_i2c_slave4,
       bus_i(4) => s_i2c_slave5,
-      bus_i(5) => s_i2c_master,
+      bus_i(5) => s_i2c_stall,
+      bus_i(6) => s_i2c_master,
       bus_o => s_i2c
       );
+
+  -- Clock-stretching device: once enabled, waits for a start
+  -- condition, lets the address byte and two data bits through, then
+  -- stretches the clock for longer than the master's stuck timeout
+  -- before releasing the bus.
+  stall: process
+  begin
+    s_i2c_stall.scl.drain_n <= '1';
+    s_i2c_stall.sda.drain_n <= '1';
+
+    wait until s_enable_stall = '1';
+    wait until s_i2c.scl = '1' and s_i2c.sda = '0';
+    -- Start SCL fall, 9 address pulses, 2 data bit pulses
+    for i in 0 to 11 loop
+      wait until s_i2c.scl = '0';
+    end loop;
+
+    s_i2c_stall.scl.drain_n <= '0';
+    wait for 100 us;
+    s_i2c_stall.scl.drain_n <= '1';
+    wait;
+  end process;
 
   
   i2c_slave: nsl_i2c.clocked.clocked_slave
@@ -546,6 +570,42 @@ begin
       sev         => warning
     );
     nsl_simulation.logging.log_test_result("10-bit address max (0x3FF, expect NACK)", check_status, pass_count, fail_count);
+
+    -- Test 21: Clock stretch beyond the stuck timeout during a read.
+    -- The announced byte string must be filled and the frame must
+    -- terminate. The stalling device holds SCL after two data bits of
+    -- the first byte; the slave then presents a '1' bit (0xAA), so
+    -- both lines are released once the stretch ends.
+    s_enable_stall <= '1';
+    nsl_amba.axi4_stream.frame_queue_check_io(
+      root_master => cmd_q,
+      root_slave  => rsp_q,
+      data1       => nsl_data.bytestream.from_suv(x"8282185002f6"),
+      data2       => nsl_data.bytestream.from_suv(x"9f590002ffffff"),
+      check_status => check_status,
+      dt          => clock_period,
+      timeout     => clock_period*200000,
+      sev         => warning
+    );
+    nsl_simulation.logging.log_test_result("Clock stretch beyond stuck timeout during read", check_status, pass_count, fail_count);
+    s_enable_stall <= '0';
+
+    -- Let the stalling device release the bus and the master see it
+    -- idle again.
+    wait for 200 us;
+
+    -- Test 22: Same read must succeed once the bus recovered
+    nsl_amba.axi4_stream.frame_queue_check_io(
+      root_master => cmd_q,
+      root_slave  => rsp_q,
+      data1       => nsl_data.bytestream.from_suv(x"8282185002f6"),
+      data2       => nsl_data.bytestream.from_suv(x"9f590002aaaaff"),
+      check_status => check_status,
+      dt          => clock_period,
+      timeout     => clock_period*200000,
+      sev         => warning
+    );
+    nsl_simulation.logging.log_test_result("Read succeeds after bus recovery", check_status, pass_count, fail_count);
 
     wait for 1000 ns;
 

@@ -40,6 +40,9 @@ package cbor_transactor is
     generic(
       clock_i_hz_c    : natural;
       target_scl_hz_c : natural := 400000;
+      -- Number of SCL half-cycles a device may stretch the clock (or
+      -- otherwise hold a line) before the current command is aborted.
+      stuck_timeout_half_cycles_c : natural := 8;
       stream_config_c : nsl_amba.axi4_stream.config_t
     );
     port(

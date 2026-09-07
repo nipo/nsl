@@ -1,0 +1,24 @@
+[TestSuite] I2C CBOR TRANSACTOR TEST SUITE
+[TestCase] #1 <Write to clocked slave> PASS
+[TestCase] #2 <Read from clocked slave> PASS
+[TestCase] #3 <Write to memory> PASS
+[TestCase] #4 <Read from memory (2x i2c read/write with restart)> PASS
+[TestCase] #5 <Read 3 bytes from memory address 0x00> PASS
+[TestCase] #6 <Access to non-existent address (expect NACK)> PASS
+[TestCase] #7 <NACK for data bytes> PASS
+[TestCase] #8 <Poll-read for non-existent slave> PASS
+[TestCase] #9 <Poll-read for slave enabled after 4us (timeout 100us)> PASS
+[TestCase] #10 <Read from non-existent address (expect NACK)> PASS
+[TestCase] #11 <Write followed by read with stop between> PASS
+[TestCase] #12 <Repeated start: Write to addr 0x50, then 0x40 without stop> PASS
+[TestCase] #13 <Write followed by repeated start read (no stop)> PASS
+[TestCase] #14 <Multiple writes to different slaves with stops> PASS
+[TestCase] #15 <Medium length byte string write (6 bytes)> PASS
+[TestCase] #16 <Back-to-back writes (3 writes, 1 stop)> PASS
+[TestCase] #17 <Medium read operation (4 bytes)> PASS
+[TestCase] #18 <10-bit address write (0x110)> PASS
+[TestCase] #19 <10-bit address read (0x110)> PASS
+[TestCase] #20 <10-bit address boundary (0x80, expect NACK)> PASS
+[TestCase] #21 <10-bit address max (0x3FF, expect NACK)> PASS
+[TestCase] #22 <Clock stretch beyond stuck timeout during read> PASS
+[TestCase] #23 <Read succeeds after bus recovery> PASS
