@@ -244,8 +244,10 @@ package body text is
         when "1101" => c := 'd';
         when "1110" => c := 'e';
         when "1111" => c := 'f';
+        -- xilinx translate_off
         when "----" => c := '-';
         when "UUUU" => c := 'U';
+        -- xilinx translate_on
         when others => c := 'X';
       end case;
       ret(i) := c;
