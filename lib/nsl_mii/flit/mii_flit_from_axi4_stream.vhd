@@ -130,10 +130,17 @@ begin
                 rin.out_counter <= ipg_c / 8 - 1;
 
             when OUT_IPG =>
-                if r.out_counter = 0 then
-                    rin.out_state <= OUT_IDLE;
-                else
-                    rin.out_counter <= r.out_counter - 1;
+                -- The gap is counted in transmitted byte times, so it
+                -- must advance at the flit consumption rate, not the
+                -- core clock: an ungated countdown collapses the gap to
+                -- a couple of nibbles once the resync fifo throttles the
+                -- flit rate below the core clock.
+                if ready_i = '1' then
+                    if r.out_counter = 0 then
+                        rin.out_state <= OUT_IDLE;
+                    else
+                        rin.out_counter <= r.out_counter - 1;
+                    end if;
                 end if;
 
             when OUT_IDLE =>
