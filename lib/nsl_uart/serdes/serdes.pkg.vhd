@@ -48,7 +48,10 @@ package serdes is
 
       divisor_i   : in unsigned;
 
-      -- Should be exposed as device RX
+      -- Should be exposed as device RX. Must be synchronous to
+      -- clock_i: an external pin has to go through a resampler
+      -- (e.g. nsl_clocking.async.async_sampler) first, or the state
+      -- machine may take inconsistent decisions and lock up.
       uart_i      : in std_ulogic;
       -- Should be exposed as device /RTS. This is active low by
       -- default, but could be reversed through generics.
