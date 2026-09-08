@@ -505,6 +505,9 @@ projects:
   - name: st7735
     path: st7735
     tags: [ghdl, simulation]
+  - name: terminal_ansi
+    path: terminal_ansi
+    tags: [ghdl, simulation]
   - name: terminal_labels
     path: terminal_labels
     tags: [ghdl, simulation]
