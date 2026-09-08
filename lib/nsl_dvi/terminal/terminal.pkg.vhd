@@ -204,6 +204,10 @@ package terminal is
       term_clock_i : in  std_ulogic;
       term_reset_n_i : in std_ulogic;
 
+      -- Added to the video-side scan row, modulo the buffer height,
+      -- turning the buffer into a ring. Sampled once per frame.
+      row_offset_i : in unsigned(row_count_l2_c-1 downto 0) := (others => '0');
+
       -- Address port to the character memory
       row_i : in unsigned(row_count_l2_c-1 downto 0);
       column_i : in unsigned(column_count_l2_c-1 downto 0);
@@ -250,6 +254,8 @@ package terminal is
 
       term_clock_i : in  std_ulogic;
       term_reset_n_i : in std_ulogic;
+
+      row_offset_i : in unsigned(row_count_l2_c-1 downto 0) := (others => '0');
 
       row_i : in unsigned(row_count_l2_c-1 downto 0);
       column_i : in unsigned(column_count_l2_c-1 downto 0);

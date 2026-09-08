@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory;
+library nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory, nsl_clocking;
 use nsl_logic.bool.all;
 use nsl_logic.logic.all;
 use nsl_data.bytestream.all;
@@ -35,7 +35,12 @@ entity terminal_text_buffer_colormap is
 
     term_clock_i : in  std_ulogic;
     term_reset_n_i : in std_ulogic;
-    
+
+    -- Added to the video-side scan row, modulo the buffer height,
+    -- turning the buffer into a ring. Sampled once per frame at
+    -- sof_i.
+    row_offset_i : in unsigned(row_count_l2_c-1 downto 0) := (others => '0');
+
     row_i : in unsigned(row_count_l2_c-1 downto 0);
     column_i : in unsigned(column_count_l2_c-1 downto 0);
 
@@ -108,8 +113,34 @@ architecture beh of terminal_text_buffer_colormap is
   signal video_cell_en_s: std_ulogic;
   signal video_row_s: row_t;
   signal video_column_s: column_t;
+  signal row_offset_resync_s: std_ulogic_vector(row_count_l2_c-1 downto 0);
+  signal video_row_offset_s: row_t;
 
 begin
+
+  offset_resync: nsl_clocking.async.async_sampler
+    generic map(
+      cycle_count_c => 2,
+      data_width_c => row_count_l2_c
+      )
+    port map(
+      clock_i => video_clock_i,
+      data_i => std_ulogic_vector(row_offset_i),
+      data_o => row_offset_resync_s
+      );
+
+  offset_capture: process(video_clock_i, video_reset_n_i) is
+  begin
+    if rising_edge(video_clock_i) then
+      if sof_i = '1' then
+        video_row_offset_s <= unsigned(row_offset_resync_s);
+      end if;
+    end if;
+
+    if video_reset_n_i = '0' then
+      video_row_offset_s <= (others => '0');
+    end if;
+  end process;
 
   user_cell_addr_s <= row_i & column_i;
   user_cell_wdata_s <= cell_pack(cell_t'(
@@ -146,7 +177,7 @@ begin
       b_data_o => video_cell_rdata_s
       );
 
-  video_cell_addr_s <= video_row_s & video_column_s;
+  video_cell_addr_s <= (video_row_s + video_row_offset_s) & video_column_s;
   video_cell_s <= cell_unpack(video_cell_rdata_s);
 
   generator: work.terminal.terminal_frame_generator

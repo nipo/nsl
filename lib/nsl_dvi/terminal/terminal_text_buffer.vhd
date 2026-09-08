@@ -36,7 +36,9 @@ entity terminal_text_buffer is
 
     term_clock_i : in  std_ulogic;
     term_reset_n_i : in std_ulogic;
-    
+
+    row_offset_i : in unsigned(row_count_l2_c-1 downto 0) := (others => '0');
+
     row_i : in unsigned(row_count_l2_c-1 downto 0);
     column_i : in unsigned(column_count_l2_c-1 downto 0);
 
@@ -84,7 +86,9 @@ begin
 
       term_clock_i => term_clock_i,
       term_reset_n_i => term_reset_n_i,
-      
+
+      row_offset_i => row_offset_i,
+
       row_i => row_i,
       column_i => column_i,
 

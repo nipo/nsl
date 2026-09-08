@@ -5,6 +5,7 @@ vhdl-sources += terminal_text_buffer.vhd
 vhdl-sources += terminal_labels_colormap.vhd
 vhdl-sources += terminal_labels.vhd
 
+deps += nsl_clocking.async
 deps += nsl_memory.ram
 deps += nsl_memory.streamer
 deps += nsl_data.bytestream
