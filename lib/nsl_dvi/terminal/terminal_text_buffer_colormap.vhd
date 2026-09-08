@@ -115,6 +115,7 @@ architecture beh of terminal_text_buffer_colormap is
   signal video_column_s: column_t;
   signal row_offset_resync_s: std_ulogic_vector(row_count_l2_c-1 downto 0);
   signal video_row_offset_s: row_t;
+  signal user_cell_write_s, user_cell_read_s: std_ulogic;
 
 begin
 
@@ -155,12 +156,15 @@ begin
   foreground_o <= user_rcell_s.fg;
   background_o <= user_rcell_s.bg;
 
+  -- Single true dual-port: user write+read on A (separate cycles),
+  -- video read on B. Registered output (2-cycle read) is what lets it
+  -- infer block RAM as a DPB.
   memory: nsl_memory.ram.ram_2p_homogeneous
     generic map(
       addr_size_c => cell_address_t'length,
       word_size_c => cell_packed_t'length,
       data_word_count_c => 1,
-      registered_output_c => false,
+      registered_output_c => true,
       b_can_write_c => false
       )
     port map(
@@ -190,7 +194,7 @@ begin
       underline_support_c => underline_support_c,
       font_hscale_c => font_hscale_c,
       font_vscale_c => font_vscale_c,
-      cell_latency_c => 1
+      cell_latency_c => 2
       )
     port map(
       clock_i => video_clock_i,
