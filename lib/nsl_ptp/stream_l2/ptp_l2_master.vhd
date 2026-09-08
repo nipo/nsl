@@ -27,7 +27,8 @@ entity ptp_l2_master is
     announce_period_c : natural := 2;
     priority1_c : natural := 128;
     priority2_c : natural := 128;
-    multicast_group_c : natural := 0
+    multicast_group_c : natural := 0;
+    delay_req_log_interval_c : integer := 0
     );
   port(
     clock_i : in std_ulogic;
@@ -38,6 +39,9 @@ entity ptp_l2_master is
     clock_class_i : in unsigned(7 downto 0)
       := to_unsigned(ptp_clock_class_default_c, 8);
     time_source_i : in byte := ptp_time_source_internal_c;
+    utc_offset_i : in signed(15 downto 0) := (others => '0');
+    utc_offset_valid_i : in std_ulogic := '0';
+    traceable_i : in std_ulogic := '0';
 
     capture_id_o : out tag_id_t;
     capture_time_i : in timestamp_t;
@@ -158,8 +162,40 @@ architecture beh of ptp_l2_master is
     source_id: ptp_port_identity_t;
     clock_class: byte;
     time_source: byte;
+    utc_offset: signed(15 downto 0);
+    utc_valid: boolean;
+    traceable: boolean;
     strobe: boolean;
   end record;
+
+  -- Smallest n with 2**n >= period, the logMessageInterval of a
+  -- message sent every period seconds.
+  function log2_ceil(period: positive) return natural
+  is
+    variable n: natural := 0;
+  begin
+    while 2 ** n < period loop
+      n := n + 1;
+    end loop;
+    return n;
+  end function;
+
+  -- Second flag byte of an Announce: the time base is on the PTP
+  -- timescale, the UTC offset and traceability follow the inputs.
+  function announce_flags(req: tx_request_t) return byte
+  is
+    variable ret: byte := (others => '0');
+  begin
+    ret(ptp_flag1_ptp_timescale_c) := '1';
+    if req.utc_valid then
+      ret(ptp_flag1_utc_offset_valid_c) := '1';
+    end if;
+    if req.traceable then
+      ret(ptp_flag1_time_traceable_c) := '1';
+      ret(ptp_flag1_frequency_traceable_c) := '1';
+    end if;
+    return ret;
+  end function;
 
   function tx_length(req: tx_request_t) return natural
   is
@@ -179,11 +215,12 @@ architecture beh of ptp_l2_master is
   function message_byte(req: tx_request_t; pos: natural) return byte
   is
     variable mt_v: natural;
-    variable len_v: byte_string(0 to 1);
+    variable len_v, utc_v: byte_string(0 to 1);
     variable ts_v: ptp_timestamp_bytes_t;
   begin
     mt_v := to_integer(unsigned(req.msg_type(3 downto 0)));
     len_v := to_be(to_unsigned(tx_length(req) - hdr_size_c, 16));
+    utc_v := to_be(unsigned(req.utc_offset));
     ts_v := to_ptp_timestamp(req.ts);
 
     if pos = ptp_off_type_c then
@@ -197,6 +234,11 @@ architecture beh of ptp_l2_master is
     elsif pos = ptp_off_flags_c then
       if mt_v = ptp_msg_sync_c then
         return to_byte(2 ** ptp_flag0_two_step_c);
+      end if;
+      return to_byte(0);
+    elsif pos = ptp_off_flags_c + 1 then
+      if mt_v = ptp_msg_announce_c then
+        return announce_flags(req);
       end if;
       return to_byte(0);
     elsif pos >= ptp_off_source_port_identity_c
@@ -214,17 +256,23 @@ architecture beh of ptp_l2_master is
       end if;
       return to_byte(3);
     elsif pos = ptp_off_log_interval_c then
-      if mt_v = ptp_msg_delay_resp_c or mt_v = ptp_msg_announce_c then
-        return to_byte(16#7f#);
+      -- The interval of the message's own kind; a Delay_Resp carries
+      -- the minimum Delay_Req interval instead.
+      if mt_v = ptp_msg_announce_c then
+        return to_byte(log2_ceil(announce_period_c));
+      elsif mt_v = ptp_msg_delay_resp_c then
+        return std_ulogic_vector(to_signed(delay_req_log_interval_c, 8));
       end if;
-      return to_byte(0);
+      return to_byte(log2_ceil(sync_period_c));
     elsif pos >= ptp_off_timestamp_c
       and pos < ptp_off_timestamp_c + ptp_timestamp_bytes_t'length then
       return ts_v(pos - ptp_off_timestamp_c);
     elsif mt_v = ptp_msg_announce_c then
       -- The Announce body shares its offsets with the Delay_Resp
       -- requesting port identity, so it is decoded on its own.
-      if pos = ptp_off_gm_priority1_c then
+      if pos >= ptp_off_utc_offset_c and pos < ptp_off_utc_offset_c + 2 then
+        return utc_v(pos - ptp_off_utc_offset_c);
+      elsif pos = ptp_off_gm_priority1_c then
         return to_byte(priority1_c);
       elsif pos = ptp_off_gm_quality_c then
         return req.clock_class;
@@ -581,6 +629,9 @@ begin
       announce_timer: integer range 0 to announce_period_c;
       announce_class: byte;
       announce_source: byte;
+      announce_utc: signed(15 downto 0);
+      announce_utc_valid: boolean;
+      announce_traceable: boolean;
 
       t1: timestamp_t;
       t1_wait: boolean;
@@ -611,6 +662,9 @@ begin
         r.announce_seq <= (others => '0');
         r.announce_pending <= false;
         r.announce_timer <= announce_period_c - 1;
+        r.announce_utc <= (others => '0');
+        r.announce_utc_valid <= false;
+        r.announce_traceable <= false;
         r.t1_wait <= false;
         r.t1_valid <= false;
         r.resp_pending <= false;
@@ -619,7 +673,8 @@ begin
     end process;
 
     transition: process(r, enable_i, clock_identity_i, clock_class_i,
-                        time_source_i, tx_capture_time_i,
+                        time_source_i, utc_offset_i, utc_offset_valid_i,
+                        traceable_i, tx_capture_time_i,
                         tx_strobe_i, tick_s, send_done_s,
                         msg_valid_s, msg_s) is
       variable mt_v: natural;
@@ -677,6 +732,9 @@ begin
             rin.announce_pending <= false;
             rin.announce_class <= byte(clock_class_i);
             rin.announce_source <= time_source_i;
+            rin.announce_utc <= utc_offset_i;
+            rin.announce_utc_valid <= utc_offset_valid_i = '1';
+            rin.announce_traceable <= traceable_i = '1';
             rin.state <= ST_ANNOUNCE;
           end if;
 
@@ -757,6 +815,9 @@ begin
       tx_req_s.source_id <= r.own_id;
       tx_req_s.clock_class <= r.announce_class;
       tx_req_s.time_source <= r.announce_source;
+      tx_req_s.utc_offset <= r.announce_utc;
+      tx_req_s.utc_valid <= r.announce_utc_valid;
+      tx_req_s.traceable <= r.announce_traceable;
 
       case r.state is
         when ST_SYNC =>

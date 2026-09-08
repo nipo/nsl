@@ -67,6 +67,17 @@ package ptp is
 
   -- twoStepFlag, in the first flag byte.
   constant ptp_flag0_two_step_c : natural := 1;
+  -- Time properties, in the second flag byte, meaningful in Announce.
+  constant ptp_flag1_leap61_c : natural := 0;
+  constant ptp_flag1_leap59_c : natural := 1;
+  constant ptp_flag1_utc_offset_valid_c : natural := 2;
+  constant ptp_flag1_ptp_timescale_c : natural := 3;
+  constant ptp_flag1_time_traceable_c : natural := 4;
+  constant ptp_flag1_frequency_traceable_c : natural := 5;
+
+  -- TAI runs this many seconds ahead of GPS time, so a receiver's
+  -- GPS-UTC leap second count plus this is currentUtcOffset.
+  constant ptp_tai_minus_gps_c : natural := 19;
 
   -- clockIdentity [8] then portNumber [2], big endian.
   subtype ptp_port_identity_t is byte_string(0 to 9);

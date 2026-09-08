@@ -130,7 +130,9 @@ package stream_l2 is
       announce_period_c : natural := 2;
       priority1_c : natural := 128;
       priority2_c : natural := 128;
-      multicast_group_c : natural := 0
+      multicast_group_c : natural := 0;
+      -- logMinDelayReqInterval carried in Delay_Resp.
+      delay_req_log_interval_c : integer := 0
       );
     port(
       clock_i : in std_ulogic;
@@ -141,6 +143,12 @@ package stream_l2 is
       clock_class_i : in unsigned(7 downto 0)
         := to_unsigned(ptp_clock_class_default_c, 8);
       time_source_i : in byte := ptp_time_source_internal_c;
+      -- Announce time properties: currentUtcOffset and its validity,
+      -- and whether time and frequency are traceable to a primary
+      -- reference.
+      utc_offset_i : in signed(15 downto 0) := (others => '0');
+      utc_offset_valid_i : in std_ulogic := '0';
+      traceable_i : in std_ulogic := '0';
 
       capture_id_o : out tag_id_t;
       capture_time_i : in timestamp_t;
