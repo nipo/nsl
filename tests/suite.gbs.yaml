@@ -566,3 +566,6 @@ projects:
   - name: usb_hid_host_keyboard
     path: usb_hid_host/keyboard
     tags: [ghdl, simulation, slow]
+  - name: usb_hid_host_keyboard_chars
+    path: usb_hid_host/keyboard_chars
+    tags: [ghdl, simulation]
