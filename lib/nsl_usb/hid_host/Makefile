@@ -5,6 +5,7 @@ vhdl-sources += hid_host_engine.vhd
 vhdl-sources += hid_host_extractor.vhd
 vhdl-sources += hid_host_keyboard.vhd
 vhdl-sources += hid_host_keyboard_events.vhd
+vhdl-sources += hid_host_keyboard_repeat.vhd
 vhdl-sources += hid_host_keyboard_chars.vhd
 vhdl-sources += hid_host_mouse.vhd
 deps += nsl_data.bytestream

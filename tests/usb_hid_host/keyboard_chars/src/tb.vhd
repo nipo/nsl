@@ -26,7 +26,21 @@ architecture beh of tb is
   signal rx_count_s: natural := 0;
   signal rx_last_s: byte := x"00";
 
+  -- Second instance: no sequences, alt passes through.
+  signal event_p_s: keyboard_event_t;
+  signal event_valid_p_s: std_ulogic := '0';
+  signal event_ready_p_s: std_ulogic;
+
+  signal data_p_s: nsl_amba.axi4_stream.bus_t;
+
+  signal rx_count_p_s: natural := 0;
+  signal rx_last_p_s: byte := x"00";
+
+  signal main_done_s: boolean := false;
+  signal plain_done_s: boolean := false;
   signal done_s: boolean := false;
+
+  constant up_seq_c: byte_string(0 to 2) := from_hex("1b5b41");
 
 begin
 
@@ -65,6 +79,33 @@ begin
           severity failure;
         rx_last_s <= bytes(report_cfg_c, data_s.m)(0);
         rx_count_s <= rx_count_s + 1;
+      end if;
+    end if;
+  end process;
+
+  dut_plain: hid_host_keyboard_chars
+    generic map(
+      sequences_c => sequences_none_c,
+      alt_sends_escape_c => false
+      )
+    port map(
+      reset_n_i => reset_n_s,
+      clock_i => clock_s,
+      event_i => event_p_s,
+      valid_i => event_valid_p_s,
+      ready_o => event_ready_p_s,
+      data_o => data_p_s.m,
+      data_i => data_p_s.s
+      );
+
+  data_p_s.s <= accept(report_cfg_c, true);
+
+  collector_plain: process(clock_s) is
+  begin
+    if rising_edge(clock_s) then
+      if is_valid(report_cfg_c, data_p_s.m) and is_ready(report_cfg_c, data_p_s.s) then
+        rx_last_p_s <= bytes(report_cfg_c, data_p_s.m)(0);
+        rx_count_p_s <= rx_count_p_s + 1;
       end if;
     end if;
   end process;
@@ -122,6 +163,22 @@ begin
       char_expect(name, expected);
     end procedure;
 
+    procedure seq_expect(name: string; expected: byte_string) is
+    begin
+      for i in expected'range loop
+        char_expect(name & " byte " & integer'image(i), expected(i));
+      end loop;
+    end procedure;
+
+    procedure press_seq_expect(name: string;
+                               code: byte;
+                               modifiers: byte;
+                               expected: byte_string) is
+    begin
+      press(code, modifiers);
+      seq_expect(name, expected);
+    end procedure;
+
   begin
     event_s <= (release => false, code => x"00", modifiers => x"00");
     wait until reset_n_s = '1';
@@ -142,12 +199,25 @@ begin
     press_expect("escape", x"29", x"00", x"1b");
     press_expect("tab", x"2b", x"00", x"09");
 
+    press_seq_expect("up", x"52", x"00", from_hex("1b5b41"));
+    press_seq_expect("right", x"4f", x"00", from_hex("1b5b43"));
+    press_seq_expect("f1", x"3a", x"00", from_hex("1b4f50"));
+    press_seq_expect("f5", x"3e", x"00", from_hex("1b5b31357e"));
+    press_seq_expect("delete", x"4c", x"00", from_hex("1b5b337e"));
+    press_seq_expect("ctrl left", x"50", x"01", from_hex("1b5b44"));
+
+    press_seq_expect("alt d", x"07", x"04", from_hex("1b64"));
+    press_seq_expect("alt shift d", x"07", x"06", from_hex("1b44"));
+    press_seq_expect("ralt d", x"07", x"40", from_hex("1b64"));
+
     -- Unmapped and non-emitting events, checked by the sentinel press
     -- that follows being the next byte on the stream.
-    press(x"3a", x"00");
     press(x"39", x"00");
+    press(x"65", x"00");
     press(x"e1", x"02");
+    press(x"39", x"04");
     release(x"07", x"00");
+    release(x"52", x"00");
     press_expect("sentinel after silent events", x"07", x"00", x"64");
 
     wait until falling_edge(clock_s);
@@ -176,14 +246,101 @@ begin
     event_valid_s <= '0';
     char_expect("character after backpressure", x"62");
 
+    -- One sequence beat per window where the consumer is ready.
+    wait until falling_edge(clock_s);
+    consumer_ready_s <= false;
+    press(x"52", x"00");
+
+    for i in up_seq_c'range loop
+      for j in 0 to 2 loop
+        wait until rising_edge(clock_s);
+        assert event_ready_s = '0'
+          report "ready_o asserted while a sequence is pending"
+          severity failure;
+      end loop;
+
+      wait until falling_edge(clock_s);
+      consumer_ready_s <= true;
+      wait until falling_edge(clock_s);
+      consumer_ready_s <= false;
+      char_expect("throttled up", up_seq_c(i));
+    end loop;
+
+    wait until falling_edge(clock_s);
+    consumer_ready_s <= true;
+
     wait until falling_edge(clock_s);
     wait until falling_edge(clock_s);
     assert rx_count_s = rx_expected
       report "extra characters were emitted"
       severity failure;
 
+    main_done_s <= true;
+    if not plain_done_s then
+      wait until plain_done_s for 2 us;
+    end if;
+    assert plain_done_s
+      report "second instance did not complete"
+      severity failure;
+
     done_s <= true;
     terminate(0);
+    wait;
+  end process;
+
+  stim_plain: process is
+    variable rx_expected: natural := 0;
+
+    procedure press(code: byte; modifiers: byte := x"00") is
+    begin
+      wait until falling_edge(clock_s);
+      event_p_s <= (release => false, code => code, modifiers => modifiers);
+      event_valid_p_s <= '1';
+      wait until rising_edge(clock_s) and event_ready_p_s = '1' for 2 us;
+      assert event_ready_p_s = '1'
+        report "event was not accepted by second instance"
+        severity failure;
+      wait until falling_edge(clock_s);
+      event_valid_p_s <= '0';
+    end procedure;
+
+    procedure press_expect(name: string;
+                           code: byte;
+                           modifiers: byte;
+                           expected: byte) is
+    begin
+      press(code, modifiers);
+      rx_expected := rx_expected + 1;
+      if rx_count_p_s /= rx_expected then
+        wait until rx_count_p_s = rx_expected for 2 us;
+      end if;
+      assert rx_count_p_s = rx_expected
+        report name & ": no character emitted by second instance"
+        severity failure;
+      assert rx_last_p_s = expected
+        report name & ": second instance got "
+        & integer'image(to_integer(unsigned(rx_last_p_s)))
+        & ", expected " & integer'image(to_integer(unsigned(expected)))
+        severity failure;
+    end procedure;
+
+  begin
+    event_p_s <= (release => false, code => x"00", modifiers => x"00");
+    wait until reset_n_s = '1';
+
+    press(x"3a", x"00");
+    press_expect("sentinel after f1", x"07", x"00", x"64");
+
+    press_expect("alt d", x"07", x"04", x"64");
+    press_expect("sentinel after alt d", x"04", x"00", x"61");
+
+    wait until falling_edge(clock_s);
+    wait until falling_edge(clock_s);
+    assert rx_count_p_s = rx_expected
+      report "second instance emitted extra characters"
+      severity failure;
+
+    plain_done_s <= true;
     wait;
   end process;
 

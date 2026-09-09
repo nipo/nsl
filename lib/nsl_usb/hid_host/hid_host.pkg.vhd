@@ -220,6 +220,38 @@ package hid_host is
       );
   end component;
 
+  -- Typematic repeat, to insert between hid_host_keyboard_events and
+  -- a consumer that wants held keys to auto-repeat (USB keyboards do
+  -- not repeat on their own).
+  --
+  -- All events pass through unchanged, input events taking priority
+  -- over synthetic ones.  The most recently pressed non-modifier key
+  -- arms the repeat; after delay_ms_c it emits synthetic press
+  -- events of that code every period_ms_c, carrying the latest
+  -- modifier state seen, so modifiers changed mid-repeat apply.  The
+  -- release of the armed code cancels the repeat, even one waiting
+  -- unsent; pressing another key re-arms on the new code.  Modifier
+  -- events (codes 0xe0 to 0xe7) neither arm nor cancel.
+  component hid_host_keyboard_repeat is
+    generic(
+      clock_rate_c: natural := 12_000_000;
+      delay_ms_c: natural := 400;
+      period_ms_c: natural := 60
+      );
+    port(
+      reset_n_i: in std_ulogic;
+      clock_i: in std_ulogic;
+
+      event_i: in keyboard_event_t;
+      valid_i: in std_ulogic;
+      ready_o: out std_ulogic;
+
+      event_o: out keyboard_event_t;
+      valid_o: out std_ulogic;
+      ready_i: in std_ulogic
+      );
+  end component;
+
   -- Keymap for hid_host_keyboard_chars, indexed by HID keyboard-page
   -- usage.  NUL means the key emits nothing.
   type keymap_entry_t is
@@ -232,16 +264,40 @@ package hid_host is
 
   constant keymap_us_c: keymap_t;
 
+  -- Multi-byte sequences for keys that have no single character,
+  -- indexed by HID keyboard-page usage.  Length 0 means no sequence:
+  -- the key falls back to the keymap.
+  constant sequence_length_max_c: natural := 5;
+
+  type key_sequence_t is
+  record
+    length: natural range 0 to sequence_length_max_c;
+    data: string(1 to sequence_length_max_c);
+  end record;
+
+  type sequence_map_t is array (0 to 103) of key_sequence_t;
+
+  -- VT/xterm sequences: arrows, Home, End, Insert, Delete, PgUp,
+  -- PgDn, F1 to F12.
+  constant sequences_vt_c: sequence_map_t;
+  -- No sequences at all, every key goes through the keymap.
+  constant sequences_none_c: sequence_map_t;
+
   -- Translates press events to a byte stream (report_cfg_c layout,
   -- no framing: last never set).
   --
-  -- Release events and codes outside the keymap are dropped.  Shift
-  -- selects the shifted column.  Control turns a base character in
-  -- the 0x40 to 0x7e range into its 0x00 to 0x1f control character.
-  -- Alt, GUI and Caps Lock are ignored.
+  -- A key with a sequence_c entry emits the sequence, modifiers
+  -- ignored.  Otherwise release events and codes outside the keymap
+  -- are dropped, shift selects the shifted column, control turns a
+  -- base character in the 0x40 to 0x7e range into its 0x00 to 0x1f
+  -- control character, and, when alt_sends_escape_c is true, alt
+  -- prefixes the emitted character with escape.  GUI and Caps Lock
+  -- are ignored.
   component hid_host_keyboard_chars is
     generic(
-      keymap_c: keymap_t := keymap_us_c
+      keymap_c: keymap_t := keymap_us_c;
+      sequences_c: sequence_map_t := sequences_vt_c;
+      alt_sends_escape_c: boolean := true
       );
     port(
       reset_n_i: in std_ulogic;
@@ -311,6 +367,52 @@ package body hid_host is
   end function;
 
   constant keymap_us_c: keymap_t := keymap_us_build;
+
+  constant esc_c: character := character'val(27);
+
+  constant no_sequence_c: key_sequence_t :=
+    (length => 0, data => (others => nul_c));
+
+  function seq(s: string) return key_sequence_t is
+    variable ret: key_sequence_t := no_sequence_c;
+  begin
+    ret.length := s'length;
+    ret.data(1 to s'length) := s;
+    return ret;
+  end function;
+
+  function sequences_vt_build return sequence_map_t is
+    variable ret: sequence_map_t := (others => no_sequence_c);
+  begin
+    -- F1 to F4 are SS3 sequences, F5 to F12 CSI ones with the vt220
+    -- numbering.
+    ret(58) := seq(esc_c & "OP");
+    ret(59) := seq(esc_c & "OQ");
+    ret(60) := seq(esc_c & "OR");
+    ret(61) := seq(esc_c & "OS");
+    ret(62) := seq(esc_c & "[15~");
+    ret(63) := seq(esc_c & "[17~");
+    ret(64) := seq(esc_c & "[18~");
+    ret(65) := seq(esc_c & "[19~");
+    ret(66) := seq(esc_c & "[20~");
+    ret(67) := seq(esc_c & "[21~");
+    ret(68) := seq(esc_c & "[23~");
+    ret(69) := seq(esc_c & "[24~");
+    ret(73) := seq(esc_c & "[2~");
+    ret(74) := seq(esc_c & "[H");
+    ret(75) := seq(esc_c & "[5~");
+    ret(76) := seq(esc_c & "[3~");
+    ret(77) := seq(esc_c & "[F");
+    ret(78) := seq(esc_c & "[6~");
+    ret(79) := seq(esc_c & "[C");
+    ret(80) := seq(esc_c & "[D");
+    ret(81) := seq(esc_c & "[B");
+    ret(82) := seq(esc_c & "[A");
+    return ret;
+  end function;
+
+  constant sequences_vt_c: sequence_map_t := sequences_vt_build;
+  constant sequences_none_c: sequence_map_t := (others => no_sequence_c);
 
   function fields_width(f: field_vector) return natural is
     variable ret: natural := 0;

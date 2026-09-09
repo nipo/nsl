@@ -9,7 +9,9 @@ use nsl_usb.hid_host.all;
 
 entity hid_host_keyboard_chars is
   generic(
-    keymap_c: keymap_t := keymap_us_c
+    keymap_c: keymap_t := keymap_us_c;
+    sequences_c: sequence_map_t := sequences_vt_c;
+    alt_sends_escape_c: boolean := true
     );
   port(
     reset_n_i: in std_ulogic;
@@ -35,7 +37,9 @@ architecture beh of hid_host_keyboard_chars is
   type regs_t is
   record
     state: state_t;
-    data: byte;
+    data: byte_string(0 to sequence_length_max_c - 1);
+    length: natural range 0 to sequence_length_max_c;
+    index: natural range 0 to sequence_length_max_c - 1;
   end record;
 
   signal r, rin: regs_t;
@@ -43,11 +47,18 @@ architecture beh of hid_host_keyboard_chars is
   -- Modifier byte bit assignment, matching the boot report.
   constant mod_lctrl_c: natural := 0;
   constant mod_lshift_c: natural := 1;
+  constant mod_lalt_c: natural := 2;
   constant mod_rctrl_c: natural := 4;
   constant mod_rshift_c: natural := 5;
+  constant mod_ralt_c: natural := 6;
 
   constant ctrl_low_c: natural := 16#40#;
   constant ctrl_high_c: natural := 16#7e#;
+
+  constant esc_byte_c: byte := x"1b";
+
+  constant empty_sequence_c: key_sequence_t :=
+    (length => 0, data => (others => character'val(0)));
 
   -- Returns x"00" for keys the map leaves unassigned and for codes
   -- past the end of the map, the modifier usages 0xe0 to 0xe7 among
@@ -73,6 +84,17 @@ architecture beh of hid_host_keyboard_chars is
     end if;
   end function;
 
+  -- Zero length for codes past the end of the map and for keys with
+  -- no sequence assigned.
+  function sequence_of(code: byte) return key_sequence_t is
+  begin
+    if to_integer(unsigned(code)) > sequence_map_t'high then
+      return empty_sequence_c;
+    end if;
+
+    return sequences_c(to_integer(unsigned(code)));
+  end function;
+
 begin
 
   regs: process(reset_n_i, clock_i) is
@@ -82,12 +104,16 @@ begin
     end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
-      r.data <= x"00";
+      r.data <= (others => x"00");
+      r.length <= 0;
+      r.index <= 0;
     end if;
   end process;
 
   transition: process(r, event_i, valid_i, data_i) is
+    variable seq: key_sequence_t;
     variable char: byte;
+    variable alt: boolean;
   begin
     rin <= r;
 
@@ -96,22 +122,43 @@ begin
         rin.state <= ST_TAKE;
 
       when ST_TAKE =>
-        if valid_i = '1' then
-          if event_i.release then
-            char := x"00";
-          else
-            char := char_of(event_i.code, event_i.modifiers);
-          end if;
+        seq := sequence_of(event_i.code);
+        char := char_of(event_i.code, event_i.modifiers);
+        alt := alt_sends_escape_c
+               and (event_i.modifiers(mod_lalt_c) = '1'
+                    or event_i.modifiers(mod_ralt_c) = '1');
 
-          if char /= x"00" then
-            rin.data <= char;
+        if valid_i = '1' and not event_i.release then
+          if seq.length /= 0 then
+            for i in 0 to sequence_length_max_c - 1 loop
+              if i < seq.length then
+                rin.data(i) <= to_byte(seq.data(i + 1));
+              end if;
+            end loop;
+            rin.length <= seq.length;
+            rin.index <= 0;
+            rin.state <= ST_PUT;
+          elsif char /= x"00" then
+            if alt then
+              rin.data(0) <= esc_byte_c;
+              rin.data(1) <= char;
+              rin.length <= 2;
+            else
+              rin.data(0) <= char;
+              rin.length <= 1;
+            end if;
+            rin.index <= 0;
             rin.state <= ST_PUT;
           end if;
         end if;
 
       when ST_PUT =>
         if is_ready(report_cfg_c, data_i) then
-          rin.state <= ST_TAKE;
+          if r.index + 1 = r.length then
+            rin.state <= ST_TAKE;
+          else
+            rin.index <= r.index + 1;
+          end if;
         end if;
     end case;
   end process;
@@ -119,7 +166,7 @@ begin
   moore: process(r) is
   begin
     data_o <= transfer(report_cfg_c,
-                       bytes => (0 => r.data),
+                       bytes => (0 => r.data(r.index)),
                        valid => r.state = ST_PUT);
 
     case r.state is
