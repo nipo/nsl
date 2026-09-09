@@ -569,3 +569,6 @@ projects:
   - name: usb_hid_host_keyboard_chars
     path: usb_hid_host/keyboard_chars
     tags: [ghdl, simulation]
+  - name: usb_hid_host_keyboard_events
+    path: usb_hid_host/keyboard_events
+    tags: [ghdl, simulation]
