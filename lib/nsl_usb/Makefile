@@ -7,5 +7,6 @@ packages += ulpi
 packages += sie
 packages += device
 packages += func
+packages += hid_host
 packages += io
 packages += testing

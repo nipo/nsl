@@ -71,6 +71,39 @@ with the following features:
 
   * CDC-ACM function.
 
+Host side, the library contains a standalone low-speed host dedicated
+to HID input devices (see hid_host/):
+
+* Bit-banged low-speed (1.5Mb/s) signaling on D+/D- from a 12MHz
+  clock, no CPU, no external Phy.
+
+* Microcoded engine whose program is written as VHDL constants and
+  assembled at elaboration (see ukp.pkg.vhd and hid_program.pkg.vhd);
+  poll interval and report length are generics.
+
+* Enumeration of the single attached device with identity capture
+  (VID/PID, interface class/subclass/protocol) exposed to the design,
+  interrupt IN endpoint polling with CRC16 checking, reports emitted
+  as AXI4-Stream frames.
+
+* Generic field extractor mapping report bytes/bits to parallel
+  values, and boot-protocol keyboard and mouse wrappers with identity
+  matching.
+
+* Wire-level low-speed device BFM in nsl_usb.testing for closed-loop
+  simulation.
+
+* Not supported by design: hubs, full-speed devices (would need SOF
+  generation hardware), HID report descriptor parsing.
+
+The host is a reimplementation of ideas pioneered by two projects:
+hi631's microcoded USB host in the Tang Nano 9K NES port
+(https://github.com/hi631/tang-nano-9K/tree/master/NES) and
+nand2mario's usb_hid_host
+(https://github.com/nand2mario/usb_hid_host), which extended it with
+device-type detection.  The microcode machine model, its timing
+discipline and the enumeration sequence come from their work.
+
 * TODO:
 
   * Add support for handling device (vendor), class/endpoint (Std,

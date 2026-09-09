@@ -551,3 +551,18 @@ projects:
   - name: time_calendar
     path: time/calendar
     tags: [ghdl, simulation]
+  - name: usb_hid_host_program
+    path: usb_hid_host/program
+    tags: [ghdl, simulation]
+  - name: usb_hid_host_extractor
+    path: usb_hid_host/extractor
+    tags: [ghdl, simulation]
+  - name: usb_hid_host_ls_bfm
+    path: usb_hid_host/ls_bfm
+    tags: [ghdl, simulation]
+  - name: usb_hid_host_host
+    path: usb_hid_host/host
+    tags: [ghdl, simulation, slow]
+  - name: usb_hid_host_keyboard
+    path: usb_hid_host/keyboard
+    tags: [ghdl, simulation, slow]

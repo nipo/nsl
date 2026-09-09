@@ -1,0 +1,14 @@
+vhdl-sources += ukp.pkg.vhd
+vhdl-sources += hid_host.pkg.vhd
+vhdl-sources += hid_program.pkg.vhd
+vhdl-sources += hid_host_engine.vhd
+vhdl-sources += hid_host_extractor.vhd
+vhdl-sources += hid_host_keyboard.vhd
+vhdl-sources += hid_host_mouse.vhd
+deps += nsl_data.bytestream
+deps += nsl_data.crc
+deps += nsl_amba.axi4_stream
+deps += nsl_clocking.async
+deps += nsl_math.arith
+deps += nsl_usb.usb
+deps += nsl_usb.io
