@@ -188,12 +188,13 @@ begin
       out_i => rx_clean_s.s
       );
 
-  -- The MII line has no flow control: beats must be available at
-  -- line rate for a whole frame once transmission starts.
+  -- The MII line has no flow control, but the stream stack sustains
+  -- well above the one-beat-per-8-cycles drain: the buffer only has
+  -- to cover start-up bubbles, 12 beats is 96 cycles of slack.
   tx_prefill: nsl_amba.axi4_stream.axi4_stream_prefill_buffer
     generic map(
       config_c => axi4_flit_cfg,
-      prefill_count_c => 64
+      prefill_count_c => 12
       )
     port map(
       clock_i => clock_100_s,
