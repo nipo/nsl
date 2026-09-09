@@ -155,16 +155,18 @@ begin
   -- source updates the bus, the accepted beat is still on it.
   check: process(clock_i) is
   begin
-    if rising_edge(clock_i) and reset_n_i = '1' then
-      assert not (sfd_i = '1' and r.tag_fillness = 0)
-        report "SFD strobed with no tag queued"
-        severity failure;
+    if rising_edge(clock_i) then
+      if reset_n_i = '1' then
+        assert not (sfd_i = '1' and r.tag_fillness = 0)
+          report "SFD strobed with no tag queued"
+          severity failure;
 
-      assert not (r.state = ST_TAG
-                  and is_valid(config_c, in_i)
-                  and is_last(config_c, in_i))
-        report "Packet carries a tag block and no frame"
-        severity failure;
+        assert not (r.state = ST_TAG
+                    and is_valid(config_c, in_i)
+                    and is_last(config_c, in_i))
+          report "Packet carries a tag block and no frame"
+          severity failure;
+      end if;
     end if;
   end process;
 

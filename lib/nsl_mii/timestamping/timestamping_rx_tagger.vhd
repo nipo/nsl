@@ -186,17 +186,19 @@ begin
   -- source updates the bus, the accepted beat is still on it.
   check: process(clock_i) is
   begin
-    if rising_edge(clock_i) and reset_n_i = '1' then
-      assert not (r.state = ST_TAG
-                  and is_valid(config_c, in_i)
-                  and r.id_fillness = 0)
-        report "Packet started with no identifier queued"
-        severity failure;
+    if rising_edge(clock_i) then
+      if reset_n_i = '1' then
+        assert not (r.state = ST_TAG
+                    and is_valid(config_c, in_i)
+                    and r.id_fillness = 0)
+          report "Packet started with no identifier queued"
+          severity failure;
 
-      assert not (sfd_i = '1'
-                  and r.id_fillness = id_fifo_depth_c)
-        report "Identifier queue overflow"
-        severity failure;
+        assert not (sfd_i = '1'
+                    and r.id_fillness = id_fifo_depth_c)
+          report "Identifier queue overflow"
+          severity failure;
+      end if;
     end if;
   end process;
 

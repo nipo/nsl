@@ -141,10 +141,12 @@ begin
 
     check: process(a_clock_i) is
     begin
-      if rising_edge(a_clock_i) and reset_n_s(0) = '1' then
-        assert a_strobe_i = '0' or r.state = ST_IDLE
-          report "Strobe while the previous event is still in flight"
-          severity failure;
+      if rising_edge(a_clock_i) then
+        if reset_n_s(0) = '1' then
+          assert a_strobe_i = '0' or r.state = ST_IDLE
+            report "Strobe while the previous event is still in flight"
+            severity failure;
+        end if;
       end if;
     end process;
   end block;
