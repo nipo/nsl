@@ -27,25 +27,51 @@ architecture rtl of framed_fifo is
 
 begin
 
-  fifo: nsl_memory.fifo.fifo_homogeneous
-    generic map(
-      word_count_c => depth,
-      data_width_c => 9,
-      clock_count_c => clk_count,
-      output_slice_c => output_slice_c,
-      input_slice_c => input_slice_c
-      )
-    port map(
-      reset_n_i => p_resetn,
-      clock_i => p_clk,
-      out_data_o(8) => p_out_val.last,
-      out_data_o(7 downto 0) => p_out_val.data,
-      out_ready_i => p_out_ack.ready,
-      out_valid_o => p_out_val.valid,
-      in_data_i(8) => p_in_val.last,
-      in_data_i(7 downto 0) => p_in_val.data,
-      in_valid_i => p_in_val.valid,
-      in_ready_o => p_in_ack.ready
-      );
+  tiny: if depth <= 16 and clk_count = 1
+  generate
+    fifo: nsl_memory.fifo.fifo_shift_register
+      generic map(
+        word_count_c => depth,
+        data_width_c => 9
+        )
+      port map(
+        reset_n_i => p_resetn,
+        clock_i => p_clk(0),
+
+        in_data_i(8) => p_in_val.last,
+        in_data_i(7 downto 0) => p_in_val.data,
+        in_valid_i => p_in_val.valid,
+        in_ready_o => p_in_ack.ready,
+
+        out_data_o(8) => p_out_val.last,
+        out_data_o(7 downto 0) => p_out_val.data,
+        out_ready_i => p_out_ack.ready,
+        out_valid_o => p_out_val.valid
+        );
+  end generate;
+
+  general: if depth > 16 or clk_count = 2
+  generate
+    fifo: nsl_memory.fifo.fifo_homogeneous
+      generic map(
+        word_count_c => depth,
+        data_width_c => 9,
+        clock_count_c => clk_count,
+        output_slice_c => output_slice_c,
+        input_slice_c => input_slice_c
+        )
+      port map(
+        reset_n_i => p_resetn,
+        clock_i => p_clk,
+        out_data_o(8) => p_out_val.last,
+        out_data_o(7 downto 0) => p_out_val.data,
+        out_ready_i => p_out_ack.ready,
+        out_valid_o => p_out_val.valid,
+        in_data_i(8) => p_in_val.last,
+        in_data_i(7 downto 0) => p_in_val.data,
+        in_valid_i => p_in_val.valid,
+        in_ready_o => p_in_ack.ready
+        );
+  end generate;
 
 end architecture;
