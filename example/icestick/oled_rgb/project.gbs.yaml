@@ -1,0 +1,44 @@
+name: icestick_oled_rgb
+
+root:
+  name: top
+  deps:
+    - nsl_digilent.pmod
+    - nsl_solomonsystech.ssd1331
+    - nsl_spi.spi
+    - nsl_dvi.pattern
+    - nsl_color.rgb
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: ice40-pcf
+      files:
+        - ../pinout/clk.pcf
+        - ../pinout/led_green.pcf
+        - ../pinout/pmod_double.pcf
+
+output:
+  - name: pnr
+    topcell: boundary
+    target:
+      part: iCE40HX1K-TQ144
+    backend_config:
+      gbs.builtin.ghdl:
+        vhdl_standard: "1993"
+      gbs.builtin.yosys:
+        tool: "yosys"
+        steps:
+          - flatten
+          - tribuf -logic
+          - deminout
+      gbs.builtin.nextpnr:
+        tool: "nextpnr-ice40"
+      gbs.builtin.icepack:
+        tool: "icepack"
+    outputs:
+      - type: bitstream
+        path: oled_rgb.bin

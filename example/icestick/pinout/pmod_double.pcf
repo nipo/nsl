@@ -1,0 +1,24 @@
+# iCEstick 2x6 Pmod connector (J2).
+#
+# The design port is a nsl_digilent.pmod.pmod_double_t, i.e.
+# std_logic_vector(1 to 8).  GHDL/yosys emits vector ports as 0-based
+# buses with bit 0 on the rightmost (highest) VHDL index, so pcf index
+# N maps to VHDL index 8-N.
+#
+# pcf index  VHDL index  Pmod pin  FPGA pin
+# [7]        (1)         1         78
+# [6]        (2)         2         79
+# [5]        (3)         3         80
+# [4]        (4)         4         81
+# [3]        (5)         7         87
+# [2]        (6)         8         88
+# [1]        (7)         9         90
+# [0]        (8)         10        91
+set_io --warn-no-port pmod_io[7] 78
+set_io --warn-no-port pmod_io[6] 79
+set_io --warn-no-port pmod_io[5] 80
+set_io --warn-no-port pmod_io[4] 81
+set_io --warn-no-port pmod_io[3] 87
+set_io --warn-no-port pmod_io[2] 88
+set_io --warn-no-port pmod_io[1] 90
+set_io --warn-no-port pmod_io[0] 91

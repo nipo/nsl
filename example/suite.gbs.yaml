@@ -68,6 +68,9 @@ projects:
   - name: usb11_ice40
     path: usb11
     tags: [yosys, ice40]
+  - name: icestick_oled_rgb
+    path: icestick/oled_rgb
+    tags: [yosys, ice40, icestick]
 
   - name: inet_arty_a7
     path: inet/arty_a7
