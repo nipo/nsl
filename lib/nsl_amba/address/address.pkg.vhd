@@ -215,6 +215,23 @@ package body address is
     return default;
   end function;
 
+  -- std_match with don't-care bits in the pattern only.  Spelled out
+  -- because ghdl-yosys does not implement std_match on non-constant
+  -- operands.
+  function pattern_matches(pattern, value: unsigned) return boolean
+  is
+    alias p: unsigned(pattern'length-1 downto 0) is pattern;
+    alias v: unsigned(value'length-1 downto 0) is value;
+  begin
+    for i in p'range
+    loop
+      if p(i) /= '-' and p(i) /= v(i) then
+        return false;
+      end if;
+    end loop;
+    return true;
+  end function;
+
   function routing_table_matches_entry(width: natural;
                                        rt: address_vector;
                                        address: unsigned;
@@ -228,7 +245,7 @@ package body address is
     -- If direct match, this is either ours or someone else's
     for i in rtx'range
     loop
-      if std_match(rtx(i)(width-1 downto 0), a) then
+      if pattern_matches(rtx(i)(width-1 downto 0), a) then
         return i = index;
       end if;
     end loop;
