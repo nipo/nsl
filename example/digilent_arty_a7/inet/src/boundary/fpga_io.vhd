@@ -54,8 +54,7 @@ begin
   clk25: nsl_clocking.pll.pll_basic
     generic map(
       input_hz_c => 100e6,
-      output_hz_c => 25e6,
-      hw_variant_c => "series67(type=pll)"
+      output_hz_c => 25e6
       )
     port map(
       clock_i => clock_100_s,

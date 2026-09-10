@@ -1,0 +1,34 @@
+name: tang_console_60k_pll_multi
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: pll_multi.fs

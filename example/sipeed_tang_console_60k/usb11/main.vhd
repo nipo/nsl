@@ -61,8 +61,7 @@ begin
   pll: nsl_clocking.pll.pll_basic
     generic map(
       input_hz_c => clock_ext_s_hz_c,
-      output_hz_c => clock_usb_s_hz_c,
-      hw_variant_c => "ice40(out=global,in=core)"
+      output_hz_c => clock_usb_s_hz_c
       )
     port map(
       clock_i => clock_ext_s,

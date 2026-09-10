@@ -1,0 +1,24 @@
+name: pll_solve_gowin_gw1n
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: gowin
+      target_part_name: GW1N-9C
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

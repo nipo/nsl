@@ -19,7 +19,16 @@ package pll_config_series67 is
     S6_DCM
     );
 
-  function variant_get(hw_variant : string) return pll_variant;
+  -- Name of a variant, as pll_implementation_id() takes it.  Only
+  -- the names the target family actually has are known: a Spartan-6
+  -- has no MMCM, a Series-7 part no DCM.
+  function variant_is_known(name: string) return boolean;
+  function variant_get(name : string) return pll_variant;
   function constraints_get(mode: pll_variant) return constraints;
+
+  -- Opaque id a pll_config_t carries: 0 is the family's default
+  -- block, anything else designates one variant.
+  function variant_id(name: string) return natural;
+  function variant_of_id(id: natural) return pll_variant;
 
 end package;

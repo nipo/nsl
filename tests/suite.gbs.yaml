@@ -416,6 +416,30 @@ projects:
   - name: ublox_nav_timegps
     path: ublox/nav_timegps
     tags: [ghdl, simulation]
+  - name: pll_multi_sim
+    path: pll_multi_sim
+    tags: [ghdl, simulation]
+  - name: pll_solve
+    path: pll_solve
+    tags: [ghdl, simulation]
+  - name: pll_solve_ecp5
+    path: pll_solve_ecp5
+    tags: [ghdl, simulation]
+  - name: pll_solve_gowin_gw1n
+    path: pll_solve_gowin_gw1n
+    tags: [ghdl, simulation]
+  - name: pll_solve_gowin_gw5a
+    path: pll_solve_gowin_gw5a
+    tags: [ghdl, simulation]
+  - name: pll_solve_ice40
+    path: pll_solve_ice40
+    tags: [ghdl, simulation]
+  - name: pll_solve_series6
+    path: pll_solve_series6
+    tags: [ghdl, simulation]
+  - name: pll_solve_series7
+    path: pll_solve_series7
+    tags: [ghdl, simulation]
   - name: ptp_stream_l2
     path: ptp/stream_l2
     tags: [ghdl, simulation]

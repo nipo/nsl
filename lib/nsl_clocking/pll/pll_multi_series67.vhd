@@ -3,27 +3,31 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_math, nsl_logic, nsl_data, nsl_clocking;
+library nsl_logic, nsl_data;
 use nsl_logic.bool.all;
 use nsl_data.text.all;
-use nsl_clocking.pll_config_series67.all;
+use work.pll.all;
+use work.pll_config_series67.all;
 
-entity pll_basic is
+-- Realized on the clock manager the config's implementation names:
+-- PLL_BASE on Spartan-6, PLLE2_ADV or MMCM_BASE on Series-7, all fed
+-- back through CLKFBOUT with the input divider at 1, or DCM_SP,
+-- whose multiplier and divider are the feedback and output divisors
+-- of the model.
+entity pll_multi is
   generic(
-    input_hz_c  : natural;
-    output_hz_c : natural;
-    hw_variant_c : string := ""
+    config_c : pll_config_t
     );
   port(
-    clock_i    : in  std_ulogic;
-    clock_o    : out std_ulogic;
+    clock_i : in std_ulogic;
+    clock_o : out std_ulogic_vector(0 to config_c.output_count-1);
 
-    reset_n_i  : in  std_ulogic;
-    locked_o   : out std_ulogic
+    reset_n_i : in std_ulogic;
+    locked_o : out std_ulogic
     );
 end entity;
 
-architecture s6 of pll_basic is
+architecture series67 of pll_multi is
 
   attribute BOX_TYPE : string;
 
@@ -232,199 +236,167 @@ architecture s6 of pll_basic is
   attribute BOX_TYPE of
     DCM_SP : component is "PRIMITIVE";
 
-  type params is
-  record
-    vco_freq : integer;
-    fin_factor : integer;
-    fout_factor : integer;
-  end record;
-  
-  function pll_params_calc(fin, fout : integer;
-                           mode: pll_variant) return params
+
+  constant mapping_c : pll_mapping_t := mapping_checked(work.pll_backend.pll_solve(config_c), config_c);
+  constant variant_c : pll_variant := variant_of_id(config_c.implementation);
+  constant input_period_ns_c : real := 1.0e9 / real(config_c.input_hz);
+
+  -- Realization parameters of the output carried by one physical
+  -- port.  Unused ports divide by one and are left unconnected.
+  function port_mapping(p: natural) return pll_output_mapping_t
   is
-    constant bounds : constraints := constraints_get(mode);
-    variable freq_lcm, vco_mult : integer;
-    variable ret : params;
   begin
-    freq_lcm := nsl_math.arith.lcm(fin, fout);
-
-    vco_mult := integer(trunc(realmin(
-      real(bounds.fmax) / real(freq_lcm),
-      real(bounds.in_factor_max) * real(fin) / real(freq_lcm)
-      )));
-    if vco_mult = 0 then
-      vco_mult := 1;
-    end if;
-
-    ret.vco_freq := freq_lcm * vco_mult;
-    ret.fin_factor := ret.vco_freq / fin;
-    ret.fout_factor := ret.vco_freq / fout;
-
-    report "Synthesizing " & bounds.mode & ", " 
-      & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
-      & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
-      severity note;
-    report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
-      & "vco_freq=" & to_string(real(ret.vco_freq) / 1.0e6) & "MHz "
-      & "(min=" & to_string(real(bounds.fmin) / 1.0e6) & "MHz, "
-      & "max=" & to_string(real(bounds.fmax) / 1.0e6) & "MHz), "
-      & "= fin * " & to_string(ret.fin_factor) & ", "
-      & "= fout * " & to_string(ret.fout_factor)
-      severity note;
-
-    assert bounds.fmin <= ret.vco_freq and ret.vco_freq <= bounds.fmax
-      report "Needed VCO frequency is out of range"
-      severity failure;
-
-    assert ret.fout_factor <= bounds.out_factor_max
-      report "Clock output frequency is out of range"
-      severity failure;
-
-    assert ret.fin_factor <= bounds.in_factor_max
-      report "Clock input frequency is out of range"
-      severity failure;
-
-    return ret;
+    for i in 0 to mapping_c.output_count - 1 loop
+      if mapping_c.output(i).enabled
+        and mapping_c.output(i).port_index = p then
+        return mapping_c.output(i);
+      end if;
+    end loop;
+    return (enabled => false,
+            port_index => 0,
+            divisor => pll_ratio_one_c,
+            hz => 0,
+            exact => false,
+            phase => pll_ratio_zero_c);
   end function;
 
-  constant series67_params : string := str_param_extract(hw_variant_c, "series67");
-  constant variant : pll_variant := variant_get(series67_params);
+  function odiv(p: natural) return integer
+  is
+  begin
+    return port_mapping(p).divisor.num;
+  end function;
 
-  signal s_reset : std_ulogic;
-  
+  signal reset_s, feedback_s : std_ulogic;
+  signal clkout_s : std_ulogic_vector(0 to 5);
+
 begin
 
-  s_reset <= not reset_n_i;
 
-  passthrough: if input_hz_c = output_hz_c
-  generate
-    clock_o <= clock_i;
-    locked_o <= reset_n_i;
-  end generate;
+  assert false
+    report "Series-6/7 PLL: " & to_string(mapping_c)
+    severity note;
 
-  use_s6pll: if variant = S6_PLL and input_hz_c /= output_hz_c
-  generate
-    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
+  reset_s <= not reset_n_i;
 
-    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
-    signal s_feedback : std_ulogic;
-  begin
-    
-    pll_inst: pll_base
+  use_s6pll: if variant_c = S6_PLL generate
+    inst: pll_base
       generic map (
-        clk_feedback         => "CLKFBOUT",
-        divclk_divide        => 1,
-        clkfbout_mult        => p.fin_factor,
-        clkout0_divide       => p.fout_factor,
-        clkin_period         => input_period_ns_c,
-        ref_jitter           => 0.125
+        clk_feedback => "CLKFBOUT",
+        divclk_divide => mapping_c.refdiv,
+        clkfbout_mult => mapping_c.fbdiv.num,
+        clkout0_divide => odiv(0),
+        clkout1_divide => odiv(1),
+        clkout2_divide => odiv(2),
+        clkout3_divide => odiv(3),
+        clkout4_divide => odiv(4),
+        clkout5_divide => odiv(5),
+        clkin_period => input_period_ns_c,
+        ref_jitter => 0.125
         )
       port map (
-        rst                 => s_reset,
-        clkin               => clock_i,
-
-        clkout0             => clock_o,
-        locked              => locked_o,
-
-        clkfbin             => s_feedback,
-        clkfbout            => s_feedback
+        rst => reset_s,
+        clkin => clock_i,
+        clkout0 => clkout_s(0),
+        clkout1 => clkout_s(1),
+        clkout2 => clkout_s(2),
+        clkout3 => clkout_s(3),
+        clkout4 => clkout_s(4),
+        clkout5 => clkout_s(5),
+        locked => locked_o,
+        clkfbin => feedback_s,
+        clkfbout => feedback_s
         );
   end generate;
 
-  use_s7pll: if variant = S7_PLL and input_hz_c /= output_hz_c
-  generate
-    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
-
-    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
-    signal s_feedback : std_ulogic;
-  begin
-    
-    pll_inst: plle2_adv
+  use_s7pll: if variant_c = S7_PLL generate
+    inst: plle2_adv
       generic map (
-        divclk_divide        => 1,
-        clkfbout_mult        => p.fin_factor,
-        clkout0_divide       => p.fout_factor,
-        clkin1_period        => input_period_ns_c,
-        ref_jitter1          => 0.125
+        divclk_divide => mapping_c.refdiv,
+        clkfbout_mult => mapping_c.fbdiv.num,
+        clkout0_divide => odiv(0),
+        clkout1_divide => odiv(1),
+        clkout2_divide => odiv(2),
+        clkout3_divide => odiv(3),
+        clkout4_divide => odiv(4),
+        clkout5_divide => odiv(5),
+        clkin1_period => input_period_ns_c,
+        ref_jitter1 => 0.125
         )
       port map (
-        rst                 => s_reset,
-        clkin1              => clock_i,
-        clkin2              => '0',
-        clkinsel            => '1',
-
-        clkout0             => clock_o,
-        locked              => locked_o,
-
+        rst => reset_s,
+        clkin1 => clock_i,
+        clkin2 => '0',
+        clkinsel => '1',
+        clkout0 => clkout_s(0),
+        clkout1 => clkout_s(1),
+        clkout2 => clkout_s(2),
+        clkout3 => clkout_s(3),
+        clkout4 => clkout_s(4),
+        clkout5 => clkout_s(5),
+        locked => locked_o,
         daddr => "0000000",
         dclk => '0',
         den => '0',
         di => x"0000",
         dwe => '0',
-
         pwrdwn => '0',
-        
-        clkfbin             => s_feedback,
-        clkfbout            => s_feedback
+        clkfbin => feedback_s,
+        clkfbout => feedback_s
         );
   end generate;
 
-  use_s7mmcm: if variant = S7_MMCM and input_hz_c /= output_hz_c
-  generate
-    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
-
-    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
-    signal s_feedback : std_ulogic;
-  begin
-    
-    mmcm_inst: mmcm_base
+  use_s7mmcm: if variant_c = S7_MMCM generate
+    inst: mmcm_base
       generic map (
-        divclk_divide        => 1,
-        clkfbout_mult_f      => real(p.fin_factor),
-        clkout0_divide_f     => real(p.fout_factor),
-        clkin1_period        => input_period_ns_c,
-        ref_jitter1          => 0.125
+        divclk_divide => mapping_c.refdiv,
+        clkfbout_mult_f => real(mapping_c.fbdiv.num),
+        clkout0_divide_f => real(odiv(0)),
+        clkout1_divide => odiv(1),
+        clkout2_divide => odiv(2),
+        clkout3_divide => odiv(3),
+        clkout4_divide => odiv(4),
+        clkout5_divide => odiv(5),
+        clkin1_period => input_period_ns_c,
+        ref_jitter1 => 0.125
         )
       port map (
-        rst                 => s_reset,
-        pwrdwn              => '0',
-        clkin1              => clock_i,
-
-        clkout0             => clock_o,
-        locked              => locked_o,
-
-        clkfbin             => s_feedback,
-        clkfbout            => s_feedback
+        rst => reset_s,
+        pwrdwn => '0',
+        clkin1 => clock_i,
+        clkout0 => clkout_s(0),
+        clkout1 => clkout_s(1),
+        clkout2 => clkout_s(2),
+        clkout3 => clkout_s(3),
+        clkout4 => clkout_s(4),
+        clkout5 => clkout_s(5),
+        locked => locked_o,
+        clkfbin => feedback_s,
+        clkfbout => feedback_s
         );
   end generate;
 
-  use_s6dcm: if variant = S6_DCM and input_hz_c /= output_hz_c
-  generate
-    constant input_period_ns_c : real := 1.0e9 / real(input_hz_c);
-
-    constant p : params := pll_params_calc(input_hz_c, output_hz_c, variant);
-    signal s_feedback : std_ulogic;
-    constant is_d2 : boolean := p.fin_factor = 1;
+  use_s6dcm: if variant_c = S6_DCM generate
+    -- A DCM cannot multiply by one, so a unit feedback factor is
+    -- realized as halving the input and multiplying by two.
+    constant halve_c : boolean := mapping_c.fbdiv.num = 1;
   begin
-    
-    dcm_inst: dcm_sp
+    inst: dcm_sp
       generic map(
         clkin_period => input_period_ns_c,
-
-        -- DCM cannot do less than multiply by 2, so do multiply by 2 when we
-        -- actually expect 1 multiplication factor, and devide input by two in
-        -- exchange.
-        clkfx_multiply => if_else(is_d2, 2, p.fin_factor),
-        clkin_divide_by_2 => is_d2,
-
-        clkfx_divide => p.fout_factor
+        clkfx_multiply => if_else(halve_c, 2, mapping_c.fbdiv.num),
+        clkin_divide_by_2 => halve_c,
+        clkfx_divide => odiv(0)
         )
       port map(
         clkin => clock_i,
-        rst => s_reset,
-        clkfx => clock_o,
+        rst => reset_s,
+        clkfx => clkout_s(0),
         locked => locked_o
         );
   end generate;
 
-end architecture;
+  outputs: for i in 0 to config_c.output_count - 1 generate
+    clock_o(i) <= clkout_s(mapping_c.output(i).port_index);
+  end generate;
+
+end architecture series67;

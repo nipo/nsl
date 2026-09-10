@@ -10,8 +10,7 @@ use ieee.math_real.all;
 entity pll_basic is
   generic(
     input_hz_c  : natural;
-    output_hz_c : natural;
-    hw_variant_c : string := ""
+    output_hz_c : natural
     );
   port(
     clock_i    : in  std_ulogic;

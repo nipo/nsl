@@ -38,6 +38,18 @@ architecture arch of main is
   signal online, online_n : std_ulogic;
 
   signal internal_clock, external_clock : std_ulogic;
+
+  -- The reference reaches the PLL through fabric, not straight off
+  -- the package pin, and the output leaves on the global network.
+  constant pll_config_c : nsl_clocking.pll.pll_config_t
+    := nsl_clocking.pll.pll_config(
+      input_hz => external_clock_freq,
+      o0 => nsl_clocking.pll.pll_output(
+        internal_clock_freq,
+        routing => nsl_clocking.pll_backend.pll_routing_id("GLOBAL")),
+      reference_input => nsl_clocking.pll_backend.pll_reference_id("CORE"));
+
+  signal pll_clock_s : std_ulogic_vector(0 to pll_config_c.output_count-1);
   signal blinker_r : std_ulogic;
   signal blinker_r_ctr : natural range 0 to internal_clock_freq / 2 - 1;
   signal blinker_b : std_ulogic;
@@ -77,19 +89,19 @@ begin
       clock_o => external_clock
       );
 
-  pll: nsl_clocking.pll.pll_basic
+  pll: nsl_clocking.pll.pll_multi
     generic map(
-      input_hz_c => external_clock_freq,
-      output_hz_c => internal_clock_freq,
-      hw_variant_c => "ice40(out=global,in=core)"
+      config_c => pll_config_c
       )
     port map(
       clock_i => external_clock,
       reset_n_i => reset_merged_n,
 
-      clock_o => internal_clock,
+      clock_o => pll_clock_s,
       locked_o => reset_n
       );
+
+  internal_clock <= pll_clock_s(0);
 
   io_driver: nsl_usb.io.io_fs_driver
     port map(

@@ -7,10 +7,16 @@ library nsl_hwconfig;
 
 package body pll_config_series67 is
 
-  function variant_get(hw_variant : string) return pll_variant
+  function variant_is_known(name: string) return boolean
   is
   begin
-    if hw_variant = "DCM" then
+    return name = "PLL" or name = "DCM";
+  end function;
+
+  function variant_get(name : string) return pll_variant
+  is
+  begin
+    if name = "DCM" then
       return S6_DCM;
     else
       return S6_PLL;
@@ -36,6 +42,24 @@ package body pll_config_series67 is
       out_factor_max => ret.out_factor_max,
       mode => ret.mode
       );
+  end function;
+
+  function variant_id(name: string) return natural
+  is
+  begin
+    if name = "DEFAULT" then
+      return 0;
+    end if;
+    return pll_variant'pos(variant_get(name)) + 1;
+  end function;
+
+  function variant_of_id(id: natural) return pll_variant
+  is
+  begin
+    if id = 0 then
+      return variant_get("DEFAULT");
+    end if;
+    return pll_variant'val(id - 1);
   end function;
 
 end package body;
