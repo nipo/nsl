@@ -1,0 +1,27 @@
+# Ethernet PMOD on J6, all eight data pins probed.
+#
+# J6 wires PMOD pin n and n+6 to the two balls of one FPGA
+# differential pair, which is also how ethernet magnetics modules
+# usually lay out the RJ45 pairs:
+#   probe 0/1: V18/V19 (IOB81)
+#   probe 2/3: G21/G22 (IOT144)
+#   probe 4/5: F18/E18 (IOT117)
+#   probe 6/7: C22/B22 (IOT133)
+# Each pair biases itself: pull-up on one leg, pull-down on the
+# other, both settling near mid-supply through the winding.
+IO_LOC  "probe_i[0]" V18;
+IO_PORT "probe_i[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "probe_i[1]" V19;
+IO_PORT "probe_i[1]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+IO_LOC  "probe_i[2]" G21;
+IO_PORT "probe_i[2]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "probe_i[3]" G22;
+IO_PORT "probe_i[3]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+IO_LOC  "probe_i[4]" F18;
+IO_PORT "probe_i[4]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "probe_i[5]" E18;
+IO_PORT "probe_i[5]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+IO_LOC  "probe_i[6]" C22;
+IO_PORT "probe_i[6]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "probe_i[7]" B22;
+IO_PORT "probe_i[7]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;

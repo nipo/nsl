@@ -1,0 +1,56 @@
+name: tang_console_60k_ethernet_10baset_inet
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+    - nsl_sipeed.pmod_ethernet
+    - nsl_digilent.pmod
+    - nsl_mii.flit
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_inet.mac
+    - nsl_inet.ipv4
+    - nsl_inet.stream
+    - nsl_inet.stream_host
+    - nsl_data.bytestream
+    - nsl_data.endian
+    - gatecap_generated.observer
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - pinout.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - timing.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: ethernet_10baset_inet.fs
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml

@@ -1,0 +1,63 @@
+name: observer.observer_core
+
+communication:
+  mode: serial_hdlc
+  clock: panel.clock
+
+instruments:
+  # Raw line, as the fabric MAU sees and drives it.
+  line: !logic-analyzer
+    storage:
+      buffer_depth_l2: 11
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      sample:
+        clock: clock
+        frequency: 100_000_000
+
+        signals:
+          rx:
+            trigger: true
+          crs:
+            trigger: true
+          tx_en:
+            trigger: true
+          tx_p:
+            trigger: false
+          link_up:
+            trigger: false
+
+  # Stack state and frame counters along the receive and transmit
+  # paths, to tell a dead line from a stalled stack.
+  panel: !control-status
+    clock: clock
+
+    status:
+      link_up: 1
+      dhcp_valid: 1
+      address:
+        width: 32
+      netmask:
+        width: 32
+      router:
+        width: 32
+      dns:
+        width: 32
+      rx_frames:
+        width: 16
+      rx_clean:
+        width: 16
+      tx_frames:
+        width: 16
+      collisions:
+        width: 16
+      late_collisions:
+        width: 16
+      excessive_collisions:
+        width: 16

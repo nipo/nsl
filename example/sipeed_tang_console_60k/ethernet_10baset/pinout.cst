@@ -1,0 +1,24 @@
+# Sipeed PMOD-Ethernet on J6.  Pin roles come from
+# nsl_sipeed.pmod_ethernet: pins 3/7 receive, 4/8 transmit, the rest
+# carry the bias network.
+#
+# The receive pair is a true differential input with the on-die
+# termination on; the unused pairs each get a pull-up on one leg and a
+# pull-down on the other, which settles every pair near mid-supply
+# through the center taps the windings share.
+IO_LOC  "pmod_io[1]" V18;
+IO_PORT "pmod_io[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[2]" G21;
+IO_PORT "pmod_io[2]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[3]" F18;
+IO_PORT "pmod_io[3]" IO_TYPE=LVDS25 PULL_MODE=NONE DIFF_RESISTOR=ON BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[4]" C22;
+IO_PORT "pmod_io[4]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=16 BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[5]" V19;
+IO_PORT "pmod_io[5]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[6]" G22;
+IO_PORT "pmod_io[6]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[7]" E18;
+IO_PORT "pmod_io[7]" IO_TYPE=LVDS25 PULL_MODE=NONE DIFF_RESISTOR=ON BANK_VCCIO=3.3;
+IO_LOC  "pmod_io[8]" B22;
+IO_PORT "pmod_io[8]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=16 BANK_VCCIO=3.3;

@@ -1,0 +1,44 @@
+name: tang_console_60k_ethernet_10baset
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+    - nsl_sipeed.pmod_ethernet
+    - nsl_digilent.pmod
+    - nsl_mii.flit
+    - nsl_bnoc.committed
+    - nsl_inet.mac
+    - nsl_uart.serdes
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - pinout.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - timing.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: ethernet_10baset.fs
