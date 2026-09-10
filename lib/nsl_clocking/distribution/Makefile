@@ -14,8 +14,12 @@ deps += machxo2.components
 endif
 
 ifeq ($(hwdep),lattice-ice40)
+ifeq ($(compiler),yosys)
+vhdl-sources += clock_buffer_ice40_yosys.vhd
+else
 vhdl-sources += clock_buffer_ice40.vhd
 deps += sb_ice.components
+endif
 endif
 
 ifeq ($(hwdep),gowin)
