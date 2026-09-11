@@ -445,6 +445,9 @@ projects:
   - name: manchester_recovery
     path: manchester/recovery
     tags: [ghdl, simulation]
+  - name: mau_10baset_back_to_back
+    path: mau_10baset/back_to_back
+    tags: [ghdl, simulation]
   - name: precise_clock_second_setter
     path: precise_clock/second_setter
     tags: [ghdl, simulation]
