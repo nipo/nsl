@@ -1,5 +1,6 @@
 packages += blender
 packages += dvi
+packages += mode
 packages += encoder
 packages += pattern
 packages += transceiver
