@@ -8,6 +8,7 @@ root:
     - nsl_clocking.distribution
     - nsl_event.tick
     - nsl_clocking.pll
+    - nsl_dvi.mode
     - nsl_dvi.transceiver
     - nsl_dvi.pattern
     - nsl_dvi.encoder
@@ -26,17 +27,9 @@ root:
   sources:
     - file_type: vhdl
       files:
-        - src/stage1_pll_mod.vhd
-        - src/stage1_pll.vhd
-        - src/dvi_pll_mod.vhd
-        - src/dvi_pll.vhd
         - src/top.pkg.vhd
         - src/boundary.vhd
         - src/main.vhd
-    - file_type: verilog
-      files:
-        - src/stage1_pll_init.v
-        - src/dvi_pll_init.v
     - file_type: gowin-cst
       files:
         - ../pinout/hdmi.cst

@@ -24,7 +24,10 @@ use nsl_indication.font.all;
 -- the slider states.
 entity main is
   generic (
-    clock_i_hz_c : natural
+    clock_i_hz_c : natural;
+    -- Video mode, and the clocks it calls for.  Both are exact: the
+    -- solver refuses a rate it cannot hold.
+    mode_c : nsl_dvi.mode.mode_t
     );
   port (
     clock_i : in std_ulogic;
@@ -40,39 +43,24 @@ end entity;
 
 architecture beh of main is
 
-  -- Frame timings, XGA 1024x768 at 60Hz, 65MHz pixel clock, both
-  -- syncs active low.
-  constant v_fp_c   : integer := 3;
-  constant v_sync_c : integer := 6;
-  constant v_bp_c   : integer := 29;
-  constant v_act_c  : integer := 768;
-  constant h_fp_c   : integer := 24;
-  constant h_sync_c : integer := 136;
-  constant h_bp_c   : integer := 160;
-  constant h_act_c  : integer := 1024;
+  use nsl_dvi.mode.all;
+  use nsl_clocking.pll.all;
 
-  -- The matching clocks are set inside the PLL wrappers:
-  -- stage1_pll: 50 MHz / 2 * 40 / 2 = 500 MHz reference,
-  -- dvi_pll: 500 MHz / 20 * 52 = 1300 MHz VCO, / 4 = 325 MHz serial
-  -- clock, / 20 = 65 MHz pixel clock.
+  -- One stage reaches both clocks from the board oscillator.
+  constant video_config_c : pll_config_t := pll_config(
+    input_hz => clock_i_hz_c,
+    o0 => pll_output(serial_clock_hz(mode_c)),
+    o1 => pll_output(pixel_clock_hz(mode_c)));
 
-  -- Translation to constants needed by components
-  constant v_fp_m1_c   : unsigned(2-1 downto 0)  := to_unsigned(v_fp_c-1, 2);
-  constant v_sync_m1_c : unsigned(3-1 downto 0)  := to_unsigned(v_sync_c-1, 3);
-  constant v_bp_m1_c   : unsigned(5-1 downto 0)  := to_unsigned(v_bp_c-1, 5);
-  constant v_act_m1_c  : unsigned(10-1 downto 0) := to_unsigned(v_act_c-1, 10);
-  constant h_fp_m1_c   : unsigned(5-1 downto 0)  := to_unsigned(h_fp_c-1, 5);
-  constant h_sync_m1_c : unsigned(8-1 downto 0)  := to_unsigned(h_sync_c-1, 8);
-  constant h_bp_m1_c   : unsigned(8-1 downto 0)  := to_unsigned(h_bp_c-1, 8);
-  constant h_act_m1_c  : unsigned(10-1 downto 0) := to_unsigned(h_act_c-1, 10);
+  signal video_clock_s : std_ulogic_vector(0 to video_config_c.output_count-1);
+
 
   -- Interconnection
   signal blinker_s: unsigned(26 downto 0);
 
-  signal dvi_ref_clock_s, dvi_pll_reset, dvi_pixel_clock_reset_n_s : std_ulogic;
+  signal dvi_ref_clock_s, dvi_pixel_clock_reset_n_s : std_ulogic;
   signal dvi_pixel_clock_s, dvi_serial_clock_s : std_ulogic;
-  signal dvi_pixel_clock_unb_s, dvi_serial_clock_unb_s : std_ulogic;
-  signal pll_locked_s, pll_reset_s: std_ulogic;
+  signal pll_locked_s : std_ulogic;
 
   signal tmds_s : nsl_dvi.dvi.symbol_vector_t;
 
@@ -92,40 +80,19 @@ begin
 
   led_o <= std_ulogic_vector(blinker_s(blinker_s'left downto blinker_s'left-1));
 
-  pll_reset_s <= not reset_n_i;
-
-  clock: work.top.stage1_pll
+  video_pll: nsl_clocking.pll.pll_multi
+    generic map(
+      config_c => video_config_c
+      )
     port map(
-      clkin => clock_i,
-      clkout0 => dvi_ref_clock_s,
-      mdclk => clock_i,
-      reset => pll_reset_s,
-      lock => pll_locked_s
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      clock_o => video_clock_s,
+      locked_o => dvi_pixel_clock_reset_n_s
       );
 
-  dvi_pll_reset <= not pll_locked_s;
-
-  dvi_clock_gen: work.top.dvi_pll
-    port map(
-      reset    => dvi_pll_reset,
-      clkin    => dvi_ref_clock_s,
-      clkout0  => dvi_serial_clock_unb_s,
-      clkout1  => dvi_pixel_clock_unb_s,
-      lock     => dvi_pixel_clock_reset_n_s,
-      mdclk    => clock_i
-      );
-
-  serial_clockbuf: nsl_clocking.distribution.clock_buffer
-    port map (
-      clock_i => dvi_serial_clock_unb_s,
-      clock_o => dvi_serial_clock_s
-      );
-
-  pixel_clockbuf: nsl_clocking.distribution.clock_buffer
-    port map (
-      clock_i => dvi_pixel_clock_unb_s,
-      clock_o => dvi_pixel_clock_s
-      );
+  dvi_serial_clock_s <= video_clock_s(0);
+  dvi_pixel_clock_s <= video_clock_s(1);
 
   driver: nsl_sipeed.pmod_dvi.pmod_dvi_output
     port map(
@@ -141,18 +108,18 @@ begin
       reset_n_i => dvi_pixel_clock_reset_n_s,
       pixel_clock_i => dvi_pixel_clock_s,
 
-      v_fp_m1_i => v_fp_m1_c,
-      v_sync_m1_i => v_sync_m1_c,
-      v_bp_m1_i => v_bp_m1_c,
-      v_act_m1_i => v_act_m1_c,
+      v_fp_m1_i => v_fp_m1(mode_c),
+      v_sync_m1_i => v_sync_m1(mode_c),
+      v_bp_m1_i => v_bp_m1(mode_c),
+      v_act_m1_i => v_act_m1(mode_c),
 
-      h_fp_m1_i => h_fp_m1_c,
-      h_sync_m1_i => h_sync_m1_c,
-      h_bp_m1_i => h_bp_m1_c,
-      h_act_m1_i => h_act_m1_c,
+      h_fp_m1_i => h_fp_m1(mode_c),
+      h_sync_m1_i => h_sync_m1(mode_c),
+      h_bp_m1_i => h_bp_m1(mode_c),
+      h_act_m1_i => h_act_m1(mode_c),
 
-      vsync_i => '0',
-      hsync_i => '0',
+      vsync_i => mode_c.v.sync,
+      hsync_i => mode_c.h.sync,
 
       sof_o => sof_s,
       sol_o => sol_s,
@@ -169,9 +136,9 @@ begin
     constant font_vscale_c: natural := 2;
     constant cell_width_c : natural := font_width(font_c) * font_hscale_c;
     constant cell_height_c : natural := font_height(font_c) * font_vscale_c;
-    constant row_count_l2_c : natural := nsl_math.arith.log2(v_act_c / cell_height_c);
-    constant column_count_l2_c : natural := nsl_math.arith.log2(h_act_c / cell_width_c);
-    constant status_row_c : natural := v_act_c / cell_height_c - 1;
+    constant row_count_l2_c : natural := nsl_math.arith.log2(mode_c.v.active / cell_height_c);
+    constant column_count_l2_c : natural := nsl_math.arith.log2(mode_c.h.active / cell_width_c);
+    constant status_row_c : natural := mode_c.v.active / cell_height_c - 1;
 
     constant color_count_l2_c : natural := 3;
     subtype color_t is unsigned(color_count_l2_c-1 downto 0);
@@ -314,8 +281,8 @@ begin
 
     underlay: work.top.scope_renderer
       generic map(
-        h_act_c => h_act_c,
-        v_act_c => v_act_c,
+        h_act_c => mode_c.h.active,
+        v_act_c => mode_c.v.active,
         color_count_l2_c => color_count_l2_c,
         background_color_c => color_background_c,
         grid_color_c => color_grid_c,

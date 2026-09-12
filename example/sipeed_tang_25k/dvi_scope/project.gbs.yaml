@@ -8,6 +8,8 @@ root:
     - nsl_sipeed.pmod_btn_4_4
     - nsl_clocking.async
     - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_dvi.mode
     - nsl_dvi.transceiver
     - nsl_dvi.encoder
     - nsl_dvi.terminal
@@ -25,20 +27,12 @@ root:
   sources:
     - file_type: vhdl
       files:
-        - src/stage1_pll_mod.vhd
-        - src/stage1_pll.vhd
-        - src/dvi_pll_mod.vhd
-        - src/dvi_pll.vhd
         - src/top.pkg.vhd
         - src/scope_sine_rom.vhd
         - src/scope_renderer.vhd
         - src/scope_controls.vhd
         - src/boundary.vhd
         - src/main.vhd
-    - file_type: verilog
-      files:
-        - src/stage1_pll_init.v
-        - src/dvi_pll_init.v
     - file_type: gowin-cst
       files:
         - ../pinout/j4_pmod_single_lvcmos33d.cst

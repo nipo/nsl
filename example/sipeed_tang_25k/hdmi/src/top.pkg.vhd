@@ -1,4 +1,4 @@
-library ieee;
+library ieee, nsl_dvi;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
@@ -10,7 +10,8 @@ package top is
     
   component main is
     generic (
-      clock_i_hz_c : natural
+      clock_i_hz_c : natural;
+      mode_c : nsl_dvi.mode.mode_t
       );
     port (
       clock_i : in std_ulogic;
@@ -23,25 +24,6 @@ package top is
       );
   end component;
 
-  component hdmi_pll is
-    port (
-      clkin: in std_logic;
-      clkout0: out std_logic;
-      clkout1: out std_logic;
-      lock: out std_logic;
-      mdclk: in std_logic;
-      reset: in std_logic
-      );
-  end component;
 
-  component stage1_pll is
-    port (
-      clkin: in std_logic;
-      clkout0: out std_logic;
-      lock: out std_logic;
-      mdclk: in std_logic;
-      reset: in std_logic
-      );
-  end component;
 
 end package;
