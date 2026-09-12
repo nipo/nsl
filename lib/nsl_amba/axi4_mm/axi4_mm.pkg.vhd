@@ -1477,9 +1477,13 @@ package body axi4_mm is
       for b in 0 to 3 -- MSB wins because processed last
       loop
         if l(b) = '1' then
-          for i in 0 to b+sl2
+          -- Bound the loop statically and mask inside it: XST refuses
+          -- a range whose end is not a literal.
+          for i in ret'range
           loop
-            ret(i) := '0';
+            if i <= b + sl2 then
+              ret(i) := '0';
+            end if;
           end loop;
         end if;
       end loop;
@@ -1498,9 +1502,13 @@ package body axi4_mm is
     variable ret: addr_t := (others => '0');
     variable sl2 : integer range 0 to 2**size_t'length-1 := to_integer(size_l2(cfg, addr));
   begin
-    for i in 0 to sl2-1
+    -- Bound the loop statically and mask inside it: XST refuses a
+    -- range whose end is a variable.
+    for i in ret'range
     loop
-      ret(i) := '1';
+      if i < sl2 then
+        ret(i) := '1';
+      end if;
     end loop;
 
     return ret;

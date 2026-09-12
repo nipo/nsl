@@ -215,6 +215,9 @@ projects:
   - name: encoder
     path: encoder
     tags: [ghdl, simulation]
+  - name: amba_mm_traffic
+    path: amba/mm_traffic
+    tags: [ghdl, simulation]
   - name: fifo4
     path: fifo4
     tags: [ghdl, simulation]
