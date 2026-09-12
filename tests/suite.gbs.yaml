@@ -385,28 +385,28 @@ projects:
     tags: [ghdl, simulation]
   - name: jtag
     path: jtag
-    tags: [ghdl, simulation]
+    tags: [ghdl, simulation, jtag_tap]
   - name: jtag_fifo_transport
     path: jtag_fifo_transport
-    tags: [ghdl, simulation]
+    tags: [ghdl, simulation, jtag_tap]
   - name: jtag_cbor_full_test
     path: jtag_cbor/full_test
     tags: [ghdl, simulation]
   - name: jtag_continuous_transport_bit_loopback
     path: jtag_continuous_transport/bit_loopback
-    tags: [ghdl, simulation, jtag_continuous_transport]
+    tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: jtag_continuous_transport_loopback
     path: jtag_continuous_transport/loopback
-    tags: [ghdl, simulation, jtag_continuous_transport]
+    tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: jtag_continuous_transport_master_loopback
     path: jtag_continuous_transport/master_loopback
-    tags: [ghdl, simulation, jtag_continuous_transport]
+    tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: jtag_continuous_transport_pause_loopback
     path: jtag_continuous_transport/pause_loopback
-    tags: [ghdl, simulation, jtag_continuous_transport]
+    tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: jtag_continuous_transport_rx
     path: jtag_continuous_transport/rx
-    tags: [ghdl, simulation, jtag_continuous_transport]
+    tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: lifo
     path: lifo
     tags: [ghdl, simulation]
