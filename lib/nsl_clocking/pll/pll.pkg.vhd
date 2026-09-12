@@ -128,12 +128,20 @@ package pll is
 
   -- Per-output features of a PLL block.
   --
-  -- phase_den is the count of selectable phase positions per output
-  -- cycle, 0 when output has no phase adjustment.
+  -- Phase adjustment comes in two shapes.  phase_den is the count of
+  -- selectable positions per output cycle, for a block whose step is
+  -- a fraction of what it outputs.  phase_vco_den is the count of
+  -- positions per VCO cycle, for a block that shifts the output by
+  -- whole and fractional VCO cycles: an output cycle being `divisor`
+  -- VCO cycles, its grid is that much finer than the output period,
+  -- and depends on the divisor the solver picks.  Either is 0 when
+  -- the block does not offer it, and both are 0 on an output with no
+  -- phase adjustment at all.
   type pll_output_topology_t is
   record
     divisor: pll_divisor_constraint_t;
     phase_den: natural;
+    phase_vco_den: natural;
   end record;
 
   type pll_output_topology_vector is array (0 to pll_output_max_c-1)
@@ -168,8 +176,9 @@ package pll is
   -- trades exact average rate for cycle-to-cycle jitter and loses
   -- phase relation to sibling outputs.
   --
-  -- phase is a fraction of the output cycle, relative to the
-  -- undelayed outputs.  Outputs with a non-zero phase cannot use
+  -- phase delays the output by that fraction of its own cycle,
+  -- relative to the undelayed outputs; it is a delay, not an advance,
+  -- as measured on a GW5A.  Outputs with a non-zero phase cannot use
   -- fractional division.
   --
   -- routing names the clock network this output drives, from
@@ -585,6 +594,15 @@ package body pll is
       & ">";
   end function;
 
+  function phase_to_string(phase: pll_ratio_t) return string
+  is
+  begin
+    if phase.num = 0 then
+      return "";
+    end if;
+    return " phase=" & to_string(phase);
+  end function;
+
   function mapping_outputs_to_string(mapping: pll_mapping_t;
                                      index: natural) return string
   is
@@ -597,12 +615,14 @@ package body pll is
         & "=" & to_string(mapping.output(index).hz) & "Hz(approx)"
         & "@port" & to_string(mapping.output(index).port_index)
         & " div=" & to_string(mapping.output(index).divisor)
+        & phase_to_string(mapping.output(index).phase)
         & mapping_outputs_to_string(mapping, index + 1);
     end if;
     return " out" & to_string(index)
       & "=" & to_string(mapping.output(index).hz) & "Hz"
       & "@port" & to_string(mapping.output(index).port_index)
       & " div=" & to_string(mapping.output(index).divisor)
+      & phase_to_string(mapping.output(index).phase)
       & mapping_outputs_to_string(mapping, index + 1);
   end function;
 
@@ -660,6 +680,37 @@ package body pll is
     mapping: pll_mapping_t;
   end record;
 
+  -- Whether a phase offset, stated as a fraction of the output
+  -- cycle, lands on a grid this port can hit with this divisor.
+  function phase_is_allowed(port_topo: pll_output_topology_t;
+                            phase: pll_ratio_t;
+                            divisor: pll_ratio_t) return boolean
+  is
+    variable den: natural;
+  begin
+    if phase.num = 0 then
+      return true;
+    end if;
+
+    -- A grid stated per output cycle holds whatever the divisor is
+    if port_topo.phase_den /= 0
+      and (phase.num * port_topo.phase_den) mod phase.den = 0 then
+      return true;
+    end if;
+
+    -- A grid stated per VCO cycle needs a whole number of VCO cycles
+    -- per output cycle to mean anything
+    if port_topo.phase_vco_den /= 0
+      and divisor.num mod divisor.den = 0 then
+      den := port_topo.phase_vco_den * (divisor.num / divisor.den);
+      if (phase.num * den) mod phase.den = 0 then
+        return true;
+      end if;
+    end if;
+
+    return false;
+  end function;
+
   -- Evaluate one output divisor candidate against one requested
   -- output.  dist_ratio is the input-to-distribution-tree rate
   -- ratio, dist_hz_r its rate in Hz.
@@ -696,14 +747,11 @@ package body pll is
       end if;
     end if;
 
-    if cfg.phase.num /= 0 then
-      -- Requested phase must sit on the port phase grid, and a
-      -- fractional divisor holds no phase relation at all.
-      if port_topo.phase_den = 0
-        or (cfg.phase.num * port_topo.phase_den) mod cfg.phase.den /= 0
-        or od.num mod od.den /= 0 then
-        ret.usable := false;
-      end if;
+    -- Requested phase must sit on the port's phase grid, and a
+    -- fractional divisor holds no phase relation at all.
+    if cfg.phase.num /= 0
+      and not phase_is_allowed(port_topo, cfg.phase, od) then
+      ret.usable := false;
     end if;
 
     return ret;

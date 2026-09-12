@@ -58,6 +58,36 @@ architecture gowin of pll_multi is
     return ((m.divisor.num mod m.divisor.den) * 8) / m.divisor.den;
   end function;
 
+  -- Phase shift of the output carried by port p, in eighths of a VCO
+  -- cycle.  A phase is stated as a fraction of the output cycle, and
+  -- an output cycle is `divisor` VCO cycles, so the eighths come out
+  -- as phase * 8 * divisor -- a whole number, the solver having
+  -- refused anything off that grid.
+  function pe_eighths(p: natural) return integer
+  is
+    constant m: pll_output_mapping_t := port_mapping(p);
+  begin
+    if m.phase.num = 0 then
+      return 0;
+    end if;
+    return (m.phase.num * 8 * (m.divisor.num / m.divisor.den)) / m.phase.den;
+  end function;
+
+  -- Whole VCO cycles of the shift, which is what CLKOUTx_PE_COARSE
+  -- takes...
+  function pe_coarse(p: natural) return integer
+  is
+  begin
+    return pe_eighths(p) / 8;
+  end function;
+
+  -- ... and the eighths left over, which CLKOUTx_PE_FINE takes.
+  function pe_fine(p: natural) return integer
+  is
+  begin
+    return pe_eighths(p) mod 8;
+  end function;
+
   function en_str(p: natural) return string
   is
   begin
@@ -402,6 +432,20 @@ begin
         odiv5_sel => odiv_int(5),
         odiv6_sel => odiv_int(6),
         odiv0_frac_sel => odiv_frac8(0),
+        clkout0_pe_coarse => pe_coarse(0),
+        clkout0_pe_fine => pe_fine(0),
+        clkout1_pe_coarse => pe_coarse(1),
+        clkout1_pe_fine => pe_fine(1),
+        clkout2_pe_coarse => pe_coarse(2),
+        clkout2_pe_fine => pe_fine(2),
+        clkout3_pe_coarse => pe_coarse(3),
+        clkout3_pe_fine => pe_fine(3),
+        clkout4_pe_coarse => pe_coarse(4),
+        clkout4_pe_fine => pe_fine(4),
+        clkout5_pe_coarse => pe_coarse(5),
+        clkout5_pe_fine => pe_fine(5),
+        clkout6_pe_coarse => pe_coarse(6),
+        clkout6_pe_fine => pe_fine(6),
         clkout0_en => en_str(0),
         clkout1_en => en_str(1),
         clkout2_en => en_str(2),

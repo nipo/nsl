@@ -76,9 +76,9 @@ package body pll_backend is
                                             pll_range(16, 16),
                                             pll_range(32, 32),
                                             pll_range(64, 64)),
-                     phase_den => 0),
+                     phase_den => 0, phase_vco_den => 0),
                others => (divisor => pll_divisor_unity_c,
-                          phase_den => 0)));
+                          phase_den => 0, phase_vco_den => 0)));
 
   function pll_topology_get(implementation: natural := 0)
     return pll_topology_t

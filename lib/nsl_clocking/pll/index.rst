@@ -148,6 +148,23 @@ five, and asking for one at 200 MHz walks the VCO down from 1400 to
 1000 to get it. A phase no divisor can carry fails elaboration, like
 any other request the block cannot hold.
 
+Phase
+-----
+
+`pll_output` takes a `phase`, a fraction of the output's own cycle by
+which it is delayed relative to the outputs that state none::
+
+  o1 => pll_output(10_000_000, phase => (num => 1, den => 8))
+
+What a block can hit depends on how it shifts. GW5A's PLLA moves an
+output by whole and eighth VCO cycles, so its grid is a matter of the
+divisor the solver picks -- an output cycle being that many VCO
+cycles. The solver will move to a divisor that carries the phase
+asked for: a fifth of a cycle needs a divisor that is a multiple of
+five, and asking for one at 200 MHz walks the VCO down from 1400 to
+1000 to get it. A phase no divisor can carry fails elaboration, like
+any other request the block cannot hold.
+
 Under the hood, `pll_multi` is realized by an elaboration-time solver
 working from a description of the vendor PLL block:
 
@@ -174,9 +191,9 @@ this way is the one `pll_multi` implements.
   the config is observable in simulation just like on hardware.
 
 * Gowin. GW5A parts map on the PLLA block (7 outputs, eighths
-  fractional divisor on output 0), GW1N/GW2A parts map on the
-  rPLL/PLL blocks (single output). Phase offsets are not supported
-  yet.
+  fractional divisor on output 0, phase shift on every output),
+  GW1N/GW2A parts map on the rPLL/PLL blocks (single output, no
+  phase shift).
 
 * Lattice ECP5, on EHXPLLL with CLKOP reserved for feedback: three
   user outputs on the CLKOS/CLKOS2/CLKOS3 dividers. Phase offsets

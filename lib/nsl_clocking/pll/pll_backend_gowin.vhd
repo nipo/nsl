@@ -125,7 +125,8 @@ package body pll_backend is
     ret.vco_khz_min := integer(pll_vco_fmin / 1.0e3);
     ret.vco_khz_max := integer(pll_vco_fmax / 1.0e3);
     ret.output := (others => (divisor => pll_divisor_unity_c,
-                              phase_den => 0));
+                              phase_den => 0,
+                              phase_vco_den => 0));
 
     if pll_type = "plla" then
       -- Feedback is realized on MDIV, ODIV0 has an eighths
@@ -133,14 +134,26 @@ package body pll_backend is
       -- output divisor and are not modeled.
       ret.fbdiv := pll_divisor(pll_range(2, 128));
       ret.output_count := 7;
+      -- PLLA shifts an output by whole and eighth VCO cycles,
+      -- CLKOUTx_PE_COARSE counting the whole ones and CLKOUTx_PE_FINE
+      -- the eighths.  An output cycle is `divisor` VCO cycles, so the
+      -- grid the solver has to land on depends on the divisor it
+      -- picks.
       for i in 0 to 6 loop
-        ret.output(i) := (divisor => odiv_c, phase_den => 0);
+        ret.output(i) := (divisor => odiv_c,
+                          phase_den => 0,
+                          phase_vco_den => 8);
       end loop;
       ret.output(0).divisor.frac_l2_den := 3;
     else
       ret.fbdiv := pll_divisor(pll_range(1, 64));
       ret.output_count := 1;
-      ret.output(0) := (divisor => odiv_c, phase_den => 0);
+      -- rPLL and PLL state a phase as a sixteenth of the output
+      -- period through PSDA_SEL, which this backend does not drive
+      -- yet.
+      ret.output(0) := (divisor => odiv_c,
+                        phase_den => 0,
+                        phase_vco_den => 0);
     end if;
 
     return ret;

@@ -59,7 +59,7 @@ package body pll_backend is
     constant bounds_c : constraints := constraints_get(variant_c);
     constant output_c : pll_output_topology_t := (
       divisor => pll_divisor(pll_range(1, bounds_c.out_factor_max)),
-      phase_den => 0);
+      phase_den => 0, phase_vco_den => 0);
     variable ret : pll_topology_t;
   begin
     ret.refdiv := pll_divisor(pll_range(1, 1));
@@ -70,7 +70,7 @@ package body pll_backend is
     ret.vco_khz_min := bounds_c.fmin / 1000;
     ret.vco_khz_max := bounds_c.fmax / 1000;
     ret.output := (others => (divisor => pll_divisor_unity_c,
-                              phase_den => 0));
+                              phase_den => 0, phase_vco_den => 0));
 
     if bounds_c.mode = "DCM" then
       ret.output_count := 1;

@@ -13,7 +13,7 @@ architecture arch of tb is
   constant od_frac_c : pll_divisor_constraint_t := pll_divisor(pll_range(1, 128),
                                                               frac_l2_den => 3);
   constant no_out_c : pll_output_topology_t := (divisor => pll_divisor_unity_c,
-                                                phase_den => 0);
+                                                phase_den => 0, phase_vco_den => 0);
 
   -- Flexible block, fractional divisor on port 0 only
   constant topo_a_c : pll_topology_t := (
@@ -25,8 +25,8 @@ architecture arch of tb is
     vco_khz_min => 400_000,
     vco_khz_max => 1_200_000,
     output_count => 4,
-    output => (0 => (divisor => od_frac_c, phase_den => 0),
-               1 | 2 | 3 => (divisor => od_int_c, phase_den => 0),
+    output => (0 => (divisor => od_frac_c, phase_den => 0, phase_vco_den => 0),
+               1 | 2 | 3 => (divisor => od_int_c, phase_den => 0, phase_vco_den => 0),
                others => no_out_c));
 
   -- Locked reference divisor and output divisor, only feedback and
@@ -42,7 +42,7 @@ architecture arch of tb is
     output_count => 1,
     output => (0 => (divisor => pll_divisor(pll_range(16, 16),
                                             frac_l2_den => 3),
-                     phase_den => 0),
+                     phase_den => 0, phase_vco_den => 0),
                others => no_out_c));
 
   -- Two ports with disjoint divisor ranges, forcing assignment to
@@ -57,9 +57,9 @@ architecture arch of tb is
     vco_khz_max => 1_200_000,
     output_count => 2,
     output => (0 => (divisor => pll_divisor(pll_range(1, 10)),
-                     phase_den => 0),
+                     phase_den => 0, phase_vco_den => 0),
                1 => (divisor => pll_divisor(pll_range(11, 128)),
-                     phase_den => 0),
+                     phase_den => 0, phase_vco_den => 0),
                others => no_out_c));
 
 begin

@@ -85,6 +85,64 @@ begin
       report "Unexpected fractional output settings"
       severity failure;
 
+    -- Phase shift: PLLA moves an output by whole and eighth VCO
+    -- cycles, so what a config can ask for depends on the divisor
+    -- the solver lands on.  A quarter cycle of a divide-by-7 output
+    -- is 14 eighths of a VCO cycle, which is on the grid.
+
+    assert t.output(0).phase_vco_den = 8 and t.output(6).phase_vco_den = 8
+      report "PLLA outputs state no VCO-relative phase grid"
+      severity failure;
+
+    cfg := pll_config(50_000_000,
+                      pll_output(200_000_000),
+                      pll_output(200_000_000, phase => (num => 1, den => 4)),
+                      pll_output(200_000_000, phase => (num => 1, den => 2)));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert m.valid
+      report "No mapping with phase shifts"
+      severity failure;
+    assert m.vco_khz = 1_400_000
+      and m.output(0).divisor = (num => 7, den => 1)
+      and m.output(1).divisor = (num => 7, den => 1)
+      and m.output(2).divisor = (num => 7, den => 1)
+      report "Phase shifts disturbed the divisors"
+      severity failure;
+    assert m.output(1).phase = (num => 1, den => 4)
+      and m.output(2).phase = (num => 1, den => 2)
+      report "Phase did not reach the mapping"
+      severity failure;
+
+    -- The grid moves with the divisor, so a phase off one divisor's
+    -- grid may sit on another's: a fifth of a cycle needs a divisor
+    -- that is a multiple of five, and 200MHz has one, VCO 1000 over
+    -- five.
+    cfg := pll_config(50_000_000,
+                      pll_output(200_000_000, phase => (num => 1, den => 8)));
+    assert nsl_clocking.pll_backend.pll_solve(cfg).valid
+      report "On-grid phase refused"
+      severity failure;
+
+    cfg := pll_config(50_000_000,
+                      pll_output(200_000_000, phase => (num => 1, den => 5)));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    assert m.valid and m.output(0).divisor = (num => 5, den => 1)
+      report "Solver did not move to a divisor carrying the phase"
+      severity failure;
+
+    -- A ninth needs a divisor that is a multiple of nine, and no
+    -- divisor reaching 200MHz from this VCO window is one.
+    cfg := pll_config(50_000_000,
+                      pll_output(200_000_000, phase => (num => 1, den => 9)));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert not m.valid
+      report "Off-grid phase accepted"
+      severity failure;
+
     -- 74.25MHz is not reachable from 50MHz, even on eighths
 
     cfg := pll_config(50_000_000,
