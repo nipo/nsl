@@ -508,6 +508,18 @@ projects:
   - name: scrambler
     path: scrambler
     tags: [ghdl, simulation]
+  - name: sdio_card
+    path: sdio/card
+    tags: [ghdl, simulation]
+  - name: sdio_cmd_engine
+    path: sdio/cmd_engine
+    tags: [ghdl, simulation]
+  - name: sdio_dat_engine
+    path: sdio/dat_engine
+    tags: [ghdl, simulation]
+  - name: sdio_host
+    path: sdio/host
+    tags: [ghdl, simulation]
   - name: serdes_input
     path: serdes/input
     tags: [ghdl, simulation]

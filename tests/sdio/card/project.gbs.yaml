@@ -1,0 +1,27 @@
+name: sdio_card
+
+root:
+  name: top
+  deps:
+    - nsl_sdio.sdio
+    - nsl_sdio.link
+    - nsl_sdio.host
+    - nsl_sdio.card
+    - nsl_sdio.testing
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
