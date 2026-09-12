@@ -79,10 +79,6 @@ begin
   p4: if ratio_c = 4
   generate
     component IDES4 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       PORT (
         D : IN std_logic;
         RESET : IN std_logic;
@@ -114,10 +110,6 @@ begin
   p8: if ratio_c = 8
   generate
     component IDES8 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       PORT (
         D,RESET : IN std_logic;
         CALIB : IN std_logic;
@@ -155,10 +147,6 @@ begin
   p10: if ratio_c = 10
   generate
     component IDES10 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       PORT (
         D,RESET : IN std_logic;
         CALIB : IN std_logic;
@@ -200,10 +188,6 @@ begin
   p16: if ratio_c = 16
   generate
     component IDES16 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       PORT (
         D,RESET : IN std_logic;
         CALIB : IN std_logic;

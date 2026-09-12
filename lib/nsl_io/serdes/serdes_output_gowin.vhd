@@ -53,10 +53,6 @@ begin
   p4: if ratio_c = 4
   generate
     component OSER4 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       port (
         D0 : in std_logic;
         D1 : in std_logic;
@@ -91,10 +87,6 @@ begin
   p8: if ratio_c = 8
   generate
     component OSER8 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       port (
         D0 : in std_logic;
         D1 : in std_logic;
@@ -141,10 +133,6 @@ begin
   p10: if ratio_c = 10
   generate
     component OSER10 is
-      GENERIC (
-        GSREN : string := "false";
-        LSREN : string := "true"
-        );
       port (
         D0 : in std_logic;
         D1 : in std_logic;
