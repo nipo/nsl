@@ -520,6 +520,9 @@ projects:
   - name: sdio_host
     path: sdio/host
     tags: [ghdl, simulation]
+  - name: sdio_pmod_tf_card
+    path: sdio/pmod_tf_card
+    tags: [ghdl, simulation]
   - name: serdes_input
     path: serdes/input
     tags: [ghdl, simulation]

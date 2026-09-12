@@ -1,0 +1,29 @@
+name: sdio_pmod_tf_card
+
+root:
+  name: top
+  deps:
+    - nsl_sdio.sdio
+    - nsl_sdio.link
+    - nsl_sdio.testing
+    - nsl_sipeed.pmod_tf_card
+    - nsl_clocking.async
+    - nsl_digilent.pmod
+    - nsl_io.io
+    - nsl_data.text
+    - nsl_logic.bool
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
