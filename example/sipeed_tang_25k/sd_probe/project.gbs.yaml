@@ -1,0 +1,47 @@
+name: tang_25k_sd_probe
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_data.bytestream
+    - nsl_digilent.pmod
+    - nsl_hwdep.reset
+    - nsl_logic.bool
+    - nsl_math.arith
+    - nsl_memory.fifo
+    - nsl_sdio.card
+    - nsl_sdio.host
+    - nsl_sdio.sdio
+    - nsl_sipeed.pmod_tf_card
+    - nsl_uart.serdes
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart_tx.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j4_tf_card.cst
+    - file_type: gowin-sdc
+      files:
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: sd_probe.fs
