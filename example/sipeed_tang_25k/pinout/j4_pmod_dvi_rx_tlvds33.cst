@@ -1,0 +1,21 @@
+# Receiving DVI on the J4 Pmod.
+#
+# The pairs are the ones nsl_sipeed.pmod_dvi drives when transmitting:
+# clock on Pmod 4/8, data0 on 3/7, data1 on 2/6, data2 on 1/5.  Only
+# the positive pin of a pair is placed; the negative one follows it.
+#
+# The Pmod terminates each pair at the connector and reconstructs a
+# 1.65V common mode on this side, which is what a differential
+# receiver here needs.
+
+IO_LOC  "dvi_ck_i" C11,C10;
+IO_PORT "dvi_ck_i" IO_TYPE=TLVDS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+
+IO_LOC  "dvi_d_i[0]" B11,B10;
+IO_PORT "dvi_d_i[0]" IO_TYPE=TLVDS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+
+IO_LOC  "dvi_d_i[1]" D11,D10;
+IO_PORT "dvi_d_i[1]" IO_TYPE=TLVDS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+
+IO_LOC  "dvi_d_i[2]" G11,G10;
+IO_PORT "dvi_d_i[2]" IO_TYPE=TLVDS33 PULL_MODE=NONE BANK_VCCIO=3.3;

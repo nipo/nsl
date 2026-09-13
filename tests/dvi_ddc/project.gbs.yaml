@@ -1,0 +1,29 @@
+name: dvi_ddc
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.ddc
+    - nsl_video.mode
+    - nsl_video.edid
+    - nsl_i2c.i2c
+    - nsl_io.io
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

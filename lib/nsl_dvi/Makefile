@@ -3,6 +3,7 @@ packages += dvi
 packages += mode
 packages += encoder
 packages += decoder
+packages += ddc
 packages += pattern
 packages += transceiver
 packages += terminal
