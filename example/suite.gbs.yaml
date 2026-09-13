@@ -26,6 +26,9 @@ projects:
   - name: tang_console_60k_blink
     path: sipeed_tang_console_60k/blink
     tags: [gowin, tang_console_60k]
+  - name: tang_console_60k_sd_cbor
+    path: sipeed_tang_console_60k/sd_cbor
+    tags: [gowin, tang_console_60k]
   - name: stream_packer
     path: stream_packer
     tags: [gowin, tang_25k]

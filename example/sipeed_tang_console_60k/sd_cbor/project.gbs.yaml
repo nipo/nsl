@@ -1,0 +1,64 @@
+name: tang_console_60k_sd_cbor
+
+root:
+  name: top
+  deps:
+    - nsl_hwdep.clock
+    - nsl_hwdep.reset
+    - nsl_clocking.async
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_indication.activity
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_usb.fs_phy
+    - nsl_usb.func
+    - nsl_usb.io
+    - nsl_amba.axi4_stream
+    - nsl_bnoc.axi_adapter
+    - nsl_bnoc.framed
+    - nsl_bnoc.pipe
+    - nsl_io.io
+    - nsl_sdio.cbor_transactor
+    - nsl_sdio.host
+    - nsl_sdio.sdio
+  sources:
+    - file_type: verilog
+      files:
+        - ../usb2/usb2_0_softphy.v
+    - file_type: vhdl
+      files:
+        - ../usb2/softphy.pkg.vhd
+        - ../usb2/gw_usb2_phy.vhd
+        - main.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/usb2.cst
+        - ../pinout/spi_flash.cst
+        - ../pinout/tf.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/clk.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - clock.sdc
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      options:
+        # A compressed bitstream is not something openFPGALoader can
+        # read back out of this family
+        bit_compress: 0
+      use_as_gpio:
+        - sspi
+        - mspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: sd_cbor.fs
