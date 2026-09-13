@@ -7,9 +7,11 @@ DVI output modules.
 Video modes
 ===========
 
-`mode <mode/>`_ states what a frame looks like -- active pixels and
-lines, the blanking around them, the sync pulses inside it -- and the
-clocks that frame calls for.
+Modes live in `nsl_video.mode <../nsl_video/index.html>`_ and
+`nsl_dvi.mode <mode/>`_ is the name DVI users know them by. A mode
+states what a frame looks like -- active pixels and lines, the
+blanking around them, the sync pulses inside it -- and the clocks
+that frame calls for.
 
 Two families state the remaining number differently. Broadcast modes
 (CEA/HDMI) state a frame rate and the pixel clock follows from the

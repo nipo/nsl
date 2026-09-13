@@ -1,2 +1,2 @@
 vhdl-sources += mode.pkg.vhd
-deps += nsl_video.mode
+deps += nsl_math.arith

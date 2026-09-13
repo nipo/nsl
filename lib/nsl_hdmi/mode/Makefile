@@ -1,2 +1,2 @@
 vhdl-sources += mode.pkg.vhd
-deps += nsl_dvi.mode
+deps += nsl_video.mode
