@@ -647,6 +647,9 @@ projects:
   - name: video_capture
     path: video_capture
     tags: [ghdl, simulation]
+  - name: video_edid
+    path: video_edid
+    tags: [ghdl, simulation]
   - name: video_capture_fifo
     path: video_capture_fifo
     tags: [ghdl, simulation]

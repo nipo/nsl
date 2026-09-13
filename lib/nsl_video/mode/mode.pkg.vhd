@@ -91,6 +91,11 @@ package mode is
   function x_width(geo: geometry_t) return natural;
   function y_width(geo: geometry_t) return natural;
 
+  type mode_vector is array(natural range <>) of mode_t;
+
+  -- Rate a line goes by at, which a sink states the range of.
+  function h_rate_hz(mode: mode_t) return natural;
+
   function h_fp_m1(mode: mode_t; width : integer := 0) return unsigned;
   function h_sync_m1(mode: mode_t; width : integer := 0) return unsigned;
   function h_bp_m1(mode: mode_t; width : integer := 0) return unsigned;
@@ -143,6 +148,9 @@ package mode is
   -- VIC 4,69
   -- PxClk = 74.25
   constant mode_std_1280x720p60_c: mode_t := mode_build(1280, 370, 110, 40, 720, 30, 5, 5, 60.0, '1', '1');
+  -- VIC 34.  Same frame as 1080p60 at half the rate, so the same
+  -- 74.25 MHz a 720p60 link runs at carries it.
+  constant mode_std_1920x1080p30_c: mode_t := mode_build(1920, 280, 88, 44, 1080, 45, 4, 5, 30.0, '1', '1');
 
   -- VIC 1.  Same, and the standard clock is not the geometry's
   -- either.
@@ -344,6 +352,12 @@ package body mode is
     else
       return to_unsigned(mode.v.active - 1, width);
     end if;
+  end function;
+
+  function h_rate_hz(mode: mode_t) return natural
+  is
+  begin
+    return mode.pixel_hz / h_total(mode);
   end function;
 
   function h_total(mode: mode_t) return natural
