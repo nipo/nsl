@@ -13,6 +13,7 @@ ise-build/
 *.bgn
 *.bit
 *.mcs
+*.bin
 *.xrpt
 xlnx_auto_0_xdb/
 xilinx_device_details.xml
