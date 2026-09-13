@@ -1,0 +1,59 @@
+name: tang_25k_dvi_rx_edid
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.ddc
+    - nsl_dvi.transceiver
+    - nsl_dvi.decoder
+    - nsl_hdmi.decoder
+    - nsl_hdmi.audio
+    - nsl_hdmi.hdmi
+    - nsl_video.raster
+    - nsl_uart.serdes
+    - nsl_data.bytestream
+    - nsl_dvi.dvi
+    - nsl_line_coding.tmds
+    - nsl_video.mode
+    - nsl_i2c.i2c
+    - nsl_sipeed.pmod_8xled
+    - nsl_digilent.pmod
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_clocking.interdomain
+    - nsl_hwdep.reset
+    - nsl_hwdep.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/pmod_dvi_sideband.cst
+        - ../pinout/clk.cst
+        - ../pinout/buttons.cst
+        - ../pinout/uart.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j5_pmod_double_lvcmos33.cst
+        - ../pinout/j4_pmod_dvi_rx_lvds.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: dvi_rx_edid.fs

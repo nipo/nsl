@@ -1,0 +1,5 @@
+# CEC, the wire a display and a source talk over about things that are
+# not pixels.  A DVI link does not use it.
+
+IO_LOC  "dvi_cec_io" F7;
+IO_PORT "dvi_cec_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=4;

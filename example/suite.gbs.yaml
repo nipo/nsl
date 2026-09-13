@@ -14,6 +14,9 @@ projects:
   - name: tang_25k_dvi_terminal
     path: sipeed_tang_25k/dvi_terminal
     tags: [gowin, tang_25k]
+  - name: tang_25k_dvi_rx_edid
+    path: sipeed_tang_25k/dvi_rx_edid
+    tags: [gowin, tang_25k]
   - name: tang_25k_seven_segment_counter
     path: sipeed_tang_25k/seven_segment_counter
     tags: [gowin, tang_25k]

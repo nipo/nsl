@@ -26,6 +26,7 @@ begin
   main: process is
     file fd: binary_file;
     variable blk, multi: edid_block_t;
+    variable full: byte_string(0 to 255);
 
     -- What a source pulls back out of a detailed timing.
     procedure check_timing(constant d: descriptor_t;
@@ -238,6 +239,109 @@ begin
       report "Pixel clock limit is below the fastest mode on offer"
       severity failure;
 
+    -- An HDMI sink, which is a base block plus a CTA extension.  What
+    -- a source reads out of that extension is what makes it send data
+    -- islands rather than plain DVI.
+
+    full := edid_data(modes => mode_vector'(0 => mode_std_1280x720p60_c),
+                      manufacturer => "NSL",
+                      product_code => 3,
+                      name => "NSL Capture",
+                      h_size_mm => 160,
+                      v_size_mm => 90,
+                      hdmi => true,
+                      audio_channels => 2);
+
+    -- One block follows, and both sum to zero
+    assert full(126) = to_byte(1)
+      report "The base block does not state an extension"
+      severity failure;
+    assert checksum_of(full(0 to 127)) = x"00"
+      report "Base block does not sum to zero once an extension is stated"
+      severity failure;
+    assert checksum_of(full(128 to 255)) = x"00"
+      report "Extension block does not sum to zero"
+      severity failure;
+
+    -- A CTA extension, revision three
+    assert full(128) = x"02" and full(129) = x"03"
+      report "Extension is not a CTA revision three block"
+      severity failure;
+
+    -- Underscan and basic audio, no YCbCr
+    assert to_integer(full(131)) / 128 = 1
+      report "Underscan is not stated"
+      severity failure;
+    assert (to_integer(full(131)) / 64) mod 2 = 1
+      report "Basic audio is not stated, so a source sends none"
+      severity failure;
+    assert (to_integer(full(131)) / 16) mod 4 = 0
+      report "YCbCr is offered, which lets a source send something other than RGB"
+      severity failure;
+
+    -- The HDMI vendor block comes first, and is the whole handshake
+    assert full(132) = x"67"
+      report "First data block is not a vendor block of seven bytes"
+      severity failure;
+    assert full(133 to 135) = byte_string'(x"03", x"0c", x"00")
+      report "Vendor block does not carry the HDMI OUI, so the link stays DVI"
+      severity failure;
+    assert full(136) = x"00" and full(137) = x"00"
+      report "Physical address is not the root one"
+      severity failure;
+    -- 74.25 MHz, in units of five
+    assert full(139) = to_byte(15)
+      report "Maximum TMDS clock reads " & to_string(to_integer(full(139)) * 5) & " MHz"
+      severity failure;
+
+    -- Then the modes, by VIC.  720p60 is VIC 4, and the first mode on
+    -- offer is marked native.
+    assert full(140) = x"41"
+      report "Second data block is not one video descriptor"
+      severity failure;
+    assert full(141) = to_byte(128 + 4)
+      report "Mode does not read back as native VIC 4"
+      severity failure;
+
+    -- Then what audio may be sent: two channels of LPCM, the three
+    -- rates every source has, all three depths
+    assert full(142) = x"23"
+      report "Third data block is not one audio descriptor"
+      severity failure;
+    assert full(143) = x"09"
+      report "Audio descriptor is not two channels of LPCM"
+      severity failure;
+    assert full(144) = x"07" and full(145) = x"07"
+      report "Audio rates or depths do not read back"
+      severity failure;
+
+    assert full(146) = x"83"
+      report "Fourth data block is not a speaker allocation"
+      severity failure;
+    assert full(147) = x"01"
+      report "Speaker allocation is not stereo"
+      severity failure;
+
+    -- Nothing follows the data blocks
+    assert full(130) = to_byte(22)
+      report "Descriptors are said to start at " & to_string(to_integer(full(130)))
+      severity failure;
+
+    -- A DVI sink is one block, and stating no audio is what it does
+    assert edid_data(modes => mode_vector'(0 => mode_std_1280x720p60_c),
+                     manufacturer => "NSL", product_code => 3)'length = 128
+      report "A DVI sink hands more than one block"
+      severity failure;
+
+    assert cea_vic(mode_std_1920x1080p60_c) = 16
+      and cea_vic(mode_std_640x480p60_c) = 1
+      and cea_vic(mode_std_1920x1080p30_c) = 34
+      report "A mode does not carry the VIC CEA gives it"
+      severity failure;
+    assert cea_vic(mode_std_1024x768p60_c) = 0
+      report "A VESA mode is given a VIC, which CEA does not name"
+      severity failure;
+
     -- Written out so it can be held against an independent reader.
     -- edid-decode takes it straight.
     file_open(fd, "edid.bin", WRITE_MODE);
@@ -246,6 +350,10 @@ begin
 
     file_open(fd, "edid-multi.bin", WRITE_MODE);
     write(fd, multi);
+    file_close(fd);
+
+    file_open(fd, "edid-hdmi.bin", WRITE_MODE);
+    write(fd, full);
     file_close(fd);
 
     report "EDID written, 128 bytes" severity note;
