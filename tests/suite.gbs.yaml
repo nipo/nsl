@@ -511,6 +511,9 @@ projects:
   - name: sdio_card
     path: sdio/card
     tags: [ghdl, simulation]
+  - name: sdio_cbor
+    path: sdio/cbor
+    tags: [ghdl, simulation]
   - name: sdio_cmd_engine
     path: sdio/cmd_engine
     tags: [ghdl, simulation]

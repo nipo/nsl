@@ -1,0 +1,28 @@
+name: sdio_cbor
+
+root:
+  name: top
+  deps:
+    - nsl_sdio.sdio
+    - nsl_sdio.link
+    - nsl_sdio.cbor_transactor
+    - nsl_sdio.testing
+    - nsl_amba.axi4_stream
+    - nsl_data.bytestream
+    - nsl_data.cbor
+    - nsl_data.text
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

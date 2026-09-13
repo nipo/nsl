@@ -15,6 +15,10 @@ library follows that split rather than the card-type one.
   Nothing there knows what a command means, which is what makes it the
   same for the three bus flavours.
 
+* `cbor_transactor <cbor_transactor>`_: a host driven by a command
+  stream, for a design where the card's command set lives in software
+  rather than in the fabric.
+
 * `testing <testing>`_: a card model to run a host against.
 
 Above the link layer, a transaction is one command with an optional
