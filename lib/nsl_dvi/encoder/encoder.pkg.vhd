@@ -30,22 +30,12 @@ package encoder is
   constant channel_bytes_starved_c: nsl_data.bytestream.byte_string(0 to 2)
     := (x"00", x"ff", x"00");
 
-  type period_t is (
-    PERIOD_CONTROL,
-    PERIOD_DI_PRE,
-    PERIOD_DI_GUARD,
-    PERIOD_DI_DATA,
-    PERIOD_VIDEO_PRE,
-    PERIOD_VIDEO_GUARD,
-    PERIOD_VIDEO_DATA
-    );
-  
   component source_stream_encoder is
     port(
       reset_n_i : in std_ulogic;
       pixel_clock_i : in std_ulogic;
 
-      period_i: in period_t;
+      period_i: in work.dvi.period_t;
 
       -- Pixel data, only valid if period_i = PERIOD_VIDEO_DATA
       pixel_i : in nsl_data.bytestream.byte_string(0 to 2);

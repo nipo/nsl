@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_color, nsl_math, nsl_line_coding, nsl_data, nsl_video, work;
 use work.encoder.all;
+use work.dvi.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;

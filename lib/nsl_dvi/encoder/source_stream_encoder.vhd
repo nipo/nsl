@@ -4,13 +4,14 @@ use ieee.numeric_std.all;
 
 library nsl_data, nsl_line_coding, work;
 use work.encoder.all;
+use work.dvi.all;
 
 entity source_stream_encoder is
   port(
     reset_n_i : in std_ulogic;
     pixel_clock_i : in std_ulogic;
 
-    period_i: in period_t;
+    period_i: in work.dvi.period_t;
 
     pixel_i : in nsl_data.bytestream.byte_string(0 to 2);
     hsync_i : in std_ulogic;
