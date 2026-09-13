@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_spi, nsl_data, nsl_color;
+library work, nsl_spi, nsl_data, nsl_color, nsl_video;
 use work.st7735.all;
 use nsl_data.bytestream.all;
 
@@ -11,8 +11,8 @@ entity st7735_spi_driver is
     clock_i_hz_c : natural;
     spi_hz_c : natural := 15_000_000;
 
-    width_c : natural := 160;
-    height_c : natural := 80;
+    config_c : nsl_video.pixel_stream.config_t;
+    geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(160, 80);
     column_offset_c : natural := 1;
     row_offset_c : natural := 26;
     madctl_c : byte := x"68";
@@ -29,11 +29,12 @@ entity st7735_spi_driver is
     dc_o : out std_ulogic;
     reset_n_o : out std_ulogic;
 
-    sof_o : out std_ulogic;
-    sol_o : out std_ulogic;
-    pixel_ready_o : out std_ulogic;
-    pixel_valid_i : in std_ulogic := '1';
-    pixel_i : in nsl_color.rgb.rgb24
+    pixel_i : in nsl_video.pixel_stream.master_t;
+    pixel_o : out nsl_video.pixel_stream.slave_t;
+
+    -- Stream framing and the panel scan agree, so what is shown is
+    -- what came in.
+    synced_o : out std_ulogic
     );
 end entity;
 
@@ -66,10 +67,10 @@ architecture beh of st7735_spi_driver is
   constant frame_setup_c : byte_string(0 to 10) := (
     cmd_caset,
     x"00", std_ulogic_vector(to_unsigned(column_offset_c, 8)),
-    x"00", std_ulogic_vector(to_unsigned(column_offset_c + width_c - 1, 8)),
+    x"00", std_ulogic_vector(to_unsigned(column_offset_c + geometry_c.width - 1, 8)),
     cmd_raset,
     x"00", std_ulogic_vector(to_unsigned(row_offset_c, 8)),
-    x"00", std_ulogic_vector(to_unsigned(row_offset_c + height_c - 1, 8)),
+    x"00", std_ulogic_vector(to_unsigned(row_offset_c + geometry_c.height - 1, 8)),
     cmd_ramwr);
   constant frame_setup_dc_c : std_ulogic_vector(0 to 10) := "01111011110";
 
@@ -96,8 +97,8 @@ architecture beh of st7735_spi_driver is
     state: state_t;
     timer: natural range 0 to timer_max_c;
     ptr: natural range 0 to frame_setup_c'length;
-    x: natural range 0 to width_c - 1;
-    y: natural range 0 to height_c - 1;
+    x: natural range 0 to geometry_c.width - 1;
+    y: natural range 0 to geometry_c.height - 1;
     display_on: boolean;
 
     shreg: std_ulogic_vector(15 downto 0);
@@ -108,6 +109,10 @@ architecture beh of st7735_spi_driver is
   end record;
 
   signal r, rin: regs_t;
+
+  signal sof_s, sol_s, ready_s, valid_s: std_ulogic;
+  signal stream_pixel_s: nsl_video.pixel_stream.pixel_t;
+  signal pixel_s: nsl_color.rgb.rgb24;
 
 begin
 
@@ -127,7 +132,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, enable_i, refresh_i, pixel_valid_i, pixel_i) is
+  transition: process(r, enable_i, refresh_i, valid_s, pixel_s) is
   begin
     rin <= r;
 
@@ -217,16 +222,16 @@ begin
           rin.state <= ST_PIXEL;
 
         when ST_PIXEL =>
-          if pixel_valid_i = '1' then
-            rin.shreg <= std_ulogic_vector(pixel_i.r(7 downto 3))
-              & std_ulogic_vector(pixel_i.g(7 downto 2))
-              & std_ulogic_vector(pixel_i.b(7 downto 3));
+          if valid_s = '1' then
+            rin.shreg <= std_ulogic_vector(pixel_s.r(7 downto 3))
+              & std_ulogic_vector(pixel_s.g(7 downto 2))
+              & std_ulogic_vector(pixel_s.b(7 downto 3));
             rin.bits_left <= 16;
             rin.div <= half_bit_cycles_c - 1;
             rin.dc <= '1';
-            if r.x /= width_c - 1 then
+            if r.x /= geometry_c.width - 1 then
               rin.x <= r.x + 1;
-            elsif r.y /= height_c - 1 then
+            elsif r.y /= geometry_c.height - 1 then
               rin.y <= r.y + 1;
               rin.state <= ST_SOL;
             elsif not r.display_on then
@@ -283,8 +288,8 @@ begin
     spi_o.mosi <= r.shreg(15);
     dc_o <= r.dc;
 
-    sof_o <= '0';
-    sol_o <= '0';
+    sof_s <= '0';
+    sol_s <= '0';
 
     case r.state is
       when ST_SLPOUT | ST_INIT | ST_SOF | ST_SETUP | ST_SOL | ST_PIXEL
@@ -306,21 +311,43 @@ begin
     end case;
 
     if r.state = ST_SOF and r.bits_left = 0 then
-      sof_o <= '1';
+      sof_s <= '1';
     end if;
 
     if r.state = ST_SOL and r.bits_left = 0 then
-      sol_o <= '1';
+      sol_s <= '1';
     end if;
   end process;
 
-  mealy: process(r, pixel_valid_i) is
+  mealy: process(r) is
   begin
-    if r.state = ST_PIXEL and r.bits_left = 0 and pixel_valid_i = '1' then
-      pixel_ready_o <= '1';
+    if r.state = ST_PIXEL and r.bits_left = 0 then
+      ready_s <= '1';
     else
-      pixel_ready_o <= '0';
+      ready_s <= '0';
     end if;
   end process;
+
+  -- The panel scan holds its serial interface when the stream has no
+  -- pixel, so a late pixel costs time, not position.
+  unframer: nsl_video.raster.pixel_stream_unframer
+    generic map(
+      config_c => config_c,
+      raster_can_wait_c => true
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      in_i => pixel_i,
+      in_o => pixel_o,
+      sof_i => sof_s,
+      sol_i => sol_s,
+      ready_i => ready_s,
+      valid_o => valid_s,
+      pixel_o => stream_pixel_s,
+      synced_o => synced_o
+      );
+
+  pixel_s <= nsl_video.pixel_stream.to_rgb24(config_c, stream_pixel_s);
 
 end architecture;

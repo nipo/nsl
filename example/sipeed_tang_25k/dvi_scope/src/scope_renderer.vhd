@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_math;
+library work, nsl_math, nsl_video;
 
 -- Scope-style color-index pixel source. Draws a graticule and a
 -- continuous sine trace from scope_sine_rom. Phase is swept
@@ -16,8 +16,8 @@ library work, nsl_math;
 -- continuous on steep slopes.
 entity scope_renderer is
   generic(
-    h_act_c : natural;
-    v_act_c : natural;
+    geometry_c : nsl_video.mode.geometry_t;
+    config_c : nsl_video.pixel_stream.config_t;
     color_count_l2_c : natural;
     background_color_c : natural;
     grid_color_c : natural;
@@ -29,11 +29,10 @@ entity scope_renderer is
     clock_i : in std_ulogic;
     reset_n_i : in std_ulogic;
 
-    sof_i : in std_ulogic;
-    sol_i : in std_ulogic;
-    color_ready_i : in std_ulogic;
-    color_valid_o : out std_ulogic;
-    color_o : out unsigned(color_count_l2_c-1 downto 0);
+    enable_i : in std_ulogic := '1';
+
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t;
 
     phase_increment_i : in unsigned(15 downto 0);
     phase_origin_i : in unsigned(15 downto 0);
@@ -44,8 +43,12 @@ end entity;
 
 architecture beh of scope_renderer is
 
-  constant x_width_c : natural := nsl_math.arith.log2(h_act_c);
-  constant y_width_c : natural := nsl_math.arith.log2(v_act_c);
+  signal sof_s, sol_s, color_ready_s, color_valid_s: std_ulogic;
+  signal color_s: unsigned(color_count_l2_c-1 downto 0);
+  signal stream_pixel_s: nsl_video.pixel_stream.pixel_t;
+
+  constant x_width_c : natural := nsl_math.arith.log2(geometry_c.width);
+  constant y_width_c : natural := nsl_math.arith.log2(geometry_c.height);
   constant rom_address_width_c : natural := 9;
   constant sample_width_c : natural := nsl_math.arith.log2(trace_amplitude_c) + 2;
 
@@ -60,7 +63,7 @@ architecture beh of scope_renderer is
     else
       v := resize(sample, v'length);
     end if;
-    c := to_signed(v_act_c / 2, c'length) - v;
+    c := to_signed(geometry_c.height / 2, c'length) - v;
     return resize(unsigned(c), y_width_c);
   end function;
 
@@ -113,7 +116,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, sof_i, sol_i, color_ready_i,
+  transition: process(r, sof_s, sol_s, color_ready_s,
                       phase_increment_i, phase_origin_i, zoom_i,
                       rom_sample_s) is
   begin
@@ -134,7 +137,7 @@ begin
         rin.state <= ST_RUN;
 
       when ST_RUN =>
-        if color_ready_i = '1' then
+        if color_ready_s = '1' then
           if r.pending then
             rin.s_cur <= sample_row(rom_sample_s, zoom_i);
           else
@@ -143,7 +146,7 @@ begin
           rin.pending <= true;
           rin.phase <= r.phase + phase_increment_i;
           rin.x <= r.x + 1;
-          if r.x = h_act_c - 1 then
+          if r.x = geometry_c.width - 1 then
             rin.state <= ST_IDLE;
           end if;
         else
@@ -154,7 +157,7 @@ begin
         end if;
     end case;
 
-    if sol_i = '1' then
+    if sol_s = '1' then
       rin.state <= ST_FETCH_CUR;
       rin.x <= (others => '0');
       rin.phase <= phase_origin_i;
@@ -167,7 +170,7 @@ begin
       end if;
     end if;
 
-    if sof_i = '1' then
+    if sof_s = '1' then
       rin.state <= ST_IDLE;
       rin.first_line <= true;
     end if;
@@ -189,18 +192,41 @@ begin
             or r.y(grid_pitch_l2_c-1 downto 0) = 0;
 
     if r.state = ST_RUN then
-      color_valid_o <= '1';
+      color_valid_s <= '1';
     else
-      color_valid_o <= '0';
+      color_valid_s <= '0';
     end if;
 
     if r.state = ST_RUN and trace then
-      color_o <= to_unsigned(trace_color_c, color_count_l2_c);
+      color_s <= to_unsigned(trace_color_c, color_count_l2_c);
     elsif r.state = ST_RUN and grid and grid_enable_i = '1' then
-      color_o <= to_unsigned(grid_color_c, color_count_l2_c);
+      color_s <= to_unsigned(grid_color_c, color_count_l2_c);
     else
-      color_o <= to_unsigned(background_color_c, color_count_l2_c);
+      color_s <= to_unsigned(background_color_c, color_count_l2_c);
     end if;
   end process;
+
+
+  stream_pixel_s <= nsl_video.pixel_stream.pixel_t'(
+    0 => resize(color_s, nsl_video.pixel_stream.max_component_bits_c),
+    others => (others => '0'));
+
+  requester: nsl_video.raster.pixel_stream_requester
+    generic map(
+      geometry_c => geometry_c,
+      config_c => config_c
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      enable_i => enable_i,
+      sof_o => sof_s,
+      sol_o => sol_s,
+      ready_o => color_ready_s,
+      valid_i => color_valid_s,
+      pixel_i => stream_pixel_s,
+      out_o => out_o,
+      out_i => out_i
+      );
 
 end architecture;

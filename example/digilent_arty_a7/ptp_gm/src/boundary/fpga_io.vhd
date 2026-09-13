@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_amba, nsl_mii, nsl_clocking, nsl_smi, nsl_hwdep, nsl_i2c,
   nsl_io, nsl_time, nsl_digilent, nsl_dvi, nsl_indication, nsl_color,
-  gatecap_generated, work;
+  gatecap_generated, work, nsl_video, nsl_solomonsystech;
 use nsl_amba.axi4_stream.all;
 use nsl_mii.flit.all;
 use nsl_time.discipline.all;
@@ -124,8 +124,14 @@ architecture beh of fpga_io is
   signal utc_offset_s : signed(15 downto 0);
   signal utc_offset_valid_s : std_ulogic;
   signal clock_class_s : unsigned(7 downto 0);
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t
+    := nsl_video.mode.geometry(nsl_solomonsystech.ssd1331.max_width_c,
+                               nsl_solomonsystech.ssd1331.max_height_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s : std_ulogic;
   signal screen_text_s : string(1 to work.func.screen_text_length_c);
   signal screen_colors_s : nsl_dvi.terminal.label_color_vector(0 to work.func.screen_color_count_c-1);
   signal dac_init_frame_s, dac_update_frame_s, dac_response_s : std_ulogic;
@@ -449,17 +455,16 @@ begin
   -- value shown has already crossed for the panel.
   display: nsl_digilent.pmod_oled_rgb.pmod_oled_rgb_driver
     generic map(
-      clock_i_hz_c => clock_hz_c
+      clock_i_hz_c => clock_hz_c,
+      config_c => pixel_config_c
       )
     port map(
       clock_i => clock_100_s,
       reset_n_i => reset_n_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s,
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s,
 
       pmod_io => ja_io
       );
@@ -472,17 +477,17 @@ begin
       color_palette_c => color_palette_c,
       font_c => nsl_indication.font_6x8.font_6x8_c,
       labels_c => work.func.screen_labels_c,
-      blank_color_c => work.func.screen_color_background_c
+      blank_color_c => work.func.screen_color_background_c,
+      config_c => pixel_config_c,
+      geometry_c => geometry_c
       )
     port map(
       clock_i => clock_100_s,
       reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s,
+      enable_i => '1',
+      out_o => pixel_s.m,
+      out_i => pixel_s.s,
 
       text_i => screen_text_s,
       color_i => screen_colors_s

@@ -1,0 +1,35 @@
+name: hdmi_encoder
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.pattern
+    - nsl_hdmi.encoder
+    - nsl_hdmi.hdmi
+    - nsl_video.mode
+    - nsl_video.pixel_stream
+    - nsl_spdif.serdes
+    - nsl_spdif.blocker
+    - nsl_line_coding.tmds
+    - nsl_clocking.interdomain
+    - nsl_color.rgb
+    - nsl_data.bytestream
+    - nsl_math.fixed
+    - nsl_simulation.driver
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spdif, nsl_simulation, nsl_line_coding, nsl_clocking, nsl_hdmi, nsl_color, nsl_data, nsl_dvi, nsl_math;
+library nsl_spdif, nsl_simulation, nsl_line_coding, nsl_clocking, nsl_hdmi, nsl_color, nsl_data, nsl_dvi, nsl_math, nsl_video;
 use nsl_spdif.serdes.all;
 use nsl_spdif.blocker.all;
 use nsl_simulation.assertions.all;
@@ -21,8 +21,12 @@ architecture arch of tb is
 
   signal di_s: data_island_t;
   signal di_ready_s, di_valid_s: std_ulogic;
-  signal sof_s, sol_s, pixel_ready_s: std_ulogic;
-  signal pixel_s : byte_string(0 to 2);
+  constant geometry_c: nsl_video.mode.geometry_t := nsl_video.mode.geometry(1280, 720);
+  constant pixel_config_c: nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s : std_ulogic;
   signal tmds_s : symbol_vector_t;
   
   signal reset_n, reset_n_async, clock: std_ulogic;
@@ -83,36 +87,37 @@ begin
       clock_i => clock
       );
 
-  pixels: process
-    variable r : integer;
+  -- Two frames is enough to see the encoder lock onto the stream
+  -- and hold, data islands going out in the blanking meanwhile.
+  runner: process is
   begin
     done(0) <= '0';
 
-    while true
+    wait until rising_edge(clock) and synced_s = '1';
+
+    for frame in 0 to 1
     loop
-      wait until falling_edge(clock);
-      if sol_s = '1' then
-        r := 0;
-      end if;
-
-      if pixel_ready_s = '1' then
-        r := r + 1 mod 4;
-      end if;
-
-      case r is
-        when 0 => pixel_s <= (x"ff", x"00", x"00");
-        when 1 => pixel_s <= (x"00", x"ff", x"00");
-        when 2 => pixel_s <= (x"00", x"00", x"ff");
-        when others => pixel_s <= (x"00", x"00", x"00");
-      end case;
-
-      wait until rising_edge(clock);
+      wait until rising_edge(clock)
+        and nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+        and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m);
     end loop;
 
     done(0) <= '1';
-
     wait;
   end process;
+
+  bars: nsl_dvi.pattern.color_bars
+    generic map(
+      geometry_c => geometry_c,
+      config_c => pixel_config_c,
+      bar_width_c => 320
+      )
+    port map(
+      clock_i => clock,
+      reset_n_i => reset_n,
+      out_o => pixel_s.m,
+      out_i => pixel_s.s
+      );
   
 --  stim: process
 --  begin
@@ -207,6 +212,9 @@ begin
 --      );
   
   enc: nsl_hdmi.encoder.hdmi_13_encoder
+    generic map(
+      config_c => pixel_config_c
+      )
     port map(
       pixel_clock_i => clock,
       reset_n_i => reset_n,
@@ -221,10 +229,9 @@ begin
       h_bp_m1_i => h_bp_m1_c,
       h_act_m1_i => h_act_m1_c,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_i => pixel_s,
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s,
 
       di_valid_i => di_valid_s,
       di_ready_o => di_ready_s,

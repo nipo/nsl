@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color, nsl_math, nsl_indication, work;
+library nsl_video, nsl_color, nsl_math, nsl_indication, work;
 use work.terminal.all;
 
 entity terminal_labels is
@@ -17,17 +17,19 @@ entity terminal_labels is
     blank_color_c: natural := 0;
     underline_support_c: boolean := false;
     font_hscale_c: positive := 1;
-    font_vscale_c: positive := 1
+    font_vscale_c: positive := 1;
+
+    config_c: nsl_video.pixel_stream.config_t;
+    geometry_c: nsl_video.mode.geometry_t
     );
   port(
     clock_i : in  std_ulogic;
     reset_n_i : in std_ulogic;
 
-    sof_i : in  std_ulogic;
-    sol_i : in  std_ulogic;
-    pixel_ready_i : in std_ulogic;
-    pixel_valid_o : out std_ulogic;
-    pixel_o : out nsl_color.rgb.rgb24;
+    enable_i : in std_ulogic := '1';
+
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t;
 
     text_i : in string;
     color_i : in label_color_vector
@@ -37,8 +39,16 @@ end entity;
 architecture beh of terminal_labels is
 
   constant color_count_l2_c : natural := nsl_math.arith.log2(color_palette_c'length);
-  signal color_ready_s, color_valid_s : std_ulogic;
-  signal color_s : unsigned(color_count_l2_c-1 downto 0);
+
+  -- Between the generator and the lookup runs a stream of palette
+  -- indices, one component wide.
+  constant index_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => config_c.pixel_count,
+                                     components => 1,
+                                     component_bits => color_count_l2_c,
+                                     ready => true);
+
+  signal index_s : nsl_video.pixel_stream.bus_t;
 
 begin
 
@@ -54,17 +64,17 @@ begin
       blank_color_c => blank_color_c,
       underline_support_c => underline_support_c,
       font_hscale_c => font_hscale_c,
-      font_vscale_c => font_vscale_c
+      font_vscale_c => font_vscale_c,
+      config_c => index_config_c,
+      geometry_c => geometry_c
       )
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      sof_i => sof_i,
-      sol_i => sol_i,
-      color_ready_i => color_ready_s,
-      color_valid_o => color_valid_s,
-      color_o => color_s,
+      enable_i => enable_i,
+      out_o => index_s.m,
+      out_i => index_s.s,
 
       text_i => text_i,
       color_i => color_i
@@ -72,20 +82,17 @@ begin
 
   colormap: work.colormap.dvi_colormap_lookup
     generic map(
-      color_count_l2_c => color_count_l2_c
+      in_config_c => index_config_c,
+      out_config_c => config_c
       )
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
       palette_i => color_palette_c,
-      sof_i => sof_i,
-      sol_i => sol_i,
-      pixel_ready_i => pixel_ready_i,
-      pixel_valid_o => pixel_valid_o,
-      pixel_o => pixel_o,
-      color_ready_o => color_ready_s,
-      color_valid_i => color_valid_s,
-      color_i => color_s
+      in_i => index_s.m,
+      in_o => index_s.s,
+      out_o => out_o,
+      out_i => out_i
       );
 
 end architecture;

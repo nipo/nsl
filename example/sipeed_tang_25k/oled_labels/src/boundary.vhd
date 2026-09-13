@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_indication,
-  nsl_time, nsl_data;
+  nsl_time, nsl_data, nsl_video, nsl_solomonsystech;
 use nsl_color.rgb.all;
 use nsl_dvi.terminal.all;
 use nsl_data.text.all;
@@ -54,8 +54,13 @@ architecture arch of boundary is
   constant text_length_c : natural := labels_text_length(labels_c);
 
   signal clock_s, internal_reset_n_s, reset_n_s : std_ulogic;
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(nsl_solomonsystech.ssd1331.max_width_c,
+                              nsl_solomonsystech.ssd1331.max_height_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s, frame_end_s : std_ulogic;
 
   signal text_s : string(1 to text_length_c);
   signal colors_s : label_color_vector(0 to color_count_c-1);
@@ -103,17 +108,16 @@ begin
 
   display: nsl_digilent.pmod_oled_rgb.pmod_oled_rgb_driver
     generic map(
-      clock_i_hz_c => clk_hz_c
+      clock_i_hz_c => clk_hz_c,
+      config_c => pixel_config_c
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s,
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s,
 
       pmod_io => j4_io
       );
@@ -127,21 +131,25 @@ begin
       font_c => nsl_indication.font_6x8.font_6x8_c,
       labels_c => labels_c,
       blank_color_c => color_background_c,
-      underline_support_c => true
+      underline_support_c => true,
+      config_c => pixel_config_c,
+      geometry_c => geometry_c
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s,
+      enable_i => '1',
+      out_o => pixel_s.m,
+      out_i => pixel_s.s,
 
       text_i => text_s,
       color_i => colors_s
       );
+
+  frame_end_s <= '1' when nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+                 and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m)
+                 else '0';
 
   counters: process(clock_s, reset_n_s)
   begin
@@ -153,7 +161,7 @@ begin
         seconds_s <= seconds_s + 1;
       end if;
 
-      if sof_s = '1' then
+      if frame_end_s = '1' then
         frame_toggle_s <= frame_toggle_s + 1;
         for i in frame_digits_s'reverse_range
         loop

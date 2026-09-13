@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library work, nsl_color, nsl_io, nsl_clocking, nsl_data, nsl_hdmi, nsl_dvi, nsl_math, nsl_signal_generator, nsl_event, nsl_digilent, nsl_sipeed;
+library work, nsl_color, nsl_io, nsl_clocking, nsl_data, nsl_hdmi, nsl_dvi, nsl_video, nsl_math, nsl_signal_generator, nsl_event, nsl_digilent, nsl_sipeed;
 use nsl_color.rgb.all;
 use nsl_digilent.pmod.all;
 use nsl_math.fixed.all;
@@ -82,8 +82,12 @@ architecture beh of main is
 
   signal tmds_s : nsl_dvi.dvi.symbol_vector_t;
 
-  signal sol_s, sof_s, pixel_ready_s : std_ulogic;
-  signal pixel_s : nsl_color.rgb.rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(mode_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s, frame_end_s : std_ulogic;
 
   signal di_valid_s : std_ulogic;
   signal di_ready_s : std_ulogic;
@@ -170,7 +174,7 @@ begin
       enable_i => '1',
       
       cts_i => hdmi_audio_cts_u_c,
-      cts_send_i => sof_s,
+      cts_send_i => frame_end_s,
 
       block_user_i => block_user,
       block_channel_status_i => block_status,
@@ -186,7 +190,7 @@ begin
       b_i.audio(19 downto 4) => audio_right_s,
       b_i.valid => '1',
 
-      sof_i => sof_s,
+      sof_i => frame_end_s,
 
       di_valid_o => di_valid_s,
       di_ready_i => di_ready_s,
@@ -194,6 +198,9 @@ begin
       );
   
    hdmi_encoder: nsl_hdmi.encoder.hdmi_13_encoder
+     generic map(
+       config_c => pixel_config_c
+       )
      port map(
        reset_n_i => hdmi_pixel_clock_reset_n_s,
        pixel_clock_i => hdmi_pixel_clock_s,
@@ -211,10 +218,9 @@ begin
        vsync_i => mode_c.v.sync,
        hsync_i => mode_c.h.sync,
   
-       sof_o => sof_s,
-       sol_o => sol_s,
-       pixel_ready_o => pixel_ready_s,
-       pixel_i => nsl_hdmi.hdmi.rgb24_pack(pixel_s),
+       pixel_i => pixel_s.m,
+       pixel_o => pixel_s.s,
+       synced_o => synced_s,
 
        di_valid_i => di_valid_s,
        di_ready_o => di_ready_s,
@@ -223,15 +229,22 @@ begin
        tmds_o => tmds_s
        );
 
+  -- What a frame boundary looks like from beside the stream
+  frame_end_s <= '1' when nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+                 and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m)
+                 else '0';
+
   generator: nsl_dvi.pattern.color_bars
+    generic map(
+      geometry_c => geometry_c,
+      config_c => pixel_config_c
+      )
     port map(
       reset_n_i => hdmi_pixel_clock_reset_n_s,
       clock_i => hdmi_pixel_clock_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_o => pixel_s
+      out_o => pixel_s.m,
+      out_i => pixel_s.s
       );
   
   block_user <= (others => '0');

@@ -2,12 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_solomonsystech, nsl_color;
+library work, nsl_solomonsystech, nsl_color, nsl_video;
 use work.pmod_oled_rgb.all;
 
 entity pmod_oled_rgb_driver is
   generic(
     clock_i_hz_c : natural;
+    config_c : nsl_video.pixel_stream.config_t;
     spi_hz_c : natural := 6_666_666
     );
   port(
@@ -17,11 +18,10 @@ entity pmod_oled_rgb_driver is
     enable_i : in std_ulogic := '1';
     refresh_i : in std_ulogic := '1';
 
-    sof_o : out std_ulogic;
-    sol_o : out std_ulogic;
-    pixel_ready_o : out std_ulogic;
-    pixel_valid_i : in std_ulogic := '1';
-    pixel_i : in nsl_color.rgb.rgb24;
+    pixel_i : in nsl_video.pixel_stream.master_t;
+    pixel_o : out nsl_video.pixel_stream.slave_t;
+
+    synced_o : out std_ulogic;
 
     pmod_io : inout work.pmod.pmod_double_t
     );
@@ -36,6 +36,7 @@ begin
   driver: nsl_solomonsystech.ssd1331.ssd1331_spi_driver
     generic map(
       clock_i_hz_c => clock_i_hz_c,
+      config_c => config_c,
       spi_hz_c => spi_hz_c
       )
     port map(
@@ -51,11 +52,9 @@ begin
       vcc_en_o => control_s.vccen,
       power_en_o => control_s.en,
 
-      sof_o => sof_o,
-      sol_o => sol_o,
-      pixel_ready_o => pixel_ready_o,
-      pixel_valid_i => pixel_valid_i,
-      pixel_i => pixel_i
+      pixel_i => pixel_i,
+      pixel_o => pixel_o,
+      synced_o => synced_o
       );
 
   io_driver: work.pmod_oled_rgb.pmod_oled_rgb_io_driver

@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_solomonsystech, nsl_dvi, nsl_indication, nsl_spi, nsl_color, nsl_data, nsl_simulation;
+library nsl_solomonsystech, nsl_dvi, nsl_video, nsl_indication, nsl_spi, nsl_color, nsl_data, nsl_simulation;
 use nsl_solomonsystech.ssd1331.all;
+use nsl_video.pixel_stream.all;
 use nsl_color.rgb.all;
 use nsl_data.bytestream.all;
 use nsl_indication.font.all;
@@ -55,8 +56,10 @@ architecture sim of tb is
   signal spi_s : nsl_spi.spi.spi_slave_i;
   signal dc_s, panel_reset_n_s, vcc_en_s, power_en_s : std_ulogic;
 
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : rgb24;
+  constant config_c : config_t := config(pixels => 1);
+
+  signal pixel_s : bus_t;
+  signal synced_s : std_ulogic;
 
   signal write_s : std_ulogic;
   signal character_s : unsigned(7 downto 0);
@@ -112,6 +115,7 @@ begin
   dut: ssd1331_spi_driver
     generic map(
       clock_i_hz_c => clock_hz_c,
+      config_c => config_c,
       spi_hz_c => spi_hz_c
       )
     port map(
@@ -124,11 +128,9 @@ begin
       vcc_en_o => vcc_en_s,
       power_en_o => power_en_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s
       );
 
   terminal: nsl_dvi.terminal.terminal_text_buffer
@@ -140,17 +142,17 @@ begin
       font_c => font_6x8_c,
       underline_support_c => false,
       font_hscale_c => 1,
-      font_vscale_c => 1
+      font_vscale_c => 1,
+      config_c => config_c,
+      geometry_c => nsl_video.mode.geometry(nsl_solomonsystech.ssd1331.max_width_c,
+                                            nsl_solomonsystech.ssd1331.max_height_c)
       )
     port map(
       video_clock_i => clock_s,
       video_reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s,
+      out_o => pixel_s.m,
+      out_i => pixel_s.s,
 
       term_clock_i => clock_s,
       term_reset_n_i => reset_n_s,

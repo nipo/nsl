@@ -3,6 +3,8 @@ name: tang_25k_lcd_terminal
 root:
   name: top
   deps:
+    - nsl_video.mode
+    - nsl_video.pixel_stream
     - nsl_icesugar.pmod_lcd_096
     - nsl_dvi.terminal
     - nsl_indication.font_6x8

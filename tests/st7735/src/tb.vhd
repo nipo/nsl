@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_sitronix, nsl_spi, nsl_color, nsl_data, nsl_simulation;
+library nsl_sitronix, nsl_spi, nsl_color, nsl_data, nsl_simulation, nsl_video;
 use nsl_sitronix.st7735.all;
 use nsl_color.rgb.all;
 use nsl_data.bytestream.all;
@@ -27,6 +27,15 @@ architecture sim of tb is
   signal enable_s : std_ulogic := '1';
   signal spi_s : nsl_spi.spi.spi_slave_i;
   signal dc_s, panel_reset_n_s : std_ulogic;
+
+  constant geometry_c : nsl_video.mode.geometry_t
+    := nsl_video.mode.geometry(width_c, height_c);
+  constant config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal stream_s : nsl_video.pixel_stream.bus_t;
+  signal stream_pixel_s : nsl_video.pixel_stream.pixel_t;
+  signal synced_s : std_ulogic;
 
   signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
   signal pixel_s : rgb24;
@@ -70,7 +79,9 @@ begin
   dut: st7735_spi_driver
     generic map(
       clock_i_hz_c => clock_hz_c,
-      spi_hz_c => spi_hz_c
+      config_c => config_c,
+      spi_hz_c => spi_hz_c,
+      geometry_c => geometry_c
       )
     port map(
       clock_i => clock_s,
@@ -83,15 +94,32 @@ begin
       dc_o => dc_s,
       reset_n_o => panel_reset_n_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s
+      pixel_i => stream_s.m,
+      pixel_o => stream_s.s,
+      synced_o => synced_s
       );
 
-  -- Frame generator model, follows sof/sol/ready strobes and exercises
-  -- backpressure through pixel_valid_i
+  -- The source owns framing now, so the raster the panel follows is
+  -- stated here.
+  requester: nsl_video.raster.pixel_stream_requester
+    generic map(
+      geometry_c => geometry_c,
+      config_c => config_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      sof_o => sof_s,
+      sol_o => sol_s,
+      ready_o => pixel_ready_s,
+      valid_i => pixel_valid_s,
+      pixel_i => stream_pixel_s,
+      out_o => stream_s.m,
+      out_i => stream_s.s
+      );
+
+  -- Frame generator model, follows sof/sol/ready strobes and leaves
+  -- gaps so the panel has to hold its serial interface
   source: process(clock_s) is
   begin
     if rising_edge(clock_s) then
@@ -116,6 +144,7 @@ begin
   end process;
 
   pixel_s <= pattern(x_s, y_s);
+  stream_pixel_s <= nsl_video.pixel_stream.to_pixel(config_c, pixel_s);
   pixel_valid_s <= '0' when valid_phase_s < 2 else '1';
 
   monitor: process is

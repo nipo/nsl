@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi, nsl_data, nsl_color;
+library nsl_spi, nsl_data, nsl_color, nsl_video;
 use nsl_data.bytestream.all;
 
 -- ST7735S is a 132RGB x 162 TFT LCD controller.  It is typically
@@ -57,7 +57,7 @@ package st7735 is
   constant cmd_colmod_16bpp : byte := x"05";
   constant cmd_colmod_18bpp : byte := x"06";
 
-  -- Refreshes the panel from a DVI-style pixel stream over the serial
+  -- Refreshes the panel from a pixel stream over the serial
   -- interface, see nsl_solomonsystech.ssd1331.ssd1331_spi_driver for
   -- the interface contract.
   --
@@ -73,10 +73,10 @@ package st7735 is
   component st7735_spi_driver is
     generic(
       clock_i_hz_c : natural;
+      config_c : nsl_video.pixel_stream.config_t;
       spi_hz_c : natural := 15_000_000;
 
-      width_c : natural := 160;
-      height_c : natural := 80;
+      geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(160, 80);
       column_offset_c : natural := 1;
       row_offset_c : natural := 26;
       madctl_c : byte := x"68";
@@ -94,13 +94,12 @@ package st7735 is
       dc_o : out std_ulogic;
       reset_n_o : out std_ulogic;
 
-      -- Connection to frame generator
-      sof_o : out std_ulogic;
-      sol_o : out std_ulogic;
-      pixel_ready_o : out std_ulogic;
-      pixel_valid_i : in std_ulogic := '1';
-      -- Encoded to RGB565 by truncation
-      pixel_i : in nsl_color.rgb.rgb24
+      -- Connection to frame generator.  Pixels are encoded to RGB565
+      -- by truncation.
+      pixel_i : in nsl_video.pixel_stream.master_t;
+      pixel_o : out nsl_video.pixel_stream.slave_t;
+
+      synced_o : out std_ulogic
       );
   end component;
 

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory;
+library nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory, nsl_video, work;
 use nsl_logic.bool.all;
 use nsl_logic.logic.all;
 use nsl_data.bytestream.all;
@@ -23,17 +23,19 @@ entity terminal_frame_generator is
     font_hscale_c: positive := 1;
     font_vscale_c: positive := 1;
 
-    cell_latency_c: natural := 1
+    cell_latency_c: natural := 1;
+
+    config_c: nsl_video.pixel_stream.config_t;
+    geometry_c: nsl_video.mode.geometry_t
     );
   port(
     clock_i : in  std_ulogic;
     reset_n_i : in std_ulogic;
 
-    sof_i : in  std_ulogic;
-    sol_i : in  std_ulogic;
-    color_ready_i : in std_ulogic;
-    color_valid_o : out std_ulogic;
-    color_o : out unsigned(color_count_l2_c-1 downto 0);
+    enable_i : in std_ulogic := '1';
+
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t;
 
     cell_enable_o : out std_ulogic;
     cell_row_o : out unsigned(row_count_l2_c-1 downto 0);
@@ -46,6 +48,10 @@ entity terminal_frame_generator is
 end entity;
 
 architecture beh of terminal_frame_generator is
+
+  signal sof_s, sol_s, color_ready_s, color_valid_s: std_ulogic;
+  signal color_s: unsigned(color_count_l2_c-1 downto 0);
+  signal stream_pixel_s: nsl_video.pixel_stream.pixel_t;
 
   constant x_font_c: byte_string(0 to font_c'length-1) := font_c;
   
@@ -194,7 +200,7 @@ begin
         end if;
       end process;
 
-      transition: process(r, sof_i, sol_i, scan_ready_s) is
+      transition: process(r, sof_s, sol_s, scan_ready_s) is
       begin
         rin <= r;
         
@@ -203,7 +209,7 @@ begin
             null;
 
           when ST_WAIT_SOL =>
-            if sol_i = '1' then
+            if sol_s = '1' then
               rin.state <= ST_SOL;
             end if;
 
@@ -229,7 +235,7 @@ begin
             end if;
 
           when ST_STREAMING =>
-            if sol_i = '1' then
+            if sol_s = '1' then
               rin.state <= ST_SOL;
             elsif scan_ready_s = '1' then
               if r.column /= 2**column_count_l2_c-1 then
@@ -240,7 +246,7 @@ begin
             end if;
         end case;
 
-        if sof_i = '1' then
+        if sof_s = '1' then
           rin.state <= ST_WAIT_SOL;
           rin.frame_start <= true;
           rin.glyph_line <= 0;
@@ -417,7 +423,7 @@ begin
       end if;
     end process;
 
-    transition: process(r, color_ready_i, glyph_line_data_s, glyph_line_sideband_s, glyph_line_valid_s) is
+    transition: process(r, color_ready_s, glyph_line_data_s, glyph_line_sideband_s, glyph_line_valid_s) is
       variable ingress: boolean;
     begin
       rin <= r;
@@ -432,7 +438,7 @@ begin
           end if;                       
           
         when ST_RENDER =>
-          if color_ready_i = '1' then
+          if color_ready_s = '1' then
             if r.glyph_subcolumn /= font_hscale_c-1 then
               rin.glyph_subcolumn <= r.glyph_subcolumn + 1;
             elsif r.glyph_column /= font_width_c-1 then
@@ -463,25 +469,25 @@ begin
 
     moore: process(r) is
     begin
-      color_o <= to_unsigned(0, color_o'length);
+      color_s <= to_unsigned(0, color_s'length);
 
       case r.state is
         when ST_FILL =>
-          color_valid_o <= '0';
+          color_valid_s <= '0';
 
         when ST_RENDER =>
-          color_valid_o <= '1';
+          color_valid_s <= '1';
           if r.pixels(0) = '1' then
-            color_o <= r.fg;
+            color_s <= r.fg;
           else
-            color_o <= r.bg;
+            color_s <= r.bg;
           end if;
       end case;
     end process;
 
     -- Glyph line stream may only be popped on the exact cycle its
     -- data is ingested, gate it with the color handshake.
-    mealy: process(r, color_ready_i) is
+    mealy: process(r, color_ready_s) is
     begin
       glyph_line_ready_s <= '0';
 
@@ -490,7 +496,7 @@ begin
           glyph_line_ready_s <= '1';
 
         when ST_RENDER =>
-          if color_ready_i = '1'
+          if color_ready_s = '1'
             and r.glyph_subcolumn = font_hscale_c-1
             and r.glyph_column = font_width_c-1 then
             glyph_line_ready_s <= '1';
@@ -498,4 +504,27 @@ begin
       end case;
     end process;
   end block;
+
+  stream_pixel_s <= nsl_video.pixel_stream.pixel_t'(
+    0 => resize(color_s, nsl_video.pixel_stream.max_component_bits_c),
+    others => (others => '0'));
+
+  requester: nsl_video.raster.pixel_stream_requester
+    generic map(
+      geometry_c => geometry_c,
+      config_c => config_c
+      )
+    port map(
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      enable_i => enable_i,
+      sof_o => sof_s,
+      sol_o => sol_s,
+      ready_o => color_ready_s,
+      valid_i => color_valid_s,
+      pixel_i => stream_pixel_s,
+      out_o => out_o,
+      out_i => out_i
+      );
+
 end architecture;

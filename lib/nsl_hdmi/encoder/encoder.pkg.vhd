@@ -2,14 +2,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color, nsl_line_coding, nsl_data, work, nsl_dvi;
+library nsl_color, nsl_line_coding, nsl_data, nsl_video, work, nsl_dvi;
 
 -- HDMI data stream encoder. Adds HDMI-specific data islands in the
 -- DVI stream.
 package encoder is
 
+  -- Sends a pixel stream out as an HDMI signal, data islands
+  -- inserted in the blanking.
+  --
+  -- The wire cannot wait, so the raster here owns the timing and the
+  -- stream follows it: the encoder locks onto the first frame the
+  -- stream opens and hands its pixels out from there.  synced_o
+  -- states whether it does.
   component hdmi_13_encoder is
     generic(
+      config_c : nsl_video.pixel_stream.config_t;
+      channel_map_c : nsl_dvi.encoder.channel_map_t := nsl_dvi.encoder.channel_map_rgb_c;
       vendor_name_c: string := "NSL";
       product_description_c: string := "HDMI Encoder";
       source_type_c: integer := 0
@@ -34,13 +43,10 @@ package encoder is
       vsync_i : in std_ulogic := '1';
       hsync_i : in std_ulogic := '1';
 
-      -- Start of frame strobe. It happens sol_o is not asserted yet
-      sof_o : out std_ulogic;
-      -- Start of line strobe. It happens pixel_ready_o is not asserted yet
-      sol_o : out std_ulogic;
-      -- Asserted every cycle pixel data is taken by encoder
-      pixel_ready_o : out std_ulogic;
-      pixel_i : in nsl_data.bytestream.byte_string(0 to 2);
+      pixel_i : in nsl_video.pixel_stream.master_t;
+      pixel_o : out nsl_video.pixel_stream.slave_t;
+
+      synced_o : out std_ulogic;
 
       -- Data island insertion option. 
       di_valid_i : in std_ulogic := '0';

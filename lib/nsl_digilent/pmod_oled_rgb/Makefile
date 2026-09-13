@@ -6,3 +6,6 @@ deps += nsl_spi.spi
 deps += nsl_color.rgb
 deps += nsl_digilent.pmod
 deps += nsl_solomonsystech.ssd1331
+deps += nsl_video.pixel_stream
+deps += nsl_video.raster
+deps += nsl_video.mode

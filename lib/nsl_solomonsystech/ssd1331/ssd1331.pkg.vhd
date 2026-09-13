@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_spi, nsl_data, nsl_color;
+library nsl_spi, nsl_data, nsl_color, nsl_video;
 use nsl_data.bytestream.all;
 
 -- SSD1331 is a 96x64 RGB OLED panel controller.
@@ -121,7 +121,7 @@ package ssd1331 is
     & "8250"
     & "837d");
 
-  -- Refreshes the panel from a DVI-style pixel stream over the serial
+  -- Refreshes the panel from a pixel stream over the serial
   -- interface.
   --
   -- After enable_i is asserted, driver powers the module up (power
@@ -131,14 +131,15 @@ package ssd1331 is
   -- powers the module down in order; init and first frame run again on
   -- next assertion.
   --
-  -- Frame generator interface follows nsl_dvi.encoder.dvi_10_encoder:
-  -- sof_o strobes once per frame before the first sol_o, sol_o strobes
-  -- before the first pixel of each line, pixel_ready_o is asserted
-  -- every cycle a pixel is taken.  Deasserting pixel_valid_i stalls
-  -- the serial interface mid-frame.
+  -- Pixels come in on a stream that states its own framing.  The
+  -- driver locks onto the first frame the stream opens and shows its
+  -- pixels from there; synced_o states whether it holds.  A stream
+  -- with no pixel ready holds the serial interface mid-frame rather
+  -- than losing the pixel.
   component ssd1331_spi_driver is
     generic(
       clock_i_hz_c : natural;
+      config_c : nsl_video.pixel_stream.config_t;
       spi_hz_c : natural := 6_666_666
       );
     port(
@@ -159,13 +160,12 @@ package ssd1331 is
       -- switchable
       power_en_o : out std_ulogic;
 
-      -- Connection to frame generator
-      sof_o : out std_ulogic;
-      sol_o : out std_ulogic;
-      pixel_ready_o : out std_ulogic;
-      pixel_valid_i : in std_ulogic := '1';
-      -- Encoded to RGB565 by truncation
-      pixel_i : in nsl_color.rgb.rgb24
+      -- Connection to frame generator.  Pixels are encoded to RGB565
+      -- by truncation.
+      pixel_i : in nsl_video.pixel_stream.master_t;
+      pixel_o : out nsl_video.pixel_stream.slave_t;
+
+      synced_o : out std_ulogic
       );
   end component;
 

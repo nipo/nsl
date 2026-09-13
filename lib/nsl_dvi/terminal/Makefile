@@ -15,3 +15,6 @@ deps += nsl_logic.bool
 deps += nsl_math.arith
 deps += nsl_indication.font
 deps += nsl_dvi.colormap
+deps += nsl_video.mode
+deps += nsl_video.pixel_stream
+deps += nsl_video.raster

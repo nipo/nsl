@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory, nsl_clocking;
+library nsl_video, nsl_data, nsl_math, nsl_logic, nsl_indication, nsl_memory, nsl_clocking;
 use nsl_logic.bool.all;
 use nsl_logic.logic.all;
 use nsl_data.bytestream.all;
@@ -21,24 +21,26 @@ entity terminal_text_buffer_colormap is
     underline_support_c: boolean := false;
 
     font_hscale_c: positive := 1;
-    font_vscale_c: positive := 1
+    font_vscale_c: positive := 1;
+
+    config_c: nsl_video.pixel_stream.config_t;
+    geometry_c: nsl_video.mode.geometry_t
     );
   port(
     video_clock_i : in  std_ulogic;
     video_reset_n_i : in std_ulogic;
 
-    sof_i : in  std_ulogic;
-    sol_i : in  std_ulogic;
-    color_ready_i : in std_ulogic;
-    color_valid_o : out std_ulogic;
-    color_o : out unsigned(color_count_l2_c-1 downto 0);
+    video_enable_i : in std_ulogic := '1';
+
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t;
 
     term_clock_i : in  std_ulogic;
     term_reset_n_i : in std_ulogic;
 
     -- Added to the video-side scan row, modulo the buffer height,
-    -- turning the buffer into a ring. Sampled once per frame at
-    -- sof_i.
+    -- turning the buffer into a ring. Sampled once per frame, on the
+    -- beat closing one, so a frame is scanned whole at one offset.
     row_offset_i : in unsigned(row_count_l2_c-1 downto 0) := (others => '0');
 
     row_i : in unsigned(row_count_l2_c-1 downto 0);
@@ -59,6 +61,9 @@ entity terminal_text_buffer_colormap is
 end entity;
 
 architecture beh of terminal_text_buffer_colormap is
+
+  signal out_stream_s: nsl_video.pixel_stream.master_t;
+  signal frame_closed_s: std_ulogic;
 
   subtype row_t is unsigned(row_count_l2_c-1 downto 0);
   subtype column_t is unsigned(column_count_l2_c-1 downto 0);
@@ -130,10 +135,16 @@ begin
       data_o => row_offset_resync_s
       );
 
+  out_o <= out_stream_s;
+
+  frame_closed_s <= '1' when nsl_video.pixel_stream.is_taken(config_c, out_stream_s, out_i)
+                    and nsl_video.pixel_stream.is_eof(config_c, out_stream_s)
+                    else '0';
+
   offset_capture: process(video_clock_i, video_reset_n_i) is
   begin
     if rising_edge(video_clock_i) then
-      if sof_i = '1' then
+      if frame_closed_s = '1' then
         video_row_offset_s <= unsigned(row_offset_resync_s);
       end if;
     end if;
@@ -194,17 +205,17 @@ begin
       underline_support_c => underline_support_c,
       font_hscale_c => font_hscale_c,
       font_vscale_c => font_vscale_c,
+      config_c => config_c,
+      geometry_c => geometry_c,
       cell_latency_c => 2
       )
     port map(
       clock_i => video_clock_i,
       reset_n_i => video_reset_n_i,
 
-      sof_i => sof_i,
-      sol_i => sol_i,
-      color_ready_i => color_ready_i,
-      color_valid_o => color_valid_o,
-      color_o => color_o,
+      enable_i => video_enable_i,
+      out_o => out_stream_s,
+      out_i => out_i,
 
       cell_enable_o => video_cell_en_s,
       cell_row_o => video_row_s,

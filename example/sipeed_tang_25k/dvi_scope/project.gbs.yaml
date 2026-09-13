@@ -3,6 +3,8 @@ name: tang_25k_dvi_scope
 root:
   name: top
   deps:
+    - nsl_video.mode
+    - nsl_video.pixel_stream
     - nsl_digilent.pmod
     - nsl_sipeed.pmod_dvi
     - nsl_sipeed.pmod_btn_4_4

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_color, nsl_clocking, nsl_data, nsl_dvi, nsl_math, nsl_digilent, nsl_sipeed, nsl_indication;
+library work, nsl_color, nsl_clocking, nsl_data, nsl_dvi, nsl_video, nsl_math, nsl_digilent, nsl_sipeed, nsl_indication;
 use nsl_color.rgb.all;
 use nsl_data.text.all;
 use nsl_digilent.pmod.all;
@@ -64,8 +64,11 @@ architecture beh of main is
 
   signal tmds_s : nsl_dvi.dvi.symbol_vector_t;
 
-  signal sol_s, sof_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : nsl_color.rgb.rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(mode_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s : std_ulogic;
 
 begin
 
@@ -104,6 +107,9 @@ begin
       );
 
   dvi_encoder: nsl_dvi.encoder.dvi_10_encoder
+    generic map(
+      config_c => pixel_config_c
+      )
     port map(
       reset_n_i => dvi_pixel_clock_reset_n_s,
       pixel_clock_i => dvi_pixel_clock_s,
@@ -121,11 +127,9 @@ begin
       vsync_i => mode_c.v.sync,
       hsync_i => mode_c.h.sync,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s,
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s,
 
       tmds_o => tmds_s
       );
@@ -142,6 +146,13 @@ begin
 
     constant color_count_l2_c : natural := 3;
     subtype color_t is unsigned(color_count_l2_c-1 downto 0);
+
+    -- Colour indices run between the two generators, the blender and
+    -- the lookup; only the lookup's output carries colour.
+    constant index_config_c : nsl_video.pixel_stream.config_t
+      := nsl_video.pixel_stream.config(pixels => 1,
+                                       components => 1,
+                                       component_bits => color_count_l2_c);
 
     -- Shared palette indices
     constant color_background_c : natural := 0;
@@ -205,10 +216,8 @@ begin
     signal phase_increment_s, phase_origin_s : unsigned(15 downto 0);
     signal phase_angle_s : unsigned(8 downto 0);
 
-    signal under_ready_s, under_valid_s : std_ulogic;
-    signal over_ready_s, over_valid_s : std_ulogic;
-    signal blend_ready_s, blend_valid_s : std_ulogic;
-    signal under_color_s, over_color_s, blend_color_s : color_t;
+    signal under_s, over_s, blend_s : nsl_video.pixel_stream.bus_t;
+    signal frame_end_s : std_ulogic;
   begin
 
     sw_sync: nsl_clocking.async.async_sampler
@@ -240,7 +249,7 @@ begin
         clock_i => dvi_pixel_clock_s,
         reset_n_i => dvi_pixel_clock_reset_n_s,
 
-        tick_i => sof_s,
+        tick_i => frame_end_s,
 
         run_i => sw_sync_s(0),
         freq_down_i => button_sync_s(0),
@@ -279,10 +288,14 @@ begin
                      else to_unsigned(color_key_c, 8);
     end generate;
 
+    frame_end_s <= '1' when nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+                   and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m)
+                   else '0';
+
     underlay: work.top.scope_renderer
       generic map(
-        h_act_c => mode_c.h.active,
-        v_act_c => mode_c.v.active,
+        geometry_c => geometry_c,
+        config_c => index_config_c,
         color_count_l2_c => color_count_l2_c,
         background_color_c => color_background_c,
         grid_color_c => color_grid_c,
@@ -293,11 +306,8 @@ begin
         clock_i => dvi_pixel_clock_s,
         reset_n_i => dvi_pixel_clock_reset_n_s,
 
-        sof_i => sof_s,
-        sol_i => sol_s,
-        color_ready_i => under_ready_s,
-        color_valid_o => under_valid_s,
-        color_o => under_color_s,
+        out_o => under_s.m,
+        out_i => under_s.s,
 
         phase_increment_i => phase_increment_s,
         phase_origin_i => phase_origin_s,
@@ -315,17 +325,16 @@ begin
         labels_c => labels_c,
         blank_color_c => lc_blank_c,
         font_hscale_c => font_hscale_c,
-        font_vscale_c => font_vscale_c
+        font_vscale_c => font_vscale_c,
+        config_c => index_config_c,
+        geometry_c => geometry_c
         )
       port map(
         clock_i => dvi_pixel_clock_s,
         reset_n_i => dvi_pixel_clock_reset_n_s,
 
-        sof_i => sof_s,
-        sol_i => sol_s,
-        color_ready_i => over_ready_s,
-        color_valid_o => over_valid_s,
-        color_o => over_color_s,
+        out_o => over_s.m,
+        out_i => over_s.s,
 
         text_i => text_s,
         color_i => colors_s
@@ -333,26 +342,24 @@ begin
 
     blender: nsl_dvi.blender.dvi_blender_color_key
       generic map(
-        color_count_l2_c => color_count_l2_c,
+        config_c => index_config_c,
         key_color_c => color_key_c
         )
       port map(
-        overlay_ready_o => over_ready_s,
-        overlay_valid_i => over_valid_s,
-        overlay_color_i => over_color_s,
+        overlay_i => over_s.m,
+        overlay_o => over_s.s,
 
-        underlay_ready_o => under_ready_s,
-        underlay_valid_i => under_valid_s,
-        underlay_color_i => under_color_s,
+        underlay_i => under_s.m,
+        underlay_o => under_s.s,
 
-        color_ready_i => blend_ready_s,
-        color_valid_o => blend_valid_s,
-        color_o => blend_color_s
+        out_o => blend_s.m,
+        out_i => blend_s.s
         );
 
     lookup: nsl_dvi.colormap.dvi_colormap_lookup
       generic map(
-        color_count_l2_c => color_count_l2_c
+        in_config_c => index_config_c,
+        out_config_c => pixel_config_c
         )
       port map(
         clock_i => dvi_pixel_clock_s,
@@ -360,15 +367,11 @@ begin
 
         palette_i => palette_c,
 
-        sof_i => sof_s,
-        sol_i => sol_s,
-        pixel_ready_i => pixel_ready_s,
-        pixel_valid_o => pixel_valid_s,
-        pixel_o => pixel_s,
+        in_i => blend_s.m,
+        in_o => blend_s.s,
 
-        color_ready_o => blend_ready_s,
-        color_valid_i => blend_valid_s,
-        color_i => blend_color_s
+        out_o => pixel_s.m,
+        out_i => pixel_s.s
         );
 
   end block;

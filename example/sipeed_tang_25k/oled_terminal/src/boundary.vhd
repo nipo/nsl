@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_indication;
+library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_indication, nsl_video, nsl_solomonsystech;
 use nsl_color.rgb.all;
 
 entity boundary is
@@ -56,8 +56,13 @@ architecture arch of boundary is
   signal r, rin : regs_t;
 
   signal clock_s, internal_reset_n_s, reset_n_s : std_ulogic;
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(nsl_solomonsystech.ssd1331.max_width_c,
+                              nsl_solomonsystech.ssd1331.max_height_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s, frame_end_s : std_ulogic;
 
   signal write_s : std_ulogic;
   signal character_s : unsigned(7 downto 0);
@@ -88,17 +93,16 @@ begin
 
   display: nsl_digilent.pmod_oled_rgb.pmod_oled_rgb_driver
     generic map(
-      clock_i_hz_c => clk_hz_c
+      clock_i_hz_c => clk_hz_c,
+      config_c => pixel_config_c
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s,
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s,
 
       pmod_io => j4_io
       );
@@ -112,17 +116,17 @@ begin
       font_c => nsl_indication.font_6x8.font_6x8_c,
       underline_support_c => false,
       font_hscale_c => 1,
-      font_vscale_c => 1
+      font_vscale_c => 1,
+      config_c => pixel_config_c,
+      geometry_c => geometry_c
       )
     port map(
       video_clock_i => clock_s,
       video_reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s,
+      video_enable_i => '1',
+      out_o => pixel_s.m,
+      out_i => pixel_s.s,
 
       term_clock_i => clock_s,
       term_reset_n_i => reset_n_s,
@@ -171,11 +175,15 @@ begin
     character'pos(screen_c(to_integer(unsigned'(r.row & r.column)) + 1)), 8);
   foreground_s <= to_unsigned(foreground_c(to_integer(r.row)), 3);
 
+  frame_end_s <= '1' when nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+                 and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m)
+                 else '0';
+
   -- Refresh heartbeat, toggles about twice a second
   heartbeat: process(clock_s)
   begin
     if rising_edge(clock_s) then
-      if sof_s = '1' then
+      if frame_end_s = '1' then
         frame_counter_s <= frame_counter_s + 1;
       end if;
     end if;

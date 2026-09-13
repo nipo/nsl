@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_indication, work;
+library nsl_video, nsl_data, nsl_indication, work;
 use nsl_data.bytestream.all;
 use work.terminal.all;
 
@@ -18,17 +18,19 @@ entity terminal_labels_colormap is
     blank_color_c: natural := 0;
     underline_support_c: boolean := false;
     font_hscale_c: positive := 1;
-    font_vscale_c: positive := 1
+    font_vscale_c: positive := 1;
+
+    config_c: nsl_video.pixel_stream.config_t;
+    geometry_c: nsl_video.mode.geometry_t
     );
   port(
     clock_i : in  std_ulogic;
     reset_n_i : in std_ulogic;
 
-    sof_i : in  std_ulogic;
-    sol_i : in  std_ulogic;
-    color_ready_i : in std_ulogic;
-    color_valid_o : out std_ulogic;
-    color_o : out unsigned(color_count_l2_c-1 downto 0);
+    enable_i : in std_ulogic := '1';
+
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t;
 
     text_i : in string;
     color_i : in label_color_vector
@@ -105,17 +107,17 @@ begin
       underline_support_c => underline_support_c,
       font_hscale_c => font_hscale_c,
       font_vscale_c => font_vscale_c,
+      config_c => config_c,
+      geometry_c => geometry_c,
       cell_latency_c => 1
       )
     port map(
       clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      sof_i => sof_i,
-      sol_i => sol_i,
-      color_ready_i => color_ready_i,
-      color_valid_o => color_valid_o,
-      color_o => color_o,
+      enable_i => enable_i,
+      out_o => out_o,
+      out_i => out_i,
 
       cell_enable_o => cell_enable_s,
       cell_row_o => cell_row_s,

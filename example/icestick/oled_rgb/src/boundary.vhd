@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color;
+library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_video;
 library nsl_solomonsystech, nsl_spi;
 
 entity boundary is
@@ -20,8 +20,14 @@ architecture arch of boundary is
   constant clk_hz_c : natural := 12_000_000;
 
   signal clock_s, internal_reset_n_s, reset_n_s : std_ulogic;
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : nsl_color.rgb.rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(
+    nsl_solomonsystech.ssd1331.max_width_c,
+    nsl_solomonsystech.ssd1331.max_height_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s : std_ulogic;
 
   signal spi_s : nsl_spi.spi.spi_slave_i;
   signal dc_s, oled_reset_n_s, vccen_s, en_s : std_ulogic;
@@ -51,7 +57,8 @@ begin
 
   display: nsl_solomonsystech.ssd1331.ssd1331_spi_driver
     generic map(
-      clock_i_hz_c => clk_hz_c
+      clock_i_hz_c => clk_hz_c,
+      config_c => pixel_config_c
       )
     port map(
       clock_i => clock_s,
@@ -63,11 +70,9 @@ begin
       vcc_en_o => vccen_s,
       power_en_o => en_s,
 
-      sof_o => sof_s,
-      sol_o => sol_s,
-      pixel_ready_o => pixel_ready_s,
-      pixel_valid_i => pixel_valid_s,
-      pixel_i => pixel_s
+      pixel_i => pixel_s.m,
+      pixel_o => pixel_s.s,
+      synced_o => synced_s
       );
 
   -- Pmod OLEDrgb pin mapping, replicated from
@@ -86,24 +91,24 @@ begin
 
   pattern: nsl_dvi.pattern.color_bars
     generic map(
+      geometry_c => geometry_c,
+      config_c => pixel_config_c,
       bar_width_c => 12
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s
+      out_o => pixel_s.m,
+      out_i => pixel_s.s
       );
 
   -- Refresh heartbeat, toggles about twice a second
   heartbeat: process(clock_s)
   begin
     if rising_edge(clock_s) then
-      if sof_s = '1' then
+      if nsl_video.pixel_stream.is_taken(pixel_config_c, pixel_s.m, pixel_s.s)
+        and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m) then
         frame_counter_s <= frame_counter_s + 1;
       end if;
     end if;

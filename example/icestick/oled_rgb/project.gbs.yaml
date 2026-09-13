@@ -5,6 +5,8 @@ root:
   deps:
     - nsl_digilent.pmod
     - nsl_solomonsystech.ssd1331
+    - nsl_video.mode
+    - nsl_video.pixel_stream
     - nsl_spi.spi
     - nsl_dvi.pattern
     - nsl_color.rgb

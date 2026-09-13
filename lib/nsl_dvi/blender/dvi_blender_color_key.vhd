@@ -2,43 +2,80 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library nsl_video, nsl_synthesis;
+use nsl_video.pixel_stream.all;
+
 entity dvi_blender_color_key is
   generic(
-    color_count_l2_c: natural;
+    config_c: nsl_video.pixel_stream.config_t;
     key_color_c: natural := 0
     );
   port(
-    overlay_ready_o : out std_ulogic;
-    overlay_valid_i : in std_ulogic;
-    overlay_color_i : in unsigned(color_count_l2_c-1 downto 0);
+    overlay_i : in nsl_video.pixel_stream.master_t;
+    overlay_o : out nsl_video.pixel_stream.slave_t;
 
-    underlay_ready_o : out std_ulogic;
-    underlay_valid_i : in std_ulogic;
-    underlay_color_i : in unsigned(color_count_l2_c-1 downto 0);
+    underlay_i : in nsl_video.pixel_stream.master_t;
+    underlay_o : out nsl_video.pixel_stream.slave_t;
 
-    color_ready_i : in std_ulogic;
-    color_valid_o : out std_ulogic;
-    color_o : out unsigned(color_count_l2_c-1 downto 0)
+    out_o : out nsl_video.pixel_stream.master_t;
+    out_i : in nsl_video.pixel_stream.slave_t
     );
 end entity;
 
 architecture beh of dvi_blender_color_key is
 
-  constant key_color_c_u : unsigned(color_count_l2_c-1 downto 0)
-    := to_unsigned(key_color_c, color_count_l2_c);
-
-  signal both_valid_s, taken_s : std_ulogic;
+  constant key_c : nsl_video.pixel_stream.component_t
+    := to_unsigned(key_color_c, nsl_video.pixel_stream.max_component_bits_c);
 
 begin
 
-  both_valid_s <= overlay_valid_i and underlay_valid_i;
-  taken_s <= both_valid_s and color_ready_i;
+  one_pixel_check: nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c => "Blending keys on one pixel at a time",
+      condition_c => config_c.pixel_count = 1
+      )
+    port map(
+      unused_i => '0'
+      );
 
-  overlay_ready_o <= taken_s;
-  underlay_ready_o <= taken_s;
+  index_check: nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c => "A colour index is a single component",
+      condition_c => config_c.component_count = 1
+      )
+    port map(
+      unused_i => '0'
+      );
 
-  color_valid_o <= both_valid_s;
-  color_o <= underlay_color_i when overlay_color_i = key_color_c_u
-             else overlay_color_i;
+  blend: process(overlay_i, underlay_i, out_i) is
+    variable overlay, underlay, blended: pixel_t;
+    variable both_valid, taken: boolean;
+  begin
+    overlay := pixel(config_c, overlay_i);
+    underlay := pixel(config_c, underlay_i);
+
+    both_valid := is_valid(config_c, overlay_i) and is_valid(config_c, underlay_i);
+    taken := both_valid and is_ready(config_c, out_i);
+
+    if overlay(0) = key_c then
+      blended := underlay;
+    else
+      blended := overlay;
+    end if;
+
+    overlay_o <= accept(config_c, ready => taken);
+    underlay_o <= accept(config_c, ready => taken);
+
+    -- Framing is the overlay's: both streams walk the same raster,
+    -- and one of them has to say where it stands.
+    out_o <= transfer(cfg => config_c,
+                      pixel => blended,
+                      valid => both_valid,
+                      sof => is_sof(config_c, overlay_i),
+                      last => is_last(config_c, overlay_i),
+                      eof => is_eof(config_c, overlay_i),
+                      error => is_error(config_c, overlay_i)
+                               or is_error(config_c, underlay_i));
+  end process;
 
 end architecture;

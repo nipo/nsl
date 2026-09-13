@@ -7,3 +7,6 @@ deps += nsl_color.rgb
 deps += nsl_data.bytestream
 deps += nsl_digilent.pmod
 deps += nsl_sitronix.st7735
+deps += nsl_video.pixel_stream
+deps += nsl_video.raster
+deps += nsl_video.mode

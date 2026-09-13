@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_indication, nsl_color, nsl_simulation, nsl_data;
+library nsl_dvi, nsl_video, nsl_indication, nsl_color, nsl_simulation, nsl_data;
 use nsl_dvi.terminal.all;
+use nsl_video.pixel_stream.all;
 use nsl_color.rgb.all;
 use nsl_data.text.all;
 use nsl_indication.font.all;
@@ -61,8 +62,10 @@ architecture sim of tb is
   signal clock_s : std_ulogic := '0';
   signal reset_n_s : std_ulogic;
 
-  signal sof_s, sol_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : rgb24;
+  constant config_c : config_t := config(pixels => 1);
+
+  signal out_s : bus_t;
+  signal valid_s : std_ulogic;
 
   signal text_s : string(1 to text_length_c);
   signal colors_s : label_color_vector(0 to 5);
@@ -133,80 +136,101 @@ begin
       font_c => font_6x8_c,
       labels_c => labels_c,
       blank_color_c => blank_color_c,
-      underline_support_c => true
+      underline_support_c => true,
+      config_c => config_c,
+      geometry_c => terminal_geometry(font_6x8_c, 4, 3)
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
 
-      sof_i => sof_s,
-      sol_i => sol_s,
-      pixel_ready_i => pixel_ready_s,
-      pixel_valid_o => pixel_valid_s,
-      pixel_o => pixel_s,
+      out_o => out_s.m,
+      out_i => out_s.s,
 
       text_i => text_s,
       color_i => colors_s
       );
 
+  valid_s <= '1' when is_valid(config_c, out_s.m) else '0';
+
   driver: process is
-    -- Pops one frame and checks it. ready_period gives the number of
-    -- cycles between two accepted pixels, to exercise backpressure.
+    variable color_v: rgb24;
+    variable sof_v, last_v, eof_v: boolean;
+
+    -- Takes one beat, ready_period cycles after the previous one, so
+    -- backpressure is exercised.
+    procedure take(constant ready_period: positive) is
+    begin
+      for i in 2 to ready_period loop
+        wait until rising_edge(clock_s);
+      end loop;
+      out_s.s <= accept(config_c, ready => true);
+      wait until rising_edge(clock_s) and valid_s = '1';
+      color_v := to_rgb24(config_c, pixel(config_c, out_s.m));
+      sof_v := is_sof(config_c, out_s.m);
+      last_v := is_last(config_c, out_s.m);
+      eof_v := is_eof(config_c, out_s.m);
+      out_s.s <= accept(config_c, ready => false);
+    end procedure;
+
+    -- Drops beats until a frame closes, so the next one is whole.
+    procedure drop_frame is
+    begin
+      loop
+        take(1);
+        exit when eof_v;
+      end loop;
+    end procedure;
+
+    -- Pops one frame and checks it, framing bits included.
     procedure check_frame(constant text: string;
                           constant colors: label_color_vector;
                           constant ready_period: positive;
                           constant msg: string) is
       variable expected: rgb24;
     begin
-      sof_s <= '1';
-      wait until rising_edge(clock_s);
-      sof_s <= '0';
-      for i in 1 to 4 loop
-        wait until rising_edge(clock_s);
-      end loop;
-
       for y in 0 to height_c - 1 loop
-        sol_s <= '1';
-        wait until rising_edge(clock_s);
-        sol_s <= '0';
-        for i in 1 to 4 loop
-          wait until rising_edge(clock_s);
-        end loop;
-
         for x in 0 to width_c - 1 loop
-          for i in 2 to ready_period loop
-            wait until rising_edge(clock_s);
-          end loop;
-          pixel_ready_s <= '1';
-          wait until rising_edge(clock_s) and pixel_valid_s = '1';
-          pixel_ready_s <= '0';
-          expected := expected_pixel(x, y, text, colors);
-          assert pixel_s = expected
+          take(ready_period);
+
+          assert sof_v = (x = 0 and y = 0)
             report msg & ": pixel " & integer'image(x) & "," & integer'image(y)
-            & " expected " & to_hex_string(expected) & ", got " & to_hex_string(pixel_s)
+            & " disagrees on opening the frame"
+            severity failure;
+          assert last_v = (x = width_c - 1)
+            report msg & ": pixel " & integer'image(x) & "," & integer'image(y)
+            & " disagrees on closing the line"
+            severity failure;
+          assert eof_v = (x = width_c - 1 and y = height_c - 1)
+            report msg & ": pixel " & integer'image(x) & "," & integer'image(y)
+            & " disagrees on closing the frame"
+            severity failure;
+
+          expected := expected_pixel(x, y, text, colors);
+          assert color_v = expected
+            report msg & ": pixel " & integer'image(x) & "," & integer'image(y)
+            & " expected " & to_hex_string(expected) & ", got " & to_hex_string(color_v)
             severity failure;
         end loop;
       end loop;
     end procedure;
   begin
-    sof_s <= '0';
-    sol_s <= '0';
-    pixel_ready_s <= '0';
+    out_s.s <= accept(config_c, ready => false);
     text_s <= text_1_c;
     colors_s <= colors_1_c;
 
     wait until reset_n_s = '1';
-    for i in 1 to 4 loop
-      wait until rising_edge(clock_s);
-    end loop;
 
+    -- The generator runs its own raster, so land on a frame boundary
+    -- before checking one.
+    drop_frame;
     check_frame(text_1_c, colors_1_c, 1, "frame 1");
 
+    -- Text is sampled as the screen is scanned, so a change costs at
+    -- most one torn frame.
     text_s <= text_2_c;
     colors_s <= colors_2_c;
-    for i in 1 to 4 loop
-      wait until rising_edge(clock_s);
-    end loop;
+    drop_frame;
 
     check_frame(text_2_c, colors_2_c, 3, "frame 2");
 

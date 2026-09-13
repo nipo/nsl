@@ -2,9 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_color, nsl_data, nsl_indication, nsl_math;
+library nsl_color, nsl_data, nsl_indication, nsl_math, nsl_video;
 
 package terminal is
+
+  -- Frame a character grid covers: as many pixels as the columns
+  -- hold, as many lines as the rows do.
+  function terminal_geometry(font_c: nsl_indication.font.font_t;
+                             column_count_l2_c, row_count_l2_c: positive;
+                             font_hscale_c: positive := 1;
+                             font_vscale_c: positive := 1)
+    return nsl_video.mode.geometry_t;
 
   -- A label is a run of characters on one row of the screen. Labels
   -- take their text sequentially from one string: the first label
@@ -64,17 +72,26 @@ package terminal is
       underline_support_c: boolean := false;
       font_hscale_c: positive := 1;
       font_vscale_c: positive := 1;
-      cell_latency_c: natural := 1
+      cell_latency_c: natural := 1;
+
+      config_c: nsl_video.pixel_stream.config_t;
+
+      -- Frame the scan covers.  terminal_geometry states the one the
+      -- whole character grid covers; a smaller one shows a window
+      -- onto the grid, which is how a grid larger than the panel it
+      -- goes to is cropped.
+      geometry_c: nsl_video.mode.geometry_t
       );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
 
-      sof_i : in  std_ulogic;
-      sol_i : in  std_ulogic;
-      color_ready_i : in std_ulogic;
-      color_valid_o : out std_ulogic;
-      color_o : out unsigned(color_count_l2_c-1 downto 0);
+      enable_i : in std_ulogic := '1';
+
+      -- A stream of colour indices, one component of
+      -- color_count_l2_c bits per pixel.
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       cell_enable_o : out std_ulogic;
       cell_row_o : out unsigned(row_count_l2_c-1 downto 0);
@@ -110,17 +127,26 @@ package terminal is
       blank_color_c: natural := 0;
       underline_support_c: boolean := false;
       font_hscale_c: positive := 1;
-      font_vscale_c: positive := 1
+      font_vscale_c: positive := 1;
+
+      config_c: nsl_video.pixel_stream.config_t;
+
+      -- Frame the scan covers.  terminal_geometry states the one the
+      -- whole character grid covers; a smaller one shows a window
+      -- onto the grid, which is how a grid larger than the panel it
+      -- goes to is cropped.
+      geometry_c: nsl_video.mode.geometry_t
       );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
 
-      sof_i : in  std_ulogic;
-      sol_i : in  std_ulogic;
-      color_ready_i : in std_ulogic;
-      color_valid_o : out std_ulogic;
-      color_o : out unsigned(color_count_l2_c-1 downto 0);
+      enable_i : in std_ulogic := '1';
+
+      -- A stream of colour indices, one component of
+      -- color_count_l2_c bits per pixel.
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       text_i : in string;
       color_i : in label_color_vector
@@ -140,17 +166,24 @@ package terminal is
       blank_color_c: natural := 0;
       underline_support_c: boolean := false;
       font_hscale_c: positive := 1;
-      font_vscale_c: positive := 1
+      font_vscale_c: positive := 1;
+
+      config_c: nsl_video.pixel_stream.config_t;
+
+      -- Frame the scan covers.  terminal_geometry states the one the
+      -- whole character grid covers; a smaller one shows a window
+      -- onto the grid, which is how a grid larger than the panel it
+      -- goes to is cropped.
+      geometry_c: nsl_video.mode.geometry_t
       );
     port(
       clock_i : in  std_ulogic;
       reset_n_i : in std_ulogic;
 
-      sof_i : in  std_ulogic;
-      sol_i : in  std_ulogic;
-      pixel_ready_i : in std_ulogic;
-      pixel_valid_o : out std_ulogic;
-      pixel_o : out nsl_color.rgb.rgb24;
+      enable_i : in std_ulogic := '1';
+
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       text_i : in string;
       color_i : in label_color_vector
@@ -187,18 +220,27 @@ package terminal is
       -- Font scaling (each pixel from font is spread x times in rows
       -- and columns).
       font_hscale_c: positive := 1;
-      font_vscale_c: positive := 1
+      font_vscale_c: positive := 1;
+
+      config_c: nsl_video.pixel_stream.config_t;
+
+      -- Frame the scan covers.  terminal_geometry states the one the
+      -- whole character grid covers; a smaller one shows a window
+      -- onto the grid, which is how a grid larger than the panel it
+      -- goes to is cropped.
+      geometry_c: nsl_video.mode.geometry_t
       );
     port(
       -- Display side
       video_clock_i : in  std_ulogic;
       video_reset_n_i : in std_ulogic;
 
-      sof_i : in  std_ulogic;
-      sol_i : in  std_ulogic;
-      color_ready_i : in std_ulogic;
-      color_valid_o : out std_ulogic;
-      color_o : out unsigned(color_count_l2_c-1 downto 0);
+      video_enable_i : in std_ulogic := '1';
+
+      -- A stream of colour indices, one component of
+      -- color_count_l2_c bits per pixel.
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       -- User side. All subsequent IOs clocked by term_clock
       term_clock_i : in  std_ulogic;
@@ -240,17 +282,24 @@ package terminal is
       font_c: nsl_indication.font.font_t;
       underline_support_c: boolean := false;
       font_hscale_c: positive := 1;
-      font_vscale_c: positive := 1
+      font_vscale_c: positive := 1;
+
+      config_c: nsl_video.pixel_stream.config_t;
+
+      -- Frame the scan covers.  terminal_geometry states the one the
+      -- whole character grid covers; a smaller one shows a window
+      -- onto the grid, which is how a grid larger than the panel it
+      -- goes to is cropped.
+      geometry_c: nsl_video.mode.geometry_t
       );
     port(
       video_clock_i : in  std_ulogic;
       video_reset_n_i : in std_ulogic;
 
-      sof_i : in  std_ulogic;
-      sol_i : in  std_ulogic;
-      pixel_ready_i : in std_ulogic;
-      pixel_valid_o : out std_ulogic;
-      pixel_o : out nsl_color.rgb.rgb24;
+      video_enable_i : in std_ulogic := '1';
+
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       term_clock_i : in  std_ulogic;
       term_reset_n_i : in std_ulogic;
@@ -278,6 +327,18 @@ package terminal is
 end package;
 
 package body terminal is
+
+  function terminal_geometry(font_c: nsl_indication.font.font_t;
+                             column_count_l2_c, row_count_l2_c: positive;
+                             font_hscale_c: positive := 1;
+                             font_vscale_c: positive := 1)
+    return nsl_video.mode.geometry_t
+  is
+  begin
+    return nsl_video.mode.geometry(
+      2**column_count_l2_c * nsl_indication.font.font_width(font_c) * font_hscale_c,
+      2**row_count_l2_c * nsl_indication.font.font_height(font_c) * font_vscale_c);
+  end function;
 
   function text_label(row, column, length, foreground, background: natural;
                       underline: boolean := false) return label_t

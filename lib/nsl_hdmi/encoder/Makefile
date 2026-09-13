@@ -10,3 +10,5 @@ deps += nsl_color.ycbcr
 deps += nsl_math.arith
 deps += nsl_dvi.dvi
 deps += nsl_dvi.encoder
+deps += nsl_video.pixel_stream
+deps += nsl_video.raster

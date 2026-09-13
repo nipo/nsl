@@ -33,3 +33,21 @@ per pixel per channel, sent on both clock edges.
 
 HDMI shares these timings, and `nsl_hdmi.mode` is the name HDMI users
 know them by.
+
+Pixels
+======
+
+Pixels reach the encoder over a `nsl_video.pixel_stream
+<../nsl_video/index.html>`_, which states its own framing. The wire
+cannot wait, so the raster inside the encoder owns the timing and the
+stream follows it: the encoder locks onto the first frame the stream
+opens and hands its pixels out from there, reporting on `synced_o`
+whether it holds. Blanking colour goes out in place of pixels while
+it does not::
+
+  constant pixel_config_c : config_t := config(pixels => 1);
+
+`channel_map_t` states which stream component each TMDS channel
+carries, because a colourspace names its components in one order and
+the wire sends them in another: RGB names red first and channel 0
+carries blue, YCbCr names luma first and channel 0 carries Cb.

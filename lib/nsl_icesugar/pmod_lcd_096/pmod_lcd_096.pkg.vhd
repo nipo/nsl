@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_spi, nsl_color, nsl_digilent, nsl_data;
+library work, nsl_spi, nsl_color, nsl_digilent, nsl_data, nsl_video;
 use nsl_data.bytestream.all;
 
 -- MuseLab iCESugar 0.96" LCD Pmod, a ST7735S-driven 160x80 IPS panel
@@ -30,6 +30,7 @@ package pmod_lcd_096 is
   component pmod_lcd_096_driver is
     generic(
       clock_i_hz_c : natural;
+      config_c : nsl_video.pixel_stream.config_t;
       spi_hz_c : natural := 15_000_000;
       column_offset_c : natural := 1;
       row_offset_c : natural := 26;
@@ -43,11 +44,10 @@ package pmod_lcd_096 is
       enable_i : in std_ulogic := '1';
       refresh_i : in std_ulogic := '1';
 
-      sof_o : out std_ulogic;
-      sol_o : out std_ulogic;
-      pixel_ready_o : out std_ulogic;
-      pixel_valid_i : in std_ulogic := '1';
-      pixel_i : in nsl_color.rgb.rgb24;
+      pixel_i : in nsl_video.pixel_stream.master_t;
+      pixel_o : out nsl_video.pixel_stream.slave_t;
+
+      synced_o : out std_ulogic;
 
       pmod_io : inout nsl_digilent.pmod.pmod_double_t
       );

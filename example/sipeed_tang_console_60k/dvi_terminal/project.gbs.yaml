@@ -3,6 +3,8 @@ name: tang_console_60k_dvi_terminal
 root:
   name: top
   deps:
+    - nsl_video.mode
+    - nsl_video.pixel_stream
     - nsl_digilent.pmod
     - nsl_clocking.async
     - nsl_clocking.distribution

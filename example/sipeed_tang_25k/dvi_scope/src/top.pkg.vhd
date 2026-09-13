@@ -2,7 +2,7 @@ library ieee, nsl_dvi;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work, nsl_digilent;
+library work, nsl_digilent, nsl_video;
 use nsl_digilent.pmod.all;
 
 package top is
@@ -46,8 +46,8 @@ package top is
 
   component scope_renderer is
     generic(
-      h_act_c : natural;
-      v_act_c : natural;
+      geometry_c : nsl_video.mode.geometry_t;
+      config_c : nsl_video.pixel_stream.config_t;
       color_count_l2_c : natural;
       background_color_c : natural;
       grid_color_c : natural;
@@ -59,11 +59,10 @@ package top is
       clock_i : in std_ulogic;
       reset_n_i : in std_ulogic;
 
-      sof_i : in std_ulogic;
-      sol_i : in std_ulogic;
-      color_ready_i : in std_ulogic;
-      color_valid_o : out std_ulogic;
-      color_o : out unsigned(color_count_l2_c-1 downto 0);
+      enable_i : in std_ulogic := '1';
+
+      out_o : out nsl_video.pixel_stream.master_t;
+      out_i : in nsl_video.pixel_stream.slave_t;
 
       phase_increment_i : in unsigned(15 downto 0);
       phase_origin_i : in unsigned(15 downto 0);

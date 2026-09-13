@@ -2,8 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_simulation;
+library nsl_dvi, nsl_video, nsl_simulation;
 use nsl_dvi.blender.all;
+use nsl_video.pixel_stream.all;
 
 -- Pushes two known color-index sequences through
 -- dvi_blender_color_key with uncorrelated stalls on both sources and
@@ -20,18 +21,29 @@ architecture sim of tb is
   constant key_color_c : natural := 7;
   constant beat_count_c : natural := 512;
 
+  constant config_c : config_t := config(pixels => 1,
+                                         components => 1,
+                                         component_bits => color_count_l2_c);
+
   subtype color_t is unsigned(color_count_l2_c-1 downto 0);
 
   signal clock_s : std_ulogic := '0';
   signal reset_n_s : std_ulogic;
 
-  signal overlay_ready_s, overlay_valid_s : std_ulogic;
-  signal underlay_ready_s, underlay_valid_s : std_ulogic;
-  signal color_ready_s, color_valid_s : std_ulogic;
-  signal overlay_color_s, underlay_color_s, color_s : color_t;
+  signal overlay_s, underlay_s, out_s : bus_t;
+
+  signal overlay_ready_s, underlay_ready_s, color_valid_s : std_ulogic;
+  signal color_s : color_t;
 
   signal overlay_done_s, underlay_done_s : boolean := false;
   signal done_s : boolean := false;
+
+  function to_index_pixel(color: color_t) return pixel_t is
+    variable ret: pixel_t := pixel_zero_c;
+  begin
+    ret(0) := resize(color, ret(0)'length);
+    return ret;
+  end function;
 
   function overlay_pattern(i: natural) return color_t is
   begin
@@ -66,26 +78,28 @@ begin
 
   dut: dvi_blender_color_key
     generic map(
-      color_count_l2_c => color_count_l2_c,
+      config_c => config_c,
       key_color_c => key_color_c
       )
     port map(
-      overlay_ready_o => overlay_ready_s,
-      overlay_valid_i => overlay_valid_s,
-      overlay_color_i => overlay_color_s,
+      overlay_i => overlay_s.m,
+      overlay_o => overlay_s.s,
 
-      underlay_ready_o => underlay_ready_s,
-      underlay_valid_i => underlay_valid_s,
-      underlay_color_i => underlay_color_s,
+      underlay_i => underlay_s.m,
+      underlay_o => underlay_s.s,
 
-      color_ready_i => color_ready_s,
-      color_valid_o => color_valid_s,
-      color_o => color_s
+      out_o => out_s.m,
+      out_i => out_s.s
       );
+
+  overlay_ready_s <= '1' when is_ready(config_c, overlay_s.s) else '0';
+  underlay_ready_s <= '1' when is_ready(config_c, underlay_s.s) else '0';
+  color_valid_s <= '1' when is_valid(config_c, out_s.m) else '0';
+  color_s <= resize(pixel(config_c, out_s.m)(0), color_t'length);
 
   overlay_gen: process is
   begin
-    overlay_valid_s <= '0';
+    overlay_s.m <= transfer(config_c, pixel_zero_c, valid => false);
     wait until reset_n_s = '1';
     wait until falling_edge(clock_s);
 
@@ -93,11 +107,12 @@ begin
       for k in 1 to i mod 3 loop
         wait until falling_edge(clock_s);
       end loop;
-      overlay_color_s <= overlay_pattern(i);
-      overlay_valid_s <= '1';
+      overlay_s.m <= transfer(config_c,
+                              to_index_pixel(overlay_pattern(i)),
+                              valid => true);
       wait until rising_edge(clock_s) and overlay_ready_s = '1';
       wait until falling_edge(clock_s);
-      overlay_valid_s <= '0';
+      overlay_s.m <= transfer(config_c, pixel_zero_c, valid => false);
     end loop;
 
     overlay_done_s <= true;
@@ -106,7 +121,7 @@ begin
 
   underlay_gen: process is
   begin
-    underlay_valid_s <= '0';
+    underlay_s.m <= transfer(config_c, pixel_zero_c, valid => false);
     wait until reset_n_s = '1';
     wait until falling_edge(clock_s);
 
@@ -114,11 +129,12 @@ begin
       for k in 1 to i mod 5 loop
         wait until falling_edge(clock_s);
       end loop;
-      underlay_color_s <= underlay_pattern(i);
-      underlay_valid_s <= '1';
+      underlay_s.m <= transfer(config_c,
+                               to_index_pixel(underlay_pattern(i)),
+                               valid => true);
       wait until rising_edge(clock_s) and underlay_ready_s = '1';
       wait until falling_edge(clock_s);
-      underlay_valid_s <= '0';
+      underlay_s.m <= transfer(config_c, pixel_zero_c, valid => false);
     end loop;
 
     underlay_done_s <= true;
@@ -128,7 +144,7 @@ begin
   sink: process is
     variable expected : color_t;
   begin
-    color_ready_s <= '0';
+    out_s.s <= accept(config_c, ready => false);
     wait until reset_n_s = '1';
     wait until falling_edge(clock_s);
 
@@ -136,7 +152,7 @@ begin
       for k in 1 to i mod 4 loop
         wait until falling_edge(clock_s);
       end loop;
-      color_ready_s <= '1';
+      out_s.s <= accept(config_c, ready => true);
       wait until rising_edge(clock_s) and color_valid_s = '1';
       expected := expected_pattern(i);
       assert color_s = expected
@@ -145,7 +161,7 @@ begin
         & ", got " & integer'image(to_integer(color_s))
         severity failure;
       wait until falling_edge(clock_s);
-      color_ready_s <= '0';
+      out_s.s <= accept(config_c, ready => false);
     end loop;
 
     for i in 1 to 4 loop

@@ -3,6 +3,8 @@ name: tang_25k_oled_terminal
 root:
   name: top
   deps:
+    - nsl_video.mode
+    - nsl_video.pixel_stream
     - nsl_digilent.pmod_oled_rgb
     - nsl_dvi.terminal
     - nsl_indication.font_6x8

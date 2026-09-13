@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library work, nsl_color, nsl_io, nsl_clocking, nsl_data, nsl_dvi, nsl_math, nsl_signal_generator, nsl_event, nsl_digilent, nsl_sipeed, nsl_indication, nsl_uart;
+library work, nsl_video, nsl_color, nsl_io, nsl_clocking, nsl_data, nsl_dvi, nsl_math, nsl_signal_generator, nsl_event, nsl_digilent, nsl_sipeed, nsl_indication, nsl_uart;
 use nsl_color.rgb.all;
 use nsl_digilent.pmod.all;
 use nsl_math.fixed.all;
@@ -72,8 +72,12 @@ architecture beh of main is
 
   signal tmds_s : nsl_dvi.dvi.symbol_vector_t;
 
-  signal sol_s, sof_s, pixel_ready_s, pixel_valid_s : std_ulogic;
-  signal pixel_s : nsl_color.rgb.rgb24;
+  constant geometry_c : nsl_video.mode.geometry_t := nsl_video.mode.geometry(mode_c);
+  constant pixel_config_c : nsl_video.pixel_stream.config_t
+    := nsl_video.pixel_stream.config(pixels => 1);
+
+  signal pixel_s : nsl_video.pixel_stream.bus_t;
+  signal synced_s : std_ulogic;
 
 begin
 
@@ -123,6 +127,9 @@ begin
       );
   
    dvi_encoder: nsl_dvi.encoder.dvi_10_encoder
+     generic map(
+       config_c => pixel_config_c
+       )
      port map(
        reset_n_i => dvi_pixel_clock_reset_n_s,
        pixel_clock_i => dvi_pixel_clock_s,
@@ -140,11 +147,9 @@ begin
        vsync_i => mode_c.v.sync,
        hsync_i => mode_c.h.sync,
   
-       sof_o => sof_s,
-       sol_o => sol_s,
-       pixel_ready_o => pixel_ready_s,
-       pixel_valid_i => pixel_valid_s,
-       pixel_i => pixel_s,
+       pixel_i => pixel_s.m,
+       pixel_o => pixel_s.s,
+       synced_o => synced_s,
   
        tmds_o => tmds_s
        );
@@ -193,17 +198,17 @@ begin
         font_c => font_c,
         underline_support_c => false,
         font_hscale_c => font_hscale_c,
-        font_vscale_c => font_vscale_c
+        font_vscale_c => font_vscale_c,
+        config_c => pixel_config_c,
+        geometry_c => geometry_c
         )
       port map(
         video_clock_i => dvi_pixel_clock_s,
         video_reset_n_i => dvi_pixel_clock_reset_n_s,
 
-        sof_i => sof_s,
-        sol_i => sol_s,
-        pixel_ready_i => pixel_ready_s,
-        pixel_valid_o => pixel_valid_s,
-        pixel_o => pixel_s,
+        video_enable_i => '1',
+        out_o => pixel_s.m,
+        out_i => pixel_s.s,
 
         term_clock_i => clock_i,
         term_reset_n_i => reset_n_i,

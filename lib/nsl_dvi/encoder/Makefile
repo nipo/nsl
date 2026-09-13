@@ -6,3 +6,5 @@ deps += nsl_data.bytestream
 deps += nsl_data.crc
 deps += nsl_line_coding.tmds
 deps += nsl_math.arith
+deps += nsl_video.pixel_stream
+deps += nsl_video.raster
