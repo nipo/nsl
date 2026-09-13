@@ -1,6 +1,7 @@
 vhdl-sources += async.pkg.vhd
 vhdl-sources += async_deglitcher.vhd
 vhdl-sources += async_input.vhd
+vhdl-sources += async_debouncer.vhd
 vhdl-sources += async_edge.vhd
 vhdl-sources += async_multi_reset.vhd
 vhdl-sources += async_sampler.vhd

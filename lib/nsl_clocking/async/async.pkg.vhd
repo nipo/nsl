@@ -49,6 +49,37 @@ package async is
       );
   end component;
 
+  -- Cycles a value has to hold still for, for a given clock rate and
+  -- settling time.  Rounded down to whole megahertz, which no
+  -- settling time is precise enough to care about.
+  function debounce_cycle_count(clock_i_hz: natural;
+                                stable_us: natural) return natural;
+
+  -- Asynchronous one bit input, taken as true once it has held still
+  -- long enough for whatever bounces to be over.  This is
+  -- async_input with its time expressed as a time rather than as a
+  -- count of cycles, which is the part a board knows and a clock rate
+  -- does not.
+  --
+  -- A mechanical contact settles in a few milliseconds.  Ten is a
+  -- usual figure for one a person operates, and a contact wiped by
+  -- something being pushed in wants more.
+  component async_debouncer is
+    generic(
+      clock_i_hz_c: natural;
+      stable_us_c: natural := 10000;
+      -- Value given until the input has held still once
+      reset_value_c: std_ulogic := '0'
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+
+      data_i: in std_ulogic;
+      data_o: out std_ulogic
+      );
+  end component;
+
   -- Asynchronous one-bit sampler with edge detection.
   component async_input is
     generic (
@@ -102,3 +133,21 @@ package async is
   end component;
 
 end package async;
+
+package body async is
+
+  function debounce_cycle_count(clock_i_hz: natural;
+                                stable_us: natural) return natural
+  is
+    constant count_c: natural := clock_i_hz / 1000000 * stable_us;
+  begin
+    -- A value has to hold still for something, whatever the numbers
+    -- say.
+    if count_c = 0 then
+      return 1;
+    else
+      return count_c;
+    end if;
+  end function;
+
+end package body async;
