@@ -35,6 +35,8 @@ output:
           - flatten
           - tribuf -logic
           - deminout
+          - delete */t:$print
+          - delete */t:$assert
       gbs.builtin.nextpnr:
         tool: "nextpnr-ice40"
       gbs.builtin.icepack:
