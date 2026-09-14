@@ -42,7 +42,8 @@ package body pll_backend is
   -- stands a chance of mapping on an actual backend.
   constant simulation_output_c : pll_output_topology_t := (
     divisor => pll_divisor(pll_range(1, 256), frac_l2_den => 8),
-    phase_den => 720, phase_vco_den => 0);
+    phase_den => 720, phase_step_max => 719,
+    phase_vco_den => 0, phase_vco_step_max => 0);
 
   constant simulation_topology_c : pll_topology_t := (
     refdiv => pll_divisor(pll_range(1, 64)),

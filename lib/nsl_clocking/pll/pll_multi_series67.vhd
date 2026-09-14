@@ -3,17 +3,16 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_logic, nsl_data;
-use nsl_logic.bool.all;
+library nsl_data;
 use nsl_data.text.all;
 use work.pll.all;
 use work.pll_config_series67.all;
 
 -- Realized on the clock manager the config's implementation names:
--- PLL_BASE on Spartan-6, PLLE2_ADV or MMCM_BASE on Series-7, all fed
--- back through CLKFBOUT with the input divider at 1, or DCM_SP,
--- whose multiplier and divider are the feedback and output divisors
--- of the model.
+-- PLL_BASE on Spartan-6, PLLE2_ADV or MMCME2_BASE on Series-7, all
+-- fed back through CLKFBOUT, or DCM_SP, whose multiplier and divider
+-- are the feedback and output divisors of the model and whose input
+-- divider is the halving switch.
 entity pll_multi is
   generic(
     config_c : pll_config_t
@@ -136,7 +135,7 @@ architecture series67 of pll_multi is
   attribute BOX_TYPE of
     PLLE2_ADV : component is "PRIMITIVE";
 
-  component MMCM_BASE
+  component MMCME2_BASE
     generic (
       BANDWIDTH : string := "OPTIMIZED";
       CLKFBOUT_MULT_F : real := 5.000;
@@ -164,7 +163,6 @@ architecture series67 of pll_multi is
       CLKOUT6_DIVIDE : integer := 1;
       CLKOUT6_DUTY_CYCLE : real := 0.500;
       CLKOUT6_PHASE : real := 0.000;
-      CLOCK_HOLD : boolean := FALSE;
       DIVCLK_DIVIDE : integer := 1;
       REF_JITTER1 : real := 0.010;
       STARTUP_WAIT : boolean := FALSE
@@ -191,7 +189,7 @@ architecture series67 of pll_multi is
       );
   end component;
   attribute BOX_TYPE of
-    MMCM_BASE : component is "PRIMITIVE";
+    MMCME2_BASE : component is "PRIMITIVE";
 
   component DCM_SP
     generic (
@@ -266,8 +264,29 @@ architecture series67 of pll_multi is
     return port_mapping(p).divisor.num;
   end function;
 
+  -- CLKOUTx_PHASE, in degrees of the output cycle.  The block delays
+  -- by whole and eighth VCO cycles and the tools recover that count
+  -- by scaling the degrees back by the output divisor; the solver has
+  -- already refused anything the grid or the shifter cannot hold.  A
+  -- positive value delays, which is what the library promises.
+  --
+  -- The epsilon covers a PLL truncating where an MMCM rounds: a
+  -- degree value binary floating point cannot hold exactly comes out
+  -- a hair low and would lose an eighth of a VCO cycle.  It is orders
+  -- of magnitude above that error and below the thousandth of a
+  -- degree the primitives check against.
+  function ophase(p: natural) return real
+  is
+    constant m: pll_output_mapping_t := port_mapping(p);
+  begin
+    if m.phase.num = 0 then
+      return 0.0;
+    end if;
+    return 360.0 * real(m.phase.num) / real(m.phase.den) + 1.0e-6;
+  end function;
+
   signal reset_s, feedback_s : std_ulogic;
-  signal clkout_s : std_ulogic_vector(0 to 5);
+  signal clkout_s : std_ulogic_vector(0 to 6);
 
 begin
 
@@ -290,6 +309,12 @@ begin
         clkout3_divide => odiv(3),
         clkout4_divide => odiv(4),
         clkout5_divide => odiv(5),
+        clkout0_phase => ophase(0),
+        clkout1_phase => ophase(1),
+        clkout2_phase => ophase(2),
+        clkout3_phase => ophase(3),
+        clkout4_phase => ophase(4),
+        clkout5_phase => ophase(5),
         clkin_period => input_period_ns_c,
         ref_jitter => 0.125
         )
@@ -319,6 +344,12 @@ begin
         clkout3_divide => odiv(3),
         clkout4_divide => odiv(4),
         clkout5_divide => odiv(5),
+        clkout0_phase => ophase(0),
+        clkout1_phase => ophase(1),
+        clkout2_phase => ophase(2),
+        clkout3_phase => ophase(3),
+        clkout4_phase => ophase(4),
+        clkout5_phase => ophase(5),
         clkin1_period => input_period_ns_c,
         ref_jitter1 => 0.125
         )
@@ -346,7 +377,7 @@ begin
   end generate;
 
   use_s7mmcm: if variant_c = S7_MMCM generate
-    inst: mmcm_base
+    inst: mmcme2_base
       generic map (
         divclk_divide => mapping_c.refdiv,
         clkfbout_mult_f => real(mapping_c.fbdiv.num),
@@ -356,6 +387,14 @@ begin
         clkout3_divide => odiv(3),
         clkout4_divide => odiv(4),
         clkout5_divide => odiv(5),
+        clkout6_divide => odiv(6),
+        clkout0_phase => ophase(0),
+        clkout1_phase => ophase(1),
+        clkout2_phase => ophase(2),
+        clkout3_phase => ophase(3),
+        clkout4_phase => ophase(4),
+        clkout5_phase => ophase(5),
+        clkout6_phase => ophase(6),
         clkin1_period => input_period_ns_c,
         ref_jitter1 => 0.125
         )
@@ -369,6 +408,7 @@ begin
         clkout3 => clkout_s(3),
         clkout4 => clkout_s(4),
         clkout5 => clkout_s(5),
+        clkout6 => clkout_s(6),
         locked => locked_o,
         clkfbin => feedback_s,
         clkfbout => feedback_s
@@ -376,15 +416,11 @@ begin
   end generate;
 
   use_s6dcm: if variant_c = S6_DCM generate
-    -- A DCM cannot multiply by one, so a unit feedback factor is
-    -- realized as halving the input and multiplying by two.
-    constant halve_c : boolean := mapping_c.fbdiv.num = 1;
-  begin
     inst: dcm_sp
       generic map(
         clkin_period => input_period_ns_c,
-        clkfx_multiply => if_else(halve_c, 2, mapping_c.fbdiv.num),
-        clkin_divide_by_2 => halve_c,
+        clkfx_multiply => mapping_c.fbdiv.num,
+        clkin_divide_by_2 => mapping_c.refdiv = 2,
         clkfx_divide => odiv(0)
         )
       port map(

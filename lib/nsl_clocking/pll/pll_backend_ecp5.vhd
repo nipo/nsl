@@ -45,7 +45,8 @@ package body pll_backend is
   -- modeled.
   constant ecp5_output_c : pll_output_topology_t := (
     divisor => pll_divisor(pll_range(1, 128)),
-    phase_den => 0, phase_vco_den => 0);
+    phase_den => 0, phase_step_max => 0,
+    phase_vco_den => 0, phase_vco_step_max => 0);
 
   constant ecp5_topology_c : pll_topology_t := (
     refdiv => pll_divisor(pll_range(1, 128)),
@@ -58,7 +59,8 @@ package body pll_backend is
     output_count => 3,
     output => (0 | 1 | 2 => ecp5_output_c,
                others => (divisor => pll_divisor_unity_c,
-                          phase_den => 0, phase_vco_den => 0)));
+                          phase_den => 0, phase_step_max => 0,
+                          phase_vco_den => 0, phase_vco_step_max => 0)));
 
   function pll_topology_get(implementation: natural := 0)
     return pll_topology_t

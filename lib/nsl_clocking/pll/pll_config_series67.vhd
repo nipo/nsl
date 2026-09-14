@@ -5,10 +5,15 @@ use ieee.math_real.all;
 
 package pll_config_series67 is
 
+  -- Mirror of the nsl_hwconfig record, so that the backend does not
+  -- have to name the family package.
   type constraints is
   record
     fmin, fmax : integer;
-    in_factor_max, out_factor_max : integer;
+    pfd_min, pfd_max : integer;
+    in_div_max : integer;
+    in_factor_min, in_factor_max : integer;
+    out_factor_max : integer;
     mode : string(1 to 3);
   end record;
   

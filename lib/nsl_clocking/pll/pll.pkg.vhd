@@ -137,11 +137,21 @@ package pll is
   -- and depends on the divisor the solver picks.  Either is 0 when
   -- the block does not offer it, and both are 0 on an output with no
   -- phase adjustment at all.
+  --
+  -- phase_step_max and phase_vco_step_max are how many steps of the
+  -- matching grid the block can accumulate.  A shifter counting VCO
+  -- cycles runs out before a full output cycle once the divisor is
+  -- large enough, so landing on the grid is not enough: a Series-7
+  -- clock manager holds 63 whole VCO cycles and seven eighths, which
+  -- is short of three quarters of an output cycle as soon as the
+  -- divisor passes 85.
   type pll_output_topology_t is
   record
     divisor: pll_divisor_constraint_t;
     phase_den: natural;
+    phase_step_max: natural;
     phase_vco_den: natural;
+    phase_vco_step_max: natural;
   end record;
 
   type pll_output_topology_vector is array (0 to pll_output_max_c-1)
@@ -562,6 +572,15 @@ package body pll is
       & "/" & to_string(value.den);
   end function;
 
+  function phase_to_string(phase: pll_ratio_t) return string
+  is
+  begin
+    if phase.num = 0 then
+      return "";
+    end if;
+    return " phase=" & to_string(phase);
+  end function;
+
   function config_outputs_to_string(config: pll_config_t;
                                     index: natural) return string
   is
@@ -572,6 +591,7 @@ package body pll is
     return " out" & to_string(index)
       & "=" & to_string(config.output(index).hz) & "Hz"
       & "~" & to_string(config.output(index).tolerance_ppm) & "ppm"
+      & phase_to_string(config.output(index).phase)
       & config_outputs_to_string(config, index + 1);
   end function;
 
@@ -592,15 +612,6 @@ package body pll is
       & ids_to_string(config)
       & config_outputs_to_string(config, 0)
       & ">";
-  end function;
-
-  function phase_to_string(phase: pll_ratio_t) return string
-  is
-  begin
-    if phase.num = 0 then
-      return "";
-    end if;
-    return " phase=" & to_string(phase);
   end function;
 
   function mapping_outputs_to_string(mapping: pll_mapping_t;
@@ -681,7 +692,8 @@ package body pll is
   end record;
 
   -- Whether a phase offset, stated as a fraction of the output
-  -- cycle, lands on a grid this port can hit with this divisor.
+  -- cycle, lands on a grid this port can hit with this divisor, and
+  -- within the number of steps the port's shifter holds.
   function phase_is_allowed(port_topo: pll_output_topology_t;
                             phase: pll_ratio_t;
                             divisor: pll_ratio_t) return boolean
@@ -694,7 +706,9 @@ package body pll is
 
     -- A grid stated per output cycle holds whatever the divisor is
     if port_topo.phase_den /= 0
-      and (phase.num * port_topo.phase_den) mod phase.den = 0 then
+      and (phase.num * port_topo.phase_den) mod phase.den = 0
+      and (phase.num * port_topo.phase_den) / phase.den
+          <= port_topo.phase_step_max then
       return true;
     end if;
 
@@ -703,7 +717,9 @@ package body pll is
     if port_topo.phase_vco_den /= 0
       and divisor.num mod divisor.den = 0 then
       den := port_topo.phase_vco_den * (divisor.num / divisor.den);
-      if (phase.num * den) mod phase.den = 0 then
+      if (phase.num * den) mod phase.den = 0
+        and (phase.num * den) / phase.den
+            <= port_topo.phase_vco_step_max then
         return true;
       end if;
     end if;

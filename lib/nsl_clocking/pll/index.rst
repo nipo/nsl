@@ -139,31 +139,20 @@ which it is delayed relative to the outputs that state none::
 
   o1 => pll_output(10_000_000, phase => (num => 1, den => 8))
 
-What a block can hit depends on how it shifts. GW5A's PLLA moves an
-output by whole and eighth VCO cycles, so its grid is a matter of the
-divisor the solver picks -- an output cycle being that many VCO
-cycles. The solver will move to a divisor that carries the phase
-asked for: a fifth of a cycle needs a divisor that is a multiple of
-five, and asking for one at 200 MHz walks the VCO down from 1400 to
-1000 to get it. A phase no divisor can carry fails elaboration, like
-any other request the block cannot hold.
+What a block can hit depends on how it shifts. GW5A's PLLA and the
+Xilinx clock managers all move an output by whole and eighth VCO
+cycles, so their grid is a matter of the divisor the solver picks --
+an output cycle being that many VCO cycles. The solver will move to a
+divisor that carries the phase asked for: a fifth of a cycle needs a
+divisor that is a multiple of five, and asking for one at 200 MHz on a
+GW5A walks the VCO down from 1400 to 1000 to get it.
 
-Phase
------
-
-`pll_output` takes a `phase`, a fraction of the output's own cycle by
-which it is delayed relative to the outputs that state none::
-
-  o1 => pll_output(10_000_000, phase => (num => 1, den => 8))
-
-What a block can hit depends on how it shifts. GW5A's PLLA moves an
-output by whole and eighth VCO cycles, so its grid is a matter of the
-divisor the solver picks -- an output cycle being that many VCO
-cycles. The solver will move to a divisor that carries the phase
-asked for: a fifth of a cycle needs a divisor that is a multiple of
-five, and asking for one at 200 MHz walks the VCO down from 1400 to
-1000 to get it. A phase no divisor can carry fails elaboration, like
-any other request the block cannot hold.
+A shifter counting VCO cycles also runs out. A Series-7 clock manager
+holds 63 whole VCO cycles and seven eighths, which stops short of
+three quarters of an output cycle as soon as the divisor passes 85: a
+phase landing on the grid is not always a phase the block reaches, and
+the solver walks the VCO down there too. A phase no divisor can carry
+fails elaboration, like any other request the block cannot hold.
 
 Under the hood, `pll_multi` is realized by an elaboration-time solver
 working from a description of the vendor PLL block:
@@ -203,11 +192,12 @@ this way is the one `pll_multi` implements.
   on a power-of-two divider. `pll_reference_id` picks the CORE/PAD
   input and `pll_routing_id` the CORE/GLOBAL output.
 
-* Xilinx Series-6 and Series-7, on PLL_BASE, PLLE2_ADV, MMCM_BASE or
-  DCM_SP, six outputs but for the DCM's one. The input divider stays
-  at 1 and the phase detector window is left open: the per-part limits
-  in `nsl_hwconfig` state a VCO window and the two factors, and
-  nothing else.
+* Xilinx Series-6 and Series-7, on PLL_BASE, PLLE2_ADV, MMCME2_BASE or
+  DCM_SP: six outputs, seven on the MMCM, one on the DCM. Phase shift
+  is carried on every output of the PLL and MMCM variants. A DCM
+  states its shift as a fraction of the input period, common to all
+  its outputs, which is not what a per-output phase means, so it
+  offers none.
 
 On backends with a `pll_multi` realization, `pll_basic` is a thin
 wrapper over it, requesting one exact output: a rate the PLL cannot

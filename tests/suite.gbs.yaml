@@ -443,6 +443,9 @@ projects:
   - name: pll_solve_series7
     path: pll_solve_series7
     tags: [ghdl, simulation]
+  - name: pll_solve_zynq7
+    path: pll_solve_zynq7
+    tags: [ghdl, simulation]
   - name: ptp_stream_l2
     path: ptp/stream_l2
     tags: [ghdl, simulation]

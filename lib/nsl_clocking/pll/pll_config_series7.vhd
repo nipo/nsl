@@ -38,6 +38,10 @@ package body pll_config_series67 is
     return constraints'(
       fmin => ret.fmin,
       fmax => ret.fmax,
+      pfd_min => ret.pfd_min,
+      pfd_max => ret.pfd_max,
+      in_div_max => ret.in_div_max,
+      in_factor_min => ret.in_factor_min,
       in_factor_max => ret.in_factor_max,
       out_factor_max => ret.out_factor_max,
       mode => ret.mode
