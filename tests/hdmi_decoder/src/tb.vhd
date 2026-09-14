@@ -2,13 +2,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_hdmi, nsl_video, nsl_color, nsl_data, nsl_simulation;
+library nsl_dvi, nsl_hdmi, nsl_video, nsl_color, nsl_data, nsl_line_coding,
+  nsl_simulation;
 use nsl_video.mode.all;
 use nsl_video.pixel_stream.all;
 use nsl_color.rgb.all;
 use nsl_data.bytestream.all;
 use nsl_data.text.all;
 use nsl_dvi.dvi.all;
+use nsl_hdmi.hdmi.all;
 
 -- Sends colour bars and data islands out as an HDMI signal and reads
 -- them back through sink_stream_decoder.
@@ -18,6 +20,11 @@ use nsl_dvi.dvi.all;
 -- what they are, that a guard band is exactly two symbols wide, and
 -- that the 32 TERC4 symbols of an island come back as the bytes that
 -- went in.
+--
+-- The packets themselves go round the same loop.  Several kinds are
+-- sent in turn, so headers differ from one packet to the next and a
+-- receiver that lost count would say so.  Every one has to come back
+-- whole, in the order it was sent, with its parity holding.
 entity tb is
 end entity;
 
@@ -39,7 +46,14 @@ architecture arch of tb is
 
   signal pixels_s: bus_t;
   signal synced_s: std_ulogic;
-  signal tmds_s: nsl_dvi.dvi.symbol_vector_t;
+  signal tmds_s, tmds_rx_s: nsl_dvi.dvi.symbol_vector_t;
+
+  -- Breaks what an island says about itself, by putting a plain
+  -- control word where the preamble states which period is coming.
+  -- A sink that missed the announcement must lose the island, not
+  -- read its guard band as the start of a picture.
+  signal pre_break_s: boolean := false;
+  signal breaking_s: boolean;
 
   signal di_s: nsl_hdmi.hdmi.data_island_t;
   signal di_valid_s, di_ready_s: std_ulogic;
@@ -49,6 +63,31 @@ architecture arch of tb is
   signal hsync_s, vsync_s: std_ulogic;
   signal di_hdr_s: std_ulogic_vector(1 downto 0);
   signal di_data_s: std_ulogic_vector(7 downto 0);
+
+  -- One bit of one symbol, flipped on request.  A BCH code of this
+  -- distance always catches a single bit, so what this asks is
+  -- whether the parity is being held against anything at all.
+  signal corrupt_s: std_ulogic;
+  signal corrupt_mask_s: std_ulogic_vector(7 downto 0);
+  signal rx_data_s: std_ulogic_vector(7 downto 0);
+  signal armed_s, caught_s: boolean := false;
+
+  signal rx_valid_s, rx_error_s: std_ulogic;
+  signal rx_packet_s: nsl_hdmi.hdmi.data_island_t;
+  signal received_s: natural;
+
+  type di_vector_t is array(natural range <>) of nsl_hdmi.hdmi.data_island_t;
+
+  -- Sent round and round.  They differ in type, in length and in what
+  -- their payload looks like -- all zeros and all ones both go
+  -- through, which is what a parity that was quietly not computed
+  -- would survive.
+  constant island_list_c: di_vector_t(0 to 3) := (
+    nsl_hdmi.hdmi.di_source_product_desc("NSL", "Decoder test"),
+    nsl_hdmi.hdmi.di_avi_rgb,
+    nsl_hdmi.hdmi.di_infoframe(nsl_hdmi.hdmi.infoframe_vendor_specific, 1,
+                               byte_string'(0 to 26 => x"ff")),
+    nsl_hdmi.hdmi.di_null);
 
   -- What the encoder sends out of a data island, in order: the header
   -- goes out a bit at a time on channel 0 and the subpackets go out
@@ -137,7 +176,7 @@ begin
       reset_n_i => reset_n_s,
       pixel_clock_i => clock_s,
 
-      tmds_i => tmds_s,
+      tmds_i => tmds_rx_s,
 
       period_o => period_s,
       pixel_o => decoded_s,
@@ -148,18 +187,130 @@ begin
       di_data_o => di_data_s
       );
 
+  receiver: nsl_hdmi.decoder.data_island_receiver
+    port map(
+      reset_n_i => reset_n_s,
+      pixel_clock_i => clock_s,
+
+      period_i => period_s,
+      di_hdr_i => di_hdr_s,
+      di_data_i => rx_data_s,
+
+      valid_o => rx_valid_s,
+      packet_o => rx_packet_s,
+      error_o => rx_error_s
+      );
+
+  breaking_s <= pre_break_s and period_s = PERIOD_DI_PRE;
+
+  tmds_rx_s(0) <= tmds_s(0);
+  tmds_rx_s(1) <= nsl_line_coding.tmds.control_encode("000")
+                  when breaking_s else tmds_s(1);
+  tmds_rx_s(2) <= nsl_line_coding.tmds.control_encode("000")
+                  when breaking_s else tmds_s(2);
+
+  corrupt_mask_s <= "00000001" when corrupt_s = '1' else "00000000";
+  rx_data_s <= di_data_s xor corrupt_mask_s;
+
+  -- Flips one bit of the first island symbol to go by once asked
+  corrupter: process is
+  begin
+    corrupt_s <= '0';
+
+    wait until armed_s;
+    wait until rising_edge(clock_s) and period_s = PERIOD_DI_DATA;
+    corrupt_s <= '1';
+    wait until rising_edge(clock_s);
+    corrupt_s <= '0';
+
+    wait;
+  end process;
+
   -- Keep handing the encoder islands to send, so blanking holds them
-  -- as often as it can
+  -- as often as it can, and step through the list on every one taken
   islands: process is
+    variable index: natural := 0;
   begin
     di_valid_s <= '0';
     di_s <= nsl_hdmi.hdmi.di_null;
 
     wait until reset_n_s = '1';
 
-    di_s <= nsl_hdmi.hdmi.di_source_product_desc("NSL", "Decoder test");
     di_valid_s <= '1';
 
+    loop
+      di_s <= island_list_c(index);
+      wait until rising_edge(clock_s) and di_ready_s = '1';
+      index := (index + 1) mod island_list_c'length;
+    end loop;
+  end process;
+
+  -- What comes back, against what went in.  Where in the list the
+  -- first packet sat is worked out rather than assumed: the encoder
+  -- may have been part way through one when checking started.
+  packet_check: process is
+    variable got: nsl_hdmi.hdmi.data_island_t;
+    variable err: std_ulogic;
+    variable count, offset: natural;
+    variable found: boolean;
+  begin
+    received_s <= 0;
+    caught_s <= false;
+    count := 0;
+    offset := 0;
+
+    wait until rising_edge(clock_s) and rx_valid_s = '1';
+    got := rx_packet_s;
+    err := rx_error_s;
+
+    found := false;
+    for i in island_list_c'range
+    loop
+      if got = island_list_c(i) then
+        offset := i;
+        found := true;
+      end if;
+    end loop;
+    assert found
+      report "The first packet off the link is none of the ones sent"
+      severity failure;
+
+    -- Content, for as long as the link is left alone
+    while not armed_s
+    loop
+      assert err = '0'
+        report "Parity failed on packet " & to_string(count)
+        & ", type " & to_hex_string(got.packet_type)
+        severity failure;
+      assert got = island_list_c((offset + count) mod island_list_c'length)
+        report "Packet " & to_string(count) & " came back as type "
+        & to_hex_string(got.packet_type) & ", not the one that was sent"
+        severity failure;
+
+      count := count + 1;
+      received_s <= count;
+
+      wait until rising_edge(clock_s) and rx_valid_s = '1';
+      got := rx_packet_s;
+      err := rx_error_s;
+    end loop;
+
+    -- A bit has been flipped in the island going by, so the packet
+    -- holding it has to come out marked.  The one in hand may already
+    -- be it, and a couple more are allowed past while the island the
+    -- flip landed in finishes -- but only a couple.
+    for i in 0 to 3
+    loop
+      exit when err = '1';
+      assert i /= 3
+        report "A flipped bit went through with its parity holding"
+        severity failure;
+
+      wait until rising_edge(clock_s) and rx_valid_s = '1';
+      err := rx_error_s;
+    end loop;
+
+    caught_s <= true;
     wait;
   end process;
 
@@ -168,6 +319,7 @@ begin
     variable guard_run, data_run, pre_run: natural;
     variable islands_seen, guards_seen: natural;
     variable packets, hdr_firsts: natural;
+    variable video_syms, island_syms, pre_syms: natural;
   begin
     done_s <= "0";
 
@@ -310,6 +462,57 @@ begin
     -- went through as well
     assert packets > islands_seen
       report "No island held packets back to back"
+      severity failure;
+
+    -- Every packet the symbols carried came back out whole.  The
+    -- checker started at the first packet the link ever carried and
+    -- the walk above at a frame boundary, so it has seen at least as
+    -- many.
+    assert received_s >= packets
+      report to_string(packets) & " packets went by and only "
+      & to_string(received_s) & " came back whole"
+      severity failure;
+
+    -- And parity says so when a bit does not survive the trip
+    armed_s <= true;
+    wait until caught_s;
+
+    -- Now break what the islands say about themselves.  The
+    -- announcement is what a sink follows an island by, and a TERC4
+    -- word reads as data rather than as control, so a sink that lost
+    -- it could take the guard band for the start of a picture and
+    -- hold that for the whole island.  Nothing but the pixels of the
+    -- frame may come out as video.
+    pre_break_s <= true;
+
+    wait until rising_edge(clock_s) and vsync_s = '1';
+    wait until rising_edge(clock_s) and vsync_s = '0';
+    wait until rising_edge(clock_s) and vsync_s = '1';
+    wait until rising_edge(clock_s) and vsync_s = '0';
+
+    video_syms := 0;
+    island_syms := 0;
+    pre_syms := 0;
+    loop
+      wait until rising_edge(clock_s);
+      if period_s = PERIOD_VIDEO_DATA then
+        video_syms := video_syms + 1;
+      end if;
+      if period_s = PERIOD_DI_DATA then
+        island_syms := island_syms + 1;
+      end if;
+      if period_s = PERIOD_DI_PRE then
+        pre_syms := pre_syms + 1;
+      end if;
+      exit when vsync_s = '1';
+    end loop;
+
+    assert video_syms = geometry_c.width * geometry_c.height
+      report "A frame whose islands went unannounced carried "
+      & to_string(video_syms) & " symbols of video, not "
+      & to_string(geometry_c.width * geometry_c.height)
+      & " (island " & to_string(island_syms) & ", preamble "
+      & to_string(pre_syms) & ")"
       severity failure;
 
     done_s <= "1";

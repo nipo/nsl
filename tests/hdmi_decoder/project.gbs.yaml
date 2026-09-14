@@ -7,10 +7,12 @@ root:
     - nsl_dvi.decoder
     - nsl_dvi.dvi
     - nsl_hdmi.encoder
+    - nsl_hdmi.decoder
     - nsl_hdmi.hdmi
     - nsl_video.mode
     - nsl_video.pixel_stream
     - nsl_color.rgb
+    - nsl_line_coding.tmds
     - nsl_data.bytestream
     - nsl_data.text
     - nsl_simulation.driver
