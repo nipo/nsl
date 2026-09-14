@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_hdmi, nsl_video, nsl_color, nsl_spdif, nsl_data,
-  nsl_simulation;
+library nsl_dvi, nsl_hdmi, nsl_video, nsl_color, nsl_spdif, nsl_audio,
+  nsl_amba, nsl_data, nsl_simulation;
 use nsl_video.mode.all;
 use nsl_video.pixel_stream.all;
 use nsl_data.bytestream.all;
@@ -11,6 +11,7 @@ use nsl_data.text.all;
 use nsl_dvi.dvi.all;
 use nsl_hdmi.hdmi.all;
 use nsl_hdmi.audio.all;
+use nsl_audio.pcm.all;
 
 -- Sends audio out over HDMI and reads it back.
 --
@@ -84,6 +85,14 @@ architecture arch of tb is
   signal acr_seen_s: natural;
   signal counting_s: boolean := false;
 
+  -- And on out of HDMI's shape into the one anything else takes
+  constant stream_cfg_c: nsl_audio.pcm_stream.config_t
+    := nsl_hdmi.audio_stream.stream_config;
+  signal stream_m_s: nsl_amba.axi4_stream.master_t;
+  signal stream_s_s: nsl_amba.axi4_stream.slave_t;
+  signal overflow_s: std_ulogic;
+  signal stream_packets_s: natural;
+
   constant aux_a_c: unsigned(3 downto 0) := "0101";
   constant aux_b_c: unsigned(3 downto 0) := "1010";
 
@@ -103,7 +112,7 @@ begin
       done_i => done_s
       );
 
-  bars: nsl_dvi.pattern.color_bars
+  bars: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => config_c,
@@ -264,6 +273,101 @@ begin
       sample_tick_o => sample_tick_s
       );
 
+  carrier: nsl_hdmi.audio_stream.hdmi_audio_stream_source
+    generic map(
+      config_c => stream_cfg_c
+      )
+    port map(
+      reset_n_i => reset_n_s,
+      clock_i => clock_s,
+
+      valid_i => audio_valid_s,
+      a_i => audio_a_s,
+      b_i => audio_b_s,
+      block_start_i => audio_block_s,
+
+      out_o => stream_m_s,
+      out_i => stream_s_s,
+
+      overflow_o => overflow_s
+      );
+
+  -- Nothing holds the stream up here, so nothing may be lost
+  stream_s_s <= nsl_audio.pcm_stream.accept(stream_cfg_c, true);
+
+  -- The same samples again, this time as frames on a stream, cut into
+  -- packets a block long
+  stream_check: process is
+    variable f: nsl_audio.pcm.frame_t;
+    variable index: unsigned(19 downto 0);
+    variable beats, packets: natural;
+  begin
+    stream_packets_s <= 0;
+    packets := 0;
+
+    -- Start at a block, since the packet running when checking began
+    -- is rightly a short one
+    loop
+      wait until rising_edge(clock_s)
+        and nsl_audio.pcm_stream.is_taken(stream_cfg_c, stream_m_s, stream_s_s);
+      exit when nsl_audio.pcm_stream.is_block(stream_cfg_c, stream_m_s);
+    end loop;
+
+    f := nsl_audio.pcm_stream.frame(stream_cfg_c, stream_m_s);
+    index := f(0).sample(23 downto 4);
+    beats := 0;
+
+    loop
+      assert f(0).sample = nsl_audio.pcm.to_sample(unsigned'(index & aux_a_c), nsl_audio.pcm.CODING_SIGNED)
+        report "Stream beat " & to_string(beats) & " of packet "
+        & to_string(packets) & " carries "
+        & to_hex_string(std_ulogic_vector(f(0).sample(23 downto 0)))
+        & " on channel 0, not "
+        & to_hex_string(std_ulogic_vector'(std_ulogic_vector(index)
+                                           & std_ulogic_vector(aux_a_c)))
+        severity failure;
+      assert f(1).sample = nsl_audio.pcm.to_sample(unsigned'((not index) & aux_b_c), nsl_audio.pcm.CODING_SIGNED)
+        report "Stream beat " & to_string(beats) & " does not carry the other "
+        & "channel on channel 1"
+        severity failure;
+
+      -- Linear PCM went in, so V may not be set on either channel
+      assert f(0).sideband(0) = '0' and f(1).sideband(0) = '0'
+        report "A stream beat states its samples are not PCM"
+        severity failure;
+
+      beats := beats + 1;
+
+      if nsl_audio.pcm_stream.is_last(stream_cfg_c, stream_m_s) then
+        assert not nsl_audio.pcm_stream.is_error(stream_cfg_c, stream_m_s)
+          report "Packet " & to_string(packets) & " came out marked in error"
+          severity failure;
+        assert beats = stream_cfg_c.frames_per_packet
+          report "Packet " & to_string(packets) & " held " & to_string(beats)
+          & " frames, not " & to_string(stream_cfg_c.frames_per_packet)
+          severity failure;
+
+        packets := packets + 1;
+        stream_packets_s <= packets;
+        beats := 0;
+      end if;
+
+      index := index + 1;
+
+      wait until rising_edge(clock_s)
+        and nsl_audio.pcm_stream.is_taken(stream_cfg_c, stream_m_s, stream_s_s);
+      f := nsl_audio.pcm_stream.frame(stream_cfg_c, stream_m_s);
+
+      -- A block may only open where a packet does
+      if nsl_audio.pcm_stream.is_block(stream_cfg_c, stream_m_s) then
+        assert beats = 0
+          report "A block opened " & to_string(beats)
+          & " frames into a packet"
+          severity failure;
+      end if;
+    end loop;
+  end process;
+
   -- What a source said about the rate has to arrive as it was said
   acr_check: process is
     variable count: natural := 0;
@@ -379,6 +483,17 @@ begin
 
     assert received_s > 100
       report "Only " & to_string(received_s) & " samples made the trip"
+      severity failure;
+
+    -- Two whole blocks on the stream, which is what says the packets
+    -- line up with the blocks a source states
+    while stream_packets_s < 2
+    loop
+      wait until rising_edge(clock_s);
+    end loop;
+
+    assert overflow_s = '0'
+      report "The stream lost a frame with nothing holding it up"
       severity failure;
 
     nsl_simulation.control.terminate(0);

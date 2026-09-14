@@ -1,26 +1,14 @@
-name: hdmi_audio
+name: audio_pcm_stream
 
 root:
   name: top
   deps:
-    - nsl_video.pattern
-    - nsl_dvi.decoder
-    - nsl_dvi.dvi
-    - nsl_hdmi.encoder
-    - nsl_hdmi.decoder
-    - nsl_hdmi.hdmi
-    - nsl_hdmi.audio
-    - nsl_hdmi.audio_stream
     - nsl_audio.pcm
     - nsl_audio.pcm_stream
     - nsl_amba.axi4_stream
-    - nsl_spdif.blocker
-    - nsl_video.mode
-    - nsl_video.pixel_stream
-    - nsl_color.rgb
     - nsl_data.bytestream
     - nsl_data.text
-    - nsl_simulation.driver
+    - nsl_simulation.control
   sources:
     - file_type: vhdl
       files:
