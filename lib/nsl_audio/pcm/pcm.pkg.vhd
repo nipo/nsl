@@ -82,6 +82,14 @@ package pcm is
   -- to say anything with U or C.
   constant block_frame_count_c: natural := 192;
 
+  -- One bit per frame of a block, for one channel.  U and C arrive
+  -- this way -- a bit at a time, saying nothing until a whole block of
+  -- them is in hand.
+  subtype block_bits_t is std_ulogic_vector(0 to block_frame_count_c-1);
+  type block_bits_vector is array (natural range <>) of block_bits_t;
+
+  constant block_bits_zero_c: block_bits_t := (others => '0');
+
   -- A rate, in frames a second.  Wide enough for anything a link
   -- carries.
   constant max_rate_width_c: natural := 20;
