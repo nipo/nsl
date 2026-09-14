@@ -1,0 +1,40 @@
+name: arty_z7_pll_check
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - gatecap_generated.pll_check
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/clk125.xdc
+        - ../pinout/leds.xdc
+        # After clk125.xdc: the clock groups reach through sys_clk_pin.
+        - clocks.xdc
+        - compress.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc7z020clg400-1
+    outputs:
+      - type: bitstream
+        path: pll_check.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
