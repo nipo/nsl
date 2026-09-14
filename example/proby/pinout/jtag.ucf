@@ -1,0 +1,9 @@
+# JTAG from FTDI (MPSSE Port B)
+# Always connected to FTDI
+NET "jtag_tdi"     LOC =  "P40" | IOSTANDARD = LVCMOS33 | SLEW = SLOW;
+# Always connected to FTDI
+NET "jtag_tms"     LOC =  "P38" | IOSTANDARD = LVCMOS33 | SLEW = SLOW;
+# Routed to FTDI when jtag_en is high
+NET "jtag_tdo"     LOC =  "P39" | IOSTANDARD = LVCMOS33 | SLEW = SLOW;
+# Routed from FTDI when jtag_en is high
+NET "jtag_tck"     LOC =  "P33" | IOSTANDARD = LVCMOS33 | SLEW = SLOW;

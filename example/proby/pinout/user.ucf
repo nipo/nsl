@@ -1,0 +1,7 @@
+# User IF
+# Active low, hardware debounce
+NET "user_led"     LOC =  "P34" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;
+# Active high
+NET "user_btn"     LOC =  "P127" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;
+# Route JTAG to FPGA IO pins rather than dedicated programming pins
+NET "jtag_en"      LOC =  "P35" | IOSTANDARD = LVCMOS25 | SLEW = SLOW;

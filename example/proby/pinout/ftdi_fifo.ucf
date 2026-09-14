@@ -1,0 +1,33 @@
+# FTDI Synchronous FIFO (Port A)
+
+NET "fifo_clk"     LOC = "P56" | IOSTANDARD = LVCMOS33 | BUFG = CLK | TNM_NET = "ft245_clk";
+
+TIMESPEC TS_ft245_clk = PERIOD ft245_clk 16.67 ns HIGH 50%;
+
+NET "fifo_*" IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW;
+
+NET "fifo_data<0>" LOC = "P70";
+NET "fifo_data<1>" LOC = "P69";
+NET "fifo_data<2>" LOC = "P67";
+NET "fifo_data<3>" LOC = "P66";
+NET "fifo_data<4>" LOC = "P65";
+NET "fifo_data<5>" LOC = "P64";
+NET "fifo_data<6>" LOC = "P62";
+NET "fifo_data<7>" LOC = "P61";
+
+# Read data from FTDI (oen must be low 1 cycle before, act low)
+NET "fifo_rdn"     LOC = "P58";
+
+# Put date to FTDI (oen must be high one cycle before, act low)
+NET "fifo_wrn"     LOC = "P57";
+
+# when low, fifo_data[] is ftdi -> fpga
+NET "fifo_oen"     LOC = "P51";
+
+# Data ready in RX buffer (act low)
+NET "fifo_rxfn"    LOC = "P60";
+# Room available in TX buffer (act low)
+NET "fifo_txen"    LOC = "P59";
+
+NET "fifo_*" OFFSET =OUT 8ns AFTER fifo_clk;
+NET "fifo_*" OFFSET =IN 8ns  VALID 8.67ns BEFORE fifo_clk;

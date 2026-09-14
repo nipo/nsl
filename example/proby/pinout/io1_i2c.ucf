@@ -1,0 +1,2 @@
+NET "scl"       LOC = "P74" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 12;
+NET "sda"       LOC = "P75" | IOSTANDARD = LVCMOS33 | SLEW = FAST | DRIVE = 12;

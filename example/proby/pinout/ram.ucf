@@ -1,0 +1,53 @@
+# Ram
+# addr[2..19] may be reorganized
+NET "ram_addr<0>"   LOC = "P8" | IOSTANDARD = LVCMOS25 | SLEW = FAST;    # Fixed, A0
+NET "ram_addr<1>"   LOC = "P7" | IOSTANDARD = LVCMOS25 | SLEW = FAST;    # Fixed, A1
+NET "ram_addr<2>"   LOC = "P6" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<3>"   LOC = "P5" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<4>"   LOC = "P2" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<5>"   LOC = "P1" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<6>"   LOC = "P111" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<7>"   LOC = "P112" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<8>"   LOC = "P132" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<9>"   LOC = "P133" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<10>"  LOC = "P16" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<11>"  LOC = "P15" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<12>"  LOC = "P14" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<13>"  LOC = "P12" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<14>"  LOC = "P11" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<15>"  LOC = "P124" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<16>"  LOC = "P126" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<17>"  LOC = "P121" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<18>"  LOC = "P120" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<19>"  LOC = "P119" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_addr<20>"  LOC = "P10" | IOSTANDARD = LVCMOS25 | SLEW = FAST;   # Fixed, NC_36M
+NET "ram_addr<21>"  LOC = "P9" | IOSTANDARD = LVCMOS25 | SLEW = FAST;    # Fixed, NC_72M
+
+# Bits in byte may be reorganized
+NET "ram_da<0>"     LOC = "P30" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<1>"     LOC = "P29" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<2>"     LOC = "P27" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<3>"     LOC = "P26" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<4>"     LOC = "P24" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<5>"     LOC = "P23" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<6>"     LOC = "P22" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_da<7>"     LOC = "P21" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_dap"       LOC = "P17" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+
+NET "ram_db<0>"     LOC = "P134" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<1>"     LOC = "P137" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<2>"     LOC = "P138" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<3>"     LOC = "P139" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<4>"     LOC = "P140" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<5>"     LOC = "P141" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<6>"     LOC = "P142" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_db<7>"     LOC = "P143" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_dbp"       LOC = "P144" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+
+NET "ram_cen"       LOC = "P114" | IOSTANDARD = LVCMOS25 | SLEW = FAST;  # Chip enable, active low, hardware pullup
+NET "ram_bwbn"      LOC = "P115" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_bwan"      LOC = "P116" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_wen"       LOC = "P117" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_cenn"      LOC = "P118" | IOSTANDARD = LVCMOS25 | SLEW = FAST;  # Clock enable
+NET "ram_oen"       LOC = "P131" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
+NET "ram_clk"       LOC = "P123" | IOSTANDARD = LVCMOS25 | SLEW = FAST | BUFG = CLK;

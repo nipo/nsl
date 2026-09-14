@@ -1,0 +1,2 @@
+# 12MHz oscillator input
+NET "clk"          LOC =  "P55" | IOSTANDARD = LVCMOS33 | SLEW = FAST | BUFG = CLK | PERIOD = 83.33 ns;

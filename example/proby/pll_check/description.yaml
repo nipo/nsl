@@ -1,0 +1,47 @@
+name: pll_check.pll_check_core
+
+communication:
+  mode: jtag
+
+instruments:
+  # Every generated rate, against the board crystal.  The four shifted
+  # outputs share the crystal's rate, so they also say straight away
+  # whether the PLL is doing what was asked.
+  rates: !clock-measurer
+    reference: board
+    frequency: 12_000_000
+    clocks: [p0, p90, p180, p270, rack, sample, f81m]
+    max_rate: 100_000_000
+
+  # The four phase-shifted clocks, sampled raw by a clock from the
+  # same block on a different divider.  48.6MHz against 12MHz is 81
+  # over 20, so the sampling instant walks the whole output cycle in
+  # 81 steps before repeating: an edge resolves to four degrees.
+  phases: !logic-analyzer
+    storage:
+      # 4096 samples is 48 walks of the grid.  Byte lane packing
+      # would pay for itself at four signals, but the packed buffer's
+      # byte-enabled memory does not infer as block ram without a
+      # registered output, so the plain one it is.
+      buffer_depth_l2: 12
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      sample:
+        clock: clock
+        frequency: 48_600_000
+
+        signals:
+          p0:
+            trigger: true
+          p90:
+            trigger: false
+          p180:
+            trigger: false
+          p270:
+            trigger: false
