@@ -10,7 +10,7 @@ instruments:
   rates: !clock-measurer
     reference: board
     frequency: 125_000_000
-    clocks: [p0, p90, p180, p270, rack, sample, f150m, f50m, f25m, f10m]
+    clocks: [p0, p90, p180, p270, mmcm_100m, sample, f150m, f50m, f25m, f10m]
     max_rate: 200_000_000
 
   # The four phase-shifted clocks, sampled raw by a clock from the
@@ -19,11 +19,10 @@ instruments:
   # repeating: an edge resolves to a 175th of a cycle, two degrees.
   phases: !logic-analyzer
     storage:
-      # 16384 samples is 187us, ninety-odd walks of the grid.  Byte
-      # lane packing would pay for itself at four signals, but the
-      # packed buffer's byte-enabled memory does not infer as block
-      # ram without a registered output, so the plain one it is.
+      # 16384 samples is 187us, ninety-odd walks of the grid, and a
+      # four-bit sample packs four to a word.
       buffer_depth_l2: 14
+      packed: true
 
     capture:
       max_windows: 1

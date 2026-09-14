@@ -59,7 +59,12 @@ ninety-odd walks of the grid.
 The four shifted clocks reach the analyzer raw, as gatecap wants, and
 ride the global network on their way -- that is what keeps their
 delays matched, so what is measured is the phase the block made and
-not the routing. `clocks.xdc` cuts the two clock groups apart,
+not the routing.
+
+The rack itself rides the board crystal, not anything the clock
+managers make. An instrument that only answers when its subject works
+tells you nothing when the subject does not; this way a clock that
+never starts reads zero, which is the measurement. `clocks.xdc` cuts the two clock groups apart,
 because that sampling is the measurement and there is nothing there
 for the tool to time.
 
@@ -103,21 +108,21 @@ Measured
 On an Arty Z7-20, Vivado 2022.2, timing met with 8.1 ns of setup
 slack::
 
-  p0      12000000 Hz     p90     12000000 Hz
-  p180    12000000 Hz     p270    12000000 Hz
-  rack   100000000 Hz     sample  87500000 Hz
-  f150m  150000000 Hz     f50m    50000000 Hz
-  f25m    25000000 Hz     f10m    10000000 Hz
+  p0, p90, p180, p270  12 MHz     mmcm_100m  100 MHz
+  sample            87.5 MHz       f150m      150 MHz
+  f50m                50 MHz       f25m        25 MHz
+  f10m                10 MHz
 
-Every rate exact to the hertz, on both blocks and through an input
-divider of five.
+Every rate within six parts per million of the plan, on both blocks
+and through an input divider of five -- and the same few ppm on all
+ten, so the ratios between them are exact.
 
 ::
 
    p0:    0.00 deg
-  p90:   89.83 deg
- p180:  180.53 deg
- p270:  270.04 deg
+  p90:   89.67 deg
+ p180:  179.94 deg
+ p270:  269.93 deg
 
 Ascending, and inside a degree of the request over repeated captures
 -- the measurement grid itself is two degrees. **A positive

@@ -51,7 +51,7 @@ architecture beh of boundary is
   signal board_s : std_ulogic;
   signal startup_reset_n_s, locked_s : std_ulogic;
   signal phase_locked_s, sample_locked_s : std_ulogic;
-  signal rack_reset_n_s, sample_reset_n_s : std_ulogic;
+  signal heartbeat_reset_n_s, sample_reset_n_s : std_ulogic;
 
   signal phase_raw_s, phase_s
     : std_ulogic_vector(0 to phase_config_c.output_count-1);
@@ -118,11 +118,11 @@ begin
 
   locked_s <= phase_locked_s and sample_locked_s;
 
-  rack_reset: nsl_clocking.async.async_edge
+  heartbeat_reset: nsl_clocking.async.async_edge
     port map(
-      clock_i => phase_s(4),
+      clock_i => phase_s(0),
       data_i => locked_s,
-      data_o => rack_reset_n_s
+      data_o => heartbeat_reset_n_s
       );
 
   sample_reset: nsl_clocking.async.async_edge
@@ -132,22 +132,25 @@ begin
       data_o => sample_reset_n_s
       );
 
-  -- Gatecap rack over the chip TAP, on the clock the phase block
-  -- makes: the rack answering at all already says that block locked.
+  -- Gatecap rack over the chip TAP, riding the board crystal rather
+  -- than anything the clock managers make: an instrument that only
+  -- answers when its subject works tells you nothing when the subject
+  -- does not.  A clock that never starts reads zero here, which is
+  -- the measurement.
   observer: gatecap_generated.pll_check.pll_check_core
     generic map(
       burst_length_l2_c => 6
       )
     port map(
-      clock_i => phase_s(4),
-      reset_n_i => rack_reset_n_s,
+      clock_i => board_s,
+      reset_n_i => startup_reset_n_s,
 
       rates_board_i => board_s,
       rates_p0_i => phase_s(0),
       rates_p90_i => phase_s(1),
       rates_p180_i => phase_s(2),
       rates_p270_i => phase_s(3),
-      rates_rack_i => phase_s(4),
+      rates_mmcm_100m_i => phase_s(4),
       rates_sample_i => sample_s(0),
       rates_f150m_i => sample_s(1),
       rates_f50m_i => sample_s(2),
@@ -163,9 +166,9 @@ begin
       );
 
   -- Enough to tell a locked board from a dead one without a host.
-  heartbeat: process(phase_s(0), rack_reset_n_s)
+  heartbeat: process(phase_s(0), heartbeat_reset_n_s)
   begin
-    if rack_reset_n_s = '0' then
+    if heartbeat_reset_n_s = '0' then
       heartbeat_s <= (others => '0');
     elsif rising_edge(phase_s(0)) then
       heartbeat_s <= heartbeat_s + 1;

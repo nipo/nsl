@@ -10,8 +10,19 @@ instruments:
   rates: !clock-measurer
     reference: board
     frequency: 12_000_000
-    clocks: [p0, p90, p180, p270, rack, sample, f81m]
+    clocks: [p0, p90, p180, p270, dcm_36m, sample, f81m]
     max_rate: 100_000_000
+
+  # What the clock managers are doing, on the crystal domain: a rate
+  # reading zero says a clock is dead, and these say why.
+  panel: !control-status
+    clock: clock
+
+    status:
+      user_btn: 1
+      startup_reset_n: 1
+      ref_locked: 1
+      phase_locked: 1
 
   # The four phase-shifted clocks, sampled raw by a clock from the
   # same block on a different divider.  48.6MHz against 12MHz is 81
@@ -19,11 +30,10 @@ instruments:
   # 81 steps before repeating: an edge resolves to four degrees.
   phases: !logic-analyzer
     storage:
-      # 4096 samples is 48 walks of the grid.  Byte lane packing
-      # would pay for itself at four signals, but the packed buffer's
-      # byte-enabled memory does not infer as block ram without a
-      # registered output, so the plain one it is.
+      # 4096 samples is 48 walks of the grid, and a four-bit sample
+      # packs four to a word.
       buffer_depth_l2: 12
+      packed: true
 
     capture:
       max_windows: 1
