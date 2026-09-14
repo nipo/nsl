@@ -138,7 +138,10 @@ begin
     frame_o.user <= r.shreg(25);
     frame_o.channel_status <= r.shreg(26);
     channel_o <= r.channel;
-    parity_ok_o <= r.par;
+    -- The running bit is toggled by every one that went by, the parity
+    -- symbol included, so a subframe whose parity holds leaves it
+    -- clear.  What this port states is the opposite of that.
+    parity_ok_o <= not r.par;
   end process;
   
 end architecture;
