@@ -122,7 +122,13 @@ if {[version -short] < 2022} {
                 set dst_clock_period [get_property -quiet -min PERIOD $dst_clock]
                 set src_clock_period [get_property -quiet -min PERIOD $src_clock]
                 set_max_delay -from $src_clock -to $dst_clock -through $dpram_output_pins $dst_clock_period -datapath_only
-                set_bus_skew -from $src_cells -to $dst_cells [expr min ($src_clock_period, $dst_clock_period)]
+                # A memory the tools left as logic answers from cells
+                # that are no startpoint for a skew constraint, and a
+                # memory they turned into a block ram answers on the
+                # read clock, where there is no skew to bound.  Both
+                # keep the delay bound above, which is what carries
+                # the crossing.
+                set_bus_skew -quiet -from $src_cells -to $dst_cells [expr min ($src_clock_period, $dst_clock_period)]
             }
         }
     }
