@@ -416,8 +416,12 @@ begin
   end generate;
 
   use_s6dcm: if variant_c = S6_DCM generate
+    -- Only the frequency synthesizer is used, so the delay line is
+    -- left out of the loop: asking for a feedback the block never
+    -- gets is asking for a lock it never reaches.
     inst: dcm_sp
       generic map(
+        clk_feedback => "NONE",
         clkin_period => input_period_ns_c,
         clkfx_multiply => mapping_c.fbdiv.num,
         clkin_divide_by_2 => mapping_c.refdiv = 2,
