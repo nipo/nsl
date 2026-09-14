@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_data, nsl_math, nsl_color;
 use nsl_data.bytestream.all;
+use nsl_data.crc.all;
 
 -- HDMI constant definitions
 package hdmi is
@@ -49,10 +50,42 @@ package hdmi is
   function di_audio_infoframe(cc, ct, ss, sf, cxt, ca, lfepbl0, lsv, dm: integer) return data_island_t;
 
   function rgb24_pack(color: nsl_color.rgb.rgb24) return byte_string;
-  
+
+  -- Parity a data island carries, over its header and over each of
+  -- its four subpackets.  Both ends run the same remainder: a source
+  -- appends what it computes, and a sink holds what arrives against
+  -- what it computes itself.
+  subtype di_bch_t is std_ulogic_vector(0 to 7);
+  constant di_bch_params_c : crc_params_t := crc_params(
+    poly => x"1c1",
+    init => "",
+    complement_state => false,
+    complement_input => false,
+    byte_bit_order => BIT_ORDER_ASCENDING,
+    spill_order => EXP_ORDER_ASCENDING,
+    byte_order => BYTE_ORDER_INCREASING);
+
+  constant di_bch_init_c : di_bch_t := (others => '0');
+
+  function di_bch(state: di_bch_t;
+                  v: std_ulogic_vector) return di_bch_t;
+
 end package hdmi;
 
 package body hdmi is
+
+  function di_bch(state: di_bch_t;
+                  v: std_ulogic_vector) return di_bch_t
+  is
+    variable s : crc_state_t := crc_load(di_bch_params_c, state);
+  begin
+    for i in v'low to v'high
+    loop
+      s := crc_update(di_bch_params_c, s, v(i));
+    end loop;
+
+    return crc_spill_vector(di_bch_params_c, s);
+  end function;
 
   function di_infoframe(frame_type, version: integer;
                         data: byte_string) return data_island_t

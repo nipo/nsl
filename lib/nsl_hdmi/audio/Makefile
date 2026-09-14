@@ -1,6 +1,8 @@
 vhdl-sources += audio.pkg.vhd
 vhdl-sources += hdmi_spdif_di_encoder.vhd
 vhdl-sources += hdmi_spdif_cts_counter.vhd
+vhdl-sources += hdmi_audio_receiver.vhd
+vhdl-sources += hdmi_audio_clock_recovery.vhd
 deps += nsl_hdmi.hdmi
 deps += nsl_spdif.blocker
 deps += nsl_logic.logic
