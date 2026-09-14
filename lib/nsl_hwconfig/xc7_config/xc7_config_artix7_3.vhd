@@ -7,9 +7,27 @@ package body xc7_config is
   is
   begin
     if mode = PLL then
-      return pll_constraints'(800000000, 2133000000, 64, 128, "PLL");
+      return pll_constraints'(
+        fmin => 800000000,
+        fmax => 2133000000,
+        pfd_min => 19000000,
+        pfd_max => 550000000,
+        in_div_max => 56,
+        in_factor_min => 2,
+        in_factor_max => 64,
+        out_factor_max => 128,
+        mode => "PLL");
     else
-      return pll_constraints'(600000000, 1600000000, 64, 128, "MCM");
+      return pll_constraints'(
+        fmin => 600000000,
+        fmax => 1600000000,
+        pfd_min => 10000000,
+        pfd_max => 550000000,
+        in_div_max => 106,
+        in_factor_min => 2,
+        in_factor_max => 64,
+        out_factor_max => 128,
+        mode => "MCM");
     end if;
   end function;
 
