@@ -1,0 +1,16 @@
+set_property -dict { PACKAGE_PIN U5    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[26] }];
+set_property -dict { PACKAGE_PIN V5    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[27] }];
+set_property -dict { PACKAGE_PIN V6    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[28] }];
+set_property -dict { PACKAGE_PIN U7    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[29] }];
+set_property -dict { PACKAGE_PIN V7    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[30] }];
+set_property -dict { PACKAGE_PIN U8    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[31] }];
+set_property -dict { PACKAGE_PIN V8    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[32] }];
+set_property -dict { PACKAGE_PIN V10   IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[33] }];
+set_property -dict { PACKAGE_PIN W10   IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[34] }];
+set_property -dict { PACKAGE_PIN W6    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[35] }];
+set_property -dict { PACKAGE_PIN Y6    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[36] }];
+set_property -dict { PACKAGE_PIN Y7    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[37] }];
+set_property -dict { PACKAGE_PIN W8    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[38] }];
+set_property -dict { PACKAGE_PIN Y8    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[39] }];
+set_property -dict { PACKAGE_PIN W9    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[40] }];
+set_property -dict { PACKAGE_PIN Y9    IOSTANDARD LVCMOS33 } [get_ports { arduino_ext_d_io[41] }];
