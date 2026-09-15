@@ -6,6 +6,48 @@ library nsl_amba;
 
 package packer is
 
+  component apb_slave_packer is
+    generic (
+      config_c: nsl_amba.apb.config_t
+      );
+    port (
+      paddr : in std_logic_vector(config_c.address_width-1 downto 0);
+      pprot : in std_logic_vector(2 downto 0) := (others => '0');
+      psel : in std_logic;
+      penable : in std_logic;
+      pwrite : in std_logic;
+      pwdata : in std_logic_vector(8 * 2**config_c.data_bus_width_l2 - 1 downto 0) := (others => '0');
+      pstrb : in std_logic_vector(2**config_c.data_bus_width_l2 - 1 downto 0) := (others => '1');
+      pready : out std_logic;
+      prdata : out std_logic_vector(8 * 2**config_c.data_bus_width_l2 - 1 downto 0);
+      pslverr : out std_logic;
+
+      apb_i : in nsl_amba.apb.slave_t;
+      apb_o : out nsl_amba.apb.master_t
+      );
+  end component;
+
+  component apb_master_packer is
+    generic (
+      config_c: nsl_amba.apb.config_t
+      );
+    port (
+      paddr : out std_logic_vector(config_c.address_width-1 downto 0);
+      pprot : out std_logic_vector(2 downto 0);
+      psel : out std_logic;
+      penable : out std_logic;
+      pwrite : out std_logic;
+      pwdata : out std_logic_vector(8 * 2**config_c.data_bus_width_l2 - 1 downto 0);
+      pstrb : out std_logic_vector(2**config_c.data_bus_width_l2 - 1 downto 0);
+      pready : in std_logic := '1';
+      prdata : in std_logic_vector(8 * 2**config_c.data_bus_width_l2 - 1 downto 0) := (others => '0');
+      pslverr : in std_logic := '0';
+
+      apb_o : out nsl_amba.apb.slave_t;
+      apb_i : in nsl_amba.apb.master_t
+      );
+  end component;
+
   component axi4_mm_lite_slave_packer is
     generic (
       config_c: nsl_amba.axi4_mm.config_t
