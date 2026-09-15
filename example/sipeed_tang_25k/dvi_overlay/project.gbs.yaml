@@ -1,0 +1,62 @@
+name: tang_25k_dvi_overlay
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.ddc
+    - nsl_dvi.transceiver
+    - nsl_dvi.decoder
+    - nsl_dvi.encoder
+    - nsl_video.terminal
+    - nsl_uart.serdes
+    - nsl_dvi.dvi
+    - nsl_video.raster
+    - nsl_video.pixel_stream
+    - nsl_video.mode
+    - nsl_indication.font_6x8
+    - nsl_icesugar.pmod_lcd_096
+    - nsl_color.rgb
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_i2c.i2c
+    - nsl_sipeed.pmod_dvi
+    - nsl_digilent.pmod
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+    - nsl_hwdep.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/pmod_dvi_sideband.cst
+        - ../pinout/clk.cst
+        - ../pinout/uart.cst
+        - ../pinout/buttons.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j4_pmod_dvi_rx_lvds.cst
+        - ../pinout/j5_pmod_single_lvcmos33d.cst
+        - ../pinout/j6_pmod_double_lvcmos33.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: dvi_overlay.fs
