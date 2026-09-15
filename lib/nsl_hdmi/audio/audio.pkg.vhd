@@ -112,16 +112,31 @@ package audio is
   --
   -- A source states N and CTS rather than a rate, and they mean
   -- 128 * fs = link clock * N / CTS.  What comes out here is a tick at
-  -- 128 * fs and another at fs, counted rather than generated: an
-  -- accumulator takes N every link cycle and gives a tick back every
-  -- CTS it holds.
+  -- mclk_ratio_c * fs and another at fs, counted rather than
+  -- generated: an accumulator takes the scaled N every link cycle and
+  -- gives a tick back every CTS it holds.
   --
   -- That makes a tick whose average rate is exactly right and whose
   -- spacing is not, wandering by one cycle either way.  Anything
   -- taking these clocks its own way -- I2S out, SPDIF out, a DAC --
-  -- retimes them, so the jitter costs nothing.  Driving a converter
-  -- straight off one would be another matter.
+  -- retimes them, so the jitter costs nothing.
+  --
+  -- Clocking a converter off one is another matter, and is what the
+  -- ratio is for.  A clock toggled on these ticks is only as even as
+  -- the link clock lets it be: its edges land on link cycles, so a
+  -- period is a whole number of them and comes out long or short as
+  -- the accumulator falls.  The faster the link clock runs against the
+  -- clock wanted, the smaller that is -- a converter's master clock
+  -- duty cycle is usually held to 45..55%, which wants the link clock
+  -- at six times it or better.
   component hdmi_audio_clock_recovery is
+    generic(
+      -- Ticks to make for every audio frame.  128 is what the standard
+      -- states N and CTS against and the least this can be asked for;
+      -- driving a converter's master clock at 256 fs takes 512, one
+      -- tick per edge.
+      mclk_ratio_c : natural := 128
+      );
     port(
       reset_n_i : in std_ulogic;
       clock_i : in std_ulogic;

@@ -2,9 +2,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library nsl_math, nsl_synthesis;
 
 entity hdmi_audio_clock_recovery is
+  generic(
+    -- Ticks to make for every audio frame.
+    --
+    -- A source states N and CTS against 128, which is what IEC 60958
+    -- clocks a subframe with, and that is the least this can be asked
+    -- for.  A converter usually wants more: 256 frames' worth of
+    -- master clock is the slowest most of them take, and a clock needs
+    -- a tick for each of its edges, so driving one costs 512.
+    --
+    -- What changes with this is the step, not the rate: every ratio
+    -- comes out at exactly the rate the source stated, because it is
+    -- the same N and CTS scaled.
+    mclk_ratio_c : natural := 128
+    );
   port(
     reset_n_i : in std_ulogic;
     clock_i : in std_ulogic;
@@ -22,32 +36,45 @@ end entity;
 
 architecture beh of hdmi_audio_clock_recovery is
 
-  -- The accumulator never passes CTS by more than N, and both are
-  -- twenty bits, so one more bit holds every sum that can arise.
-  subtype acc_t is unsigned(20 downto 0);
+  -- What the stated N has to be multiplied by to tick this often.  A
+  -- ratio the standard's 128 does not divide has no such number and is
+  -- not a thing to ask for.
+  constant scale_c : natural := mclk_ratio_c / 128;
 
-  -- Ticks of 128 * fs to one of fs
-  constant mclk_per_sample_c : natural := 128;
+  -- The accumulator never passes CTS by more than the scaled N, and
+  -- CTS is twenty bits, so twenty bits plus what the scale adds plus
+  -- one holds every sum that can arise.
+  subtype acc_t is unsigned(20 + nsl_math.arith.log2(scale_c) downto 0);
 
   type regs_t is
   record
     ready: std_ulogic;
     cts: acc_t;
-    -- What to add: N while below CTS, and N less CTS when stepping
-    -- over it.  Holding both means one adder does the work of an add
-    -- and a subtract.
+    -- What to add: the scaled N while below CTS, and that less CTS
+    -- when stepping over it.  Holding both means one adder does the
+    -- work of an add and a subtract.
     step_up, step_wrap: acc_t;
 
     acc: acc_t;
     mclk: std_ulogic;
 
-    divider: natural range 0 to mclk_per_sample_c-1;
+    divider: natural range 0 to mclk_ratio_c-1;
     sample: std_ulogic;
   end record;
 
   signal r, rin: regs_t;
 
 begin
+
+  shape: nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c => "A tick ratio has to be a whole number of the 128 "
+      & "a source states N and CTS against",
+      condition_c => scale_c * 128 = mclk_ratio_c
+      )
+    port map(
+      unused_i => '0'
+      );
 
   regs: process(clock_i, reset_n_i) is
   begin
@@ -73,10 +100,11 @@ begin
     if valid_i = '1' then
       rin.ready <= '1';
       rin.cts <= resize(cts_i, acc_t'length);
-      rin.step_up <= resize(n_i, acc_t'length);
+      rin.step_up <= resize(n_i * scale_c, acc_t'length);
       -- N is smaller than CTS by a long way, so this wraps.  Adding it
       -- back on is what takes CTS off again.
-      rin.step_wrap <= resize(n_i, acc_t'length) - resize(cts_i, acc_t'length);
+      rin.step_wrap <= resize(n_i * scale_c, acc_t'length)
+                       - resize(cts_i, acc_t'length);
     end if;
 
     if r.ready = '1' then
@@ -87,7 +115,7 @@ begin
         rin.acc <= r.acc + r.step_wrap;
         rin.mclk <= '1';
 
-        if r.divider = mclk_per_sample_c-1 then
+        if r.divider = mclk_ratio_c-1 then
           rin.divider <= 0;
           rin.sample <= '1';
         else

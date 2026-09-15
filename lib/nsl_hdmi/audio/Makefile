@@ -8,3 +8,5 @@ deps += nsl_spdif.blocker
 deps += nsl_logic.logic
 deps += nsl_data.bytestream
 deps += nsl_data.endian
+deps += nsl_math.arith
+deps += nsl_synthesis.assertion
