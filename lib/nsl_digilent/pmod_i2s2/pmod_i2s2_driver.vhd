@@ -9,7 +9,7 @@ entity pmod_i2s2_driver is
     line_in_slave_c: boolean := false
     );
   port(
-    pmod_io: work.pmod.pmod_double_t;
+    pmod_io: inout work.pmod.pmod_double_t;
 
     clock_i   : in std_ulogic;
     reset_n_i : in std_ulogic;
@@ -72,6 +72,8 @@ begin
       port map(
         clock_i => clock_i,
         reset_n_i => reset_n_i,
+
+        sck_div_m1_i => rx_sck_div_m1_i,
 
         sck_o => pmod_io(7),
         ws_o => pmod_io(6),
