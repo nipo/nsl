@@ -41,7 +41,11 @@ architecture arch of tb is
 
   signal clock_s, reset_n_s: std_ulogic;
 
-  signal slave_o_s: nsl_i2c.i2c.i2c_o;
+  signal slave_o_s, hdmi_o_s: nsl_i2c.i2c.i2c_o;
+
+  -- A sink answers its EDID at one address only.  The HDMI one sits
+  -- elsewhere so both shapes of block are on the bus at once.
+  constant hdmi_address_c: unsigned(7 downto 1) := "1010001";
   signal bus_s: nsl_i2c.i2c.i2c_i;
   signal selected_s: std_ulogic;
 
@@ -67,8 +71,10 @@ begin
   end process;
 
   -- Both ends pull down, and pull-ups make the rest
-  bus_s.scl <= '0' when master_scl_s = '0' or slave_o_s.scl.drain_n = '0' else 'H';
-  bus_s.sda <= '0' when master_sda_s = '0' or slave_o_s.sda.drain_n = '0' else 'H';
+  bus_s.scl <= '0' when master_scl_s = '0' or slave_o_s.scl.drain_n = '0'
+               or hdmi_o_s.scl.drain_n = '0' else 'H';
+  bus_s.sda <= '0' when master_sda_s = '0' or slave_o_s.sda.drain_n = '0'
+               or hdmi_o_s.sda.drain_n = '0' else 'H';
 
   dut: nsl_dvi.ddc.ddc_edid_slave
     generic map(
@@ -87,6 +93,28 @@ begin
       i2c_o => slave_o_s,
 
       selected_o => selected_s
+      );
+
+  hdmi_dut: nsl_dvi.ddc.ddc_edid_slave
+    generic map(
+      modes_c => modes_c,
+      manufacturer_c => "NSL",
+      product_code_c => 3,
+      name_c => "NSL Capture",
+      h_size_mm_c => 160,
+      v_size_mm_c => 120,
+      hdmi_c => true,
+      audio_channels_c => 2,
+      address_c => hdmi_address_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      i2c_i => bus_s,
+      i2c_o => hdmi_o_s,
+
+      selected_o => open
       );
 
   main: process is
@@ -246,6 +274,46 @@ begin
       report "The slave answered an address that is not its own"
       severity failure;
     bus_stop;
+
+    -- An HDMI sink hands two blocks, and the second is past the one
+    -- byte of address a source writes.  Reading there is what proves
+    -- the whole of it is reachable.
+    bus_start;
+    bus_write(to_byte(16#a2#), acked);
+    assert acked
+      report "The HDMI slave did not answer its address"
+      severity failure;
+    bus_write(to_byte(128), acked);
+    bus_start;
+    bus_write(to_byte(16#a3#), acked);
+    for i in 0 to block_byte_count_c-1
+    loop
+      bus_read(got(i), i = block_byte_count_c-1);
+    end loop;
+    bus_stop;
+
+    assert got(0) = x"02" and got(1) = x"03"
+      report "The second block is not a CTA revision three extension"
+      severity failure;
+    assert got(4) = x"67" and got(5 to 7) = byte_string'(x"03", x"0c", x"00")
+      report "The second block does not carry the HDMI vendor block"
+      severity failure;
+    assert checksum_of(got) = x"00"
+      report "The second block does not sum to zero"
+      severity failure;
+
+    -- And the first block says it is there
+    bus_start;
+    bus_write(to_byte(16#a2#), acked);
+    bus_write(to_byte(126), acked);
+    bus_start;
+    bus_write(to_byte(16#a3#), acked);
+    bus_read(got(0), true);
+    bus_stop;
+
+    assert got(0) = to_byte(1)
+      report "The base block does not state the extension that follows it"
+      severity failure;
 
     nsl_simulation.control.terminate(0);
     wait;
