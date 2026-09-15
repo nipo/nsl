@@ -263,6 +263,9 @@ projects:
   - name: hdmi_encoder
     path: hdmi/encoder
     tags: [ghdl, simulation]
+  - name: hdmi_decoder
+    path: hdmi_decoder
+    tags: [ghdl, simulation]
   - name: i2c_cbor_full_test
     path: i2c_cbor/full_test
     tags: [ghdl, simulation]
