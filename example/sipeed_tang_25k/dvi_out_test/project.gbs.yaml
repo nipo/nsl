@@ -1,0 +1,45 @@
+name: tang_25k_dvi_out_test
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.encoder
+    - nsl_dvi.dvi
+    - nsl_video.mode
+    - nsl_sipeed.pmod_dvi
+    - nsl_data.bytestream
+    - nsl_digilent.pmod
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j4_pmod_dvi_rx_lvds.cst
+        - ../pinout/j5_pmod_single_lvcmos33d.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: dvi_out_test.fs
