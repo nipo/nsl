@@ -156,6 +156,55 @@ package raster is
       );
   end component;
 
+  -- Makes a smaller raster out of a bigger one, by leaving pixels out.
+  --
+  -- Nothing is filtered and nothing is averaged: one pixel in so many
+  -- is kept and the rest are dropped.  That is what a thumbnail on a
+  -- small panel wants and what costs nothing -- no line store, no
+  -- multiplier, one adder an axis.
+  --
+  -- Which ones are kept is the remainder trick: an accumulator takes
+  -- the output size every pixel and gives a pixel back every input
+  -- size it holds.  Over a line that keeps exactly the output width,
+  -- wherever the ratio falls -- 1280 to 160 is every eighth pixel and
+  -- 1920 to 80 lines is every thirteenth or fourteenth by turns.
+  --
+  -- The accumulator is tested against the difference of the two sizes
+  -- rather than having the step added before the test, so what runs
+  -- is one comparison and one addition of a constant rather than two
+  -- additions one after the other.
+  --
+  -- The last pixel of a line always survives, and so does the last
+  -- line of a frame, so a line and a frame end where they ended.  The
+  -- first does not: the first pixel kept is some way in, which shows
+  -- as the picture being cropped by less than one output pixel.
+  --
+  -- What arrives cannot be held up -- a raster off a wire never can --
+  -- so a beat with nowhere to go is dropped and overflow_o says so.
+  -- What leaves may be: this is where a captured stream gets its back
+  -- pressure back, which is why the two configurations are stated
+  -- separately.  They differ in that and in nothing else.
+  component pixel_stream_decimator is
+    generic(
+      in_config_c: nsl_video.pixel_stream.config_t;
+      out_config_c: nsl_video.pixel_stream.config_t;
+      in_geometry_c: nsl_video.mode.geometry_t;
+      out_geometry_c: nsl_video.mode.geometry_t
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+
+      in_i: in nsl_video.pixel_stream.master_t;
+      in_o: out nsl_video.pixel_stream.slave_t;
+
+      out_o: out nsl_video.pixel_stream.master_t;
+      out_i: in nsl_video.pixel_stream.slave_t;
+
+      overflow_o: out std_ulogic
+      );
+  end component;
+
   -- Feeds a raster that owns its own timing from a pixel stream.
   --
   -- Framing travels with the pixels, and a wire-side raster cannot
