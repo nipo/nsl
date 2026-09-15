@@ -1,0 +1,72 @@
+name: tang_25k_hdmi_audio_i2s
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.ddc
+    - nsl_dvi.transceiver
+    - nsl_dvi.decoder
+    - nsl_dvi.dvi
+    - nsl_video.terminal
+    - nsl_hdmi.decoder
+    - nsl_hdmi.audio
+    - nsl_hdmi.audio_stream
+    - nsl_hdmi.hdmi
+    - nsl_audio.pcm
+    - nsl_audio.pcm_stream
+    - nsl_i2s.clock
+    - nsl_i2s.stream
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_video.raster
+    - nsl_video.pixel_stream
+    - nsl_video.mode
+    - nsl_indication.font_6x8
+    - nsl_icesugar.pmod_lcd_096
+    - nsl_color.rgb
+    - nsl_data.bytestream
+    - nsl_data.text
+    - nsl_i2c.i2c
+    - nsl_digilent.pmod
+    - nsl_digilent.pmod_i2s2
+    - nsl_uart.serdes
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_clocking.interdomain
+    - nsl_hwdep.reset
+    - nsl_hwdep.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/pmod_dvi_sideband.cst
+        - ../pinout/clk.cst
+        - ../pinout/uart.cst
+        - ../pinout/buttons.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j4_pmod_dvi_rx_lvds.cst
+        - ../pinout/j5_pmod_double_lvcmos33.cst
+        - ../pinout/j6_pmod_double_lvcmos33.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: hdmi_audio_i2s.fs
