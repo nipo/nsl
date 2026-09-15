@@ -3,8 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_dvi, nsl_hdmi, nsl_simulation, nsl_data;
-use nsl_dvi.mode.all;
+library nsl_video, nsl_simulation, nsl_data;
+use nsl_video.mode.all;
 use nsl_data.text.all;
 
 entity tb is
@@ -82,17 +82,6 @@ begin
       and v_bp_m1(m, 5) = to_unsigned(19, 5)
       and v_act_m1(m, 10) = to_unsigned(719, 10)
       report "Bad vertical timings"
-      severity failure;
-
-    -- The HDMI names reach the same modes and the same functions
-
-    assert nsl_hdmi.mode.pixel_clock_hz(nsl_hdmi.mode.mode_std_1280x720p50_c)
-      = pixel_clock_hz(mode_std_1280x720p50_c)
-      report "HDMI and DVI disagree on a mode"
-      severity failure;
-    assert nsl_hdmi.mode.h_act_m1(nsl_hdmi.mode.mode_std_720x576p50_c, 10)
-      = h_act_m1(mode_std_720x576p50_c, 10)
-      report "HDMI and DVI disagree on a timing"
       severity failure;
 
     nsl_simulation.control.terminate(0);

@@ -27,7 +27,7 @@ entity main is
     clock_i_hz_c : natural;
     -- Video mode, and the clocks it calls for.  Both are exact: the
     -- solver refuses a rate it cannot hold.
-    mode_c : nsl_dvi.mode.mode_t
+    mode_c : nsl_video.mode.mode_t
     );
   port (
     clock_i : in std_ulogic;
@@ -46,7 +46,7 @@ end entity;
 
 architecture beh of main is
 
-  use nsl_dvi.mode.all;
+  use nsl_video.mode.all;
   use nsl_clocking.pll.all;
 
   -- One stage reaches both clocks from the board oscillator.
@@ -337,7 +337,7 @@ begin
         background_i => rd_bg_s
         );
 
-    display: nsl_dvi.terminal.terminal_text_buffer
+    display: nsl_video.terminal.terminal_text_buffer
       generic map(
         row_count_l2_c => row_count_l2_c,
         column_count_l2_c => column_count_l2_c,

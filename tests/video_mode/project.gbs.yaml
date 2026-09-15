@@ -1,18 +1,21 @@
-name: dvi_blender
+name: video_mode
 
 root:
   name: top
   deps:
-    - nsl_dvi.blender
+    - nsl_video.mode
     - nsl_simulation.control
+    - nsl_data.text
   sources:
     - file_type: vhdl
       files:
-        - tb.vhd
+        - src/tb.vhd
 
 output:
   - name: simulation
     topcell: tb
+    filter_vars:
+      hwdep: simulation
     backend_config:
       gbs.builtin.ghdl:
         success_regex: "Terminating with error level: 0"

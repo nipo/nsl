@@ -11,12 +11,11 @@ root:
     - nsl_clocking.async
     - nsl_clocking.distribution
     - nsl_clocking.pll
-    - nsl_dvi.mode
     - nsl_dvi.transceiver
     - nsl_dvi.encoder
-    - nsl_dvi.terminal
-    - nsl_dvi.blender
-    - nsl_dvi.colormap
+    - nsl_video.terminal
+    - nsl_video.blender
+    - nsl_video.colormap
     - nsl_indication.font_6x8
     - nsl_hwdep.clock
     - nsl_hwdep.reset

@@ -6,7 +6,7 @@ library nsl_color, nsl_video, nsl_synthesis;
 use nsl_color.rgb.all;
 use nsl_color.ycbcr.all;
 
-entity color_bars is
+entity ycbcr_color_bars is
     generic(
       geometry_c : nsl_video.mode.geometry_t;
       config_c : nsl_video.pixel_stream.config_t;
@@ -21,9 +21,9 @@ entity color_bars is
       out_o : out nsl_video.pixel_stream.master_t;
       out_i : in nsl_video.pixel_stream.slave_t
     );
-end color_bars;
+end ycbcr_color_bars;
 
-architecture beh of color_bars is
+architecture beh of ycbcr_color_bars is
 
   type regs_t is
   record

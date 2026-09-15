@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_video, nsl_solomonsystech;
+library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_color, nsl_video,
+  nsl_solomonsystech;
 
 entity boundary is
   port (
@@ -66,7 +67,7 @@ begin
       pmod_io => j4_io
       );
 
-  pattern: nsl_dvi.pattern.color_bars
+  pattern: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => pixel_config_c,

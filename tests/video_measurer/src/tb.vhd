@@ -83,7 +83,7 @@ begin
   hsync_pol_s <= modes_c(mode_index_s).h.sync;
   vsync_pol_s <= modes_c(mode_index_s).v.sync;
 
-  bars: nsl_dvi.pattern.color_bars
+  bars: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => config_c,

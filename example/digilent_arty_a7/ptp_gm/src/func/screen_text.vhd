@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_data, nsl_dvi, nsl_time, work;
+library nsl_data, nsl_time, work, nsl_video;
 use nsl_data.text.all;
-use nsl_dvi.terminal.all;
+use nsl_video.terminal.all;
 use nsl_time.calendar.all;
 use nsl_time.timestamp.all;
 use nsl_time.discipline.all;

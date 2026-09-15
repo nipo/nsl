@@ -11,8 +11,14 @@ Modes and geometries
 
 `mode <mode/>`_ states what a frame looks like -- active pixels and
 lines, the blanking around them, the sync pulses inside it -- and the
-clocks that frame calls for. `nsl_dvi.mode` and `nsl_hdmi.mode` are
-the names DVI and HDMI users know the same package by.
+clocks that frame calls for.
+
+Two families state the remaining number differently. Broadcast modes
+(CEA/HDMI) state a frame rate and the pixel clock follows from the
+geometry; computer modes (VESA/DMT) state a pixel clock and the frame
+rate follows. 1024x768 at "60 Hz" runs at 65 MHz, which is 60.004
+frames per second, not 60, and `mode_build_clocked` is how such a
+mode is stated. Either way a mode knows its pixel clock exactly.
 
 A *geometry* is the part of a mode a pixel stream cares about: how
 many pixels a line holds and how many lines a frame holds. Blanking

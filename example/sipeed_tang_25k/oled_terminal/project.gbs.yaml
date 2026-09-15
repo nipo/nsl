@@ -6,7 +6,7 @@ root:
     - nsl_video.mode
     - nsl_video.pixel_stream
     - nsl_digilent.pmod_oled_rgb
-    - nsl_dvi.terminal
+    - nsl_video.terminal
     - nsl_indication.font_6x8
     - nsl_color.rgb
     - nsl_clocking.distribution

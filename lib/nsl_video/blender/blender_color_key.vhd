@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_video, nsl_synthesis;
 use nsl_video.pixel_stream.all;
 
-entity dvi_blender_color_key is
+entity blender_color_key is
   generic(
     config_c: nsl_video.pixel_stream.config_t;
     key_color_c: natural := 0
@@ -22,7 +22,7 @@ entity dvi_blender_color_key is
     );
 end entity;
 
-architecture beh of dvi_blender_color_key is
+architecture beh of blender_color_key is
 
   constant key_c : nsl_video.pixel_stream.component_t
     := to_unsigned(key_color_c, nsl_video.pixel_stream.max_component_bits_c);

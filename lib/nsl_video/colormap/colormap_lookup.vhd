@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 library nsl_color, nsl_video, nsl_synthesis;
 use nsl_video.pixel_stream.all;
 
-entity dvi_colormap_lookup is
+entity colormap_lookup is
   generic(
     in_config_c : nsl_video.pixel_stream.config_t;
     out_config_c : nsl_video.pixel_stream.config_t
@@ -24,7 +24,7 @@ entity dvi_colormap_lookup is
     );
 end entity;
 
-architecture beh of dvi_colormap_lookup is
+architecture beh of colormap_lookup is
 
   subtype color_t is unsigned(in_config_c.component_bits-1 downto 0);
 

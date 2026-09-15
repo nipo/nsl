@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_amba, nsl_mii, nsl_clocking, nsl_smi, nsl_hwdep, nsl_i2c,
-  nsl_io, nsl_time, nsl_digilent, nsl_dvi, nsl_indication, nsl_color,
+  nsl_io, nsl_time, nsl_digilent, nsl_indication, nsl_color,
   gatecap_generated, work, nsl_video, nsl_solomonsystech;
 use nsl_amba.axi4_stream.all;
 use nsl_mii.flit.all;
@@ -133,7 +133,7 @@ architecture beh of fpga_io is
   signal pixel_s : nsl_video.pixel_stream.bus_t;
   signal synced_s : std_ulogic;
   signal screen_text_s : string(1 to work.func.screen_text_length_c);
-  signal screen_colors_s : nsl_dvi.terminal.label_color_vector(0 to work.func.screen_color_count_c-1);
+  signal screen_colors_s : nsl_video.terminal.label_color_vector(0 to work.func.screen_color_count_c-1);
   signal dac_init_frame_s, dac_update_frame_s, dac_response_s : std_ulogic;
   -- second, tacc, freq_ppb, pps_offset and aux_offset concatenated
   -- for one settled crossing toward the panel.
@@ -469,7 +469,7 @@ begin
       pmod_io => ja_io
       );
 
-  terminal: nsl_dvi.terminal.terminal_labels
+  terminal: nsl_video.terminal.terminal_labels
     generic map(
       row_count_l2_c => 3,
       column_count_l2_c => 4,

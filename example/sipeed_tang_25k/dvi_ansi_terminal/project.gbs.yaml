@@ -9,10 +9,9 @@ root:
     - nsl_sipeed.pmod_dvi
     - nsl_clocking.async
     - nsl_clocking.distribution
-    - nsl_dvi.mode
     - nsl_dvi.transceiver
     - nsl_dvi.encoder
-    - nsl_dvi.terminal
+    - nsl_video.terminal
     - nsl_terminal.ansi
     - nsl_indication.font_6x8
     - nsl_hwdep.clock

@@ -15,9 +15,9 @@ package blender is
   --
   -- The datapath is combinational.  Typical usage is between two
   -- colour-index generators and a shared
-  -- nsl_dvi.colormap.dvi_colormap_lookup instance, with key_color_c
+  -- nsl_video.colormap.colormap_lookup instance, with key_color_c
   -- reserved as the transparent entry of the overlay.
-  component dvi_blender_color_key is
+  component blender_color_key is
     generic(
       config_c: nsl_video.pixel_stream.config_t;
       key_color_c: natural := 0

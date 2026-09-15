@@ -2,11 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_clocking, nsl_hwdep, nsl_digilent, nsl_icesugar, nsl_dvi,
+library nsl_amba, nsl_clocking, nsl_hwdep, nsl_digilent, nsl_icesugar,
   nsl_color, nsl_indication, nsl_data, nsl_usb, nsl_video;
 use nsl_amba.axi4_stream.all;
 use nsl_color.rgb.all;
-use nsl_dvi.terminal.all;
+use nsl_video.terminal.all;
 use nsl_data.bytestream.all;
 use nsl_data.text.all;
 use nsl_usb.hid_host.all;
@@ -276,7 +276,7 @@ begin
       pmod_io => j4_io
       );
 
-  terminal: nsl_dvi.terminal.terminal_labels
+  terminal: nsl_video.terminal.terminal_labels
     generic map(
       row_count_l2_c => 4,
       column_count_l2_c => 5,

@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_time, nsl_simulation, work;
-use nsl_dvi.terminal.all;
+library nsl_time, nsl_simulation, work, nsl_video;
+use nsl_video.terminal.all;
 use work.func.all;
 
 entity tb is

@@ -8,7 +8,7 @@ library nsl_data;
 package ansi is
 
   -- Terminal engine backed by a text buffer memory such as
-  -- nsl_dvi.terminal.terminal_text_buffer. It consumes a byte stream
+  -- nsl_video.terminal.terminal_text_buffer. It consumes a byte stream
   -- and drives the buffer user port with the resulting screen
   -- contents. Colors are 4-bit indices: 0-7 are the standard ANSI
   -- colors, 8-15 their bright variants (SGR bold or 90-107 codes).

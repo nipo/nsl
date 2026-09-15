@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_dvi, nsl_color, nsl_video;
+library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_color, nsl_video;
 library nsl_solomonsystech, nsl_spi;
 
 entity boundary is
@@ -89,7 +89,7 @@ begin
   pmod_io(7) <= vccen_s;
   pmod_io(8) <= en_s;
 
-  pattern: nsl_dvi.pattern.color_bars
+  pattern: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => pixel_config_c,

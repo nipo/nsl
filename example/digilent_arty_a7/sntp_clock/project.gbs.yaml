@@ -28,7 +28,7 @@ root:
     - nsl_smi.transactor
     - nsl_digilent.pmod
     - nsl_digilent.pmod_oled_rgb
-    - nsl_dvi.terminal
+    - nsl_video.terminal
     - nsl_indication.font_6x8
     - nsl_color.rgb
     - nsl_data.text

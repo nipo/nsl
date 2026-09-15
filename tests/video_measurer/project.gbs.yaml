@@ -3,7 +3,7 @@ name: video_measurer
 root:
   name: top
   deps:
-    - nsl_dvi.pattern
+    - nsl_video.pattern
     - nsl_dvi.encoder
     - nsl_dvi.dvi
     - nsl_video.mode

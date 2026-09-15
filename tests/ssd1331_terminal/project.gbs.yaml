@@ -4,7 +4,7 @@ root:
   name: top
   deps:
     - nsl_solomonsystech.ssd1331
-    - nsl_dvi.terminal
+    - nsl_video.terminal
     - nsl_indication.font
     - nsl_indication.font_6x8
     - nsl_spi.spi

@@ -49,7 +49,7 @@ Architecture
     |
   screen_text (calendar_from_seconds, to_decimal_string)
     | 128-character string and 5 color indices
-  terminal_labels (nsl_dvi, 16x8 label layout, 6x8 font) -> pmod_oled_rgb_driver on JA
+  terminal_labels (nsl_video, 16x8 label layout, 6x8 font) -> pmod_oled_rgb_driver on JA
 
   link_monitor_smi (PHY_DP83xxx) -> smi_framed_transactor -> MDIO
 

@@ -13,7 +13,7 @@ package colormap is
   -- component: a stream of eight-bit indices looks up a palette of
   -- 256 entries.  The lookup is registered, and framing travels with
   -- the pixel it belongs to.
-  component dvi_colormap_lookup is
+  component colormap_lookup is
     generic(
       in_config_c : nsl_video.pixel_stream.config_t;
       out_config_c : nsl_video.pixel_stream.config_t

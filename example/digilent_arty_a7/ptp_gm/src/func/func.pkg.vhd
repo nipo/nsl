@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_i2c, nsl_smi, nsl_time, nsl_dvi;
-use nsl_dvi.terminal.all;
+library nsl_amba, nsl_i2c, nsl_smi, nsl_time, nsl_video;
+use nsl_video.terminal.all;
 
 package func is
 

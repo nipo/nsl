@@ -271,7 +271,7 @@ begin
                  and nsl_video.pixel_stream.is_eof(pixel_config_c, pixel_s.m)
                  else '0';
 
-  generator: nsl_dvi.pattern.color_bars
+  generator: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => pixel_config_c

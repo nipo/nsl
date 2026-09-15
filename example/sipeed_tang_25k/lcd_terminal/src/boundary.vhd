@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_icesugar, nsl_dvi, nsl_color, nsl_indication, nsl_video;
+library nsl_clocking, nsl_hwdep, nsl_digilent, nsl_icesugar, nsl_color,
+  nsl_indication, nsl_video;
 use nsl_color.rgb.all;
 
 entity boundary is
@@ -128,7 +129,7 @@ begin
       pmod_io => j4_io
       );
 
-  terminal: nsl_dvi.terminal.terminal_text_buffer
+  terminal: nsl_video.terminal.terminal_text_buffer
     generic map(
       row_count_l2_c => 4,
       column_count_l2_c => 5,

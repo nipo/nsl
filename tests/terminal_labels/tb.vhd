@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_dvi, nsl_video, nsl_indication, nsl_color, nsl_simulation, nsl_data;
-use nsl_dvi.terminal.all;
+library nsl_video, nsl_indication, nsl_color, nsl_simulation, nsl_data;
+use nsl_video.terminal.all;
 use nsl_video.pixel_stream.all;
 use nsl_color.rgb.all;
 use nsl_data.text.all;

@@ -2,7 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_solomonsystech, nsl_dvi, nsl_video, nsl_indication, nsl_spi, nsl_color, nsl_data, nsl_simulation;
+library nsl_solomonsystech, nsl_video, nsl_indication, nsl_spi,
+  nsl_color, nsl_data, nsl_simulation;
 use nsl_solomonsystech.ssd1331.all;
 use nsl_video.pixel_stream.all;
 use nsl_color.rgb.all;
@@ -133,7 +134,7 @@ begin
       synced_o => synced_s
       );
 
-  terminal: nsl_dvi.terminal.terminal_text_buffer
+  terminal: nsl_video.terminal.terminal_text_buffer
     generic map(
       row_count_l2_c => 3,
       column_count_l2_c => 4,

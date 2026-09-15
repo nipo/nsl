@@ -80,7 +80,7 @@ begin
       color_i => color_i
       );
 
-  colormap: work.colormap.dvi_colormap_lookup
+  colormap: work.colormap.colormap_lookup
     generic map(
       in_config_c => index_config_c,
       out_config_c => config_c

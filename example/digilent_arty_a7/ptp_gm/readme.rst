@@ -76,7 +76,7 @@ Status screen
 =============
 
 A Pmod OLEDrgb (SSD1331, 96x64) on JA shows the grandmaster status as
-a 16x8 text screen, rendered by ``nsl_dvi.terminal.terminal_labels``
+a 16x8 text screen, rendered by ``nsl_video.terminal.terminal_labels``
 from ``src/func/screen_text.vhd`` in the stack domain, every value
 having already crossed for the panel::
 

@@ -93,7 +93,7 @@ begin
       done_i => done_s
       );
 
-  bars: nsl_dvi.pattern.color_bars
+  bars: nsl_video.pattern.rgb_color_bars
     generic map(
       geometry_c => geometry_c,
       config_c => tx_config_c,

@@ -11,7 +11,7 @@ ANSI terminal engine
 
 ``nsl_terminal.ansi.ansi_terminal`` turns a byte stream (typically a
 UART) into screen contents, driving the user port of a text buffer
-memory such as ``nsl_dvi.terminal.terminal_text_buffer``. Any display
+memory such as ``nsl_video.terminal.terminal_text_buffer``. Any display
 that exposes such a buffer (DVI, OLED, LCD) is then a terminal.
 
 Architecture

@@ -16,7 +16,7 @@ entity main is
     clock_i_hz_c : natural;
     -- Video mode, and the clocks it calls for.  Both are exact: the
     -- solver refuses a rate it cannot hold.
-    mode_c : nsl_dvi.mode.mode_t
+    mode_c : nsl_video.mode.mode_t
     );
   port (
     clock_i : in std_ulogic;
@@ -33,7 +33,7 @@ end entity;
 
 architecture beh of main is
 
-  use nsl_dvi.mode.all;
+  use nsl_video.mode.all;
   use nsl_clocking.pll.all;
 
   -- 720p50 needs 74.25MHz, which no single ratio reaches from 50MHz:
@@ -189,7 +189,7 @@ begin
 
     signal r, rin: regs_t;
   begin    
-    generator: nsl_dvi.terminal.terminal_text_buffer
+    generator: nsl_video.terminal.terminal_text_buffer
       generic map(
         row_count_l2_c => row_count_l2_c,
         column_count_l2_c => column_count_l2_c,

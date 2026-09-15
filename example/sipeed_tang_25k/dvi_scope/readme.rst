@@ -3,7 +3,7 @@
 ================
 
 This example demonstrates the color-key overlay blender
-(``nsl_dvi.blender.dvi_blender_color_key``).
+(``nsl_video.blender.blender_color_key``).
 
 A scope-style underlay (graticule and sine trace) and a
 ``terminal_labels_colormap`` overlay (title bar and status line) are

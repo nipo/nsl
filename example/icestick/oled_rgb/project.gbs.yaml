@@ -8,7 +8,7 @@ root:
     - nsl_video.mode
     - nsl_video.pixel_stream
     - nsl_spi.spi
-    - nsl_dvi.pattern
+    - nsl_video.pattern
     - nsl_color.rgb
     - nsl_clocking.distribution
     - nsl_clocking.async

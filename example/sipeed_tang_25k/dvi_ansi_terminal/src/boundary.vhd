@@ -1,4 +1,4 @@
-library ieee, nsl_dvi;
+library ieee, nsl_video;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
@@ -61,7 +61,7 @@ begin
   main: work.top.main
     generic map(
       clock_i_hz_c => clk_hz_c,
-      mode_c => nsl_dvi.mode.mode_std_1024x768p60_c
+      mode_c => nsl_video.mode.mode_std_1024x768p60_c
       )
     port map(
       clock_i => clock_s,

@@ -12,12 +12,10 @@ root:
     - nsl_clocking.distribution
     - nsl_event.tick
     - nsl_clocking.pll
-    - nsl_dvi.mode
     - nsl_dvi.transceiver
-    - nsl_dvi.pattern
+    - nsl_video.pattern
     - nsl_hdmi.audio
     - nsl_hdmi.encoder
-    - nsl_hdmi.pattern
     - nsl_hwdep.clock
     - nsl_hwdep.reset
     - nsl_io.io

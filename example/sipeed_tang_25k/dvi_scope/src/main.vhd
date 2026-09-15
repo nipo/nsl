@@ -6,7 +6,7 @@ library work, nsl_color, nsl_clocking, nsl_data, nsl_dvi, nsl_video, nsl_math, n
 use nsl_color.rgb.all;
 use nsl_data.text.all;
 use nsl_digilent.pmod.all;
-use nsl_dvi.terminal.all;
+use nsl_video.terminal.all;
 use nsl_indication.font.all;
 
 -- Scope-style demo of the color-key overlay blender.
@@ -14,7 +14,7 @@ use nsl_indication.font.all;
 -- Two color-index pixel sources run in lockstep: a scope_renderer
 -- underlay (graticule plus sine trace) and a terminal_labels_colormap
 -- overlay (title bar and status line, blank cells emitting the key
--- color). dvi_blender_color_key merges them, a shared colormap lookup
+-- color). blender_color_key merges them, a shared colormap lookup
 -- turns the result into RGB for the DVI encoder.
 --
 -- Sliders: 0 runs the horizontal scroll, 1 enables the graticule, 2
@@ -27,7 +27,7 @@ entity main is
     clock_i_hz_c : natural;
     -- Video mode, and the clocks it calls for.  Both are exact: the
     -- solver refuses a rate it cannot hold.
-    mode_c : nsl_dvi.mode.mode_t
+    mode_c : nsl_video.mode.mode_t
     );
   port (
     clock_i : in std_ulogic;
@@ -43,7 +43,7 @@ end entity;
 
 architecture beh of main is
 
-  use nsl_dvi.mode.all;
+  use nsl_video.mode.all;
   use nsl_clocking.pll.all;
 
   -- One stage reaches both clocks from the board oscillator.
@@ -315,7 +315,7 @@ begin
         grid_enable_i => sw_sync_s(1)
         );
 
-    overlay: nsl_dvi.terminal.terminal_labels_colormap
+    overlay: nsl_video.terminal.terminal_labels_colormap
       generic map(
         row_count_l2_c => row_count_l2_c,
         column_count_l2_c => column_count_l2_c,
@@ -340,7 +340,7 @@ begin
         color_i => colors_s
         );
 
-    blender: nsl_dvi.blender.dvi_blender_color_key
+    blender: nsl_video.blender.blender_color_key
       generic map(
         config_c => index_config_c,
         key_color_c => color_key_c
@@ -356,7 +356,7 @@ begin
         out_i => blend_s.s
         );
 
-    lookup: nsl_dvi.colormap.dvi_colormap_lookup
+    lookup: nsl_video.colormap.colormap_lookup
       generic map(
         in_config_c => index_config_c,
         out_config_c => pixel_config_c

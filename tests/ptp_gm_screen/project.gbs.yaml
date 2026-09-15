@@ -11,7 +11,7 @@ root:
    - nsl_time.discipline
    - nsl_time.calendar
    - nsl_data.text
-   - nsl_dvi.terminal
+   - nsl_video.terminal
   sources:
     - file_type: vhdl
       files:
