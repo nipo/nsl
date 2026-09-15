@@ -653,3 +653,6 @@ projects:
   - name: dvi_encoder
     path: dvi_encoder
     tags: [ghdl, simulation]
+  - name: dvi_decoder
+    path: dvi_decoder
+    tags: [ghdl, simulation]

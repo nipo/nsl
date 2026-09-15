@@ -2,6 +2,7 @@ packages += blender
 packages += dvi
 packages += mode
 packages += encoder
+packages += decoder
 packages += pattern
 packages += transceiver
 packages += terminal
