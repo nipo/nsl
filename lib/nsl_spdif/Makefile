@@ -3,3 +3,4 @@ packages += serdes
 packages += framer
 packages += blocker
 packages += transceiver
+packages += stream
