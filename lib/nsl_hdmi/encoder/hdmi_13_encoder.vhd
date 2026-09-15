@@ -6,6 +6,7 @@ library nsl_color, nsl_math, nsl_line_coding, nsl_data, nsl_video, work, nsl_dvi
 use work.hdmi.all;
 use work.encoder.all;
 use nsl_dvi.encoder.all;
+use nsl_dvi.dvi.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
 use nsl_data.crc.all;
@@ -149,7 +150,7 @@ architecture beh of hdmi_13_encoder is
   
   signal r, rin : regs_t;
 
-  signal period_s : period_t;
+  signal period_s : nsl_dvi.dvi.period_t;
   signal di_hdr_s: std_ulogic_vector(1 downto 0);
   signal di_data_s: std_ulogic_vector(7 downto 0);
 
