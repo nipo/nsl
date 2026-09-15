@@ -209,12 +209,6 @@ projects:
   - name: dsp_pid
     path: dsp/pid
     tags: [ghdl, simulation]
-  - name: dvi_blender
-    path: dvi_blender
-    tags: [ghdl, simulation]
-  - name: dvi_mode
-    path: dvi_mode
-    tags: [ghdl, simulation]
   - name: easyscale
     path: easyscale
     tags: [ghdl, simulation]
