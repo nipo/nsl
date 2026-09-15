@@ -117,6 +117,45 @@ package raster is
       );
   end component;
 
+  -- Turns a raster arriving on its own schedule into a pixel stream.
+  --
+  -- Where the other two ways in ask a generator for pixels, this one
+  -- is handed them: a raster coming off a wire cannot be asked to
+  -- wait, and neither can the stream it turns into, so the stream
+  -- carries no ready and whatever takes it has to absorb it.
+  --
+  -- A pixel is held for a cycle, because what says it closes a line is
+  -- that no pixel follows it.  What says it closes a frame is the line
+  -- it sits on being the last, which no look at the raster can tell:
+  -- it takes knowing how many lines the frame holds.  So the
+  -- measurement comes in here, and nothing goes out until it settled
+  -- -- which also keeps frames seen while the link was still coming
+  -- up from being passed on.  It states the sync polarity too.
+  --
+  -- A line that does not come out the length the measurement states
+  -- is marked in error on the beat that closes it.
+  component pixel_stream_capturer is
+    generic(
+      config_c: nsl_video.pixel_stream.config_t
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+
+      de_i: in std_ulogic;
+      vsync_i: in std_ulogic;
+      pixel_i: in nsl_video.pixel_stream.pixel_t;
+
+      timings_i: in nsl_video.mode.timings_t;
+      timings_valid_i: in std_ulogic;
+
+      out_o: out nsl_video.pixel_stream.master_t;
+      -- Unused: the stream carries no ready.  Here so a stream is
+      -- wired as a pair, as everywhere else.
+      out_i: in nsl_video.pixel_stream.slave_t
+      );
+  end component;
+
   -- Feeds a raster that owns its own timing from a pixel stream.
   --
   -- Framing travels with the pixels, and a wire-side raster cannot
@@ -168,6 +207,38 @@ package raster is
       pixel_o: out nsl_video.pixel_stream.pixel_t;
 
       synced_o: out std_ulogic
+      );
+  end component;
+
+  -- Measures the raster a link is sending from its syncs alone.
+  --
+  -- A sync is asserted where it sits away from the level it holds
+  -- while the raster is active, which is what gives its polarity
+  -- without being told: no sync is ever asserted during active video.
+  --
+  -- Horizontal timings are taken from lines that showed pixels, since
+  -- a blanking line measures a line that is not the one being looked
+  -- for.  Vertical timings are counted in lines.
+  --
+  -- valid_o is asserted once a frame measured the same as the one
+  -- before it, which is what tells a settled link from one still
+  -- coming up, or from noise.  Counters stop at the top rather than
+  -- wrapping, so a period that never ends measures something no
+  -- second frame can agree with.
+  --
+  -- Nothing about the syncs says what rate they arrive at, so no
+  -- clock comes out of here.
+  component raster_measurer is
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+
+      de_i: in std_ulogic;
+      hsync_i: in std_ulogic;
+      vsync_i: in std_ulogic;
+
+      timings_o: out nsl_video.mode.timings_t;
+      valid_o: out std_ulogic
       );
   end component;
 

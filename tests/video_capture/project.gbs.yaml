@@ -1,0 +1,33 @@
+name: video_capture
+
+root:
+  name: top
+  deps:
+    - nsl_dvi.pattern
+    - nsl_dvi.encoder
+    - nsl_dvi.dvi
+    - nsl_video.mode
+    - nsl_video.pixel_stream
+    - nsl_video.raster
+    - nsl_dvi.decoder
+    - nsl_line_coding.tmds
+    - nsl_color.rgb
+    - nsl_simulation.driver
+    - nsl_data.text
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

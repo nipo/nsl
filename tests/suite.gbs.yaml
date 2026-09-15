@@ -638,6 +638,15 @@ projects:
   - name: video_pixel_stream
     path: video_pixel_stream
     tags: [ghdl, simulation]
+  - name: video_measurer
+    path: video_measurer
+    tags: [ghdl, simulation]
+  - name: video_capture
+    path: video_capture
+    tags: [ghdl, simulation]
+  - name: video_capture_fifo
+    path: video_capture_fifo
+    tags: [ghdl, simulation]
   - name: video_raster
     path: video_raster
     tags: [ghdl, simulation]
