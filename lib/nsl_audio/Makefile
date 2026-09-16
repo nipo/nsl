@@ -6,3 +6,4 @@ packages += effect
 packages += meter
 packages += ambience
 packages += octaver
+packages += mixer
