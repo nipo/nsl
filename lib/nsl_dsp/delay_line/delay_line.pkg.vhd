@@ -36,4 +36,21 @@ package delay_line is
       );
   end component;
 
+  component delay_line_variable is
+    generic(
+      data_width_c : integer;
+      delay_width_c : positive
+      );
+    port(
+      reset_n_i : in  std_ulogic;
+      clock_i : in  std_ulogic;
+
+      ready_o : out std_ulogic;
+      valid_i : in  std_ulogic;
+      delay_i : in unsigned(delay_width_c-1 downto 0);
+      data_i : in std_ulogic_vector(data_width_c-1 downto 0);
+      data_o : out std_ulogic_vector(data_width_c-1 downto 0)
+      );
+  end component;
+
 end package delay_line;

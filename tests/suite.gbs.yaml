@@ -209,6 +209,9 @@ projects:
   - name: dsp_pid
     path: dsp/pid
     tags: [ghdl, simulation]
+  - name: dsp_delay_line
+    path: dsp/delay_line
+    tags: [ghdl, simulation]
   - name: easyscale
     path: easyscale
     tags: [ghdl, simulation]
