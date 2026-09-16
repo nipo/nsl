@@ -244,6 +244,25 @@ package packer is
       );
   end component;
 
+  component axi4_stream_monitor_packer is
+    generic (
+      config_c: nsl_amba.axi4_stream.config_t
+      );
+    port (
+      tvalid : in std_logic;
+      tready : in std_logic := '1';
+      tdata : in std_logic_vector(8 * config_c.data_width - 1 downto 0) := (others => '0');
+      tstrb : in std_logic_vector(config_c.data_width - 1 downto 0) := (others => '1');
+      tkeep : in std_logic_vector(config_c.data_width - 1 downto 0) := (others => '1');
+      tlast: in std_logic := '1';
+      tid: in std_logic_vector(config_c.id_width - 1 downto 0) := (others => '0');
+      tdest: in std_logic_vector(config_c.dest_width-1 downto 0) := (others => '0');
+      tuser: in std_logic_vector(config_c.user_width-1 downto 0) := (others => '0');
+
+      stream_o : out nsl_amba.axi4_stream.bus_t
+      );
+  end component;
+
   component axi4_stream_slave_packer is
     generic (
       config_c: nsl_amba.axi4_stream.config_t
