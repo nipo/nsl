@@ -7,3 +7,4 @@ packages += meter
 packages += ambience
 packages += octaver
 packages += mixer
+packages += iir
