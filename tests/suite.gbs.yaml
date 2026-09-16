@@ -122,6 +122,9 @@ projects:
   - name: amba_stream_packer
     path: amba/stream_packer
     tags: [ghdl, simulation]
+  - name: audio_effect
+    path: audio/effect
+    tags: [ghdl, simulation, audio]
   - name: audio_routing
     path: audio/routing
     tags: [ghdl, simulation, audio]
