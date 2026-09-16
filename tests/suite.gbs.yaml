@@ -131,6 +131,9 @@ projects:
   - name: audio_meter
     path: audio/meter
     tags: [ghdl, simulation, audio]
+  - name: audio_octaver
+    path: audio/octaver
+    tags: [ghdl, simulation, audio]
   - name: audio_routing
     path: audio/routing
     tags: [ghdl, simulation, audio]
