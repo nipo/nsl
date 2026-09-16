@@ -153,7 +153,17 @@ package ls_bfm is
     generic(
       device_descriptor_c: byte_string;
       config_descriptor_c: byte_string;
-      interrupt_ep_c: natural := 1
+      interrupt_ep_c: natural := 1;
+      -- What the device answers a control read with at a time.  Eight
+      -- is what a low-speed device must use and what a full-speed one
+      -- may; a full-speed device is free to use up to sixty four, and
+      -- then a whole descriptor comes back at once.
+      ep0_mps_c: natural := 8;
+      -- Inject retries before each control data packet, and corrupt the
+      -- first data packet of each control read once.
+      control_nak_count_c: natural := 0;
+      control_silent_count_c: natural := 0;
+      control_bad_crc_once_c: boolean := false
       );
     port(
       host_i: in usb_io_c;

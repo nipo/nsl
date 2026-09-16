@@ -18,7 +18,17 @@ entity ls_device_bfm is
   generic(
     device_descriptor_c: nsl_data.bytestream.byte_string;
     config_descriptor_c: nsl_data.bytestream.byte_string;
-    interrupt_ep_c: natural := 1
+    interrupt_ep_c: natural := 1;
+    -- What the device answers a control read with at a time.  Eight
+    -- is what a low-speed device must use and what a full-speed one
+    -- may; a full-speed device is free to use up to sixty four, and
+    -- then a whole descriptor comes back at once.
+    ep0_mps_c: natural := 8;
+    -- Inject retries before each control data packet, and corrupt the
+    -- first data packet of each control read once.
+    control_nak_count_c: natural := 0;
+    control_silent_count_c: natural := 0;
+    control_bad_crc_once_c: boolean := false
     );
   port(
     -- Wire-level connection, seen from the host core: host_i is what
@@ -50,8 +60,6 @@ architecture beh of ls_device_bfm is
 
   constant dev_desc_c: byte_string(0 to device_descriptor_c'length-1) := device_descriptor_c;
   constant cfg_desc_c: byte_string(0 to config_descriptor_c'length-1) := config_descriptor_c;
-
-  constant ep0_mps_c: natural := 8;
 
   -- A bus reset is a much shorter SE0 than this, but a low-speed host
   -- also emits bare EOPs as keep-alives.  Anything longer than a
@@ -109,6 +117,8 @@ begin
     variable pid: pid_t;
     variable chunk: natural;
     variable dtype: descriptor_type_t;
+    variable nak_left, silent_left: natural := 0;
+    variable corrupt_next: boolean := false;
 
     procedure rx_wait(variable data: out byte_string;
                       variable length: out natural;
@@ -235,6 +245,9 @@ begin
         ctrl_len := 0;
         ctrl_off := 0;
         ctrl_toggle := '1';
+        nak_left := control_nak_count_c;
+        silent_left := control_silent_count_c;
+        corrupt_next := control_bad_crc_once_c;
 
         if setup.rtype /= SETUP_TYPE_STANDARD
           or setup.recipient /= SETUP_RECIPIENT_DEVICE then
@@ -287,18 +300,36 @@ begin
         if ctrl_stall then
           ls_packet_send(device_drive, PID_STALL);
         elsif setup.direction = DEVICE_TO_HOST then
+          if silent_left /= 0 then
+            silent_left := silent_left - 1;
+            next;
+          elsif nak_left /= 0 then
+            nak_left := nak_left - 1;
+            ls_packet_send(device_drive, PID_NAK);
+            next;
+          end if;
           chunk := ctrl_len - ctrl_off;
           if chunk > ep0_mps_c then
             chunk := ep0_mps_c;
           end if;
 
           ls_packet_send(device_drive, ls_data_pid(ctrl_toggle),
-                         ls_data_with_crc(ctrl_buf(ctrl_off to ctrl_off + chunk - 1)));
+                         ls_data_with_crc(ctrl_buf(ctrl_off to ctrl_off + chunk - 1),
+                                          corrupt_next));
           rx_wait(rx, rx_len, response_timeout_c);
 
+          if corrupt_next then
+            assert not is_ack(rx, rx_len)
+              report "Host ACKed a corrupted control packet"
+              severity failure;
+            corrupt_next := false;
+            next;
+          end if;
           if is_ack(rx, rx_len) then
             ctrl_off := ctrl_off + chunk;
             ctrl_toggle := not ctrl_toggle;
+            nak_left := control_nak_count_c;
+            silent_left := control_silent_count_c;
           else
             log_warning(ctx_c, "Data stage packet was not acknowledged");
           end if;

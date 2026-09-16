@@ -6,11 +6,11 @@ library nsl_amba, nsl_data, nsl_usb;
 use nsl_data.bytestream.all;
 use nsl_usb.ukp.all;
 
--- Standalone low-speed USB host for HID input devices.
+-- Standalone full-/low-speed USB host for HID input devices.
 --
 -- hid_host_engine runs an elaboration-time-assembled microcode
 -- program (see the ukp package) that enumerates the single directly
--- attached low-speed device, records its identity, and polls its
+-- attached device, records its identity, and polls its
 -- interrupt IN endpoint.  Each interrupt report received with a good
 -- CRC is emitted as one last-delimited frame on an AXI4-Stream port.
 --
@@ -21,9 +21,12 @@ use nsl_usb.ukp.all;
 -- for boot-protocol devices.
 package hid_host is
 
-  -- Interrupt reports from low-speed devices are at most 8 bytes
-  -- (low-speed maximum packet size).
+  -- Reports are limited to eight bytes at either speed. Control
+  -- packets have their own, larger full-speed buffer.
   constant report_length_max_c: natural := 8;
+
+  -- Full-speed EP0 maximum packet size.
+  constant control_length_max_c: natural := 64;
 
   constant report_cfg_c: nsl_amba.axi4_stream.config_t :=
     nsl_amba.axi4_stream.config(bytes => 1, last => true);
@@ -36,6 +39,7 @@ package hid_host is
   constant save_reg_if_class_c: natural := 4;
   constant save_reg_if_subclass_c: natural := 5;
   constant save_reg_if_protocol_c: natural := 6;
+  constant save_reg_ep0_mps_c: natural := 7;
 
   type device_identity_t is
   record
@@ -57,6 +61,25 @@ package hid_host is
     -- Asserted for one cycle when the protocol watchdog expires and
     -- restarts the program.
     error: std_ulogic;
+    -- Pulses for every packet taken off the wire whose PID checks
+    -- out, whatever it was and whatever came of it.  Nothing else
+    -- distinguishes a device that is not answering from one whose
+    -- answers cannot be read.
+    packet: std_ulogic;
+    -- Where the microcode is.  For bring-up: an engine that has
+    -- stopped getting anywhere is stopped at an instruction, and this
+    -- says which one.  Addresses are the ones assemble() laid out,
+    -- which hid_program's source order gives.
+    program_counter: unsigned(10 downto 0);
+    -- What SPEED last made of the line.  Meaningless before a device
+    -- has been seen, and always false in a host built without full
+    -- speed.
+    full_speed: boolean;
+    -- Most recent valid PID, including handshakes; zero after reset.
+    received_pid: byte;
+    -- Diagnostic bytes, MSB first: EP0 MPS, control bytes remaining,
+    -- descriptor offset, then ERR in bit 7 and receive count in 6..0.
+    control_debug: std_ulogic_vector(31 downto 0);
   end record;
 
   -- One extracted report field.  Fields spanning multiple bytes are
@@ -82,7 +105,13 @@ package hid_host is
   component hid_host_engine is
     generic(
       program_c: program_t;
-      clock_rate_c: natural := 12_000_000
+      clock_rate_c: natural := 12_000_000;
+      -- Whether to carry the logic for talking to full-speed devices.
+      -- It costs a faster clock: a full-speed bit has to be several
+      -- cycles long where a low-speed one is eight times that, so a
+      -- host that handles both needs 48MHz or more.  A host built
+      -- without it sees a full-speed device as an empty port.
+      full_speed_c: boolean := false
       );
     port(
       reset_n_i: in std_ulogic;
@@ -125,6 +154,9 @@ package hid_host is
   component hid_host_keyboard is
     generic(
       clock_rate_c: natural := 12_000_000;
+      -- See hid_host_engine: talking to full-speed devices as well
+      -- costs a faster clock.
+      full_speed_c: boolean := false;
       -- x"0000" matches any.
       expected_vid_c: unsigned(15 downto 0) := x"0000";
       expected_pid_c: unsigned(15 downto 0) := x"0000"
@@ -151,6 +183,9 @@ package hid_host is
   component hid_host_mouse is
     generic(
       clock_rate_c: natural := 12_000_000;
+      -- See hid_host_engine: talking to full-speed devices as well
+      -- costs a faster clock.
+      full_speed_c: boolean := false;
       expected_vid_c: unsigned(15 downto 0) := x"0000";
       expected_pid_c: unsigned(15 downto 0) := x"0000"
       );

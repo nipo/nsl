@@ -24,10 +24,21 @@ use nsl_data.bytestream.all;
 --
 -- Machine model, for a low-speed USB host bit-banging D+/D-:
 --
--- * The engine clock runs at 8 cycles per bit time (12MHz for the
---   1.5Mb/s low-speed rate).
+-- * The engine clock is a multiple of 12MHz and the bit time is a
+--   whole number of its cycles: clock/12MHz cycles at full speed and
+--   eight times that at low speed.  48MHz therefore gives four cycles
+--   per full-speed bit and thirty two per low-speed one.  Which of
+--   the two is in force is decided at run time by SPEED, so one
+--   program and one bitstream serve either kind of device.
 --
--- * W is an 8-bit down-counter, loaded by LDI, used by DJNZ for loops
+-- * Below SPEED, the machine only ever thinks in the low-speed sense
+--   of the lines: at full speed the two are swapped on the way in and
+--   on the way out.  A full-speed bus is otherwise a low-speed bus in
+--   every respect that matters here -- same J/K, same sync, same bit
+--   stuffing, same CRCs, same end of packet -- so nothing else in the
+--   instruction set knows which is which.
+--
+-- * W is an 11-bit down-counter, loaded by LDI, used by DJNZ for loops
 --   and by IN as a sample-count timeout.
 --
 -- * C is a 1-bit flag, toggled by TOGGLE, tested by BC.  Programs
@@ -48,18 +59,20 @@ use nsl_data.bytestream.all;
 --   and cleared when a packet with any PID other than NAK or STALL is
 --   received, so a receive that times out with no response reads as
 --   NAKed.  The ERR flag (BERR) is cleared by START and set when a
---   DATA packet fails CRC16 check.  SAVE copies receive buffer bytes
+--   packet has a framing error, times out, or fails CRC16. SAVE copies
+--   descriptor bytes from the current packet
 --   to the identity registers defined in the hid_host package.
 package ukp is
 
   type opcode_t is (
     -- No effect.
     UKP_NOP,
-    -- Load 8-bit constant into W.
+    -- Load 11-bit constant into W.
     UKP_LDI,
     -- Stall until D- goes low (start of packet on low-speed, where
     -- idle J state has D- high), then reset receive state: bit
     -- counter and CRC cleared, ERR flag cleared, NAK flag set.
+    -- Waiting consumes W bit times; silence times out with NAK set.
     UKP_START,
     -- Drive the bus with 4 raw (D+, D-) symbol pairs, one per bit
     -- time, most-significant bit first, without NRZI encoding nor bit
@@ -86,14 +99,15 @@ package ukp is
     -- Branch if the last receive attempt got a NAK or STALL PID, or
     -- timed out without receiving any packet.
     UKP_BNAK,
-    -- Branch if the last received DATA packet failed CRC16 check.
+    -- Branch on receive timeout, framing error, or failed CRC16.
     UKP_BERR,
     -- Decrement W, branch if the result is not zero.
     UKP_DJNZ,
     -- Toggle the C flag.
     UKP_TOGGLE,
-    -- Copy receive buffer byte (operand bits 3..0) to identity
-    -- register (operand bits 7..4).
+    -- Copy descriptor byte (operand bits 5..0) to identity register
+    -- (bits 10..6), if it falls in the last received packet. CONTROL
+    -- and BMORE track the packet's offset within the transfer.
     UKP_SAVE,
     -- Run the receiver.  Completes at EOP (single-ended zero sampled)
     -- or after W bit samples, whichever comes first.  W decrements on
@@ -107,6 +121,29 @@ package ukp is
     -- Save the address of the next instruction to the link register
     -- and branch.
     UKP_CALL,
+    -- Latch the speed of the attached device from the line as it
+    -- stands: a device pulls up the line it signals a J on, which is
+    -- D- at low speed and D+ at full speed.  What follows runs at the
+    -- latched speed -- one eighth of the bit period for full speed --
+    -- and with the two lines swapped, so that everything downstream
+    -- of here keeps thinking in the low-speed sense whichever speed
+    -- the device turned out to be.
+    UKP_SPEED,
+    -- Branch if the latched speed is full speed.
+    UKP_BFS,
+    -- Transmit one byte of a start-of-frame token's payload, NRZI
+    -- encoded and bit stuffed like OUTB: operand 0 sends the low
+    -- eight bits of the frame number, operand 1 the top three
+    -- followed by the CRC5 over all eleven.  The frame number
+    -- advances after the second byte, so a SOF costs exactly these
+    -- two instructions.
+    UKP_SOF,
+    -- Start a control read of operand bytes, resetting its offset.
+    UKP_CONTROL,
+    -- Account for the received payload and branch if more is due.
+    -- A short packet ends the transfer, using bMaxPacketSize0 saved
+    -- from the device descriptor. Only execute after successful IN.
+    UKP_BMORE,
     -- Pseudo-instruction defining a label position.  Emits nothing.
     UKP_LABEL
     );
@@ -142,10 +179,15 @@ package ukp is
   function djnz(l: label_t) return program_t;
   function toggle return program_t;
   function save(reg, index: natural) return program_t;
+  function control_read(length: natural) return program_t;
+  function bmore(l: label_t) return program_t;
   function usb_in return program_t;
   function wait_frame return program_t;
   function jmp(l: label_t) return program_t;
   function call(l: label_t) return program_t;
+  function speed_sense return program_t;
+  function bfs(l: label_t) return program_t;
+  function sof(half: natural range 0 to 1) return program_t;
   function nop return program_t;
 
   -- 16-bit instruction word: opcode_encode() of the opcode in bits
@@ -185,7 +227,7 @@ package body ukp is
 
   function ldi(v: natural) return program_t is
   begin
-    assert v < 256
+    assert v < 2048
       report "LDI immediate out of range: " & integer'image(v)
       severity failure;
     return single(UKP_LDI, v);
@@ -265,10 +307,23 @@ package body ukp is
 
   function save(reg, index: natural) return program_t is
   begin
-    assert reg < 16 and index < 16
+    assert reg < 32 and index < 64
       report "SAVE operand out of range"
       severity failure;
-    return single(UKP_SAVE, reg * 16 + index);
+    return single(UKP_SAVE, reg * 64 + index);
+  end function;
+
+  function control_read(length: natural) return program_t is
+  begin
+    assert length > 0 and length <= 64
+      report "Control read length out of range"
+      severity failure;
+    return single(UKP_CONTROL, length);
+  end function;
+
+  function bmore(l: label_t) return program_t is
+  begin
+    return single(UKP_BMORE, l);
   end function;
 
   function usb_in return program_t is
@@ -289,6 +344,21 @@ package body ukp is
   function call(l: label_t) return program_t is
   begin
     return single(UKP_CALL, l);
+  end function;
+
+  function speed_sense return program_t is
+  begin
+    return single(UKP_SPEED, 0);
+  end function;
+
+  function bfs(l: label_t) return program_t is
+  begin
+    return single(UKP_BFS, l);
+  end function;
+
+  function sof(half: natural range 0 to 1) return program_t is
+  begin
+    return single(UKP_SOF, half);
   end function;
 
   function nop return program_t is
@@ -318,7 +388,7 @@ package body ukp is
   function is_branch(op: opcode_t) return boolean is
   begin
     case op is
-      when UKP_BZ | UKP_BC | UKP_BNAK | UKP_BERR
+      when UKP_BZ | UKP_BC | UKP_BNAK | UKP_BERR | UKP_BFS | UKP_BMORE
         | UKP_DJNZ | UKP_JMP | UKP_CALL =>
         return true;
       when others =>

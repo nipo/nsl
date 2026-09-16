@@ -10,19 +10,16 @@ use nsl_usb.ukp.all;
 use nsl_usb.hid_host.all;
 
 -- Microcode program driving hid_host_engine: enumerate the single
--- attached low-speed device, record its identity, then poll its
+-- attached full-/low-speed device, record its identity, then poll its
 -- interrupt IN endpoint forever.
 --
 -- The program only ever addresses one device at address 1 on endpoint
 -- 1, which is what boot-protocol keyboards, mice and the vast
 -- majority of HID gamepads expose.
 --
--- Control transfers here follow the minimal sequence a HID device
--- accepts: SETUP with a DATA0 payload, then IN transactions ACKed
--- unconditionally.  Data toggles of the IN data stage are neither
--- driven nor verified, and the status stage of the two
--- GET_DESCRIPTOR transfers is skipped: a bus reset follows each of
--- them and clears whatever endpoint state was left behind.
+-- Control reads use bMaxPacketSize0 and descriptor-relative offsets,
+-- validate CRCs, retry NAKs, and complete their OUT status stage.
+-- IN data toggles are not checked.
 package hid_program is
 
   type hid_program_config_t is
@@ -32,12 +29,17 @@ package hid_program is
     report_length: natural;
     -- for SET_CONFIGURATION
     configuration_value: natural;
+    -- Milliseconds to let a newly plugged device's contacts settle
+    -- before talking to it.  Shortening it is for tests, which would
+    -- otherwise spend most of their run waiting.
+    debounce_ms: natural;
   end record;
 
   constant hid_program_defaults_c: hid_program_config_t := (
     poll_interval_ms => 8,
     report_length => 8,
-    configuration_value => 1);
+    configuration_value => 1,
+    debounce_ms => 200);
 
   function hid_program(cfg: hid_program_config_t) return program_t;
 
@@ -54,12 +56,10 @@ package body hid_program is
   constant control_endpoint_c: endpoint_no_t := x"0";
   constant interrupt_endpoint_c: endpoint_no_t := x"1";
 
-  -- Descriptor sizes requested from the device.  18 is the whole
-  -- device descriptor; 24 spans the 9-byte configuration descriptor
-  -- plus enough of the first interface descriptor to reach
-  -- bInterfaceProtocol.
-  constant device_descriptor_length_c: natural := 18;
-  constant configuration_descriptor_length_c: natural := 24;
+  -- Read the device descriptor and the first configuration's prefix.
+  -- A short packet terminates a descriptor shorter than the request.
+  constant device_read_length_c: natural := 18;
+  constant configuration_read_length_c: natural := 64;
 
   constant lbl_start_c: label_t := 0;
   constant lbl_poll_wait_c: label_t := 1;
@@ -67,10 +67,7 @@ package body hid_program is
   constant lbl_connected_c: label_t := 3;
   constant lbl_disconnected_c: label_t := 4;
   constant lbl_device_desc_lo_c: label_t := 5;
-  constant lbl_device_desc_hi_c: label_t := 6;
   constant lbl_config_desc_0_c: label_t := 7;
-  constant lbl_config_desc_1_c: label_t := 8;
-  constant lbl_config_desc_2_c: label_t := 9;
   constant lbl_set_address_status_c: label_t := 10;
   constant lbl_set_config_status_c: label_t := 11;
   constant lbl_reset_c: label_t := 12;
@@ -81,6 +78,14 @@ package body hid_program is
   constant lbl_receive_settle_c: label_t := 17;
   constant lbl_ack_c: label_t := 18;
   constant lbl_control_in_c: label_t := 19;
+  constant lbl_poll_sof_c: label_t := 20;
+  constant lbl_poll_ka_done_c: label_t := 21;
+  constant lbl_recovery_sof_c: label_t := 22;
+  constant lbl_recovery_ka_done_c: label_t := 23;
+  constant lbl_device_sof_c: label_t := 25;
+  constant lbl_device_ka_done_c: label_t := 26;
+  constant lbl_config_sof_c: label_t := 27;
+  constant lbl_config_ka_done_c: label_t := 28;
 
   -- Two bit times of single-ended zero followed by idle J.  On
   -- low speed, J is D+ low and D- high.  This is both the end of
@@ -89,6 +94,35 @@ package body hid_program is
   is
   begin
     return out4(dp => "0000", dm => "0011");
+  end function;
+
+  -- A millisecond's worth of bus activity, whichever speed the device
+  -- turned out to be: a start-of-frame token at full speed, a bare
+  -- end of packet at low speed.  Either keeps a device from deciding
+  -- the bus has gone quiet and suspending itself.
+  --
+  -- Only the full-speed one carries a frame number, and the engine
+  -- rather than the program counts it: a token whose contents change
+  -- every millisecond cannot be a constant assembled here, which is
+  -- the whole reason SOF is an instruction.
+  --
+  -- The two labels are scratch and must not be used elsewhere.
+  function keepalive(fs_label, done_label: label_t) return program_t
+  is
+  begin
+    return bfs(fs_label)
+      & eop
+      & hiz
+      & jmp(done_label)
+
+      & lbl(fs_label)
+      & out_bytes(sync_c & pid_byte(PID_SOF))
+      & sof(0)
+      & sof(1)
+      & eop
+      & hiz
+
+      & lbl(done_label);
   end function;
 
   -- Sync, PID, address and endpoint with its CRC5.
@@ -100,14 +134,14 @@ package body hid_program is
     return out_bytes(sync_c & pid_byte(pid) & token_data(addr, endp)) & eop;
   end function;
 
-  -- Sync, DATA0 PID, payload and its CRC16.
-  function data0_packet(payload: byte_string) return program_t
+  -- Sync, data PID, payload and its CRC16.
+  function data_packet(payload: byte_string; pid: pid_t := PID_DATA0) return program_t
   is
     constant state: crc_state_t := crc_update(data_crc_params_c,
                                               crc_init(data_crc_params_c),
                                               payload);
   begin
-    return out_bytes(sync_c & pid_byte(PID_DATA0)
+    return out_bytes(sync_c & pid_byte(pid)
                      & payload & crc_spill(data_crc_params_c, state))
       & eop;
   end function;
@@ -120,7 +154,7 @@ package body hid_program is
   is
   begin
     return token_packet(PID_SETUP, addr, control_endpoint_c)
-      & data0_packet(setup_pack(request));
+      & data_packet(setup_pack(request));
   end function;
 
   -- Number of bit samples IN may take before giving up on a device
@@ -133,15 +167,44 @@ package body hid_program is
     constant wire_bits: natural := (payload_bytes + 3) * 8;
     constant samples: natural := wire_bits + (wire_bits / 5) + 8;
   begin
-    assert samples < 256
+    assert samples < 2048
       report "Receive timeout does not fit in W"
       severity failure;
     return samples;
   end function;
 
-  -- Every descriptor packet of the enumeration sequence is a full
-  -- low-speed maximum-size packet.
-  constant descriptor_timeout_c: natural := receive_timeout(8);
+  -- Includes a maximum-size full-speed control packet.
+  constant descriptor_timeout_c: natural
+    := receive_timeout(control_length_max_c);
+
+  function control_status return program_t is
+  begin
+    return token_packet(PID_OUT, default_address_c, control_endpoint_c)
+      & data_packet(null_byte_string, PID_DATA1)
+      & hiz
+      & ldi(descriptor_timeout_c)
+      & call(lbl_receive_c)
+      & bnak(lbl_start_c)
+      & berr(lbl_start_c);
+  end function;
+
+  -- ACK before extracting fields so software work cannot extend the
+  -- full-speed handshake turnaround. NAK and CRC errors retry the
+  -- same packet without advancing the descriptor offset.
+  function control_stage(saves: program_t; retry: label_t) return program_t
+  is
+  begin
+    return call(lbl_control_in_c)
+      & hiz
+      & ldi(descriptor_timeout_c)
+      & call(lbl_receive_c)
+      & bnak(retry)
+      & berr(retry)
+      & call(lbl_ack_c)
+      & hiz
+      & saves
+      & bmore(retry);
+  end function;
 
   function get_descriptor(descriptor_type: descriptor_type_t;
                           length: natural) return setup_t
@@ -188,6 +251,10 @@ package body hid_program is
       report "HID report length must be in 1 to "
       & integer'image(report_length_max_c)
       severity failure;
+    assert cfg.debounce_ms >= 1 and cfg.debounce_ms <= 255
+      report "HID debounce must be in 1 to 255 ms"
+      severity failure;
+
     assert cfg.poll_interval_ms >= 1 and cfg.poll_interval_ms <= 255
       report "HID poll interval must be in 1 to 255 ms"
       severity failure;
@@ -204,99 +271,76 @@ package body hid_program is
       & lbl(lbl_poll_wait_c)
       & wait_frame
       & bc(lbl_connected_c)
+
+      -- Which line a device pulls up is both how it says it is there
+      -- and how it says how fast it runs, so the two questions are
+      -- one and are answered here: after this the line the device
+      -- pulled up is the one BZ tests, whichever it was.
+      --
+      -- Only on this path.  The bus is idle here, and a speed read
+      -- off a bus carrying traffic would be no speed at all.
+      & speed_sense
       & bz(lbl_start_c)
 
-      -- A device pulls D- up as soon as it is plugged; let the
+      -- A device pulls its line up as soon as it is plugged; let the
       -- contacts settle before talking to it.
-      & ldi(200)
+      & ldi(cfg.debounce_ms)
       & lbl(lbl_debounce_c)
       & wait_frame
       & djnz(lbl_debounce_c)
 
+      -- Read again now the contacts have stopped moving: what was
+      -- latched above was enough to notice the device, but a bouncing
+      -- line is a poor thing to have decided a bit rate from.
+      & speed_sense
+
       & call(lbl_reset_c)
 
-      -- GET_DESCRIPTOR(device) at the default address.  The answer
-      -- comes as 8-byte packets; the second one carries descriptor
-      -- bytes 8 to 15, and idVendor starts at descriptor offset 8, so
-      -- vendor and product ids are receive buffer bytes 0 to 3.
+      -- bMaxPacketSize0 is in the first eight bytes, so it is known
+      -- before deciding whether a subsequent IN transaction is due.
+      & control_read(device_read_length_c)
       & setup_txn(default_address_c,
                   get_descriptor(DESCRIPTOR_TYPE_DEVICE,
-                                 device_descriptor_length_c))
+                                 device_read_length_c))
       & hiz
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
+      & bnak(lbl_start_c)
+      & berr(lbl_start_c)
 
       & lbl(lbl_device_desc_lo_c)
-      & call(lbl_control_in_c)
-      & hiz
-      & ldi(descriptor_timeout_c)
-      & call(lbl_receive_c)
-      & bnak(lbl_device_desc_lo_c)
-      & call(lbl_ack_c)
-      & hiz
+      & wait_frame
+      & keepalive(lbl_device_sof_c, lbl_device_ka_done_c)
+      & control_stage(save(save_reg_ep0_mps_c, 7)
+                      & save(save_reg_vid_l_c, 8)
+                      & save(save_reg_vid_h_c, 9)
+                      & save(save_reg_pid_l_c, 10)
+                      & save(save_reg_pid_h_c, 11),
+                      lbl_device_desc_lo_c)
 
-      & lbl(lbl_device_desc_hi_c)
-      & call(lbl_control_in_c)
-      & hiz
-      & ldi(descriptor_timeout_c)
-      & call(lbl_receive_c)
-      & bnak(lbl_device_desc_hi_c)
-      & save(save_reg_vid_l_c, 0)
-      & save(save_reg_vid_h_c, 1)
-      & save(save_reg_pid_l_c, 2)
-      & save(save_reg_pid_h_c, 3)
-      & call(lbl_ack_c)
-      & hiz
+      & control_status
 
-      -- No status stage was run for the transfer above; the reset
-      -- puts the device back to a known state.
-      & call(lbl_reset_c)
-
-      -- GET_DESCRIPTOR(configuration) at the default address.  The
-      -- 9-byte configuration descriptor is immediately followed by
-      -- the 9-byte interface descriptor of interface 0, whose
-      -- bInterfaceClass, bInterfaceSubClass and bInterfaceProtocol
-      -- are at descriptor offsets 14, 15 and 16.  With 8-byte
-      -- packets, offsets 14 and 15 are bytes 6 and 7 of the second
-      -- packet, and offset 16 is byte 0 of the third.
+      -- The first interface follows the nine-byte configuration
+      -- header. SAVE uses descriptor offsets regardless of EP0 MPS.
+      & control_read(configuration_read_length_c)
       & setup_txn(default_address_c,
                   get_descriptor(DESCRIPTOR_TYPE_CONFIGURATION,
-                                 configuration_descriptor_length_c))
+                                 configuration_read_length_c))
       & hiz
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
+      & bnak(lbl_start_c)
+      & berr(lbl_start_c)
 
       & lbl(lbl_config_desc_0_c)
-      & call(lbl_control_in_c)
-      & hiz
-      & ldi(descriptor_timeout_c)
-      & call(lbl_receive_c)
-      & bnak(lbl_config_desc_0_c)
-      & call(lbl_ack_c)
-      & hiz
+      & wait_frame
+      & keepalive(lbl_config_sof_c, lbl_config_ka_done_c)
+      & control_stage(save(save_reg_if_class_c, 14)
+                      & save(save_reg_if_subclass_c, 15)
+                      & save(save_reg_if_protocol_c, 16),
+                      lbl_config_desc_0_c)
 
-      & lbl(lbl_config_desc_1_c)
-      & call(lbl_control_in_c)
-      & hiz
-      & ldi(descriptor_timeout_c)
-      & call(lbl_receive_c)
-      & bnak(lbl_config_desc_1_c)
-      & save(save_reg_if_class_c, 6)
-      & save(save_reg_if_subclass_c, 7)
-      & call(lbl_ack_c)
-      & hiz
-
-      & lbl(lbl_config_desc_2_c)
-      & call(lbl_control_in_c)
-      & hiz
-      & ldi(descriptor_timeout_c)
-      & call(lbl_receive_c)
-      & bnak(lbl_config_desc_2_c)
-      & save(save_reg_if_protocol_c, 0)
-      & call(lbl_ack_c)
-      & hiz
-
-      & call(lbl_reset_c)
+      & control_status
 
       -- SET_ADDRESS, still at the default address.  Its status stage
       -- is a zero-length IN, and the device only starts answering on
@@ -305,6 +349,8 @@ package body hid_program is
       & hiz
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
+      & bnak(lbl_start_c)
+      & berr(lbl_start_c)
 
       & lbl(lbl_set_address_status_c)
       & call(lbl_control_in_c)
@@ -312,8 +358,13 @@ package body hid_program is
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
       & bnak(lbl_set_address_status_c)
+      & berr(lbl_set_address_status_c)
       & call(lbl_ack_c)
       & hiz
+      -- SET_ADDRESS recovery is at least 2ms, even when the first
+      -- free-running millisecond tick is immediately due.
+      & wait_frame
+      & wait_frame
       & wait_frame
 
       -- SET_CONFIGURATION at the assigned address.
@@ -321,6 +372,8 @@ package body hid_program is
       & hiz
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
+      & bnak(lbl_start_c)
+      & berr(lbl_start_c)
 
       & lbl(lbl_set_config_status_c)
       & token_packet(PID_IN, device_address_c, control_endpoint_c)
@@ -328,6 +381,7 @@ package body hid_program is
       & ldi(descriptor_timeout_c)
       & call(lbl_receive_c)
       & bnak(lbl_set_config_status_c)
+      & berr(lbl_set_config_status_c)
       & call(lbl_ack_c)
       & hiz
 
@@ -340,8 +394,7 @@ package body hid_program is
       -- Enumerated device, one millisecond into the poll interval.
       & lbl(lbl_connected_c)
       & bz(lbl_disconnected_c)
-      & eop
-      & hiz
+      & keepalive(lbl_poll_sof_c, lbl_poll_ka_done_c)
       & djnz(lbl_poll_wait_c)
 
       -- Interval elapsed: one interrupt IN transaction.  A NAK means
@@ -362,11 +415,11 @@ package body hid_program is
       & toggle
       & jmp(lbl_start_c)
 
-      -- Bus reset: 10ms of single-ended zero, then 40ms of recovery
-      -- during which keep-alives hold the device awake.
+      -- At least 10ms of SE0, including an initial partial tick.
+      -- Then 40ms of recovery with keep-alives to hold the device awake.
       & lbl(lbl_reset_c)
       & out0
-      & ldi(10)
+      & ldi(11)
       & lbl(lbl_reset_se0_c)
       & wait_frame
       & djnz(lbl_reset_se0_c)
@@ -374,8 +427,7 @@ package body hid_program is
       & ldi(40)
       & lbl(lbl_reset_recovery_c)
       & wait_frame
-      & eop
-      & hiz
+      & keepalive(lbl_recovery_sof_c, lbl_recovery_ka_done_c)
       & djnz(lbl_reset_recovery_c)
       & wait_frame
       & ret

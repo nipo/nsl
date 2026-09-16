@@ -77,7 +77,8 @@ begin
       program_c => hid_program(hid_program_config_t'(
         poll_interval_ms => poll_interval_ms_c,
         report_length => 8,
-        configuration_value => 1)),
+        configuration_value => 1,
+        debounce_ms => 200)),
       clock_rate_c => 12_000_000
       )
     port map(
@@ -264,8 +265,8 @@ begin
 
     log_info("* Idle with no device across a watchdog period");
 
-    -- The idle loop executes no START and receives nothing; only the
-    -- taken BZ holds the watchdog reset.  The watchdog period is
+    -- The idle loop receives nothing; speed sensing holds the
+    -- watchdog reset. The watchdog period is
     -- 2**24 cycles, a hair under 1.4s; the error monitor catches any
     -- pulse.
     present_s <= '0';

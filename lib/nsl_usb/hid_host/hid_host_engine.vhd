@@ -10,7 +10,7 @@ use nsl_usb.usb.all;
 use nsl_usb.ukp.all;
 use nsl_usb.hid_host.all;
 
--- Microcoded low-speed USB host sequencer, running the program given
+-- Microcoded full-/low-speed USB host sequencer, running the program given
 -- as a generic through the instruction set of the ukp package.
 --
 -- The sequencer alternates a fetch cycle and an execute cycle: the ROM
@@ -22,14 +22,19 @@ use nsl_usb.hid_host.all;
 -- instructions retire immediately and hand a byte to the serializer;
 -- the instruction stream then idles until the serializer is done.
 --
--- Bit timing is a free-running 3-bit counter of the 8 clock cycles of
--- a 1.5Mb/s bit.  While the driver is released, any transition on D-
--- realigns it so that the receiver samples mid-bit; the transmitter
--- changes symbol on its wrap.
+-- Bit timing follows the selected speed. While the driver is released,
+-- transitions realign the receiver's mid-bit sample point.
 entity hid_host_engine is
   generic(
     program_c: program_t;
-    clock_rate_c: natural := 12_000_000
+    clock_rate_c: natural := 12_000_000;
+    -- Whether to carry the logic for talking to full-speed devices.
+    -- It costs a faster clock -- a full-speed bit has to be several
+    -- cycles long, where a low-speed one is eight times that -- and
+    -- so is worth declining where only low-speed devices are
+    -- expected.  A host built without it sees a full-speed device as
+    -- an empty port.
+    full_speed_c: boolean := false
     );
   port(
     reset_n_i: in std_ulogic;
@@ -46,8 +51,17 @@ entity hid_host_engine is
     );
 begin
 
-  assert clock_rate_c = 12_000_000
-    report "hid_host_engine needs a 12MHz clock, 8 cycles per low-speed bit"
+  assert clock_rate_c mod 1_500_000 = 0 and clock_rate_c >= 12_000_000
+    report "hid_host_engine needs a multiple of 1.5MHz, 12MHz or more: a "
+    & "low-speed bit is a whole number of cycles and wants at least eight "
+    & "of them"
+    severity failure;
+
+  assert not full_speed_c
+    or (clock_rate_c mod 12_000_000 = 0 and clock_rate_c >= 48_000_000)
+    report "a full-speed capable hid_host_engine needs a multiple of 12MHz, "
+    & "48MHz or more: a full-speed bit is clock_rate_c/12MHz cycles and the "
+    & "receiver wants at least four of them to find the middle of one"
     severity failure;
 
 end entity;
@@ -59,9 +73,14 @@ architecture beh of hid_host_engine is
   -- Instruction word address space of the ISA.
   constant pc_width_c: natural := 11;
 
-  -- Point within an 8-cycle bit time where the receiver samples the
-  -- line, counted from the transition that realigned the bit timer.
-  constant sample_phase_c: natural := 4;
+  -- Cycles in a bit time, one speed each.  Full speed is 12Mb/s and
+  -- low speed an eighth of that, so the two differ by a factor of
+  -- eight and nothing else about the wire differs at all.
+  -- Zero when the clock is too slow to carry a full-speed bit, which
+  -- only happens where full speed was not asked for.
+  constant fs_bit_cycles_c: natural := clock_rate_c / 12_000_000;
+  constant ls_bit_cycles_c: natural := clock_rate_c / 1_500_000;
+  constant t_width_c: natural := nsl_math.arith.log2(ls_bit_cycles_c);
 
   constant ms_last_c: natural := clock_rate_c / 1000 - 1;
 
@@ -69,10 +88,18 @@ architecture beh of hid_host_engine is
   constant wd_width_c: natural := nsl_math.arith.log2(clock_rate_c);
   constant wd_last_c: unsigned(wd_width_c - 1 downto 0) := (others => '1');
 
-  -- Longest packet the receive buffer keeps: a maximum-size low-speed
-  -- payload and its CRC16.
-  constant rx_buffer_size_c: natural := report_length_max_c + 2;
+  -- Longest packet the receive buffer keeps, and its CRC16.  A report
+  -- is bounded by the low-speed packet size; a control transfer is
+  -- bounded by what the program asks for, since a device may answer
+  -- the whole of it at once.
+  constant rx_buffer_size_c: natural
+    := nsl_math.arith.max(report_length_max_c, control_length_max_c) + 2;
 
+  constant op_speed_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_SPEED);
+  constant op_bfs_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_BFS);
+  constant op_sof_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_SOF);
+  constant op_control_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_CONTROL);
+  constant op_bmore_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_BMORE);
   constant op_ldi_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_LDI);
   constant op_start_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_START);
   constant op_out4_c: std_ulogic_vector(4 downto 0) := opcode_encode(UKP_OUT4);
@@ -94,7 +121,7 @@ architecture beh of hid_host_engine is
 
   subtype pc_t is unsigned(pc_width_c - 1 downto 0);
 
-  type identity_regs_t is array (0 to save_reg_if_protocol_c) of byte;
+  type identity_regs_t is array (0 to save_reg_ep0_mps_c) of byte;
 
   type regs_t is
   record
@@ -103,14 +130,22 @@ architecture beh of hid_host_engine is
     link: pc_t;
     inst: word_t;
     inst_ready: std_ulogic;
-    w: unsigned(7 downto 0);
+    w: unsigned(10 downto 0);
     c: std_ulogic;
     nak: std_ulogic;
     err: std_ulogic;
 
     -- Bit timer and free-running millisecond timer.
-    t: unsigned(2 downto 0);
+    t: unsigned(t_width_c - 1 downto 0);
     ms_count: natural range 0 to ms_last_c;
+
+    -- What the device turned out to be, latched by SPEED.  It sets
+    -- the bit period and swaps the lines; nothing else depends on it.
+    full_speed: std_ulogic;
+    -- Frame number of the next start-of-frame token.  Full speed
+    -- only: low speed has no frames, only bare end-of-packet
+    -- keep-alives.
+    frame_no: unsigned(10 downto 0);
 
     -- Line driver.
     dp: std_ulogic;
@@ -137,9 +172,12 @@ architecture beh of hid_host_engine is
     rx_count: natural range 0 to rx_buffer_size_c;
     rx_crc: crc_state_t;
     rx_is_data: boolean;
+    received_pid: byte;
 
     -- Identity registers written by SAVE.
     ident: identity_regs_t;
+    control_offset: natural range 0 to control_length_max_c;
+    control_left: natural range 0 to control_length_max_c;
 
     -- Outgoing report frame.
     frame: byte_string(0 to report_length_max_c - 1);
@@ -148,6 +186,7 @@ architecture beh of hid_host_engine is
 
     wd: unsigned(wd_width_c - 1 downto 0);
     error: std_ulogic;
+    packet: std_ulogic;
   end record;
 
   signal r, rin: regs_t;
@@ -197,6 +236,8 @@ begin
       r.c <= '0';
       r.nak <= '1';
       r.err <= '0';
+      r.full_speed <= '0';
+      r.frame_no <= (others => '0');
       r.t <= (others => '0');
       r.ms_count <= 0;
       r.dp <= '0';
@@ -218,12 +259,17 @@ begin
       r.rx_count <= 0;
       r.rx_crc <= crc_init(data_crc_params_c);
       r.rx_is_data <= false;
+      r.received_pid <= x"00";
       r.ident <= (others => (others => '0'));
+      r.ident(save_reg_ep0_mps_c) <= x"08";
+      r.control_offset <= 0;
+      r.control_left <= 0;
       r.frame <= (others => (others => '0'));
       r.frame_len <= 0;
       r.frame_index <= 0;
       r.wd <= (others => '0');
       r.error <= '0';
+      r.packet <= '0';
     end if;
   end process;
 
@@ -232,15 +278,48 @@ begin
     variable operand: unsigned(pc_width_c - 1 downto 0);
     variable rx_data: std_ulogic;
     variable rx_byte: byte;
+    variable line: std_ulogic_vector(1 downto 0);
+    variable bit_last, sample_at: unsigned(t_width_c - 1 downto 0);
+    variable sof_crc: std_ulogic_vector(4 downto 0);
+    variable save_index: integer;
+    variable payload_count: natural range 0 to control_length_max_c;
   begin
     rin <= r;
 
     op := r.inst(15 downto 11);
     operand := unsigned(r.inst(10 downto 0));
-    rx_data := nrzi_decode(sampled_s(0), r.rx_prev);
+    -- The bus as this machine wants to see it.  Below here nothing
+    -- knows about full speed: the lines are swapped on the way in, so
+    -- a full-speed bus reads as a low-speed one of the same shape.
+    if full_speed_c and r.full_speed = '1' then
+      line := sampled_s(0) & sampled_s(1);
+      bit_last := to_unsigned(fs_bit_cycles_c - 1, bit_last'length);
+      sample_at := to_unsigned(fs_bit_cycles_c / 2, sample_at'length);
+    else
+      line := sampled_s;
+      bit_last := to_unsigned(ls_bit_cycles_c - 1, bit_last'length);
+      sample_at := to_unsigned(ls_bit_cycles_c / 2, sample_at'length);
+    end if;
+
+    save_index := to_integer(operand(5 downto 0)) - r.control_offset;
+    if r.rx_count >= 2 then
+      payload_count := r.rx_count - 2;
+    else
+      payload_count := 0;
+    end if;
+
+    -- CRC5 over the frame number, for whichever start-of-frame token
+    -- goes out next.  Eleven bits of exclusive or.
+    sof_crc := crc_spill_vector(token_crc_params_c,
+                                crc_update(token_crc_params_c,
+                                           crc_init(token_crc_params_c),
+                                           std_ulogic_vector(r.frame_no)));
+
+    rx_data := nrzi_decode(line(0), r.rx_prev);
     rx_byte := rx_data & r.rx_shift(7 downto 1);
 
     rin.error <= '0';
+    rin.packet <= '0';
 
     if r.ms_count = ms_last_c then
       rin.ms_count <= 0;
@@ -252,12 +331,14 @@ begin
 
     -- While the driver is off, any line transition realigns the bit
     -- timer so that the sample point lands mid-bit.
-    if r.oe = '0' and sampled_s(0) /= r.dm_prev then
+    if r.oe = '0' and line(0) /= r.dm_prev then
       rin.t <= to_unsigned(1, r.t'length);
+    elsif r.t = bit_last then
+      rin.t <= (others => '0');
     else
       rin.t <= r.t + 1;
     end if;
-    rin.dm_prev <= sampled_s(0);
+    rin.dm_prev <= line(0);
 
     if to_integer(r.pc) < rom_c'length then
       rin.inst <= rom_c(to_integer(r.pc));
@@ -302,6 +383,11 @@ begin
             rin.tx_index <= r.tx_index - 1;
           end if;
         end if;
+      elsif r.tx_ones = 6 then
+        -- Stuffing also applies at the end of the CRC, before EOP.
+        rin.dp <= not r.dp;
+        rin.dm <= r.dp;
+        rin.tx_ones <= 0;
       else
         rin.dp <= r.tx_data(4 + r.tx_index);
         rin.dm <= r.tx_data(r.tx_index);
@@ -323,7 +409,7 @@ begin
       rin.inst_ready <= '0';
 
       if op = op_ldi_c then
-        rin.w <= operand(7 downto 0);
+        rin.w <= operand;
 
       elsif op = op_start_c then
         -- A packet starts from idle J, which is the NRZI reference the
@@ -338,11 +424,20 @@ begin
         rin.rx_is_data <= false;
         rin.err <= '0';
         rin.nak <= '1';
-        rin.wd <= (others => '0');
 
-        if sampled_s(0) = '1' then
-          rin.pc <= r.pc;
-          rin.inst_ready <= '1';
+        -- Silence consumes the receive budget too; it leaves NAK set.
+        if line(0) = '1' then
+          if r.t = 0 and r.w = 0 then
+            -- Fall through, and leave the receive that follows enough
+            -- to finish on immediately.
+            rin.w <= to_unsigned(1, r.w'length);
+          else
+            if r.t = 0 then
+              rin.w <= r.w - 1;
+            end if;
+            rin.pc <= r.pc;
+            rin.inst_ready <= '1';
+          end if;
         else
           rin.t <= to_unsigned(1, r.t'length);
         end if;
@@ -382,12 +477,8 @@ begin
         rin.pc <= r.link;
 
       elsif op = op_bz_c then
-        -- A taken BZ is the program observing that no device is
-        -- attached; that idle state is healthy, so it holds the
-        -- watchdog reset just like traffic does.
-        if sampled_s(0) = '0' then
+        if line(0) = '0' then
           rin.pc <= operand;
-          rin.wd <= (others => '0');
         end if;
 
       elsif op = op_bc_c then
@@ -415,14 +506,28 @@ begin
         rin.c <= not r.c;
 
       elsif op = op_save_c then
-        if to_integer(operand(7 downto 4)) <= save_reg_if_protocol_c
-          and to_integer(operand(3 downto 0)) < rx_buffer_size_c then
-          rin.ident(to_integer(operand(7 downto 4)))
-            <= r.rx_buf(to_integer(operand(3 downto 0)));
+        if to_integer(operand(10 downto 6)) <= save_reg_ep0_mps_c
+          and save_index >= 0 and save_index < payload_count then
+          rin.ident(to_integer(operand(10 downto 6)))
+            <= r.rx_buf(save_index);
+        end if;
+
+      elsif op = op_control_c then
+        rin.control_offset <= 0;
+        rin.control_left <= to_integer(operand);
+
+      elsif op = op_bmore_c then
+        if payload_count < r.control_left
+          and payload_count = to_integer(unsigned(r.ident(save_reg_ep0_mps_c))) then
+          rin.control_left <= r.control_left - payload_count;
+          rin.control_offset <= r.control_offset + payload_count;
+          rin.pc <= operand;
+        else
+          rin.control_left <= 0;
         end if;
 
       elsif op = op_in_c then
-        if r.t /= sample_phase_c then
+        if r.t /= sample_at then
           rin.pc <= r.pc;
           rin.inst_ready <= '1';
         else
@@ -431,13 +536,21 @@ begin
           -- Single-ended zero ends the packet.  A data packet checks
           -- out when the running CRC16 over everything that followed
           -- the PID, its two check bytes included, hits the residue.
-          if sampled_s = "00" then
-            rin.wd <= (others => '0');
-
+          if line = "00" then
+            if r.rx_bit /= 0 or r.rx_ones = 6 or r.rx_index /= 2 then
+              rin.err <= '1';
+            end if;
             if r.rx_is_data then
               if r.rx_count >= 2
+                and r.err = '0'
+                and r.rx_bit = 0 and r.rx_ones /= 6
                 and crc_is_valid(data_crc_params_c, r.rx_crc) then
-                if r.c = '1' and r.rx_count > 2 and r.frame_len = 0 then
+                rin.wd <= (others => '0');
+                -- A report, and only a report: the buffer is sized
+                -- for control transfers now, and a packet longer than
+                -- a report is not one.
+                if r.c = '1' and r.rx_count > 2 and r.frame_len = 0
+                  and r.rx_count - 2 <= report_length_max_c then
                   rin.frame <= r.rx_buf(0 to report_length_max_c - 1);
                   rin.frame_len <= r.rx_count - 2;
                   rin.frame_index <= 0;
@@ -447,12 +560,15 @@ begin
               end if;
             end if;
           else
-            rin.rx_prev <= sampled_s(0);
+            rin.rx_prev <= line(0);
 
             -- Sixth consecutive one: the symbol on the wire is a
             -- stuffed bit and carries no data.
             if r.rx_ones = 6 then
               rin.rx_ones <= 0;
+              if rx_data /= '0' then
+                rin.err <= '1';
+              end if;
             else
               rin.rx_shift <= rx_byte;
 
@@ -470,8 +586,14 @@ begin
                   rin.rx_index <= r.rx_index + 1;
                 end if;
 
-                if r.rx_index = 1 then
+                if r.rx_index = 0 then
+                  if rx_byte /= x"80" then
+                    rin.err <= '1';
+                  end if;
+                elsif r.rx_index = 1 then
                   if pid_byte_is_correct(rx_byte) then
+                    rin.received_pid <= rx_byte;
+                    rin.packet <= '1';
                     if pid_get(rx_byte) /= PID_NAK
                       and pid_get(rx_byte) /= PID_STALL then
                       rin.nak <= '0';
@@ -480,6 +602,8 @@ begin
                       or pid_get(rx_byte) = PID_DATA1 then
                       rin.rx_is_data <= true;
                     end if;
+                  else
+                    rin.err <= '1';
                   end if;
                 elsif r.rx_index = 2 then
                   rin.rx_crc <= crc_update(data_crc_params_c, r.rx_crc, rx_byte);
@@ -496,11 +620,16 @@ begin
             if r.w /= 1 then
               rin.pc <= r.pc;
               rin.inst_ready <= '1';
+            else
+              rin.err <= '1';
             end if;
           end if;
         end if;
 
       elsif op = op_wait_c then
+        if r.c = '1' then
+          rin.wd <= (others => '0');
+        end if;
         if r.ms_count /= ms_last_c then
           rin.pc <= r.pc;
           rin.inst_ready <= '1';
@@ -512,14 +641,40 @@ begin
       elsif op = op_call_c then
         rin.link <= r.pc + 1;
         rin.pc <= operand;
+
+      elsif op = op_speed_c then
+        rin.wd <= (others => '0');
+        -- Read from the bus as it is rather than as this machine has
+        -- been looking at it: which line is pulled up is the thing
+        -- being decided, so it cannot already be known.  Built
+        -- without full speed, every device reads as a low-speed one
+        -- and a full-speed device therefore reads as no device.
+        if full_speed_c then
+          rin.full_speed <= sampled_s(1);
+        end if;
+        rin.frame_no <= (others => '0');
+
+      elsif op = op_bfs_c then
+        if full_speed_c and r.full_speed = '1' then
+          rin.pc <= operand;
+        end if;
+
+      elsif op = op_sof_c then
+        if operand(0) = '0' then
+          rin.tx_data <= std_ulogic_vector(r.frame_no(7 downto 0));
+        else
+          rin.tx_data <= sof_crc & std_ulogic_vector(r.frame_no(10 downto 8));
+          rin.frame_no <= r.frame_no + 1;
+        end if;
+        rin.tx_index <= 7;
+        rin.tx_nrzi <= true;
+        rin.tx_active <= '1';
       end if;
     end if;
 
-    -- Protocol watchdog.  It is held reset by START and by every
-    -- packet that reaches its end of packet, so it only expires when
-    -- the program stopped talking to the device altogether.  Identity
-    -- and C survive the restart; the program clears them itself once
-    -- it observes the device is gone.
+    -- Enumeration must make progress: silence, NAKs and bad packets
+    -- cannot postpone recovery indefinitely. Idle speed sensing and
+    -- normal interrupt-poll waits keep a healthy host out of recovery.
     if r.wd = wd_last_c then
       rin.wd <= (others => '0');
       rin.pc <= (others => '0');
@@ -528,13 +683,19 @@ begin
       rin.tx_ones <= 0;
       rin.oe <= '0';
       rin.error <= '1';
+      rin.c <= '0';
     end if;
   end process;
 
   moore: process(r) is
   begin
-    bus_o.dp <= r.dp;
-    bus_o.dm <= r.dm;
+    if full_speed_c and r.full_speed = '1' then
+      bus_o.dp <= r.dm;
+      bus_o.dm <= r.dp;
+    else
+      bus_o.dp <= r.dp;
+      bus_o.dm <= r.dm;
+    end if;
     bus_o.oe <= r.oe;
     bus_o.dp_pullup_en <= '0';
 
@@ -549,6 +710,14 @@ begin
 
     status_o.enumerated <= r.c = '1';
     status_o.error <= r.error;
+    status_o.packet <= r.packet;
+    status_o.program_counter <= resize(r.pc, status_o.program_counter'length);
+    status_o.full_speed <= r.full_speed = '1';
+    status_o.received_pid <= r.received_pid;
+    status_o.control_debug <= r.ident(save_reg_ep0_mps_c)
+      & std_ulogic_vector(to_unsigned(r.control_left, 8))
+      & std_ulogic_vector(to_unsigned(r.control_offset, 8))
+      & r.err & std_ulogic_vector(to_unsigned(r.rx_count, 7));
 
     if r.frame_len /= 0 then
       report_o <= transfer(report_cfg_c,

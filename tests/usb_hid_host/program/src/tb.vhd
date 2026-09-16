@@ -45,10 +45,21 @@ architecture arch of tb is
   -- Word encoding is the 5-bit opcode_t'pos in bits 15 downto 11 and
   -- the operand in bits 10 downto 0.  The backward label resolves to
   -- address 0, the forward one to address 21.
+  -- Every opcode carrying a label must come out of the assembler with
+  -- an address in it instead.  One that does not is assembled with the
+  -- label number still there and branches into the middle of the
+  -- program, which is a thing that happened once.
+  constant branch_program_c: program_t :=
+    bfs(lbl_forward_c)
+    & nop
+    & lbl(lbl_forward_c)
+    & sof(0);
+  constant branch_rom_c: rom_t := assemble(branch_program_c);
+
   constant expected_c: rom_t(0 to 21) := (
     0 => x"082a",
     1 => x"18a5",
-    2 => x"7069",
+    2 => x"7189",
     3 => x"30de",
     4 => x"30ad",
     5 => x"30be",
@@ -83,6 +94,16 @@ begin
 
   check: process
   begin
+    assert branch_rom_c(0)(15 downto 11) = opcode_encode(UKP_BFS)
+      report "Branch-if-full-speed did not assemble to its own opcode"
+      severity failure;
+
+    assert unsigned(branch_rom_c(0)(10 downto 0)) = 2
+      report "Branch-if-full-speed kept its label number instead of the "
+      & "address it stands for: operand is "
+      & integer'image(to_integer(unsigned(branch_rom_c(0)(10 downto 0))))
+      severity failure;
+
     assert instruction_count(test_program_c) = expected_c'length
       report "Test program has "
       & integer'image(instruction_count(test_program_c))

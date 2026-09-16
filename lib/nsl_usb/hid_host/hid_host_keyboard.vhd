@@ -10,6 +10,9 @@ use nsl_usb.hid_program.all;
 entity hid_host_keyboard is
   generic(
     clock_rate_c: natural := 12_000_000;
+    -- See hid_host_engine: talking to full-speed devices as well
+    -- costs a faster clock.
+    full_speed_c: boolean := false;
     expected_vid_c: unsigned(15 downto 0) := x"0000";
     expected_pid_c: unsigned(15 downto 0) := x"0000"
     );
@@ -66,8 +69,10 @@ begin
       program_c => hid_program(hid_program_config_t'(
         poll_interval_ms => 8,
         report_length => 8,
-        configuration_value => 1)),
-      clock_rate_c => clock_rate_c
+        configuration_value => 1,
+        debounce_ms => 200)),
+      clock_rate_c => clock_rate_c,
+      full_speed_c => full_speed_c
       )
     port map(
       reset_n_i => reset_n_i,
