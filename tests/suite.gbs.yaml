@@ -125,6 +125,9 @@ projects:
   - name: audio_effect
     path: audio/effect
     tags: [ghdl, simulation, audio]
+  - name: audio_meter
+    path: audio/meter
+    tags: [ghdl, simulation, audio]
   - name: audio_routing
     path: audio/routing
     tags: [ghdl, simulation, audio]
