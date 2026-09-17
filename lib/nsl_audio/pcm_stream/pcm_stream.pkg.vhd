@@ -90,6 +90,15 @@ package pcm_stream is
 
   type config_vector is array (natural range <>) of config_t;
 
+  -- Whether two configurations describe the same PCM frame.
+  function same_frame(left, right: config_t) return boolean;
+  -- Whether two configurations use the same AXI4-Stream transport.
+  function same_stream(left, right: config_t) return boolean;
+  -- Whether a frame can cross between two configurations unchanged.
+  function compatible(left, right: config_t) return boolean;
+  -- Exact comparison, including packet framing length.
+  function "="(left, right: config_t) return boolean;
+
   -- Bytes one sample takes in TDATA.
   function sample_bytes(cfg: config_t) return natural;
   -- Bytes one frame takes in TDATA.
@@ -156,6 +165,41 @@ package pcm_stream is
 end package;
 
 package body pcm_stream is
+
+  function same_frame(left, right: config_t) return boolean
+  is
+  begin
+    return left.channel_count = right.channel_count
+      and left.sample_bits = right.sample_bits
+      and left.sideband_bits = right.sideband_bits
+      and left.coding = right.coding;
+  end function;
+
+  function same_stream(left, right: config_t) return boolean
+  is
+  begin
+    return left.stream.data_width = right.stream.data_width
+      and left.stream.user_width = right.stream.user_width
+      and left.stream.id_width = right.stream.id_width
+      and left.stream.dest_width = right.stream.dest_width
+      and left.stream.has_keep = right.stream.has_keep
+      and left.stream.has_strobe = right.stream.has_strobe
+      and left.stream.has_ready = right.stream.has_ready
+      and left.stream.has_last = right.stream.has_last;
+  end function;
+
+  function compatible(left, right: config_t) return boolean
+  is
+  begin
+    return same_frame(left, right) and same_stream(left, right);
+  end function;
+
+  function "="(left, right: config_t) return boolean
+  is
+  begin
+    return compatible(left, right)
+      and left.frames_per_packet = right.frames_per_packet;
+  end function;
 
   function sample_bytes(cfg: config_t) return natural
   is
