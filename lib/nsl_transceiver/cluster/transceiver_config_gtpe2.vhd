@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_transceiver, nsl_math, nsl_hwdep, nsl_data;
+library nsl_transceiver, nsl_math, nsl_hwconfig, nsl_data;
 use nsl_transceiver.target.all;
 use nsl_transceiver.lane.all;
 use nsl_math.int_ext.all;
@@ -246,12 +246,12 @@ package body transceiver_config_gtpe2 is
   function constraints_get(mode : pll_variant)
     return constraints
   is
-    variable ret : nsl_hwdep.xc7_config.pll_constraints;
+    variable ret : nsl_hwconfig.xc7_config.pll_constraints;
   begin
     if mode = S7_MMCM then
-      ret := nsl_hwdep.xc7_config.pll_constraints_get(nsl_hwdep.xc7_config.MMCM);
+      ret := nsl_hwconfig.xc7_config.pll_constraints_get(nsl_hwconfig.xc7_config.MMCM);
     elsif mode = S7_PLL then
-      ret := nsl_hwdep.xc7_config.pll_constraints_get(nsl_hwdep.xc7_config.PLL);
+      ret := nsl_hwconfig.xc7_config.pll_constraints_get(nsl_hwconfig.xc7_config.PLL);
     else
       report "Unsupported mode" severity failure;
     end if;
