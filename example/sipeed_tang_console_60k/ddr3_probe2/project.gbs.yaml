@@ -1,0 +1,61 @@
+name: tang_console_60k_ddr3_probe2
+
+repositories:
+  # The gatecap gateware library, and the rack this design describes.
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
+  - path: description.yaml
+    loader: gatecap-description
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_io.serdes
+    - nsl_io.delay
+    - nsl_logic.bool
+    - gatecap_generated.ddr3_scope
+    - nsl_amba.axi4_stream
+    - nsl_bnoc.axi_adapter
+    - nsl_bnoc.chunked_link
+    - nsl_bnoc.framed
+    - nsl_bnoc.pipe
+    - nsl_usb.func
+    - nsl_usb.io
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_uart.serdes
+  sources:
+    - file_type: verilog
+      files:
+        - ../../../../gatecap/gateware/example/tang_console/phy/usb2_0_softphy.v
+    - file_type: vhdl
+      files:
+        - ../../../../gatecap/gateware/example/tang_console/phy/softphy.pkg.vhd
+        - ../../../../gatecap/gateware/example/tang_console/phy/gw_usb2_phy.vhd
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart_tx.cst
+        - ../pinout/ddr3_probe2.cst
+        - ../../../../gatecap/gateware/example/tang_console/constraint/usb2.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: ddr3_probe2.fs

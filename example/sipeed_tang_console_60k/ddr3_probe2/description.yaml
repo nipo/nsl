@@ -1,0 +1,42 @@
+# The build generates the rack from this description; the emitted units
+# are analysed into the gatecap_generated library.
+#
+# A window onto the memory bus, sampled by the same input serialisers
+# that read the part: each fabric cycle carries eight slots of a data
+# line and of both strobes, so a capture has slot resolution while the
+# instrument itself runs at fabric rate.
+#
+# The phase field says which part of the sequence a cycle belongs to,
+# and triggers, so a capture can be pinned to the write burst rather
+# than to whenever the host happened to arm it.
+name: ddr3_scope.ddr3_scope_core
+
+communication:
+  mode: axi4_stream
+
+instruments:
+  la: !logic-analyzer
+    storage:
+      buffer_depth_l2: 9
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: value
+
+    domains:
+      pins:
+        clock: clock
+        frequency: 100_000_000
+
+        signals:
+          dq0: !bus
+            width: 8
+          dqs0: !bus
+            width: 8
+          dqs1: !bus
+            width: 8
+          phase: !bus
+            width: 4
+            trigger: true

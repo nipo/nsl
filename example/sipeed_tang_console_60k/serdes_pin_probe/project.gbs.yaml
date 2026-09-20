@@ -1,0 +1,41 @@
+name: tang_console_60k_serdes_pin_probe
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_io.delay
+    - nsl_io.io
+    - nsl_io.serdes
+    - nsl_uart.serdes
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart_tx.cst
+        - ../pinout/ready_led.cst
+        - pinout.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    filter_vars:
+      hwdep: gowin
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: serdes_pin_probe.fs

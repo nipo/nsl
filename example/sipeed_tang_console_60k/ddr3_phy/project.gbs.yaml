@@ -1,0 +1,43 @@
+name: tang_console_60k_ddr3_phy
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_ext_ram.ddr3_io
+    - nsl_ext_ram.dfi
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+    - nsl_io.io
+    - nsl_io.diff
+    - nsl_uart.serdes
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart_tx.cst
+        - ../pinout/ddr3_probe2.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    filter_vars:
+      hwdep: gowin
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: ddr3_phy.fs

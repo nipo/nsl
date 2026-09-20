@@ -1,0 +1,167 @@
+# The populated DDR3 site, wired for nsl_ext_ram.ddr3_io.ddr3_phy_serdes
+# at DDR3-800.
+#
+# Pins come from ddr3.cst, which records the board; the IO types come
+# from ddr3_probe2.cst, which is what has been driven on this board and
+# answered.  The bank sits at 1.5V and the part takes its reference
+# from the board divider -- VTTREF reaches V3, W7, F1 and P1 -- so
+# plain LVCMOS15 carries both directions.  SSTL15 receivers against
+# that reference are the option this does not take yet: a receiver
+# threshold is a thing to move once the bus answers at all, and not
+# while nothing does.
+#
+# Only the first site is fitted.  The second one's lanes share every
+# pin constrained above the data group and are left unconstrained
+# below it.
+#
+# Every data and strobe pin is pulled down, so a bus nobody drives
+# reads as zero on all sixteen lines.  ddr3_probe2.cst pulled DQ8 the
+# other way on purpose, to tell a silent part from a broken capture;
+# that asymmetry belongs to a probe and not to a walk, where a pull
+# fighting the part's own driver would do it on one line out of
+# sixteen.
+
+# Shared command and address group.  Every one of these leaves from a
+# serialiser on the shifted clock pair, so there is no placement here
+# for the tools to get wrong.
+
+IO_LOC  "ddr3_ck_p_o" L3;
+IO_PORT "ddr3_ck_p_o" IO_TYPE=LVCMOS15 DRIVE=8;
+IO_LOC  "ddr3_ck_n_o" K3;
+IO_PORT "ddr3_ck_n_o" IO_TYPE=LVCMOS15 DRIVE=8;
+IO_LOC  "ddr3_cke_o" K6;
+IO_PORT "ddr3_cke_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_cs_n_o" P4;
+IO_PORT "ddr3_cs_n_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_ras_n_o" L5;
+IO_PORT "ddr3_ras_n_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_cas_n_o" L4;
+IO_PORT "ddr3_cas_n_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_we_n_o" M5;
+IO_PORT "ddr3_we_n_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_odt_o" M2;
+IO_PORT "ddr3_odt_o" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_reset_n_o" L6;
+IO_PORT "ddr3_reset_n_o" IO_TYPE=LVCMOS15;
+
+IO_LOC  "ddr3_ba_o[0]" P5;
+IO_PORT "ddr3_ba_o[0]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_ba_o[1]" P2;
+IO_PORT "ddr3_ba_o[1]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_ba_o[2]" M6;
+IO_PORT "ddr3_ba_o[2]" IO_TYPE=LVCMOS15;
+
+IO_LOC  "ddr3_a_o[0]" M1;
+IO_PORT "ddr3_a_o[0]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[1]" K2;
+IO_PORT "ddr3_a_o[1]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[2]" G2;
+IO_PORT "ddr3_a_o[2]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[3]" J4;
+IO_PORT "ddr3_a_o[3]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[4]" J2;
+IO_PORT "ddr3_a_o[4]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[5]" H2;
+IO_PORT "ddr3_a_o[5]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[6]" G3;
+IO_PORT "ddr3_a_o[6]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[7]" J1;
+IO_PORT "ddr3_a_o[7]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[8]" J5;
+IO_PORT "ddr3_a_o[8]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[9]" H5;
+IO_PORT "ddr3_a_o[9]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[10]" L1;
+IO_PORT "ddr3_a_o[10]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[11]" H3;
+IO_PORT "ddr3_a_o[11]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[12]" K4;
+IO_PORT "ddr3_a_o[12]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[13]" K1;
+IO_PORT "ddr3_a_o[13]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_a_o[14]" D1;
+IO_PORT "ddr3_a_o[14]" IO_TYPE=LVCMOS15;
+# A15 addresses nothing at this density -- eight banks of 32768 rows of
+# 1024 columns fill the 4Gbit with A0 to A14 -- and the pin is an input
+# of the part all the same, so it is driven rather than left floating.
+IO_LOC  "ddr3_a_o[15]" R1;
+IO_PORT "ddr3_a_o[15]" IO_TYPE=LVCMOS15;
+
+# The fitted site's data group.
+
+IO_LOC  "ddr3_0_dm_o[0]" AA4;
+IO_PORT "ddr3_0_dm_o[0]" IO_TYPE=LVCMOS15;
+IO_LOC  "ddr3_0_dm_o[1]" V7;
+IO_PORT "ddr3_0_dm_o[1]" IO_TYPE=LVCMOS15;
+
+IO_LOC  "ddr3_0_dq_io[0]" Y4;
+IO_PORT "ddr3_0_dq_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[1]" AB3;
+IO_PORT "ddr3_0_dq_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[2]" AA5;
+IO_PORT "ddr3_0_dq_io[2]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[3]" V4;
+IO_PORT "ddr3_0_dq_io[3]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[4]" AA1;
+IO_PORT "ddr3_0_dq_io[4]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[5]" AB2;
+IO_PORT "ddr3_0_dq_io[5]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[6]" AB5;
+IO_PORT "ddr3_0_dq_io[6]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[7]" AB1;
+IO_PORT "ddr3_0_dq_io[7]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[8]" AA8;
+IO_PORT "ddr3_0_dq_io[8]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[9]" Y8;
+IO_PORT "ddr3_0_dq_io[9]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[10]" AB7;
+IO_PORT "ddr3_0_dq_io[10]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[11]" Y7;
+IO_PORT "ddr3_0_dq_io[11]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[12]" AB8;
+IO_PORT "ddr3_0_dq_io[12]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[13]" W9;
+IO_PORT "ddr3_0_dq_io[13]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[14]" AB6;
+IO_PORT "ddr3_0_dq_io[14]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dq_io[15]" Y9;
+IO_PORT "ddr3_0_dq_io[15]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+
+# Each strobe is a pair of ordinary pins driven complementary, not a
+# differential primitive: the bank runs LVCMOS15 and the pair's two
+# halves each carry their own tristated serialiser, which is what the
+# PHY hands over.  The P half is read back on the pin it leaves by.
+IO_LOC  "ddr3_0_dqs_p_io[0]" Y3;
+IO_PORT "ddr3_0_dqs_p_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dqs_n_io[0]" AA3;
+IO_PORT "ddr3_0_dqs_n_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dqs_p_io[1]" V9;
+IO_PORT "ddr3_0_dqs_p_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "ddr3_0_dqs_n_io[1]" V8;
+IO_PORT "ddr3_0_dqs_n_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+
+# The four walkers' beat enables, kept off the global clock tree.
+#
+# A memory tester advances its whole hash pipeline on one enable, so
+# `transition.advance` reaches some two to three hundred clock enables
+# inside its own walker.  The placer counts that as a clock candidate
+# and promotes it to a *primary* global clock resource -- there are
+# eight, this design has eight real clocks, and a bench net taking one
+# costs a real clock its place and the whole device its placement.
+# The net is an enable and not a clock, so it belongs on ordinary
+# routing whatever its fanout.
+#
+# CLOCK_LOC ... LOCAL_CLOCK is the statement of that, from SUG1018
+# "Arora V Design Physical Constraints User Guide", section 2.7 Clock
+# Net Constraints: "LOCAL_CLOCK means this net is not routed to the
+# global clock wire", and with LOCAL_CLOCK no signal_type is taken.
+#
+# All four are named, not the two a given build happens to promote:
+# which walker wins a primary is the placer's, and the policy is about
+# what the net is.  Each walker's reset is the same shape and is not
+# nameable -- it comes out of synthesis as `nNNN_5` -- so the enable is
+# the lever this file has.
+CLOCK_LOC "probe/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "bank_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "row_walk/transition.advance" LOCAL_CLOCK;

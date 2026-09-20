@@ -1,0 +1,18 @@
+# Three pins of the fitted DDR3 site's lane 0, taken from
+# ../pinout/ddr3_probe2.cst: DQ0, DQ1 and DQ2.  Nothing here drives the
+# part on purpose -- what is asked of these pins is whether the fabric
+# will build the IO logic each one is given, and that question is
+# answered by the tools alone.
+
+IO_LOC  "dq_io[0]" Y4;
+IO_PORT "dq_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "dq_io[1]" AB3;
+IO_PORT "dq_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_LOC  "dq_io[2]" AA5;
+IO_PORT "dq_io[2]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+
+# The loopback pin: PMOD0_IO0 of J6, which has nothing on it.  A pad
+# driven and read at once is the whole experiment, so the only net in
+# it is the one inside the package.
+IO_LOC  "loop_io" V18;
+IO_PORT "loop_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;

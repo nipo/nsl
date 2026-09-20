@@ -1,0 +1,95 @@
+# 2 x H5TQ4G63EFR (4Gb x16) footprints share A, BA, CS#, RAS#, CAS#, WE#,
+# CKE, ODT, RESET and CK. Single rank, no rank selection.
+#
+# Only one device is populated and the board has no silkscreen refdes, so
+# the two were told apart by reading the MPR through both pin groups: the
+# first site's lanes answer, the second site's never move. The second
+# site's pins are kept here for the record.
+
+# VTTREF is connected to V3, W7, F1 and P1.
+
+# Shared
+
+IO_LOC "ddr3_a0" M1;
+IO_LOC "ddr3_a1" K2;
+IO_LOC "ddr3_a2" G2;
+IO_LOC "ddr3_a3" J4;
+IO_LOC "ddr3_a4" J2;
+IO_LOC "ddr3_a5" H2;
+IO_LOC "ddr3_a6" G3;
+IO_LOC "ddr3_a7" J1;
+IO_LOC "ddr3_a8" J5;
+IO_LOC "ddr3_a9" H5;
+IO_LOC "ddr3_a10" L1;
+IO_LOC "ddr3_a11" H3;
+IO_LOC "ddr3_a12" K4;
+IO_LOC "ddr3_a13" K1;
+IO_LOC "ddr3_a14" D1;
+IO_LOC "ddr3_a15" R1;
+
+IO_LOC "ddr3_ba0" P5;
+IO_LOC "ddr3_ba1" P2;
+IO_LOC "ddr3_ba2" M6;
+
+IO_LOC "ddr3_cs#" P4;
+IO_LOC "ddr3_cas#" L4;
+
+IO_LOC "ddr3_cke" K6;
+
+IO_LOC "ddr3_clk0_n" K3;
+IO_LOC "ddr3_clk0_p" L3;
+
+IO_LOC "ddr3_odt" M2;
+IO_LOC "ddr3_ras#" L5;
+IO_LOC "ddr3_reset" L6;
+IO_LOC "ddr3_we#" M5;
+
+# First chip (Refdes = DDR1)
+
+IO_LOC "ddr3_0_dm0" AA4;
+IO_LOC "ddr3_0_dm1" V7;
+IO_LOC "ddr3_0_dq0" Y4;
+IO_LOC "ddr3_0_dq1" AB3;
+IO_LOC "ddr3_0_dq2" AA5;
+IO_LOC "ddr3_0_dq3" V4;
+IO_LOC "ddr3_0_dq4" AA1;
+IO_LOC "ddr3_0_dq5" AB2;
+IO_LOC "ddr3_0_dq6" AB5;
+IO_LOC "ddr3_0_dq7" AB1;
+IO_LOC "ddr3_0_dq8" AA8;
+IO_LOC "ddr3_0_dq9" Y8;
+IO_LOC "ddr3_0_dq10" AB7;
+IO_LOC "ddr3_0_dq11" Y7;
+IO_LOC "ddr3_0_dq12" AB8;
+IO_LOC "ddr3_0_dq13" W9;
+IO_LOC "ddr3_0_dq14" AB6;
+IO_LOC "ddr3_0_dq15" Y9;
+IO_LOC "ddr3_0_dqs0_n" AA3;
+IO_LOC "ddr3_0_dqs0_p" Y3;
+IO_LOC "ddr3_0_dqs1_n" V8;
+IO_LOC "ddr3_0_dqs1_p" V9;
+
+# Second chip (Refdes = DDR2)
+
+IO_LOC "ddr3_1_dm0" T6;
+IO_LOC "ddr3_1_dm1" W1;
+IO_LOC "ddr3_1_dq0" U5;
+IO_LOC "ddr3_1_dq1" R6;
+IO_LOC "ddr3_1_dq2" U6;
+IO_LOC "ddr3_1_dq3" R4;
+IO_LOC "ddr3_1_dq4" Y6;
+IO_LOC "ddr3_1_dq5" T4;
+IO_LOC "ddr3_1_dq6" V5;
+IO_LOC "ddr3_1_dq7" T5;
+IO_LOC "ddr3_1_dq8" W2;
+IO_LOC "ddr3_1_dq9" Y1;
+IO_LOC "ddr3_1_dq10" T1;
+IO_LOC "ddr3_1_dq11" U3;
+IO_LOC "ddr3_1_dq12" U2;
+IO_LOC "ddr3_1_dq13" V2;
+IO_LOC "ddr3_1_dq14" U1;
+IO_LOC "ddr3_1_dq15" Y2;
+IO_LOC "ddr3_1_dqs0_n" W5;
+IO_LOC "ddr3_1_dqs0_p" W6;
+IO_LOC "ddr3_1_dqs1_n" R2;
+IO_LOC "ddr3_1_dqs1_p" R3;

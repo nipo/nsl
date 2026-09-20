@@ -1,0 +1,352 @@
+# The build generates the rack from this description; the emitted units
+# are analysed into the gatecap_generated library.
+#
+# The same panel as example/xc7a50t/ddr3, on a part two byte lanes
+# wide: every reading of the data bus is twice as many bits, so the
+# words that were two are four, the two per-pin words are sixteen bits
+# and the strobe words are one per lane rather than one.
+#
+# The transport is the board's own USB2 port through the soft PHY,
+# rather than the JTAG the Artix bench reaches its rack by.
+name: ddr3_walk.ddr3_walk_core
+
+communication:
+  mode: axi4_stream
+
+instruments:
+  # Against the board oscillator.  The memory clock is the one the
+  # controller's every delay was resolved against, so a part that
+  # never answers and a clock that came up at the wrong rate need
+  # telling apart before anything below is worth reading.  The other
+  # three outputs of the block are tied to this one by construction.
+  rates: !clock-measurer
+    reference: board
+    frequency: 50_000_000
+    clocks: [ram]
+    max_rate: 200_000_000
+
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Held low, the selected walker sits in reset, and the adapter
+      # and the core with it: a master reset in the middle of a
+      # transaction leaves its slave holding a transfer whose other
+      # side has gone, and nothing in the protocol gets it out again.
+      # Raising it starts a run, and dropping and raising it again
+      # starts the next: a walker stops for good when it is done, by
+      # design.  Every run therefore pays the part's power-up sequence
+      # at its front, which the core replays from its first step.
+      #
+      # The part itself is not taken down with them.  While this is low
+      # its reset pin and its clock enable are held where the sequence
+      # left them, because every other instrument here works with the
+      # run down and each of them wants a part that is initialised and
+      # clocked.
+      #
+      # The first bring-up does not wait for this either: a register of
+      # this family comes out of configuration at zero, so the design's
+      # own reset is what releases the core until it has played the
+      # sequence once.
+      run: 1
+      # Which walker.  Zero is the short region used for training, one
+      # the whole part, and between them two sizes the address map
+      # chose: two is every bank at row zero, which crosses a bank
+      # boundary and no row boundary, and three adds the first row
+      # crossing on top of that.  A contiguous region cannot reach a
+      # second row without crossing every bank first, so that is the
+      # ladder there is.
+      full:
+        width: 2
+      # Write levelling.  The strobe still goes out but the data lines
+      # are let go of, so the part answers on them with what it sampled
+      # of the memory clock.
+      level: 1
+      # Every change of this, either way, moves every data pin's delay
+      # line on one tap.  The line only goes forward and wraps, so a
+      # position is a count of changes and a sweep is a run of them.
+      # This family's line carries 256 taps of about 12.5 ps, some two
+      # and a half beats of range, so a sweep of it is long and worth
+      # subsampling before it is refined.
+      tick: 1
+      # Slots from the cycle a read was announced on to the slot its
+      # first beat lands in.  The coarse half of read training.
+      offset:
+        width: 7
+      # Where the data sits against the strobe, in whole slots.  Eight
+      # is the quarter period the clock pair provides and nothing more.
+      # The serialiser carrying the data hands its parallel word to its
+      # shifted fast side whole, so the burst lands a whole cycle from
+      # there one way or the other: the range is a word either way,
+      # zero putting the burst a cycle later and fifteen seven slots
+      # earlier.  On this family the data keeps the unshifted pair and
+      # the strobe's group is the one that crosses, so eight -- no
+      # slipping at all -- is what to expect.
+      slip:
+        width: 4
+      # Close the row behind the poke's write, by asking for auto
+      # precharge on it.  The read that follows then falls on a closed
+      # row, so an answer that changes when this is set says the part
+      # acted on the write command -- which nothing else here can tell
+      # apart from a write whose burst goes astray.
+      poke_ap: 1
+      # Write one burst and read it back, straight at the DFI: a row
+      # opened, a burst written, a precharge, the row opened again and
+      # a read.  Nothing between the panel and the pins belongs to the
+      # controller, so what comes back is this PHY's burst and what the
+      # part made of it.
+      poke: 1
+      # The first beat of that burst; the rest count up from it, so a
+      # burst that comes back rotated or reversed says so.
+      poke_value:
+        width: 8
+      # Put the part in multi purpose register mode and read it.
+      # Every read then answers with a pattern the part holds rather
+      # than with the array, which is what lets the read path be
+      # trained before any write is trusted.
+      mpr: 1
+      # Slots by which this family puts a pad's tristate word on the
+      # pin ahead of the data word beside it, one for the data pads
+      # and one for the strobe.  The tristate register is not part of
+      # the serialiser's word pipeline, so the two need not arrive
+      # together; a family where they do wants zero, which is what a
+      # GW5A pad is expected to be.  Measured with the drive map,
+      # which tells a driven slot from a released one by reading each
+      # of them many times over.
+      dq_lead:
+        width: 4
+      dqs_lead:
+        width: 4
+      # Turn the strobe pattern round in the word the serialiser is
+      # given.  A board may present the pair either way about, and a
+      # part reads its beats off the sense of the strobe against its
+      # data, so this is the control that tries the other way without
+      # another build.
+      dqs_invert: 1
+      # Whose numbers the PHY is given: this panel's offset, slip,
+      # dq_lead, dqs_lead and dqs_invert, or the board record the
+      # design carries.  A control register comes out of reset at zero
+      # and zero is a legal setting for most of them, so an instrument
+      # that means to sweep says so here rather than being inferred
+      # from a write.  Low is what a design with no host attached
+      # does.
+      manual: 1
+      # How the strobe is asked for while levelling.  Zero is a burst
+      # now and then, which is what levelling asks for; three is one
+      # on every cycle; two is none at all, which is what the pin
+      # watcher is read against.
+      force:
+        width: 2
+      # On-die termination at the part.  Held asserted rather than
+      # placed around each write, which is what a controller would do
+      # and what this one does not do yet.
+      odt: 1
+      # Announce a read on the cycle the poke's write goes out on, and
+      # not on the cycle its read does.  The data pads are buffers, so
+      # the receivers see what this design drives, and the capture is
+      # then our own burst caught at read offset slots from the command
+      # that asked for it.  That turns the read path into a ruler for
+      # where the write data really sits against its command.
+      snoop: 1
+      # Mode register 1 bit A11, written into the part by a step of the
+      # poke sequence.  Setting it enables TDQS, and a part with TDQS
+      # enabled supports no data mask at all -- so a burst that lands
+      # only with this set says the mask pin was hiding it.
+      tdqs: 1
+
+    status:
+      # Whether the power-up sequence has played since the design was
+      # configured.  Latched, and cleared only by the design's own
+      # reset: the run takes the core back to the first step of that
+      # sequence, so the core's own ready line follows the run, and
+      # what a host asks here is whether the sequence ever ran at all.
+      # Whether the bus can take a transaction at this instant is the
+      # other question, and handshake below is what answers it.
+      ready: 1
+      busy: 1
+      done: 1
+      error_count:
+        width: 32
+      first_error_address:
+        width: 29
+      # The first beat of a run, whole: a controller cycle here is a
+      # hundred and twenty-eight bits, so it takes four status words.
+      # A cycle is laid out a byte lane at a time inside a slot, so
+      # byte 2s + l is lane l of slot s and word zero holds slots zero
+      # and one.  A bus nobody is driving and a bus driven at the wrong
+      # moment read the same through an error count and differently
+      # here.
+      first_read_0:
+        width: 32
+      first_read_1:
+        width: 32
+      first_read_2:
+        width: 32
+      first_read_3:
+        width: 32
+      # Beats that came back at all, whatever they held.
+      read_count:
+        width: 32
+      # The rest of the bus the selected walker drives, a channel at a
+      # time, both sides of each handshake, cleared with the run.  A
+      # walker that raises busy and returns nothing says no more than
+      # that through an error count; which of these stopped moving says
+      # which transfer it is waiting on.
+      aw_count:
+        width: 32
+      w_count:
+        width: 32
+      b_count:
+        width: 32
+      ar_count:
+        width: 32
+      # The address of the last transaction accepted each way, which
+      # says how far into the region a stall got.
+      last_aw:
+        width: 29
+      last_ar:
+        width: 29
+      # Both sides of every channel as they stand: aw, w, b, ar and r,
+      # valid in the low bit of each pair and ready in the high one.
+      # A bus where nothing moves has one side of one channel waiting,
+      # and the counters above cannot say which.
+      handshake:
+        width: 10
+      # What the core put on the command pins, by kind, counted from
+      # reset: the power-up script's own register writes are in these,
+      # so it is what they do over a run rather than what they hold
+      # that belongs to it.  A bus that stops advancing with these
+      # still moving is a part that is not answering; one that stops
+      # with these frozen is a controller that has stopped asking.
+      act_count:
+        width: 32
+      pre_count:
+        width: 32
+      wr_count:
+        width: 32
+      rd_count:
+        width: 32
+      ref_count:
+        width: 32
+      mrs_count:
+        width: 32
+      # Set while a pin's delay line sits at its shortest tap, which is
+      # how a sweep knows it has been round.  One bit a data pin, and
+      # this part has sixteen.
+      delay_mark:
+        width: 16
+      # What the part sampled of the memory clock, one bit a data pin.
+      # The part drives every pin of a lane alike, so pins of one lane
+      # that disagree are a bus nobody is driving -- and the two lanes
+      # may legitimately differ from each other, since each has its own
+      # strobe.
+      level_answer:
+        width: 16
+      # Each lane's own strobe, caught on the pin it leaves by, over a
+      # levelling pass: one bit a slot for a slot that was ever high,
+      # one for a slot that was ever low.  A strobe that toggles makes
+      # the two differ.
+      strobe_high_0:
+        width: 8
+      strobe_low_0:
+        width: 8
+      strobe_high_1:
+        width: 8
+      strobe_low_1:
+        width: 8
+      # Where the levelling sequence is, and how many strobe bursts it
+      # has asked for since it started.  A sequence that never started
+      # and one whose bursts go nowhere read alike without these.
+      level_step:
+        width: 5
+      level_burst:
+        width: 8
+      # What the part answered on the controller-to-PHY line, whatever
+      # asked for it, and how many answers have come back.  Four words
+      # laid out as first_read above.
+      mpr_0:
+        width: 32
+      mpr_1:
+        width: 32
+      mpr_2:
+        width: 32
+      mpr_3:
+        width: 32
+      mpr_count:
+        width: 8
+      # Each lane's strobe over the same eight slots the answer above
+      # was taken from, picked out of the capture with the offset the
+      # data was picked with and latched on the same cycle.  One bit a
+      # slot, slot zero in the top bit as in the two above, so eight
+      # binary digits of it read slot zero first.
+      strobe_word_0:
+        width: 8
+      strobe_word_1:
+        width: 8
+
+  # The DFI on the PHY's side of the sequencer mux, a controller cycle
+  # a sample.  A burst that comes back wrong is a burst that was either
+  # written wrong or read wrong, and no count of bad beats says which:
+  # the command that opened the row, the sixteen bytes that went out
+  # under it and the sixteen that came back for the read of the same
+  # address, in time order, do.  Probing the PHY side rather than the
+  # core side means the sequencer's own traffic shows too, so a poke
+  # and a walk read the same way.
+  capture: !logic-analyzer
+    storage:
+      # A pass of the short walker is four write bursts and four read
+      # bursts, a couple of hundred cycles including the walker's own
+      # priming.  A thousand samples covers one whole with room to
+      # spare, and the part of a longer run that matters is still its
+      # beginning.
+      buffer_depth_l2: 10
+
+    domains:
+      ram:
+        clock: clock
+        frequency: 100_000_000
+
+        signals:
+          # The run with a controller that has come ready under it,
+          # which is where a pass begins.  Armed with the run down and
+          # the run raised afterwards: the core leaves reset with the
+          # walker and spends the part's power-up sequence there,
+          # seventy thousand cycles of it, so a window on the run
+          # itself would hold that sequence and none of the pass.
+          run:
+            trigger: true
+          # The selected walker has counted a bad beat.  Triggering on
+          # this catches the cycle a pass goes wrong rather than the
+          # cycle it starts, for a capture that wants the failure and
+          # not the run around it.
+          error:
+            trigger: true
+          # Phase zero of the command slot, as the pins carry it.  Raw
+          # rather than decoded, so a deselect and a NOP are told apart
+          # here as they are on the wire.
+          cs_n: {}
+          ras_n: {}
+          cas_n: {}
+          we_n: {}
+          bank: !bus
+            width: 3
+          # Enough for a row of this part, which is wider than any
+          # column address it carries.
+          address: !bus
+            width: 15
+          wrdata_en: {}
+          # One controller cycle of the bus, slot zero in the low byte:
+          # a whole DDR3 burst of eight on a sixteen bit part.
+          wrdata: !bus
+            width: 128
+          rddata_valid: {}
+          rddata: !bus
+            width: 128
+          # Enough of the count to say which beat of a pass went wrong
+          # without carrying a word that never moves.
+          error_count: !bus
+            width: 8
+          # The walker's read channel, both sides of the handshake, so
+          # a beat the core returned can be matched to the beat the
+          # walker took.
+          r_beat: {}
