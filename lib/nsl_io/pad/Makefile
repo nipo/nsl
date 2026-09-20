@@ -3,6 +3,8 @@ vhdl-sources += pad_sstl_generic.vhd
 
 ifeq ($(hwdep),xilinx)
 vhdl-sources += pad_diff_output_xc.vhd
+vhdl-sources += pad_diff_output_tristated_xc.vhd
+vhdl-sources += pad_diff_io_xc.vhd
 vhdl-sources += pad_tmds_output_xc.vhd
 vhdl-sources += pad_tmds_input_xc.vhd
 
@@ -19,6 +21,8 @@ endif
 
 ifeq ($(hwdep),simulation)
 vhdl-sources += pad_diff_output_simulation.vhd
+vhdl-sources += pad_diff_output_tristated_simulation.vhd
+vhdl-sources += pad_diff_io_simulation.vhd
 vhdl-sources += pad_tmds_output_simulation.vhd
 vhdl-sources += pad_tmds_input_simulation.vhd
 vhdl-sources += pad_diff_input_simulation.vhd
@@ -32,3 +36,4 @@ vhdl-sources += pad_tmds_output_gowin.vhd
 endif
 
 deps += nsl_io.diff
+deps += nsl_io.io

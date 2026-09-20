@@ -90,6 +90,34 @@ package pad is
       );
   end component;
 
+  -- A differential output that can let go of its pair.  Both halves
+  -- come off one buffer, so they cannot be placed apart and their
+  -- crossing point is the one the receiver was promised: a pair driven
+  -- as two ordinary pins moves that crossing by whatever the two pins'
+  -- routing differs by, and a receiver that reads the crossing reads
+  -- the difference.
+  --
+  -- Nothing reads the pair back here.  A bidirectional differential
+  -- pad is pad_sstl_diff_io.
+  component pad_diff_output_tristated
+    port(
+      p_se : in nsl_io.io.tristated;
+      p_diff : out diff_pair
+      );
+  end component;
+
+  -- A differential pair driven from one buffer and read back through
+  -- it.  The pair reaches the top level as two inout wires, the way
+  -- nsl_io.io.tristated_io_driver does for a single one.
+  component pad_diff_io
+    port(
+      v_i : in nsl_io.io.tristated;
+      v_o : out std_ulogic;
+      p_io : inout std_logic;
+      n_io : inout std_logic
+      );
+  end component;
+
   component pad_tmds_output
     generic(
       invert_c : boolean := false;
