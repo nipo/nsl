@@ -1,0 +1,12 @@
+vhdl-sources += sram.pkg.vhd
+vhdl-sources += sram_core.vhd
+vhdl-sources += sram_controller.vhd
+vhdl-sources += axi4_mm_sram.vhd
+deps += nsl_ext_ram.timing
+deps += nsl_ext_ram.burst
+deps += nsl_ext_ram.sram_io
+deps += nsl_ext_ram.frontend
+deps += nsl_amba.axi4_mm
+deps += nsl_math.arith
+deps += nsl_data.bytestream
+deps += nsl_io.io

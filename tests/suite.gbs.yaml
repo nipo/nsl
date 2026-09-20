@@ -218,6 +218,15 @@ projects:
   - name: amba_mm_traffic
     path: amba/mm_traffic
     tags: [ghdl, simulation]
+  - name: ext_ram_sram_axi
+    path: ext_ram/sram_axi
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_sram_controller
+    path: ext_ram/sram_controller
+    tags: [ghdl, simulation]
+  - name: ext_ram_sram_model
+    path: ext_ram/sram_model
+    tags: [ghdl, simulation]
   - name: fifo4
     path: fifo4
     tags: [ghdl, simulation]
