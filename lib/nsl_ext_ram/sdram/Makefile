@@ -1,0 +1,12 @@
+vhdl-sources += sdram.pkg.vhd
+vhdl-sources += sdram_controller.vhd
+vhdl-sources += axi4_mm_sdram.vhd
+deps += nsl_ext_ram.timing
+deps += nsl_ext_ram.dfi
+deps += nsl_ext_ram.burst
+deps += nsl_ext_ram.dram
+deps += nsl_ext_ram.sdram_io
+deps += nsl_math.arith
+deps += nsl_io.io
+deps += nsl_amba.axi4_mm
+deps += nsl_ext_ram.frontend

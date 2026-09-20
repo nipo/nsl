@@ -21,6 +21,35 @@ use nsl_ext_ram.timing.all;
 -- and a bench that cannot fail is not a check of anything.
 package simulation is
 
+  component sdram_model is
+    generic(
+      part_c: dram_part_t;
+      check_timing_c: boolean := true;
+      -- Clock to data out, and how long data stays valid past an edge
+      tac_ps_c: natural := 5400;
+      toh_ps_c: natural := 2500;
+      -- Command, address and write data setup and hold
+      tis_ps_c: natural := 1500;
+      tih_ps_c: natural := 800
+      );
+    port(
+      clock_i: in std_ulogic;
+      cke_i: in std_ulogic;
+      cs_n_i: in std_ulogic;
+      ras_n_i: in std_ulogic;
+      cas_n_i: in std_ulogic;
+      we_n_i: in std_ulogic;
+      ba_i: in unsigned;
+      a_i: in unsigned;
+      dqm_i: in std_ulogic_vector;
+
+      dq_i: in std_ulogic_vector;
+      dq_o: out nsl_io.io.tristated_vector;
+
+      violation_count_o: out natural
+      );
+  end component;
+
   component sram_model is
     generic(
       part_c: sram_part_t;

@@ -215,8 +215,20 @@ projects:
   - name: encoder
     path: encoder
     tags: [ghdl, simulation]
+  - name: ext_ram_sdram_axi
+    path: ext_ram/sdram_axi
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_sdram_axi_early
+    path: ext_ram/sdram_axi_early
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_sdram_controller
+    path: ext_ram/sdram_controller
+    tags: [ghdl, simulation]
   - name: amba_mm_traffic
     path: amba/mm_traffic
+    tags: [ghdl, simulation]
+  - name: ext_ram_sdram_model
+    path: ext_ram/sdram_model
     tags: [ghdl, simulation]
   - name: ext_ram_sram_axi
     path: ext_ram/sram_axi
