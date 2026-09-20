@@ -24,6 +24,10 @@ vhdl-sources += ddr_output_mxo2.vhd
 deps += machxo2.components
 endif
 
+ifneq ($(filter lattice-ecp5,$(hwdep)),)
+vhdl-sources += ddr_output_ecp5.vhd
+endif
+
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += ddr_input_gowin.vhd
 vhdl-sources += ddr_output_gowin.vhd
