@@ -1,0 +1,2 @@
+packages += qspi
+packages += transactor

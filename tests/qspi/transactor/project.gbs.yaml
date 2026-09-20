@@ -1,0 +1,26 @@
+name: qspi_transactor
+
+root:
+  name: top
+  deps:
+    - nsl_qspi.transactor
+    - nsl_qspi.qspi
+    - nsl_bnoc.framed
+    - nsl_data.bytestream
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - ../common/qspi_test_support.pkg.vhd
+        - ../common/qspi_flash_model.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

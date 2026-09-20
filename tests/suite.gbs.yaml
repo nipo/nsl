@@ -544,6 +544,9 @@ projects:
   - name: publish_counter
     path: publish_counter
     tags: [ghdl, simulation]
+  - name: qspi_transactor
+    path: qspi/transactor
+    tags: [ghdl, simulation, qspi]
   - name: sc202
     path: sc202
     tags: [ghdl, simulation]
