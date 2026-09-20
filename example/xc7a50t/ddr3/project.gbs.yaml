@@ -1,0 +1,55 @@
+name: xc7a50t_ddr3
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_io.delay
+    - nsl_io.io
+    - nsl_io.pad
+    - nsl_io.serdes
+    - nsl_io.diff
+    - nsl_amba.axi4_mm
+    - nsl_amba.mm_fifo
+    - nsl_amba.mm_traffic
+    - nsl_data.bytestream
+    - nsl_logic.bool
+    - nsl_ext_ram.ddr3
+    - nsl_ext_ram.ddr3_io
+    - nsl_ext_ram.dram
+    - nsl_ext_ram.frontend
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+    - gatecap_generated.ddr3_walk
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/clk25.xdc
+        - ../pinout/ddr3.xdc
+        # After the pinout: the clock groups reach through board_clk.
+        - clocks.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc7a50tfgg484-1
+    outputs:
+      - type: bitstream
+        path: ddr3.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
