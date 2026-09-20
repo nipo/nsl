@@ -25,10 +25,10 @@ begin
   begin
     if rising_edge(clock_i) then
       if shift_i = '1' then
-        if step_count_s = 0 then
-          step_count_s <= tap_step_count_c-1;
+        if step_count_s = tap_step_count_c-1 then
+          step_count_s <= 0;
         else
-          step_count_s <= step_count_s - 1;
+          step_count_s <= step_count_s + 1;
         end if;
       end if;
     end if;
@@ -39,6 +39,9 @@ begin
   end process;
 
   mark_o <= '1' when step_count_s = 0 else '0';
-  data_o <= data_i after (step_count_s * tap_time_c);
+  -- A delay line passes what it is given, however short: an inertial
+  -- delay would swallow any pulse shorter than the tap count it is set
+  -- to, which is exactly the case a line this long is set up for.
+  data_o <= transport data_i after (step_count_s * tap_time_c);
   
 end architecture;

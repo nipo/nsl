@@ -1,6 +1,16 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+-- IDELAYE2 walked one tap longer per shift.  The line carries
+-- thirty-two taps, each a thirty-second of the reference period the
+-- primitive was told to expect, and wraps back to the shortest past
+-- the longest.
+--
+-- The counter here is a model of the one inside the primitive, kept
+-- only so that the mark can be reported: both start where a
+-- configured device leaves them, at tap zero, and both wrap at the
+-- same place, so the two cannot drift.  The primitive's own count is
+-- not readable without a second output the users of this do not want.
 entity input_delay_variable is
   port(
     clock_i : in std_ulogic;
@@ -59,10 +69,10 @@ begin
   begin
     if rising_edge(clock_i) then
       if shift_i = '1' then
-        if step_count_s = 0 then
-          step_count_s <= tap_step_count_c-1;
+        if step_count_s = tap_step_count_c-1 then
+          step_count_s <= 0;
         else
-          step_count_s <= step_count_s - 1;
+          step_count_s <= step_count_s + 1;
         end if;
       end if;
     end if;
@@ -89,7 +99,7 @@ begin
       datain => '0',
       dataout => data_o,
       idatain => data_i,
-      inc => '0',
+      inc => '1',
       ld => '0',
       ldpipeen => '0',
       regrst => reset_s

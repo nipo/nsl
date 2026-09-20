@@ -66,10 +66,10 @@ begin
   begin
     if rising_edge(clock_i) then
       if shift_i = '1' then
-        if step_count_s = 0 then
-          step_count_s <= tap_step_count_c-1;
+        if step_count_s = tap_step_count_c-1 then
+          step_count_s <= 0;
         else
-          step_count_s <= step_count_s - 1;
+          step_count_s <= step_count_s + 1;
         end if;
       end if;
     end if;
@@ -98,7 +98,7 @@ begin
       clk => clock_i,
       odatain => '0',
       idatain => data_i,
-      inc => '0',
+      inc => '1',
       ioclk0 => '0',
       ioclk1 => '0',
       dataout => data_o,

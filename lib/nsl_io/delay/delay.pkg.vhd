@@ -39,6 +39,34 @@ package delay is
       );
   end component;
 
+  -- Calibration reference the variable delay lines of some families
+  -- need before their taps mean anything.  One instance serves every
+  -- delay line in a design; where a family needs none, ready_o is
+  -- asserted and nothing is built.
+  --
+  -- clock_i is the reference frequency the delay lines were told to
+  -- expect, which is a property of the family rather than of the
+  -- design.
+  component delay_reference is
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      ready_o : out std_ulogic
+      );
+  end component;
+
+  -- Input delay line whose length is walked a tap at a time.
+  --
+  -- A pulse on shift_i makes the line one tap longer, and the line
+  -- wraps to its shortest tap past the longest one it carries.  mark_o
+  -- says the line is at that shortest tap, tap zero, which is the only
+  -- position a design can name without knowing how many taps a family
+  -- gives it: n pulses from the mark leave the line at tap n.
+  --
+  -- How long a tap is, and how many there are, belong to the family.  A
+  -- design that needs a known position walks to the mark and counts
+  -- from there.
   component input_delay_variable is
     port(
       clock_i : in std_ulogic;

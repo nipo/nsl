@@ -8,6 +8,7 @@ deps += nsl_math.arith
 ifeq ($(hwdep),simulation)
 vhdl-sources += input_delay_fixed_simulation.vhd
 vhdl-sources += output_delay_fixed_symmetrical.vhd
+vhdl-sources += delay_reference_simulation.vhd
 vhdl-sources += input_delay_variable_simulation.vhd
 vhdl-sources += input_delay_variable_simulation_sdr.vhd
 vhdl-sources += output_delay_variable_symmetrical.vhd
@@ -26,6 +27,7 @@ ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += input_delay_fixed_xc7.vhd
 vhdl-sources += output_delay_fixed_xc7.vhd
 vhdl-sources += input_delay_variable_xc7.vhd
+vhdl-sources += delay_reference_xc7.vhd
 vhdl-sources += output_delay_variable_xc7.vhd
 endif
 endif
@@ -36,6 +38,7 @@ ifeq ($(hwdep),gowin)
 ifneq ($(filter GW5%,$(target_part)),)
 vhdl-sources += input_delay_fixed_gowin_gw5.vhd
 vhdl-sources += input_delay_variable_gowin_gw5.vhd
+vhdl-sources += delay_reference_gowin.vhd
 else
 vhdl-sources += input_delay_fixed_gowin.vhd
 endif
