@@ -1,10 +1,12 @@
 vhdl-sources += ddr.pkg.vhd
 vhdl-sources += ddr_bus_output.vhd
 vhdl-sources += ddr_bus_input.vhd
+vhdl-sources += ddr_bus_output_tristated.vhd
 
 ifeq ($(hwdep),simulation)
 vhdl-sources += ddr_input_simulation.vhd
 vhdl-sources += ddr_output_simulation.vhd
+vhdl-sources += ddr_output_tristated_simulation.vhd
 endif
 
 ifeq ($(hwdep),xilinx)
@@ -31,6 +33,7 @@ endif
 ifneq ($(filter gowin,$(hwdep)),)
 vhdl-sources += ddr_input_gowin.vhd
 vhdl-sources += ddr_output_gowin.vhd
+vhdl-sources += ddr_output_tristated_gowin.vhd
 endif
 
 ifneq ($(filter altera,$(hwdep)),)
@@ -41,3 +44,4 @@ endif
 endif
 
 deps += nsl_io.diff
+deps += nsl_io.io

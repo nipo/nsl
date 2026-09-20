@@ -72,6 +72,39 @@ package ddr is
       );
   end component;
 
+  -- DDR output that can let go of its pin.
+  --
+  -- Data follows the halves of the clock period as for ddr_output, but
+  -- the output enable covers a whole period: that is the granularity
+  -- the silicon offers, and a pad turns around on a period boundary,
+  -- never inside one.
+  --
+  -- The pad side is a tristated pair already moving at pin rate.
+  -- Turning it into a wire is the top level's business, which keeps
+  -- inout ports out of the hierarchy.  Reading the same pin is a
+  -- separate ddr_input, so that capture can run off its own clock.
+  component ddr_output_tristated is
+    port(
+      clock_i : in nsl_io.diff.diff_pair;
+      d_i : in std_ulogic_vector(1 downto 0);
+      oe_i : in std_ulogic;
+      pad_o : out nsl_io.io.tristated
+      );
+  end component;
+
+  -- An array of ddr_output_tristated sharing one output enable
+  component ddr_bus_output_tristated is
+    generic(
+      ddr_width : natural
+      );
+    port(
+      clock_i : in nsl_io.diff.diff_pair;
+      d_i : in std_ulogic_vector(2 * ddr_width - 1 downto 0);
+      oe_i : in std_ulogic;
+      pad_o : out nsl_io.io.tristated_vector(ddr_width - 1 downto 0)
+      );
+  end component;
+
   -- DDR output bus
   -- An array of ddr_input
   -- Clock propagation scheme is not handled here
