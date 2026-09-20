@@ -1,0 +1,13 @@
+# The board itself: how it is configured, and the oscillator.
+#
+# Reset and asynchronous paths are cut here rather than per design.
+# Lattice has no equivalent of the constraint generator the other
+# backends get, and every NSL crossing lands on a resynchroniser, so
+# the blunt form is the one available.
+
+SYSCONFIG CONFIG_IOVOLTAGE=3.3 COMPRESS_CONFIG=ON MCCLK_FREQ=62 MASTER_SPI_PORT=ENABLE SLAVE_SPI_PORT=DISABLE SLAVE_PARALLEL_PORT=DISABLE;
+BLOCK RESETPATHS;
+BLOCK ASYNCPATHS;
+LOCATE COMP "clk" SITE "M1";
+IOBUF  PORT "clk" IO_TYPE=LVCMOS33 PULLMODE=NONE;
+FREQUENCY PORT "clk" 50 MHZ;

@@ -1,0 +1,162 @@
+# Winbond W9825G6KH, 4 banks x 8K rows x 512 columns x 16 bits.
+
+LOCATE COMP "sdram_a[0]" SITE "B10";
+IOBUF  PORT "sdram_a[0]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[1]" SITE "A9";
+IOBUF  PORT "sdram_a[1]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[2]" SITE "B9";
+IOBUF  PORT "sdram_a[2]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[3]" SITE "A8";
+IOBUF  PORT "sdram_a[3]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[4]" SITE "B8";
+IOBUF  PORT "sdram_a[4]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[5]" SITE "A7";
+IOBUF  PORT "sdram_a[5]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[6]" SITE "B7";
+IOBUF  PORT "sdram_a[6]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[7]" SITE "A6";
+IOBUF  PORT "sdram_a[7]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[8]" SITE "B6";
+IOBUF  PORT "sdram_a[8]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[9]" SITE "A5";
+IOBUF  PORT "sdram_a[9]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[10]" SITE "A10";
+IOBUF  PORT "sdram_a[10]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[11]" SITE "B5";
+IOBUF  PORT "sdram_a[11]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_a[12]" SITE "A4";
+IOBUF  PORT "sdram_a[12]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[0]" SITE "B16";
+IOBUF  PORT "sdram_dq[0]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[1]" SITE "C14";
+IOBUF  PORT "sdram_dq[1]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[2]" SITE "C16";
+IOBUF  PORT "sdram_dq[2]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[3]" SITE "C15";
+IOBUF  PORT "sdram_dq[3]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[4]" SITE "D16";
+IOBUF  PORT "sdram_dq[4]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[5]" SITE "A15";
+IOBUF  PORT "sdram_dq[5]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[6]" SITE "B15";
+IOBUF  PORT "sdram_dq[6]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[7]" SITE "A14";
+IOBUF  PORT "sdram_dq[7]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[8]" SITE "A2";
+IOBUF  PORT "sdram_dq[8]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[9]" SITE "B2";
+IOBUF  PORT "sdram_dq[9]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[10]" SITE "E2";
+IOBUF  PORT "sdram_dq[10]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[11]" SITE "D1";
+IOBUF  PORT "sdram_dq[11]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[12]" SITE "C2";
+IOBUF  PORT "sdram_dq[12]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[13]" SITE "C1";
+IOBUF  PORT "sdram_dq[13]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[14]" SITE "C3";
+IOBUF  PORT "sdram_dq[14]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dq[15]" SITE "B1";
+IOBUF  PORT "sdram_dq[15]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_ba[0]" SITE "A11";
+IOBUF  PORT "sdram_ba[0]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_ba[1]" SITE "B11";
+IOBUF  PORT "sdram_ba[1]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dqm[0]" SITE "B14";
+IOBUF  PORT "sdram_dqm[0]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_dqm[1]" SITE "B3";
+IOBUF  PORT "sdram_dqm[1]" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_csn" SITE "B12";
+IOBUF  PORT "sdram_csn" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_cke" SITE "B4";
+IOBUF  PORT "sdram_cke" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_clk" SITE "A3";
+IOBUF  PORT "sdram_clk" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_wen" SITE "A13";
+IOBUF  PORT "sdram_wen" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_casn" SITE "B13";
+IOBUF  PORT "sdram_casn" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+LOCATE COMP "sdram_rasn" SITE "A12";
+IOBUF  PORT "sdram_rasn" IO_TYPE=LVCMOS33 PULLMODE=NONE DRIVE=4;
+
+# What the part is held to, against the clock forwarded beside it.
+#
+# The PHY keeps one register per pin and forwards the memory clock
+# half a period behind the one those registers launch on, so the part
+# samples the middle of the window a pin is held for.  Nothing below
+# makes that half period -- it comes out of the ODDR -- and no number
+# below is a margin on its own: every pin of this bus carries the same
+# PLL and pad latency, the forwarded clock included, so what these
+# bound is the *spread* between the pins and the clock, and on a
+# source synchronous bus the spread is the whole of the margin.
+#
+# CLOCK_TO_OUT ... CLKOUT PORT measures a data pad's transition
+# against "sdram_clk"'s for the same launching edge, and the
+# transition it measures against is the forwarded clock's falling one.
+# The rising edge, which is what the part samples on, is half a period
+# after it.  A pin holds its value for a whole period, so with the
+# part asking tIS before that edge and tIH after it:
+#
+#   MAX = tCK/2 - tIS  and  MIN = tIH - tCK/2
+#
+# INPUT_SETUP has no CLKOUT of its own, so the read side is written
+# against a clock net rather than the clock port: measured from the
+# port it would carry the PLL's own output phase, which the tools pick
+# with the dividers and which therefore moves with the rate, while
+# what the part actually answers to is the memory clock itself.  From
+# the PLL output both sides of the loop are placement and nothing
+# else.
+#
+# The part answers tAC after the sdram_clk edge it was asked on and
+# holds tOH past the next one; the fabric catches that on the falling
+# edge one period later, which is what makes the eye reachable at all
+# (see nsl_ext_ram/DESIGN.md sec. 11).  So, with Tco the memory clock
+# net to "sdram_clk" pad delay -- 5.81 ns slow and 2.21 ns fast here,
+# which a CLOCK_TO_OUT on the clock pin itself will print:
+#
+#   INPUT_DELAY = Tco(slow) + tAC   and   HOLD = -(Tco(fast) + tOH)
+#
+# INPUT_DELAY is period relative, so the read side follows the memory
+# clock by itself; the CLOCK_TO_OUT pair does not, and is written here
+# for the rate sdram/src/boundary.vhd asks the PLL for.
+#
+# tIS 1.5 ns, tIH 0.8 ns, tAC 5.4 ns and tOH 2.5 ns are the W9825G6KH
+# figures this library already carries, as the defaults of
+# nsl_ext_ram.simulation's sdram_model.
+
+# The memory clock, named because nothing else names it: the tools
+# cannot read a rate out of the PLL without being told what feeds it,
+# and left alone they hold this domain to the rate they assume at the
+# PLL's input rather than to the one boundary.vhd asks for.
+FREQUENCY NET "ram_raw_s" 80 MHZ ;
+
+# The panel and the rate measurer read this domain from the board
+# clock and are read back from it, over NSL resynchronisers.  The two
+# clocks come out of one PLL, so BLOCK ASYNCPATHS does not reach them:
+# the tools relate them and score the crossing against a period.
+#
+# Cut rather than relaxed.  MULTICYCLE is the tempting form -- a
+# resynchroniser wants its hold met and not its setup -- and it makes
+# the tools try and fail rather than not try: the hold is then asked
+# of an edge two periods away and the report fills with "cannot fix
+# hold timing violation".
+BLOCK PATH FROM CLKNET "clk_c_1" TO CLKNET "ram_raw_s" ;
+BLOCK PATH FROM CLKNET "ram_raw_s" TO CLKNET "clk_c_1" ;
+
+# Command setup and hold at the part, tIS 1.5 ns / tIH 0.8 ns, at 80 MHz.
+CLOCK_TO_OUT PORT "sdram_cke" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+CLOCK_TO_OUT PORT "sdram_csn" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+CLOCK_TO_OUT PORT "sdram_rasn" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+CLOCK_TO_OUT PORT "sdram_casn" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+CLOCK_TO_OUT PORT "sdram_wen" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+# Address setup and hold at the part, same tIS / tIH.
+CLOCK_TO_OUT PORT "sdram_ba[*]" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+CLOCK_TO_OUT PORT "sdram_a[*]" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+# Mask setup and hold at the part, same tIS / tIH.
+CLOCK_TO_OUT PORT "sdram_dqm[*]" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+# Write data setup and hold at the part, same tIS / tIH.  This scores
+# the tri-state control beside the data, which has to reach the pad in
+# the same window or the part samples a bus nobody is driving.
+CLOCK_TO_OUT PORT "sdram_dq[*]" MAX 4.75 ns MIN -5.45 ns CLKPORT "clk" CLKOUT PORT "sdram_clk" ;
+# Read data: access time tAC 5.4 ns, output hold tOH 2.5 ns.
+INPUT_SETUP PORT "sdram_dq[*]" INPUT_DELAY 11.2 ns HOLD -4.71 ns CLKNET "ram_raw_s" SS ;

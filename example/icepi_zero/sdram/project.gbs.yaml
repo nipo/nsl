@@ -1,0 +1,47 @@
+name: icepi_zero_sdram
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_io.io
+    - nsl_amba.axi4_mm
+    - nsl_amba.mm_traffic
+    - nsl_data.bytestream
+    - nsl_ext_ram.sdram
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+    - gatecap_generated.sdram_walk
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: ecp5-lpf
+      files:
+        - ../pinout/board.lpf
+        - ../pinout/sdram.lpf
+        - ../pinout/led.lpf
+
+output:
+  - name: pnr
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.diamond
+    target:
+      part: LFE5U-25F-6BG256C
+    outputs:
+      - type: bitstream
+        path: sdram.bit
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
