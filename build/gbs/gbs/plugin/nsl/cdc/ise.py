@@ -36,8 +36,8 @@ class CdcIseConstraintTask(Task):
     def __init__(
         self,
         dispatcher,
-        inputs,
-        outputs
+        outputs,
+        inputs = [],
     ):
         super().__init__(
             dispatcher,
@@ -289,6 +289,7 @@ class CdcIseDispatcher(BaseDispatcher):
         for source in sources:
             self._constraint_task.add_input(source)
 
+
 class CdcIsePass(BasePass):
     name = "nsl-cdc-ise"
     input_types = {"nsl-ccf", "ise-netlist"}
@@ -296,6 +297,7 @@ class CdcIsePass(BasePass):
 
     def dispatchers(self, context):
         return [CdcIseDispatcher(context)]
+
 
 class CdcIseBackend(BaseBackend):
     def __init__(self):
@@ -308,9 +310,20 @@ class CdcIseBackend(BaseBackend):
         project_config,
         gbs_config,
     ):
-        passes = []
+        # What this pass makes is a UCF, which is never something a
+        # project asks for by name: it is an input to the very flow
+        # that is about to run.  So the trigger is the flow, named by
+        # the outputs ISE itself answers to -- gating on "xilinx-ucf"
+        # instead meant the pass was never contributed at all, and the
+        # crossings went unconstrained in every ISE design.
+        ise_types = {
+            "bitstream",
+            "ise-bitstream", "ise-timing-report", "ise-netlist",
+            "ise-netlist-functional", "ise-netlist-partial",
+            "ise-netlist-full",
+        }
 
-        if output_types & {"xilinx-ucf"}:
-            passes.append(CdcIsePass(config))
+        if not (output_types & ise_types):
+            return []
 
-        return passes
+        return [CdcIsePass(config)]
