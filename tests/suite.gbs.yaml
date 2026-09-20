@@ -547,6 +547,12 @@ projects:
   - name: qspi_transactor
     path: qspi/transactor
     tags: [ghdl, simulation, qspi]
+  - name: qspi_xip
+    path: qspi/xip
+    tags: [ghdl, simulation, qspi]
+  - name: qspi_xip_apb
+    path: qspi/xip_apb
+    tags: [ghdl, simulation, qspi, apb]
   - name: sc202
     path: sc202
     tags: [ghdl, simulation]

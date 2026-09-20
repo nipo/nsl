@@ -1,0 +1,9 @@
+vhdl-sources += xip.pkg.vhd
+vhdl-sources += axi4_mm_qspi_xip.vhd
+vhdl-sources += axi4_mm_qspi_xip_apb.vhd
+deps += nsl_qspi.transactor
+deps += nsl_amba.axi4_mm
+deps += nsl_amba.apb
+deps += nsl_bnoc.framed
+deps += nsl_data.bytestream
+deps += nsl_data.endian
