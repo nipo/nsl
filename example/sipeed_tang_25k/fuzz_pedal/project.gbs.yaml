@@ -1,0 +1,71 @@
+name: tang_25k_fuzz_pedal
+
+root:
+  name: top
+  deps:
+    - nsl_audio.effect
+    - nsl_audio.meter
+    - nsl_audio.routing
+    - nsl_audio.pcm
+    - nsl_audio.pcm_stream
+    - nsl_i2s.stream
+    - nsl_i2s.receiver
+    - nsl_i2s.transmitter
+    - nsl_i2s.clock
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_digilent.pmod
+    - nsl_digilent.pmod_i2s2
+    - nsl_sipeed.pmod_btn_4_4
+    - nsl_icesugar.pmod_lcd_096
+    - nsl_video.terminal
+    - nsl_video.pixel_stream
+    - nsl_video.mode
+    - nsl_indication.font_6x8
+    - nsl_color.rgb
+    - nsl_data.text
+    - nsl_data.bytestream
+    - nsl_uart.serdes
+    - nsl_math.fixed
+    - nsl_clocking.distribution
+    - nsl_clocking.async
+    - nsl_clocking.interdomain
+    - nsl_clocking.pll
+    - nsl_usb.hid_host
+    - nsl_usb.io
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/key_repeater.vhd
+        - src/boundary.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/clk.cst
+        - ../pinout/uart_tx.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/j4_pmod_i2s2.cst
+        - ../pinout/j5_pmod_double_lvcmos33.cst
+        - ../pinout/j6_pmod_double_lvcmos33_in.cst
+        - ../pinout/usb_host.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - src/clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.gowin
+    target:
+      part: GW5A-LV25MG121NC1/I0#A
+      use_as_gpio:
+        - sspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: fuzz_pedal.fs
