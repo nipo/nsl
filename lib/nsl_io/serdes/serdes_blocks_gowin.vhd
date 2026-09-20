@@ -2,6 +2,15 @@
 -- synthesis translate_off
 -- This VHDL was converted from Verilog using the
 -- Icarus Verilog VHDL Code Generator 12.0 (stable) ()
+--
+-- These are the GW1N and GW2A models.  Arora V's deserialisers are not
+-- the same blocks: its IDES8 carries five shift stages a side where
+-- these carry four, and cuts the word out of the later four, so a
+-- GW5A pad hands the fabric the same wire two slots later than this
+-- says.  The output serialisers do match.  A bench that simulates a
+-- GW5A design against these will be that much optimistic about when a
+-- capture arrives; nsl_ext_ram's DESIGN.md section 12 has the
+-- comparison.
 
 library ieee;
 use ieee.std_logic_1164.all;

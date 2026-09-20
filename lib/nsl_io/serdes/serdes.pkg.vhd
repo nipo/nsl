@@ -120,6 +120,53 @@ package serdes is
       );
   end component;
 
+  -- Serialising output that can let go of its pin.
+  --
+  -- Data behaves as for serdes_output.  The output enable carries one
+  -- bit per pair of serial bits, which is the granularity the pad
+  -- logic offers: a serialiser holds half as many tristate registers
+  -- as data ones, so a pin turns around every second bit at finest.
+  -- Enable bit i covers serial bits 2*i and 2*i+1.
+  --
+  -- The pad side is a tristated pair already moving at pin rate.
+  -- Turning it into a wire is the top level's business, which keeps
+  -- inout ports out of the hierarchy.  Reading the same pin is a
+  -- separate serdes_input, so capture can run off its own clock.
+  --
+  -- This is not the block a memory PHY wants.  A DRAM data lane needs
+  -- its strobe, its mask and its capture built from one tightly
+  -- coupled group of vendor primitives, sharing a strobe generator and
+  -- fractional-cycle taps that no portable serialiser exposes, so such
+  -- a PHY instantiates those primitives itself.  What is here suits a
+  -- bidirectional source-synchronous bus whose turnaround falls on a
+  -- pair of serial bits.
+  component serdes_output_tristated is
+    generic(
+      -- Whether to send parallel_i from left or right.
+      left_first_c : boolean := false;
+      ddr_mode_c : boolean := false;
+      -- Whether we are going to delay block
+      to_delay_c : boolean := false;
+      -- Must be even.  Actual limits are dependent on implementation.
+      ratio_c : positive
+      );
+    port(
+      -- * DDR mode: parallel_clock * ratio / 2
+      -- * non-DDR mode: parallel_clock * ratio
+      serial_clock_i : in std_ulogic;
+      parallel_clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      -- This vector will be used left to right or right to left
+      -- depending on generic.
+      parallel_i : in std_ulogic_vector(0 to ratio_c-1);
+      -- Follows the same direction as parallel_i.
+      output_enable_i : in std_ulogic_vector(0 to ratio_c/2-1);
+
+      pad_o : out nsl_io.io.tristated
+      );
+  end component;
+
   component serdes_input is
     generic(
       -- Whether to receive parallel_i from left or right.
