@@ -1,4 +1,5 @@
 vhdl-sources += pad.pkg.vhd
+vhdl-sources += pad_sstl_generic.vhd
 
 ifeq ($(hwdep),xilinx)
 vhdl-sources += pad_diff_output_xc.vhd
