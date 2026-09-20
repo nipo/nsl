@@ -10,7 +10,7 @@ use nsl_data.text.all;
 use nsl_simulation.assertions.all;
 use nsl_simulation.logging.all;
 use nsl_simulation.control.all;
-use nsl_hdmi.encoder.all;
+use nsl_hdmi.hdmi.all;
 
 entity tb is
 end tb;
