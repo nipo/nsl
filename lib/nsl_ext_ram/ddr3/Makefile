@@ -1,0 +1,13 @@
+vhdl-sources += ddr3.pkg.vhd
+vhdl-sources += ddr3_controller.vhd
+vhdl-sources += axi4_mm_ddr3.vhd
+deps += nsl_ext_ram.timing
+deps += nsl_ext_ram.dfi
+deps += nsl_ext_ram.burst
+deps += nsl_ext_ram.dram
+deps += nsl_ext_ram.ddr3_io
+deps += nsl_ext_ram.frontend
+deps += nsl_amba.axi4_mm
+deps += nsl_math.arith
+deps += nsl_io.io
+deps += nsl_io.diff

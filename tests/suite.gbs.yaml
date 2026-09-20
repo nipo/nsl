@@ -215,6 +215,24 @@ projects:
   - name: encoder
     path: encoder
     tags: [ghdl, simulation]
+  - name: ext_ram_serdes_output_tristated
+    path: ext_ram/serdes_output_tristated
+    tags: [ghdl, simulation]
+  - name: ext_ram_ddr_output_tristated
+    path: ext_ram/ddr_output_tristated
+    tags: [ghdl, simulation]
+  - name: ext_ram_ddr3_axi
+    path: ext_ram/ddr3_axi
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_ddr3_x8_axi
+    path: ext_ram/ddr3_x8_axi
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_ddr3_x8_walk
+    path: ext_ram/ddr3_x8_walk
+    tags: [ghdl, simulation, slow]
+  - name: ext_ram_ddr3_serdes_phy
+    path: ext_ram/ddr3_serdes_phy
+    tags: [ghdl, simulation, slow]
   - name: ext_ram_sdram_axi
     path: ext_ram/sdram_axi
     tags: [ghdl, simulation, slow]

@@ -1,0 +1,27 @@
+name: ext_ram_ddr3_x8_axi
+
+root:
+  name: top
+  deps:
+    - nsl_ext_ram.ddr3
+    - nsl_ext_ram.simulation
+    - nsl_ext_ram.part
+    - nsl_amba.mm_traffic
+    - nsl_amba.axi4_mm
+    - nsl_io.io
+    - nsl_io.diff
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

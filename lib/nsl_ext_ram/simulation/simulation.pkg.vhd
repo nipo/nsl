@@ -50,6 +50,37 @@ package simulation is
       );
   end component;
 
+  component ddr3_model is
+    generic(
+      part_c: dram_part_t;
+      check_timing_c: boolean := true;
+      tdqsq_ps_c: natural := 150;
+      tds_ps_c: natural := 125;
+      tis_ps_c: natural := 350
+      );
+    port(
+      ck_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+      cke_i: in std_ulogic;
+      cs_n_i: in std_ulogic;
+      ras_n_i: in std_ulogic;
+      cas_n_i: in std_ulogic;
+      we_n_i: in std_ulogic;
+      ba_i: in unsigned;
+      a_i: in unsigned;
+      odt_i: in std_ulogic;
+
+      dm_i: in std_ulogic_vector;
+      dqs_i: in std_ulogic_vector;
+      dqs_o: out nsl_io.io.tristated_vector;
+
+      dq_i: in std_ulogic_vector;
+      dq_o: out nsl_io.io.tristated_vector;
+
+      violation_count_o: out natural
+      );
+  end component;
+
   component sram_model is
     generic(
       part_c: sram_part_t;
