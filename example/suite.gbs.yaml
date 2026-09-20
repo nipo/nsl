@@ -90,3 +90,9 @@ projects:
   - name: inet_s6
     path: inet/s6
     tags: [ise, spartan6]
+  - name: proby_pll_check
+    path: proby/pll_check
+    tags: [ise, spartan6, proby]
+  - name: proby_sram
+    path: proby/sram
+    tags: [ise, spartan6, proby]

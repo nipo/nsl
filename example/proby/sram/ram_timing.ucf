@@ -1,0 +1,33 @@
+# Everything the controller drives towards the part, the forwarded
+# clock included, so the report puts their pad delays side by side.
+NET "ram_addr<*>" TNM = "ram_bus";
+NET "ram_cen" TNM = "ram_bus";
+NET "ram_cenn" TNM = "ram_bus";
+NET "ram_wen" TNM = "ram_bus";
+NET "ram_bwan" TNM = "ram_bus";
+NET "ram_bwbn" TNM = "ram_bus";
+NET "ram_oen" TNM = "ram_bus";
+NET "ram_da<*>" TNM = "ram_bus";
+NET "ram_db<*>" TNM = "ram_bus";
+NET "ram_dap" TNM = "ram_bus";
+NET "ram_dbp" TNM = "ram_bus";
+NET "ram_clk" TNM = "ram_bus";
+
+# The bus is source synchronous, so the absolute number here is not
+# the margin: the clock the part samples on leaves through the same
+# managers and the same kind of pad as the data, half a memory period
+# later, and what the part sees is the difference between the two.
+# ISE 14.7 ignores REFERENCE_PIN on an OFFSET OUT, which is how that
+# difference would be stated directly, and measures from the board
+# clock pad instead -- charging the whole DCM and PLL latency, some
+# fifteen nanoseconds of it, to every pin alike.
+#
+# That common latency is exactly why a tight absolute bound still does
+# the job.  Every pin in the group carries it, so bounding the group
+# bounds the spread, and the spread is the margin.  Left loose, the
+# spread wandered between 1.7 and 3.0 ns from one build to the next
+# and the rate a build survived was partly luck.
+#
+# 17 ns against a forwarded clock that leaves at about 15.7 keeps every
+# pin within some 1.3 ns of it.
+TIMEGRP "ram_bus" OFFSET = OUT 17 ns AFTER "clk";

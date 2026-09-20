@@ -1,0 +1,40 @@
+name: sram_walk.sram_walk_core
+
+communication:
+  mode: jtag
+
+instruments:
+  # Against the board oscillator.  A part that never answers and a
+  # clock that never started look the same from the panel, and this is
+  # what tells them apart: a dead PLL reads zero here.
+  rates: !clock-measurer
+    reference: board
+    frequency: 12_000_000
+    clocks: [ram]
+    max_rate: 100_000_000
+
+  # On the memory clock, where every value it carries is generated.
+  # The measurer above covers the case where that clock is missing.
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Held low, the walk sits in reset.  Raising it starts one, and
+      # dropping and raising it again starts the next: the tester
+      # stops for good when it is done, by design.
+      run: 1
+
+    # A lane's ninth bit failing to answer for the eight beside it is a
+    # fault in its own right, and one the payload check can mask: the
+    # counter here catches a marginal data line that the walk survives.
+    tick-in:
+      - [ parity_error ]
+
+    status:
+      ready: 1
+      busy: 1
+      done: 1
+      error_count:
+        width: 32
+      first_error_address:
+        width: 22

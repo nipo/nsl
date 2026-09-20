@@ -50,4 +50,7 @@ NET "ram_bwan"      LOC = "P116" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
 NET "ram_wen"       LOC = "P117" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
 NET "ram_cenn"      LOC = "P118" | IOSTANDARD = LVCMOS25 | SLEW = FAST;  # Clock enable
 NET "ram_oen"       LOC = "P131" | IOSTANDARD = LVCMOS25 | SLEW = FAST;
-NET "ram_clk"       LOC = "P123" | IOSTANDARD = LVCMOS25 | SLEW = FAST | BUFG = CLK;
+# The clock the part runs on is an output, forwarded through a double
+# rate register.  A Spartan-6 global buffer may not drive a data pin
+# and the tools stop rather than warn, so this pin carries no BUFG.
+NET "ram_clk"       LOC = "P123" | IOSTANDARD = LVCMOS25 | SLEW = FAST;

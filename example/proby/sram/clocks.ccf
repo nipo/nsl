@@ -1,0 +1,11 @@
+# The clock domains of this design, for the CDC constraint generator.
+#
+# UCF has no way to ask the netlist what its clocks are, so unlike the
+# Vivado and Gowin generators -- which write patterns the tool resolves
+# for itself -- the ISE one has to be told.  A name here is a net, and
+# the number after it is that net's period in nanoseconds.
+#
+# The memory period has to follow ram_hz_c in src/boundary.vhd.
+board_s 83.33
+rack_s  27.77
+ram_s   7.9365

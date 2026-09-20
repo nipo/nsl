@@ -1,0 +1,59 @@
+name: proby_sram
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - nsl_io.io
+    - nsl_amba.axi4_mm
+    - nsl_amba.mm_traffic
+    - nsl_ext_ram.sram
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+    - gatecap_generated.sram_walk
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: nsl-ccf
+      files:
+        - clocks.ccf
+    - file_type: xilinx-ucf
+      files:
+        - ../pinout/clk.ucf
+        - ../pinout/user.ucf
+        - ../pinout/ram.ucf
+        - ram_timing.ucf
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc6slx9-2tqg144
+    backend_config:
+      gbs.builtin.ise:
+        map_options:
+          # The bus is source synchronous, so what the part sees is the
+          # skew between the data pins and the clock forwarded beside
+          # them.  Registers left in the fabric reach their pads by
+          # whatever route placement found; packed into the pads they
+          # share one.
+          pr: b
+          # Spartan-6 honours neither of these and says so in the map
+          # report; asking for them only makes noise.
+          retiming: null
+          register_duplication: null
+    outputs:
+      - type: bitstream
+        path: sram.bit
+      - type: ise-timing-report
+        path: timing.rpt
+
+repositories:
+  - path: description.yaml
+    loader: gatecap-description
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
