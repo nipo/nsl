@@ -121,8 +121,12 @@ begin
 
   begin
 
-    clock_proc: process(clock_i, reset_n_i) is
+    regs: process(clock_i, reset_n_i) is
     begin
+      if rising_edge(clock_i) then
+        r <= rin;
+      end if;
+
       if reset_n_i = '0' then
         r.store_count <= 0;
         if in_rl_c > 0 then
@@ -131,8 +135,6 @@ begin
         if out_rl_c > 0 then
           r.out_pipe_valid <= (others => '0');
         end if;
-      elsif rising_edge(clock_i) then
-        r <= rin;
       end if;
     end process;
 

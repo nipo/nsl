@@ -132,12 +132,14 @@ begin
 
     reg: process(clock_i, reset_n_i) is
     begin
+      if rising_edge(clock_i) then
+        r <= rin;
+      end if;
+
       if reset_n_i = '0' then
         r.state    <= ST_FORWARD;
         r.filled   <= 0;
         r.post     <= transfer_defaults(out_config_c);
-      elsif rising_edge(clock_i) then
-        r <= rin;
       end if;
     end process;
 
@@ -338,11 +340,13 @@ begin
 
     reg: process(clock_i, reset_n_i) is
     begin
+      if rising_edge(clock_i) then
+        r <= rin;
+      end if;
+
       if reset_n_i = '0' then
         r.valid      <= '0';
         r.emits_left <= 0;
-      elsif rising_edge(clock_i) then
-        r <= rin;
       end if;
     end process;
 
