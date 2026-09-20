@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package arith is
 
-  -- Returns y such that 2**y <= x
+  -- Returns the smallest y such that x <= 2**y (0 for x = 0).
   -- e.g. for x=9..16, this returns 4
   function log2(x : natural) return natural;
 
@@ -47,12 +47,19 @@ end package arith;
 package body arith is
     
   function log2(x : natural) return natural is
+    variable remaining: natural;
+    variable width: natural := 0;
   begin
     if x <= 1 then
       return 0;
-    else
-      return log2((x+1)/2) + 1;
     end if;
+
+    remaining := x - 1;
+    while remaining /= 0 loop
+      remaining := remaining / 2;
+      width := width + 1;
+    end loop;
+    return width;
   end log2;
 
   function to_unsigned_auto(value : natural) return unsigned is
