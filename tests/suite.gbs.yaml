@@ -455,6 +455,9 @@ projects:
   - name: inet_switching_mac_table
     path: inet/switching/mac_table
     tags: [ghdl, simulation]
+  - name: inet_vlan_path_router
+    path: inet/vlan_path_router
+    tags: [ghdl, simulation]
   - name: jtag
     path: jtag
     tags: [ghdl, simulation, jtag_tap]

@@ -1,0 +1,32 @@
+name: inet_vlan_path_router
+
+root:
+  name: top
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_bnoc.committed
+    - nsl_bnoc.testing
+    - nsl_bnoc.axi_adapter
+    - nsl_data.bytestream
+    - nsl_data.crc
+    - nsl_data.endian
+    - nsl_data.text
+    - nsl_inet.vlan
+    - nsl_inet.mac
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl: {}
+    outputs:
+      - type: simulator
+        path: tb

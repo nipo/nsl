@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, work;
+library nsl_amba, nsl_bnoc, work;
 use nsl_bnoc.committed.all;
 use work.mac.all;
 
@@ -81,6 +81,31 @@ package vlan is
 
       out_o : out nsl_bnoc.committed.committed_req;
       out_i : in nsl_bnoc.committed.committed_ack
+      );
+  end component;
+
+  -- One layer-1 committed link fanned out to one AXI4-Stream pipe per
+  -- VLAN.  Checks and strips the FCS on the way in, recomputes it on
+  -- the way out, so the tag length change stays consistent.
+  component vlan_path_router is
+    generic(
+      vlan_id_c : vlan_id_vector;
+      native_vlan_id_c : vlan_id_t := 0
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      l1_rx_i : in  nsl_bnoc.committed.committed_req_t;
+      l1_rx_o : out  nsl_bnoc.committed.committed_ack_t;
+      l1_tx_o : out nsl_bnoc.committed.committed_req_t;
+      l1_tx_i : in nsl_bnoc.committed.committed_ack_t;
+
+      routed_tx_o : out nsl_amba.axi4_stream.master_vector(0 to vlan_id_c'length-1);
+      routed_tx_i : in  nsl_amba.axi4_stream.slave_vector(0 to vlan_id_c'length-1);
+
+      routed_rx_i : in  nsl_amba.axi4_stream.master_vector(0 to vlan_id_c'length-1);
+      routed_rx_o : out nsl_amba.axi4_stream.slave_vector(0 to vlan_id_c'length-1)
       );
   end component;
 
