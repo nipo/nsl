@@ -1,0 +1,16 @@
+# Interfaces beyond vlan_count_c are hidden in the customisation GUI.
+
+set_property enablement_dependency {$vlan_count_c > 1} [ipx::get_bus_interfaces routed_tx_1 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 1} [ipx::get_bus_interfaces routed_rx_1 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 2} [ipx::get_bus_interfaces routed_tx_2 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 2} [ipx::get_bus_interfaces routed_rx_2 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 3} [ipx::get_bus_interfaces routed_tx_3 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 3} [ipx::get_bus_interfaces routed_rx_3 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 4} [ipx::get_bus_interfaces routed_tx_4 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 4} [ipx::get_bus_interfaces routed_rx_4 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 5} [ipx::get_bus_interfaces routed_tx_5 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 5} [ipx::get_bus_interfaces routed_rx_5 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 6} [ipx::get_bus_interfaces routed_tx_6 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 6} [ipx::get_bus_interfaces routed_rx_6 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 7} [ipx::get_bus_interfaces routed_tx_7 -of_objects [ipx::current_core]]
+set_property enablement_dependency {$vlan_count_c > 7} [ipx::get_bus_interfaces routed_rx_7 -of_objects [ipx::current_core]]

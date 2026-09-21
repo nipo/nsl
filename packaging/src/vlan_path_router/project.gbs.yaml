@@ -1,0 +1,42 @@
+name: vlan_path_router
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - vlan_path_router_ip_top.vhd
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_bnoc.axi_adapter
+    - nsl_bnoc.committed
+    - nsl_bnoc.framed
+    - nsl_data.bytestream
+    - nsl_inet.mac
+    - nsl_inet.vlan
+    - nsl_logic.bool
+
+output:
+  - name: ip_package
+    topcell: vlan_path_router_ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: inet
+        name: vlan_path_router
+        version: "1.0"
+        taxonomy: /NSL/Inet
+        display_name: VLAN Path Router
+        description: 802.1Q demux/mux between one layer-1 committed link and one AXI4-Stream pipe per VLAN, with FCS check and regeneration
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: vlan_path_router_1.0.zip

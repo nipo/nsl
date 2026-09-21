@@ -107,3 +107,6 @@ projects:
   - name: tristated_driver
     path: tristated_driver
     tags: [vivado-ip]
+  - name: vlan_path_router
+    path: vlan_path_router
+    tags: [vivado-ip]
