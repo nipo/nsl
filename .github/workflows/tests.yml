@@ -94,6 +94,42 @@ jobs:
               sys.exit("suite built no project successfully")
           EOF
 
+      - name: Summarize failures
+        # The Checks tab gets this through the JUnit publisher below,
+        # but only once the reader goes looking for it. Put the same
+        # diagnostic on the run page, where a red build lands first.
+        if: failure()
+        working-directory: tests
+        run: |
+          python - test-results >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          import json, pathlib, sys
+
+          results = pathlib.Path(sys.argv[1])
+          summary = results / "summary.json"
+          if not summary.exists():
+              print("The suite wrote no summary; see the step log above.")
+              raise SystemExit(0)
+
+          projects = json.loads(summary.read_text())["projects"]
+          broken = [p for p in projects
+                    if p["status"] in ("failure", "error")]
+          if not broken:
+              print("No project failed; the suite itself did not finish.")
+              raise SystemExit(0)
+
+          print(f"## {len(broken)} project(s) failed")
+          for project in broken:
+              print(f"### {project['name']}")
+              print(f"`{project['path']}` — {project['status']}")
+              log = pathlib.Path(project.get("log_file", ""))
+              detail = (log.read_text() if log.is_file()
+                        else project.get("error_message", ""))
+              if detail:
+                  print("```")
+                  print(detail.strip())
+                  print("```")
+          EOF
+
       - name: Upload JUnit + per-project logs
         # Skip under act: upload-artifact talks to the GitHub-hosted
         # artifact service and needs ACTIONS_RUNTIME_TOKEN which act doesn't
