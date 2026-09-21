@@ -24,6 +24,10 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
+          # A run triggered by this push may not be registered yet when
+          # this job starts; poll only after the API has had time to see
+          # it, or we conclude "nothing pending" and pull a stale :latest.
+          sleep 20
           for _ in $(seq 1 60); do
             running=$(gh run list --repo "$REPO" \
               --workflow=ci-image.yml --commit="$SHA" --status=in_progress \
