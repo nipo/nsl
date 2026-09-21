@@ -228,9 +228,9 @@ begin
       clock_i   => clock_s,
 
       l1_rx_i => l1_rx_s.req,
-      l1_rx_o => l1_tx_s.ack,
+      l1_rx_o => l1_rx_s.ack,
       l1_tx_o => l1_tx_s.req,
-      l1_tx_i => l1_rx_s.ack,
+      l1_tx_i => l1_tx_s.ack,
 
       routed_tx_o => tx_m_s,
       routed_tx_i => tx_s_s,
