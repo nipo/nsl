@@ -1,0 +1,38 @@
+name: axi4_stream_async_packet_drop_fifo
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - axi4_stream_async_packet_drop_fifo_ip_top.vhd
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+  deps:
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_data.bytestream
+    - nsl_logic.bool
+
+output:
+  - name: ip_package
+    topcell: axi4_stream_async_packet_drop_fifo_ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: amba
+        name: axi4_stream_async_packet_drop_fifo
+        version: "1.0"
+        taxonomy: /NSL/Amba
+        display_name: Packet Drop Fifo
+        description: Single asynchronous packet-drop fifo between two AXI4-Stream ports
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: axi4_stream_async_packet_drop_fifo_1.0.zip

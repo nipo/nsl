@@ -62,6 +62,9 @@ projects:
   - name: axis_ws2812_column_driver
     path: axis_ws2812_column_driver
     tags: [vivado-ip]
+  - name: axi4_stream_async_packet_drop_fifo
+    path: axi4_stream_async_packet_drop_fifo
+    tags: [vivado-ip]
   - name: framed_i2c_controller
     path: framed_i2c_controller
     tags: [vivado-ip]
