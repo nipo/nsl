@@ -159,6 +159,11 @@ package interdomain is
   -- Takes a tick in an input domain, and translate it to a tick in
   -- output domain.  Can reach at most lowest of half input clock
   -- frequency and half of output clock frequency.
+  --
+  -- The input reset is carried to the output side as well, so neither
+  -- power-up nor an assertion of the reset in the middle of a run
+  -- shows up as a tick on the output.  Ticks the input side took
+  -- before a reset may be lost to it.
   component interdomain_tick is
     port(
       input_clock_i : in  std_ulogic;
