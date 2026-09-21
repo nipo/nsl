@@ -22,8 +22,8 @@ FROM ghdl/ghdl:6.0.0-mcode-ubuntu-24.04
 # Python 3.13 is needed for gbs and the NSL plugin. Ubuntu 24.04 ships 3.12,
 # so pull 3.13 from deadsnakes. NodeJS is needed because `container:`-jobs in
 # GitHub Actions run JavaScript actions (e.g. actions/checkout,
-# actions/upload-artifact) inside the container; the runner expects Node 20+
-# in PATH. Use the upstream NodeSource repo since Ubuntu's universe is on 18.
+# actions/upload-artifact) inside the container; the runner expects Node 24
+# in PATH. Use the upstream NodeSource repo since Ubuntu's universe is older.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
@@ -36,7 +36,7 @@ RUN apt-get update && \
         python3.13 \
         python3.13-venv \
         && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -49,7 +49,6 @@ RUN ln -sf /usr/bin/python3.13 /usr/local/bin/python && \
 # Pinnable via build-arg so a Dockerfile change isn't required to bump gbs.
 ARG GBS_REF=master
 RUN python -m pip install --no-cache-dir \
-        click \
         "git+https://github.com/nipo/gbs.git@${GBS_REF}"
 
 # NSL plugin from the checked-out source tree. The image rebuilds whenever
