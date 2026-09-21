@@ -70,6 +70,26 @@ jobs:
         working-directory: tests
         run: gbs suite build
 
+      - name: Check the suite actually ran
+        working-directory: tests
+        # gbs reports a project whose backend isn't usable on this host as
+        # UNPLANNABLE, not as a failure, and the suite still exits 0. Every
+        # project here is a GHDL simulation, so an unplannable project means
+        # the container's tool config is broken -- which otherwise shows up
+        # as a green build that ran no test at all.
+        run: |
+          python - test-results/summary.json <<'EOF'
+          import json, sys
+
+          stats = json.load(open(sys.argv[1]))["statistics"]
+          print(", ".join(f"{k}: {v}" for k, v in stats.items()))
+          if stats["unplannable"]:
+              sys.exit(f"{stats['unplannable']} project(s) have no viable "
+                       f"build plan; the GHDL backend is not usable here")
+          if not stats["successful"]:
+              sys.exit("suite built no project successfully")
+          EOF
+
       - name: Upload JUnit + per-project logs
         # Skip under act: upload-artifact@v4 talks to the GitHub-hosted
         # artifact service and needs ACTIONS_RUNTIME_TOKEN which act doesn't
@@ -87,4 +107,6 @@ jobs:
         if: always() && !env.ACT
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          junit_files: tests/test-results/junit.xml
+          files: tests/test-results/junit.xml
+          action_fail: true
+          action_fail_on_inconclusive: true
