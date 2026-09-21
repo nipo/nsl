@@ -54,7 +54,12 @@ begin
   sdio_o.d(sdio_o.d'left downto 4) <= (others => '1');
 
   -- An unwired socket leaves this floating, which reads as neither
-  -- value and leaves the debouncer at the one it starts from.
+  -- value and leaves the debouncer at the one it starts from.  The
+  -- pin is only ever listened to, but it still has to be released
+  -- here: an inout port of an array type takes a driver for the whole
+  -- array, and an element this side never assigns holds that driver
+  -- at 'U' and wins the resolution against whatever the socket says.
+  pmod_io(7) <= 'Z';
   card_detect_s <= not to_x01(pmod_io(7));
 
   -- The contact bounces, and pushing a card in wipes it for a while,
