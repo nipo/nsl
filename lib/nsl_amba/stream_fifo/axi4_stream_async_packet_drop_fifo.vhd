@@ -81,7 +81,7 @@ architecture beh of axi4_stream_async_packet_drop_fifo is
     signal reset_n_s: std_ulogic_vector(0 to clock_count_c-1);
 
     signal in_same_wrap_s, in_fifo_full_s, do_write_s : boolean;
-    signal out_fifo_full_s, do_read_s, out_same_wrap_s : boolean;
+    signal out_fifo_empty_s, do_read_s, out_same_wrap_s : boolean;
 
 begin
 
@@ -103,11 +103,18 @@ begin
             wptr : ptr_t;
             -- Speculative write pointer
             wptr_sp : ptr_t;
-            do_commit : std_ulogic;
+            -- Snapshot of the write pointer currently being shipped to
+            -- the read domain, and the last value it acknowledged.
+            wptr_tx : ptr_t;
+            wptr_tx_wrap : std_ulogic;
+            wptr_published : ptr_t;
+            wptr_published_wrap : std_ulogic;
             -- Speculative gray wrap
             wptr_sp_wrap : std_ulogic;
             wptr_wrap : std_ulogic;
             write_overrun : std_ulogic;
+
+            error : std_ulogic;
     
         end record;
     
@@ -126,11 +133,15 @@ begin
                 r.write_overrun <= '0';
                 r.wptr_wrap <= '0';
                 r.wptr_sp_wrap <= '0';
-                r.do_commit <= '0';
+                r.wptr_tx <= to_ptr(0);
+                r.wptr_tx_wrap <= '0';
+                r.wptr_published <= to_ptr(0);
+                r.wptr_published_wrap <= '0';
+                r.error <= '0';
             end if;
         end process;
 
-        write_transition : process (r, in_i, error_i, do_write_s) is
+        write_transition : process (r, in_i, error_i, do_write_s, left_wrap_and_wptr_ready_s) is
         begin
 
             rin <= r;
@@ -141,7 +152,9 @@ begin
 
                 when IN_DATA_STORE =>
                     if is_valid(config_c, in_i) then
-                        if do_write_s then
+                        if error_i = '1' then
+                            rin.error <= error_i;
+                        elsif do_write_s then
                             rin.wptr_sp <= r.wptr_sp + 1;
                             if r.wptr_sp = max_ptr_c then
                                 rin.wptr_sp_wrap <= not r.wptr_sp_wrap; 
@@ -151,8 +164,7 @@ begin
                         end if;
 
                         if is_last(config_c, in_i) then
-                            if do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE then
-                                rin.do_commit <= '1';
+                            if do_write_s and r.write_overrun = '0' and r.error = '0' and error_i = '0' then
                                 rin.wptr <= r.wptr_sp + 1;
                                 if r.wptr_sp = max_ptr_c then
                                     rin.wptr_wrap <= not r.wptr_sp_wrap;
@@ -161,6 +173,7 @@ begin
                                 end if;
                             else
                                 -- ROLLBACK
+                                rin.error <= '0';
                                 rin.wptr_sp <= r.wptr;
                                 rin.wptr_sp_wrap <= r.wptr_wrap;
                                 rin.write_overrun <= '0';
@@ -175,13 +188,21 @@ begin
 
             case r.out_state is
                 when OUT_WRITE_POINTER_IDLE =>
-                    if r.do_commit = '1' then
+                    -- Ship the newest committed pointer whenever it has
+                    -- moved since the read domain last acknowledged one.
+                    -- Commits landing while a transfer is in flight simply
+                    -- coalesce: the reader only ever needs the latest value.
+                    if r.wptr /= r.wptr_published
+                      or r.wptr_wrap /= r.wptr_published_wrap then
+                        rin.wptr_tx <= r.wptr;
+                        rin.wptr_tx_wrap <= r.wptr_wrap;
                         rin.out_state <= OUT_WRITE_POINTER;
                     end if;
 
                 when OUT_WRITE_POINTER =>
                     if left_wrap_and_wptr_ready_s = '1' then
-                        rin.do_commit <= '0';
+                        rin.wptr_published <= r.wptr_tx;
+                        rin.wptr_published_wrap <= r.wptr_tx_wrap;
                         rin.out_state <= OUT_WRITE_POINTER_IDLE;
                     end if;
 
@@ -221,7 +242,9 @@ begin
         remote_wptr_txer_proc : process (r) is
         begin
 
-            left_wrap_and_wptr_s <= r.wptr_wrap & std_ulogic_vector(r.wptr);
+            -- The snapshot is held stable for the whole transfer; r.wptr
+            -- may move again while this one is still in flight.
+            left_wrap_and_wptr_s <= r.wptr_tx_wrap & std_ulogic_vector(r.wptr_tx);
             left_wrap_and_wptr_valid_s <= '0';
 
             case r.out_state is
@@ -237,7 +260,7 @@ begin
             to_logic(r.in_state = IN_DATA_STORE and 
              is_valid(config_c, in_i) and
              is_last(config_c, in_i) and
-             not (do_write_s and r.write_overrun = '0' and error_i = '0' and r.out_state = OUT_WRITE_POINTER_IDLE));
+             not (do_write_s and r.write_overrun = '0' and error_i = '0'));
         in_o <= accept(config_c, r.in_state /= IN_RESET); -- No back pressure, if overrun packet is dropped.
     end block;
 
@@ -317,15 +340,22 @@ begin
               unsigned(data_o) => right_rptr_gray_s
               );
       
-          rptr: nsl_clocking.intradomain.intradomain_multi_reg
-            generic map(
-              data_width_c => ptr_t'length + 1
-              )
-            port map(
-              clock_i => clock_i(0),
-              data_i => std_ulogic_vector(right_rptr_gray_s),
-              unsigned(data_o) => right_wrap_and_rptr_bin_s
-              );
+            rptr: nsl_clocking.intradomain.intradomain_multi_reg
+                generic map(
+                data_width_c => ptr_t'length + 1
+                )
+                port map(
+                clock_i => clock_i(0),
+                data_i => std_ulogic_vector(right_rptr_gray_s),
+                unsigned(data_o) => right_wrap_and_rptr_bin_s
+                );
+                    
+            right_rptr_wrap_s <= right_wrap_and_rptr_bin_s(right_wrap_and_rptr_bin_s'left);
+            right_rptr_resync_s <= right_wrap_and_rptr_bin_s(right_wrap_and_rptr_bin_s'left - 1 downto 0);
+
+            left_wrap_and_wptr_ready_s <= left_resync_wrap_and_wptr_ready_s;
+            left_resync_wrap_and_wptr_valid_s <= left_wrap_and_wptr_valid_s;
+            left_resync_wrap_and_wptr_s <= left_wrap_and_wptr_s;
         end generate;
     
     end block;
@@ -349,6 +379,7 @@ begin
     );
 
     read_block : block
+
         type out_left_data_t is (
             OUT_RESET,
             OUT_READ_DATA
@@ -368,36 +399,37 @@ begin
         signal r, rin : regs_t;
 
     begin
+        
         streamer: nsl_memory.streamer.memory_streamer
-        generic map(
-            addr_width_c => mem_ptr_t'length,
-            data_width_c => data_fifo_word_t'length,
-            memory_latency_c => 1
-            )
-        port map(
-            clock_i => clock_i(1),
-            reset_n_i => reset_n_s(1),
+            generic map(
+                addr_width_c => mem_ptr_t'length,
+                data_width_c => data_fifo_word_t'length,
+                memory_latency_c => 1
+                )
+            port map(
+                clock_i => clock_i(clock_count_c - 1),
+                reset_n_i => reset_n_s(clock_count_c - 1),
 
-            addr_valid_i => in_streamer_valid_s,
-            addr_ready_o => out_streamer_ready_s,
-            addr_i => unsigned(r.rptr),
-            sideband_i => (others => '0'),
+                addr_valid_i => in_streamer_valid_s,
+                addr_ready_o => out_streamer_ready_s,
+                addr_i => unsigned(r.rptr),
+                sideband_i => (others => '0'),
 
-            data_valid_o => out_streamer_valid_s,
-            data_ready_i => in_streamer_ready_s,
-            data_o => out_stream_data_s,
+                data_valid_o => out_streamer_valid_s,
+                data_ready_i => in_streamer_ready_s,
+                data_o => out_stream_data_s,
 
-            mem_enable_o => read_ram_s.read_enable,
-            mem_address_o => read_ram_s.read_ptr,
-            mem_data_i => read_ram_s.read_data
-            );
+                mem_enable_o => read_ram_s.read_enable,
+                mem_address_o => read_ram_s.read_ptr,
+                mem_data_i => read_ram_s.read_data
+                );
 
         regs : process (reset_n_s, clock_i) is
         begin
-            if rising_edge(clock_i(1)) then
+            if rising_edge(clock_i(clock_count_c - 1)) then
                 r <= rin;
             end if;
-            if reset_n_s(1) = '0' then
+            if reset_n_s(clock_count_c - 1) = '0' then
                 r.rptr <= to_ptr(0);
                 r.remote_wptr <= to_ptr(0);
                 r.out_state <= OUT_RESET;
@@ -437,8 +469,8 @@ begin
         end process;
 
         out_same_wrap_s <= r.wptr_wrap = r.remote_wrap;
-        out_fifo_full_s <= (r.rptr = r.remote_wptr) and out_same_wrap_s;
-        do_read_s <= not out_fifo_full_s;
+        out_fifo_empty_s <= (r.rptr = r.remote_wptr) and out_same_wrap_s;
+        do_read_s <= not out_fifo_empty_s;
 
         ram_reader_proc : process (r,do_read_s) is
         begin
