@@ -6,10 +6,10 @@ root:
     - file_type: vhdl
       files:
         - routed_endpoint.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/routed.zip
-        - ../interface/framed/framed.zip
+        - ../interface/routed/routed.yaml
+        - ../interface/framed/framed.yaml
   deps:
    - nsl_bnoc.framed
    - nsl_bnoc.routed

@@ -6,9 +6,9 @@ root:
     - file_type: vhdl
       files:
         - ip_top.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/phc_timestamp.zip
+        - ../interface/phc_timestamp/phc_timestamp.yaml
   deps:
     - nsl_time.timestamp
     - nsl_time.pps

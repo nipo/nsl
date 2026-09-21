@@ -6,9 +6,9 @@ root:
     - file_type: vhdl
       files:
         - routed_router.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/routed.zip
+        - ../interface/routed/routed.yaml
     - file_type: vivado-ip-customization-tcl
       files:
         - ports.tcl

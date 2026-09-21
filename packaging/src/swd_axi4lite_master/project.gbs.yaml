@@ -6,9 +6,9 @@ root:
     - file_type: vhdl
       files:
         - swd_axi4lite_master.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/swd.zip
+        - ../interface/swd/swd.yaml
   deps:
    - nsl_clocking.async
    - nsl_hwdep.clock

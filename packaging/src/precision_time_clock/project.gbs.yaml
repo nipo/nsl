@@ -7,9 +7,9 @@ root:
       files:
         - phc_main.vhd
         - ip_top.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/phc_timestamp.zip
+        - ../interface/phc_timestamp/phc_timestamp.yaml
   deps:
     - nsl_amba.axi4_mm
     - nsl_time.timestamp

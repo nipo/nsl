@@ -6,10 +6,10 @@ root:
     - file_type: vhdl
       files:
         - ip_top.vhd
-    - file_type: vivado-bus-zip
+    - file_type: vivado-bus-yaml
       files:
-        - ../interface/framed/framed.zip
-        - ../interface/framed/spi.zip
+        - ../interface/framed/framed.yaml
+        - ../interface/spi/spi.yaml
   deps:
    - nsl_bnoc.framed
    - nsl_spi.transactor
