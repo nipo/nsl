@@ -26,7 +26,8 @@ output:
     filter_vars:
       hwdep: simulation
     backend_config:
-      gbs.builtin.ghdl: {}
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
     outputs:
-      - type: simulator
-        path: tb
+      - type: simulation-log
+        path: simulation.log
