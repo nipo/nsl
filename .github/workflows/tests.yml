@@ -56,7 +56,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Seed gbs user config
         # GH Actions overrides HOME to /github/home in container jobs, hiding
@@ -91,11 +91,11 @@ jobs:
           EOF
 
       - name: Upload JUnit + per-project logs
-        # Skip under act: upload-artifact@v4 talks to the GitHub-hosted
+        # Skip under act: upload-artifact talks to the GitHub-hosted
         # artifact service and needs ACTIONS_RUNTIME_TOKEN which act doesn't
         # mint. Real CI sets that env automatically.
         if: always() && !env.ACT
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: tests/test-results/
