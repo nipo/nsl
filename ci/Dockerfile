@@ -58,15 +58,23 @@ RUN python -m pip install --no-cache-dir \
 COPY build/gbs/ /opt/nsl-plugin/
 RUN python -m pip install --no-cache-dir /opt/nsl-plugin
 
-# Default gbs tool config: ghdl on PATH (provided by the base image), with the
-# same warning suppressions and runtime flags the local dev environment uses.
+# Default gbs tool config, with the same warning suppressions and runtime
+# flags the local dev environment uses.
+#
+# `executable` must be an absolute path: gbs probes a tool by stat()ing that
+# value and drops the backend when it does not resolve. A bare `ghdl` never
+# resolves, whatever $PATH says, and the whole suite then plans to nothing --
+# every project reported UNPLANNABLE while the build still exits 0. Resolve
+# the path at image build time so the config tracks wherever the base image
+# puts GHDL.
 RUN mkdir -p /root/.config && \
+    GHDL="$(command -v ghdl)" && \
     printf '%s\n' \
         'tools:' \
         '  - name: ghdl' \
         '    variant: system' \
         '    config:' \
-        '      executable: ghdl' \
+        "      executable: $GHDL" \
         '      analyze_args:   ["-Wno-hide"]' \
         '      elaborate_args: ["-Wno-hide"]' \
         '      run_args:       ["--ieee-asserts=disable"]' \
