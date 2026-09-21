@@ -56,11 +56,14 @@ begin
       ki_i => to_sfixed(ki_c, gain_t'left, gain_t'right),
       kd_i => to_sfixed(kd_c, gain_t'left, gain_t'right),
 
+      control_min_i => nasf,
+      control_max_i => nasf,
+
       changed_o => pid_changed_s,
       control_o => pid_control_s
       );
 
-  -- ki and kd left unconnected: degrades to a P controller.
+  -- ki and kd absent: degrades to a P controller.
   p_only: nsl_dsp.pid.pid_sfixed
     port map(
       clock_i => clock_s,
@@ -71,6 +74,11 @@ begin
       measure_i => measure_s,
 
       kp_i => to_sfixed(kp_c, gain_t'left, gain_t'right),
+      ki_i => nasf,
+      kd_i => nasf,
+
+      control_min_i => nasf,
+      control_max_i => nasf,
 
       changed_o => p_changed_s,
       control_o => p_control_s

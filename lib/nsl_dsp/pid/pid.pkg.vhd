@@ -15,7 +15,7 @@ package pid is
   -- sample every cycle and pulses changed_o with the matching
   -- control_o six cycles later.
   --
-  -- Anti-windup: with control_min_i/control_max_i connected (both or
+  -- Anti-windup: with control_min_i/control_max_i given (both or
   -- neither), the integrator clamps to the output window -- it
   -- accumulates post-gain, so the limits apply directly whatever the
   -- gains -- and the output clamps to the same window; residual
@@ -25,8 +25,12 @@ package pid is
   -- of control_o.  The derivative acts on the error, so a set point
   -- step kicks it.
   --
-  -- Leaving ki_i or kd_i unconnected removes the branch: the
-  -- controller degrades to PD, PI or P.
+  -- Every sfixed input takes its range from what is bound to it, so
+  -- an absent term is passed as nasf rather than left open: a port
+  -- default cannot carry the range the instance gives the port, and
+  -- simulators that elaborate statically reject one that does not.
+  -- Passing nasf for ki_i or kd_i removes the branch: the controller
+  -- degrades to PD, PI or P.
   component pid_sfixed is
     generic(
       ni_c: positive := 8
@@ -42,13 +46,13 @@ package pid is
       measure_i: in sfixed;
 
       kp_i: in sfixed;
-      ki_i: in sfixed := nasf;
-      kd_i: in sfixed := nasf;
+      ki_i: in sfixed;
+      kd_i: in sfixed;
 
       -- Runtime output window, applied to the integrator and the
-      -- output.  Connect both or neither.
-      control_min_i: in sfixed := nasf;
-      control_max_i: in sfixed := nasf;
+      -- output.  Give both or neither.
+      control_min_i: in sfixed;
+      control_max_i: in sfixed;
 
       changed_o: out std_ulogic;
       control_o : out sfixed

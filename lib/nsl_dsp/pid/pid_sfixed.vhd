@@ -18,11 +18,11 @@ entity pid_sfixed is
     measure_i: in sfixed;
 
     kp_i: in sfixed;
-    ki_i: in sfixed := nasf;
-    kd_i: in sfixed := nasf;
+    ki_i: in sfixed;
+    kd_i: in sfixed;
 
-    control_min_i: in sfixed := nasf;
-    control_max_i: in sfixed := nasf;
+    control_min_i: in sfixed;
+    control_max_i: in sfixed;
 
     changed_o: out std_ulogic;
     control_o : out sfixed
