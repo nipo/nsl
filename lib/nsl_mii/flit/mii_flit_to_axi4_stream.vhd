@@ -62,6 +62,7 @@ begin
         if reset_n_i = '0' then
             r.in_state <= IN_RESET;
             r.out_state <= OUT_RESET;
+            r.fifo_fillness <= 0;
         end if;
     end process;
 
