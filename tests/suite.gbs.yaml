@@ -359,6 +359,9 @@ projects:
   - name: ibm_8b10b_synchronous
     path: ibm_8b10b/synchronous
     tags: [ghdl, simulation]
+  - name: interdomain_tick
+    path: interdomain_tick
+    tags: [ghdl, simulation]
   - name: inet_ethernet
     path: inet/ethernet
     tags: [ghdl, simulation]
