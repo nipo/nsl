@@ -77,6 +77,9 @@ projects:
   - name: framed_swd_controller
     path: framed_swd_controller
     tags: [vivado-ip]
+  - name: gmii_z7_phy
+    path: gmii_z7_phy
+    tags: [vivado-ip]
   - name: i2c_input_deglitcher
     path: i2c_input_deglitcher
     tags: [vivado-ip]
