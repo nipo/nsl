@@ -3,10 +3,8 @@ name: inet_vlan_path_router
 root:
   name: top
   deps:
-    - nsl_amba.axi4_stream
     - nsl_bnoc.committed
     - nsl_bnoc.testing
-    - nsl_bnoc.axi_adapter
     - nsl_data.bytestream
     - nsl_data.crc
     - nsl_data.endian
@@ -18,7 +16,7 @@ root:
   sources:
     - file_type: vhdl
       files:
-        - tb.vhd
+        - src/tb.vhd
 
 output:
   - name: simulation
