@@ -37,12 +37,41 @@ Running
 
 ::
 
-  gbs project build
+  gbs project build pnr
   acrobe chip -r ftdi-dk0gfmir/icepizero/jtag/chain program --run sdram.bit
   acrobe run walk.py 10
 
 The number is how many walks to run, all of them out of one gatecap
 session.
+
+Open toolchain
+==============
+
+The same design, the same part and the same rate also build through
+GHDL, yosys, nextpnr and ecppack::
+
+  gbs project build pnr-yosys
+  acrobe chip -r ftdi-dk0gfmir/icepizero/jtag/chain program --run sdram-yosys.bit
+  acrobe run walk.py 10
+
+Three things that chain needs and Diamond does not:
+
+* The data pads are resolved in the top entity rather than through
+  ``nsl_io.io.tristated_vector_io_driver``.  GHDL synthesis does not
+  carry an inout across a hierarchy boundary: a child's inout port
+  becomes an internal wire, the pin is emitted as an output, and what
+  the fabric reads back is its own drive instead of what the part put
+  on the wire.  Both halves of the bus die, and nothing says so.
+
+* The placer's seed is pinned in the project file.  The fabric reaches
+  about 80 MHz, which is what the design asks for, so whether the
+  placer arrives depends on where it started.
+
+* Nothing checks the bus.  nextpnr reads ``FREQUENCY`` out of the LPF
+  and ignores the rest: ``CLOCK_TO_OUT``, ``INPUT_SETUP`` and ``BLOCK
+  PATH`` pass unread, so the pin-level margins the table below is
+  about are not covered by this flow.  What says the bus works is the
+  walk.
 
 Result
 ======
@@ -59,3 +88,6 @@ Result
 
 So 80 MHz is the highest rate at which the fabric and the bus both
 close, this is the current configuration.
+
+The open chain lands in the same place from its own model: 80.84 MHz
+against the 80 MHz ask, and the part walks clean at that rate.

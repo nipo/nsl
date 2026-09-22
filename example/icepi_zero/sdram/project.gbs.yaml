@@ -40,6 +40,27 @@ output:
       - type: pnr-report
         path: pnr-report.html
 
+  - name: pnr-yosys
+    topcell: boundary
+    require_backends:
+      - gbs.builtin.yosys
+      - gbs.builtin.nextpnr
+      - gbs.builtin.ecppack
+    target:
+      part: LFE5U-25F-6BG256C
+    backend_config:
+      gbs.builtin.ghdl:
+        vhdl_standard: "1993"
+      gbs.builtin.nextpnr:
+        # The fabric reaches about 80 MHz here, which is the rate the
+        # design asks for, so whether the placer gets there depends on
+        # where it started: seeds 2 to 6 meet it, 1 and 7 stop around
+        # 77 MHz.  Pinned so the build that closes keeps closing.
+        seed: 6
+    outputs:
+      - type: bitstream
+        path: sdram-yosys.bit
+
 repositories:
   - path: description.yaml
     loader: gatecap-description
