@@ -72,6 +72,18 @@ output:
         - done
         - ready
         - cpu
+      options:
+        # This design has eight real clocks and a part with eight
+        # primary global resources, and the bench's walkers each reset
+        # a few hundred registers off one net.  Left alone the placer
+        # promotes those resets into the primaries, spends the budget
+        # on the bench and re-places the whole device around it, which
+        # is what makes a reading of this design's timing unrepeatable.
+        # Replicating a high-fanout driver into several lower-fanout
+        # ones takes the argument for promoting them away.
+        replicate_resources: 1
+        # Gowin's own default on the larger Arora V parts.
+        place_option: 3
     outputs:
       - type: gowin-fs
         path: ddr3.fs

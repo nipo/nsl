@@ -56,8 +56,13 @@ instruments:
       # crossing on top of that.  A contiguous region cannot reach a
       # second row without crossing every bank first, so that is the
       # ladder there is.
+      #
+      # Four and five are the two halves of the part, which differ in
+      # the top row bit alone: four holds A14 low over every bank, row
+      # and column below it, five holds it high over every one above.
+      # Together they cover what one walks, minus the transition.
       full:
-        width: 2
+        width: 3
       # Write levelling.  The strobe still goes out but the data lines
       # are let go of, so the part answers on them with what it sampled
       # of the memory clock.

@@ -20,127 +20,139 @@
 # that asymmetry belongs to a probe and not to a walk, where a pull
 # fighting the part's own driver would do it on one line out of
 # sixteen.
+#
+# Every pin carries SLEW_RATE=FAST, which is not the default: a pad of
+# this family takes SLOW if a design says nothing, and a slow edge is
+# most of a 1.25 ns beat.  Left at the default, three data pins out of
+# sixteen read a low beat high whenever the next beat of the same pin
+# was high -- never the other way round, which is what says an edge --
+# which does not show in read training, whose pattern alternates every
+# beat and has no history to distort.  The command group is fast for
+# the same reason and it bought nothing there: A14 lands an activate
+# on the wrong half of the part either way, which is the bench's one
+# open fault and a skew rather than an edge.  The readme has the
+# measurements.
 
 # Shared command and address group.  Every one of these leaves from a
 # serialiser on the shifted clock pair, so there is no placement here
 # for the tools to get wrong.
 
 IO_LOC  "ddr3_ck_p_o" L3;
-IO_PORT "ddr3_ck_p_o" IO_TYPE=LVCMOS15 DRIVE=8;
+IO_PORT "ddr3_ck_p_o" IO_TYPE=LVCMOS15 DRIVE=8 SLEW_RATE=FAST;
 IO_LOC  "ddr3_ck_n_o" K3;
-IO_PORT "ddr3_ck_n_o" IO_TYPE=LVCMOS15 DRIVE=8;
+IO_PORT "ddr3_ck_n_o" IO_TYPE=LVCMOS15 DRIVE=8 SLEW_RATE=FAST;
 IO_LOC  "ddr3_cke_o" K6;
-IO_PORT "ddr3_cke_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_cke_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_cs_n_o" P4;
-IO_PORT "ddr3_cs_n_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_cs_n_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_ras_n_o" L5;
-IO_PORT "ddr3_ras_n_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_ras_n_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_cas_n_o" L4;
-IO_PORT "ddr3_cas_n_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_cas_n_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_we_n_o" M5;
-IO_PORT "ddr3_we_n_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_we_n_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_odt_o" M2;
-IO_PORT "ddr3_odt_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_odt_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_reset_n_o" L6;
-IO_PORT "ddr3_reset_n_o" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_reset_n_o" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 
 IO_LOC  "ddr3_ba_o[0]" P5;
-IO_PORT "ddr3_ba_o[0]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_ba_o[0]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_ba_o[1]" P2;
-IO_PORT "ddr3_ba_o[1]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_ba_o[1]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_ba_o[2]" M6;
-IO_PORT "ddr3_ba_o[2]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_ba_o[2]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 
 IO_LOC  "ddr3_a_o[0]" M1;
-IO_PORT "ddr3_a_o[0]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[0]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[1]" K2;
-IO_PORT "ddr3_a_o[1]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[1]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[2]" G2;
-IO_PORT "ddr3_a_o[2]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[2]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[3]" J4;
-IO_PORT "ddr3_a_o[3]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[3]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[4]" J2;
-IO_PORT "ddr3_a_o[4]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[4]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[5]" H2;
-IO_PORT "ddr3_a_o[5]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[5]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[6]" G3;
-IO_PORT "ddr3_a_o[6]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[6]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[7]" J1;
-IO_PORT "ddr3_a_o[7]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[7]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[8]" J5;
-IO_PORT "ddr3_a_o[8]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[8]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[9]" H5;
-IO_PORT "ddr3_a_o[9]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[9]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[10]" L1;
-IO_PORT "ddr3_a_o[10]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[10]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[11]" H3;
-IO_PORT "ddr3_a_o[11]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[11]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[12]" K4;
-IO_PORT "ddr3_a_o[12]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[12]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[13]" K1;
-IO_PORT "ddr3_a_o[13]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[13]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_a_o[14]" D1;
-IO_PORT "ddr3_a_o[14]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[14]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 # A15 addresses nothing at this density -- eight banks of 32768 rows of
 # 1024 columns fill the 4Gbit with A0 to A14 -- and the pin is an input
 # of the part all the same, so it is driven rather than left floating.
 IO_LOC  "ddr3_a_o[15]" R1;
-IO_PORT "ddr3_a_o[15]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_a_o[15]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 
 # The fitted site's data group.
 
 IO_LOC  "ddr3_0_dm_o[0]" AA4;
-IO_PORT "ddr3_0_dm_o[0]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_0_dm_o[0]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dm_o[1]" V7;
-IO_PORT "ddr3_0_dm_o[1]" IO_TYPE=LVCMOS15;
+IO_PORT "ddr3_0_dm_o[1]" IO_TYPE=LVCMOS15 SLEW_RATE=FAST;
 
 IO_LOC  "ddr3_0_dq_io[0]" Y4;
-IO_PORT "ddr3_0_dq_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[1]" AB3;
-IO_PORT "ddr3_0_dq_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[2]" AA5;
-IO_PORT "ddr3_0_dq_io[2]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[2]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[3]" V4;
-IO_PORT "ddr3_0_dq_io[3]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[3]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[4]" AA1;
-IO_PORT "ddr3_0_dq_io[4]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[4]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[5]" AB2;
-IO_PORT "ddr3_0_dq_io[5]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[5]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[6]" AB5;
-IO_PORT "ddr3_0_dq_io[6]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[6]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[7]" AB1;
-IO_PORT "ddr3_0_dq_io[7]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[7]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[8]" AA8;
-IO_PORT "ddr3_0_dq_io[8]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[8]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[9]" Y8;
-IO_PORT "ddr3_0_dq_io[9]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[9]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[10]" AB7;
-IO_PORT "ddr3_0_dq_io[10]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[10]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[11]" Y7;
-IO_PORT "ddr3_0_dq_io[11]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[11]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[12]" AB8;
-IO_PORT "ddr3_0_dq_io[12]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[12]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[13]" W9;
-IO_PORT "ddr3_0_dq_io[13]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[13]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[14]" AB6;
-IO_PORT "ddr3_0_dq_io[14]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[14]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dq_io[15]" Y9;
-IO_PORT "ddr3_0_dq_io[15]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dq_io[15]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 
 # Each strobe is a pair of ordinary pins driven complementary, not a
 # differential primitive: the bank runs LVCMOS15 and the pair's two
 # halves each carry their own tristated serialiser, which is what the
 # PHY hands over.  The P half is read back on the pin it leaves by.
 IO_LOC  "ddr3_0_dqs_p_io[0]" Y3;
-IO_PORT "ddr3_0_dqs_p_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dqs_p_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dqs_n_io[0]" AA3;
-IO_PORT "ddr3_0_dqs_n_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dqs_n_io[0]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dqs_p_io[1]" V9;
-IO_PORT "ddr3_0_dqs_p_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dqs_p_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 IO_LOC  "ddr3_0_dqs_n_io[1]" V8;
-IO_PORT "ddr3_0_dqs_n_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
+IO_PORT "ddr3_0_dqs_n_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN SLEW_RATE=FAST;
 
-# The four walkers' beat enables, kept off the global clock tree.
+# The six walkers' beat enables, kept off the global clock tree.
 #
 # A memory tester advances its whole hash pipeline on one enable, so
 # `transition.advance` reaches some two to three hundred clock enables
@@ -156,7 +168,7 @@ IO_PORT "ddr3_0_dqs_n_io[1]" IO_TYPE=LVCMOS15 PULL_MODE=DOWN;
 # Net Constraints: "LOCAL_CLOCK means this net is not routed to the
 # global clock wire", and with LOCAL_CLOCK no signal_type is taken.
 #
-# All four are named, not the two a given build happens to promote:
+# All six are named, not the two a given build happens to promote:
 # which walker wins a primary is the placer's, and the policy is about
 # what the net is.  Each walker's reset is the same shape and is not
 # nameable -- it comes out of synthesis as `nNNN_5` -- so the enable is
@@ -165,3 +177,5 @@ CLOCK_LOC "probe/transition.advance" LOCAL_CLOCK;
 CLOCK_LOC "walk/transition.advance" LOCAL_CLOCK;
 CLOCK_LOC "bank_walk/transition.advance" LOCAL_CLOCK;
 CLOCK_LOC "row_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "low_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "high_walk/transition.advance" LOCAL_CLOCK;

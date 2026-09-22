@@ -2,12 +2,14 @@
 
 Run with::
 
-  acrobe run walk.py [resource-path] [dqs-invert] [size=0..3] [count=N]
+  acrobe run walk.py [resource-path] [dqs-invert] [size=0..5] [count=N]
                      [train=1]
 
 The size says which region is walked: zero is the 256 byte probe the
 map uses, one the whole part, two every bank at row zero and three that
-with a second row on top.  The default is the whole part.
+with a second row on top.  Four and five are the halves of the part,
+which differ in the top row bit alone and hold A14 still throughout.
+The default is the whole part.
 
 ``count=N`` runs the region N times, one walk after another out of one
 session.  One session on purpose: a script killed inside a transfer
@@ -112,12 +114,16 @@ class Walk:
     WHOLE = 1
     BANKS = 2
     ROWS = 3
+    LOW_HALF = 4
+    HIGH_HALF = 5
 
     SIZE_NAME = {
         PROBE: "the 256 byte probe",
         WHOLE: "the whole part, 512 MiB",
         BANKS: "every bank at row zero, 16 KiB",
         ROWS: "two rows in every bank, 32 KiB",
+        LOW_HALF: "the lower half, 256 MiB, A14 low throughout",
+        HIGH_HALF: "the upper half, 256 MiB, A14 high throughout",
         }
 
     # A controller cycle on this part is sixteen bytes, and a status

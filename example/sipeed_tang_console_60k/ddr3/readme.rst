@@ -10,19 +10,43 @@ pins hold one clock pair each.  That single refusal is what the port
 is about, and everything else here is the Artix bench with the data
 bus twice as wide.
 
-**The ladder has run as far as it goes.**  The rack answers, the
-controller clock is the one the design was built for, the part is
-alive and answers write levelling -- and no read of the array reaches
-the fabric, at any of the sixty-four offsets the port could express then or
-any of the two hundred and fifty-six taps of the line.  What stops it
-is not a setting.  The design's own burst, read back on the pins it
-leaves by, comes back with **every falling-edge beat missing**, and it
-comes back **sixty-seven slots** from its command where the Artix's
-comes back at thirty-three.  Either of those on its own empties the
-read map.  The second has been fixed since -- the read offset carries
-seven bits now and reaches seventy -- and the first has not.  So the
-two read figures are still placeholders, and "What the ladder said"
-below is why no measurement can replace them yet.
+**The bus answers and the whole part walks clean.**  Read training
+lands on the part's own multi purpose register, a burst written at the
+DFI comes back whole, and every region -- the probe, the banks, the
+rows, each half of the part and all 512 MiB of it -- crosses without
+an error, three passes each.  The board record is in the bitstream, so
+the design comes up trained with no host attached.
+
+Two things had to be found for that, and neither was a controller.
+The first was the **read offset**: this family puts a read answer at
+slot **seventy** where the Artix puts it at fifty-three, and a six bit
+port could not say it, so every map taken through one read a bus
+nobody drove and said so.  The port carries seven bits now.
+
+The second was **the slew rate of the pads**.  A Gowin pad defaults to
+a slow output slew, which on a bus whose beat is 1.25 ns is not an
+edge at all: a low beat followed by a high one came back high, a few
+beats in a hundred, on three data pins out of sixteen -- and never the
+other way round, which is what says an edge and not a sampling point.
+Nothing in the read training sees it, because the pattern the part
+answers a training read with alternates every beat and has no history
+to distort.  ``SLEW_RATE=FAST`` on the data group took every region
+inside a row to zero errors, and moved the read eye a beat earlier
+with it.
+
+What that took, past the two findings below, was **a memory period of
+setup on the address**.  ``A14`` is the one address pin the board puts
+away from the others, and half a tick was not enough for it: an
+activate carrying that bit set reached the part with it clear, and a
+whole-part walk lost half a percent of its beats to the collateral.
+``early_address_c`` presents the address and bank on the tick before
+the command as well -- the ticks a one-command-a-cycle controller
+leaves deselected -- and reading 13 is what it came to.
+
+One reading here still lies: the design's own burst, read back on the
+pins it leaves by while it drives them, comes back with every odd beat
+replaced by the even one before it.  That is the pad not hearing its
+own driver, and it is the argument of reading 5.
 
 The board
 =========
@@ -44,6 +68,11 @@ The board
   ``../pinout/ddr3_walk.cst`` follows.  SSTL15 receivers against that
   reference are a later option: a receiver threshold is worth moving
   once the bus answers at all, and not while nothing does.
+- Every pin of the bus carries ``SLEW_RATE=FAST``.  A Gowin pad
+  defaults to ``SLOW`` and the pin report is where that shows, since
+  nothing refuses it and no simulation models it; what it costs is in
+  readings 7 and 8 below.  SUG1018 §2.5 has the attribute and notes
+  that the GW5A(T)-60 is one of the parts that take it.
 - A15 addresses nothing at this density -- eight banks of 32768 rows
   of 1024 columns fill the 4Gbit with A0 to A14 -- and is an input of
   the part all the same, so the design holds it low rather than
@@ -116,9 +145,10 @@ Three consequences follow in this design and nowhere else:
   does not pay, and the strobe's group pays one going out.  So what
   the two words say about each other would be a reading and not a
   calibration, and ``ruler.py`` is what times them together.  On the
-  board the strobe half of that reading is not there at all: the pin
-  reads back flat at every slot while its own driver drives, which is
-  in "What is open" below.
+  board that reading is not to be had on a write: a pad hears nothing
+  of its own driver at the beat rate, which is in "What is open"
+  below, and the strobe's word alternates every beat.  On a read it
+  is, and the strobe reads as a clean alternation there.
 - **Each strobe is a pair of ordinary pins**, driven complementary from
   two tristated serialisers, rather than a differential primitive: the
   bank runs LVCMOS15.  That is what ``ddr3_probe2`` drove, and the PHY
@@ -143,7 +173,10 @@ access carries sixteen bytes, so address bits 4 to 10 are the column,
 A page is two kilobytes, the bank turns over every two of them and the
 row every sixteen, so a contiguous region cannot reach a second row
 without having crossed every bank boundary first.  That is the whole
-of the ladder the address map offers.
+of the ladder the address map offers, and it is what separated the two
+faults of reading 8: the small regions exercise fourteen address bits
+and the whole part exercises twenty-nine, so a weak line high up the
+row address shows on one and not the others.
 
 The rack rides the board's **own USB2 port**, which the fabric drives
 through the soft high-speed PHY kept in the gatecap tree: the design
@@ -166,46 +199,64 @@ What this board is to measure of the PHY is one constant in
 generic::
 
   constant board_c: nsl_ext_ram.ddr3_io.serdes_board_t := (
-    read_offset => 61,
-    read_tap => 0,
-    write_slip => 8,
+    read_offset => 70,
+    read_tap => 47,
+    write_slip => 7,
     dq_enable_lead => 0,
     dqs_enable_lead => 0,
     strobe_invert => false
     );
 
-Four of the six are what the family says rather than what the board
-says, and are known before a measurement:
+Three of the six are what the family says rather than what the board
+says, and were known before a measurement:
 
-- ``write_slip`` is **nominal**.  On the 7-series the data serialiser
-  hands its parallel word across to a fast clock its parallel side
-  does not run on, so the burst lands a whole cycle from where an
-  aligned pair would put it and that board wants slip 0.  Here the
-  data keeps the unshifted pair and the strobe's group is the one that
-  crosses, so there is no whole-word transfer for the data to lose: a
-  real ``OSER8`` takes its parallel word on a parallel edge.  Eight is
-  no slipping at all.
 - both **enable leads are zero**.  A GW5A pad's tristate is per pair
   and travels with the word its own serialiser presents.
 - ``strobe_invert`` is **false**, which is the sense the schedule
   holds.
 
-The two read figures are the measurement, and both are still
-**placeholders**: the ladder has run and neither can be measured from
-this design.
+The other three are measured, and all three are off the nominal:
 
-- ``read_offset`` was guessed a word above the Artix's 53, because the
-  READ command leaves a cycle later through the crossing.  The board
-  says the guess is not merely off but out of reach: the design's own
-  write burst, timed against its own command, is at slot **67** where
-  the Artix's is at 33, which puts a read answer near 69 -- past what
-  the six bit port of the time could say.  The port carries seven bits
-  now and reaches it; 61 is left where it was because the capture
-  below is what stops the right number being measured.
-- ``read_tap`` is sub-slot, on a line of **256 taps of about 12.5 ps**
-  -- some two and a half beats of range, against the 7-series line's
-  32 taps of 78 ps.  The line steps and wraps as it should; there is
-  no window on the plane to place it in.
+- ``read_offset`` is **70**, against the Artix's 53.  A whole cycle of
+  that is the output stage both families gained; the rest is the
+  strobe's group crossing to the shifted pair, which a 7-series pin
+  does not do.  The port had six bits when this board was first mapped
+  and could not say seventy at all, which is why every map before this
+  one was empty.  It read 71 while the pads were at the family's
+  default slew, and a faster edge arrives a beat earlier.
+- ``read_tap`` is **47**, the middle of the run of 41 taps over which
+  a walk of the array is clean.  The part's own training pattern
+  answers over a wider run at a different centre, 73 taps centred on
+  52, because it alternates every beat and so is the easiest traffic
+  there is; the record follows the array.  The offset either side of
+  this one answers over a run of its own, eighty-odd taps away: the
+  line carries 256 taps of about 12.5 ps and a beat is 1.25 ns, so the
+  runs are one window reached a beat apart.
+- ``write_slip`` is **7**, a slot short of nominal.  There is no
+  whole-word transfer for the data to lose here -- a real ``OSER8``
+  takes its parallel word on a parallel edge, unlike the 7-series,
+  whose data serialiser hands its word a cycle early and wants slip 0
+  -- so eight was the expectation.  The remaining slot is the strobe's
+  own crossing arriving a beat ahead of the data it clocks.  At eight
+  the part drops the first beat of every burst and stores the other
+  seven; at six it drops the last; at seven the burst comes back
+  whole.
+
+One thing this board asks of the PHY is not in the record, and is a
+generic beside it: ``early_address_c => true``.  A command belongs to
+one memory tick and CK rises in its middle, so an address pin is
+settled half a tick either side of the edge that reads it -- 1.25 ns
+here, and not enough for ``A14`` at D1.  With the generic on, a tick
+that deselects the part carries the address and bank of the tick
+*after* it rather than its own, so a command following a deselect is
+presented a tick and a half early.  Only the address and the bank
+move: CS, RAS, CAS and WE stay on their own tick, or the deselect
+would reach the part as a second command.  ``dram_core`` writes
+``dfi_o.command(0)`` alone and leaves the other three phases
+deselected, so the three ticks behind every command are free.  It is a
+generic and not a seventh field of ``serdes_board_t`` because that
+record is an aggregate every board states in full, and a field added
+to it rewrites every board.
 
 The PHY applies the record itself: out of reset it waits for the delay
 reference, walks every data pin's line round to its mark and then out
@@ -228,9 +279,9 @@ enabled.
 
 It costs, of a GW5AT-60::
 
-  logic       15393/59904   26%   (13381 LUT, 1442 ALU, 570 ROM16)
-  register    13465/60780   23%
-  CLS         14277/29952   48%
+  logic       15969/59904   27%   (13943 LUT, 1456 ALU, 570 ROM16)
+  register    14004/60780   24%
+  CLS         14558/29952   49%
   IOLOGIC        70/293     24%   47 OSER8, 20 IDES8, 18 IODELAY
   BSRAM          22/118     19%
   I/O port       58/297     20%
@@ -289,16 +340,37 @@ What the flow objected to, and how it was answered:
   with 1.85 ns of slack.  The stage costs one cycle on both families
   and ``read_offset`` grows by a word with it (``DESIGN.md`` §10).
 
-**The memory domain meets, to 0.4%**::
+The build the readings below come off reads::
 
-  board          50.000 MHz constraint   152.403 MHz actual
-  mem           100.000 MHz constraint    99.623 MHz actual   TNS   -0.211 ns over 7 endpoints
-  mem_shifted   100.000 MHz constraint   190.978 MHz actual
-  usb            60.002 MHz constraint    60.307 MHz actual   met
-  7 setup endpoints violated, 12 hold
+  board          50.000 MHz constraint   175.133 MHz actual   met
+  mem           100.000 MHz constraint    92.280 MHz actual   short
+  mem_shifted   100.000 MHz constraint   269.736 MHz actual   met
+  usb            60.002 MHz constraint    69.045 MHz actual   met
+  290 setup endpoints violated, TNS -81.316 ns; 13 hold
 
-Getting there took one constraint and two register stages, and the
-constraint is the interesting one.
+Every one of the 290 is a family this report has always carried and
+none of them is the command path: the burst adapter's transaction
+address into a walker's hash at -0.837 ns worst, the panel's walker
+selector into the core's write data enables, and the core's own
+scheduler.  The board is what says whether it costs anything, and with
+this build it walks the whole part clean three times.  Builds of this
+bench have read between 86.2 and 100.5 MHz on ``mem`` with the failing
+paths in that handful of families; a tenth of a nanosecond here is the
+placer's.
+
+Getting there took two placer options, one constraint and two register
+stages.
+
+**Two walkers more cost it.**  The build the halves of reading 10 come
+out of reads 88.928 MHz on ``mem``, TNS -75.689 ns over 257 endpoints
+and nothing violated anywhere else, which is the spread this design's
+placements have always had rather than anything new.  Every one of the
+257 is the bench's own: the burst adapter's transaction address
+reaching a walker's hash, which is the family that has been at the top
+of this report since there were four walkers, with six of them on one
+bus to fan out into.  The board is what says whether it costs
+anything, and it says region 4 walks 16777216 beats clean while region
+5 does not, so what the report has is distance and not an error.
 
 **The tool routes a bench's enables on the global clock tree.**  A
 GW5AT-60 has eight *primary* global clock resources and eight *long
@@ -351,6 +423,27 @@ constraint took ``mem`` to 89.466 MHz and TNS to -44.614 ns over 90
 endpoints, and gave ``usb`` all but one endpoint back: a sixth of the
 negative slack survived, and it was all distance.
 
+**What names cannot reach, two placer options can.**  A build of the
+record alone -- three constants moved, nothing else -- placed at
+86.237 MHz on ``mem`` and 55.376 MHz on ``usb``, and on the board its
+own rack answered with a corrupt descriptor and a controller clock
+read as 4 MHz, 120 MHz and 200 MHz on three consecutive tries.  The
+netlist had barely moved and the device had been re-placed around it,
+which is the failure mode the global-clock policy was meant to end and
+only half did: three walker resets held primaries and the 400 MHz
+pair sat on long wires.  ``project.gbs.yaml`` therefore asks for two
+things the tool does not do by default::
+
+  replicate_resources: 1      # SUG1220: split a high-fanout driver
+  place_option: 3             # Gowin's own default on the larger Arora V
+
+Replication takes the argument for promoting a bench's reset away by
+making it several smaller nets.  Together they gave 98.787 MHz on
+``mem``, ``usb`` met with no violated endpoint at all, one primary
+left spare, and -- with the pads' slew rate the only change between
+two builds -- an identical placement twice running, which is the first
+time a reading of this design has repeated.
+
 **Two register stages spent that distance.**  Both are the bench
 reaching across the die, and both cost a cycle of a thing no cycle
 depends on:
@@ -385,58 +478,64 @@ says:
   is not data: the pipeline is the same depth and all that moves is
   when a new offset begins to apply, a cycle later.
 
-What that leaves is seven endpoints, all in the burst adapter's own
-beat arithmetic, at a tenth of a nanosecond::
+What that leaves is **nothing negative**.  The tightest paths in the
+report are the rack's own APB bridge at +0.003 ns and the burst
+adapter's transaction address reaching a walker's hash at +0.047::
 
-  -0.038  adapter/r.line -> walk/r.hashing_8          1
-  -0.029  adapter/r.line -> adapter/r.line[20..25]    6
+  +0.003  the rack's APB bridge, address into its word register
+  +0.047  adapter/r.txn.addr -> read_stage/slice/r.data/RESET
+  +0.048  adapter/r.txn.addr -> probe/r.stirred[2][1]/CE
 
-and the next paths after them are positive: the controller's own pick
-feeding itself at +0.011, the other three walkers' hashes at +0.013 to
-+0.022, the rack's APB bridge at +0.084.  The families this file used
-to list -- the panel's counters off ``core/r.step``, the panel's
-control into ``core/r.acc_address``, the walkers' comparison a
-nanosecond out -- are gone from the report entirely.  ``mem``'s worst
-path is twelve levels where it was fourteen, and 0.038 ns at twelve
-levels is the placer's noise rather than a path.
+The families this file used to list -- the panel's counters off
+``core/r.step``, the panel's control into ``core/r.acc_address``, the
+walkers' comparison a nanosecond out -- are gone from the report
+entirely.  Earlier builds left a handful of the adapter's endpoints a
+tenth of a nanosecond short and that was always the placer's noise
+rather than a path: what was failing on the board at the time was the
+pads, which are readings 7 and 8.
 
-All **twelve hold** violations are inside the vendor's soft
+All **thirteen hold** violations are inside the vendor's soft
 high-speed PHY, between its 60 MHz side and the 120 MHz side its own
 ``CLKDIV`` makes, on gray-coded FIFO pointers, as the fourteen before
 them were.  ``ddr3_probe2`` shipped with them unanalysed -- it states
 no clock for that domain -- and worked on this board.
 
-What the constraint did not do is empty the primaries: the tool
-promotes whatever is left, and this build spends them on the soft
-PHY's link reset, a core state bit that drives 134 set and reset pins,
-and the MPR readback's 144 way capture enable.  The first two are what
-the resource is for.  The third is another enable, unnameable, and on
-no failing path -- a reminder that naming nets one at a time is a
-policy and not a fix, and that the policy is *a beat enable is not a
-clock*.
+What neither the constraint nor the options did is empty the
+primaries: the tool promotes whatever is left, and this build spends
+four of eight on walker resets and one on a core state bit.  The
+400 MHz pair sits on long wires and on hard clock rows, which is where
+it belongs::
+
+  raw_s[0], raw_s_395[3]           PRIMARY  the two controller clocks
+  hs_phy/.../sclk                  PRIMARY  the soft PHY's own
+  core/gowin_reg_r.state_400[6]_1  PRIMARY  a core state bit
+  walk/n503_7, bank_walk/n488_8,
+  row_walk/n489_7, low_walk/n502_7 PRIMARY  four walker resets
+  board_s, ram_reset_n_s, utmi clock, n451_7,
+  raw_s_393[1], raw_s_394[2], high_walk/n502_7,
+  hs_phy/fast_clock_s              LW       eight of eight
+
+  raw_s_393[1]                     HCLK     BANK9_HCLK1
+  raw_s_394[2]                     HCLK     BANK9_HCLK2 BANK10_BANK11_HCLK3
 
 One thing to know before reading any of these numbers twice: the
-tool's placement of this design moves with the size of the changes
-above.  Builds of it have read 98.935, 95.180, 93.671, 93.480, 88.609,
-89.466 and now 99.623 MHz on ``mem`` while the failing paths stayed in
-a handful of families, and ``board`` moved between 123 and 167 MHz and
-``mem_shifted`` between 121 and 205 without either being touched.  At
-48% of the part's CLS and with a clock of 8393 loads, a tenth of a
-nanosecond of worst slack here is the placer's.  What the global-clock
-policy bought is that the budget no longer moves with the netlist,
-which is what made every earlier reading unrepeatable.
-
-None of this has been tried on hardware.  What a 0.4% shortfall on the
-controller clock costs is the burst adapter holding a beat count that
-is a tenth of a nanosecond late, on a domain whose pins are placed and
-whose crossings are checked.  It is the first thing to confirm once
-the rack can be reached, and the last thing to suspect.
+tool's placement of this design used to move with the size of the
+changes above.  Builds of it have read 98.935, 95.180, 93.671, 93.480,
+88.609, 89.466, 99.623, 86.237, 98.787, 100.468 and now 92.280 MHz on
+``mem`` while the failing paths stayed in a handful of families, and
+``board`` moved between 123 and 190 MHz and ``mem_shifted`` between
+121 and 270 without either being touched.  At 49% of the part's CLS
+and with a clock of 8393 loads, a tenth of a nanosecond of worst slack
+here is the placer's, and the board is what says what it costs.
 
 What the ladder said
 ====================
 
 Every reading below comes off the committed bitstream, over the rack
-on the board's own USB2 port.
+on the board's own USB2 port.  That bitstream carries the board record
+out of ``src/boundary.vhd``, so nothing below touches the panel's
+``manual`` bit except where it says so: the PHY places itself at reset
+and a walk measures the record the design was built with.
 
 **1. The transport and the clock.**  The rack enumerates and lists its
 blocks -- the bridge, the enumerator, the clock measurer, the panel,
@@ -447,12 +546,10 @@ built for::
   clock,rate_hz
   ram,100000000
 
-One thing the host tooling will not do here: ``acrobe gatecap -r
-<path> info`` and ``... rates`` each hang before printing anything,
-while the same resolve driven from ``acrobe run`` -- ``Session(path)``
-and then the blocks' own console adaptors, which is the stack both
-verbs use -- answers in seconds over the same transport.  Every
-reading here was taken that way.
+Every resolve over this port hangs before printing anything until the
+port is put in raw mode, whatever verb asks for it; ``stty -F
+/dev/ttyACM0 raw -echo`` after programming is what makes any of the
+readings below possible.
 
 **2. The panel, before any walk.**  Straight after configuration, and
 unchanged two seconds later::
@@ -473,27 +570,28 @@ as on the Lattice board the SDRAM bench runs on, so ``walk.py``
 raising the run before it drops it costs nothing here rather than
 being what makes the drop a transition.
 
-**3. The read map is empty.**  ``mpr.py`` maps all sixty-four offsets
-against the line at eight taps a step, and then has nothing to
-refine::
+**3. The read map lands, once the offset can reach it.**  ``mpr.py``
+maps every offset the port carries against the line.  Over the
+sixty-four a six bit port could say it finds nothing at all -- which
+is what this file used to record, and what sent the whole
+investigation after the capture.  Over a hundred and twenty-eight it
+finds the answer::
 
-  sequencer step 7, 150 answers so far
-    offset 0: nothing
-    ...
-    offset 63: nothing
-  the pattern never came back whole.  What did, most often:
-    0x00000000000000000000000000000000  at 2048 points
-    a cycle of all ones or all zeroes is a bus nobody drove
+  offsets that answered coarsely: (69, 70, 71, 72)
+    offset 69: 3 taps, taps 0 to 2
+    offset 70: 73 taps, taps 16 to 88
+    offset 71: 71 taps, taps 101 to 171
+    offset 72: 70 taps, taps 186 to 255
+  the part's pattern comes back at read offset 70, over 73 taps of the
+  line; the middle of that run is tap 52
 
-Two thousand and forty-eight points and one word between them.  The
-answers counter runs the whole time, so reads are being issued and the
-PHY is announcing a capture for each of them; what the capture holds
-is a bus nobody drove, on both lanes, at every offset and every tap.
-A pass over the same plane printing the strobe words beside the data
-says the same and adds that the strobe pins read ``00000000`` at every
-one of those points too.
+Three offsets answer over runs of their own, eighty-odd taps apart:
+one window reached a beat early, on the beat, and a beat late.  A
+window of 73 taps is 0.9 ns of a 1.25 ns beat, so the read path is not
+merely found but wide.  It is not as wide as it looks, which is
+reading 9.
 
-The instrument is not what is broken.  The panel's tick moves the
+The instrument was never what was broken.  The panel's tick moves the
 delay lines and they wrap where the family says they should::
 
   delay_mark over 12 ticks from rest: 0xffff 0x0000 0x0000 ... 0x0000
@@ -512,156 +610,396 @@ it sampled of CK on each rising strobe edge::
     levelling:      0xffff  (moving)
     the answer sits at 0xffff: the part has taken the bus, so the strobe reaches it
 
-So the command pins are decoded, a mode register write lands, the
-strobe arrives with edges on it and the part drives sixteen data pins.
-Nothing in the empty map above is the part being absent, and the site
-this bench drives is the fitted one.
+So the command pins are decoded, a mode register write lands and the
+part drives sixteen data pins.  Two lanes answering differently and an
+answer that moves between two readings are what sampling looks like: a
+flop nobody clocked would read the same on both lanes and stay there.
+What the reading does not prove on its own is that the strobe carries
+a *beat rate* -- one rising edge in a burst is enough to update the
+part's feedback flop -- and reading 3 is what settles that, since a
+part answering an MPR read has taken the READ command, the MPR entry
+and the burst.
 
-The same passes say the strobe pin's own **readback is dead** --
-``ever high 0x00, ever low 0xff`` on both lanes, while its own driver
-is driving.  There is no reading of the strobe to be had on this
-board, which takes ``ruler.py``'s second row and ``drivemap.py``'s
-strobe map out of use.
+The same passes say the strobe pin reads back flat -- ``ever high
+0x00, ever low 0xff`` on both lanes -- while its own driver drives.
+That is the loopback of reading 5 again, on the pin whose word
+alternates every beat: the same readback resolves the *part's* strobe
+perfectly, as ``01010101`` and ``10101010`` at the offsets the read
+answer sits at.
 
-**5. What the design's own burst says.**  ``ruler.py`` announces the
-capture on the cycle of a *write*, so the pads' own receivers see the
-burst the design is driving.  It comes back, and it comes back wrong
-in two separate ways::
-
-  --- poke value 0x40, capture announced on the write
-  offset  data, earliest byte first                          strobe by lane
-      59  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 41   00000000 00000000
-      60  00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 41   00000000 00000000
-      61  00 00 00 00 00 00 00 00 00 00 00 40 40 41 40 41   00000000 00000000
-      62  00 00 00 00 00 00 00 00 00 00 40 41 40 41 44 45   00000000 00000000
-      63  00 00 00 00 00 00 00 00 40 41 40 41 44 45 40 41   00000000 00000000
-
-**Every falling-edge beat is missing.**  A cycle is eight slots of two
-lanes and the poke counts up, so slot *s* should read ``0x40 + 2s`` on
-lane 0.  What offset 63 holds is::
+**5. What the design's own burst says, and why it says it twice.**
+``ruler.py`` announces the capture on the cycle of a *write*, so the
+pads' own receivers see the burst the design is driving.  With the
+poke counting up from ``0x40``, lane 0 of slot *s* should read
+``0x40 + 2s``.  At the trained tap and offset it reads::
 
   slot   0     1     2     3     4     5     6     7
   want   40    42    44    46    48    4a    4c    4e
-  got    40    40    44    40    48    48    4c    48
+  got    40    40    44    44    48    48    4c    4c
 
-Slots 0, 2, 4 and 6 are exactly right and 1, 3, 5 and 7 carry a copy.
-Which side loses them is in *which* copy: slot 3 holds slot 0's word
-rather than slot 2's, and slot 7 holds slot 4's rather than slot 6's.
-A driver emitting only even beats would hold each for two slots and
-give ``40 40 42 42 44 44 46 46``; a listener whose falling-edge half
-updates once a half-cycle gives exactly what is there.  **The loss is
-in the capture and not in the drive**, which is the one piece of good
-news here: it leaves the write path unaccused.
+**Every odd beat is a copy of the even one before it**, and that
+holds at every one of the 256 taps of the line and at every slip.  The
+tempting reading is that the capture drops a beat; it is wrong, and
+three measurements say so.
 
-It is also enough on its own to empty the read map.  The
-multi-purpose register's predefined pattern alternates every beat and
-is phase-locked to CK, and so are the slots this capture resolves: a
-capture that answers on one CK edge and copies the other reads that
-pattern as a constant at every offset.  Which is what it read.
+- **The line cannot undo it.**  A capture whose falling-edge half were
+  dead would show the odd beats once the line moved the sampling point
+  a beat, since the line spans some three of them.  It never does: the
+  window walks a slot later per eighty-odd taps, monotonically, and
+  the shape of the word never changes.
+- **The slip cannot undo it either.**  A pad emitting only the even
+  positions of the word it is given would turn the odd beats up at an
+  odd slip.  Slips 6 to 10 move the burst a slot a step and leave the
+  shape exactly as it is, so what is duplicated follows the burst and
+  not the serialiser's word.
+- **The part sees the beats the loopback does not.**  A burst written
+  at the DFI and read back out of the array comes back ``40 41 42 43
+  44 45 46 47 48 49 4a 4b 4c 4d 4e 4f`` -- whole, odd beats included.
+  The part's receivers resolve what this design's own receivers, on
+  the same pins, do not.
 
-**The burst is sixty-seven slots from its own command.**  The same
-measurement on the Artix puts it at thirty-three to forty.  Sweeping
-the slip moves it a slot a step and confirms the reading -- slip 12
-puts it at 63, slip 8 at 67, slip 4 and slip 0 out past the end of the
-window -- so what is deep is the pad path and not a slip that is
-wrong.  A read answer belongs a slot or two past where the write data
-sits, which is somewhere near **offset 69**, which is past what the
-six bit ``read_offset_i`` of the time could say.  The port is now
-``unsigned(6 downto 0)`` and the PHY's announcement queue reaches the
-far end of it, so with the capture mended the offset can be pointed at
-the answer.
+So the loss is neither the drive nor the capture of anything the bus
+carries: it is a **pad listening to itself while it drives**.  The
+receiver of a GW5A pad does not resolve a 1.25 ns beat out of its own
+driver's waveform, and does resolve one out of the part's -- the MPR
+answer in reading 3 alternates every beat and comes back whole through
+the same pad, the same ``IODELAY`` and the same ``IDES8``.  Turning
+the part's termination off makes the loopback worse rather than
+better, which is what a settling time does and not what a dropped beat
+does.
 
-**6. The poke does not land**, which follows from all of the above and
-is here for the file::
+``ruler.py``, ``taps.py`` and ``drivemap.py`` all read the bus this
+way, so none of them measures what it means to.  The slip is measured
+against the array instead, in reading 6.
 
-  --- TDQS disabled: the mask pin is live
-  value   read back                                       answers
-   0x10   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00    49  0/16
-   0x40   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   156  0/16
-   0xa0   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   157  0/16
-    the answer does not move when the value does
+**6. The poke lands, and places the slip.**  A burst written at the
+DFI and read back from the array, at the read point of the day --
+offset 71 and tap 107, before the slew was set::
 
-with the TDQS bit set reading the same.  The walk was not run: a walk
-checks a record, and there is no record to check.
+  slip 6   40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4c 4d
+  slip 7   40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f
+  slip 8   00 00 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f
+
+A slot either side of seven loses an end beat, and seven is whole.
+That is the whole of write training this bench needs, and it is
+measured against the part rather than against a pin.  The slip is a
+whole beat and the slew moved the timing by a third of one, so it did
+not move; what says so is a clean walk, which is a write landing
+1024 times over.
+
+**7. What a bad beat was, before the slew was set.**  A build of the
+record with every pad at the family's default slew walked the probe's
+region clean and missed beats everywhere else::
+
+  region 0   256 bytes          16 accesses       0 errors
+  region 2   16 KiB, every bank  1024 beats     155 errors
+  region 3   32 KiB, two rows    2048 beats     174 errors
+  region 1   512 MiB         33554432 beats 1522528 errors, 1.65 s
+
+The shape of it said what it was, and none of the three things the
+counts suggested was right.
+
+- **It was not the cadence.**  ``first_error_address`` reads ``0x170``
+  on five walks of region 2 out of six, which is inside the *first*
+  page of the region, so nothing has crossed a bank or a row when it
+  fails.  ``trace.py size=2`` catches the failing cycle with the
+  thousand before it: the bad beat is the twenty-fourth read of a
+  string of reads of one open row, with the nearest refresh 250 cycles
+  behind it and no activate or precharge between.
+- **It was not the controller.**  The same window carries 522 write
+  bursts with their bank and column, and every one of them puts the
+  payload the walker's own hash says that address should hold on the
+  DFI.  What leaves the controller is right; what comes back is not.
+- **It was not the sampling point.**  ``dataeye.py`` walks the whole
+  of region 2 at every tap of the line.  The window is taps 72 to 132,
+  which is the one ``mpr.py`` maps, and inside it the count never
+  falls below 139 and never rises above 190.  A floor that flat across
+  sixty taps is not an eye edge.
+
+What it was is in the beats themselves.  Paired against the walker's
+own hash, 204 of 960 read bursts came back wrong and carried 233 bad
+bits between them -- about one bit a burst -- and every one of the 233
+had the same shape::
+
+  the bad bit is a zero, and the next beat of the same pin is a one   229 / 233
+  the bad bit read one where zero was written                         233 / 233
+  the bad bit read zero where one was written                           0 / 233
+
+  DQ1   7.2% of its zeroes that are followed by a one
+  DQ12  4.6%
+  DQ7   1.1%
+  the other thirteen pins        0.0%, over 1400 to 2900 chances each
+
+A high that reaches backwards into the low before it, on three pins
+and never the reverse, is a pad whose rising edge is early against its
+falling one -- an edge, not a threshold and not a phase.  The pin
+report says why: **every pad of the bus was at** ``slew SLOW``, which
+is the family's default and which nothing in the flow, the netlist or
+any simulation mentions.  A slow edge on a 1.25 ns beat is most of the
+beat.  The part's own training pattern never showed it because it
+alternates every beat and so has no run of history to distort.
+
+**8. With** ``SLEW_RATE=FAST`` **on the bus**, and the board record at
+what reading 9 measures.  Out of the bitstream, nothing on the panel
+touched::
+
+  region 0   256 bytes          16 accesses      0 errors, 3 walks
+  region 2   16 KiB, every bank  1024 beats      0 errors, 3 walks
+  region 3   32 KiB, two rows    2048 beats      0 errors, 3 walks
+  region 1   512 MiB         33554432 beats 206962, 253383, 267502
+
+Every region that stays inside a row is clean, three walks each, and
+the whole part is six times better than it was.  What is left has a
+different shape entirely:
+whole bursts wrong rather than single bits, in runs of forty or a
+hundred, and each one carrying a real payload -- the payload of the
+**same bank and same column of the row with bit 14 set**, read while
+the pins said bit 14 clear.  Over one window, 128 of 296 paired read
+bursts, and every one of the 128 the same::
+
+  the payload of this address with row bit 14 set      128 / 128
+  the payload of this address with row bit 14 cleared    0 / 128
+  the payload of any other row, or of another bank       0 / 128
+
+That is **A14**, and reading 10 says which way round: the pins did say
+bit 14 clear on that read and the read was right, what was wrong was
+the write of the address with the bit *set*, which landed with it
+clear.  It is the one address pin the board puts away from the others
+-- D1, where the other fourteen sit in the G to R block beside CK at
+L3 -- and a fast slew on the command group does not move it::
+
+  region 1   512 MiB    33554432 beats   186483 errors  data group fast
+  region 1   512 MiB    33554432 beats   153693 errors  command group too
+
+**9. The read eye moves with the slew, and the array's eye is not the
+part's.**  With the bus fast, ``mpr.py`` finds the part's pattern at
+offset **70** over 73 taps, 16 to 88; it was offset 71 over taps 71 to
+143 before.  A faster edge arrives earlier, by about thirty taps of
+12.5 ps, and a whole beat of offset with it.  But ``dataeye.py`` walks
+region 2 at every tap and reads a *narrower* window at a *different*
+centre::
+
+  offset 70, the part's own pattern    73 taps, 16 to 88, centre 52
+  offset 70, 1024 beats of the array   41 taps, 27 to 67, centre 47
+
+Forty-one taps that reach **zero errors**, which no tap of any
+previous build did.  Training against something the part made owes
+nothing to a write and is the right thing to do first; it is not the
+last thing to do, because the traffic a design carries is harder than
+an alternation and draws a smaller eye.  The board record is the
+middle of the second one.
+
+**10. Which half of the part.**  Two more walkers, which differ in the
+top row bit alone: region 4 addresses every bank, row and column of
+the part with A14 held **low** throughout, region 5 does the same with
+it held **high**, and neither ever changes it.  Out of the bitstream,
+nothing on the panel touched::
+
+  region 4   256 MiB, A14 low   16777216 beats       0,   0,   1
+  region 5   256 MiB, A14 high  16777216 beats    2694, 439, 1205
+  region 1   512 MiB            33554432 beats   44307, 13930, 32250
+
+The lower half's one bad beat is not noise: it is byte ``0xe5cc810``
+every time it appears, which is bank 1 of row ``0x3973``, and reading
+12 finds the same one beat at the middle of the read window.  One
+location in sixteen million, at the same place, is either a cell of
+the part or the one path this build leaves short -- the burst
+adapter's transaction address into that walker's hash, which is where
+its 257 endpoints are.  It is three orders of magnitude below what the
+upper half does and is left alone.
+
+Everything above is unchanged on this build: ``mpr.py`` finds the
+part's pattern at offset 70 over 72 taps, 17 to 88, with the middle at
+52, ``poke.py``'s answer follows its value either way of the TDQS bit,
+and regions 0, 2 and 3 walk clean three times each.
+
+The lower half is clean and the upper half is not, so what a
+whole-part walk fails on is that one pin and nothing else: not the
+other fourteen row bits, not the three bank bits, not the column, and
+not the data path, every bit of which the lower half exercises over
+the same sixteen million beats.
+
+It also settles the direction, which reading 8 has the wrong way
+round.  The lower half never drives A14 high, so a pin read high where
+low was driven would fail there, and it does not.  What a whole-part
+walk sees is the collateral of the other direction: the write of the
+address with row bit 14 **set** lands with it **clear**, overwriting
+the low address, whose own read is then right about a location that
+now holds the high address's payload.  **A14 is driven high and
+sampled low**, on the activate that carries it; the column commands
+that follow an activate do not care what that pin says.
+
+**11. The margin is near zero, and no number the design carries sets
+it.**  Region 5 at the board record, over three configurations of one
+bitstream and three passes of each::
+
+  configuration 1                                 2694,  439, 1205
+  configuration 2                                51935, 2455, 4723
+  configuration 3                                  315,  881,  887
+
+  the build of reading 8, one pass                        242586
+
+An order of magnitude between passes that share a configuration and
+another between one bitstream's configurations: the part samples that
+pin on the edge of its window, and which side of it a given activate
+falls is decided by the conditions of the hour.  The build of reading
+8 is two hundred times worse again, and the two builds differ by two
+walkers and a placement -- so the size of the fault is the build's,
+and having one at all is the pin's.
+
+A longer memory period does not buy the margin back.  A build at
+**81.25 MHz** -- ``tck_ps_c`` 3077, a 1300 MHz VCO with divisors 16,
+4, 4, 16, and the quarter period a whole VCO cycle rather than six
+eighths of one -- trained at its own read offset and walked the same
+three regions to the same answer: lower half clean, upper half 300908,
+whole part 135630.  A quarter of a nanosecond more window either side
+of the sampling edge changed nothing, which a fixed pad-to-pad skew
+would have spent.
+
+**12. No tap of the delay line takes it away.**  ``dataeye.py`` walks
+a region at every tap and counts, which is the read plane drawn with
+the traffic a design carries rather than with the part's own pattern.
+The two halves draw the same window and different floors, one walk a
+tap, sixteen taps a step::
+
+  tap      region 4, A14 low   region 5, A14 high
+  0                 16777216            16777216
+  16                16227236            16280104
+  32                      77                2156
+  48                       1                2351
+  64                    2187                4457
+  80                14219831            14034685
+  96 and up         16777216            16777216
+
+The window is the same one either way -- taps 32 to 64 of 256 -- so
+the read path does not know which half of the part it is reading.
+What differs is what the bottom of that window holds: one bad beat in
+sixteen million for the lower half, two thousand for the upper, and
+no tap anywhere on the line that takes the difference away.  A beat
+the capture got wrong moves with the tap; this does not, so it is not
+in the capture, and the walk of the lower half says the same thing
+about every other pin on the bus.
+
+**13. The address a tick early closes it.**  ``early_address_c =>
+true`` in ``src/boundary.vhd``, nothing else moved.  Out of the
+bitstream, nothing on the panel touched::
+
+  region 0   256 bytes              16 accesses     0, 0, 0
+  region 2   16 KiB, every bank     1024 beats      0, 0, 0
+  region 3   32 KiB, two rows       2048 beats      0, 0, 0
+  region 5   256 MiB, A14 high  16777216 beats      0, 0, 0
+  region 4   256 MiB, A14 low   16777216 beats      1, 0, 0
+  region 1   512 MiB            33554432 beats      0, 0, 0
+
+**Region 5 is the reading.**  The half of the part that drives A14
+high on every activate failed in under a second on every build before
+this one -- 315 to 51935 bad beats a pass, over three configurations
+of one bitstream and the build of reading 8 two hundred times worse
+again -- and it now walks sixteen million beats clean, three passes.
+The whole part follows: 33554432 beats, three passes, no error, where
+the best previous build lost 13930.
+
+Everything else reads as it did.  ``mpr.py`` finds the part's pattern
+over the same four offsets and the same runs -- 69 for three taps, 70
+over 72 taps from 16, 71 over 73 from 99, 72 over 72 from 184 -- so
+the read path did not move; the record's tap sits in the run at 16 to
+87 as it did.  ``poke.py``'s answer follows its value either way of
+the TDQS bit.  The lower half's one bad beat is still byte
+``0xe5cc810``, on one pass of three, which is reading 10's and is not
+A14.
+
+The margin the command pins had was half a memory tick and is now a
+tick and a half.  That is the whole of the change: no pin attribute,
+no clock rate, no placement and no tap.
 
 What is open
 ============
 
-- **The capture loses every falling-edge beat**, and that is the rung
-  everything else waits behind.  A pad's ``IDES8`` and its ``OSER8``
-  share a control set and therefore a clock pair on this family --
-  which is why ``shift_strobe_c`` is true at all -- so what is wrong
-  sits inside the one arrangement that builds and routes.
-
-  What it is not: the wrapper's bit order.  ``IDES8``'s eight outputs
-  come out oldest first with ``Q0`` the earliest bit on the wire --
-  the two chains are cut alternately, deepest first, and within a
-  stage the rising-sampled bit is the older of the pair -- and
-  ``serdes_input_gowin`` binds ``Q0`` to ``parallel_o(0)`` under
-  ``left_first_c``, which is what the package contract and the
-  simulation architecture both mean by it.  Checked bit by bit against
-  ``prim_sim.v`` for GW1N, GW2A and GW5A; all three agree with the
-  wrapper.  What the comparison did turn up is that Arora V's
-  ``IDES8`` carries one shift stage more than the older families', so
-  a GW5A capture arrives two slots later than the behavioural blocks
-  in ``nsl_io`` say -- two slots of the sixty-seven, and not the
-  falling-edge half.  ``DESIGN.md`` section 12 has both.
-
-  ``example/sipeed_tang_console_60k/serdes_pin_probe`` now carries the
-  loopback that would settle it -- one word driven out of an
-  ``OSER8`` and read back at the same pad through the ``IODELAY`` and
-  the ``IDES8``, on a header pin and on a DDR3 pin at once, over every
-  tap -- and it is unread: the UART pin that report leaves on stopped
-  reaching the debugger's receiver after its first reading.  Its
-  README has what was tried.  The transport that would unblock it is
-  the one this bench already has.
-- **The read offset now reaches the answer.**  The write burst alone
-  is sixty-seven slots from its command on this family, so a read
-  answer is near seventy, which a six bit ``read_offset_i`` could not
-  say.  The port, the panel's field, the board record's use of it and
-  both benches' scripts carry seven bits now, and the PHY's
-  announcement queue was deepened to seventeen cycles so that a sweep
-  of the whole port has somewhere to read out of.  This board's
-  controller asks for nineteen cycles of read ahead for the same
-  reason.  The two read figures of the board record are still
-  placeholders, because the capture below is what stops them being
-  measured.
-- **There is no reading of the strobe.**  The strobe pin reads back
-  flat at every slot while its own driver is driving, so nothing here
-  times the strobe against the data or shows the strobe's driven
-  window.  That readback is the one path in this design that rides the
-  shifted pair and crosses back to the controller clock in a single
-  register, and it is the only instrument of the set that does not
-  work.
-- ``acrobe gatecap info`` and ``rates`` hang on this transport, where
-  the same blocks answer through ``acrobe run`` in seconds.  It is a
-  host-side difference between the two resolve paths and not the
-  board's.
-- The **memory domain is 5% short** of 100 MHz, and what it costs.
-  None of it is this bench's own logic: it is thirty-three endpoints
-  inside ``axi4_mm_burst_adapter``'s beat arithmetic reaching the
-  walkers' hashing, worst -0.521 ns on a path of eleven levels,
-  -8.7 ns over all of them.  A build before the read offset was
-  widened had seven such endpoints at -0.038 ns, and the queues that
-  widening deepened -- seventeen cycles of announcement in the PHY,
-  thirteen of read ahead in the controller -- are what moved it.  The
-  placer is noisy at this occupancy and this is more than noise; what
-  a beat count half a nanosecond late does to a cadence is still a
-  prediction until a read comes back.
+- **A14 was driven high and sampled low** on an activate, and reading
+  13 closed it.  Readings 10 and 11 had the isolation -- the half of
+  the part that never drives that pin high walked clean over sixteen
+  million beats, the half that drives it high on every activate did
+  not, and the DFI analyser saw the right row leave the controller
+  either way -- and none of the pad's own knobs moved it: the pin
+  report carries ``SLEW_RATE=FAST`` at D1 as at the other fifteen
+  address pins, ``DRIVE=16`` is refused outright on an LVCMOS15 pad of
+  this part with ``(CT1108) Illegal port attribute value specified``,
+  a build at 81.25 MHz read the same, and no tap of the delay line
+  took it away.  What it wanted was setup, and this family has no
+  output delay line to buy any with.  ``early_address_c`` buys it out
+  of the schedule instead: the three ticks a one-command-a-cycle
+  controller leaves deselected carry no address the part reads, so the
+  address of the tick after a deselect goes out on it.  What is left
+  to know is how much margin that bought rather than whether it
+  bought enough -- a pin whose skew is a tick and a half would come
+  back, and there is no instrument here that measures it.
+- **A pad's slew rate is a setting with no default worth having, and
+  nothing says so.**  ``SLOW`` is what a GW5A pad takes if a design
+  does not ask, the flow raises no message, the netlist does not carry
+  it and no simulation of this bench models a pad's edge at all.  It
+  is visible in exactly one place, the pin report's *Slew Rate*
+  column, which is not a place anyone reads while chasing a
+  controller.  Readings 7 and 8 are what it cost here.
+- **A GW5A pad does not hear its own driver at the beat rate.**  Every
+  self-loopback instrument here -- ``ruler.py``, ``taps.py``,
+  ``drivemap.py`` -- reads the design's own burst with each odd beat
+  replaced by the even one before it, at every tap and every slip,
+  while the same pad, the same ``IODELAY`` and the same ``IDES8``
+  resolve the part's own alternating pattern perfectly.  Reading 5 has
+  the three measurements that separate the two.  It survived the slew
+  rate, so it is not the edge that reading 7 was: the DQ pins carry no
+  ``DRIVE`` attribute in ``../pinout/ddr3_walk.cst``, where the clock
+  pins carry ``DRIVE=8``, and turning the part's termination off makes
+  the reading worse rather than better.  It costs nothing now that the
+  slip is measured against the array, and it is worth knowing before
+  any of those three scripts is trusted again.
+- **The strobe is read back, but only where the part drives it.**
+  ``ruler.py``'s second row and ``drivemap.py``'s strobe map are the
+  loopback again and read flat; the same readback shows the part's
+  strobe as ``01010101`` and ``10101010`` at the offsets the read
+  answer sits at.  So there is a reading of the strobe on a read and
+  none on a write.
+- **A freshly enumerated serial port hangs every gatecap resolve**,
+  ``acrobe gatecap info`` and ``rates`` included, because the tty
+  adapter does not put the port in raw mode and the port comes up in
+  canonical discipline with echo.  ``stty -F /dev/ttyACM0 raw -echo``
+  after every programming is the workaround; the fix belongs in
+  acrobe's tty adapter.
+- The **memory domain is 1.2% short** of 100 MHz, over fourteen
+  endpoints at a tenth of a nanosecond, all of them the burst
+  adapter's transaction address reaching a walker's hash.  The board
+  says it costs nothing: the walkers pass at this occupancy, and what
+  was failing on them was the pads.  Two queues were suspected of
+  having caused it and neither did.  ``read_depth_c`` in the PHY is
+  seventeen bits of shift register and a seventeen way mux of one bit,
+  and deriving it from ``board_c.read_offset`` would save ten flip
+  flops while costing a training sweep its reach past the record --
+  which is the thing that made this board work at all, since the
+  record was found by sweeping the whole port.  What the widening
+  really deepened is ``read_ahead_c`` in the controller, whose read
+  queue is fourteen cycles of a hundred and forty-four bits; thirteen
+  is what a round trip of ``read_offset / 8 + 3`` asks for, so there
+  are two cycles of margin in it and no more.  Both are left alone.
 - **The global clock budget is a policy this design states and does not
-  own.**  Four walker enables are held off the tree by name; every
-  other high-fanout net is the tool's to promote, and this build spends
-  a primary on the MPR readback's capture enable.  A build whose netlist
-  moves can promote a different one, so a report that has moved is
-  worth reading at its global clock table first.
+  own.**  Four walker enables are held off the tree by name and
+  ``replicate_resources`` takes the pressure off the rest, but three
+  primaries still go to walker resets, which are not nameable.  Three
+  builds in a row have now placed identically, which is new; a build
+  whose netlist moves can still promote something else, so a report
+  that has moved is worth reading at its global clock table first.
 - **Programming this board from the Gowin programmer.**
   ``programmer_cli`` never opens the cable -- ``Error: Cable open
   failed`` -- while ``acrobe`` opens the same FT2232 and shifts JTAG
   on it.  The FT2232's second interface stays bound to ``ftdi_sio`` and
   appears as a ``/dev/ttyUSB``, which the vendor library does not
-  detach and libusb does; unbinding it wants root.  ``acrobe chip
-  program`` reaches a GW5A over JTAG and takes a ``.fs``, so that is
-  the way in once the board answers.  Worth knowing either way: a
+  detach and libusb does.  Unbinding it wants no root: ``acrobe -q
+  info enumerate -r 'sp-<serial>/jtag(fmax=20M)'`` detaches the kernel
+  driver through libusb, and ``programmer_cli --channel 0 --location
+  4369 --device GW5AT-60B --operation_index 2 --fs <absolute path>``
+  then opens the cable.  ``--scan-cables F`` reports that location;
+  plain ``--scan-cables`` reports 0 and is wrong.  Retry once on
+  ``OpenChain: TDO stuck``.  ``acrobe chip program`` reaches a GW5A
+  over JTAG and takes a ``.fs`` as well.  Worth knowing either way: a
   ``programmer_cli`` that has been killed keeps the interface, and
   every later attempt then fails to open the cable for that reason and
   not for this one.
@@ -687,9 +1025,12 @@ Running it
 ::
 
   gbs project build
+  acrobe -q info enumerate -r 'sp-<serial>/jtag(fmax=20M)'  # frees the cable
   /opt/Gowin/current/Programmer/bin/programmer_cli \
-      --device GW5AT-60B --operation_index 2 --frequency 15MHz \
-      -f /absolute/path/to/ddr3.fs
+      --channel 0 --location 4369 \
+      --device GW5AT-60B --operation_index 2 \
+      --fs /absolute/path/to/ddr3.fs
+  stty -F /dev/ttyACM0 raw -echo   # or every resolve below hangs
   acrobe info adapters   # find the serial port the design brought up
   acrobe gatecap -r tty-<dev>/serial/chunked/gatecap info
   acrobe gatecap -r tty-<dev>/serial/chunked/gatecap rates
@@ -707,21 +1048,36 @@ Running it
                           # train=1 maps the read plane first, which is
                           # how the record's two read figures are found
   acrobe run eye.py       # the read plane, three ways, at length
+  acrobe run dataeye.py   # the same plane against the array rather
+                          # than against the part's own pattern: one
+                          # walk of a region at every tap, counted
+                          # size= picks the region, taps=a:b the span,
+                          # odt= the part's termination, passes= how
+                          # many walks a tap
   acrobe run drivemap.py  # which wire slots the pads hold
   acrobe run ruler.py     # where the write data sits against its command
   acrobe run level.py     # ask the part whether the strobe arrives
   acrobe run probe.py     # what the bus held at every read offset
   acrobe run taps.py      # the burst and the strobe at every tap
-  acrobe run trace.py     # a pass of the probe walker, on the DFI: the
-                          # first failing one, or the last clean one
+  acrobe run trace.py     # a pass of a walker, on the DFI: the first
+                          # failing one, or the last clean one
+                          # size= picks the region.  The probe's whole
+                          # pass fits the window and is caught from
+                          # the run; a larger region is caught on the
+                          # walker's own error line with the window
+                          # standing before it, pre= samples of it
 
-The ``.fs`` path handed to ``programmer_cli`` has to be **absolute**,
-and ``--scan-cables`` is what says which cable and location to use.
+The ``.fs`` path handed to ``programmer_cli`` has to be **absolute**.
+``--scan-cables F`` is what says which cable and location to use;
+plain ``--scan-cables`` reports location 0 and is wrong.  The
+enumerate above is what detaches ``ftdi_sio`` from the cable's second
+interface, which the vendor library will not do and does not need
+root for.
 
-Those last two hang on this transport and print nothing.  A script run
-under ``acrobe run`` that opens ``Session(path)`` and asks each block's
-console adaptor answers in seconds over the same port, which is what
-every reading below the transport was taken with.
+The ``stty`` is not optional.  A freshly enumerated port comes up in
+canonical discipline with echo, acrobe's tty adapter does not put it
+in raw mode, and every resolve over it -- ``acrobe run`` included --
+hangs before printing anything.
 
 ``walk.py`` reads the board record out of ``src/boundary.vhd`` rather
 than repeating it, so a script that sweeps one figure puts the other

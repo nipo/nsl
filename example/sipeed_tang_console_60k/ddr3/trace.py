@@ -2,17 +2,16 @@
 
 Run with::
 
-  acrobe run trace.py [resource-path] [passes=40]
+  acrobe run trace.py [resource-path] [passes=40] [size=0..5]
+                      [pre=N] [offset=N] [tap=N]
 
-The probe walker writes two bursts and reads them back, and at the
-centre of the measured read eye it still gets a whole burst wrong now
-and then.  An error count says a beat came back wrong and nothing
-about how: a burst that came back one beat late, a burst that came
-back turned round, and a burst that is the one the pass before wrote
-all read the same through a count.
+An error count says a beat came back wrong and nothing about how: a
+burst that came back one beat late, a burst that came back turned
+round, and a burst that is the one the pass before wrote all read the
+same through a count.
 
-This runs the walker until a pass comes back with errors, with a
-capture of the PHY's own side of the DFI armed on the run.  It then
+This runs one walker until a pass comes back with errors, with a
+capture of the PHY's own side of the DFI armed over it.  It then
 prints that pass and the last clean one the same way -- every command
 that was not a deselect, every cycle a write burst went out on and
 every cycle a read burst came back on, in time order -- and pairs each
@@ -21,9 +20,20 @@ pass.  A pairing says which of the four a wrong burst is: the same
 bytes, the same bytes moved along by so many beats, the bytes the
 earlier pass wrote to that address, or none of those.
 
-The write path is left where the maps put it and the read path at the
-centre of the mapped eye, so what a pass does here is what a walk at
-those settings does.
+``size=`` picks the region, as in ``walk.py``.  The probe's whole pass
+fits the window and is caught from the run; every larger region writes
+itself out before it reads any of itself back, thousands of cycles
+earlier than the window reaches, so those are caught on the walker's
+own error line with the window standing before it.  A pairing is then
+only to be had where a write of the same pass happens to fall inside
+the window, and what the capture is read for is the command sequence
+the bad beat arrived in.  ``pre=N`` overrides how much of the window
+stands before the trigger.
+
+The write path and the read path are left where the board record puts
+them, so what a pass does here is what a walk does; ``offset`` and
+``tap`` put them somewhere else, for a capture of a point the record
+does not carry.
 """
 
 import asyncio
@@ -317,36 +327,53 @@ class Pass:
 
 class Trace:
     DEPTH = 1024
-    OFFSET = 45
-    TAP = 13
+    OFFSET = Walk.OFFSET
+    TAP = Walk.TAP
     PASSES = 40
     POLL_SECONDS = 0.05
-    PASS_TIMEOUT = 5.0
+    PASS_TIMEOUT = 30.0
     CAPTURE_TIMEOUT = 5.0
 
-    def __init__(self, path, passes=PASSES):
+    def __init__(self, path, passes=PASSES, size=Walk.PROBE, pre=None,
+                 offset=OFFSET, tap=TAP):
         self.session = Session(path)
         self.passes = passes
+        self.size = size
+        self.pre = pre
+        self.offset = offset
+        self.tap = tap
         self.panel = None
         self.control = None
         self.trigger = None
         self.buffer = None
         self.vector = None
-        self.run_bit = None
+        self.trigger_bit = None
+        self.trigger_name = None
         self.depth = self.DEPTH
 
     @staticmethod
     def parse(args):
         path = Walk.DEFAULT_PATH
         passes = Trace.PASSES
+        size = Walk.PROBE
+        pre = None
+        offset, tap = Trace.OFFSET, Trace.TAP
         for arg in args:
             key, sep, value = arg.partition("=")
             if sep and key == "passes":
                 passes = int(value, 0)
+            elif sep and key == "size":
+                size = int(value, 0)
+            elif sep and key == "pre":
+                pre = int(value, 0)
+            elif sep and key == "offset":
+                offset = int(value, 0)
+            elif sep and key == "tap":
+                tap = int(value, 0)
             elif not sep:
                 path = arg
 
-        return path, passes
+        return path, passes, size, pre, offset, tap
 
     # -- the bench ---------------------------------------------------------
 
@@ -362,16 +389,16 @@ class Trace:
             await self.panel.control_write(name, 0)
         # The capture is taken at one named point of the read plane, so
         # the panel's copy of the record is what the PHY reads here.
-        await Walk.take_panel(self.panel, offset=self.OFFSET)
+        await Walk.take_panel(self.panel, offset=self.offset)
         await self.panel.control_write("poke_ap", 0)
         await self.panel.control_write("odt", 1)
 
         line = Line(self.panel)
-        if not await line.goto(self.TAP):
+        if not await line.goto(self.tap):
             print("the delay lines never reported their shortest tap")
             return False
 
-        print(f"read path at offset {self.OFFSET}, tap {self.TAP}")
+        print(f"read path at offset {self.offset}, tap {self.tap}")
         return True
 
     def capture_blocks(self):
@@ -391,16 +418,34 @@ class Trace:
         return control, control.trigger_node_get(), control.sink_node_get()
 
     async def arm(self):
-        """A window that starts where the walker leaves reset.
+        """A window over the part of the pass that can be read.
 
-        The run is down when this is called, so a match on it fires the
-        cycle the host raises it and the window covers the pass from
-        its first cycle.
+        A region the window holds whole is caught from its first cycle:
+        the run is down when this is called, so a match on it fires as
+        the host raises it.  A region longer than the window has its
+        reads thousands of cycles past its writes, and the cycle worth
+        holding is then the one a beat came back wrong on, so the
+        trigger is the walker's own error and the window sits mostly
+        before it.
         """
-        await self.trigger.configure(value=1 << self.run_bit,
-                                     mask=1 << self.run_bit)
-        await self.control.configure(self.depth)
+        await self.trigger.configure(value=1 << self.trigger_bit,
+                                     mask=1 << self.trigger_bit)
+        await self.control.configure(self.depth, self.pre_trigger())
         await self.control.arm()
+
+    def pre_trigger(self):
+        """How much of the window stands before the trigger.
+
+        None of it on the run, which begins a pass; all but a burst's
+        own answer on an error, since what names a bad beat is the
+        commands that led to it.
+        """
+        if self.pre is not None:
+            return self.pre
+        if self.trigger_name == "run":
+            return 0
+
+        return self.depth - 64
 
     async def wait_idle(self):
         start = time.monotonic()
@@ -423,7 +468,7 @@ class Trace:
         thing in the window.
         """
         await self.panel.control_write("run", 0)
-        await self.panel.control_write("full", Walk.PROBE)
+        await self.panel.control_write("full", self.size)
         await self.arm()
         await self.panel.control_write("run", 1)
 
@@ -436,6 +481,14 @@ class Trace:
             await asyncio.sleep(self.POLL_SECONDS)
 
         errors = await self.panel.status_read("error_count")
+        if self.trigger_name == "error" and not errors:
+            # Nothing fired the window and nothing was going to, so the
+            # capture is taken down here rather than waited out.
+            await self.control.abort()
+            await self.panel.control_write("run", 0)
+            print(f"pass {index}: no bad beat")
+            return None
+
         triggered = await self.wait_idle()
         if triggered is None:
             print(f"pass {index}: the capture never returned to idle")
@@ -448,8 +501,8 @@ class Trace:
         await self.panel.control_write("run", 0)
 
         if not triggered:
-            print(f"pass {index}: the capture never fired; the run bit did"
-                  " not reach the capture domain")
+            print(f"pass {index}: the capture never fired on"
+                  f" {self.trigger_name}")
             return None
 
         return Pass(index, errors, samples, self.vector)
@@ -537,13 +590,20 @@ class Trace:
 
         self.control, self.trigger, self.buffer = self.capture_blocks()
         self.vector = Vector(self.control.signal_names)
-        self.run_bit = self.trigger.signal_names.index("run")
+        # The probe's whole pass fits the window; the larger regions
+        # read back thousands of cycles after they were written, so
+        # only the cycle a beat came back wrong on can place a window
+        # on them.
+        self.trigger_name = "run" if self.size == Walk.PROBE else "error"
+        self.trigger_bit = self.trigger.signal_names.index(self.trigger_name)
         # The core's own cap, which its capture-length register is sized
         # from: a window longer than the buffer holds is refused.
         self.depth = min(self.DEPTH, self.control.max_samples())
         print(f"capture: {self.control.signal_count} probes,"
               f" {self.buffer.depth} samples deep,"
               f" {self.control.sample_rate} Hz")
+        print(f"walking {Walk.SIZE_NAME[self.size]}, triggering on"
+              f" {self.trigger_name}, {self.pre_trigger()} samples before it")
 
         if not await self.setup():
             return 1
@@ -583,6 +643,6 @@ class Trace:
 
 
 async def main():
-    path, passes = Trace.parse(sys.argv[1:])
-    if await Trace(path, passes).run():
+    got = Trace.parse(sys.argv[1:])
+    if await Trace(*got).run():
         raise SystemExit(1)

@@ -102,32 +102,39 @@ architecture beh of boundary is
   -- Four of the six are what the family says rather than what the
   -- board says, and are known before a measurement:
   --
-  --  * write_slip is nominal.  The strobe's group is the one that
-  --    crosses to the shifted clock here, and a real OSER8 takes its
-  --    parallel word on a parallel edge, so there is no whole-word
-  --    transfer for the data to lose -- unlike the 7-series, whose
-  --    data serialiser hands its word a cycle early and wants slip 0.
+  --  * write_slip is measured, and a slot short of nominal.  The
+  --    strobe's group is the one that crosses to the shifted clock
+  --    here and a real OSER8 takes its parallel word on a parallel
+  --    edge, so there is no whole-word transfer for the data to lose
+  --    -- unlike the 7-series, whose data serialiser hands its word a
+  --    cycle early and wants slip 0.  The remaining slot is the
+  --    strobe's crossing arriving a beat ahead of the data it clocks:
+  --    at eight the part drops the first beat of every burst and
+  --    stores the other seven, at six it drops the last, at seven the
+  --    burst comes back whole.
   --  * both enable leads are zero.  A GW5A pad's tristate is per pair
   --    and travels with the word its own serialiser presents.
   --  * strobe_invert is false, which is the sense the schedule holds.
   --
-  -- The two read figures are the measurement, and both are still
-  -- placeholders: the instruments have been run and neither figure can
-  -- be reached from here.  read_offset was guessed a word above the
-  -- Artix's 53, because the READ command leaves a cycle later through
-  -- the crossing (DESIGN.md section 10).  The board puts this design's
-  -- own write burst 67 slots from its own command where the Artix's is
-  -- at 33, so a read answer belongs near 69, which is past what a six
-  -- bit port could say: read_offset_i carries seven bits and the PHY's
-  -- announcement queue reaches the far end of them.
-  -- read_tap is sub-slot on a line of 256 taps of about
-  -- 12.5 ps: the line steps and wraps, and there is no window on the
-  -- read plane to place it in.  The readme's "What the ladder said"
-  -- carries the readings.
+  -- The two read figures are the measurement.  The offset is past what
+  -- a six bit port could say -- this design's own write burst is 67
+  -- slots from its own command where the Artix's is at 33, and a read
+  -- answer sits a few slots past it -- so read_offset_i carries seven
+  -- bits and the PHY's announcement queue reaches the far end of them.
+  -- A line of 256 taps of about 12.5 ps spans some three slots, so the
+  -- offset either side of this one answers over a run of its own,
+  -- which is the same window reached a beat earlier and a beat later.
+  --
+  -- The tap is the middle of the run the *array* answers over and not
+  -- of the run the part's own training pattern answers over, and the
+  -- two are not the same: the training pattern alternates every beat,
+  -- which is the easiest traffic there is, and it reads back over 73
+  -- taps centred on 52 where a walk of 1024 beats is clean over 41
+  -- taps, 27 to 67.  ``dataeye.py`` is what maps the second one.
   constant board_c: nsl_ext_ram.ddr3_io.serdes_board_t := (
-    read_offset => 61,
-    read_tap => 0,
-    write_slip => 8,
+    read_offset => 70,
+    read_tap => 47,
+    write_slip => 7,
     dq_enable_lead => 0,
     dqs_enable_lead => 0,
     strobe_invert => false
@@ -174,6 +181,15 @@ architecture beh of boundary is
   -- The first row crossing on top of that, which is the first
   -- precharge and reactivate a walk meets.
   constant row_byte_l2_c: natural := layout_c.row_low + 1;
+  -- Half the part each, which is the top row bit either way.  A14 is
+  -- the highest address pin this density uses, so the lower half is
+  -- every place A14 addresses with it low and the upper half is every
+  -- place it addresses with it high.  Neither half ever changes that
+  -- pin, so a half that walks clean says the fault of the whole part
+  -- is not anything the other thirteen row bits, the three bank bits
+  -- or the column do.
+  constant half_byte_l2_c: natural := layout_c.byte_address_width - 1;
+  constant half_base_c: natural := 2 ** half_byte_l2_c;
 
   signal board_s: std_ulogic;
   signal raw_s: std_ulogic_vector(0 to ram_config_c.output_count - 1);
@@ -181,6 +197,7 @@ architecture beh of boundary is
   signal startup_reset_n_s, locked_s, ram_reset_n_s: std_ulogic;
   signal probe_reset_n_s, walk_reset_n_s: std_ulogic;
   signal bank_reset_n_s, row_reset_n_s: std_ulogic;
+  signal low_reset_n_s, high_reset_n_s: std_ulogic;
   signal bus_reset_n_s, ctrl_reset_n_s, part_up_s: std_ulogic;
 
   -- The bus as the walkers see it, and the bus as the controller
@@ -188,6 +205,7 @@ architecture beh of boundary is
   -- where a register slice sits between them.
   signal axi_s, mem_s: bus_t;
   signal probe_axi_s, walk_axi_s, bank_axi_s, row_axi_s: master_t;
+  signal low_axi_s, high_axi_s: master_t;
   signal ready_s: std_ulogic;
 
   signal cmd_s: nsl_ext_ram.burst.cmd_t;
@@ -326,13 +344,19 @@ architecture beh of boundary is
   signal row_busy_s, row_done_s: std_ulogic;
   signal row_errors_s: unsigned(31 downto 0);
   signal row_first_s: unsigned(axi_config_c.address_width - 1 downto 0);
+  signal low_busy_s, low_done_s: std_ulogic;
+  signal low_errors_s: unsigned(31 downto 0);
+  signal low_first_s: unsigned(axi_config_c.address_width - 1 downto 0);
+  signal high_busy_s, high_done_s: std_ulogic;
+  signal high_errors_s: unsigned(31 downto 0);
+  signal high_first_s: unsigned(axi_config_c.address_width - 1 downto 0);
   signal busy_s, done_s: std_ulogic;
   signal error_count_s: unsigned(31 downto 0);
   signal first_error_s: unsigned(axi_config_c.address_width - 1 downto 0);
 
   -- Panel controls
   signal run_s, level_s, tick_s: std_ulogic;
-  signal full_s: unsigned(1 downto 0);
+  signal full_s: unsigned(2 downto 0);
 
   -- The same selector, registered in the memory domain.  The panel's
   -- own copy comes out of a resynchroniser that lives with the rack,
@@ -341,7 +365,7 @@ architecture beh of boundary is
   -- Registered here, the rack's distance and the mux each get a cycle
   -- of their own.  Which walker runs changes only between runs, so a
   -- cycle of lag on it is nothing the bus can see.
-  signal full_r_s: unsigned(1 downto 0);
+  signal full_r_s: unsigned(2 downto 0);
   signal offset_s: unsigned(6 downto 0);
   signal slip_s: unsigned(3 downto 0);
   signal odt_s: std_ulogic;
@@ -557,11 +581,13 @@ begin
   end process;
 
   -- Which walker that reset reaches: the selected one.  The other
-  -- three are held down so they keep off the bus.
+  -- five are held down so they keep off the bus.
   probe_reset_n_s <= bus_reset_n_s when full_r_s = 0 else '0';
   walk_reset_n_s <= bus_reset_n_s when full_r_s = 1 else '0';
   bank_reset_n_s <= bus_reset_n_s when full_r_s = 2 else '0';
   row_reset_n_s <= bus_reset_n_s when full_r_s = 3 else '0';
+  low_reset_n_s <= bus_reset_n_s when full_r_s = 4 else '0';
+  high_reset_n_s <= bus_reset_n_s when full_r_s = 5 else '0';
 
   -- The one thing that does not wait for the run is the first
   -- bring-up.  A control register of this family comes out of
@@ -581,6 +607,8 @@ begin
   axi_s.m <= walk_axi_s when full_r_s = 1
              else bank_axi_s when full_r_s = 2
              else row_axi_s when full_r_s = 3
+             else low_axi_s when full_r_s = 4
+             else high_axi_s when full_r_s = 5
              else probe_axi_s;
 
   probe: nsl_amba.mm_traffic.axi4_mm_memory_tester
@@ -667,6 +695,59 @@ begin
       done_o => row_done_s,
       error_count_o => row_errors_s,
       first_error_address_o => row_first_s
+      );
+
+  -- One half of the part each, and the top row bit is what tells them
+  -- apart.  A14 is the pin a whole-part walk fails on and the pin
+  -- neither of these ever changes: the lower half addresses every
+  -- bank, row and column this part has with A14 held low, the upper
+  -- half does the same with it held high.  Which of the two fails
+  -- says which edge of that pin the part misses, and a half that
+  -- walks clean at the size the whole part fails at clears everything
+  -- but A14.
+  --
+  -- The upper half starts where the lower one ends, so between them
+  -- they are the whole part written twice and read twice, with the
+  -- one transition the whole-part walk makes taken out.
+  low_walk: nsl_amba.mm_traffic.axi4_mm_memory_tester
+    generic map(
+      config_c => axi_config_c,
+      region_byte_l2_c => half_byte_l2_c,
+      burst_length_c => 8,
+      seed_c => 20260919,
+      scramble_c => false
+      )
+    port map(
+      clock_i => ram_s,
+      reset_n_i => low_reset_n_s,
+      start_i => '1',
+      axi_o => low_axi_s,
+      axi_i => axi_s.s,
+      busy_o => low_busy_s,
+      done_o => low_done_s,
+      error_count_o => low_errors_s,
+      first_error_address_o => low_first_s
+      );
+
+  high_walk: nsl_amba.mm_traffic.axi4_mm_memory_tester
+    generic map(
+      config_c => axi_config_c,
+      base_address_c => half_base_c,
+      region_byte_l2_c => half_byte_l2_c,
+      burst_length_c => 8,
+      seed_c => 20260920,
+      scramble_c => false
+      )
+    port map(
+      clock_i => ram_s,
+      reset_n_i => high_reset_n_s,
+      start_i => '1',
+      axi_o => high_axi_s,
+      axi_i => axi_s.s,
+      busy_o => high_busy_s,
+      done_o => high_done_s,
+      error_count_o => high_errors_s,
+      first_error_address_o => high_first_s
       );
 
   -- One register stage on the way back from the controller, and only
@@ -1234,7 +1315,16 @@ begin
       -- pad driven from one clock pair cannot be listened to on
       -- another: the quarter period leaves on the strobe, CK and the
       -- command pins instead.
-      shift_strobe_c => true
+      shift_strobe_c => true,
+      -- A14 is at D1, eight IOLOGIC sites from the group the other
+      -- fourteen address pins sit in and twenty-three from CK, and a
+      -- half tick of setup is not enough for it: an activate carrying
+      -- that bit set lands at the part with it clear, which is the
+      -- fault readings 10 and 11 isolate.  The core issues one command
+      -- a controller cycle, so the three ticks either side of it
+      -- deselect and the address may be presented a memory period
+      -- early at no cost on the wire.
+      early_address_c => true
       )
     port map(
       clock_i => ram_s,
@@ -1472,18 +1562,26 @@ begin
   busy_s <= walk_busy_s when full_r_s = 1
             else bank_busy_s when full_r_s = 2
             else row_busy_s when full_r_s = 3
+            else low_busy_s when full_r_s = 4
+            else high_busy_s when full_r_s = 5
             else probe_busy_s;
   done_s <= walk_done_s when full_r_s = 1
             else bank_done_s when full_r_s = 2
             else row_done_s when full_r_s = 3
+            else low_done_s when full_r_s = 4
+            else high_done_s when full_r_s = 5
             else probe_done_s;
   error_count_s <= walk_errors_s when full_r_s = 1
                    else bank_errors_s when full_r_s = 2
                    else row_errors_s when full_r_s = 3
+                   else low_errors_s when full_r_s = 4
+                   else high_errors_s when full_r_s = 5
                    else probe_errors_s;
   first_error_s <= walk_first_s when full_r_s = 1
                    else bank_first_s when full_r_s = 2
                    else row_first_s when full_r_s = 3
+                   else low_first_s when full_r_s = 4
+                   else high_first_s when full_r_s = 5
                    else probe_first_s;
 
   -- One step of every data pin's delay line each time the panel's tick
