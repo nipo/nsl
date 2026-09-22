@@ -221,15 +221,17 @@ begin
   sdram_a <= std_ulogic_vector(ram_a_s);
   sdram_dqm <= ram_dqm_s;
 
-  dq_pads: nsl_io.io.tristated_vector_io_driver
-    generic map(
-      width_c => part_c.dq_width
-      )
-    port map(
-      v_i => dq_out_s,
-      v_o => dq_in_s,
-      io_io => sdram_dq
-      );
+  -- The pads are resolved here rather than through
+  -- nsl_io.io.tristated_vector_io_driver: GHDL synthesis does not
+  -- carry an inout across a hierarchy boundary.  A child's inout port
+  -- becomes an internal wire, the pin is emitted as an output, and
+  -- what the fabric reads back is its own drive instead of what the
+  -- part put on the wire.  Both halves of the bus die silently.
+  dq_pads: for i in 0 to part_c.dq_width - 1
+  generate
+    sdram_dq(i) <= std_logic(dq_out_s(i).v) when dq_out_s(i).en = '1' else 'Z';
+    dq_in_s(i) <= to_x01(sdram_dq(i));
+  end generate;
 
   observer: gatecap_generated.sdram_walk.sdram_walk_core
     generic map(
