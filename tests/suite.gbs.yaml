@@ -260,6 +260,9 @@ projects:
   - name: ext_ram_ddr3_x8_walk
     path: ext_ram/ddr3_x8_walk
     tags: [ghdl, simulation, slow]
+  - name: ext_ram_ddr3_x16_walk
+    path: ext_ram/ddr3_x16_walk
+    tags: [ghdl, simulation, slow]
   - name: ext_ram_ddr3_serdes_phy
     path: ext_ram/ddr3_serdes_phy
     tags: [ghdl, simulation, slow]
