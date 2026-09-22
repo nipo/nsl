@@ -36,6 +36,24 @@ generic::
     strobe_invert => false
     );
 
+Measured
+========
+
+Vivado 2022.2 meets every constraint: WNS +0.878 ns, TNS zero over
+13864 endpoints, the worst path a panel control register crossing into
+the controller on the 100 MHz clock.
+
+What the part answers at the record above::
+
+  mpr.py    the pattern at offset 53, at the record's own tap, and
+            nowhere else in the offset port's 128 slots
+  poke.py   all eight bytes follow the value, TDQS either way
+  walk.py   the whole part in 0.79, 0.78 and 0.79 s, no errors,
+            37.5 cycles a transaction
+  trace.py  forty passes, no bad beat, every read burst the one its
+            own pass wrote; column commands a cycle apart bar the
+            three gaps a group of four leaves
+
 Running
 =======
 

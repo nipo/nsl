@@ -264,20 +264,23 @@ class Probe:
     """
 
     BEATS = 16
-    # Where the part can answer at all, and one offset either side.
-    OFFSETS = tuple(range(43, 49))
+    # Where the part can answer at all, and two offsets either side.
+    OFFSETS = tuple(range(51, 57))
     # A pass of the short walker is over in microseconds.  The wait has
     # to end by itself whatever happens: a script killed in the middle
     # of a transaction wedges the transport until the part is
-    # programmed again.
+    # programmed again.  A caller walking a larger region says how long
+    # that one takes.
     TIMEOUT = 2.0
     POLL_SECONDS = 0.01
 
-    def __init__(self, panel, size, passes=1, offsets=OFFSETS):
+    def __init__(self, panel, size, passes=1, offsets=OFFSETS,
+                 timeout=TIMEOUT):
         self.panel = panel
         self.size = size
         self.passes = passes
         self.offsets = tuple(offsets)
+        self.timeout = timeout
 
     def table(self):
         """An empty map of the plane, for this many passes a cell."""
@@ -305,7 +308,7 @@ class Probe:
 
         start = time.monotonic()
         while not await self.panel.status_read("done"):
-            if time.monotonic() - start > self.TIMEOUT:
+            if time.monotonic() - start > self.timeout:
                 await self.panel.control_write("run", 0)
                 return None
             await asyncio.sleep(self.POLL_SECONDS)

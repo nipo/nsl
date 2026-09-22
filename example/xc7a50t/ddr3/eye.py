@@ -49,7 +49,7 @@ from walk import Walk
 class Eye:
     # The maps that need the sequencer rather than a walker are read at
     # the offsets the part answered at, and one either side.
-    DATA_OFFSETS = tuple(range(43, 47))
+    DATA_OFFSETS = tuple(range(52, 56))
     BEATS = 8
     # Three passes a cell: whether a point answers and whether it keeps
     # answering are different questions, and the second is the one a
