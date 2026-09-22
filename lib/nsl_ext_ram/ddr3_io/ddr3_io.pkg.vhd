@@ -181,7 +181,17 @@ package ddr3_io is
       -- one control set -- so true moves the shift onto the strobe,
       -- the clock and the command pins and leaves both directions of
       -- every data pin on the unshifted pair.
-      shift_strobe_c: boolean := false
+      shift_strobe_c: boolean := false;
+      -- Hold a command's address and bank on the pins for the memory
+      -- tick before the command as well, which a tick that deselects
+      -- the part has no use of.  It is a board's answer rather than a
+      -- family's -- an address pin the board routes away from the rest
+      -- is what asks for it -- but it sits here and not in
+      -- serdes_board_t because a record every board states in full
+      -- cannot gain a field without every board being rewritten.  The
+      -- select pins never move with it, so the part still sees one
+      -- command.
+      early_address_c: boolean := false
       );
     port(
       clock_i: in std_ulogic;

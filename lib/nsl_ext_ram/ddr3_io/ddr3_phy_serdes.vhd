@@ -159,7 +159,41 @@ entity ddr3_phy_serdes is
     -- a strobe edge in the middle of a data bit.  What does differ is
     -- which strobe edge a given beat pairs with, and that is a whole
     -- slot, which is what write_slip is for.
-    shift_strobe_c: boolean := false
+    shift_strobe_c: boolean := false;
+
+    -- Hold a command's address and bank on the pins for the memory
+    -- tick before the command as well as for its own.
+    --
+    -- A command is sampled on one clock edge and the address pins are
+    -- read nowhere else, so the only thing that matters about them is
+    -- that they are settled at that edge.  Presented a tick at a time
+    -- they are settled half a tick before it and half a tick after:
+    -- the least setup this shape can give.  A pin the board routes
+    -- further than the rest, or a pad whose output is slower than the
+    -- rest, spends that half tick on flight and is sampled at its old
+    -- value, and a row address that reaches the part with one bit
+    -- stale is a row nobody asked for.
+    --
+    -- With this set, a tick that deselects the part carries the
+    -- address and bank of the tick after it instead of its own, which
+    -- it has no use for: a command whose tick follows a deselect is
+    -- then presented a whole memory period early and the setup goes
+    -- from half a tick to a tick and a half.  Only the address and the
+    -- bank move.  CS, RAS, CAS, WE and CKE stay on their own tick, or
+    -- the part would sample a second command where the deselect was.
+    --
+    -- It buys nothing unless the tick before a command deselects,
+    -- which is what a controller issuing one command per controller
+    -- cycle gives; a command on the tick after another keeps its own
+    -- address and is no worse off than it is here with this false.
+    -- The cost is that the address and bank words of the deselect
+    -- ticks stop being constants a synthesiser can fold, and that the
+    -- next cycle's command reaches this cycle's word: the DFI port is
+    -- read for the last tick of a cycle where the DFI register alone
+    -- is read for the others.
+    --
+    -- False is a board whose address pins arrive with the rest.
+    early_address_c: boolean := false
     );
   port(
     -- Controller clock, one cycle per burst of eight
@@ -678,6 +712,35 @@ begin
     report "ddr3_phy_serdes: the address bus is wider than a command carries"
     severity failure;
 
+  -- A command only reaches its pins early while the tick before it
+  -- deselects, so the option is worth what a controller issuing one
+  -- command per controller cycle makes it worth.  A cycle carrying
+  -- several is not wrong here -- every tick that carries a command
+  -- keeps its own address, so the part sees what it would have seen
+  -- with this false -- but the pin the option exists for is back on
+  -- half a tick of setup, which is the fault it was turned on to fix.
+  early_address_watch: if early_address_c
+  generate
+    watch: process(clock_i) is
+      variable selected: natural;
+    begin
+      if rising_edge(clock_i) then
+        selected := 0;
+        for phase in 0 to dfi_config_c.phase_count - 1
+        loop
+          if dfi_i.command(phase).cs_n = '0' then
+            selected := selected + 1;
+          end if;
+        end loop;
+
+        assert selected <= 1
+          report "ddr3_phy_serdes: early_address_c wants one command a cycle"
+                 &", and this cycle carries several"
+          severity warning;
+      end if;
+    end process;
+  end generate;
+
   regs: process(clock_i, reset_n_i) is
   begin
     if rising_edge(clock_i) then
@@ -739,6 +802,7 @@ begin
     variable slot_sel: natural;
     variable word: byte_string(0 to max_dq_byte_count_c - 1);
     variable cmd: command_t;
+    variable addr_cmd: command_t;
     variable cmd_a: unsigned(max_address_width_c - 1 downto 0);
     variable cmd_b: unsigned(max_bank_width_c - 1 downto 0);
     variable pin_slot: natural;
@@ -940,11 +1004,37 @@ begin
     -- pair each of them goes out on: the schedule, the DFI register
     -- and the knobs are in this domain and nothing else needs to be in
     -- another.
+    --
+    -- Which command a tick takes its address and bank from is
+    -- early_address_c's question, and the select pins never follow it:
+    -- a tick that carries a command carries its own address, because
+    -- the address is only ever read at the select and moving it would
+    -- be moving the command.  A tick that deselects carries nothing
+    -- the part reads, so it is free to carry the next tick's address
+    -- and let the pins settle a memory period early.  The tick after
+    -- the last of a cycle is the first of the next, and what the DFI
+    -- port carries now is what the DFI register will carry next cycle,
+    -- which is what the word built now goes out beside.
     for phase in 0 to dfi_config_c.phase_count - 1
     loop
       cmd := r.dfi.command(phase);
-      cmd_a := resize(address(dfi_config_c, cmd), max_address_width_c);
-      cmd_b := resize(bank(dfi_config_c, cmd), max_bank_width_c);
+
+      if early_address_c then
+        if cmd.cs_n /= '0' then
+          if phase = dfi_config_c.phase_count - 1 then
+            addr_cmd := dfi_i.command(0);
+          else
+            addr_cmd := r.dfi.command(phase + 1);
+          end if;
+        else
+          addr_cmd := cmd;
+        end if;
+      else
+        addr_cmd := cmd;
+      end if;
+
+      cmd_a := resize(address(dfi_config_c, addr_cmd), max_address_width_c);
+      cmd_b := resize(bank(dfi_config_c, addr_cmd), max_bank_width_c);
 
       for edge in 0 to dfi_config_c.edge_count - 1
       loop
