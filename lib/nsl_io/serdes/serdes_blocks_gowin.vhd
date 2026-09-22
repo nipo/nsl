@@ -9,8 +9,7 @@
 -- GW5A pad hands the fabric the same wire two slots later than this
 -- says.  The output serialisers do match.  A bench that simulates a
 -- GW5A design against these will be that much optimistic about when a
--- capture arrives; nsl_ext_ram's DESIGN.md section 12 has the
--- comparison.
+-- capture arrives; doc/architecture_notes/gowin has the comparison.
 
 library ieee;
 use ieee.std_logic_1164.all;
