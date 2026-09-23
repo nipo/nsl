@@ -1,0 +1,33 @@
+name: tei0003_pll
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_hwdep.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/top.vhd
+    - file_type: quartus-pin-assignment
+      files:
+        - pins.tcl
+    - file_type: quartus-sdc
+      files:
+        - clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: top
+    target:
+      part: 10CL025YU256C8G
+    backend_config:
+      gbs.builtin.quartus:
+        tool: quartus-prime
+    outputs:
+      - type: bitstream
+        path: pll.sof
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html

@@ -14,3 +14,4 @@ ise-build
 webtalk.log
 *.fs
 *.rpt
+*.sof
