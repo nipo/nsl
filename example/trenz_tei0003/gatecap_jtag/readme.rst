@@ -37,5 +37,36 @@ Programming and talking to it
 ::
 
   acrobe chip -r tei-ara41546/jtag/chain/0 program gatecap_jtag.rbf
+  acrobe info enumerate -r tei-ara41546/jtag/chain
   PYTHONPATH=$HOME/projects/gatecap/host acrobe run panel.py
 
+::
+
+  Node tree:
+    chain
+      10CL025Y
+        sld
+          continuous_transport0
+            gatecap
+              bridge
+                enumerator
+                rates
+                panel
+                  registers
+
+::
+
+  rack fingerprint 0x00d2e50c
+    block bridge
+    block enumerator
+    block rates
+    block panel
+    block registers
+  rates {'board': 12000000}
+  scratch 0x00000000 -> scratch_back 0x00000000  ok
+  scratch 0xdeadbeef -> scratch_back 0xdeadbeef  ok
+  scratch 0x5a5a5a5a -> scratch_back 0x5a5a5a5a  ok
+  scratch 0xffffffff -> scratch_back 0xffffffff  ok
+  ticks 516415974 -> 522445896, 6029922 in about half a second
+  ping_count 0 -> 5 after 5 strobes
+  button 1
