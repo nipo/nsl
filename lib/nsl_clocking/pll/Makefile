@@ -72,4 +72,12 @@ vhdl-sources += pll_basic.vhd
 deps += nsl_data.text
 deps += nsl_hwconfig.cyclone10lp_config
 endif
+ifneq ($(filter A5E%,$(target_part)),)
+vhdl-sources += pll_backend.pkg.vhd
+vhdl-sources += pll_backend_agilex5.vhd
+vhdl-sources += pll_multi_agilex5.vhd
+vhdl-sources += pll_basic.vhd
+deps += nsl_data.text
+deps += nsl_hwconfig.agilex5_config
+endif
 endif
