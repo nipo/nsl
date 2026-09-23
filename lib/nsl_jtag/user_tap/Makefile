@@ -35,4 +35,7 @@ vhdl-sources += jtag_user_tap_cyclone10lp.vhd
 deps += nsl_clocking.distribution
 deps += nsl_jtag.tap
 endif
+ifneq ($(filter A5E%,$(target_part)),)
+vhdl-sources += jtag_user_tap_altera_vjtag.vhd
+endif
 endif
