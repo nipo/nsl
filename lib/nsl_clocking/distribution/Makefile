@@ -8,6 +8,10 @@ ifeq ($(hwdep),xilinx)
 vhdl-sources += clock_buffer_xilinx.vhd
 endif
 
+ifeq ($(hwdep),altera)
+vhdl-sources += clock_buffer_altera.vhd
+endif
+
 ifeq ($(hwdep),lattice-machxo2)
 vhdl-sources += clock_buffer_machxo2.vhd
 deps += machxo2.components
