@@ -33,7 +33,7 @@ from acrobe_plugin.gatecap.session import Session
 
 
 class Rates:
-    DEFAULT_PATH = "ub3-/jtag/chain/0/bnoc_continuous_transport/gatecap"
+    DEFAULT_PATH = "ub3-/jtag/chain/0/sld/continuous_transport/gatecap"
 
     EXPECTED_HZ = {"pll0": 100_000_000, "pll1": 125_000_000,
                    "loopback": 100_000_000}
