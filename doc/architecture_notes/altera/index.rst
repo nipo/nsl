@@ -359,3 +359,146 @@ unprotected against retiming and merging here.  Nothing in this tree
 relies on that protection yet; a design that does wants
 ``set_instance_assignment -name PRESERVE_REGISTER ON`` and ``-name
 DONT_MERGE_REGISTER ON`` on the crossing.
+
+Agilex 5
+========
+
+Checked against Quartus Prime Pro 25.3.1 on an ``A5EB013BB23BE4SCS``
+(Terasic DE25-Nano, speed grade -4S).  Figures that were read come
+from the Agilex 5 Device Data Sheet (813918), the Agilex 5 Clocking
+and PLL User Guide (813671) and the Agilex 5 GPIO User Guide
+(813934).  The device atoms are declared in
+``quartus/libraries/vhdl/tennm/tennm_components.vhd``, except the
+``tennm_ph2_*`` ones this family uses for its I/O and PLLs, which
+only the simulation copy of that file declares.
+
+User JTAG
+---------
+
+**There is no device atom giving the fabric the user chains.** The
+SDM owns the TAP.  The only JTAG atoms are three ``tennm_sdm_jtag*``,
+whose models are encrypted and whose behaviour is documented nowhere.
+What Intel does document is the virtual JTAG path, and that is what
+``nsl_jtag.user_tap`` uses on this family: one
+``sld_virtual_jtag_basic`` node, behind the SLD hub Quartus inserts
+by itself whenever such a node is present.
+
+**The hub owns USER0 (``0x00C``) and USER1 (``0x00E``) of a 10-bit
+IR.** A DR scan under USER1 loads the hub's virtual IR: the node
+address in its upper bits and that node's own IR in the lower ones,
+address 0 being the hub.  A DR scan under USER0 then reaches the
+addressed node's DR with nothing added.  With the hub addressed and
+its IR at zero, each 4-bit USER0 scan captures the next nibble of an
+identification ROM, least significant first: a hub word (IR width in
+bits 7:0, manufacturer 0x06E in 18:8, node count in 26:19), then one
+word per node (instance, manufacturer, type, version).  On a design
+carrying one node with a one-bit IR the hub reports a 4-bit IR, so
+its virtual IR is 5 bits.
+
+The node ties its identity to the one vendor tools know as virtual
+JTAG, manufacturer 110 and type 8.  acrobe's
+``component/altera/sld_hub.py`` enumerates the hub and selects the
+node before every USER0 shift, so no selection state has to survive
+between two host operations.
+
+**Quartus adds an ``altera_reserved_tck`` port with the hub**, though
+the design declares no JTAG port at all.  TCK is constrained on it
+the Cyclone 10 LP way, as a clock asynchronous to the fabric's.  A
+gatecap rack reached this way closes TCK at 30 MHz with 11.9 ns of
+setup slack, and round-trips its panel on silicon.
+
+Reset
+-----
+
+**The SDM brings the fabric into user mode sector by sector**, and
+says when the whole device is up through the ``USER_RESET`` role of
+one of its outputs: a ``fourteennm_sdm_gpio_out`` at ``bitpos`` 15,
+high until then.  That atom is all Intel's Reset Release IP carries,
+and ``nsl_clocking.reset``'s ``reset_at_startup`` releases on it here.
+Quartus maps it onto ``tennm_sdm_gpio_out``.
+
+The design assistant's ``RES-10204 - Reset Release Instance Count
+Check`` recognises the IP rather than the atom, and keeps reporting
+"No reset release IP detected in project" on a design that carries
+the atom.
+
+PLL
+---
+
+**The I/O PLL counters are N from 1 to 110, M from 4 to 320 and seven
+C from 1 to 510**, integer only (813671 table 2).  A fabric-feeding
+PLL in HVIO banks 6E to 6H carries two C counters only.  **The PFD
+takes 10 to 325 MHz and the VCO runs from 600 MHz** to 3200 MHz on
+-1V, -4S, -2V, -2E and -5S parts, 2400 MHz on -3V, -6S and -6X.  A C
+counter hands the core at most 1100, 1000 or 780 MHz across the same
+three groups (813918 table 48).  Phase moves in eighths of a VCO
+period.
+
+**No megafunction takes a ratio on this family.**  ``altera_iopll``
+is a Platform Designer generator whose output instantiates
+``tennm_ph2_iopll`` with the counters it settled, so
+``nsl_clocking.pll`` instantiates that atom itself, handing it the
+solver's N, M and C.  What the fitter builds is therefore the
+mapping: 50 to 100 and 125 MHz comes out of the fitter's PLL summary
+as N = 1, M = 60 and a 3000 MHz VCO, which is the solver's answer.
+The IOPLL generator itself, asked for 100 MHz off 50 MHz on this
+board, emits N = 1, M = 64 and C = 32 at 3200 MHz, which is also the
+solver's answer for that request.
+
+**The atom must be given every generic.**  Leaving one to its
+declared default fails elaboration with ``Error (23742) ... Missing
+required parameter 'base_address' for parameterized module
+'TENNM_PH2_IOPLL'``.  The values to give are the ones the generator
+emits; they are reproduced in ``pll_multi_agilex5.vhd``.
+
+**A bare atom gets no clocks derived for it.**  The generator ships an
+SDC that declares the output clocks, and without it the outputs are
+unconstrained.  A design instantiating the atom declares them::
+
+  create_generated_clock -name pll0 -source [get_ports clk50m_i] \
+    -multiply_by 2 [get_pins {pll|inst|out_clk[0]}]
+
+**Measured on silicon: asked for 100 and 125 MHz off a 50 MHz
+oscillator, the PLL comes back at 100.000000 and 125.000000 MHz**,
+counted by a ``gatecap.clock_measurer`` riding that oscillator.
+
+Internal oscillator
+-------------------
+
+**``tennm_sdm_oscillator`` is reachable from the fabric**, and
+``nsl_clocking.oscillator``'s ``clock_internal`` takes ``clkout``.
+Its rate is not published for the fabric side.  On a DE25-Nano,
+configured with ``DEVICE_INITIALIZATION_CLOCK OSC_CLK_1_125MHZ``, it
+reads 250.000000 MHz against the board oscillator: twice the
+external 125 MHz clock rather than the loose rate of an on-die
+oscillator.  A design should expect the rate to follow the board's
+configuration clock setting.
+
+DDR output
+----------
+
+**``tennm_ph2_ddio_out`` is used directly.**  The GPIO IP drives
+``datainlo`` with the word that leaves first (813934, output path
+waveform), and ``areset`` is active low while ``sreset`` is active
+high.  **Measured on silicon**, fed the two halves of a forwarded
+clock off a 100 MHz PLL output, a header pin carries 100 MHz, read
+back through its own input buffer, and stops when both halves are
+held equal.
+
+Clock pins
+----------
+
+**Two clocks can compete for one path into the core.**  On a
+DE25-Nano, ``CLOCK1_50`` (``V16``) and header pin ``H16`` both reach
+the core through the same regional clock input.  With both used as
+clocks, the fitter fails with ``Error (24403) ... cannot find routing
+connectivity ... because the routing resource is used by`` the
+other.  The 1.1 V ``CLOCK0_50`` (``DJ35``) does not share it.
+
+Board transport
+---------------
+
+The DE25-Nano's on-board USB Blaster 3 is an FT4232H under Altera's
+VID and PID, which ``ftdi_sio`` does not claim, so the channel
+wired to the fabric UART shows up as no tty.  JTAG is therefore the
+bring-up transport on that board.
