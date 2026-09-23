@@ -1,0 +1,53 @@
+# Rack of the CYC1000's clock bench.
+#
+# Two things are read here and neither can be read any other way on
+# this board: the rate the PLL actually came up at, and whether the
+# DDR output block the SDRAM PHY forwards its memory clock with
+# really moves a pin.
+name: tei0003_clock_check.tei0003_clock_check_core
+
+communication:
+  mode: serial_hdlc
+  # The transport takes its bit period from the clock it rides, and
+  # that is the oscillator rather than anything the PLL makes: a link
+  # that answers then says nothing about the PLL, which is what makes
+  # the rate below a measurement instead of a tautology.
+  clock: rates.ref
+
+instruments:
+  rates: !clock-measurer
+    reference: ref
+    frequency: 12_000_000
+    # fabric is the PLL output as the fabric sees it.  loopback is the
+    # same clock after a DDR output block, a pin and an input buffer,
+    # so it is the pin that is being counted rather than a net.
+    clocks: [fabric, loopback]
+    max_rate: 200_000_000
+
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Holds the DDR output's two halves at the same value, so the
+      # pin stops.  The rate measured on the loopback then drops to
+      # nothing, which is what tells a pin being driven by the block
+      # from a pin the measurer is reading some other net on.
+      still: 1
+      led:
+        width: 7
+
+    status:
+      # PLL lock, as the oscillator's domain sees it.
+      locked: 1
+      # Free running off the 12 MHz pin: a readback that does not move
+      # says the design is not clocked, whatever else answers.
+      ticks:
+        width: 32
+
+    # A control/status instrument with no tick at all hands Quartus a
+    # zero-length array generic, which it refuses.
+    tick-out:
+      - [ ping ]
+
+    tick-in:
+      - [ ping_count ]
