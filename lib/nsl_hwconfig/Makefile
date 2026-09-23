@@ -15,4 +15,7 @@ ifneq ($(filter altera,$(hwdep)),)
 ifneq ($(filter 10CL%,$(target_part)),)
 packages += cyclone10lp_config
 endif
+ifneq ($(filter A5E%,$(target_part)),)
+packages += agilex5_config
+endif
 endif
