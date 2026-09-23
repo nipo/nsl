@@ -2,10 +2,12 @@
 # it.
 create_clock -name clk12m -period 83.333 [get_ports clk12m_i]
 
-# TCK, at the 12 MHz acrobe drives this part at.  The transport crosses
-# it to the oscillator in its own FIFOs.
-create_clock -name tck -period 83.333 [get_ports altera_reserved_tck]
-set_clock_groups -asynchronous -group {clk12m} -group {tck}
+# TCK.  The SLD hub Quartus inserts constrains altera_reserved_tck
+# itself, at 10 MHz, before this file is read, and a second
+# create_clock on the port is ignored.  acrobe drives this part at
+# 12 MHz, which the TCK domain's slack covers.  The transport crosses
+# TCK to the oscillator in its own FIFOs.
+set_clock_groups -asynchronous -group {clk12m} -group {altera_reserved_tck}
 
 derive_clock_uncertainty
 

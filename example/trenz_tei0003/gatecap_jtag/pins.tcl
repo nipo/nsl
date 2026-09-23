@@ -15,9 +15,6 @@ set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
 # 12 MHz oscillator, the only clock here.
 set_location_assignment PIN_M2 -to clk12m_i
 
-# The altera_reserved_* JTAG ports need no assignment: Quartus puts
-# them on the dedicated JTAG pads.
-
 set_location_assignment PIN_M6 -to led_o[0]
 set_location_assignment PIN_T4 -to led_o[1]
 set_location_assignment PIN_T3 -to led_o[2]

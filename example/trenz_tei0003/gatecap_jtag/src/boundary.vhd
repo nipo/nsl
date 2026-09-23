@@ -6,10 +6,10 @@ library nsl_clocking, gatecap_generated;
 
 -- JTAG gatecap bench for a CYC1000.
 --
--- The rack is reached through the part's own TAP, on the USER0 chain,
--- over the same FT2232H channel the part is configured through.  The
--- TAP pins come in as the altera_reserved_* ports Quartus expects for
--- the JTAG atom, and are handed to the transport untouched.
+-- The rack is reached through the part's own TAP, over the same
+-- FT2232H channel the part is configured through, as a virtual JTAG
+-- node behind the SLD hub Quartus inserts.  The hub finds the TAP by
+-- itself, so no JTAG pin reaches this top level.
 --
 -- One clock and no PLL: the 12 MHz oscillator on CLK12M drives the
 -- system side of the transport, the instruments and the counter below
@@ -28,11 +28,6 @@ library nsl_clocking, gatecap_generated;
 entity boundary is
   port(
     clk12m_i: in std_ulogic;
-
-    altera_reserved_tck: in std_ulogic;
-    altera_reserved_tms: in std_ulogic;
-    altera_reserved_tdi: in std_ulogic;
-    altera_reserved_tdo: out std_ulogic;
 
     led_o: out std_ulogic_vector(7 downto 0);
     user_btn_i: in std_ulogic
@@ -106,10 +101,10 @@ begin
       )
     port map(
       reset_n_i => reset_n_s,
-      chip_tck_i => altera_reserved_tck,
-      chip_tms_i => altera_reserved_tms,
-      chip_tdi_i => altera_reserved_tdi,
-      chip_tdo_o => altera_reserved_tdo,
+      chip_tck_i => '0',
+      chip_tms_i => '0',
+      chip_tdi_i => '0',
+      chip_tdo_o => open,
 
       rates_ref_i => clock_s,
       rates_board_i => clock_s,

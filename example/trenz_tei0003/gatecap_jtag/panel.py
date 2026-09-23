@@ -12,10 +12,9 @@ from acrobe_plugin.gatecap.session import Session
 
 
 class Panel:
-    # The adapter name ends in the board's USB serial number; after the
-    # chain come the transport acrobe runs on the USER0 chain and the
-    # rack itself.
-    DEFAULT_PATH = "tei-ara41546/jtag/chain/0/bnoc_continuous_transport/gatecap"
+    # After the chain come the SLD hub, the node it reports as a gatecap
+    # continuous transport, and the rack itself.
+    DEFAULT_PATH = "tei-ara41546/jtag/chain/0/sld/continuous_transport/gatecap"
 
     def __init__(self, path):
         self.path = path

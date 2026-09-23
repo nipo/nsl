@@ -4,3 +4,4 @@ gbs-build/
 *.rbf
 *.jam
 *-report.html
+build.out
