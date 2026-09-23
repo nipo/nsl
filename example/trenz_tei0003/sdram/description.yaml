@@ -1,0 +1,102 @@
+# Rack of the CYC1000's SDRAM bench.
+#
+# The transport is the FT2232H's second channel, a plain two-wire UART
+# the board wires into the fabric.  It rides the 12 MHz oscillator
+# rather than the memory clock, so the link stays up whatever the PLL
+# and the memory domain are doing -- which is what lets a stalled walk
+# be read rather than guessed at.
+name: tei0003_sdram.tei0003_sdram_core
+
+communication:
+  mode: serial_hdlc
+  clock: rates.ref
+
+instruments:
+  # Against the board oscillator.  A part that never answers and a
+  # clock that never started look the same from the panel; this is
+  # what tells them apart.
+  rates: !clock-measurer
+    reference: ref
+    frequency: 12_000_000
+    clocks: [ram]
+    max_rate: 200_000_000
+
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Held low the walk sits in reset.  Raising it starts one, and
+      # dropping and raising it again starts the next: the walker
+      # stops for good when it is done, by design.
+      run: 1
+      # LED1 to LED6.  The two above them carry the memory clock's
+      # heartbeat and the error light, so the board says something
+      # before any host has talked to it.
+      led:
+        width: 6
+
+    status:
+      ready: 1
+      busy: 1
+      done: 1
+      error_count:
+        width: 32
+      first_error_address:
+        width: 23
+      first_read:
+        width: 16
+      # Beats that came back at all, whatever they held.
+      read_count:
+        width: 32
+      # The rest of the bus the walker drives, a channel at a time,
+      # both sides of each handshake, cleared with the run.  A walker
+      # that raises busy and returns nothing says no more than that
+      # through an error count; which of these stopped moving says
+      # which transfer it is waiting on.
+      aw_count:
+        width: 32
+      w_count:
+        width: 32
+      b_count:
+        width: 32
+      ar_count:
+        width: 32
+      # The address of the last transaction accepted each way, which
+      # says how far into the region a stall got.
+      last_aw:
+        width: 23
+      last_ar:
+        width: 23
+      # What the command pins carried, by kind, counted from reset
+      # rather than from the run: the power-up script's own register
+      # writes are in these, and so is anything the controller was
+      # asked for before a host attached.  A bus that stops advancing
+      # with these still moving is a part that is not answering; one
+      # that stops with these frozen is a controller that has stopped
+      # asking.
+      act_count:
+        width: 32
+      pre_count:
+        width: 32
+      wr_count:
+        width: 32
+      rd_count:
+        width: 32
+      ref_count:
+        width: 32
+      mrs_count:
+        width: 32
+      # Both sides of every channel as they stand: aw, w, b, ar and r,
+      # valid in the low bit of each pair and ready in the high one.
+      # A bus where nothing moves has one side of one channel waiting,
+      # and the counters above cannot say which.
+      handshake:
+        width: 10
+
+    # A control/status instrument with no tick at all hands Quartus a
+    # zero-length array generic, which it refuses.
+    tick-out:
+      - [ ping ]
+
+    tick-in:
+      - [ ping_count ]

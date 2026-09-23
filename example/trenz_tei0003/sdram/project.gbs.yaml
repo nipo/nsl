@@ -1,0 +1,51 @@
+name: tei0003_sdram
+
+repositories:
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
+  - path: description.yaml
+    loader: gatecap-description
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_hwdep.reset
+    - nsl_io.io
+    - nsl_amba.axi4_mm
+    - nsl_amba.mm_traffic
+    - nsl_data.bytestream
+    - nsl_ext_ram.sdram
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+    - gatecap_generated.tei0003_sdram
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: quartus-pin-assignment
+      files:
+        - pins.tcl
+    - file_type: quartus-sdc
+      files:
+        - clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: 10CL025YU256C8G
+    backend_config:
+      gbs.builtin.quartus:
+        tool: quartus-prime
+    outputs:
+      - type: bitstream
+        path: sdram.sof
+      - type: quartus-rbf
+        path: sdram.rbf
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html

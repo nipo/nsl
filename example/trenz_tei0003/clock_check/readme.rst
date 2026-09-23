@@ -13,9 +13,15 @@ fits, meets timing and drives a constant.
 
 The transport is the ``gatecap_uart`` bench's: the FT2232H's second
 channel at 1 Mbaud, HDLC frames, an 8n1 UART.  **It rides the 12 MHz
-oscillator and not the PLL**, which is what makes the rate below a
-measurement rather than a tautology -- a rack riding the clock it
-measures answers at the right rate by construction.
+oscillator and not the PLL.**
+
+That is the rule every instrument on this board follows: an
+instrument's clock must not come from the thing it measures.  A rack
+riding the PLL reports the PLL's rate correctly by construction and
+says nothing -- and a PLL that came up wrong would take the link down
+with it, leaving the one situation the instrument exists for as the
+one in which it is silent.  Here a wrong PLL is a wrong number on a
+link that still answers.
 
 What is measured
 ================
