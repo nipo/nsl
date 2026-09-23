@@ -161,6 +161,73 @@ package part is
     zqinit_min_ck => 0
     );
 
+  -- Winbond W9864G6JT, 64Mbit SDR SDRAM, 1M x 4 banks x 16.
+  --
+  -- Transcribed from revision A03 of the datasheet, whose AC table
+  -- holds one column for both speed grades the part is sorted into:
+  -- -6 and -6I differ in temperature range and in nothing else.
+  --
+  -- The geometry is why A12 and A13 are not bonded out: twelve row
+  -- bits and eight column bits address the whole of a bank.
+  --
+  -- aa_ps is what settles the CAS latency, and the sheet states that
+  -- as a minimum period per latency rather than as an access time:
+  -- CAS latency 2 down to 7.5 ns and CAS latency 3 down to 6 ns.
+  -- Fifteen nanoseconds is the access time both of those are the
+  -- rounding of, and rounding it up against the period reproduces
+  -- the table.
+  constant w9864g6jt_c: dram_part_t := (
+    generation => DRAM_SDR,
+
+    bank_count_l2 => 2,
+    row_count_l2 => 12,
+    column_count_l2 => 8,
+    dq_width => 16,
+    prefetch_l2 => 0,
+
+    tck_min_ps => 6000,
+    tck_max_ps => 1000000,
+
+    aa_ps => 15000,
+    rcd_ps => 15000,
+    rp_ps => 15000,
+    ras_ps => 42000,
+    rc_ps => 60000,
+    -- The sheet gives tRRD in nanoseconds and states no clock floor
+    -- for it.
+    rrd_ps => 12000,
+    rrd_min_ck => 1,
+    -- No activate window on SDR
+    faw_ps => 0,
+    ccd_min_ck => 1,
+
+    -- Write recovery is stated in clocks alone, and is the same at
+    -- either CAS latency.
+    wr_ps => 0,
+    wr_min_ck => 2,
+    -- Read follows write with no bus turnaround penalty
+    wtr_ps => 0,
+    wtr_min_ck => 0,
+    rtp_ps => 0,
+    rtp_min_ck => 0,
+
+    -- An auto refresh occupies a whole tRC.
+    rfc_ps => 60000,
+    -- 4096 rows in 64 ms
+    refi_ps => 15625000,
+
+    mrd_min_ck => 2,
+    mod_ps => 0,
+    mod_min_ck => 0,
+
+    -- No reset pin
+    init_reset_ps => 0,
+    -- The initial pause the power-up sequence opens with
+    init_cke_ps => 200000000,
+    -- No ZQ pin
+    zqinit_min_ck => 0
+    );
+
   -- Cypress CY7C1462AV25, 36Mbit pipelined NoBL SRAM, 2M x 18.
   --
   -- Transcribed from the -200 speed grade column of document
