@@ -27,90 +27,88 @@ entity ram_2p_homogeneous is
     );
 end ram_2p_homogeneous;
 
--- Gowin's tools only infer a block ram from a memory where a byte is
--- read on the cycles it is not written, so read and write are kept
--- mutually exclusive, byte by byte.  Vivado refuses that shape, and
--- the two are irreconcilable, hence a file each.
-architecture byte_wr_ram_excl of ram_2p_homogeneous is
+architecture byte_wr_ram_rf of ram_2p_homogeneous is
 
   constant word_count : integer := 2 ** addr_size_c;
   subtype word_t is std_ulogic_vector(data_word_count_c * word_size_c - 1 downto 0);
   signal a_out_reg, b_out_reg: word_t;
   type ram_type is array (0 to word_count - 1) of word_t;
   shared variable dpram_reg : ram_type;
+  attribute syn_ramstyle : string;
+  attribute syn_ramstyle of dpram_reg : variable is "no_rw_check";
 
 begin
-
-  -- A byte that is written reads back what was written, always.
-  assert not read_before_write_c
-    report "This memory has no read-before-write mode"
-    severity failure;
 
   a_port: process(a_clock_i)
   begin
     if rising_edge(a_clock_i) then
       if a_enable_i = '1' then
-        if registered_output_c then
-          a_data_o <= a_out_reg;
+        if not read_before_write_c then
+          for i in 0 to data_word_count_c - 1
+          loop
+            if a_write_en_i(i) = '1' then
+              dpram_reg(to_integer(to_01(a_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
+                := a_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
+            end if;
+          end loop;
         end if;
 
-        for i in 0 to data_word_count_c - 1
-        loop
-          if a_write_en_i(i) = '1' then
-            dpram_reg(to_integer(to_01(a_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
-              := a_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-            if registered_output_c then
-              a_out_reg((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= a_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-            else
-              a_data_o((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= a_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
+        if registered_output_c then
+          a_data_o <= a_out_reg;
+          a_out_reg <= dpram_reg(to_integer(to_01(a_address_i, '0')));
+        else
+          a_data_o <= dpram_reg(to_integer(to_01(a_address_i, '0')));
+        end if;
+
+        if read_before_write_c then
+          for i in 0 to data_word_count_c - 1
+          loop
+            if a_write_en_i(i) = '1' then
+              dpram_reg(to_integer(to_01(a_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
+                := a_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
             end if;
-          else
-            if registered_output_c then
-              a_out_reg((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= dpram_reg(to_integer(to_01(a_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c);
-            else
-              a_data_o((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= dpram_reg(to_integer(to_01(a_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c);
-            end if;
-          end if;
-        end loop;
+          end loop;
+        end if;
       end if;
     end if;
   end process;
 
   b_port: process(b_clock_i)
   begin
-    if rising_edge(b_clock_i) then
+    if rising_edge(b_clock_i)
+    then
       if b_enable_i = '1' then
+        if not read_before_write_c then
+          if b_can_write_c then
+            for i in 0 to data_word_count_c - 1
+            loop
+              if b_write_en_i(i) = '1' then
+                dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
+                  := b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
+              end if;
+            end loop;
+          end if;
+        end if;
+        
         if registered_output_c then
           b_data_o <= b_out_reg;
+          b_out_reg <= dpram_reg(to_integer(to_01(b_address_i, '0')));
+        else
+          b_data_o <= dpram_reg(to_integer(to_01(b_address_i, '0')));
         end if;
 
-        for i in 0 to data_word_count_c - 1
-        loop
-          if b_write_en_i(i) = '1' then
-            dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
-              := b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-            if registered_output_c then
-              b_out_reg((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-            else
-              b_data_o((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
-            end if;
-          else
-            if registered_output_c then
-              b_out_reg((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c);
-            else
-              b_data_o((i + 1) * word_size_c - 1 downto i * word_size_c)
-                <= dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c);
-            end if;
+        if read_before_write_c then
+          if b_can_write_c then
+            for i in 0 to data_word_count_c - 1
+            loop
+              if b_write_en_i(i) = '1' then
+                dpram_reg(to_integer(to_01(b_address_i, '0')))((i + 1) * word_size_c - 1 downto i * word_size_c)
+                  := b_data_i((i + 1) * word_size_c - 1 downto i * word_size_c);
+              end if;
+            end loop;
           end if;
-        end loop;
+        end if;
       end if;
     end if;
   end process;
-end byte_wr_ram_excl;
+end byte_wr_ram_rf;

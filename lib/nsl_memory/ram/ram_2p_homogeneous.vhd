@@ -27,10 +27,6 @@ entity ram_2p_homogeneous is
     );
 end ram_2p_homogeneous;
 
--- The whole word reaches the output on every enabled cycle, and
--- read_before_write_c picks which side of the write that read sits
--- on.  This is the shape Vivado and ISE infer a block ram from;
--- Gowin wants the other one next door.
 architecture byte_wr_ram_rf of ram_2p_homogeneous is
 
   constant word_count : integer := 2 ** addr_size_c;
