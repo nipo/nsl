@@ -19,7 +19,7 @@ endif
 
 ifneq ($(filter altera,$(hwdep)),)
 ifneq ($(filter A5E%,$(target_part)),)
-vhdl-sources += clock_internal_altera_14nm.vhd
+vhdl-sources += clock_internal_agilex5.vhd
 endif
 ifneq ($(filter 10CL%,$(target_part)),)
 vhdl-sources += clock_internal_cyclone10lp.vhd
