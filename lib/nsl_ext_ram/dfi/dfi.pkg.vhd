@@ -352,7 +352,11 @@ package body dfi is
                 mask: std_ulogic_vector := "") return data_t
   is
     alias value_v: byte_string(0 to value'length - 1) is value;
-    alias mask_v: std_ulogic_vector(0 to mask'length - 1) is mask;
+    -- Taken as a constant rather than as an alias: mask is empty by
+    -- default, and Quartus rejects an alias whose subtype has a null
+    -- range.  A constant copies position-wise, which is what the
+    -- alias gave.
+    constant mask_v: std_ulogic_vector(0 to mask'length - 1) := mask;
     variable ret: data_t;
   begin
     assert value'length = cfg.dq_byte_count
@@ -420,7 +424,9 @@ package body dfi is
                           mask: std_ulogic_vector := "") return data_vector
   is
     alias value_v: byte_string(0 to value'length - 1) is value;
-    alias mask_v: std_ulogic_vector(0 to mask'length - 1) is mask;
+    -- A constant rather than an alias, for the null range an empty
+    -- mask gives.
+    constant mask_v: std_ulogic_vector(0 to mask'length - 1) := mask;
     constant stride_c: natural := cfg.dq_byte_count;
     variable ret: data_vector(0 to max_slot_count_c - 1);
   begin
