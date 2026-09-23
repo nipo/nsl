@@ -60,7 +60,10 @@ package continuous_transport is
   component jtag_continuous_transport_tap is
     generic(
       tx_fifo_depth_c : natural := 256;
-      rx_fifo_depth_c : natural := 256
+      rx_fifo_depth_c : natural := 256;
+      -- Identity of the chain, as nsl_jtag.user_tap states it.
+      node_type_c : natural range 0 to 255 := 0;
+      node_version_c : natural range 0 to 15 := 0
       );
     port(
       chip_tck_i : in std_ulogic := '0';

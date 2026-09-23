@@ -3,9 +3,22 @@ use ieee.std_logic_1164.all;
 
 package user_tap is
 
+  -- node_type_c and node_version_c name what the user chains carry,
+  -- for backends that let a host discover it.  On Altera parts, the
+  -- chains are a virtual JTAG node whose identity word the SLD hub
+  -- reports: manufacturer, type and version, laid out like the fields
+  -- of a JTAG IDCODE.  NSL nodes take manufacturer 0x5ff, JEP106 bank
+  -- 11 and code 0x7f, a code JEP106 never assigns in any bank, and
+  -- type 0 states nothing.  Other backends have nowhere to put an
+  -- identity and ignore both.
+  --
+  -- Types assigned:
+  -- 0x01: nsl_jtag.continuous_transport carrying a gatecap rack.
   component jtag_user_tap
     generic(
-      user_port_count_c : integer := 1
+      user_port_count_c : integer := 1;
+      node_type_c : natural range 0 to 255 := 0;
+      node_version_c : natural range 0 to 15 := 0
       );
     port(
       chip_tck_i : in std_ulogic := '0';

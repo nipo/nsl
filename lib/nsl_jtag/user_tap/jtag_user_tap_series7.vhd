@@ -3,7 +3,9 @@ use ieee.std_logic_1164.all;
 
 entity jtag_user_tap is
   generic(
-    user_port_count_c : integer := 1
+    user_port_count_c : integer := 1;
+    node_type_c : natural range 0 to 255 := 0;
+    node_version_c : natural range 0 to 15 := 0
     );
   port(
     chip_tck_i : in std_ulogic := '0';

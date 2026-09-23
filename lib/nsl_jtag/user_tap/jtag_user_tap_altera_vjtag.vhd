@@ -11,15 +11,17 @@ use ieee.std_logic_1164.all;
 -- a port with one USER1 scan and then shifts its DR under USER0 like
 -- any other user chain.
 --
--- The node is identified to hub enumeration as Intel's virtual JTAG,
--- manufacturer 110 and type 8, so vendor tools list it.
+-- The node reports manufacturer 0x5ff with node_type_c and
+-- node_version_c to hub enumeration, as user_tap's package states.
 --
 -- There is no hard TAP to reach here: the hub connects itself to the
 -- part's JTAG, so the chip_* ports are unused.  run_o is the TAP's
 -- own Run-Test/Idle, whatever instruction is loaded.
 entity jtag_user_tap is
   generic(
-    user_port_count_c : integer := 1
+    user_port_count_c : integer := 1;
+    node_type_c : natural range 0 to 255 := 0;
+    node_version_c : natural range 0 to 15 := 0
     );
   port(
     chip_tck_i : in std_ulogic := '0';
@@ -91,9 +93,9 @@ begin
 
   inst: sld_virtual_jtag_basic
     generic map(
-      sld_mfg_id => 110,
-      sld_type_id => 8,
-      sld_version => 1,
+      sld_mfg_id => 16#5ff#,
+      sld_type_id => node_type_c,
+      sld_version => node_version_c,
       sld_auto_instance_index => "YES",
       sld_ir_width => 1
       )

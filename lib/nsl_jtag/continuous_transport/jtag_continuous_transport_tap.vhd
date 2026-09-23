@@ -10,7 +10,10 @@ use nsl_jtag.continuous_transport.all;
 entity jtag_continuous_transport_tap is
   generic(
     tx_fifo_depth_c : natural := 256;
-    rx_fifo_depth_c : natural := 256
+    rx_fifo_depth_c : natural := 256;
+    -- Identity of the chain, as nsl_jtag.user_tap states it.
+    node_type_c : natural range 0 to 255 := 0;
+    node_version_c : natural range 0 to 15 := 0
     );
   port(
     chip_tck_i : in std_ulogic := '0';
@@ -52,7 +55,9 @@ begin
 
   inst: nsl_jtag.user_tap.jtag_user_tap
     generic map(
-      user_port_count_c => 1
+      user_port_count_c => 1,
+      node_type_c => node_type_c,
+      node_version_c => node_version_c
       )
     port map(
       chip_tck_i => chip_tck_i,
