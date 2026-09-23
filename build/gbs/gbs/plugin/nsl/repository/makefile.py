@@ -360,6 +360,15 @@ class Context(dict):
         t = self.expand(t)
         return self.expand(text).replace(f, t)
 
+    def _func_findstring(self, function: str, find: str, text: str) -> str:
+        """
+        $(findstring find, text)
+        """
+        find = self.expand(find)
+        if find in self.expand(text):
+            return find
+        return ""
+
 class Makefile:
     """
     A makefile interpreter
