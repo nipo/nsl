@@ -262,12 +262,17 @@ It is the oscillator the part runs active serial configuration from;
 ``oscena`` held high keeps it running after configuration, and
 ``nsl_clocking.oscillator``'s ``clock_internal`` backend does exactly that.
 
+**Its rate is only specified through the AS DCLK it clocks**: 20 to
+40 MHz, 33 MHz typical (C10LP51002 table 37).  The atom output runs at
+about twice DCLK -- a 10CL025 on a CYC1000 measures about 65 MHz, read
+as the throughput of an SPI master it clocks at known divisors -- so a
+design has to cope with anything up to 80 MHz.  Anything derived from
+it, such as an SPI divisor, is computed against that fastest case.
+
 **It runs faster than Quartus believes.**  The timing model caps the
-atom at about 46 MHz through its minimum pulse width, while a 10CL025
-on a CYC1000 measures about 65 MHz, read as the throughput of an SPI
-master it clocks at known divisors.  A design on it cannot be
-constrained at the real rate without failing that check, so constrain
-it lower and keep the fabric paths well inside the real period.
+atom at about 46 MHz through its minimum pulse width.  A design on it
+cannot be constrained at the fastest case without failing that check,
+so constrain it lower and keep the fabric paths well inside 12.5 ns.
 
 User JTAG
 =========

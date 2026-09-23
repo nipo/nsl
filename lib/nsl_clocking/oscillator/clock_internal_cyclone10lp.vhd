@@ -2,9 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 -- Cyclone 10 LP internal oscillator, the one the part runs active
--- serial configuration from.  Its rate is loosely specified: about
--- 65 MHz measured on a 10CL025, while Quartus models the atom as
--- unable to run above about 46 MHz.
+-- serial configuration from.  It is only specified through the AS
+-- DCLK it clocks, 20 to 40 MHz, and runs at about twice that: expect
+-- up to 80 MHz.  Quartus models the atom as unable to run above about
+-- 46 MHz.
 entity clock_internal is
   port(
     clock_o      : out std_ulogic
