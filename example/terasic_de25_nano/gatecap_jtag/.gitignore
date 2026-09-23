@@ -1,0 +1,7 @@
+gbs-build/
+.gbs/
+*.sof
+*.rbf
+*.jam
+*-report.html
+build.out

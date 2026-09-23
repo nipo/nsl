@@ -1,0 +1,59 @@
+# Rack of the DE25-Nano's JTAG gatecap bench.
+#
+# The transport rides the part's own TAP, on the on-board USB Blaster
+# 3, as a virtual JTAG node behind Quartus's SLD hub.  It crosses from
+# TCK to the board oscillator in its own FIFOs; the 50 MHz pin clocks
+# the transport's system side, the instruments and the user logic
+# alike.
+name: de25_nano_jtag.de25_nano_jtag_core
+
+communication:
+  mode: jtag
+  clock: rates.ref
+
+instruments:
+  # Watches the oscillator against itself: the answer is known in
+  # advance, which is what makes it a check that the block, the
+  # transport and the clock are all running.
+  rates: !clock-measurer
+    reference: ref
+    frequency: 50_000_000
+    clocks: [board]
+    max_rate: 200_000_000
+
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Written by the host and read straight back through the status
+      # word below, so a round trip crosses the register file rather
+      # than turning around in the host or on the wire.
+      scratch:
+        width: 32
+      # LED0 to LED6.  LED7 is not on the panel, it is the counter's
+      # own heartbeat, so the board says whether it is clocked before
+      # any host has talked to it.
+      led:
+        width: 7
+
+    status:
+      # The control word above, as the fabric holds it.
+      scratch_back:
+        width: 32
+      # Free running off the 50 MHz pin.  A readback that does not move
+      # says the design is not clocked, whatever else answers.
+      ticks:
+        width: 32
+      # KEY0, high when pressed.
+      button: 1
+
+    # Wired to one another in the fabric, so a strobe the host sends
+    # comes back as a count the host reads.  The panel would carry
+    # neither otherwise, and a control/status instrument with no tick
+    # at all hands Quartus a zero-length array generic, which it
+    # refuses (see doc/architecture_notes/altera).
+    tick-out:
+      - [ ping ]
+
+    tick-in:
+      - [ ping_count ]
