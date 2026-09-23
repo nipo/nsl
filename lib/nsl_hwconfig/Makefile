@@ -11,3 +11,8 @@ ifneq ($(filter gowin,$(hwdep)),)
 packages += gowin_config
 endif
 
+ifneq ($(filter altera,$(hwdep)),)
+ifneq ($(filter 10CL%,$(target_part)),)
+packages += cyclone10lp_config
+endif
+endif
