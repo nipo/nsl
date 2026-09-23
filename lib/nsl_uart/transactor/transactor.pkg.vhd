@@ -3,13 +3,14 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_amba, nsl_uart, nsl_clocking;
+use nsl_uart.serdes.all;
 
 package transactor is
 
   component uart8 is
     generic(
       stop_count_c : natural range 1 to 2 := 1;
-      parity_c : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
+      parity_c : parity_t := PARITY_NONE;
       handshake_active_c : std_ulogic := '0'
       );
     port(
@@ -61,7 +62,7 @@ package transactor is
       break_o        : out std_ulogic;
 
       stop_count_i       : in natural range 1 to 2;
-      parity_i           : in nsl_uart.serdes.parity_t;
+      parity_i           : in parity_t;
       handshake_active_i : in std_ulogic := '0'
       );
   end component;
@@ -71,7 +72,7 @@ package transactor is
       system_clock_c     : natural;
       stream_config_c    : nsl_amba.axi4_stream.config_t;
       stop_count_c       : natural range 1 to 2 := 1;
-      parity_c           : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
+      parity_c           : parity_t := PARITY_NONE;
       handshake_active_c : std_ulogic := '0';
       baud_rate_c        : unsigned(23 downto 0);
       timeout_c          : unsigned(23 downto 0);

@@ -3,11 +3,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_bnoc, nsl_uart, nsl_clocking;
+use nsl_uart.serdes.all;
 
 entity uart8 is
   generic(
     stop_count_c : natural range 1 to 2 := 1;
-    parity_c : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
+    parity_c : parity_t := PARITY_NONE;
     handshake_active_c : std_ulogic := '0'
     );
   port(

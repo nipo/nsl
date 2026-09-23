@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;       
 
 library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic, nsl_event, nsl_signal_generator, nsl_math;
+use nsl_uart.serdes.all;
 use nsl_data.cbor.all;
 
 entity axi4stream_cbor_uart_transactor is
@@ -10,7 +11,7 @@ entity axi4stream_cbor_uart_transactor is
     system_clock_c     : natural;
     stream_config_c    : nsl_amba.axi4_stream.config_t;
     stop_count_c       : natural range 1 to 2 := 1;
-    parity_c           : nsl_uart.serdes.parity_t := nsl_uart.serdes.PARITY_NONE;
+    parity_c           : parity_t := PARITY_NONE;
     handshake_active_c : std_ulogic := '0';
     baud_rate_c        : unsigned(23 downto 0);
     timeout_c          : unsigned(23 downto 0);
@@ -97,7 +98,7 @@ architecture rtl of axi4stream_cbor_uart_transactor is
     item_count  : natural range 0 to item_count_max_c;
     len         : natural range 0 to 15;   -- String length countdown
 
-    parity      : nsl_uart.serdes.parity_t;
+    parity      : parity_t;
     hs          : std_ulogic;
     stop_count  : natural range 1 to 2;
     baudrate    : unsigned(23 downto 0);
@@ -247,11 +248,11 @@ begin
 
           elsif r.map_state = MAP_VAL_PAR then
             if cmd_i.data(0) = char_to_ulogic(N_STR_C(1)) then
-              rin.parity <= nsl_uart.serdes.PARITY_NONE;
+              rin.parity <= PARITY_NONE;
             elsif cmd_i.data(0) = char_to_ulogic(E_STR_C(1)) then
-              rin.parity <= nsl_uart.serdes.PARITY_EVEN;
+              rin.parity <= PARITY_EVEN;
             elsif cmd_i.data(0) = char_to_ulogic(O_STR_C(1)) then
-              rin.parity <= nsl_uart.serdes.PARITY_ODD;
+              rin.parity <= PARITY_ODD;
             end if;
 
           end if;
@@ -338,9 +339,9 @@ begin
             rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(PARITY_STR_C));
           when 4 =>
             case r.parity is
-              when nsl_uart.serdes.PARITY_NONE => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(N_STR_C));
-              when nsl_uart.serdes.PARITY_EVEN => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(E_STR_C));
-              when nsl_uart.serdes.PARITY_ODD  => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(O_STR_C));
+              when PARITY_NONE => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(N_STR_C));
+              when PARITY_EVEN => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(E_STR_C));
+              when PARITY_ODD  => rin.encoded <= nsl_amba.axi4_stream.reset(buffer_cfg_c, nsl_data.cbor.cbor_tstr(O_STR_C));
               when others => null;
             end case;
           when 5 =>
