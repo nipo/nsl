@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_io, nsl_i2c, work, unisim;
+library nsl_clocking, nsl_io, nsl_i2c, work, unisim;
 
 entity boundary is
   port (
@@ -63,7 +63,7 @@ begin
       clock_o => config_clock_s
       );
 
-  roc_gen: nsl_hwdep.reset.reset_at_startup
+  roc_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => config_clock_s,
       reset_n_o => roc_n_s

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_dvi, nsl_hdmi, nsl_i2c, nsl_video,
+library nsl_clocking, nsl_dvi, nsl_hdmi, nsl_i2c, nsl_video,
   nsl_icesugar, nsl_indication, nsl_color, nsl_digilent, nsl_audio,
   nsl_i2s, nsl_amba, nsl_uart, nsl_data;
 use nsl_data.bytestream.all;
@@ -382,7 +382,7 @@ begin
       clock_o => clock_s
       );
 
-  roc_gen: nsl_hwdep.reset.reset_at_startup
+  roc_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => internal_reset_n_s

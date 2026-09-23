@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, gatecap_generated;
+library nsl_clocking, gatecap_generated;
 use nsl_clocking.pll.all;
 
 entity boundary is
@@ -68,7 +68,7 @@ begin
       clock_o => board_s
       );
 
-  startup_reset: nsl_hwdep.reset.reset_at_startup
+  startup_reset: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => board_s,
       reset_n_o => startup_reset_n_s

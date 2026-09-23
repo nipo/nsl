@@ -8,7 +8,7 @@ root:
     - nsl_clocking.pll
     - nsl_data.bytestream
     - nsl_digilent.pmod
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_logic.bool
     - nsl_math.arith
     - nsl_memory.fifo

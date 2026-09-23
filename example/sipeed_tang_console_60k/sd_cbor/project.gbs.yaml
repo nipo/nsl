@@ -3,7 +3,7 @@ name: tang_console_60k_sd_cbor
 root:
   name: top
   deps:
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_clocking.async
     - nsl_clocking.pll
     - nsl_clocking.distribution

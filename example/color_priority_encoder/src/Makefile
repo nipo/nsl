@@ -3,6 +3,6 @@ constraint-sources += led.ucf
 deps += nsl_ws.driver
 deps += nsl_color.rgb
 deps += nsl_indication.activity
-deps += nsl_hwdep.reset
+deps += nsl_clocking.reset
 
 

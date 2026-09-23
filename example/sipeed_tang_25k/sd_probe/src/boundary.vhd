@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_data, nsl_digilent, nsl_hwdep, nsl_logic,
+library nsl_clocking, nsl_data, nsl_digilent, nsl_logic,
   nsl_math, nsl_memory, nsl_sdio, nsl_sipeed, nsl_uart;
 use nsl_data.bytestream.all;
 use nsl_sdio.sdio.all;
@@ -235,7 +235,7 @@ begin
       clock_o => board_clock_s
       );
 
-  startup: nsl_hwdep.reset.reset_at_startup
+  startup: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => board_clock_s,
       reset_n_o => startup_reset_n_s

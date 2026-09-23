@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_signal_generator, nsl_math;
+library nsl_clocking, nsl_signal_generator, nsl_math;
 
 entity top is
   port (
@@ -37,7 +37,7 @@ begin
       clock_o => clock
       );
 
-  reset_gen: nsl_hwdep.reset.reset_at_startup
+  reset_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock,
       reset_n_o => reset_n

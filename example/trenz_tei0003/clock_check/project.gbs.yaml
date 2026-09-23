@@ -12,7 +12,7 @@ root:
     - nsl_clocking.async
     - nsl_clocking.distribution
     - nsl_clocking.pll
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_io.ddr
     - nsl_io.io
     - gatecap_generated.tei0003_clock_check

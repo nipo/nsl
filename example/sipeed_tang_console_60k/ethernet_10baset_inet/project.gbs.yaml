@@ -6,7 +6,7 @@ root:
     - nsl_clocking.distribution
     - nsl_clocking.pll
     - nsl_clocking.async
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_sipeed.pmod_ethernet
     - nsl_digilent.pmod
     - nsl_mii.flit

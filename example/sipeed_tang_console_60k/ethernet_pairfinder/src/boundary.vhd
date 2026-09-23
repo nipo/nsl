@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_clocking, nsl_uart;
+library nsl_clocking, nsl_uart;
 use nsl_uart.serdes.all;
 
 -- Ethernet magnetics pin mapping finder.
@@ -105,7 +105,7 @@ begin
       clock_o => clock_s
       );
 
-  por: nsl_hwdep.reset.reset_at_startup
+  por: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => reset_n_s

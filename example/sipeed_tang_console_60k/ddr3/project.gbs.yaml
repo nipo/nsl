@@ -13,7 +13,7 @@ root:
     - nsl_clocking.pll
     - nsl_clocking.async
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_io.delay
     - nsl_io.io
     - nsl_io.serdes

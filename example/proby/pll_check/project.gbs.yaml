@@ -6,7 +6,7 @@ root:
     - nsl_clocking.pll
     - nsl_clocking.async
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - gatecap_generated.pll_check
   sources:
     - file_type: vhdl

@@ -7,7 +7,7 @@ root:
     - nsl_ws.driver
     - nsl_indication.activity
     - nsl_color.rgb
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
   sources:
     - file_type: vhdl
       files:

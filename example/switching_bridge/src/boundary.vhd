@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_amba, nsl_data, nsl_clocking, nsl_hwdep, nsl_inet, nsl_logic;
+library nsl_amba, nsl_data, nsl_clocking, nsl_inet, nsl_logic;
 use nsl_data.bytestream.all;
 use nsl_data.prbs.all;
 use nsl_inet.switching.all;
@@ -109,7 +109,7 @@ begin
       clock_o => clock_s
       );
 
-  roc_gen: nsl_hwdep.reset.reset_at_startup
+  roc_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => reset_n_s

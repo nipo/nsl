@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_mii, nsl_clocking, nsl_smi, nsl_hwdep, nsl_i2c,
+library nsl_amba, nsl_mii, nsl_clocking, nsl_smi, nsl_i2c,
   nsl_io, nsl_time, nsl_digilent, nsl_indication, nsl_color,
   gatecap_generated, work, nsl_video, nsl_solomonsystech;
 use nsl_amba.axi4_stream.all;
@@ -178,7 +178,7 @@ begin
       locked_o => rtc_locked_s
       );
 
-  int_reset_gen: nsl_hwdep.reset.reset_at_startup
+  int_reset_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_100_s,
       reset_n_o => int_reset_n_s

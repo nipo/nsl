@@ -3,7 +3,6 @@ name: usb11
 root:
   name: top
   deps:
-    - nsl_hwdep.reset
     - nsl_simulation.control
     - nsl_clocking.async
     - nsl_memory.fifo

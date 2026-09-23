@@ -7,7 +7,7 @@ root:
     - nsl_data.bytestream
     - nsl_data.prbs
     - nsl_clocking.oscillator
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_inet.switching
     - nsl_logic.logic
   sources:

@@ -12,7 +12,7 @@ root:
   deps:
     - nsl_clocking.async
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - gatecap_generated.tei0003_jtag
   sources:
     - file_type: vhdl

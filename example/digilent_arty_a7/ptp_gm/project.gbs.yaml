@@ -50,7 +50,7 @@ root:
     - nsl_clocking.interdomain
     - nsl_clocking.pll
     - nsl_io.clock
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - gatecap_generated.observer
   sources:
     - file_type: vhdl

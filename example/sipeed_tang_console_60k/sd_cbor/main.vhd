@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_bnoc, nsl_clocking, nsl_hwdep, nsl_indication,
+library nsl_amba, nsl_bnoc, nsl_clocking, nsl_indication,
   nsl_io, nsl_sdio, nsl_usb;
 use nsl_sdio.sdio.all;
 
@@ -99,7 +99,7 @@ begin
   -- The buttons of this board sit in the bank the socket is in, and
   -- they are wired for a supply a card cannot take, so the reset this
   -- starts with is its own.
-  startup: nsl_hwdep.reset.reset_at_startup
+  startup: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_ext_s,
       reset_n_o => startup_reset_n_s

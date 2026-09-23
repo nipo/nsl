@@ -5,7 +5,7 @@ root:
   deps:
     - nsl_clocking.oscillator
     - nsl_hwdep.uid
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_clocking.async
     - nsl_memory.fifo
     - nsl_usb.usb

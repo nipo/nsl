@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_clocking, nsl_uart, nsl_mii, nsl_bnoc, nsl_inet,
+library nsl_clocking, nsl_uart, nsl_mii, nsl_bnoc, nsl_inet,
   nsl_digilent, nsl_sipeed;
 use nsl_uart.serdes.all;
 use nsl_mii.flit.all;
@@ -189,7 +189,7 @@ begin
       clock_o => clock_ext_s
       );
 
-  por: nsl_hwdep.reset.reset_at_startup
+  por: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_ext_s,
       reset_n_o => por_n_s

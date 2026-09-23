@@ -4,7 +4,7 @@ root:
   name: top
   deps:
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_clocking.async
     - nsl_uart.serdes
   sources:

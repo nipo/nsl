@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, gatecap_generated;
+library nsl_clocking, gatecap_generated;
 
 -- JTAG gatecap bench for a CYC1000.
 --
@@ -62,7 +62,7 @@ begin
       clock_o => clock_s
       );
 
-  reset: nsl_hwdep.reset.reset_at_startup
+  reset: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => reset_n_s

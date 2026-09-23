@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_data, nsl_ext_ram, nsl_hwdep, nsl_io, nsl_uart;
+library nsl_clocking, nsl_data, nsl_ext_ram, nsl_io, nsl_uart;
 use nsl_clocking.pll.all;
 use nsl_data.bytestream.all;
 use nsl_ext_ram.dfi.all;
@@ -236,7 +236,7 @@ begin
 
   -- The PLL wants a reset of its own out of configuration before it
   -- will lock.
-  startup: nsl_hwdep.reset.reset_at_startup
+  startup: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => board_clock_s,
       reset_n_o => pll_reset_n_s

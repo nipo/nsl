@@ -22,7 +22,7 @@ root:
     - nsl_sipeed.pmod_8xled
     - nsl_clocking.distribution
     - nsl_clocking.async
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_clocking.oscillator
   sources:
     - file_type: vhdl

@@ -20,7 +20,6 @@ root:
     - nsl_uart.transactor
     - nsl_indication.activity
     - nsl_line_coding.hdlc
-    - nsl_hwdep.reset
     - nsl_clocking.pll
     - nsl_io.clock
   sources:

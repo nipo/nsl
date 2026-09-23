@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep;
+library nsl_clocking;
 use nsl_clocking.pll.all;
 
 -- 12 MHz oscillator to an 80 MHz fabric clock on a CYC1000.
@@ -43,7 +43,7 @@ begin
       locked_o => locked_s
       );
 
-  reset: nsl_hwdep.reset.reset_at_startup
+  reset: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s(0),
       reset_n_o => reset_n_s

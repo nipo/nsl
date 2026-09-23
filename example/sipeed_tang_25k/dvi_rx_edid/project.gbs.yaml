@@ -21,7 +21,7 @@ root:
     - nsl_clocking.distribution
     - nsl_clocking.async
     - nsl_clocking.interdomain
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_clocking.oscillator
   sources:
     - file_type: vhdl

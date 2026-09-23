@@ -5,7 +5,7 @@ root:
   deps:
     - nsl_clocking.pll
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
   sources:
     - file_type: vhdl
       files:

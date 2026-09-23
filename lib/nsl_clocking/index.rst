@@ -16,7 +16,9 @@ Clocking utilities are split by function:
 
 * `pll <oll/index>`_ for simple PLL instantiation from various vendor backends,
 
-* `oscillator <oscillator/index>`_ for on-chip oscillators.
+* `oscillator <oscillator/index>`_ for on-chip oscillators,
+
+* `reset <reset/index>`_ for reset generation at end of configuration.
 
 .. toctree::
 
@@ -26,3 +28,4 @@ Clocking utilities are split by function:
    distribution/index
    pll/index
    oscillator/index
+   reset/index

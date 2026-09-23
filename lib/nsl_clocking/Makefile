@@ -4,3 +4,4 @@ packages += intradomain
 packages += pll
 packages += distribution
 packages += oscillator
+packages += reset

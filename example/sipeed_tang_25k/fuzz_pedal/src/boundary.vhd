@@ -3,8 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_amba, nsl_audio, nsl_clocking, nsl_color, nsl_data, nsl_digilent,
-  nsl_hwdep, nsl_i2s, nsl_icesugar, nsl_indication, nsl_logic, nsl_math,
+library nsl_amba, nsl_audio, nsl_clocking, nsl_color, nsl_data, nsl_digilent, nsl_i2s, nsl_icesugar, nsl_indication, nsl_logic, nsl_math,
   nsl_sipeed, nsl_uart, nsl_usb, nsl_video;
 use nsl_audio.effect.all;
 use nsl_logic.bool.all;
@@ -607,7 +606,7 @@ begin
       clock_o => clock_s
       );
 
-  roc_gen: nsl_hwdep.reset.reset_at_startup
+  roc_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => internal_reset_n_s

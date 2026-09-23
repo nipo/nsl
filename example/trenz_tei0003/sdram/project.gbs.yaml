@@ -12,7 +12,7 @@ root:
     - nsl_clocking.async
     - nsl_clocking.distribution
     - nsl_clocking.pll
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_io.io
     - nsl_amba.axi4_mm
     - nsl_amba.mm_traffic

@@ -3,7 +3,6 @@ name: tang_console_60k_usb2
 root:
   name: top
   deps:
-    - nsl_hwdep.reset
     - nsl_clocking.async
     - nsl_clocking.pll
     - nsl_clocking.distribution

@@ -55,7 +55,7 @@ begin
       clock_o => clock_int
       );
 
-  reset_gen: nsl_hwdep.reset.reset_at_startup
+  reset_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_int,
       reset_n_o => reset_n_int

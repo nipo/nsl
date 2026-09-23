@@ -5,7 +5,7 @@ root:
   deps:
     - nsl_clocking.pll
     - nsl_clocking.distribution
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
     - nsl_ext_ram.ddr3_io
     - nsl_ext_ram.dfi
     - nsl_ext_ram.part

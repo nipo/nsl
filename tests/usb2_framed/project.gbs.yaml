@@ -3,7 +3,6 @@ name: usb2_framed
 root:
   name: top
   deps:
-    - nsl_hwdep.reset
     - nsl_clocking.async
     - nsl_memory.fifo
     - nsl_usb.testing

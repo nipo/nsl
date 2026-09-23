@@ -11,7 +11,7 @@ root:
     - nsl_color.rgb
     - nsl_clocking.distribution
     - nsl_clocking.async
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
   sources:
     - file_type: vhdl
       files:

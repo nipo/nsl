@@ -23,7 +23,7 @@ root:
     - nsl_digilent.pmod
     - nsl_clocking.distribution
     - nsl_clocking.async
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
   sources:
     - file_type: vhdl
       files:

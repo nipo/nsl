@@ -33,7 +33,7 @@ root:
     - nsl_clocking.pll
     - nsl_usb.hid_host
     - nsl_usb.io
-    - nsl_hwdep.reset
+    - nsl_clocking.reset
   sources:
     - file_type: vhdl
       files:

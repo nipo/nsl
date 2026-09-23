@@ -2,7 +2,7 @@ library ieee, nsl_video;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_io, nsl_i2c, work, nsl_digilent, nsl_sipeed;
+library nsl_clocking, nsl_io, nsl_i2c, work, nsl_digilent, nsl_sipeed;
 use nsl_digilent.pmod.all;
 
 entity boundary is
@@ -43,7 +43,7 @@ begin
       clock_o => clock_s
       );
 
-  roc_gen: nsl_hwdep.reset.reset_at_startup
+  roc_gen: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => clock_s,
       reset_n_o => internal_reset_n_s

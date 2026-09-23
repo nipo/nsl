@@ -110,7 +110,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_hwdep, nsl_io, nsl_uart, work;
+library nsl_clocking, nsl_io, nsl_uart, work;
 use nsl_clocking.pll.all;
 
 -- Which arrangements of clocks a GW5A pin will carry at once, and what
@@ -326,7 +326,7 @@ begin
       clock_o => board_clock_s
       );
 
-  startup: nsl_hwdep.reset.reset_at_startup
+  startup: nsl_clocking.reset.reset_at_startup
     port map(
       clock_i => board_clock_s,
       reset_n_o => pll_reset_n_s
