@@ -1,0 +1,24 @@
+name: pll_solve_cyclone10lp
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.pll
+    - nsl_simulation.control
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: altera
+      target_part: 10CL025YU256C8G
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

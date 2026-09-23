@@ -506,6 +506,9 @@ projects:
   - name: pll_solve
     path: pll_solve
     tags: [ghdl, simulation]
+  - name: pll_solve_cyclone10lp
+    path: pll_solve_cyclone10lp
+    tags: [ghdl, simulation]
   - name: pll_solve_ecp5
     path: pll_solve_ecp5
     tags: [ghdl, simulation]
