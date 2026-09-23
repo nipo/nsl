@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep, nsl_bnoc, nsl_spi, nsl_io;
+library nsl_usb, nsl_memory, nsl_clocking, nsl_ice40, nsl_bnoc, nsl_spi, nsl_io;
 
 entity main is
   port (
@@ -216,19 +216,19 @@ begin
 
   sb: if true
   generate
-    g_driver: nsl_hwdep.ice40.ice40_opendrain_io_driver
+    g_driver: nsl_ice40.io.ice40_opendrain_io_driver
       port map(
         v_i.drain_n => online_n,
         io_io => led_g_o
         );
 
-    r_driver: nsl_hwdep.ice40.ice40_opendrain_io_driver
+    r_driver: nsl_ice40.io.ice40_opendrain_io_driver
       port map(
         v_i.drain_n => blinker_r,
         io_io => led_r_o
         );
 
-    b_driver: nsl_hwdep.ice40.ice40_opendrain_io_driver
+    b_driver: nsl_ice40.io.ice40_opendrain_io_driver
       port map(
         v_i.drain_n => blinker_b,
         io_io => led_b_o

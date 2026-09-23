@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 library nsl_io;
 
-package ice40 is
+package io is
 
   component ice40_opendrain_io_driver is
     port(
@@ -14,4 +14,4 @@ package ice40 is
       );
     end component;
 
-end package ice40;
+end package io;
