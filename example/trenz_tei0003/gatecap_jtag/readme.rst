@@ -26,8 +26,8 @@ Building
 
   gbs -C example/trenz_tei0003/gatecap_jtag project build
 
-3035 logic elements of 24624, 2435 registers.  Timing closes with
-40.3 ns of setup slack in the TCK domain and 70.1 ns on the
+3042 logic elements of 24624, 2435 registers.  Timing closes with
+39.8 ns of setup slack in the TCK domain and 69.8 ns on the
 oscillator, both at 83.3 ns.
 
 The top level carries four ports named ``altera_reserved_tck``,
