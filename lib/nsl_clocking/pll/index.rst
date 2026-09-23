@@ -57,6 +57,7 @@ and other parameters.
 Supported backends include:
 
 * Gowin (GW1N / GW2A),
+* Intel Cyclone 10 LP,
 * Lattice iCE40,
 * Lattice MachXO2,
 * Xilinx Series6 and Series7,
@@ -183,6 +184,12 @@ this way is the one `pll_multi` implements.
   fractional divisor on output 0, phase shift on every output),
   GW1N/GW2A parts map on the rPLL/PLL blocks (single output, no
   phase shift).
+
+* Intel Cyclone 10 LP, on the ALTPLL megafunction: five outputs off
+  the post-scale counters, no phase shift.  The solver settles the
+  ratio of each output to the reference and proves a counter
+  assignment for it exists; Quartus picks the counters that realize
+  the ratio, which need not be the ones the mapping names.
 
 * Lattice ECP5, on EHXPLLL with CLKOP reserved for feedback: three
   user outputs on the CLKOS/CLKOS2/CLKOS3 dividers. Phase offsets

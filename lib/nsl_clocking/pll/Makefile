@@ -62,3 +62,13 @@ vhdl-sources += pll_multi_ecp5.vhd
 vhdl-sources += pll_basic.vhd
 deps += nsl_data.text
 endif
+
+ifneq ($(filter altera,$(hwdep)),)
+ifneq ($(filter 10CL%,$(target_part)),)
+vhdl-sources += pll_backend.pkg.vhd
+vhdl-sources += pll_backend_cyclone10lp.vhd
+vhdl-sources += pll_multi_cyclone10lp.vhd
+vhdl-sources += pll_basic.vhd
+deps += nsl_data.text
+endif
+endif
