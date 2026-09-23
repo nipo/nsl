@@ -228,10 +228,14 @@ package body crc is
                       spill_order: exp_order_t;
                       byte_order : byte_order_t) return crc_params_t
   is
-    alias xp: std_ulogic_vector(0 to poly'length-1) is poly;
-    alias rxp: std_ulogic_vector(poly'length-1 downto 0) is poly;
-    alias xi: std_ulogic_vector(0 to init'length-1) is init;
-    alias rxi: std_ulogic_vector(init'length-1 downto 0) is init;
+    -- The two orders of each argument are taken as constants rather
+    -- than as aliases: init is empty by default, and Quartus rejects an
+    -- alias whose subtype has a null range.  A constant copies
+    -- position-wise, which is what the alias gave.
+    constant xp: std_ulogic_vector(0 to poly'length-1) := poly;
+    constant rxp: std_ulogic_vector(poly'length-1 downto 0) := poly;
+    constant xi: std_ulogic_vector(0 to init'length-1) := init;
+    constant rxi: std_ulogic_vector(init'length-1 downto 0) := init;
     variable order: natural;
     variable p, i: crc_word_t;
     variable so: exp_order_t;
