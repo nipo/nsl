@@ -7,6 +7,6 @@ deps += nsl_coresight.ap
 deps += nsl_coresight.dapbus
 deps += nsl_indication.activity
 deps += nsl_amba.ram
-deps += nsl_hwdep.clock
+deps += nsl_clocking.oscillator
 deps += nsl_hwdep.reset
 

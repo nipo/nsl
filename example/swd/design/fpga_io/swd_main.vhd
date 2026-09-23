@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_coresight, nsl_indication, nsl_amba;
+library nsl_clocking, nsl_hwdep, nsl_coresight, nsl_indication, nsl_amba;
 
 entity swd_main is
   generic(
@@ -29,7 +29,7 @@ architecture arch of swd_main is
 
 begin
   
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clock
       );

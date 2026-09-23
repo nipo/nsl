@@ -72,7 +72,7 @@ begin
       io_io => swdio
       );
   
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clk
       );

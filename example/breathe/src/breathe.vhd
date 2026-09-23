@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_signal_generator, nsl_math;
+library nsl_clocking, nsl_hwdep, nsl_signal_generator, nsl_math;
 
 entity top is
   port (
@@ -32,7 +32,7 @@ begin
 
   duty_cycle_compl <= (not duty_cycle) + 1;
   
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clock
       );

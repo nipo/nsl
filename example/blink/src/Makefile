@@ -16,4 +16,4 @@ endif
 endif
 endif
 endif
-deps += nsl_hwdep.clock
+deps += nsl_clocking.oscillator

@@ -290,7 +290,7 @@ begin
 
   -- An oscillator of its own, so a dead board clock still shows a
   -- loaded bitstream rather than nothing at all.
-  osc: nsl_hwdep.clock.clock_internal
+  osc: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => osc_s
       );

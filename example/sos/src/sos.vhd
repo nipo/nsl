@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_hwdep, nsl_indication;
+library nsl_clocking, nsl_hwdep, nsl_indication;
 
 entity top is
   port (
@@ -27,7 +27,7 @@ architecture arch of top is
   
 begin
 
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clock
       );

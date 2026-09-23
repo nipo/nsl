@@ -3,7 +3,7 @@ name: tang_25k_blink
 root:
   name: top
   deps:
-    - nsl_hwdep.clock
+    - nsl_clocking.oscillator
   sources:
     - file_type: vhdl
       files:

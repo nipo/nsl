@@ -1,7 +1,7 @@
 vhdl-sources += main.vhd
 vhdl-sources += main.pkg.vhd
 constraint-sources += swd.ucf
-deps += nsl_hwdep.clock
+deps += nsl_clocking.oscillator
 deps += nsl_hwdep.reset
 deps += nsl_memory.ram
 deps += nsl_io.io

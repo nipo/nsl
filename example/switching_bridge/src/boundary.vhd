@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_amba, nsl_data, nsl_hwdep, nsl_inet, nsl_logic;
+library nsl_amba, nsl_data, nsl_clocking, nsl_hwdep, nsl_inet, nsl_logic;
 use nsl_data.bytestream.all;
 use nsl_data.prbs.all;
 use nsl_inet.switching.all;
@@ -104,7 +104,7 @@ architecture arch of boundary is
 
 begin
 
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clock_s
       );

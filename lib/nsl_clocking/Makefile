@@ -3,3 +3,4 @@ packages += interdomain
 packages += intradomain
 packages += pll
 packages += distribution
+packages += oscillator

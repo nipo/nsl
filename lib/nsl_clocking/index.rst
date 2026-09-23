@@ -14,7 +14,9 @@ Clocking utilities are split by function:
 * `distribution <istribution/index>`_ for clock distribution cells such as global clock
   buffers,
 
-* `pll <oll/index>`_ for simple PLL instantiation from various vendor backends.
+* `pll <oll/index>`_ for simple PLL instantiation from various vendor backends,
+
+* `oscillator <oscillator/index>`_ for on-chip oscillators.
 
 .. toctree::
 
@@ -23,3 +25,4 @@ Clocking utilities are split by function:
    intradomain/index
    distribution/index
    pll/index
+   oscillator/index

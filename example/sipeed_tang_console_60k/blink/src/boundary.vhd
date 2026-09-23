@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_hwdep;
+library nsl_clocking;
 
 entity boundary is
   port (
@@ -18,7 +18,7 @@ architecture arch of boundary is
 
 begin
 
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clk
       );

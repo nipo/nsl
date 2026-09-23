@@ -6,7 +6,7 @@ root:
       - nsl_amba.axi4_stream
       - nsl_data.bytestream
       - nsl_data.prbs
-      - nsl_hwdep.clock
+      - nsl_clocking.oscillator
       - nsl_hwdep.reset
       - nsl_inet.mac
       - nsl_inet.ipv4
@@ -30,7 +30,7 @@ root:
       - nsl_amba.axi4_stream
       - nsl_data.bytestream
       - nsl_data.prbs
-      - nsl_hwdep.clock
+      - nsl_clocking.oscillator
       - nsl_hwdep.reset
       - nsl_inet.mac
       - nsl_inet.ipv4

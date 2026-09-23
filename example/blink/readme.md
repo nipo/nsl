@@ -91,24 +91,24 @@ following:
 * finally, there are dependencies on packages from the library:
 
   ```
-  deps += nsl_hwdep.clock
+  deps += nsl_clocking.oscillator
   ```
 
 ## Topcell implementation
 
 Breakdown of the whole VHDL implementation is unimportant, the only
 interesting part is the instantiation of the clock generator, first by
-declaring `nsl_hwdep` as a library:
+declaring `nsl_clocking` as a library:
 
 ```
-library nsl_hwdep;
+library nsl_clocking;
 ```
 
 Then instantiating the relevant component from the library by its
 fully qualified name:
 
 ```
-  clk_gen: nsl_hwdep.clock.clock_internal
+  clk_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clk
       );

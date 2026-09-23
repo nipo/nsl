@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-package clock is
+package oscillator is
 
   -- Internal clock generation. Frequency is device-specific and may not be
   -- precise at all.
@@ -12,4 +12,4 @@ package clock is
       );
   end component;
 
-end package clock;
+end package oscillator;

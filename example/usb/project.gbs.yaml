@@ -3,7 +3,7 @@ name: usb_spartan6
 root:
   name: top
   deps:
-    - nsl_hwdep.clock
+    - nsl_clocking.oscillator
     - nsl_hwdep.uid
     - nsl_hwdep.reset
     - nsl_clocking.async

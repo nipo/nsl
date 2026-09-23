@@ -50,7 +50,7 @@ architecture arch of main is
 
 begin
 
-  clock_gen: nsl_hwdep.clock.clock_internal
+  clock_gen: nsl_clocking.oscillator.clock_internal
     port map(
       clock_o => clock_int
       );
