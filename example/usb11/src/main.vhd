@@ -83,7 +83,7 @@ begin
 
   reset_merged_n <= not button_i;
 
-  gb16: nsl_hwdep.clock.clock_buffer
+  gb16: nsl_clocking.distribution.clock_buffer
     port map(
       clock_i => clk16_i,
       clock_o => external_clock

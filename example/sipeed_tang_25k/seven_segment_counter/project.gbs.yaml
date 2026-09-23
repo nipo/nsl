@@ -3,7 +3,6 @@ name: tang_25k_seven_segment_counter
 root:
   name: top
   deps:
-    - nsl_hwdep.clock
     - nsl_hwdep.reset
     - nsl_sipeed.pmod_dtx2
     - nsl_sipeed.pmod_8xled

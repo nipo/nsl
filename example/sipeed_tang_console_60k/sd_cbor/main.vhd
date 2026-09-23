@@ -90,7 +90,7 @@ architecture arch of main is
 
 begin
 
-  clock_ext_buffer: nsl_hwdep.clock.clock_buffer
+  clock_ext_buffer: nsl_clocking.distribution.clock_buffer
     port map(
       clock_i => clk_i,
       clock_o => clock_ext_s

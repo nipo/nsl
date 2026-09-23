@@ -1,7 +1,6 @@
 vhdl-sources += clock.pkg.vhd
 
 ifneq ($(filter xc%,$(target_part)),)
-vhdl-sources += clock_buffer_xilinx.vhd
 ifneq ($(filter xc6slx%,$(target_part)),)
 vhdl-sources += clock_internal_spartan6.vhd
 endif
@@ -29,7 +28,6 @@ endif
 
 ifneq ($(filter lattice-machxo2,$(hwdep)),)
 vhdl-sources += clock_internal_mxo2.vhd
-vhdl-sources += clock_buffer_machxo2.vhd
 deps += machxo2.components
 endif
 
@@ -41,16 +39,13 @@ endif
 
 ifneq ($(filter lattice-ice40,$(hwdep)),)
 vhdl-sources += clock_internal_ice40.vhd
-vhdl-sources += clock_buffer_ice40.vhd
 deps += sb_ice.components
 endif
 
 ifneq ($(filter lattice-ecp5,$(hwdep)),)
 ifeq ($(compiler),yosys)
-vhdl-sources += clock_buffer_ecp5_yosys.vhd
 vhdl-sources += clock_internal_ecp5_yosys.vhd
 else
-vhdl-sources += clock_buffer_ecp5.vhd
 vhdl-sources += clock_internal_ecp5.vhd
 endif
 deps += sb_ice.components

@@ -12,13 +12,4 @@ package clock is
       );
   end component;
 
-  -- Clock buffer abstraction. This got superseded by
-  -- nsl_clocking.distribution
-  component clock_buffer is
-    port(
-      clock_i      : in std_ulogic;
-      clock_o      : out std_ulogic
-      );
-  end component;
-
 end package clock;

@@ -24,7 +24,6 @@ root:
     - nsl_clocking.distribution
     - nsl_clocking.async
     - nsl_hwdep.reset
-    - nsl_hwdep.clock
   sources:
     - file_type: vhdl
       files:

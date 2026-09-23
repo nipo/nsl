@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep, nsl_bnoc, nsl_spi, nsl_io, nsl_indication;
+library nsl_usb, nsl_memory, nsl_clocking, nsl_bnoc, nsl_spi, nsl_io, nsl_indication;
 
 entity main is
   port (
@@ -48,7 +48,7 @@ begin
 
   reset_merged_n_s <= s_n_i(1);
 
-  clock_ext_buffer: nsl_hwdep.clock.clock_buffer
+  clock_ext_buffer: nsl_clocking.distribution.clock_buffer
     port map(
       clock_i => clk_i,
       clock_o => clock_ext_s

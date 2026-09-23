@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_usb, nsl_hwdep;
+library nsl_usb, nsl_clocking;
 use nsl_usb.ulpi.all;
 
 entity ulpi8_line_driver is
@@ -48,7 +48,7 @@ begin
   data_io <= std_logic_vector(bus_i.data) when dir_i = '0' and last_dir = '0' else (others => 'Z');
   bus_o.data <= std_ulogic_vector(data_io) when dir_i = '1' and last_dir = '1' else (others => '-');
 
-  clock_buffer_inst: nsl_hwdep.clock.clock_buffer
+  clock_buffer_inst: nsl_clocking.distribution.clock_buffer
     port map(
       clock_i => clock_i,
       clock_o => bus_o.clock

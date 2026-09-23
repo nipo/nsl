@@ -16,7 +16,6 @@ root:
     - nsl_video.terminal
     - nsl_indication.font_6x8
     - nsl_indication.font_4x6
-    - nsl_hwdep.clock
     - nsl_hwdep.reset
     - nsl_io.io
     - nsl_io.clock

@@ -12,7 +12,6 @@ deps += nsl_dvi.transceiver
 deps += nsl_video.pattern
 deps += nsl_hdmi.audio
 deps += nsl_hdmi.encoder
-deps += nsl_hwdep.clock
 deps += nsl_hwdep.reset
 deps += nsl_i2c.i2c
 deps += nsl_io.io
