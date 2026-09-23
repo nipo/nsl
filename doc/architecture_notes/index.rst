@@ -14,6 +14,8 @@ on.
 
 Notes available:
 
+* ``altera/`` -- Cyclone 10 LP, which is Cyclone IV E silicon.
+
 * ``gowin/`` -- Arora V (GW5A), with GW1N/GW2A where they differ.
 
 Xilinx and Lattice notes are not written yet.
