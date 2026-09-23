@@ -1,0 +1,64 @@
+# Rack of the CYC1000's serial gatecap bench.
+#
+# The transport is the FT2232H's second channel, which the board wires
+# into the fabric as a plain two-wire UART.  It rides the board
+# oscillator, which is also the only clock this design has: there is no
+# PLL here, so the 12 MHz pin clocks the transport, the instruments and
+# the user logic alike.
+name: tei0003_uart.tei0003_uart_core
+
+communication:
+  mode: serial_hdlc
+  # The transport takes its bit period from the clock it rides, so the
+  # domain that states a frequency is the one to ride.  Naming the
+  # measurer's reference here also keeps the whole design on one clock.
+  clock: rates.ref
+
+instruments:
+  # The next rung on this board is a PLL, and this is the instrument
+  # that will say whether it came up at the rate it was asked for.  For
+  # now it watches the oscillator against itself: the answer is known
+  # in advance, which is what makes it a check that the block, the
+  # transport and the clock are all running.
+  rates: !clock-measurer
+    reference: ref
+    frequency: 12_000_000
+    clocks: [board]
+    # Headroom for the clocks a PLL will make on this board.
+    max_rate: 200_000_000
+
+  panel: !control-status
+    clock: clock
+
+    control:
+      # Written by the host and read straight back through the status
+      # word below, so a round trip crosses the register file rather
+      # than turning around in the host or on the wire.
+      scratch:
+        width: 32
+      # Secondary sanity light: LED1 to LED7.  LED8 is not on the
+      # panel, it is the counter's own heartbeat, so the board says
+      # whether it is clocked before any host has talked to it.
+      led:
+        width: 7
+
+    status:
+      # The control word above, as the fabric holds it.
+      scratch_back:
+        width: 32
+      # Free running off the 12 MHz pin.  A readback that does not move
+      # says the design is not clocked, whatever else answers.
+      ticks:
+        width: 32
+      button: 1
+
+    # Wired to one another in the fabric, so a strobe the host sends
+    # comes back as a count the host reads.  The panel would carry
+    # neither otherwise, and a control/status instrument with no tick
+    # at all hands Quartus a zero-length array generic, which it
+    # refuses (see the readme).
+    tick-out:
+      - [ ping ]
+
+    tick-in:
+      - [ ping_count ]

@@ -1,0 +1,44 @@
+name: tei0003_gatecap_uart
+
+repositories:
+  # The gatecap gateware library, and the rack this design describes.
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
+  - path: description.yaml
+    loader: gatecap-description
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_hwdep.reset
+    - gatecap_generated.tei0003_uart
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: quartus-pin-assignment
+      files:
+        - pins.tcl
+    - file_type: quartus-sdc
+      files:
+        - clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: 10CL025YU256C8G
+    backend_config:
+      gbs.builtin.quartus:
+        tool: quartus-prime
+    outputs:
+      - type: bitstream
+        path: gatecap_uart.sof
+      - type: quartus-rbf
+        path: gatecap_uart.rbf
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html
