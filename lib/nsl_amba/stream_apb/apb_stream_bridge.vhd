@@ -97,12 +97,15 @@ architecture rtl of apb_stream_bridge is
   -- a register.  Bits beyond the field's top are left out.
   function byte_set(field : unsigned; idx : natural; b : byte) return unsigned
   is
-    variable ret : unsigned(field'length-1 downto 0) := field;
+    constant src : unsigned(field'length-1 downto 0) := field;
+    variable ret : unsigned(field'length-1 downto 0);
   begin
     for i in ret'range
     loop
       if i / 8 = idx then
         ret(i) := b(i mod 8);
+      else
+        ret(i) := src(i);
       end if;
     end loop;
     return ret;
