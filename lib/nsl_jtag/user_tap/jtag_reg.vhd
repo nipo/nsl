@@ -2,8 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep;
-use nsl_hwdep.jtag.jtag_tap_register;
+library nsl_jtag;
+use nsl_jtag.user_tap.jtag_tap_register;
 
 entity jtag_reg is
   generic(
@@ -32,7 +32,7 @@ architecture beh of jtag_reg is
   
 begin
 
-  tap : nsl_hwdep.jtag.jtag_tap_register
+  tap : nsl_jtag.user_tap.jtag_tap_register
     generic map(
       id_c => id_c
       )

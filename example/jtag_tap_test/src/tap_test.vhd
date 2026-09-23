@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep;
+library nsl_jtag;
 
 entity tap_test is
   port (
@@ -56,7 +56,7 @@ begin
 
   tdo_s <= r.shreg(0);
   
-  inst: nsl_hwdep.jtag.jtag_user_tap
+  inst: nsl_jtag.user_tap.jtag_user_tap
     port map(
       chip_tck_i => chip_tck_i,
       chip_tdi_i => chip_tdi_i,

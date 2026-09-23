@@ -30,7 +30,7 @@ package continuous_transport is
 
   -- TAP-side slave: terminates the protocol against a custom DR (selected by
   -- reg_id_c) and exposes a system-clock framed byte interface in each
-  -- direction. Binds to the on-chip TAP through nsl_hwdep.jtag.jtag_tap_register.
+  -- direction. Binds to the on-chip TAP through nsl_jtag.user_tap.jtag_tap_register.
   component continuous_transport_slave is
     generic(
       reg_id_c         : natural range 1 to 4;

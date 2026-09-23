@@ -1,5 +1,6 @@
 packages += jtag
 packages += tap
+packages += user_tap
 packages += ate
 packages += transactor
 packages += cbor_transactor

@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_math, nsl_clocking;
+library nsl_jtag, nsl_math, nsl_clocking;
 
 entity jtag_inbound_fifo is
   generic(
@@ -33,7 +33,7 @@ begin
   jtag_reset_n_o <= jtag_reset_n;
   jtag_dout(jtag_dout'left downto 1) <= (others => '0');
   
-  reg : nsl_hwdep.jtag.jtag_reg
+  reg : nsl_jtag.user_tap.jtag_reg
     generic map(
       width_c => jtag_din'length,
       id_c => id_c

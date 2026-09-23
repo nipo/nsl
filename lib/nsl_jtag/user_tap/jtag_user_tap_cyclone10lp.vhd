@@ -10,8 +10,7 @@ library nsl_clocking;
 -- update and run-test/idle with "IR is a user instruction", but has
 -- no capture strobe and no USER0 select.  Both are derived here from
 -- a TAP state machine and an IR shadow tracking the hard TAP, which
--- then are the only source for every output.  The tracker is local:
--- nsl_jtag.tap depends on this library through its transports.
+-- then are the only source for every output.
 --
 -- The atom's tck/tms/tdi/tdo must reach top-level ports named
 -- altera_reserved_tck/tms/tdi/tdo.  Instantiating it inserts no SLD

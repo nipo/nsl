@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_clocking, nsl_memory, nsl_logic;
+library nsl_jtag, nsl_clocking, nsl_memory, nsl_logic;
 
 entity jtag_fifo_transport_slave_tap is
   generic(
@@ -70,7 +70,7 @@ architecture beh of jtag_fifo_transport_slave_tap is
 
 begin
 
-  inst: nsl_hwdep.jtag.jtag_user_tap
+  inst: nsl_jtag.user_tap.jtag_user_tap
     generic map(
       user_port_count_c => reg_count_c
       )

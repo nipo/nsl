@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_hwdep, nsl_memory, nsl_clocking, nsl_bnoc, nsl_data;
+library nsl_jtag, nsl_memory, nsl_clocking, nsl_bnoc, nsl_data;
 use nsl_data.bytestream.all;
 use nsl_bnoc.chunked_link.all;
 use nsl_jtag.continuous_transport.all;
@@ -76,7 +76,7 @@ architecture beh of continuous_transport_slave is
 
 begin
 
-  tap: nsl_hwdep.jtag.jtag_tap_register
+  tap: nsl_jtag.user_tap.jtag_tap_register
     generic map(
       id_c => reg_id_c
       )

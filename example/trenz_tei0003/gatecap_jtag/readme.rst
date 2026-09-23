@@ -10,7 +10,7 @@ configured through: no UART, and no fabric clock on the host side of
 the link.
 
 The transport sits on the USER0 chain through
-``nsl_hwdep.jtag.jtag_user_tap``, which on this family instantiates
+``nsl_jtag.user_tap.jtag_user_tap``, which on this family instantiates
 the ``cyclone10lp_jtag`` atom.  The 12 MHz oscillator on ``CLK12M``
 clocks the system side of the transport, the instruments and the user
 logic; TCK only clocks the transport's TAP side.

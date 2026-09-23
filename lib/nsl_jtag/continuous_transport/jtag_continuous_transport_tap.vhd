@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_jtag, nsl_data, nsl_bnoc, nsl_hwdep, nsl_clocking, nsl_memory;
+library nsl_jtag, nsl_data, nsl_bnoc, nsl_clocking, nsl_memory;
 use nsl_data.bytestream.all;
 use nsl_bnoc.chunked_link.all;
 use nsl_jtag.continuous_transport.all;
@@ -50,7 +50,7 @@ begin
   tx_fillness_s <= to_unsigned(tx_fifo_fill_s, tx_fillness_s'length);
   reset_n_o <= not tlr_s;
 
-  inst: nsl_hwdep.jtag.jtag_user_tap
+  inst: nsl_jtag.user_tap.jtag_user_tap
     generic map(
       user_port_count_c => 1
       )

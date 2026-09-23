@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-package jtag is
+package user_tap is
 
   component jtag_user_tap
     generic(
@@ -60,4 +60,4 @@ package jtag is
       );
   end component;
   
-end package jtag;
+end package user_tap;

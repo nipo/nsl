@@ -1,4 +1,4 @@
-vhdl-sources += jtag.pkg.vhd
+vhdl-sources += user_tap.pkg.vhd
 vhdl-sources += jtag_reg.vhd
 
 ifneq ($(filter xc%,$(target_part)),)

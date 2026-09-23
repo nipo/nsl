@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_hwdep, nsl_clocking, nsl_memory;
+library nsl_jtag, nsl_clocking, nsl_memory;
 
 entity jtag_fifo_transport_slave is
   generic(
@@ -75,7 +75,7 @@ begin
       data_o => reset_n_o
       );
 
-  shreg: nsl_hwdep.jtag.jtag_reg
+  shreg: nsl_jtag.user_tap.jtag_reg
     generic map(
       width_c => shreg_t'length,
       id_c => data_reg_no_c
@@ -200,7 +200,7 @@ begin
     out_available_uns <= to_unsigned(out_available, out_available_uns'length);
     data <= std_ulogic_vector(in_free_uns & out_available_uns);
 
-    status_reg: nsl_hwdep.jtag.jtag_reg
+    status_reg: nsl_jtag.user_tap.jtag_reg
       generic map(
         width_c => data'length,
         id_c => status_reg_no_c
