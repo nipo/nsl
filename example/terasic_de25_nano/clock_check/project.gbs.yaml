@@ -1,0 +1,47 @@
+name: de25_nano_clock_check
+
+repositories:
+  - path: ../../../../gatecap/gateware/lib/repository.gbs.yaml
+    loader: yaml
+  - path: description.yaml
+    loader: gatecap-description
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.async
+    - nsl_clocking.distribution
+    - nsl_clocking.pll
+    - nsl_clocking.oscillator
+    - nsl_clocking.reset
+    - nsl_io.ddr
+    - nsl_io.io
+    - gatecap_generated.de25_nano_clock_check
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: quartus-pin-assignment
+      files:
+        - pins.tcl
+    - file_type: quartus-sdc
+      files:
+        - clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: A5EB013BB23BE4SCS
+    backend_config:
+      gbs.builtin.quartus:
+        tool: quartus-pro:25.3.1
+    outputs:
+      - type: bitstream
+        path: clock_check.sof
+      - type: quartus-rbf
+        path: clock_check.rbf
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html
