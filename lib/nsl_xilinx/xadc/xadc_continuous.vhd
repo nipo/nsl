@@ -2,11 +2,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_io, nsl_hwdep, nsl_data;
+library nsl_math, nsl_io, nsl_xilinx, nsl_data;
 use nsl_math.fixed.all;
 use nsl_data.text.all;
 use nsl_io.diff.all;
-use nsl_hwdep.xadc.all;
+use nsl_xilinx.xadc.all;
 
 entity xadc_continuous is
   generic(

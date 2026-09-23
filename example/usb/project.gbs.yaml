@@ -4,7 +4,7 @@ root:
   name: top
   deps:
     - nsl_clocking.oscillator
-    - nsl_hwdep.uid
+    - nsl_xilinx.uid
     - nsl_clocking.reset
     - nsl_clocking.async
     - nsl_memory.fifo

@@ -2,9 +2,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_math, nsl_io, nsl_hwdep, nsl_logic;
+library nsl_math, nsl_io, nsl_xilinx, nsl_logic;
 use nsl_math.fixed.all;
-use nsl_hwdep.xadc.all;
+use nsl_xilinx.xadc.all;
 use nsl_logic.bool.all;
 
 entity xadc_wrapper is

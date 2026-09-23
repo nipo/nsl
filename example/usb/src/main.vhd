@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep;
+library nsl_usb, nsl_memory, nsl_clocking, nsl_xilinx;
 
 entity main is
   port (
@@ -132,7 +132,7 @@ begin
       tx_o.ready => tx_ready
       );
 
-  uid: nsl_hwdep.uid.uid32_reader
+  uid: nsl_xilinx.uid.uid32_reader
     port map(
       clock_i => ulpi.phy2link.clock,
       reset_n_i => reset_n,
