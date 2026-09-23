@@ -61,8 +61,11 @@ package continuous_transport is
     generic(
       tx_fifo_depth_c : natural := 256;
       rx_fifo_depth_c : natural := 256;
-      -- Identity of the chain, as nsl_jtag.user_tap states it.
-      node_type_c : natural range 0 to 255 := 0;
+      -- Identity of the chain, as nsl_jtag.user_tap states it: an NSL
+      -- continuous transport unless a user stacking something on it
+      -- names the whole in its own space.
+      node_vendor_c : natural range 0 to 2047 := 16#5ff#;
+      node_type_c : natural range 0 to 255 := 16#01#;
       node_version_c : natural range 0 to 15 := 0
       );
     port(

@@ -11,8 +11,8 @@ use ieee.std_logic_1164.all;
 -- a port with one USER1 scan and then shifts its DR under USER0 like
 -- any other user chain.
 --
--- The node reports manufacturer 0x5ff with node_type_c and
--- node_version_c to hub enumeration, as user_tap's package states.
+-- The node reports node_vendor_c, node_type_c and node_version_c to
+-- hub enumeration, as user_tap's package states.
 --
 -- There is no hard TAP to reach here: the hub connects itself to the
 -- part's JTAG, so the chip_* ports are unused.  run_o is the TAP's
@@ -20,6 +20,7 @@ use ieee.std_logic_1164.all;
 entity jtag_user_tap is
   generic(
     user_port_count_c : integer := 1;
+    node_vendor_c : natural range 0 to 2047 := 16#5ff#;
     node_type_c : natural range 0 to 255 := 0;
     node_version_c : natural range 0 to 15 := 0
     );
@@ -93,7 +94,7 @@ begin
 
   inst: sld_virtual_jtag_basic
     generic map(
-      sld_mfg_id => 16#5ff#,
+      sld_mfg_id => node_vendor_c,
       sld_type_id => node_type_c,
       sld_version => node_version_c,
       sld_auto_instance_index => "YES",

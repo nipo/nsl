@@ -3,20 +3,26 @@ use ieee.std_logic_1164.all;
 
 package user_tap is
 
-  -- node_type_c and node_version_c name what the user chains carry,
-  -- for backends that let a host discover it.  On Altera parts, the
-  -- chains are a virtual JTAG node whose identity word the SLD hub
-  -- reports: manufacturer, type and version, laid out like the fields
-  -- of a JTAG IDCODE.  NSL nodes take manufacturer 0x5ff, JEP106 bank
-  -- 11 and code 0x7f, a code JEP106 never assigns in any bank, and
-  -- type 0 states nothing.  Other backends have nowhere to put an
-  -- identity and ignore both.
+  -- node_vendor_c, node_type_c and node_version_c name what the user
+  -- chains carry, for backends that let a host discover it.  On Altera
+  -- parts, the chains are a virtual JTAG node whose identity word the
+  -- SLD hub reports: manufacturer, type and version, laid out like the
+  -- fields of a JTAG IDCODE.  Other backends have nowhere to put an
+  -- identity and ignore all three.
   --
-  -- Types assigned:
-  -- 0x01: nsl_jtag.continuous_transport carrying a gatecap rack.
+  -- The manufacturer is an 11-bit JEP106 code, continuation count over
+  -- identification code.  NSL's is 0x5ff, bank 11 and code 0x7f, a
+  -- code JEP106 never assigns in any bank.  A user owning another such
+  -- space passes its own, and a type only means something within its
+  -- manufacturer's space.
+  --
+  -- NSL types:
+  -- 0x00: nothing stated.
+  -- 0x01: nsl_jtag.continuous_transport, carrying framed bytes.
   component jtag_user_tap
     generic(
       user_port_count_c : integer := 1;
+      node_vendor_c : natural range 0 to 2047 := 16#5ff#;
       node_type_c : natural range 0 to 255 := 0;
       node_version_c : natural range 0 to 15 := 0
       );

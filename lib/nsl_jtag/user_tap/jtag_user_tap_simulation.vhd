@@ -6,6 +6,7 @@ library nsl_simulation;
 entity jtag_user_tap is
   generic(
     user_port_count_c : integer := 1;
+    node_vendor_c : natural range 0 to 2047 := 16#5ff#;
     node_type_c : natural range 0 to 255 := 0;
     node_version_c : natural range 0 to 15 := 0
     );

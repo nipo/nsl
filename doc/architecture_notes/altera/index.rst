@@ -400,12 +400,15 @@ continuation count over identification code: Intel's own nodes report
 type and 5-bit version take the part number and revision places.
 ``sld_virtual_jtag_basic`` takes all four fields as generics.
 
-NSL nodes report manufacturer ``0x5FF``: bank 11, code ``0x7F``.  JEP106
-never assigns ``0x7F`` in any bank, since that value marks a
-continuation, so no vendor's node can collide with it.  The type then
-names what the node carries, as ``nsl_jtag.user_tap``'s package
-assigns it; ``0x01`` is a continuous transport carrying a gatecap
-rack, set by gatecap's JTAG adapter.
+NSL nodes report manufacturer ``0x5FF`` by default: bank 11, code
+``0x7F``.  JEP106 never assigns ``0x7F`` in any bank, since that value
+marks a continuation, so no vendor's node can collide with it.  The
+type then names what the node carries, as ``nsl_jtag.user_tap``'s
+package assigns it; ``nsl_jtag.continuous_transport`` reports ``0x01``,
+a framed transport whatever it carries.  A user stacking something on
+it can name the whole in a space of its own: gatecap's JTAG adapter
+reports manufacturer ``0x6FF``, bank 13 and code ``0x7F``, with type
+``0x01`` for a continuous transport carrying a rack.
 
 acrobe's ``component/altera/sld_hub.py`` enumerates the hub under an
 ``sld`` child of the TAP and looks each node up by that identity, as
