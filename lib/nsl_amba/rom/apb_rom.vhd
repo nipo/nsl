@@ -6,7 +6,7 @@ library nsl_amba, nsl_data, nsl_memory, nsl_math;
 use nsl_amba.apb.all;
 use nsl_data.bytestream.all;
 use nsl_data.endian.all;
-use nsl_memory.rom.rom_implementation_t;
+use nsl_memory.rom.all;
 
 entity apb_rom is
   generic (

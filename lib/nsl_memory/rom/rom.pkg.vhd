@@ -6,6 +6,9 @@ library nsl_data;
 
 package rom is
 
+  -- Users of this type import the whole package rather than the type
+  -- alone: Quartus does not make a type's enumeration literals visible
+  -- through a use clause naming the type, as VHDL 10.4 has it.
   type rom_implementation_t is (
     ROM_BLOCK,
     ROM_DISTRIBUTED,

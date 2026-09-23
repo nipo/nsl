@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library nsl_amba, nsl_data, nsl_memory;
-use nsl_memory.rom.rom_implementation_t;
+use nsl_memory.rom.all;
 
 package rom is
 
