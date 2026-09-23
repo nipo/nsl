@@ -41,6 +41,9 @@ ifneq ($(filter A5E%,$(target_part)),)
 vhdl-sources += ddr_input_altera_10nm.vhd
 vhdl-sources += ddr_output_altera_10nm.vhd
 endif
+ifneq ($(filter 10CL%,$(target_part)),)
+vhdl-sources += ddr_output_cyclone10lp.vhd
+endif
 endif
 
 deps += nsl_io.diff
