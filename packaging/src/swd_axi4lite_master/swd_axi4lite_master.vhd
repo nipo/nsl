@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_coresight, nsl_amba, nsl_clocking, nsl_hwdep;
+library nsl_coresight, nsl_amba, nsl_clocking;
 
 entity swd_axi4lite_master is
   generic(

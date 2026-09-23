@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_mii, nsl_clocking, nsl_smi, work, nsl_hwdep, nsl_io, nsl_bnoc;
+library nsl_mii, nsl_clocking, nsl_smi, work, nsl_io, nsl_bnoc;
 
 entity fpga_io is
   port(

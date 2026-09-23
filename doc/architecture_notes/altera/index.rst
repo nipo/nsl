@@ -260,7 +260,7 @@ Internal oscillator
 **The ``cyclone10lp_oscillator`` atom is usable from the fabric.**
 It is the oscillator the part runs active serial configuration from;
 ``oscena`` held high keeps it running after configuration, and
-``nsl_hwdep.clock``'s ``clock_internal`` backend does exactly that.
+``nsl_clocking.oscillator``'s ``clock_internal`` backend does exactly that.
 
 **It runs faster than Quartus believes.**  The timing model caps the
 atom at about 46 MHz through its minimum pulse width, while a 10CL025
@@ -287,7 +287,7 @@ atom hands the pad signals back as ``tckutap``, ``tmsutap`` and
 ``usr1user`` telling the two apart.  There is no capture strobe and no
 USER0 select, so a register that must load a value before it shifts
 out needs fabric that tracks the TAP state and the IR.
-``nsl_hwdep.jtag``'s backend does exactly that and uses none of the
+``nsl_jtag.user_tap``'s backend does exactly that and uses none of the
 qualified outputs.
 
 **``tdouser`` is launched on the falling edge of TCK.**  The atom
@@ -338,7 +338,7 @@ and a USB bridge's modem lines, that is most of the package.  Set it
 to ``AS INPUT TRI-STATED`` in the project's pin assignments.
 
 **Quartus honours a VHDL signal's initial value as its power-up
-state.**  ``nsl_hwdep.reset``'s ``reset_at_startup_generic`` falls
+state.**  ``nsl_clocking.reset``'s ``reset_at_startup_generic`` falls
 through for this hwdep and works: its shift register starts at zero,
 converges on the alternating pattern it watches for, and releases the
 design.  Measured on a CYC1000.

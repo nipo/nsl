@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_usb, nsl_memory, nsl_clocking, nsl_hwdep, nsl_bnoc;
+library nsl_usb, nsl_memory, nsl_clocking, nsl_bnoc;
 use nsl_usb.utmi.all;
 
 entity dut is
