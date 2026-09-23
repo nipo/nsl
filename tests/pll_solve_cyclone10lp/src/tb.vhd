@@ -32,6 +32,9 @@ begin
       and t.vco_khz_min = 300_000 and t.vco_khz_max = 1_300_000
       report "Bad frequency windows"
       severity failure;
+    assert t.out_khz_max = 402_500
+      report "Bad output ceiling for the -C8 grade of this part"
+      severity failure;
     assert t.output(4).divisor.ranges(0) = (min => 1, max => 512, step => 1)
       and t.output(4).divisor.frac_l2_den = 0
       report "Bad output divisor constraint"
@@ -106,8 +109,9 @@ begin
       report "Unexpected settings at the window edges"
       severity failure;
 
-    -- One VCO step above the ceiling, with C at one, is out of
-    -- reach
+    -- A rate above the oscillator ceiling is out of reach whatever
+    -- the counters, and on this grade the output ceiling turns it
+    -- away even before the search
 
     cfg := pll_config(12_000_000, pll_output(1_308_000_000));
     m := nsl_clocking.pll_backend.pll_solve(cfg);
@@ -144,6 +148,35 @@ begin
       and m.output(0).divisor = (num => 500, den => 1)
       and m.output(0).exact
       report "Unexpected settings at the bottom of the VCO window"
+      severity failure;
+
+    -- The output ceiling is a limit of the clock network rather than
+    -- of the oscillator: 450 MHz sits well inside the VCO window,
+    -- reachable as 900 MHz over two, and is still refused on a -C8
+    -- part.
+
+    cfg := pll_config(12_000_000, pll_output(450_000_000));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert not m.valid
+      report "Rate above the output ceiling mapped"
+      severity failure;
+
+    -- Just under it, the same chain of counters serves
+
+    cfg := pll_config(12_000_000, pll_output(400_000_000));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert m.valid
+      report "Rate below the output ceiling rejected"
+      severity failure;
+    assert m.refdiv = 1 and m.fbdiv = (num => 100, den => 1)
+      and m.vco_khz = 1_200_000
+      and m.output(0).divisor = (num => 3, den => 1)
+      and m.output(0).exact
+      report "Unexpected settings under the output ceiling"
       severity failure;
 
     -- ALTPLL rounds a phase shift to the eighth of a VCO period

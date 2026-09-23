@@ -1,6 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library nsl_hwconfig;
+use nsl_hwconfig.cyclone10lp_config.all;
+
 use work.pll.all;
 
 package body pll_backend is
@@ -82,10 +85,14 @@ package body pll_backend is
   -- the one Quartus names "Nominal VCO frequency" in the PLL Summary
   -- of its compilation report, alongside the K it settled on.
   --
-  -- Output rate has an upper bound too -- 402.5 MHz to a global
-  -- clock on the -C8 grade, 472.5 MHz on -C6 -- which
-  -- pll_topology_t has no field for and which is therefore left to
-  -- the vendor to catch.
+  -- The same table states an output ceiling, and that is the one
+  -- figure there which moves with the speed grade, so it comes from
+  -- nsl_hwconfig rather than from here.  It bounds the rate onto a
+  -- global clock network, the only destination this abstraction
+  -- models; driving a pin instead would allow 472.5 MHz whatever the
+  -- grade.
+  constant cyclone10lp_constraints_c : pll_constraints := pll_constraints_get;
+
   constant cyclone10lp_topology_c : pll_topology_t := (
     refdiv => pll_divisor(pll_range(1, 512)),
     fbdiv => pll_divisor(pll_range(1, 512)),
@@ -94,6 +101,7 @@ package body pll_backend is
     pfd_khz_max => 325_000,
     vco_khz_min => 300_000,
     vco_khz_max => 1_300_000,
+    out_khz_max => cyclone10lp_constraints_c.out_max / 1000,
     output_count => 5,
     output => (0 to 4 => cyclone10lp_output_c,
                others => cyclone10lp_output_none_c));

@@ -159,8 +159,8 @@ Under the hood, `pll_multi` is realized by an elaboration-time solver
 working from a description of the vendor PLL block:
 
 * `pll_topology_t` describes what the block can do: legal divisor
-  values for every stage, PFD and VCO frequency windows, per-output
-  features,
+  values for every stage, PFD and VCO frequency windows, the ceiling
+  on the rate an output carries, per-output features,
 
 * `mapping_solve()` searches divisor settings satisfying both the
   topology and the config, and returns a `pll_mapping_t` holding the

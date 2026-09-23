@@ -70,5 +70,6 @@ vhdl-sources += pll_backend_cyclone10lp.vhd
 vhdl-sources += pll_multi_cyclone10lp.vhd
 vhdl-sources += pll_basic.vhd
 deps += nsl_data.text
+deps += nsl_hwconfig.cyclone10lp_config
 endif
 endif

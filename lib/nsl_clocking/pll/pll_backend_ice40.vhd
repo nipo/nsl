@@ -69,6 +69,9 @@ package body pll_backend is
     pfd_khz_max => 133_000,
     vco_khz_min => 533_000,
     vco_khz_max => 1_066_000,
+    -- No output ceiling stated: an output is bounded by the VCO
+    -- window and its own divider alone.
+    out_khz_max => 0,
     output_count => 1,
     output => (0 => (divisor => pll_divisor(pll_range(2, 2),
                                             pll_range(4, 4),

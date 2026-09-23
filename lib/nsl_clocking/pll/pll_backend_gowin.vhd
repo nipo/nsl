@@ -124,6 +124,9 @@ package body pll_backend is
     ret.pfd_khz_max := integer(pll_pfd_fmax / 1.0e3);
     ret.vco_khz_min := integer(pll_vco_fmin / 1.0e3);
     ret.vco_khz_max := integer(pll_vco_fmax / 1.0e3);
+    -- nsl_hwconfig states no output ceiling for these parts, so an
+    -- output is bounded by the VCO window and its own divider alone.
+    ret.out_khz_max := 0;
     ret.output := (others => (divisor => pll_divisor_unity_c,
                               phase_den => 0,
                               phase_step_max => 0,

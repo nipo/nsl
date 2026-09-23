@@ -37,7 +37,8 @@ use nsl_data.text.all;
 --
 -- - pll_topology_t describes what a vendor PLL block can do: legal
 --   divisor values for every stage, PFD and VCO frequency windows,
---   per-output features.  Backends expose a factory returning it,
+--   the ceiling on the rate an output carries, per-output features.
+--   Backends expose a factory returning it,
 --
 -- - pll_config_t describes what the user wants: input rate, output
 --   rates and per-output allowances,
@@ -162,6 +163,12 @@ package pll is
   --
   -- Frequency windows are in kHz: VCO rates above 2.1 GHz exist and
   -- do not fit a 32-bit natural in Hz.
+  --
+  -- out_khz_max is the fastest rate the block carries out of an
+  -- output, a limit of the routing and of the counter rather than of
+  -- the oscillator, and one that usually moves with the speed grade.
+  -- 0 states no limit, which leaves an output bounded by the VCO
+  -- window and its divisor alone.
   type pll_topology_t is
   record
     refdiv: pll_divisor_constraint_t;
@@ -171,6 +178,7 @@ package pll is
     pfd_khz_max: natural;
     vco_khz_min: natural;
     vco_khz_max: natural;
+    out_khz_max: natural;
     output_count: natural range 0 to pll_output_max_c;
     output: pll_output_topology_vector;
   end record;
@@ -995,6 +1003,24 @@ package body pll is
       vco_khz => 0,
       output_count => config.output_count,
       output => (others => output_mapping_none_c));
+
+    -- A rate over the block's output ceiling is out of reach whatever
+    -- the divisor chain: the search below would happily land on it,
+    -- so it is turned away here, with a word about why.
+    if topology.out_khz_max /= 0 then
+      for i in 0 to pll_output_max_c - 1 loop
+        if i < config.output_count
+          and real(config.output(i).hz)
+            > real(topology.out_khz_max) * 1000.0 then
+          report "PLL output " & to_string(i)
+            & " asks for " & to_string(config.output(i).hz / 1000)
+            & "kHz, over the " & to_string(topology.out_khz_max)
+            & "kHz this block carries out of an output"
+            severity warning;
+          return best;
+        end if;
+      end loop;
+    end if;
 
     rd_ranges: for rri in 0 to pll_range_max_c - 1 loop
       if rri >= topology.refdiv.range_count then
