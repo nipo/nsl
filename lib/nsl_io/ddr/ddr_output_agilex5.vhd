@@ -11,7 +11,9 @@ entity ddr_output is
     );
 end entity;
 
-architecture alteran_tennm of ddr_output is
+-- The GPIO IP drives datainlo with the word that leaves first, so
+-- d_i(0) goes there.  areset is active low, sreset active high.
+architecture agilex5 of ddr_output is
 
   component tennm_ph2_ddio_out is
     generic(
@@ -20,7 +22,7 @@ architecture alteran_tennm of ddr_output is
       sclr_ena  : string := "SCLR_ENA_NONE"
       );
     port(
-      areset   : in  std_logic := '0';
+      areset   : in  std_logic := '1';
       sreset   : in  std_logic := '0';
       ena      : in  std_logic := '1';
       clk      : in  std_logic;
@@ -29,28 +31,6 @@ architecture alteran_tennm of ddr_output is
       dataout  : out std_logic
       );
   end component;
-
-  -- component tennm_ph2_io_obuf is
-  --   generic(
-  --     open_drain              : string := "OPEN_DRAIN_OFF";
-  --     buffer_usage            : string := "REGULAR";
-  --     dynamic_pull_up_enabled : string := "FALSE";
-  --     equalization            : string := "EQUALIZATION_OFF";
-  --     io_standard             : string := "IO_STANDARD_IOSTD_OFF";
-  --     rzq_id                  : string := "RZQ_ID_RZQ0";
-  --     slew_rate               : string := "SLEW_RATE_SLOW";
-  --     termination             : string := "TERMINATION_SERIES_OFF";
-  --     toggle_speed            : string := "TOGGLE_SPEED_SLOW";
-  --     usage_mode              : string := "USAGE_MODE_GPIO"
-  --     );
-  --   port(
-  --     i  : in  std_logic;
-  --     oe : in  std_logic := '1';
-  --     o  : out std_logic
-  --     );
-  -- end component;
-
-  signal ddio_out_s : std_logic;
 
 begin
 
@@ -64,17 +44,10 @@ begin
       clk      => clock_i.p,
       datainlo => d_i(0),
       datainhi => d_i(1),
-      dataout  => dd_o, -- ddio_out_s,
-      areset   => '0',
+      dataout  => dd_o,
+      areset   => '1',
       sreset   => '0',
       ena      => '1'
       );
-
-  -- obuf: tennm_ph2_io_obuf
-  --   port map(
-  --     i  => ddio_out_s,
-  --     oe => '1',
-  --     o  => dd_o
-  --     );
 
 end architecture;

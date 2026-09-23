@@ -14,7 +14,7 @@ entity ddr_input is
     );
 end entity;
 
-architecture alteran_tennm of ddr_input is
+architecture agilex5 of ddr_input is
 
   signal clock_s: nsl_io.diff.diff_pair;
 
