@@ -277,34 +277,32 @@ so constrain it lower and keep the fabric paths well inside 12.5 ns.
 User JTAG
 =========
 
-**The user chains hang off the ``cyclone10lp_jtag`` device atom.**
-It is the Xilinx ``BSCANE2`` of this family, and instantiating it
-inserts no SLD hub -- which also means SignalTap and anything else on
-virtual JTAG is gone from that design.  Its ``tck``, ``tms``, ``tdi``
-and ``tdo`` must reach top-level ports named ``altera_reserved_tck``,
-``_tms``, ``_tdi`` and ``_tdo``; Quartus places those on the dedicated
-JTAG pads itself and they need no location assignment.
+**``nsl_jtag.user_tap`` reaches the user chains through the SLD hub**,
+as one virtual JTAG node, the same way it does on Agilex 5; the hub,
+its protocol and the node identity are described under that family
+below.  Quartus Standard inserts the hub and its ``altera_reserved_*``
+ports itself, and constrains ``altera_reserved_tck`` at 10 MHz before
+the project's own SDC is read, so a ``create_clock`` on that port is
+ignored with ``Warning (332049)``; the project's SDC only puts that
+clock in an asynchronous group.
 
-**The IR is 10 bits; USER0 is ``0x00C`` and USER1 ``0x00E``.**  The
-atom hands the pad signals back as ``tckutap``, ``tmsutap`` and
-``tdiutap``, and offers ``shiftuser``, ``updateuser`` and
-``runidleuser`` qualified by "IR is USER0 or USER1", with
-``usr1user`` telling the two apart.  There is no capture strobe and no
-USER0 select, so a register that must load a value before it shifts
-out needs fabric that tracks the TAP state and the IR.
-``nsl_jtag.user_tap``'s backend does exactly that and uses none of the
-qualified outputs.
-
-**``tdouser`` is launched on the falling edge of TCK.**  The atom
-routes it to the TDO pad while a user IR is selected, and the host
-samples on the rising edge.
-
-**TCK is a clock like any other.**  ``create_clock`` on
-``altera_reserved_tck`` and an asynchronous group against the fabric
-clock is all the timing analyser needs; the pads themselves stay
-unconstrained.  On a CYC1000 at 12 MHz the TCK domain closes with 40 ns
-of setup slack, and gatecap's JTAG transport enumerates, round-trips
-panel registers and survives a reconfiguration over the same TAP.
+**The ``cyclone10lp_jtag`` device atom is the other way in.**  It is
+the Xilinx ``BSCANE2`` of this family: instantiating it inserts no SLD
+hub, which also takes SignalTap and anything else on virtual JTAG out
+of that design.  Its ``tck``, ``tms``, ``tdi`` and ``tdo`` must reach
+top-level ports named ``altera_reserved_tck``, ``_tms``, ``_tdi`` and
+``_tdo``, which Quartus places on the dedicated JTAG pads.  The IR is
+10 bits, USER0 ``0x00C`` and USER1 ``0x00E``.  The atom hands the pad
+signals back as ``tckutap``, ``tmsutap`` and ``tdiutap`` and offers
+``shiftuser``, ``updateuser`` and ``runidleuser`` qualified by "IR is
+USER0 or USER1", with ``usr1user`` telling the two apart, but no
+capture strobe and no USER0 select: a register that loads before it
+shifts needs fabric tracking the TAP state and the IR.  ``tdouser`` is
+launched on the falling edge of TCK.  Measured on a CYC1000, a user
+tap on that atom carries gatecap's JTAG transport at 12 MHz with 40 ns
+of setup slack in the TCK domain.  NSL uses the hub instead, which
+works the same on every Altera family and lets the host discover what
+a design carries.
 
 External memory
 ===============
@@ -395,11 +393,33 @@ word per node (instance, manufacturer, type, version).  On a design
 carrying one node with a one-bit IR the hub reports a 4-bit IR, so
 its virtual IR is 5 bits.
 
-The node ties its identity to the one vendor tools know as virtual
-JTAG, manufacturer 110 and type 8.  acrobe's
-``component/altera/sld_hub.py`` enumerates the hub and selects the
-node before every USER0 shift, so no selection state has to survive
-between two host operations.
+**A node word is a JTAG IDCODE in all but its bit positions.**  Its
+11-bit manufacturer is a JEP106 code packed as an IDCODE packs it,
+continuation count over identification code: Intel's own nodes report
+110, which is bank 0, code ``0x6E``, Altera's JEP106 code.  The 8-bit
+type and 5-bit version take the part number and revision places.
+``sld_virtual_jtag_basic`` takes all four fields as generics.
+
+NSL nodes report manufacturer ``0x5FF``: bank 11, code ``0x7F``.  JEP106
+never assigns ``0x7F`` in any bank, since that value marks a
+continuation, so no vendor's node can collide with it.  The type then
+names what the node carries, as ``nsl_jtag.user_tap``'s package
+assigns it; ``0x01`` is a continuous transport carrying a gatecap
+rack, set by gatecap's JTAG adapter.
+
+acrobe's ``component/altera/sld_hub.py`` enumerates the hub under an
+``sld`` child of the TAP and looks each node up by that identity, as
+it looks TAPs up by IDCODE, so a design's rack is found without
+naming its transport::
+
+  $ acrobe info enumerate -r ub3-/jtag/chain/0/sld
+  Node tree:
+    sld
+      continuous_transport0
+        (gatecap)
+
+The host selects a node before every USER0 shift, so no selection
+state has to survive between two host operations.
 
 **Quartus adds an ``altera_reserved_tck`` port with the hub**, though
 the design declares no JTAG port at all.  TCK is constrained on it
