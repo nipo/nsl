@@ -254,6 +254,38 @@ PLL, so Quartus times the crossing rather than ignoring it, and on a
 the two rates make are 4.16 ns apart, which is what the crossing gets
 whatever the 83 ns period suggests.
 
+User JTAG
+=========
+
+**The user chains hang off the ``cyclone10lp_jtag`` device atom.**
+It is the Xilinx ``BSCANE2`` of this family, and instantiating it
+inserts no SLD hub -- which also means SignalTap and anything else on
+virtual JTAG is gone from that design.  Its ``tck``, ``tms``, ``tdi``
+and ``tdo`` must reach top-level ports named ``altera_reserved_tck``,
+``_tms``, ``_tdi`` and ``_tdo``; Quartus places those on the dedicated
+JTAG pads itself and they need no location assignment.
+
+**The IR is 10 bits; USER0 is ``0x00C`` and USER1 ``0x00E``.**  The
+atom hands the pad signals back as ``tckutap``, ``tmsutap`` and
+``tdiutap``, and offers ``shiftuser``, ``updateuser`` and
+``runidleuser`` qualified by "IR is USER0 or USER1", with
+``usr1user`` telling the two apart.  There is no capture strobe and no
+USER0 select, so a register that must load a value before it shifts
+out needs fabric that tracks the TAP state and the IR.
+``nsl_hwdep.jtag``'s backend does exactly that and uses none of the
+qualified outputs.
+
+**``tdouser`` is launched on the falling edge of TCK.**  The atom
+routes it to the TDO pad while a user IR is selected, and the host
+samples on the rising edge.
+
+**TCK is a clock like any other.**  ``create_clock`` on
+``altera_reserved_tck`` and an asynchronous group against the fabric
+clock is all the timing analyser needs; the pads themselves stay
+unconstrained.  On a CYC1000 at 12 MHz the TCK domain closes with 40 ns
+of setup slack, and gatecap's JTAG transport enumerates, round-trips
+panel registers and survives a reconfiguration over the same TAP.
+
 External memory
 ===============
 
