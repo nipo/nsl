@@ -8,9 +8,11 @@ It needs nothing from the board beyond the JTAG the part is
 configured through, and no fabric clock on the host side of the link.
 
 The transport sits behind Quartus's SLD hub, as the virtual JTAG node
-``nsl_jtag.user_tap.jtag_user_tap`` instantiates on this family.  The
-host selects the node with a USER1 scan and then runs the transport
-under USER0.  The 50 MHz oscillator on ``CLOCK1_50`` clocks the
+``nsl_jtag.user_tap.jtag_user_tap`` instantiates on Altera parts.  The
+node reports NSL's manufacturer and the type of a continuous transport
+carrying gatecap, so acrobe finds it by enumerating the hub: no path
+component names the transport by hand.  The host selects the node
+with a USER1 scan and then runs the transport under USER0.  The 50 MHz oscillator on ``CLOCK1_50`` clocks the
 system side of the transport, the instruments and the user logic;
 TCK only clocks the transport's TAP side.
 
@@ -35,7 +37,15 @@ Programming and talking to it
 ::
 
   acrobe chip -r ub3-/jtag/chain/0 program gatecap_jtag.rbf
+  acrobe info enumerate -r ub3-/jtag/chain/0/sld
   PYTHONPATH=$HOME/projects/gatecap/host acrobe run panel.py
+
+::
+
+  Node tree:
+    sld
+      continuous_transport0
+        (gatecap)
 
 ::
 
