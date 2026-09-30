@@ -1,3 +1,5 @@
+ifeq ($(hwdep),xilinx)
+
 ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += xc7_config.pkg.vhd
 
@@ -12,4 +14,14 @@ endif
 deps += nsl_math.arith
 deps += nsl_data.text
 deps += nsl_logic.bool
+endif
+
+ifneq ($(filter zynqusp%,$(family)),)
+vhdl-sources += xc7_config.pkg.vhd # FIXME
+vhdl-sources += xc7_config_artix7_3.vhd # FIXME: add ZynqUSP config
+deps += nsl_math.arith
+deps += nsl_data.text
+deps += nsl_logic.bool
+endif
+
 endif
