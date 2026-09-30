@@ -68,6 +68,9 @@ projects:
   - name: amba_axi4_stream_async_packet_drop_fifo_pkt_gen
     path: amba/axi4_stream_async_packet_drop_fifo_pkt_gen
     tags: [ghdl, simulation]
+  - name: amba_axi4_mm_logger
+    path: amba/axi4_mm_logger
+    tags: [ghdl, simulation]
   - name: amba_axi4_mm_on_stream
     path: amba/axi4_mm_on_stream
     tags: [ghdl, simulation]
