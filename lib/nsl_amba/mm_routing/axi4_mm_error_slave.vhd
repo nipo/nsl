@@ -6,11 +6,11 @@ library nsl_amba, nsl_data;
 use nsl_amba.axi4_mm.all;
 use nsl_data.bytestream.all;
 
--- Error slave that responds with DECERR to all transactions.
--- Used for unmapped address ranges in the interconnect.
+-- Error slave that responds with resp_c to all transactions.
 entity axi4_mm_error_slave is
   generic(
-    config_c : config_t
+    config_c : config_t;
+    resp_c : resp_enum_t := RESP_DECERR
     );
   port(
     clock_i : in std_ulogic;
@@ -132,7 +132,7 @@ begin
       when ST_W_RESP =>
         axi_o.b <= write_response(config_c,
                                   id => r.w_id,
-                                  resp => RESP_DECERR,
+                                  resp => resp_c,
                                   valid => true);
     end case;
 
@@ -148,7 +148,7 @@ begin
         axi_o.r <= read_data(config_c,
                              id => r.r_id,
                              bytes => null_byte_string,
-                             resp => RESP_DECERR,
+                             resp => resp_c,
                              last => config_c.len_width = 0 or r.r_len_m1 = 0,
                              valid => true);
     end case;

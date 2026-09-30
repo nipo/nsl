@@ -7,11 +7,13 @@ library work;
 -- AXI4-MM routing components for building interconnect fabrics.
 package mm_routing is
 
-  -- Error slave that responds with DECERR to all transactions.
-  -- Useful for handling unmapped address ranges.
+  -- Error slave that responds with resp_c (DECERR by default) to all
+  -- transactions.  Useful for handling unmapped address ranges, or
+  -- standing for a device that faults every access (SLVERR).
   component axi4_mm_error_slave is
     generic(
-      config_c : work.axi4_mm.config_t
+      config_c : work.axi4_mm.config_t;
+      resp_c : work.axi4_mm.resp_enum_t := work.axi4_mm.RESP_DECERR
       );
     port(
       clock_i : in std_ulogic;
