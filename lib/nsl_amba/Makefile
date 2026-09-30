@@ -18,6 +18,7 @@ packages += axi_apb
 packages += dma_request
 packages += stream_traffic
 packages += mm_traffic
+packages += mm_logger
 packages += stream_to_udp
 packages += stream_to_tcp
 packages += stream_meta
