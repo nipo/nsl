@@ -1,0 +1,34 @@
+name: arty_z7_ps7_axi_check
+
+root:
+  name: top
+  deps:
+    - nsl_xilinx.ps7
+    - nsl_amba.axi4_mm
+    - nsl_amba.apb
+    - nsl_amba.axi_apb
+    - nsl_amba.mm_traffic
+    - nsl_amba.ram
+    - nsl_clocking.distribution
+    - nsl_clocking.reset
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - ../pinout/clk125.xdc
+        - ../pinout/leds.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xc7z020clg400-1
+    outputs:
+      - type: bitstream
+        path: ps7_axi_check.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt

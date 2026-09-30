@@ -6,3 +6,4 @@ endif
 
 packages += uid
 packages += icap
+packages += ps7
