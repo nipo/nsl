@@ -7,5 +7,13 @@ endif
 endif
 
 ifeq ($(hwdep),xilinx)
+
+ifneq ($(filter artix7%,$(family)),)
 vhdl-sources += target_gtpe2.vhd
+endif
+
+ifneq ($(filter zynqusp%,$(family)),)
+vhdl-sources += target_gthe4.vhd
+endif
+
 endif
