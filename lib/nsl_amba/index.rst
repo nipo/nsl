@@ -34,6 +34,7 @@ Detailed description
    apb_routing/index
    axi_apb/index
    mm_fifo/index
+   mm_logger/index
    ram/index
    stream_endpoint/index
    stream_fifo/index
