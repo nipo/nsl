@@ -41,6 +41,7 @@ architecture beh of jtag_continuous_transport_tap is
 
   signal tlr_s, rti_s, update_s, capture_s, shift_s, tdi_s,
     tck_s, tdo_s, selected_s: std_ulogic;
+  signal core_update_s, core_capture_s, core_shift_s : std_ulogic;
   signal reset_n_s, merged_reset_n_s : std_ulogic;
 
   signal rx_fifo_free_s : integer range 0 to rx_fifo_depth_c;
@@ -80,6 +81,13 @@ begin
       tck_o => tck_s
       );
   
+  -- The TAP controller walks the DR states whatever the instruction,
+  -- and so do its strobes: only a shift through our register belongs
+  -- to the transport.
+  core_capture_s <= capture_s and selected_s;
+  core_shift_s <= shift_s and selected_s;
+  core_update_s <= update_s and selected_s;
+
   merged_reset_n_s <= (not tlr_s) and reset_n_i;
   reset_sync: nsl_clocking.async.async_edge
     port map(
@@ -93,9 +101,9 @@ begin
     clock_i   => tck_s,
     reset_n_i => "not"(tlr_s),
 
-    shift_i   => shift_s,
-    capture_i => capture_s,
-    update_i  => update_s,
+    shift_i   => core_shift_s,
+    capture_i => core_capture_s,
+    update_i  => core_update_s,
     tdi_i     => tdi_s,
     tdo_o     => tdo_s,
 
