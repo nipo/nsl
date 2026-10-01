@@ -16,7 +16,6 @@ package sgmii is
   type sgmii_m2p is record
     data_m2p_symbol : nsl_line_coding.ibm_8b10b.data_t;
     align_rst       : std_ulogic;
-    sys_reset_n     : std_ulogic;
     valid_symbol    : std_ulogic;
   end record;
 

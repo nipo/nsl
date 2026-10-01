@@ -57,11 +57,10 @@ begin  -- architecture beh
   -- Signal assignments
   -- Outputs
   sgmii_o.align_rst    <= s_align_rst;
-  sgmii_o.sys_reset_n  <= s_loss_connect_rst_n;
   sgmii_o.valid_symbol <= s_valid_symbol;
 
   -- Valid symbol
-  s_valid_symbol <= s_symbol_expected and not(sgmii_i.code_err) and not(sgmii_i.disparity_err);
+  s_valid_symbol <= not(sgmii_i.code_err) and not(sgmii_i.disparity_err);
 
   -- Link up
   link_up_o <= s_link_up;
@@ -69,28 +68,17 @@ begin  -- architecture beh
   -- Restart autonegotiation on loss of connection -----------------------------------------
   s_autoneg_restart <= not(sgmii_i.align_ready);
 
-  sys_rst : process (clock_i, reset_n_i) is
-  begin
-    if reset_n_i = '0' then
-      s_loss_connect_rst_n <= '0';
-    elsif rising_edge(clock_i) then     -- rising clock edge
-      if (s_link_up = '1') and (s_valid_symbol = '0') then
-        s_loss_connect_rst_n <= '0';
-      else
-        s_loss_connect_rst_n <= reset_n_i;
-      end if;
-    end if;
-  end process;
-
   align_rst : process (clock_i, reset_n_i) is
   begin
     if reset_n_i = '0' then
       s_align_rst <= '1';
-    elsif rising_edge(clock_i) then     -- rising clock edge
+    end if;
+    
+    if rising_edge(clock_i) then     -- rising clock edge
       if (sgmii_i.align_ready = '1') and (s_valid_symbol = '0') then
         s_align_rst <= '1';
       else
-        s_align_rst <= not(reset_n_i);
+        s_align_rst <= '0';
       end if;
     end if;
   end process;
@@ -100,7 +88,7 @@ begin  -- architecture beh
   sgmii_pcs_rx_1 : work.sgmii.sgmii_pcs_rx
     port map (
       clock_i           => clock_i,
-      reset_n_i         => s_loss_connect_rst_n,
+      reset_n_i         => reset_n_i,
       symbol_i          => sgmii_i.data_p2m_symbol,
       symbol_expected_o => s_symbol_expected,
       flit_o            => s_rx_flit,
@@ -113,7 +101,7 @@ begin  -- architecture beh
   rx_to_committed : work.flit.mii_flit_to_committed
     port map(
       clock_i   => clock_i,
-      reset_n_i => s_loss_connect_rst_n,
+      reset_n_i => reset_n_i,
 
       flit_i  => s_rx_flit,
       valid_i => s_rx_valid_2_commit,
@@ -127,7 +115,7 @@ begin  -- architecture beh
   sgmii_pcs_tx_1 : work.sgmii.sgmii_pcs_tx
     port map (
       clock_i       => clock_i,
-      reset_n_i     => s_loss_connect_rst_n,
+      reset_n_i     => reset_n_i,
       flit_i        => s_tx_flit,
       symbol_o      => sgmii_o.data_m2p_symbol,
       send_config_i => s_tx_send_config,
@@ -141,7 +129,7 @@ begin  -- architecture beh
       )
     port map(
       clock_i   => clock_i,
-      reset_n_i => s_loss_connect_rst_n,
+      reset_n_i => reset_n_i,
 
       committed_i => tx_i,
       committed_o => tx_o,
@@ -156,7 +144,7 @@ begin  -- architecture beh
       link_timer_cycles_c => link_timer_c)
     port map (
       clock_i           => clock_i,
-      reset_n_i         => s_loss_connect_rst_n,
+      reset_n_i         => reset_n_i,
       config_i          => "0000000000100000",  -- See IEEE 802.3 clause 37
                                                 -- Full Duplex only, no pause,
                                                 -- no next page
