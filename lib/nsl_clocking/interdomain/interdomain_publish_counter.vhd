@@ -8,7 +8,8 @@ entity interdomain_publish_counter is
   generic(
     data_width_c : integer;
     cycle_count_c : natural := 2;
-    decode_stage_count_c : natural := 1
+    decode_stage_count_c : natural := 1;
+    output_is_gray_c : boolean := false
     );
   port(
     reset_n_i : in std_ulogic;
@@ -69,7 +70,7 @@ begin
       data_width_c => data_width_c,
       decode_stage_count_c => decode_stage_count_c,
       input_is_gray_c => false,
-      output_is_gray_c => false
+      output_is_gray_c => output_is_gray_c
       )
     port map(
       clock_in_i => clock_in_i,

@@ -78,7 +78,10 @@ package interdomain is
     generic(
       data_width_c : integer;
       cycle_count_c : natural := 2;
-      decode_stage_count_c : natural := 1
+      decode_stage_count_c : natural := 1;
+      -- Hands data_o out gray-coded, decode_stage_count_c is then
+      -- unused.
+      output_is_gray_c : boolean := false
       );
     port(
       -- Input domain reset
