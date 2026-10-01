@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_clocking, nsl_logic, nsl_math, nsl_memory;
+library nsl_clocking, nsl_logic, nsl_math, nsl_memory, nsl_synthesis;
 use nsl_logic.bool.all;
 
 entity fifo_homogeneous is
@@ -244,6 +244,21 @@ architecture ram2 of fifo_homogeneous is
   signal streamer_reset_n_s: std_ulogic;
 
 begin
+
+  assert word_count_c > 2
+    report "fifo_homogeneous needs a word_count_c above 2, use "
+      & "fifo_register_slice or fifo_auto for one or two words"
+    severity failure;
+
+  depth_check: nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c => "fifo_homogeneous needs a word_count_c above 2, use "
+      & "fifo_register_slice or fifo_auto for one or two words",
+      condition_c => word_count_c > 2
+      )
+    port map(
+      unused_i => '0'
+      );
 
   assert is_synchronous_c or is_pow2_c
     report "Bisynchronous fifos can only work for power-of-two depths"

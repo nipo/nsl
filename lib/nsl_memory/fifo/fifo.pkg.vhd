@@ -138,6 +138,11 @@ package fifo is
   -- New code should use fifo_auto, which falls back to this one only
   -- for what cheaper blocks cannot do.
   --
+  -- word_count_c must be above 2, elaboration fails otherwise. For one
+  -- or two words, fifo_register_slice is the fifo to use
+  -- (nsl_clocking.interdomain.interdomain_fifo_slice across clocks),
+  -- fifo_auto picks it.
+  --
   -- Either side may be made cancellable through its *_cancellable_c
   -- generic. A cancellable side hands its beats over speculatively:
   -- the peer only gets to see them, and the fifo only gets to reuse

@@ -53,7 +53,8 @@ Generic fifo component
 The general-purpose fifo of NSL is `fifo_homogeneous`_. It may have
 one or two ports depending on the `clock_count_c`` generic.  Data
 width is homogeneous between input and output ports.  Optionally, one
-may add a fifo slice at input and/or output port.
+may add a fifo slice at input and/or output port. It needs more than
+2 words: a register slice is the fifo for one or two.
 
 Fifo counters giving count of free positions (on write side) and
 available words (on read side) are available.  These counters are
