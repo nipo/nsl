@@ -8,7 +8,7 @@ use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
 use nsl_transceiver.lane.all;
-use nsl_transceiver.transceiver_config_gtpe2.all;
+use nsl_transceiver.transceiver_config_gthe4.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -615,13 +615,8 @@ begin
       -- FIXME: debug
       lane_rx_clock_o(lane_idx) <= s_txusrclk2_buff;
 
+      -- FIXME: Add an MMCM for more flexibility?
       mmcm_gen : if data_width_ratio_c /= 1 generate
-
-        constant input_hz_c        : natural := config_c.lanes(lane_idx).line_rate_mbps * 50000;
-        constant input_period_ns_c : real    := 1.0e9 / real(input_hz_c);
-        constant output_hz_c       : natural := input_hz_c * data_width_ratio_c;
-
-        constant p : params := pll_params_calc(input_hz_c, output_hz_c, S7_MMCM);
 
         begin
 
@@ -1027,7 +1022,7 @@ begin
         RX_EYESCAN_VS_RANGE          => "00",
         RX_EYESCAN_VS_UT_SIGN        => '0',
         RX_FABINT_USRCLK_FLOP        => '0',
-        RX_INT_DATAWIDTH             => 0,  -- FIXME: modify with config
+        RX_INT_DATAWIDTH             => data_width_config_c.int_data_width,
         RX_PMA_POWER_SAVE            => '0',
         RX_PMA_RSV0                  => "0000000000000000",
         RX_PROGDIV_CFG               => 0.0,
@@ -1121,7 +1116,7 @@ begin
         TX_FABINT_USRCLK_FLOP        => '0',
         TX_FIFO_BYP_EN               => '0',
         TX_IDLE_DATA_ZERO            => '0',
-        TX_INT_DATAWIDTH             => 0,  -- FIXME: add to config
+        TX_INT_DATAWIDTH             => data_width_config_c.int_data_width,  
         TX_LOOPBACK_DRIVE_HIZ        => "FALSE",
         TX_MAINCURSOR_SEL            => '0',
         TX_MARGIN_FULL_0             => "1011111",
@@ -1200,7 +1195,7 @@ begin
         CPLLLOCKDETCLK       => '0',
         CPLLLOCKEN           => '1',
         CPLLPD               => s_pll_pd,
-        CPLLREFCLKSEL        => "001",  --FIXME make general depending on refclk_vec
+        CPLLREFCLKSEL        => cpll_refclk_set(ref_clock_c),  
         CPLLRESET            => '0',
         DMONFIFORESET        => '0',
         DMONITORCLK          => '0',

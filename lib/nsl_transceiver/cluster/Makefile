@@ -19,9 +19,8 @@ ifeq ($(hwdep),xilinx)
 
 ifneq ($(filter zynqusp%,$(family)),)
 vhdl-sources += transceiver_cluster_gthe4.vhd
-vhdl-sources += transceiver_config_gtpe2.vhd
+vhdl-sources += transceiver_config_gthe4.vhd
 deps += nsl_data.bytestream
-deps += nsl_hwconfig.xc7_config
 deps += nsl_logic.gearbox
 deps += nsl_clocking.distribution
 deps += nsl_clocking.async
