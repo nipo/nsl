@@ -34,6 +34,11 @@ entity apb_slave is
     );
 end entity;
 
+-- A read is answered from registers only: data taken from r_data_i,
+-- either at setup or during the access phase, is stored, and PREADY
+-- rises from that register on the next cycle. This keeps the user's
+-- read multiplexer out of the combinational path to the bus response.
+-- Writes are acknowledged by w_ready_i directly.
 architecture rtl of apb_slave is
 
   type regs_t is
@@ -88,9 +93,13 @@ begin
           rin.serviced_early <= false;
         end if;
       else
-        if r.serviced_early or r_valid_i = '1' then
+        if r.serviced_early then
           rin.access_phase <= false;
           rin.serviced_early <= false;
+        elsif r_valid_i = '1' then
+          rin.serviced_early <= true;
+          rin.rdata <= r_data_i;
+          rin.rerror <= r_error_i = '1';
         end if;
       end if;
     else
@@ -102,7 +111,7 @@ begin
     end if;
   end process;
 
-  mealy: process(r, apb_i, r_data_i, r_valid_i, r_error_i, w_ready_i, w_error_i) is
+  mealy: process(r, apb_i, w_ready_i, w_error_i) is
   begin
     address_o <= resize(address(config_c, apb_i, config_c.data_bus_width_l2), address_o'length);
     w_data_o <= bytes(config_c, apb_i);
@@ -121,9 +130,8 @@ begin
                                  error => r.rerror, ready => true);
           r_ready_o <= '0';
         else
-          apb_o <= read_response(config_c, bytes => r_data_i,
-                                 error => r_error_i = '1',
-                                 ready => r_valid_i = '1');
+          apb_o <= read_response(config_c, bytes => r.rdata,
+                                 error => r.rerror, ready => false);
           r_ready_o <= '1';
         end if;
       else

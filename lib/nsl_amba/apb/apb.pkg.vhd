@@ -288,6 +288,20 @@ package apb is
 
   -- APB slave abstraction. It hides all the handshake to the
   -- bus.
+  --
+  -- Address and write data are valid from the setup phase on.
+  --
+  -- A write completes on the cycle w_ready_i is seen asserted while
+  -- w_valid_o is: a write acknowledged at setup completes with no
+  -- wait state, then each cycle w_ready_i stays low adds one.
+  --
+  -- A read is taken on the cycle r_valid_i is seen asserted while
+  -- r_ready_o is, and the bus response always comes from a register:
+  -- a read answered at setup completes with no wait state, a read
+  -- answered during the access phase completes the cycle after
+  -- r_valid_i, i.e. with one wait state more than the cycles
+  -- r_valid_i stayed low. r_data_i and r_error_i are only sampled
+  -- along with r_valid_i.
   component apb_slave is
     generic (
       config_c: config_t
@@ -370,6 +384,8 @@ package apb is
       -- then.  Until then, the strobe stays asserted and reg_no_o
       -- stable, the bus transfer being held.  Left open, both are
       -- asserted: every access completes on its first strobe cycle.
+      -- A read taken after its first strobe cycle completes on the
+      -- bus one cycle after it is taken, see apb_slave.
       w_ready_i : in std_ulogic := '1';
       r_valid_i : in std_ulogic := '1';
       -- Read error: taken with r_valid_i, the read answers SLVERR.
