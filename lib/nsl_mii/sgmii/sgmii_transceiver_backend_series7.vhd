@@ -364,7 +364,7 @@ begin  -- architecture beh
       )
     port map(
       clock_i   => s_parallel_clock_buff,
-      reset_n_i => sgmii_i.sys_reset_n,
+      reset_n_i => s_parallel_reset_sync_n,
 
       delay_mark_i  => '1',
       serdes_mark_i => '1',

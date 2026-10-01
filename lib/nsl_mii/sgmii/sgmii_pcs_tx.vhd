@@ -97,7 +97,7 @@ begin
         rin.state <= ST_IDLE;
 
       when ST_F_DATA =>
-        if flit_i.valid = '1' then
+        if link_up_i = '1' and flit_i.valid = '1' then
           symbol_o <= data(flit_i.data);
           rin.state <= ST_F_DATA;
         else

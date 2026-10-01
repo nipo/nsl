@@ -214,7 +214,7 @@ begin  -- architecture beh
       implementation_c => "logic")
     port map (
       clock_i           => s_parallel_clock_buff,
-      reset_n_i         => sgmii_i.sys_reset_n,
+      reset_n_i         => s_general_reset_sync_n,
       valid_i           => '1',
       data_i            => s_ser2dec_code,
       data_o            => sgmii_o.data_p2m_symbol,
@@ -229,7 +229,7 @@ begin  -- architecture beh
       )
     port map(
       clock_i   => s_parallel_clock_buff,
-      reset_n_i => sgmii_i.sys_reset_n,
+      reset_n_i => s_general_reset_sync_n,
 
       delay_shift_o  => s_delay_shift,
       delay_mark_i   => s_delay_mark,
@@ -244,7 +244,7 @@ begin  -- architecture beh
   delayer : nsl_io.delay.input_delay_variable
     port map(
       clock_i   => s_parallel_clock_buff,
-      reset_n_i => sgmii_i.sys_reset_n,
+      reset_n_i => s_general_reset_sync_n,
       mark_o    => s_delay_mark,
       shift_i   => s_delay_shift,
       data_i    => s_data_p2m_se,
@@ -257,7 +257,7 @@ begin  -- architecture beh
     port map (
       bit_clock_i  => s_serial_clock_buff,
       word_clock_i => s_parallel_clock_buff,
-      reset_n_i    => sgmii_i.sys_reset_n,
+      reset_n_i    => s_general_reset_sync_n,
       serial_i     => s_delayed_data,
       parallel_o   => s_ser2dec_code,
       bitslip_i    => s_slip_shift,
@@ -281,7 +281,7 @@ begin  -- architecture beh
       implementation_c => "logic")
     port map (
       clock_i   => s_parallel_clock_buff,
-      reset_n_i => sgmii_i.sys_reset_n,
+      reset_n_i => s_general_reset_sync_n,
       valid_i   => '1',
       data_i    => sgmii_i.data_m2p_symbol,
       data_o    => s_enc2ser_code
@@ -293,7 +293,7 @@ begin  -- architecture beh
     port map (
       bit_clock_i  => s_serial_clock_buff,
       word_clock_i => s_parallel_clock_buff,
-      reset_n_i    => sgmii_i.sys_reset_n,
+      reset_n_i    => s_general_reset_sync_n,
       parallel_i   => s_enc2ser_code,
       serial_o     => s_data_m2p_se
       );
