@@ -1,7 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_memory, nsl_hwconfig, nsl_clocking, nsl_synthesis;
+library nsl_memory, nsl_hwconfig, nsl_clocking, nsl_synthesis, nsl_math, nsl_logic;
+use nsl_logic.bool.all;
 use nsl_memory.fifo.all;
 
 entity fifo_auto is
@@ -49,6 +50,11 @@ architecture beh of fifo_auto is
   -- Between the block and the output slice.
   signal block_out_data_s: data_t;
   signal block_out_valid_s, block_out_ready_s: std_ulogic;
+
+  -- fifo_homogeneous only crosses clocks at power-of-two depths.
+  constant homogeneous_word_count_c: positive
+    := if_else(config_c.clock_count = 1, config_c.word_count,
+               nsl_math.arith.align_up(config_c.word_count));
 
   constant depth_ok_c: boolean := config_c.word_count > 2
     or not (config_c.counters
@@ -136,12 +142,20 @@ begin
     end generate;
   end generate;
 
+  -- Counters of a fifo_homogeneous rounded up to a deeper one may go
+  -- past the ranges config_c sets for the ports, they are clamped
+  -- there. Clamped counts stay true lower bounds, and in_free_o stays
+  -- nonzero exactly when in_ready_o is asserted.
   homogeneous: if implementation_c = FIFO_IMPLEMENTATION_HOMOGENEOUS
   generate
+    signal out_available_min_s: integer range 0 to homogeneous_word_count_c;
+    signal out_available_s: integer range 0 to homogeneous_word_count_c + 1;
+    signal in_free_s: integer range 0 to homogeneous_word_count_c;
+  begin
     impl: nsl_memory.fifo.fifo_homogeneous
       generic map(
         data_width_c => config_c.data_width,
-        word_count_c => config_c.word_count,
+        word_count_c => homogeneous_word_count_c,
         clock_count_c => config_c.clock_count,
         input_slice_c => config_c.input_slice,
         output_slice_c => config_c.output_slice,
@@ -158,16 +172,30 @@ begin
         out_valid_o => out_valid_o,
         out_commit_i => out_commit_i,
         out_rollback_i => out_rollback_i,
-        out_available_min_o => out_available_min_o,
-        out_available_o => out_available_o,
+        out_available_min_o => out_available_min_s,
+        out_available_o => out_available_s,
 
         in_data_i => in_data_i,
         in_valid_i => in_valid_i,
         in_ready_o => in_ready_o,
         in_commit_i => in_commit_i,
         in_rollback_i => in_rollback_i,
-        in_free_o => in_free_o
+        in_free_o => in_free_s
         );
+
+    exact: if homogeneous_word_count_c = config_c.word_count
+    generate
+      out_available_min_o <= out_available_min_s;
+      out_available_o <= out_available_s;
+      in_free_o <= in_free_s;
+    end generate;
+
+    rounded: if homogeneous_word_count_c /= config_c.word_count
+    generate
+      out_available_min_o <= nsl_math.arith.min(out_available_min_s, config_c.word_count);
+      out_available_o <= nsl_math.arith.min(out_available_s, config_c.word_count + 1);
+      in_free_o <= nsl_math.arith.min(in_free_s, config_c.word_count);
+    end generate;
   end generate;
 
   single: if implementation_c = FIFO_IMPLEMENTATION_SHIFT_REGISTER

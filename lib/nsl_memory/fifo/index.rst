@@ -22,7 +22,9 @@ Selection rules, first matching one wins:
 
 2. two clocks, fill counters or cancellation on either side:
    `fifo_homogeneous`_, which is the only one to have them. These need
-   more than 2 words;
+   more than 2 words. Across two clocks, the depth is rounded up to the
+   next power of two, which is then the capacity; fill counters are
+   clamped to the requested depth;
 
 3. at most 16 words holding at most 16 bits in total (64 bits on a
    target without LUT RAM): `fifo_shift_register`_;

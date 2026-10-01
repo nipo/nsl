@@ -71,6 +71,14 @@ architecture arch of tb is
      FIFO_IMPLEMENTATION_REGISTER_SLICE),
     (fifo_config(data_width => 8, word_count => 4, clock_count => 2,
                  output_slice => true),
+     FIFO_IMPLEMENTATION_HOMOGENEOUS),
+    (fifo_config(data_width => 8, word_count => 3, clock_count => 2),
+     FIFO_IMPLEMENTATION_HOMOGENEOUS),
+    (fifo_config(data_width => 8, word_count => 5, clock_count => 2,
+                 counters => true),
+     FIFO_IMPLEMENTATION_HOMOGENEOUS),
+    (fifo_config(data_width => 8, word_count => 13, clock_count => 2,
+                 counters => true, register_counters => true),
      FIFO_IMPLEMENTATION_HOMOGENEOUS)
     );
 
@@ -265,7 +273,8 @@ begin
           refused_v := refused_v + 1;
         end if;
 
-        if config_c.counters then
+        -- A registered count lags the handshake by a cycle.
+        if config_c.counters and not config_c.register_counters then
           if in_ready_s = '1' then
             assert_equal(name_c, "in_free_o while ready",
                          in_free_s /= 0, true, failure);

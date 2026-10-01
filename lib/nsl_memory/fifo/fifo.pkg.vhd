@@ -93,6 +93,10 @@ package fifo is
   --   implementation (word_count of 1 or 2) holds two words with one
   --   clock, three with two, and has registered ports already: slices
   --   asked for add nothing to it;
+  --   fifo_homogeneous across two clocks takes word_count rounded up
+  --   to the next power of two, which is then its capacity, and its
+  --   counters are clamped to the port ranges: still lower bounds,
+  --   in_free_o still nonzero exactly when in_ready_o is asserted;
   --
   -- - a word is presented on the output at least one cycle after it
   --   was accepted.
