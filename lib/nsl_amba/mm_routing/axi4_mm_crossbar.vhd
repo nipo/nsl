@@ -417,9 +417,11 @@ begin
         );
   end generate;
 
-  -- R/B response merging: each master receives responses from all slave ports
-  -- Since only one slave can have valid asserted for a given master at a time
-  -- (due to ID-based routing), we can safely OR the valid signals and mux the data.
+  -- R/B response merging: each master receives responses from all slave
+  -- ports.  A master port only has reads (writes) outstanding at one
+  -- slave at a time (see axi4_mm_crossbar_master_port), so at most one
+  -- slave port asserts valid for a given master per channel, and the
+  -- valids can be ORed and the data muxed.
   response_merge: process(slave_r_data, slave_r_valid, slave_b_data, slave_b_valid,
                           master_r_ready, master_b_ready)
     variable r_valid_v : std_ulogic;
