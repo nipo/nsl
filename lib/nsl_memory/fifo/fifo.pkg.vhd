@@ -38,7 +38,8 @@ package fifo is
   type fifo_implementation_t is (
     FIFO_IMPLEMENTATION_SHIFT_REGISTER,
     FIFO_IMPLEMENTATION_LUTRAM,
-    FIFO_IMPLEMENTATION_HOMOGENEOUS
+    FIFO_IMPLEMENTATION_HOMOGENEOUS,
+    FIFO_IMPLEMENTATION_REGISTER_SLICE
     );
 
   -- Data bits (word_count * data_width) up to which fifo_auto keeps
@@ -53,20 +54,24 @@ package fifo is
   -- Implementation fifo_auto selects for a configuration on a target
   -- with given LUT RAM resources, first matching rule wins:
   --
-  -- 1. fifo_homogeneous if clock_count is 2, or if counters or
+  -- 1. register slice if word_count is at most 2 and neither counters
+  --    nor cancellation are requested: fifo_register_slice with one
+  --    clock, fifo_register_slice followed by
+  --    nsl_clocking.interdomain.interdomain_fifo_slice with two;
+  --
+  -- 2. fifo_homogeneous if clock_count is 2, or if counters or
   --    cancellation on either side are requested: no other block has
-  --    them;
+  --    them. These need word_count above 2;
   --
-  -- 2. fifo_shift_register if word_count is at most 2, or if
-  --    word_count is at most 16 and word_count * data_width is at
-  --    most fifo_auto_shift_register_bits_lutram_c (target with LUT
-  --    RAM) or fifo_auto_shift_register_bits_no_lutram_c (target
-  --    without);
+  -- 3. fifo_shift_register if word_count is at most 16 and
+  --    word_count * data_width is at most
+  --    fifo_auto_shift_register_bits_lutram_c (target with LUT RAM)
+  --    or fifo_auto_shift_register_bits_no_lutram_c (target without);
   --
-  -- 3. fifo_lutram if the target has LUT RAM with asynchronous read
+  -- 4. fifo_lutram if the target has LUT RAM with asynchronous read
   --    and word_count is at most its fifo_depth_max;
   --
-  -- 4. fifo_homogeneous otherwise, for block RAM.
+  -- 5. fifo_homogeneous otherwise, for block RAM.
   function fifo_auto_implementation(
     config: fifo_config_t;
     lutram: nsl_hwconfig.memory_config.lutram_t) return fifo_implementation_t;
@@ -84,7 +89,10 @@ package fifo is
   --   duplicated;
   --
   -- - capacity is at least word_count, exactly word_count without
-  --   slices, each slice adding up to two words;
+  --   slices, each slice adding up to two words. A register slice
+  --   implementation (word_count of 1 or 2) holds two words with one
+  --   clock, three with two, and has registered ports already: slices
+  --   asked for add nothing to it;
   --
   -- - a word is presented on the output at least one cycle after it
   --   was accepted.
@@ -97,7 +105,8 @@ package fifo is
   --
   -- Counter outputs are only meaningful when config_c.counters is set.
   -- Commit and rollback inputs are ignored on a side that is not
-  -- cancellable.
+  -- cancellable. Counters and cancellation need word_count above 2,
+  -- elaboration fails otherwise.
   component fifo_auto is
     generic(
       config_c: fifo_config_t
@@ -467,6 +476,13 @@ package body fifo is
   is
     variable shift_register_bits: natural;
   begin
+    if config.word_count <= 2
+      and not config.counters
+      and not config.in_cancellable
+      and not config.out_cancellable then
+      return FIFO_IMPLEMENTATION_REGISTER_SLICE;
+    end if;
+
     if config.clock_count /= 1
       or config.counters
       or config.in_cancellable
@@ -480,9 +496,8 @@ package body fifo is
       shift_register_bits := fifo_auto_shift_register_bits_no_lutram_c;
     end if;
 
-    if config.word_count <= 2
-      or (config.word_count <= 16
-          and config.word_count * config.data_width <= shift_register_bits) then
+    if config.word_count <= 16
+      and config.word_count * config.data_width <= shift_register_bits then
       return FIFO_IMPLEMENTATION_SHIFT_REGISTER;
     end if;
 

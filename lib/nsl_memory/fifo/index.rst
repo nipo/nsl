@@ -15,19 +15,26 @@ cost nothing.
 
 Selection rules, first matching one wins:
 
-1. two clocks, fill counters or cancellation on either side:
-   `fifo_homogeneous`_, which is the only one to have them;
+1. at most 2 words, without fill counters nor cancellation: a register
+   slice, `fifo_register_slice`_ with one clock, followed by
+   ``nsl_clocking.interdomain.interdomain_fifo_slice`` with two. Its
+   ports are registered already, requested slices add nothing;
 
-2. at most 2 words, or at most 16 words holding at most 16 bits in
-   total (64 bits on a target without LUT RAM): `fifo_shift_register`_;
+2. two clocks, fill counters or cancellation on either side:
+   `fifo_homogeneous`_, which is the only one to have them. These need
+   more than 2 words;
 
-3. a target with asynchronous-read LUT RAM, and a depth up to the
+3. at most 16 words holding at most 16 bits in total (64 bits on a
+   target without LUT RAM): `fifo_shift_register`_;
+
+4. a target with asynchronous-read LUT RAM, and a depth up to the
    deepest fifo that is cheaper in LUT RAM than in block RAM on that
    target: `fifo_lutram`_;
 
-4. otherwise `fifo_homogeneous`_, over block RAM.
+5. otherwise `fifo_homogeneous`_, over block RAM.
 
-Register slices go around the selected block when requested. The rules
+Register slices go around the selected shift register or LUT RAM
+block when requested. The rules
 are available as ``fifo_auto_implementation()`` for code or tests that
 need to know the outcome.
 

@@ -36,13 +36,15 @@ architecture arch of tb is
 
   constant dut_c: dut_vector := (
     (fifo_config(data_width => 8, word_count => 1),
-     FIFO_IMPLEMENTATION_SHIFT_REGISTER),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
     (fifo_config(data_width => 32, word_count => 2),
-     FIFO_IMPLEMENTATION_SHIFT_REGISTER),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
     (fifo_config(data_width => 2, word_count => 8),
      FIFO_IMPLEMENTATION_SHIFT_REGISTER),
     (fifo_config(data_width => 8, word_count => 2, output_slice => true),
-     FIFO_IMPLEMENTATION_SHIFT_REGISTER),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
+    (fifo_config(data_width => 8, word_count => 3),
+     FIFO_IMPLEMENTATION_LUTRAM),
     (fifo_config(data_width => 16, word_count => 16),
      FIFO_IMPLEMENTATION_LUTRAM),
     (fifo_config(data_width => 8, word_count => 5,
@@ -62,6 +64,13 @@ architecture arch of tb is
      FIFO_IMPLEMENTATION_HOMOGENEOUS),
     (fifo_config(data_width => 8, word_count => 2, clock_count => 2,
                  input_slice => true, output_slice => true),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
+    (fifo_config(data_width => 8, word_count => 1, clock_count => 2),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
+    (fifo_config(data_width => 16, word_count => 2, clock_count => 2),
+     FIFO_IMPLEMENTATION_REGISTER_SLICE),
+    (fifo_config(data_width => 8, word_count => 4, clock_count => 2,
+                 output_slice => true),
      FIFO_IMPLEMENTATION_HOMOGENEOUS)
     );
 
@@ -102,21 +111,30 @@ architecture arch of tb is
                    failure);
     end procedure;
   begin
+    -- Register slices for up to two words, whatever the width and
+    -- the clock count, as long as no counters nor cancellation are
+    -- asked for.
+    expect("d1 w64", fifo_config(64, 1), gowin_c, FIFO_IMPLEMENTATION_REGISTER_SLICE);
+    expect("d2 w32", fifo_config(32, 2), gowin_c, FIFO_IMPLEMENTATION_REGISTER_SLICE);
+    expect("d2 slices", fifo_config(32, 2, input_slice => true, output_slice => true),
+           gowin_c, FIFO_IMPLEMENTATION_REGISTER_SLICE);
+    expect("d1 2 clocks", fifo_config(8, 1, clock_count => 2), gowin_c,
+           FIFO_IMPLEMENTATION_REGISTER_SLICE);
+    expect("d2 2 clocks", fifo_config(8, 2, clock_count => 2), gowin_c,
+           FIFO_IMPLEMENTATION_REGISTER_SLICE);
+    expect("none d2 w32", fifo_config(32, 2), none_c, FIFO_IMPLEMENTATION_REGISTER_SLICE);
+
     -- Features only fifo_homogeneous has, even when tiny.
-    expect("2 clocks", fifo_config(8, 2, clock_count => 2), gowin_c,
+    expect("2 clocks", fifo_config(8, 3, clock_count => 2), gowin_c,
            FIFO_IMPLEMENTATION_HOMOGENEOUS);
-    expect("counters", fifo_config(8, 2, counters => true), gowin_c,
+    expect("counters", fifo_config(8, 3, counters => true), gowin_c,
            FIFO_IMPLEMENTATION_HOMOGENEOUS);
     expect("in cancel", fifo_config(8, 16, in_cancellable => true), gowin_c,
            FIFO_IMPLEMENTATION_HOMOGENEOUS);
     expect("out cancel", fifo_config(8, 16, out_cancellable => true), gowin_c,
            FIFO_IMPLEMENTATION_HOMOGENEOUS);
 
-    -- Shift register: up to two words whatever the width, or few bits.
-    expect("d1 w64", fifo_config(64, 1), gowin_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
-    expect("d2 w32", fifo_config(32, 2), gowin_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
-    expect("d2 slices", fifo_config(32, 2, input_slice => true, output_slice => true),
-           gowin_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
+    -- Shift register for few bits.
     expect("d16 w1", fifo_config(1, 16), gowin_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
     expect("d4 w4", fifo_config(4, 4), gowin_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
     expect("d4 w5", fifo_config(5, 4), gowin_c, FIFO_IMPLEMENTATION_LUTRAM);
@@ -131,7 +149,6 @@ architecture arch of tb is
     expect("sync read d16", fifo_config(32, 16), sync_read_c, FIFO_IMPLEMENTATION_HOMOGENEOUS);
 
     -- No LUT RAM: registers for few bits, block RAM otherwise.
-    expect("none d2 w32", fifo_config(32, 2), none_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
     expect("none d8 w8", fifo_config(8, 8), none_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
     expect("none d16 w4", fifo_config(4, 16), none_c, FIFO_IMPLEMENTATION_SHIFT_REGISTER);
     expect("none d8 w9", fifo_config(9, 8), none_c, FIFO_IMPLEMENTATION_HOMOGENEOUS);

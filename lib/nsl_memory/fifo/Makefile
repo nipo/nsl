@@ -20,3 +20,4 @@ deps += nsl_memory.ram
 deps += nsl_memory.streamer
 deps += nsl_logic.bool
 deps += nsl_hwconfig.memory_config
+deps += nsl_synthesis.assertion
