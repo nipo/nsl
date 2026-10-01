@@ -56,6 +56,16 @@ end fifo_homogeneous;
 -- most the room there is, the output side sees at most the words there
 -- are.
 --
+-- Input side readiness is a register of its own, so that no
+-- arithmetic sits between flip-flops and in_ready_o. It is computed
+-- from the next input position against the output position one stage
+-- ahead in its crossing pipeline (the output side register itself in
+-- the synchronous case), i.e. the value the received position takes on
+-- the very edge the flag is updated. The flag therefore always equals
+-- the comparison of the current positions. In the bisynchronous case,
+-- that stage ahead is still gray-coded, and the comparison takes place
+-- in gray code.
+--
 -- The output side counter feeds addresses to a memory streamer, which
 -- hides memory latency behind a prefetch and only issues reads it has
 -- room to land. An address is issued for every position the input side
@@ -115,6 +125,12 @@ architecture ram2 of fifo_homogeneous is
   constant last_index_c: mem_ptr_t := to_unsigned(word_count_c-1, ptr_width_c);
   constant is_pow2_c: boolean := last_index_c = (last_index_c'range => '1');
   constant is_synchronous_c: boolean := clock_count_c = 1;
+  constant decode_stage_count_c: positive := (position_t'length + 3) / 4;
+  -- Gray code of the wrap bit alone. Gray coding is linear over xor, so
+  -- toggling the wrap bit of a binary position toggles these bits of
+  -- its gray code.
+  constant gray_wrap_c: std_ulogic_vector(position_t'range)
+    := nsl_math.gray.bin_to_gray(to_unsigned(2 ** ptr_width_c, position_t'length));
 
   function position_next(position: position_t) return position_t is
     variable ret: position_t;
@@ -158,10 +174,26 @@ architecture ram2 of fifo_homogeneous is
   signal out_data_s: data_t;
   signal out_valid_s, out_ready_s: std_ulogic;
 
+  -- Same index on another wrap means the input side caught up with the
+  -- output side from behind. Peer position is binary in the synchronous
+  -- case, gray-coded otherwise, which then implies a power-of-two depth.
+  function in_full(position: position_t;
+                   peer: std_ulogic_vector(position_t'range)) return boolean is
+  begin
+    if is_synchronous_c then
+      return position(mem_ptr_t'range) = unsigned(peer(mem_ptr_t'range))
+        and position(position_t'left) /= peer(position_t'left);
+    else
+      return nsl_math.gray.bin_to_gray(position) = (peer xor gray_wrap_c);
+    end if;
+  end function;
+
   -- Input side, in clock_i(0)
   type in_regs_t is
   record
-    running: boolean;
+    -- Input side accepts a word. Held low until out of reset, as peer
+    -- position is only meaningful from then on.
+    ready: boolean;
     -- Position the next accepted word is written to.
     position: position_t;
     -- Position the last commit left behind, only meaningful when
@@ -189,9 +221,12 @@ architecture ram2 of fifo_homogeneous is
   signal in_position_s, in_position_resync_s: position_t;
   -- Output side position, and the same after crossing to the input side.
   signal out_position_s, out_position_resync_s: position_t;
+  -- Value out_position_resync_s takes on the next clock_i(0) edge,
+  -- binary in the synchronous case, gray-coded otherwise.
+  signal out_position_ahead_s: std_ulogic_vector(position_t'range);
 
-  -- Input side sees the memory as full, output side sees it as empty.
-  signal in_full_s, out_empty_s: boolean;
+  -- Output side sees the memory as empty.
+  signal out_empty_s: boolean;
 
   signal mem_write_en_s: std_ulogic;
   signal mem_write_address_s: mem_ptr_t;
@@ -296,7 +331,7 @@ begin
       in_to_out: nsl_clocking.interdomain.interdomain_counter
         generic map(
           data_width_c => position_t'length,
-          decode_stage_count_c => (position_t'length + 3) / 4
+          decode_stage_count_c => decode_stage_count_c
           )
         port map(
           clock_in_i => clock_i(0),
@@ -311,7 +346,7 @@ begin
       in_to_out: nsl_clocking.interdomain.interdomain_publish_counter
         generic map(
           data_width_c => position_t'length,
-          decode_stage_count_c => (position_t'length + 3) / 4
+          decode_stage_count_c => decode_stage_count_c
           )
         port map(
           reset_n_i => reset_n_s(0),
@@ -324,38 +359,75 @@ begin
           );
     end generate;
 
-    out_stepping: if not out_cancellable_c
-    generate
-      out_to_in: nsl_clocking.interdomain.interdomain_counter
-        generic map(
-          data_width_c => position_t'length,
-          decode_stage_count_c => (position_t'length + 3) / 4
-          )
-        port map(
-          clock_in_i => clock_i(clock_count_c-1),
-          clock_out_i => clock_i(0),
-          data_i => out_position_s,
-          data_o => out_position_resync_s
-          );
-    end generate;
+    -- Output position crosses gray-coded, and is decoded on the input
+    -- side, where the comparison for readiness takes the gray-coded
+    -- value at the decoder's last stage but one.
+    out_crossing: block is
+      signal gray_s: unsigned(position_t'range);
+    begin
+      out_stepping: if not out_cancellable_c
+      generate
+        out_to_in: nsl_clocking.interdomain.interdomain_counter
+          generic map(
+            data_width_c => position_t'length,
+            output_is_gray_c => true
+            )
+          port map(
+            clock_in_i => clock_i(clock_count_c-1),
+            clock_out_i => clock_i(0),
+            data_i => out_position_s,
+            data_o => gray_s
+            );
+      end generate;
 
-    out_jumping: if out_cancellable_c
-    generate
-      out_to_in: nsl_clocking.interdomain.interdomain_publish_counter
+      out_jumping: if out_cancellable_c
+      generate
+        out_to_in: nsl_clocking.interdomain.interdomain_publish_counter
+          generic map(
+            data_width_c => position_t'length,
+            output_is_gray_c => true
+            )
+          port map(
+            reset_n_i => reset_n_s(clock_count_c-1),
+            clock_in_i => clock_i(clock_count_c-1),
+            clock_out_i => clock_i(0),
+            target_i => out_position_s,
+            backward_i => '0',
+            publish_o => open,
+            data_o => gray_s
+            );
+      end generate;
+
+      decoder: nsl_math.gray.gray_decoder_pipelined
         generic map(
-          data_width_c => position_t'length,
-          decode_stage_count_c => (position_t'length + 3) / 4
+          cycle_count_c => decode_stage_count_c,
+          data_width_c => position_t'length
           )
         port map(
-          reset_n_i => reset_n_s(clock_count_c-1),
-          clock_in_i => clock_i(clock_count_c-1),
-          clock_out_i => clock_i(0),
-          target_i => out_position_s,
-          backward_i => '0',
-          publish_o => open,
-          data_o => out_position_resync_s
+          clock_i => clock_i(0),
+          gray_i => std_ulogic_vector(gray_s),
+          binary_o => out_position_resync_s
           );
-    end generate;
+
+      single_stage: if decode_stage_count_c = 1
+      generate
+        out_position_ahead_s <= std_ulogic_vector(gray_s);
+      end generate;
+
+      multi_stage: if decode_stage_count_c > 1
+      generate
+        ahead: nsl_clocking.intradomain.intradomain_multi_reg
+          generic map(
+            cycle_count_c => decode_stage_count_c - 1,
+            data_width_c => position_t'length
+            )
+          port map(
+            clock_i => clock_i(0),
+            data_i => std_ulogic_vector(gray_s),
+            data_o => out_position_ahead_s
+            );
+      end generate;
+    end block;
   end generate;
 
   sync: if is_synchronous_c generate
@@ -383,6 +455,8 @@ begin
         data_i => std_ulogic_vector(out_position_s),
         unsigned(data_o) => out_position_resync_s
         );
+
+    out_position_ahead_s <= std_ulogic_vector(out_position_s);
   end generate;
 
   in_regs: process(clock_i(0), reset_n_s(0)) is
@@ -392,32 +466,25 @@ begin
     end if;
 
     if reset_n_s(0) = '0' then
-      in_r.running <= false;
+      in_r.ready <= false;
       in_r.position <= (others => '0');
       in_r.committed <= (others => '0');
     end if;
   end process;
 
-  -- Same index on another wrap means the input side caught up with the
-  -- output side from behind.
-  in_full_s <= in_r.position(mem_ptr_t'range) = out_position_resync_s(mem_ptr_t'range)
-               and in_r.position(position_t'left) /= out_position_resync_s(position_t'left);
-
-  in_transition: process(in_r, in_valid_s, in_full_s,
+  in_transition: process(in_r, in_valid_s, out_position_ahead_s,
                          in_commit_i, in_rollback_i) is
-    variable position_after: position_t;
+    variable position_after, position_rin: position_t;
   begin
     in_rin <= in_r;
 
-    in_rin.running <= true;
-
-    if in_r.running and in_valid_s = '1' and not in_full_s then
+    if in_r.ready and in_valid_s = '1' then
       position_after := position_next(in_r.position);
     else
       position_after := in_r.position;
     end if;
 
-    in_rin.position <= position_after;
+    position_rin := position_after;
 
     if in_cancellable_c then
       -- Commit and rollback both take the beat of the very cycle they
@@ -426,20 +493,20 @@ begin
       if to_x01(in_rollback_i) = '1' then
         -- A memory write taking place this cycle lands past the
         -- rewound position, where a later word overwrites it.
-        in_rin.position <= in_r.committed;
+        position_rin := in_r.committed;
       elsif to_x01(in_commit_i) = '1' then
         in_rin.committed <= position_after;
       end if;
     end if;
+
+    in_rin.position <= position_rin;
+    in_rin.ready <= not in_full(position_rin, out_position_ahead_s);
   end process;
 
-  in_moore: process(in_r, in_valid_s, in_full_s, out_position_resync_s) is
+  in_moore: process(in_r, in_valid_s, out_position_resync_s) is
   begin
-    -- Peer position is only meaningful once out of reset, hold the
-    -- input side back until then rather than acknowledge a word the
-    -- position counter would not account for.
-    in_ready_s <= to_logic(in_r.running and not in_full_s);
-    mem_write_en_s <= to_logic(in_r.running and not in_full_s) and in_valid_s;
+    in_ready_s <= to_logic(in_r.ready);
+    mem_write_en_s <= to_logic(in_r.ready) and in_valid_s;
     mem_write_address_s <= in_r.position(mem_ptr_t'range);
     free_s <= word_count_c
               - position_diff(in_r.position, out_position_resync_s, word_count_c);
