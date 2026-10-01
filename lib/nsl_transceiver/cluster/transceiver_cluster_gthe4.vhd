@@ -269,6 +269,9 @@ begin
     signal s_rx_data_to_adapter   : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
 
+    signal s_rx_clk_cr_cnt_stdl : std_logic_vector(1 downto 0);
+    signal s_rx_clk_cr_cnt : std_ulogic_vector(1 downto 0);
+
   begin
 
     -- TX and RX Data ------------------------------------------------------------
@@ -403,6 +406,9 @@ begin
           end if;
         when ST_DONE =>
           rin_rx.timeout <= timeout_delay_c;
+          if s_pll_locked_sync = '0' then
+            rin_rx.state <= ST_RESET;
+          end if;          
       end case;
 
     end process;
@@ -453,6 +459,9 @@ begin
           end if;
         when ST_DONE =>
           rin_tx.timeout <= timeout_delay_c;
+          if s_pll_locked_sync = '0' then
+            rin_tx.state <= ST_RESET;
+          end if;
       end case;
 
     end process;    
@@ -581,7 +590,7 @@ begin
           )
         port map(
           clock_i   => s_parallel_clock_buff,
-          reset_n_i => tx_m_i(lane_idx).control(data_byte_count_c * 2),
+          reset_n_i => s_parallel_reset_sync_n,
 
           delay_mark_i  => '1',
           serdes_mark_i => '1',
@@ -620,7 +629,7 @@ begin
 
         begin
 
-          s_domain_a_pll_locked <= s_pll_locked_sync;
+          s_domain_a_pll_locked <= s_rx_pma_rst_done_sync and s_tx_pma_rst_done_sync;
           
           BUFG_GT_parallelclk : BUFG_GT
             generic map (
@@ -674,6 +683,9 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
+    s_rx_clk_cr_cnt <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
+    rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr_cnt(0 downto 0);
+      
     gthe4_i : GTHE4_CHANNEL
       generic map
       (
@@ -737,7 +749,7 @@ begin
         CLK_COR_SEQ_1_4              => "0000000000",
         CLK_COR_SEQ_1_ENABLE         => "1111",
         CLK_COR_SEQ_2_1              => "0110111100",  -- K28.5
-        CLK_COR_SEQ_2_2              => "0011000101",  -- D5.6
+        CLK_COR_SEQ_2_2              => "0010110101",  -- D21.5
         CLK_COR_SEQ_2_3              => "0000000000",
         CLK_COR_SEQ_2_4              => "0000000000",
         CLK_COR_SEQ_2_ENABLE         => "1111",
@@ -1462,7 +1474,7 @@ begin
         RXCHANREALIGN        => open,
         RXCHBONDO            => open,
         RXCKCALDONE          => open,
-        RXCLKCORCNT          => open,
+        RXCLKCORCNT          => s_rx_clk_cr_cnt_stdl,
         RXCOMINITDET         => open,
         RXCOMMADET           => open,
         RXCOMSASDET          => open,
