@@ -135,6 +135,7 @@ begin
           flit_o.valid <= '1';
           flit_o.error <= '1';
           valid_o <= '1';
+          rin.state <= ST_IDLE;
         end if;
 
       when ST_END_T =>
