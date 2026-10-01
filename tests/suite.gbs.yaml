@@ -53,6 +53,9 @@ projects:
   - name: amba_axi4_mm_crossbar_tester
     path: amba/axi4_mm_crossbar_tester
     tags: [ghdl, simulation]
+  - name: amba_axi4_mm_crossbar_order
+    path: amba/axi4_mm_crossbar_order
+    tags: [ghdl, simulation]
   - name: amba_axi4_mm_lite_ram
     path: amba/axi4_mm_lite_ram
     tags: [ghdl, simulation]
