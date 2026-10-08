@@ -209,6 +209,9 @@ begin  -- architecture beh
 
   -- RX side --------------------------------------------------------------------------------
 
+  -- Clock correction not implemented for SERDES backend
+  sgmii_o.clk_cor <= '0';
+  
   ibm_8b10b_decoder_1 : nsl_line_coding.ibm_8b10b.ibm_8b10b_decoder
     generic map (
       implementation_c => "logic")

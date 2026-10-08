@@ -60,7 +60,7 @@ begin  -- architecture beh
   sgmii_o.valid_symbol <= s_valid_symbol;
 
   -- Valid symbol
-  s_valid_symbol <= not(sgmii_i.code_err) and not(sgmii_i.disparity_err);
+  s_valid_symbol <= s_symbol_expected and not(sgmii_i.code_err) and not(sgmii_i.disparity_err);
 
   -- Link up
   link_up_o <= s_link_up;
@@ -89,6 +89,7 @@ begin  -- architecture beh
     port map (
       clock_i           => clock_i,
       reset_n_i         => reset_n_i,
+      clk_cor_i         => sgmii_i.clk_cor,
       symbol_i          => sgmii_i.data_p2m_symbol,
       symbol_expected_o => s_symbol_expected,
       flit_o            => s_rx_flit,
