@@ -24,6 +24,7 @@ package sgmii is
     code_err        : std_ulogic;
     disparity_err   : std_ulogic;
     align_ready     : std_ulogic;
+    clk_cor         : std_ulogic; -- 1 insert/skip, 0 none
   end record;
 
   component sgmii_driver is
@@ -58,6 +59,8 @@ package sgmii is
 
       symbol_i          : in  nsl_line_coding.ibm_8b10b.data_t;
       symbol_expected_o : out std_ulogic;
+
+      clk_cor_i : in std_ulogic;
 
       flit_o         : out mii_flit_t;
       config_valid_o : out std_ulogic;

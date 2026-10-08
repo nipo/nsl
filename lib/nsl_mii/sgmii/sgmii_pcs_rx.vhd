@@ -14,6 +14,8 @@ entity sgmii_pcs_rx is
     symbol_i    : in  nsl_line_coding.ibm_8b10b.data_t;
     symbol_expected_o : out std_ulogic;
 
+    clk_cor_i : in std_ulogic;
+
     flit_o         : out mii_flit_t;
     config_valid_o : out std_ulogic;
     config_o       : out config_reg_t;
@@ -27,6 +29,7 @@ architecture beh of sgmii_pcs_rx is
   type state_t is (
     ST_IDLE,
     ST_COMMA,
+    ST_WAIT_COMMA,
     ST_CONFIG_D,
     ST_CONFIG_LO,
     ST_DATA,
@@ -37,9 +40,11 @@ architecture beh of sgmii_pcs_rx is
   record
     state      : state_t;
     config_reg : config_reg_t;
+    wait_comma_timeout : natural;
   end record;
 
   signal r, rin: regs_t;
+  constant wait_comma_timeout_cycles_c : natural := 5;
 
 begin
 
@@ -51,6 +56,7 @@ begin
 
     if reset_n_i = '0' then
       r.state <= ST_IDLE;
+      r.wait_comma_timeout <= wait_comma_timeout_cycles_c;
     end if;
   end process;
 
@@ -69,7 +75,10 @@ begin
 
     case r.state is
       when ST_IDLE =>
-        if symbol_i = K28_5 then
+        if clk_cor_i = '1' then
+          rin.wait_comma_timeout <= wait_comma_timeout_cycles_c;
+          rin.state <= ST_WAIT_COMMA;
+        elsif symbol_i = K28_5 then
           rin.state <= ST_COMMA;
         elsif symbol_i = K27_7 then
           rin.state <= ST_DATA;
@@ -81,7 +90,10 @@ begin
         end if;
 
       when ST_COMMA =>
-        if symbol_i = data(5, 6) or symbol_i = data(16, 2) then
+        if clk_cor_i = '1' then
+          rin.wait_comma_timeout <= wait_comma_timeout_cycles_c;
+          rin.state <= ST_WAIT_COMMA;
+        elsif symbol_i = data(5, 6) or symbol_i = data(16, 2) then
           rin.state <= ST_IDLE;
           idle_match_o <= '1';
         elsif symbol_i = data(21, 5) or symbol_i = data(2, 2) then
@@ -98,8 +110,28 @@ begin
           rin.state <= ST_IDLE;
         end if;
 
+      when ST_WAIT_COMMA =>
+        if symbol_i = K28_5 then
+          rin.state <= ST_COMMA;
+        elsif symbol_i = K27_7 then
+          rin.state <= ST_DATA;
+          flit_o.data <= x"55";
+          flit_o.valid <= '1';
+          valid_o <= '1';
+        else
+          if r.wait_comma_timeout = 0 then
+            rin.wait_comma_timeout <= wait_comma_timeout_cycles_c;
+            rin.state <= ST_IDLE;
+          else
+            rin.wait_comma_timeout <= r.wait_comma_timeout - 1;
+          end if;
+        end if;
+
       when ST_CONFIG_D =>
-        if symbol_i.control = '0' then
+        if clk_cor_i = '1' then
+          rin.wait_comma_timeout <= wait_comma_timeout_cycles_c;
+          rin.state <= ST_WAIT_COMMA;
+        elsif symbol_i.control = '0' then
           rin.state <= ST_CONFIG_LO;
           rin.config_reg(7 downto 0) <= symbol_i.data;
         else
@@ -107,7 +139,10 @@ begin
         end if;
 
       when ST_CONFIG_LO =>
-        if symbol_i.control = '0' then
+        if clk_cor_i = '1' then
+          rin.wait_comma_timeout <= wait_comma_timeout_cycles_c;
+          rin.state <= ST_WAIT_COMMA;
+        elsif symbol_i.control = '0' then
           rin.state <= ST_IDLE;
           rin.config_reg(15 downto 8) <= symbol_i.data;
           config_valid_o <= '1';
