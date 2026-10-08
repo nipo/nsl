@@ -714,11 +714,13 @@ begin
   -- Aligner --------------------------------------------------------------------------------
 
     need_alignment : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NONE) or
+                        (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA) or
+                        (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) or
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS) generate
       -- Alignment done
       s_pcomma_align_en                                                               <= not(s_align_ready(0));
       s_mcomma_align_en                                                               <= not(s_align_ready(0));
-      s_cdr_hold                                                                      <= s_align_ready(0);
+      s_cdr_hold                                                                      <= '0';
       rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
 
       aligner : nsl_io.delay.input_delay_aligner_slow
@@ -728,7 +730,7 @@ begin
           )
         port map(
           clock_i   => s_parallel_clock_buff,
-          reset_n_i => tx_m_i(lane_idx).control(data_byte_count_c * 2),
+          reset_n_i => s_parallel_reset_sync_n,
 
           delay_mark_i  => '1',
           serdes_mark_i => '1',
@@ -739,9 +741,7 @@ begin
           );
     end generate;
 
-    no_align : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA) or
-                  (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA) or
-                  (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) generate
+    no_align : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA) generate
       s_pcomma_align_en                                                               <= '1';
       s_mcomma_align_en                                                               <= '1';
       s_cdr_hold                                                                      <= '1';
@@ -850,6 +850,8 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
+    rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr(0 downto 0);
+    
     gtpe2_i : GTPE2_CHANNEL
       generic map
       (
@@ -898,7 +900,7 @@ begin
         CLK_CORRECT_USE      => ("TRUE"),
         CLK_COR_SEQ_2_ENABLE => ("1111"),
         CLK_COR_SEQ_2_1      => ("0110111100"),  -- K28.5
-        CLK_COR_SEQ_2_2      => ("0011000101"),  -- D5.6
+        CLK_COR_SEQ_2_2      => ("0010110101"),  -- D21.5
         CLK_COR_SEQ_2_3      => ("0000000000"),
         CLK_COR_SEQ_2_4      => ("0000000000"),
 
@@ -1254,7 +1256,7 @@ begin
         RXOSINTSTROBESTARTED       => open,
         RXOSINTTESTOVRDEN          => '0',
         ------------------- Receive Ports - Clock Correction Ports -----------------
-        RXCLKCORCNT                => open,
+        RXCLKCORCNT                => s_rx_clk_cr_stdl,
         ---------- Receive Ports - FPGA RX Interface Datapath Configuration --------
         RX8B10BEN                  => '1',
         ------------------ Receive Ports - FPGA RX Interface Ports -----------------
