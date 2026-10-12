@@ -30,6 +30,9 @@ entity mau_10baset_mau is
     crs_o : out std_ulogic;
     col_o : out std_ulogic;
 
+    tx_sfd_o : out std_ulogic;
+    rx_sfd_o : out std_ulogic;
+
     collision_o : out std_ulogic;
     late_collision_o : out std_ulogic;
     excessive_collision_o : out std_ulogic
@@ -58,6 +61,7 @@ begin
       carrier_i => carrier_s,
 
       transmitting_o => transmitting_s,
+      sfd_o => tx_sfd_o,
 
       collision_o => collision_o,
       late_collision_o => late_collision_o,
@@ -102,6 +106,7 @@ begin
       link_up_o => link_up_o
       );
 
+  rx_sfd_o <= frame_s;
   crs_o <= carrier_s or transmitting_s;
   col_o <= carrier_s and transmitting_s;
 

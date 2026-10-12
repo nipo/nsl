@@ -91,6 +91,8 @@ architecture arch of tb is
   signal a_collision_s, b_collision_s : std_ulogic;
   signal a_late_collision_s, b_late_collision_s : std_ulogic;
   signal a_excessive_collision_s, b_excessive_collision_s : std_ulogic;
+  signal a_tx_sfd_s, b_tx_sfd_s, a_rx_sfd_s, b_rx_sfd_s : std_ulogic;
+  signal a_tx_sfd_count_s, b_tx_sfd_count_s : natural := 0;
 
   signal start_a2b_s : std_ulogic := '0';
   signal start_b2a_s : std_ulogic := '0';
@@ -266,6 +268,9 @@ begin
       crs_o => a_crs_s,
       col_o => a_col_s,
 
+      tx_sfd_o => a_tx_sfd_s,
+      rx_sfd_o => a_rx_sfd_s,
+
       collision_o => a_collision_s,
       late_collision_o => a_late_collision_s,
       excessive_collision_o => a_excessive_collision_s
@@ -319,6 +324,9 @@ begin
       polarity_inverted_o => b_polarity_s,
       crs_o => b_crs_s,
       col_o => b_col_s,
+
+      tx_sfd_o => b_tx_sfd_s,
+      rx_sfd_o => b_rx_sfd_s,
 
       collision_o => b_collision_s,
       late_collision_o => b_late_collision_s,
@@ -416,6 +424,61 @@ begin
               retry_split_s <= b_retry_v - a_retry_v;
             end if;
           end if;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  -- Transmit SFD strobes once per frame, receive SFD strobes once per
+  -- received frame.  Clean frames from A to B see a constant delay
+  -- between both strobes.
+  sfd_monitor: process(clock_s) is
+    variable a_rx_frames_v, b_rx_frames_v : natural := 0;
+    variable a_rx_sfd_v, b_rx_sfd_v : natural := 0;
+    variable a_tx_at_v : time := 0 ns;
+    variable delay_v, delay_ref_v : time := 0 ns;
+  begin
+    if rising_edge(clock_s) then
+      if reset_n_s = '1' then
+        if a_tx_sfd_s = '1' then
+          a_tx_sfd_count_s <= a_tx_sfd_count_s + 1;
+          a_tx_at_v := now;
+        end if;
+        if b_tx_sfd_s = '1' then
+          b_tx_sfd_count_s <= b_tx_sfd_count_s + 1;
+        end if;
+
+        if a_rx_sfd_s = '1' then
+          a_rx_sfd_v := a_rx_sfd_v + 1;
+        end if;
+        if b_rx_sfd_s = '1' then
+          b_rx_sfd_v := b_rx_sfd_v + 1;
+          if a2b_done_s = '0' then
+            delay_v := now - a_tx_at_v;
+            if delay_ref_v = 0 ns then
+              delay_ref_v := delay_v;
+              log_info("A tx SFD to B rx SFD: " & time'image(delay_v));
+            end if;
+            assert abs(delay_v - delay_ref_v) <= 2 * 2 * clock_half_c
+              report "SFD delay drifted to " & time'image(delay_v)
+              severity failure;
+          end if;
+        end if;
+
+        -- Frame end flit, emitted once per received frame.
+        if a_rx_valid_s = '1' and a_rx_flit_s.valid = '0'
+          and a_rx_flit_s.error = '0' then
+          a_rx_frames_v := a_rx_frames_v + 1;
+          assert a_rx_frames_v = a_rx_sfd_v
+            report "A received a frame without its SFD strobe"
+            severity failure;
+        end if;
+        if b_rx_valid_s = '1' and b_rx_flit_s.valid = '0'
+          and b_rx_flit_s.error = '0' then
+          b_rx_frames_v := b_rx_frames_v + 1;
+          assert b_rx_frames_v = b_rx_sfd_v
+            report "B received a frame without its SFD strobe"
+            severity failure;
         end if;
       end if;
     end if;
@@ -723,6 +786,12 @@ begin
     wait for 150 us;
     assert b_link_up_s = '1'
       report "Link did not come back up at B"
+      severity failure;
+
+    assert a_tx_sfd_count_s = 8 and b_tx_sfd_count_s = 7
+      report "Transmit SFD strobes do not match frames, A: "
+      & integer'image(a_tx_sfd_count_s) & ", B: "
+      & integer'image(b_tx_sfd_count_s)
       severity failure;
 
     log_info("All tests passed at " & time'image(now));

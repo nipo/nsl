@@ -80,6 +80,14 @@ package mau_10baset is
       crs_o : out std_ulogic;
       col_o : out std_ulogic;
 
+      -- Frame timestamp points, single cycle strobes on the end of
+      -- the last SFD bit cell on the line.  Transmit strobes once
+      -- per frame taken from flit_i, see mau_10baset_tx.  Receive
+      -- strobes once per frame emitted on flit_o, a fixed number of
+      -- cycles after the bit cell was sampled.
+      tx_sfd_o : out std_ulogic;
+      rx_sfd_o : out std_ulogic;
+
       -- Single cycle strobes, see mau_10baset_tx.
       collision_o : out std_ulogic;
       late_collision_o : out std_ulogic;
@@ -121,6 +129,11 @@ package mau_10baset is
 
       transmitting_o : out std_ulogic;
 
+      -- Strobes when the last SFD bit cell ends on the line.  Every
+      -- frame taken from flit_i strobes exactly once, on the first
+      -- attempt that gets its SFD out, or when abandoned if none did.
+      sfd_o : out std_ulogic;
+
       -- Strobes on every detected collision.
       collision_o : out std_ulogic;
       -- Strobes on a collision detected at or after the slot time.
@@ -154,7 +167,9 @@ package mau_10baset is
       carrier_o : out std_ulogic;
       -- Strobes on reception of a plausible normal link pulse.
       link_pulse_o : out std_ulogic;
-      -- Strobes on reception of a frame with a valid SFD.
+      -- Strobes on reception of a frame with a valid SFD, on the
+      -- cycle its last bit is recovered.  Every strobe is followed
+      -- by exactly one frame on flit_o.
       frame_o : out std_ulogic;
       polarity_inverted_o : out std_ulogic
       );

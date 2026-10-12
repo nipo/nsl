@@ -28,6 +28,13 @@ entity mau_10baset_tx is
 
     transmitting_o : out std_ulogic;
 
+    -- Strobes for one cycle when the last bit cell of the SFD ends on
+    -- the line, i.e. when the first bit of the destination address
+    -- starts.  This is the frame timestamp point.  Every frame taken
+    -- from flit_i strobes exactly once: on the first attempt that
+    -- gets its SFD out, or when it is abandoned if none did.
+    sfd_o : out std_ulogic;
+
     -- Strobes for one cycle on every detected collision.
     collision_o : out std_ulogic;
     -- Strobes for one cycle on a collision detected at or after the
@@ -71,6 +78,7 @@ architecture beh of mau_10baset_tx is
   -- Jam sequence, 32 bits of alternating data.
   constant jam_byte_c : byte := x"55";
   constant jam_bits_c : natural := 32;
+  constant sfd_byte_c : byte := x"d5";
   constant jam_bytes_c : natural := jam_bits_c / 8;
   -- Transmission attempts before a frame is abandoned.
   constant attempt_max_c : natural := 16;
@@ -171,6 +179,15 @@ architecture beh of mau_10baset_tx is
     jam_ctr : natural range 0 to jam_bytes_c-1;
     line_valid : std_ulogic;
 
+    -- SFD of the current frame was loaded for transmission, on any
+    -- attempt.
+    sfd_loaded : boolean;
+    -- SFD is in shreg, its last bit cell not started yet.
+    sfd_pending : boolean;
+    -- Last bit cell of SFD is on the line.
+    sfd_tail : boolean;
+    sfd : std_ulogic;
+
     collision : std_ulogic;
     late_collision : std_ulogic;
     excessive_collision : std_ulogic;
@@ -220,6 +237,7 @@ begin
       r.collision <= '0';
       r.late_collision <= '0';
       r.excessive_collision <= '0';
+      r.sfd <= '0';
     end if;
   end process;
 
@@ -235,6 +253,7 @@ begin
     rin.collision <= '0';
     rin.late_collision <= '0';
     rin.excessive_collision <= '0';
+    rin.sfd <= '0';
 
     -- Medium is ours to take one inter-frame gap after carrier fell.
     medium_free_v := carrier_i = '0' and r.defer_ctr = 0;
@@ -309,6 +328,9 @@ begin
             rin.bit_index <= 0;
             rin.line_valid <= '1';
             rin.pre_full <= false;
+            rin.sfd_loaded <= false;
+            rin.sfd_pending <= false;
+            rin.sfd_tail <= false;
             rin.attempt <= 0;
             rin.backoff_mask <= to_unsigned(1, backoff_exp_max_c);
             rin.pending <= PEND_NONE;
@@ -339,6 +361,17 @@ begin
         end if;
 
         if line_ready_s = '1' then
+          -- Encoder samples a bit cell on this cycle, which is also
+          -- the end of the previous one.
+          if r.sfd_tail then
+            rin.sfd_tail <= false;
+            rin.sfd <= '1';
+          end if;
+          if r.sfd_pending and r.bit_index = 7 then
+            rin.sfd_pending <= false;
+            rin.sfd_tail <= true;
+          end if;
+
           if r.bit_index /= 7 then
             rin.bit_index <= r.bit_index + 1;
             rin.shreg <= '0' & r.shreg(7 downto 1);
@@ -347,6 +380,10 @@ begin
             rin.shreg <= r.log(r.rd_ptr);
             rin.rd_ptr <= r.rd_ptr + 1;
             rin.bit_index <= 0;
+            if not r.sfd_loaded and r.log(r.rd_ptr) = sfd_byte_c then
+              rin.sfd_loaded <= true;
+              rin.sfd_pending <= true;
+            end if;
           else
             assert r.pre_full
               report "Flit interface did not keep up with the line"
@@ -356,6 +393,10 @@ begin
             if r.pre_valid = '1' then
               rin.shreg <= r.pre_data;
               rin.bit_index <= 0;
+              if not r.sfd_loaded and r.pre_data = sfd_byte_c then
+                rin.sfd_loaded <= true;
+                rin.sfd_pending <= true;
+              end if;
               if r.log_len /= log_depth_c then
                 rin.log(r.log_len) <= r.pre_data;
                 rin.log_len <= r.log_len + 1;
@@ -374,6 +415,17 @@ begin
         if collision_detect_c and carrier_i = '1' then
           rin.collision <= '1';
           rin.fetch <= '0';
+          -- A frame must strobe exactly once, the strobe consumer
+          -- pairs strobes with frames.  An SFD that started its way
+          -- out strobes now, one loaded on this very cycle is
+          -- forgotten and will be found again in the replay.  An
+          -- abandoned frame that never strobed strobes now.
+          rin.sfd_loaded <= r.sfd_loaded;
+          rin.sfd_pending <= false;
+          rin.sfd_tail <= false;
+          if r.sfd_pending or r.sfd_tail then
+            rin.sfd <= '1';
+          end if;
           rin.shreg <= jam_byte_c;
           rin.bit_index <= 0;
           rin.jam_ctr <= jam_bytes_c - 1;
@@ -383,9 +435,15 @@ begin
           if r.slot_ctr = 0 then
             rin.late_collision <= '1';
             rin.pending <= abandon_v;
+            if not r.sfd_loaded then
+              rin.sfd <= '1';
+            end if;
           elsif r.attempt = attempt_max_c - 1 then
             rin.excessive_collision <= '1';
             rin.pending <= abandon_v;
+            if not r.sfd_loaded then
+              rin.sfd <= '1';
+            end if;
           else
             rin.attempt <= r.attempt + 1;
             rin.backoff_slots <= backoff_v;
@@ -488,6 +546,7 @@ begin
     collision_o <= r.collision;
     late_collision_o <= r.late_collision;
     excessive_collision_o <= r.excessive_collision;
+    sfd_o <= r.sfd;
 
     case r.state is
       when ST_DATA | ST_JAM | ST_LAST | ST_TP_IDL =>

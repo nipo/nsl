@@ -29,6 +29,9 @@ entity pmod_ethernet_10baset_mau is
     late_collision_o : out std_ulogic;
     excessive_collision_o : out std_ulogic;
 
+    tx_sfd_o : out std_ulogic;
+    rx_sfd_o : out std_ulogic;
+
     probe_o : out work.pmod_ethernet.pmod_ethernet_probe_t
     );
 end entity;
@@ -79,7 +82,9 @@ begin
       col_o => col_o,
       collision_o => collision_o,
       late_collision_o => late_collision_o,
-      excessive_collision_o => excessive_collision_o
+      excessive_collision_o => excessive_collision_o,
+      tx_sfd_o => tx_sfd_o,
+      rx_sfd_o => rx_sfd_o
       );
 
   probe_o.rx <= rx_s;

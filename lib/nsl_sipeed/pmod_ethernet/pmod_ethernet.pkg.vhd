@@ -90,6 +90,11 @@ package pmod_ethernet is
       late_collision_o : out std_ulogic;
       excessive_collision_o : out std_ulogic;
 
+      -- Frame timestamp points, see nsl_8023.mau_10baset.  Each
+      -- strobe matches exactly one frame, in order.
+      tx_sfd_o : out std_ulogic;
+      rx_sfd_o : out std_ulogic;
+
       probe_o : out pmod_ethernet_probe_t
       );
   end component;
@@ -128,6 +133,11 @@ package pmod_ethernet is
       collision_o : out std_ulogic;
       late_collision_o : out std_ulogic;
       excessive_collision_o : out std_ulogic;
+
+      -- Frame timestamp points, see nsl_8023.mau_10baset.  Each
+      -- strobe matches exactly one frame, in order.
+      tx_sfd_o : out std_ulogic;
+      rx_sfd_o : out std_ulogic;
 
       probe_o : out pmod_ethernet_probe_t
       );
