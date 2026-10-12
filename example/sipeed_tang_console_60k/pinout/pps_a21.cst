@@ -1,0 +1,5 @@
+# Pulse-per-second output on A21, a pin of the external SDRAM header
+# (sdram_dq_io[9] in sdram.cst): a design using this file leaves the
+# SDRAM header unused.
+IO_LOC  "pps_o" A21;
+IO_PORT "pps_o" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
