@@ -1,6 +1,13 @@
-IO_LOC  "usb_dp_io" J19;
+// Full-speed USB on the board's USB2 connector.
+//
+// The line is driven and sampled single-ended through the pins the
+// high-speed PHY uses as its termination (J16 on D+, AB16 on D-).  M17
+// feeds the 1.5k D+ pull-up, attached when driven high, detached when
+// left floating.  The high-speed transmit pair and receivers stay
+// floating and unpulled so they do not load the line.
+IO_LOC  "usb_dp_io" J16;
 IO_PORT "usb_dp_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
-IO_LOC  "usb_dn_io" H19;
+IO_LOC  "usb_dn_io" AB16;
 IO_PORT "usb_dn_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
 IO_LOC  "usb_dp_pullup_io" M17;
 IO_PORT "usb_dp_pullup_io" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
@@ -13,7 +20,7 @@ IO_LOC  "usb_unused_io[2]" H20;
 IO_PORT "usb_unused_io[2]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 IO_LOC  "usb_unused_io[3]" G20;
 IO_PORT "usb_unused_io[3]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
-IO_LOC  "usb_unused_io[4]" J16;
-IO_PORT "usb_unused_io[4]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
-IO_LOC  "usb_unused_io[5]" AB16;
-IO_PORT "usb_unused_io[5]" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+IO_LOC  "usb_unused_io[4]" J19;
+IO_PORT "usb_unused_io[4]" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+IO_LOC  "usb_unused_io[5]" H19;
+IO_PORT "usb_unused_io[5]" IO_TYPE=LVCMOS33 PULL_MODE=NONE;

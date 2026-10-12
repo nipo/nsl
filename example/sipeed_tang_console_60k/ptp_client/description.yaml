@@ -1,0 +1,62 @@
+name: observer.observer_core
+
+# The rack is a Full Speed device on the board's USB2 connector, on
+# the phy's own 60 MHz clock.
+communication:
+  mode: usb
+
+instruments:
+  # Raw line, as the fabric MAU sees and drives it.
+  line: !logic-analyzer
+    storage:
+      buffer_depth_l2: 11
+
+    capture:
+      max_windows: 1
+
+    trigger:
+      capabilities: edge
+
+    domains:
+      sample:
+        clock: clock
+        frequency: 100_000_000
+
+        signals:
+          rx:
+            trigger: true
+          crs:
+            trigger: true
+          tx_en:
+            trigger: true
+          tx_p:
+            trigger: false
+          link_up:
+            trigger: false
+
+  # Discipline state and frame counters, core domain.  Signed values
+  # are two's complement in their width.
+  panel: !control-status
+    clock: clock
+
+    status:
+      link_up: 1
+      locked: 1
+      second:
+        width: 32
+      offset:
+        width: 32
+      path_delay:
+        width: 32
+      freq_ppb:
+        width: 24
+      syncs:
+        width: 16
+      steps:
+        width: 16
+      rx_frames:
+        width: 16
+      tx_frames:
+        width: 16
+      tx_stamps:
+        width: 16
