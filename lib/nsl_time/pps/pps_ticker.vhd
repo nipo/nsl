@@ -26,7 +26,11 @@ architecture beh of pps_ticker is
   type regs_t is
   record
     reference: timestamp_t;
+    -- The second that ticks next, and the two before it, so that
+    -- matching the reference against them takes no adder.
     next_second: timestamp_second_t;
+    current_second: timestamp_second_t;
+    previous_second: timestamp_second_t;
     tick: std_ulogic;
   end record;
 
@@ -50,6 +54,8 @@ begin
     if reset_n_i = '0' then
       r.reference <= timestamp_zero_c;
       r.next_second <= (others => '0');
+      r.current_second <= (others => '0');
+      r.previous_second <= (others => '0');
       r.tick <= '0';
     end if;
   end process;
@@ -63,19 +69,23 @@ begin
 
     if r.reference.abs_change = '1' then
       rin.next_second <= r.reference.second + 1;
-    elsif r.reference.second = r.next_second then
+      rin.current_second <= r.reference.second;
+      rin.previous_second <= r.reference.second - 1;
+    elsif r.reference.second = r.next_second
+      or (lead_ns_c /= 0
+          and r.reference.second = r.current_second
+          and r.reference.nanosecond >= lead_threshold_c) then
       rin.next_second <= r.next_second + 1;
+      rin.current_second <= r.next_second;
+      rin.previous_second <= r.current_second;
       rin.tick <= '1';
-    elsif lead_ns_c /= 0
-      and r.reference.second + 1 = r.next_second
-      and r.reference.nanosecond >= lead_threshold_c then
-      rin.next_second <= r.next_second + 1;
-      rin.tick <= '1';
-    elsif r.reference.second + 1 /= r.next_second
-      and r.reference.second + 2 /= r.next_second then
+    elsif r.reference.second /= r.current_second
+      and r.reference.second /= r.previous_second then
       -- The time base is not where the ticker expects, ticked ahead
       -- or not: resynchronize without a pulse.
       rin.next_second <= r.reference.second + 1;
+      rin.current_second <= r.reference.second;
+      rin.previous_second <= r.reference.second - 1;
     end if;
   end process;
 
