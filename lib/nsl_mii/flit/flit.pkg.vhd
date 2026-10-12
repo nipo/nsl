@@ -72,6 +72,9 @@ package flit is
     );
   end component;
 
+  -- Every frame starting with a valid preamble and SFD yields
+  -- exactly one packet, a frame without any data byte yields a one
+  -- byte packet flagged in error.
   component mii_flit_to_axi4_stream is
     port (
         clock_i   : in std_ulogic;

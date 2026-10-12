@@ -42,6 +42,8 @@ architecture beh of mii_flit_to_axi4_stream is
         in_state : in_state_t;
         in_overflow : boolean;
         in_error_seen : boolean;
+        -- Some data byte of the current frame entered the fifo.
+        in_pushed : boolean;
 
         fifo : byte_string(0 to fifo_depth_c - 1);
         fifo_fillness : integer range 0 to fifo_depth_c;
@@ -83,6 +85,7 @@ begin
                     rin.in_state <= IN_PRE;
                     rin.in_overflow <= false;
                     rin.in_error_seen <= false;
+                    rin.in_pushed <= false;
                 end if;
 
             when IN_PRE =>
@@ -104,6 +107,7 @@ begin
                 if valid_i = '1' then
                     if flit_i.valid = '1' and flit_i.error = '0' then
                         fifo_push := true;
+                        rin.in_pushed <= true;
                     elsif flit_i.valid = '0' and flit_i.error = '1' then
                         -- GMII / RGMII:
                         -- - 00-0d, 10-1e, 20-fe: reserved
@@ -122,6 +126,14 @@ begin
                         rin.in_error_seen <= true;
                     else -- valid = '0', error = '0'
                         rin.in_state <= IN_COMMIT;
+                        -- A frame that ends right after its SFD still
+                        -- yields one packet, flagged in error, so that
+                        -- frames and packets stay in one to one
+                        -- correspondence.
+                        if not r.in_pushed then
+                            fifo_push := true;
+                            rin.in_error_seen <= true;
+                        end if;
                     end if;
                 end if;
 
