@@ -9,5 +9,3 @@ deps += nsl_data.endian
 deps += nsl_bnoc.committed
 deps += nsl_math.arith
 deps += nsl_inet.mac
-deps += nsl_amba.axi4_stream
-deps += nsl_bnoc.axi_adapter

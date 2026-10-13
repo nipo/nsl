@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_bnoc, work;
+library nsl_bnoc, work;
 use nsl_bnoc.committed.all;
 use work.mac.all;
 
@@ -84,28 +84,33 @@ package vlan is
       );
   end component;
 
-  -- One layer-1 committed link fanned out to one AXI4-Stream pipe per
-  -- VLAN.  Checks and strips the FCS on the way in, recomputes it on
-  -- the way out, so the tag length change stays consistent.
+  -- One tagged layer-1 committed link fanned out to one committed pipe
+  -- per VLAN.  Checks and strips the FCS on the way in, recomputes it
+  -- on the way out, so the tag length change stays consistent.  Per-VID
+  -- pipes carry untagged frames plus the status byte, without FCS
+  -- unless routed_has_fcs_c is set.
   component vlan_path_router is
     generic(
       vlan_id_c : vlan_id_vector;
-      native_vlan_id_c : vlan_id_t := 0
+      native_vlan_id_c : vlan_id_t := 0;
+      -- Per-VID pipes are layer-1 links (see vlan_path_router.vhd)
+      routed_has_fcs_c : boolean := false
       );
     port(
       reset_n_i : in std_ulogic;
       clock_i   : in std_ulogic;
 
-      l1_rx_i : in  nsl_bnoc.committed.committed_req_t;
-      l1_rx_o : out  nsl_bnoc.committed.committed_ack_t;
-      l1_tx_o : out nsl_bnoc.committed.committed_req_t;
-      l1_tx_i : in nsl_bnoc.committed.committed_ack_t;
+      rx_eth_vlan_i : in  nsl_bnoc.committed.committed_req_t;
+      rx_eth_vlan_o : out nsl_bnoc.committed.committed_ack_t;
 
-      routed_tx_o : out nsl_amba.axi4_stream.master_vector(0 to vlan_id_c'length-1);
-      routed_tx_i : in  nsl_amba.axi4_stream.slave_vector(0 to vlan_id_c'length-1);
+      tx_eth_vlan_o : out nsl_bnoc.committed.committed_req_t;
+      tx_eth_vlan_i : in  nsl_bnoc.committed.committed_ack_t;
 
-      routed_rx_i : in  nsl_amba.axi4_stream.master_vector(0 to vlan_id_c'length-1);
-      routed_rx_o : out nsl_amba.axi4_stream.slave_vector(0 to vlan_id_c'length-1)
+      rx_eth_routed_o : out nsl_bnoc.committed.committed_req_vector(0 to vlan_id_c'length-1);
+      rx_eth_routed_i : in  nsl_bnoc.committed.committed_ack_vector(0 to vlan_id_c'length-1);
+
+      tx_eth_routed_i : in  nsl_bnoc.committed.committed_req_vector(0 to vlan_id_c'length-1);
+      tx_eth_routed_o : out nsl_bnoc.committed.committed_ack_vector(0 to vlan_id_c'length-1)
       );
   end component;
 
