@@ -6,10 +6,14 @@ root:
     - file_type: vhdl
       files:
         - gmii_z7_phy_ip_top.vhd
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
   deps:
     - nsl_bnoc.committed
     - nsl_bnoc.framed
     - nsl_mii.gmii
+    - nsl_smi.smi
 
 output:
   - name: ip_package
