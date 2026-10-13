@@ -14,7 +14,8 @@ use unisim.vcomponents.all;
 
 entity sgmii_serdes_backend_series7 is
   generic (
-    refclk_hz_c : positive := 25000000
+    refclk_hz_c : positive := 25000000;
+    rx_invert_c : boolean := false
   );
   port (
     ref_clk_i   : in std_ulogic;
@@ -37,7 +38,7 @@ architecture beh of sgmii_serdes_backend_series7 is
   signal s_data_m2p_se : std_ulogic;
   signal s_data_p2m_se : std_ulogic;
 
-  signal s_ser2dec_code : nsl_line_coding.ibm_8b10b.code_word_t;
+  signal s_ser2dec_code, s_ser2dec_processed_code : nsl_line_coding.ibm_8b10b.code_word_t;
   signal s_enc2ser_code : nsl_line_coding.ibm_8b10b.code_word_t;
 
   signal s_delay_shift  : std_ulogic;
@@ -219,7 +220,7 @@ begin  -- architecture beh
       clock_i           => s_parallel_clock_buff,
       reset_n_i         => s_general_reset_sync_n,
       valid_i           => '1',
-      data_i            => s_ser2dec_code,
+      data_i            => s_ser2dec_processed_code,
       data_o            => sgmii_o.data_p2m_symbol,
       code_error_o      => sgmii_o.code_err,
       disparity_error_o => sgmii_o.disparity_err
@@ -266,6 +267,14 @@ begin  -- architecture beh
       bitslip_i    => s_slip_shift,
       mark_o       => s_slip_mark
       );
+
+  invert_in: if rx_invert_c generate
+    s_ser2dec_processed_code <= not s_ser2dec_code;
+  end generate;
+
+  not_invert_in: if not rx_invert_c generate
+    s_ser2dec_processed_code <= s_ser2dec_code;
+  end generate;
 
   pad_diff_input_1 : nsl_io.pad.pad_diff_input
     generic map (

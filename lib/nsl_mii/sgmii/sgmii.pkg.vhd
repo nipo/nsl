@@ -125,8 +125,9 @@ package sgmii is
   -- needed for the SERDES primitives (MMCM + BUFR + BUFIO, etc)
   component sgmii_serdes_backend_series7 is
     generic (
-      refclk_hz_c : positive := 25000000
-      );    
+      refclk_hz_c : positive := 25000000;
+      rx_invert_c : boolean := false
+      );
     port (
       ref_clk_i   : in std_ulogic;
       ref_rst_n_i : in std_ulogic;
