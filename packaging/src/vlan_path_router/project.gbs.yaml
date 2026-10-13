@@ -10,14 +10,10 @@ root:
       files:
         - ports.tcl
   deps:
-    - nsl_amba.axi4_stream
-    - nsl_bnoc.axi_adapter
     - nsl_bnoc.committed
     - nsl_bnoc.framed
-    - nsl_data.bytestream
     - nsl_inet.mac
     - nsl_inet.vlan
-    - nsl_logic.bool
 
 output:
   - name: ip_package
@@ -33,7 +29,7 @@ output:
         version: "1.0"
         taxonomy: /NSL/Inet
         display_name: VLAN Path Router
-        description: 802.1Q demux/mux between one layer-1 committed link and one AXI4-Stream pipe per VLAN, with FCS check and regeneration
+        description: 802.1Q demux/mux between one tagged layer-1 committed link and one committed pipe per VLAN, with FCS check and regeneration
         supported_families:
           - zynq
           - artix7
