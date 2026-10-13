@@ -185,9 +185,13 @@ begin
     signal s_gt_power_good_sync : std_logic;
     signal s_rx_pma_rst_done       : std_logic;
     signal s_tx_pma_rst_done       : std_logic;
+    signal s_rx_rst_done       : std_logic;
+    signal s_tx_rst_done       : std_logic;    
     signal s_pll_locked_sync    : std_logic;
     signal s_rx_pma_rst_done_sync  : std_logic;
     signal s_tx_pma_rst_done_sync  : std_logic;
+    signal s_rx_rst_done_sync  : std_logic;
+    signal s_tx_rst_done_sync  : std_logic;    
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock        : std_ulogic;
@@ -197,7 +201,6 @@ begin
     signal s_txusrclk2_buff        : std_ulogic;
 
     signal s_pll_locked : std_logic;
-
     signal s_pll_pd         : std_logic;
     signal s_pll_reset_done : std_logic;
 
@@ -245,7 +248,9 @@ begin
       ST_WAIT_PLL,
       ST_WAIT_PMA_LOW,
       ST_WAIT_PWR_GOOD,
+      ST_DELAY_PWR_GOOD,
       ST_WAIT_PMA_HIGH,
+      ST_READY,
       ST_DONE);
 
     type regs_t is
@@ -253,6 +258,9 @@ begin
       state   : reset_state_t;
       gth_rst : std_ulogic;
       timeout : natural;
+      pwr_timer : natural;
+      rx_ready : std_logic;
+      tx_ready : std_logic;
     end record;
 
     signal r_rx, rin_rx, r_tx, rin_tx : regs_t;
@@ -265,6 +273,7 @@ begin
     constant data_bit_count_c    : natural      := config_c.lanes(lane_idx).data_byte_count * 8;
     constant data_width_ratio_c  : natural      := data_width_config_c.interface_width / data_bit_count_c;
     constant timeout_delay_c     : natural      := stable_clk_ref_mhz_c * 1_000_000;
+    constant gt_pwr_delay_c      : natural      := stable_clk_ref_mhz_c * 250 + 50;
 
     signal s_rx_data_to_adapter   : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
@@ -311,7 +320,7 @@ begin
       case r_pll.state is
         when ST_RESET =>
           rin_pll.pll_count <= 0;
-          rin_pll.pll_pd    <= '0';
+          rin_pll.pll_pd    <= '1';
           rin_pll.pll_done  <= '0';
           rin_pll.state     <= ST_HOLD_RST;
         when ST_HOLD_RST =>
@@ -334,9 +343,9 @@ begin
     -- GTH reset -----------------------------------------------------------------
     s_gth_rx_rst  <= r_rx.gth_rst;
     s_gth_tx_rst  <= r_tx.gth_rst;
-    s_rx_ready <= s_rx_pma_rst_done_sync;
-    s_tx_ready <= s_tx_pma_rst_done_sync;
-
+    s_rx_ready <= r_rx.rx_ready;
+    s_tx_ready <= r_tx.tx_ready;
+    
     -- De-glitch asynchronous signals
     pll_locked_sync : nsl_clocking.async.async_deglitcher
       port map(
@@ -357,7 +366,21 @@ begin
         clock_i => s_stableclk,
         data_i  => s_tx_pma_rst_done,
         data_o  => s_tx_pma_rst_done_sync
-        );                
+        );
+
+    rx_rst_done_sync : nsl_clocking.async.async_deglitcher
+      port map(
+        clock_i => s_stableclk,
+        data_i  => s_rx_rst_done,
+        data_o  => s_rx_rst_done_sync
+        );
+
+    tx_rst_done_sync : nsl_clocking.async.async_deglitcher
+      port map(
+        clock_i => s_stableclk,
+        data_i  => s_tx_rst_done,
+        data_o  => s_tx_rst_done_sync
+        );                    
 
     -- Reset FSM
     reg_rx : process(reset_n_i, s_stableclk)
@@ -375,7 +398,8 @@ begin
     end process;
 
     transition_rx : process(r_rx, s_gt_power_good_sync, s_pll_locked_sync,
-                            s_pll_reset_done, s_rx_pma_rst_done_sync) is
+                            s_pll_reset_done, s_rx_pma_rst_done_sync,
+                            s_rx_rst_done_sync) is
 
     begin
       rin_rx         <= r_rx;
@@ -386,6 +410,8 @@ begin
           rin_rx.state   <= ST_WAIT_PLL;
           rin_rx.gth_rst <= '1';
           rin_rx.timeout <= timeout_delay_c;
+          rin_rx.rx_ready <= '0';
+          rin_rx.tx_ready <= '0';
         when ST_WAIT_PLL =>
           rin_rx.gth_rst <= '1';
           if s_pll_locked_sync = '1' and s_pll_reset_done = '1' then
@@ -396,19 +422,32 @@ begin
             rin_rx.state <= ST_WAIT_PWR_GOOD;
           end if;
         when ST_WAIT_PWR_GOOD =>
+          rin_rx.pwr_timer <= gt_pwr_delay_c;
           if s_gt_power_good_sync = '1' then
+            rin_rx.state <= ST_DELAY_PWR_GOOD;
+          end if;
+        when ST_DELAY_PWR_GOOD =>
+          if r_rx.pwr_timer = 0 then
             rin_rx.state <= ST_WAIT_PMA_HIGH;
-          end if;          
+          else
+            rin_rx.pwr_timer <= r_rx.pwr_timer - 1;
+          end if;
         when ST_WAIT_PMA_HIGH =>
           rin_rx.gth_rst <= '0';
           if s_rx_pma_rst_done_sync = '1' then
+            rin_rx.state <= ST_READY;
+          end if;
+        when ST_READY =>
+          rin_rx.rx_ready <= '1';
+          rin_rx.timeout <= timeout_delay_c;
+          if s_rx_rst_done_sync = '1' then
             rin_rx.state <= ST_DONE;
           end if;
         when ST_DONE =>
           rin_rx.timeout <= timeout_delay_c;
           if s_pll_locked_sync = '0' then
             rin_rx.state <= ST_RESET;
-          end if;          
+          end if;                    
       end case;
 
     end process;
@@ -428,7 +467,8 @@ begin
     end process;
 
     transition_tx : process(r_tx, s_gt_power_good_sync, s_pll_locked_sync,
-                            s_pll_reset_done, s_tx_pma_rst_done_sync) is
+                            s_pll_reset_done, s_tx_pma_rst_done_sync,
+                            s_tx_rst_done_sync) is
 
     begin
       rin_tx         <= r_tx;
@@ -439,6 +479,8 @@ begin
           rin_tx.state   <= ST_WAIT_PLL;
           rin_tx.gth_rst <= '1';
           rin_tx.timeout <= timeout_delay_c;
+          rin_tx.rx_ready <= '0';
+          rin_tx.tx_ready <= '0';
         when ST_WAIT_PLL =>
           rin_tx.gth_rst <= '1';
           if s_pll_locked_sync = '1' and s_pll_reset_done = '1' then
@@ -449,19 +491,31 @@ begin
             rin_tx.state <= ST_WAIT_PWR_GOOD;
           end if;
         when ST_WAIT_PWR_GOOD =>
+          rin_tx.pwr_timer <= gt_pwr_delay_c;          
           if s_gt_power_good_sync = '1' then
+            rin_tx.state <= ST_DELAY_PWR_GOOD;
+          end if;
+        when ST_DELAY_PWR_GOOD =>
+          if r_tx.pwr_timer = 0 then
             rin_tx.state <= ST_WAIT_PMA_HIGH;
+          else
+            rin_tx.pwr_timer <= r_tx.pwr_timer - 1;
           end if;          
         when ST_WAIT_PMA_HIGH =>
           rin_tx.gth_rst <= '0';
           if s_tx_pma_rst_done_sync = '1' then
+            rin_tx.state <= ST_READY;
+          end if;
+        when ST_READY =>
+          rin_tx.tx_ready <= '1';
+          if s_tx_rst_done_sync = '1' then
             rin_tx.state <= ST_DONE;
           end if;
         when ST_DONE =>
           rin_tx.timeout <= timeout_delay_c;
           if s_pll_locked_sync = '0' then
             rin_tx.state <= ST_RESET;
-          end if;
+          end if;                    
       end case;
 
     end process;    
@@ -613,10 +667,14 @@ begin
 
     clocking : block
 
-      signal s_domain_a_pll_reset      : std_ulogic;
       signal s_domain_a_pll_locked     : std_ulogic;
       signal s_domain_a_pll_locked_vec : std_ulogic_vector(0 downto 0);
       signal s_domain_a_pll_feedback   : std_ulogic;
+
+      -- BUFG_GT
+      signal s_cesync : std_ulogic;
+      signal s_clrsync : std_ulogic;
+      signal s_bufgt_clr : std_ulogic;
 
     begin
 
@@ -629,7 +687,18 @@ begin
 
         begin
 
-          s_domain_a_pll_locked <= s_rx_pma_rst_done_sync and s_tx_pma_rst_done_sync;
+          s_domain_a_pll_locked <= s_rx_rst_done_sync and s_tx_rst_done_sync;
+
+          s_bufgt_clr <= not(s_rx_pma_rst_done_sync and s_tx_pma_rst_done_sync);
+
+          BUFG_GT_SYNC_inst : BUFG_GT_SYNC
+            port map (
+              CESYNC => s_cesync,   
+              CLRSYNC => s_clrsync, 
+              CE => '1',           
+              CLK => s_tx_out_clock,         
+              CLR => s_bufgt_clr
+              );          
           
           BUFG_GT_parallelclk : BUFG_GT
             generic map (
@@ -637,9 +706,9 @@ begin
               )
             port map (
               O       => s_parallel_clock_buff,
-              CE      => '1',
+              CE      => s_cesync,
               CEMASK  => '0',
-              CLR     => '0',
+              CLR     => s_clrsync,
               CLRMASK => '0',
               DIV     => "000",
               I       => s_tx_out_clock
@@ -651,9 +720,9 @@ begin
               )
             port map (
               O       => s_txusrclk2_buff,
-              CE      => '1',
+              CE      => s_cesync,
               CEMASK  => '0',
-              CLR     => '0',
+              CLR     => s_clrsync,
               CLRMASK => '0',
               DIV     => "001",
               I       => s_tx_out_clock
@@ -1511,7 +1580,7 @@ begin
         RXQPISENP            => open,
         RXRATEDONE           => open,
         RXRECCLKOUT          => open,
-        RXRESETDONE          => open,
+        RXRESETDONE          => s_rx_rst_done,
         RXSLIDERDY           => open,
         RXSLIPDONE           => open,
         RXSLIPOUTCLKRDY      => open,
@@ -1535,7 +1604,7 @@ begin
         TXQPISENN            => open,
         TXQPISENP            => open,
         TXRATEDONE           => open,
-        TXRESETDONE          => open,
+        TXRESETDONE          => s_tx_rst_done,
         TXSYNCDONE           => open,
         TXSYNCOUT            => open
       );
