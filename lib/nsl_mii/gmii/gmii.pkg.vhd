@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_smi;
 use nsl_bnoc.committed.all;
 
 package gmii is
@@ -38,14 +38,24 @@ package gmii is
   -- Pseudo GMII adapter, fixed at Gb traffic, dedicated to connection
   -- to Zynq-7 hard-IP. Behaves as a Phy to the GbE controller. Always
   -- feed a 125 MHz clock.
+  --
+  -- With indep_rx_clock_c, the path towards the controller (to_mac,
+  -- RXD/RX_DV, CRS and the RX clock given to the controller) runs on
+  -- rx_clock_i instead of clock_i, e.g. a clock recovered by an
+  -- external Phy, with no relation to clock_i. rx_clock_i is ignored
+  -- otherwise.
   component gmii_z7_phy is
     generic(
       -- In bit time
-      ipg_c : natural := 96
+      ipg_c : natural := 96;
+      indep_rx_clock_c : boolean := false;
+      has_mdio_c : boolean := false;
+      phy_addr_c : unsigned(4 downto 0) := (others => '0')
       );
     port(
       reset_n_i : in std_ulogic;
       clock_i : in std_ulogic;
+      rx_clock_i : in std_ulogic := '0';
 
       gmii_tx_i : in gmii_io_group_t;
       -- Zynq-7 GbE receives TX Clock from PL.
@@ -60,7 +70,13 @@ package gmii is
       from_mac_i : in committed_ack;
 
       to_mac_i : in committed_req;
-      to_mac_o : out committed_ack
+      to_mac_o : out committed_ack;
+
+      smi_i : in nsl_smi.smi.smi_slave_i := (mdc => '1', mdio => '1');
+      smi_o : out nsl_smi.smi.smi_slave_o;
+
+      link_up_i : in std_ulogic := '0';
+      mdio_resetn : out std_ulogic
       );
   end component;
 
