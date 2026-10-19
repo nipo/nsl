@@ -126,7 +126,9 @@ begin  -- architecture beh
 
   tx_from_committed : work.flit.mii_flit_from_committed
     generic map(
-      ipg_c => 96
+      pre_count_c => 7,
+      ipg_c => 80 -- See clause 35 IEEE 802.3, ipg includes End of Packet and
+                  -- Carrier Extend
       )
     port map(
       clock_i   => clock_i,
