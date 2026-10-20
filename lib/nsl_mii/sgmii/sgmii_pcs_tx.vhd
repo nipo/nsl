@@ -39,6 +39,7 @@ architecture beh of sgmii_pcs_tx is
   record
     state    : state_t;
     c_toggle : boolean;
+    even     : boolean;
   end record;
 
   signal r, rin: regs_t;
@@ -54,12 +55,14 @@ begin
     if reset_n_i = '0' then
       r.state <= ST_IDLE;
       r.c_toggle <= false;
+      r.even <= true;
     end if;
   end process;
 
   transition: process(r, flit_i, send_config_i, config_i, link_up_i)
   begin
     rin <= r;
+    rin.even <= not r.even;
     symbol_o <= K28_5;
 
     case r.state is
@@ -113,7 +116,11 @@ begin
 
       when ST_F_R =>
         symbol_o <= K23_7;
-        rin.state <= ST_IDLE;
+        if r.even then
+          rin.state <= ST_F_R;
+        else
+          rin.state <= ST_IDLE;
+        end if;
     end case;
   end process;
 
