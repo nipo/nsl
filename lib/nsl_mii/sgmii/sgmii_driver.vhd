@@ -44,6 +44,7 @@ architecture beh of sgmii_driver is
   signal s_link_up         : std_ulogic;
 
   signal s_tx_flit           : mii_flit_t;
+  signal s_tx_flit_ready     : std_ulogic;
   signal s_rx_flit           : mii_flit_t;
   signal s_rx_valid_2_commit : std_ulogic;
 
@@ -122,6 +123,7 @@ begin  -- architecture beh
       clock_i       => clock_i,
       reset_n_i     => reset_n_i,
       flit_i        => s_tx_flit,
+      flit_ready_o  => s_tx_flit_ready,
       symbol_o      => sgmii_o.data_m2p_symbol,
       send_config_i => s_tx_send_config,
       config_i      => s_tx_config,
@@ -142,7 +144,7 @@ begin  -- architecture beh
       committed_o => tx_o,
 
       flit_o  => s_tx_flit,
-      ready_i => s_link_up
+      ready_i => s_tx_flit_ready
       );
 
   -- Auto negotiation ----------------------------------------------------------------------

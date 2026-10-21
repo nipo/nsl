@@ -13,6 +13,7 @@ entity sgmii_pcs_tx is
     reset_n_i   : in  std_ulogic;
 
     flit_i      : in  mii_flit_t;
+    flit_ready_o : out std_ulogic;
 
     symbol_o    : out nsl_line_coding.ibm_8b10b.data_t;
 
@@ -45,6 +46,14 @@ architecture beh of sgmii_pcs_tx is
   signal r, rin: regs_t;
 
 begin
+
+  disparity_o <= '1' when r.rd_pos else '0';
+
+  flit_ready_o <= '0' when link_up_i = '0'
+                  else '0' when flit_i.valid = '1'
+                                and r.state /= ST_IDLE
+                                and r.state /= ST_F_DATA
+                  else '1';
 
   regs: process(reset_n_i, clock_i)
   begin
