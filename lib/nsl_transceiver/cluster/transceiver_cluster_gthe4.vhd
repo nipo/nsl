@@ -235,6 +235,8 @@ begin
     signal s_rxdisperr    : std_logic_vector(3 downto 0);
     signal s_rxcodeerr    : std_logic_vector(3 downto 0);
     signal s_txcharisk    : std_logic_vector(3 downto 0);
+    signal s_txctrl0      : std_logic_vector(15 downto 0);
+    signal s_txctrl1      : std_logic_vector(15 downto 0);
     signal s_txctrl2      : std_logic_vector(7 downto 0);
 
     signal s_pcomma_align_en : std_logic;
@@ -518,7 +520,7 @@ begin
           end if;                    
       end case;
 
-    end process;    
+    end process;
 
     -- Gearbox -----------------------------------------------------------------
 
@@ -530,6 +532,10 @@ begin
       signal s_rx_disperr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_rx_codeerr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_txcharisk_vec    : std_ulogic_vector(3 downto 0);
+      signal s_tx_disp_val_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
+      signal s_tx_disp_frc_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
+      signal s_txdisp_val_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
+      signal s_txdisp_frc_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
       signal s_gth_tx_data_stdu : std_ulogic_vector(data_width_config_c.interface_width - 1 downto 0);
 
     begin
@@ -544,6 +550,13 @@ begin
       s_rxdisperr(3 downto 0)                                                         <= s_rxctrl1(3 downto 0);
       s_rxcodeerr(3 downto 0)                                                         <= s_rxctrl3(3 downto 0);
       s_txctrl2                                                                       <= (3 => s_txcharisk(3), 2 => s_txcharisk(2), 1 => s_txcharisk(1), 0 => s_txcharisk(0), others => '0');
+      s_txctrl0                                                                       <= (15 downto 4 => '0') & std_logic_vector(s_txdisp_val_vec);
+      s_txctrl1                                                                       <= (15 downto 4 => '0') & std_logic_vector(s_txdisp_frc_vec);
+
+      disp_pack : for i in 0 to data_byte_count_c - 1 generate
+        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(4);
+        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(3) and tx_m_i(lane_idx).aux(i)(4);
+      end generate;
 
       gearbox_datafromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
@@ -621,6 +634,32 @@ begin
           reset_n_i => s_parallel_reset_sync_n,
           in_i      => s_tx_charisk_gear,
           out_o     => s_txcharisk_vec((data_byte_count_c * 2) - 1 downto 0)
+          );
+
+      gearbox_dispfrctotx : nsl_logic.gearbox.gearbox_c2c
+        generic map (
+          input_width_c   => data_byte_count_c,
+          output_width_c  => data_byte_count_c * 2,
+          left_to_right_c => false
+          )
+        port map (
+          clock_i   => s_parallel_clock_buff,
+          reset_n_i => s_parallel_reset_sync_n,
+          in_i      => s_tx_disp_frc_in,
+          out_o     => s_txdisp_frc_vec((data_byte_count_c * 2) - 1 downto 0)
+          );
+
+      gearbox_dispvaltotx : nsl_logic.gearbox.gearbox_c2c
+        generic map (
+          input_width_c   => data_byte_count_c,
+          output_width_c  => data_byte_count_c * 2,
+          left_to_right_c => false
+          )
+        port map (
+          clock_i   => s_parallel_clock_buff,
+          reset_n_i => s_parallel_reset_sync_n,
+          in_i      => s_tx_disp_val_in,
+          out_o     => s_txdisp_val_vec((data_byte_count_c * 2) - 1 downto 0)
           );
 
     end block;
@@ -1437,8 +1476,8 @@ begin
         TXCOMINIT            => '0',
         TXCOMSAS             => '0',
         TXCOMWAKE            => '0',
-        TXCTRL0              => (others => '0'),
-        TXCTRL1              => (others => '0'),
+        TXCTRL0              => s_txctrl0,
+        TXCTRL1              => s_txctrl1,
         TXCTRL2              => s_txctrl2,
         TXDATA               => s_gth_tx_data,
         TXDATAEXTENDRSVD     => (others => '0'),
