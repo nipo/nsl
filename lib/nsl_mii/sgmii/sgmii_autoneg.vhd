@@ -129,7 +129,11 @@ begin
           end if;
 
         when ST_LINK_OK =>
-          null;
+          -- If a config is received reset the link
+          if rx_config_valid_i = '1' then
+            rin.link_timer <= link_timer_cycles_c;
+            rin.state <= ST_AN_ENABLE;
+          end if;
       end case;
     end if;
   end process;
