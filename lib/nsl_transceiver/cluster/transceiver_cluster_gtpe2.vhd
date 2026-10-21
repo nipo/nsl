@@ -407,16 +407,18 @@ begin
     signal s_pll1_clk    : std_logic;
     signal s_pll1_refclk : std_logic;
 
-    signal s_rx_ready      : std_logic;
-    signal s_tx_ready      : std_logic;
-    signal s_gtp_rx_data   : std_logic_vector(31 downto 0) := (others => '0');
-    signal s_gtp_tx_data   : std_logic_vector(31 downto 0) := (others => '0');
-    signal s_tx_out_clock  : std_logic;
-    signal s_rxchariscomma : std_logic_vector(3 downto 0);
-    signal s_rxcharisk     : std_logic_vector(3 downto 0);
-    signal s_rxdisperr     : std_logic_vector(3 downto 0);
-    signal s_rxcodeerr     : std_logic_vector(3 downto 0);
-    signal s_txcharisk     : std_logic_vector(3 downto 0);
+    signal s_rx_ready       : std_logic;
+    signal s_tx_ready       : std_logic;
+    signal s_gtp_rx_data    : std_logic_vector(31 downto 0) := (others => '0');
+    signal s_gtp_tx_data    : std_logic_vector(31 downto 0) := (others => '0');
+    signal s_tx_out_clock   : std_logic;
+    signal s_rxchariscomma  : std_logic_vector(3 downto 0);
+    signal s_rxcharisk      : std_logic_vector(3 downto 0);
+    signal s_rxdisperr      : std_logic_vector(3 downto 0);
+    signal s_rxcodeerr      : std_logic_vector(3 downto 0);
+    signal s_txcharisk      : std_logic_vector(3 downto 0);
+    signal s_txchardispval  : std_logic_vector(3 downto 0);
+    signal s_txchardispmode : std_logic_vector(3 downto 0);
 
     signal s_pcomma_align_en : std_logic;
     signal s_mcomma_align_en : std_logic;
@@ -620,6 +622,10 @@ begin
       signal s_rx_disperr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_rx_codeerr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_txcharisk_vec    : std_ulogic_vector(3 downto 0);
+      signal s_tx_disp_val_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
+      signal s_tx_disp_frc_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
+      signal s_txdisp_val_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
+      signal s_txdisp_frc_vec   : std_ulogic_vector(3 downto 0) := (others => '0');      
       signal s_gtp_tx_data_stdu : std_ulogic_vector(data_width_config_c.interface_width - 1 downto 0);
 
     begin
@@ -630,6 +636,13 @@ begin
       s_tx_charisk_gear                                                               <= tx_m_i(lane_idx).control(data_byte_count_c - 1 downto 0);
       s_txcharisk                                                                     <= std_logic_vector(s_txcharisk_vec);
       s_gtp_tx_data(data_width_config_c.interface_width - 1 downto 0)                 <= std_logic_vector(s_gtp_tx_data_stdu);
+      s_txchardispval                                                                 <= std_logic_vector(s_txdisp_val_vec);
+      s_txchardispmode                                                                <= std_logic_vector(s_txdisp_frc_vec);
+
+      disp_pack : for i in 0 to data_byte_count_c - 1 generate
+        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(4);
+        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(3) and tx_m_i(lane_idx).aux(i)(4);
+      end generate;      
 
       gearbox_datafromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
@@ -708,6 +721,32 @@ begin
           in_i      => s_tx_charisk_gear,
           out_o     => s_txcharisk_vec((data_byte_count_c * 2) - 1 downto 0)
           );
+
+      gearbox_dispfrctotx : nsl_logic.gearbox.gearbox_c2c
+        generic map (
+          input_width_c   => data_byte_count_c,
+          output_width_c  => data_byte_count_c * 2,
+          left_to_right_c => false
+          )
+        port map (
+          clock_i   => s_parallel_clock_buff,
+          reset_n_i => s_parallel_reset_sync_n,
+          in_i      => s_tx_disp_frc_in,
+          out_o     => s_txdisp_frc_vec((data_byte_count_c * 2) - 1 downto 0)
+          );
+
+      gearbox_dispvaltotx : nsl_logic.gearbox.gearbox_c2c
+        generic map (
+          input_width_c   => data_byte_count_c,
+          output_width_c  => data_byte_count_c * 2,
+          left_to_right_c => false
+          )
+        port map (
+          clock_i   => s_parallel_clock_buff,
+          reset_n_i => s_parallel_reset_sync_n,
+          in_i      => s_tx_disp_val_in,
+          out_o     => s_txdisp_val_vec((data_byte_count_c * 2) - 1 downto 0)
+          );      
 
     end block;
 
@@ -1418,10 +1457,10 @@ begin
         TXPRBSFORCEERR             => '0',
         ------------------ Transmit Ports - TX 8B/10B Encoder Ports ----------------
         TX8B10BBYPASS              => "0000",
-        TXCHARDISPMODE(3 downto 2) => "00",
-        TXCHARDISPMODE(1 downto 0) => "00",
-        TXCHARDISPVAL(3 downto 2)  => "00",
-        TXCHARDISPVAL(1 downto 0)  => "00",
+        TXCHARDISPMODE(3 downto 2) => s_txchardispmode(3 downto 2),
+        TXCHARDISPMODE(1 downto 0) => s_txchardispmode(1 downto 0),
+        TXCHARDISPVAL(3 downto 2)  => s_txchardispval(3 downto 2),
+        TXCHARDISPVAL(1 downto 0)  => s_txchardispval(1 downto 0),
         TXCHARISK(3 downto 2)      => s_txcharisk(3 downto 2),
         TXCHARISK(1 downto 0)      => s_txcharisk(1 downto 0),
         ------------------ Transmit Ports - TX Buffer Bypass Ports -----------------
