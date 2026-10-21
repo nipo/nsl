@@ -13,6 +13,21 @@ package sgmii is
 
   subtype config_reg_t is std_ulogic_vector(15 downto 0);
 
+  -- See IEEE 802.3 clause 37
+  -- Full Duplex only, no pause, no next page
+  constant config_1000BaseX_c : config_reg_t := "0000000000100000";
+  -- 10ms
+  constant link_timer_1000BaseX_c : natural := 1250000;
+
+  -- See SGMII CISCO spec, table 1
+  -- Auto-negotiation is done with the PHY
+  -- Full Duplex, 1000BaseX mode
+  constant config_sgmii_c : config_reg_t := "0001100000000001";
+  
+  -- SGMII spec says: "The link_timer inside the Auto-Negotiation has been 
+  -- changed from 10 msec to 1.6 msec to ensure a prompt update of the link status."
+  constant link_timer_sgmii_c : natural := 200000;
+
   type sgmii_m2p is record
     data_m2p_symbol : nsl_line_coding.ibm_8b10b.data_t;
     align_rst       : std_ulogic;
@@ -29,10 +44,7 @@ package sgmii is
 
   component sgmii_driver is
     generic (
-      link_timer_c : positive := 200000  -- SGMII spec says: "The link_timer
-                                         -- inside the Auto-Negotiation has been 
-                                         -- changed from 10 msec to 1.6 msec to
-                                         -- ensure a prompt update of the link status."
+      sgmii_mode : boolean := false
       );
     port (
       reset_n_i : in std_ulogic;
