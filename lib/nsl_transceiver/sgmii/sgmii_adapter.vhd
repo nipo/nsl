@@ -75,6 +75,8 @@ begin
   s_tx_m.data(0)    <= sgmii_i.data_m2p_symbol.data;
   s_tx_m.control(3) <= sgmii_i.align_rst;
   s_tx_m.control(1) <= sgmii_i.valid_symbol;
+  s_tx_m.aux(0)(4)  <= '1'; -- Enable RD control
+  s_tx_m.aux(0)(3)  <= sgmii_i.tx_disparity;
 
   tx_m_o <= s_tx_m;
 
