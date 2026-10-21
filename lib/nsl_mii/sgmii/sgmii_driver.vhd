@@ -125,6 +125,7 @@ begin  -- architecture beh
       flit_i        => s_tx_flit,
       flit_ready_o  => s_tx_flit_ready,
       symbol_o      => sgmii_o.data_m2p_symbol,
+      disparity_o   => sgmii_o.tx_disparity,
       send_config_i => s_tx_send_config,
       config_i      => s_tx_config,
       link_up_i     => s_link_up
