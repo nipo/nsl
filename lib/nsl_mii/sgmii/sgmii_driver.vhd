@@ -8,7 +8,7 @@ use work.sgmii.all;
 
 entity sgmii_driver is
   generic (
-    link_timer_c : positive := 200000
+    sgmii_mode : boolean := false
     );
   port (
     reset_n_i : in std_ulogic;
@@ -30,6 +30,10 @@ entity sgmii_driver is
 end entity sgmii_driver;
 
 architecture beh of sgmii_driver is
+
+  -- Choose mode constants
+  constant config_reg_c : config_reg_t := config_sgmii_c when sgmii_mode else config_1000BaseX_c;
+  constant link_timer_c : natural      := link_timer_sgmii_c when sgmii_mode else link_timer_1000BaseX_c;
 
   -- Internal signals
   signal s_rx_config_valid : std_ulogic;
@@ -148,11 +152,7 @@ begin  -- architecture beh
     port map (
       clock_i           => clock_i,
       reset_n_i         => reset_n_i,
-      config_i          => "0000000000100000",  -- See IEEE 802.3 clause 37
-                                                -- Full Duplex only, no pause,
-                                                -- no next page
-                                                -- 0------0001----- (put zeros in place
-                                                -- of don't cares)
+      config_i          => config_reg_c,
       restart_i         => s_autoneg_restart,
       rx_config_valid_i => s_rx_config_valid,
       rx_config_i       => s_rx_config,
