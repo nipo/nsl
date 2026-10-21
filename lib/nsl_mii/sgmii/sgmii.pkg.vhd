@@ -88,7 +88,8 @@ package sgmii is
       reset_n_i : in std_ulogic;
 
       flit_i : in mii_flit_t;
-
+      flit_ready_o : out std_ulogic;
+    
       symbol_o : out nsl_line_coding.ibm_8b10b.data_t;
 
       send_config_i : in std_ulogic;
