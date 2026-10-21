@@ -30,6 +30,7 @@ package sgmii is
 
   type sgmii_m2p is record
     data_m2p_symbol : nsl_line_coding.ibm_8b10b.data_t;
+    tx_disparity    : std_ulogic;
     align_rst       : std_ulogic;
     valid_symbol    : std_ulogic;
   end record;
@@ -91,6 +92,11 @@ package sgmii is
       flit_ready_o : out std_ulogic;
     
       symbol_o : out nsl_line_coding.ibm_8b10b.data_t;
+      -- Running disparity the encoder must use when encoding symbol_o
+      -- ('1' = positive, '0' = negative). Same cycle as symbol_o. The
+      -- backend must encode each symbol as if the RD before it were this
+      -- value, so that the line follows this PCS's RD model exactly.
+      disparity_o : out std_ulogic;      
 
       send_config_i : in std_ulogic;
       config_i      : in config_reg_t;
