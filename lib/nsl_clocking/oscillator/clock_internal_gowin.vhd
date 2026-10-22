@@ -13,12 +13,6 @@ architecture gw of clock_internal is
 
   attribute syn_black_box: boolean;
   constant target_freq_c : real := 60.0e6;
-  constant osc_freq_c : real := 210.0e6;
-  constant divisor_c : integer := (integer(osc_freq_c / target_freq_c) / 2) * 2;
-  
-  -- 2.1-125 MHz, 5%
-  -- freq_div: 2-128, even only
-  -- Aim for ~60MHz
 
 begin
 
@@ -34,6 +28,9 @@ begin
         );
     end component;
     attribute syn_black_box of OSC : component is true;
+
+    constant osc_freq_c : real := 210.0e6;
+    constant divisor_c : integer := (integer(osc_freq_c / target_freq_c) / 2) * 2;
   begin
     inst: OSC
       generic map (
@@ -56,6 +53,9 @@ begin
         );
     end component;
     attribute syn_black_box of OSCH : component is true;
+
+    constant osc_freq_c : real := 210.0e6;
+    constant divisor_c : integer := (integer(osc_freq_c / target_freq_c) / 2) * 2;
   begin
     inst: OSCH
       generic map (
@@ -68,6 +68,9 @@ begin
 
   has_osca: if nsl_hwconfig.gowin_config.internal_osc = "osca"
   generate
+    constant osc_freq_c : real := 210.0e6;
+    constant divisor_c : integer := (integer(osc_freq_c / target_freq_c) / 2) * 2;
+
     component OSCA is
       generic (
         FREQ_DIV : integer := 96
@@ -86,6 +89,30 @@ begin
       port map (
         OSCOUT => clock_o,
         OSCEN => '1'
+        );
+  end generate;
+
+  has_oscz: if nsl_hwconfig.gowin_config.internal_osc = "oscz"
+  generate
+    component OSCZ is
+      generic (
+        FREQ_DIV : integer := 100;
+        S_RATE : string := "FAST"
+        );
+      port (
+        OSCEN : in std_logic;
+        OSCOUT: out std_logic
+        );
+    end component;
+    attribute syn_black_box of OSCZ : component is true;
+  begin
+    inst: OSCZ
+      generic map (
+        FREQ_DIV => 2
+        )
+      port map (
+        OSCEN => '1',
+        OSCOUT => clock_o
         );
   end generate;
 
