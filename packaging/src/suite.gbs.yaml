@@ -38,6 +38,9 @@ projects:
   - name: activity_monitor
     path: activity_monitor
     tags: [vivado-ip]
+  - name: activity_blinker
+    path: activity_blinker
+    tags: [vivado-ip]
   - name: axi4lite_clock_measurer
     path: axi4lite_clock_measurer
     tags: [vivado-ip]

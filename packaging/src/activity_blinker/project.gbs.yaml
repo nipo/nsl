@@ -1,0 +1,35 @@
+name: activity_blinker
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - ip_top.vhd
+    - file_type: vivado-bd-tcl
+      files:
+        - bd.tcl
+  deps:
+    - nsl_indication.activity
+
+output:
+  - name: ip_package
+    topcell: ip_top
+    target:
+      part: xc7a50tfgg484-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: indication
+        name: activity_blinker
+        version: "1.0"
+        taxonomy: /Indication
+        display_name: Activity Blinker
+        description: Blinks a LED continuously, faster when activity is detected
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: activity_blinker_1.0.zip
