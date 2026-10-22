@@ -14,6 +14,10 @@ package smi is
     mdio : std_ulogic;
   end record;
 
+  constant smi_master_i_idle_c : smi_master_i := (
+    mdio => '1'
+    );
+
   type smi_master_io is record
     i : smi_master_i;
     o : smi_master_o;
