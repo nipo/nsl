@@ -49,6 +49,10 @@ package spi is
     miso : std_ulogic;
   end record;
 
+  constant spi_master_i_idle_c : spi_master_i := (
+    miso => '1'
+    );
+
   type spi_master_io is
   record
     o: spi_master_o;
