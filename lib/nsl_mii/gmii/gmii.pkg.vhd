@@ -28,6 +28,12 @@ package gmii is
     -- en is called dv on RX path.
     en, er : std_ulogic;
   end record;
+
+  constant gmii_io_group_idle_c : gmii_io_group_t := (
+    data => (others => '-'),
+    en => '0',
+    er => '0'
+    );
   
   -- Pseudo GMII adapter, fixed at Gb traffic, dedicated to connection
   -- to Zynq-7 hard-IP. Behaves as a Phy to the GbE controller. Always
