@@ -1,3 +1,4 @@
+packages += uart
 packages += serdes
 packages += transactor
 packages += testing
