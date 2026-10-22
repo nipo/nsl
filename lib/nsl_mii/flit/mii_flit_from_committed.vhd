@@ -219,8 +219,13 @@ begin
           flit_o.valid <= '0';
         else
           flit_o.error <= '0';
-          flit_o.data <= r.fifo(0);
-          flit_o.valid <= to_logic(r.fifo_fillness /= 0);
+          if r.fifo_fillness /= 0 then
+            flit_o.valid <= '1';
+            flit_o.data <= r.fifo(0);
+          else
+            flit_o.valid <= '0';
+            flit_o.data <= x"00";
+          end if;
         end if;
         packet_o <= '1';
 
