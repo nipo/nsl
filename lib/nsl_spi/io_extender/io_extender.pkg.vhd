@@ -31,13 +31,14 @@ package io_extender is
   component io_extender_framed_driver is
     generic(
       clock_divisor_c : natural range 0 to 2**5-1;
-      slave_no_c : natural range 0 to 6
+      slave_no_c : natural range 0 to 6;
+      data_width_c : positive := 8
       );
     port(
       reset_n_i    : in std_ulogic;
       clock_i      : in std_ulogic;
 
-      data_i       : in std_ulogic_vector(7 downto 0);
+      data_i       : in std_ulogic_vector(data_width_c-1 downto 0);
 
       cmd_i : in  nsl_bnoc.framed.framed_ack;
       cmd_o : out nsl_bnoc.framed.framed_req;

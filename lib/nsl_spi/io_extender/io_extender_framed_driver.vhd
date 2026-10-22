@@ -2,18 +2,21 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc;
+library nsl_bnoc, nsl_data;
+use nsl_data.bytestream.all;
+use nsl_data.endian.all;
 
 entity io_extender_framed_driver is
   generic(
     clock_divisor_c : natural range 0 to 2**5-1;
-    slave_no_c : natural range 0 to 6
+    slave_no_c : natural range 0 to 6;
+    data_width_c : positive := 8
     );
   port(
     reset_n_i    : in std_ulogic;
     clock_i      : in std_ulogic;
 
-    data_i       : in std_ulogic_vector(7 downto 0);
+    data_i       : in std_ulogic_vector(data_width_c-1 downto 0);
 
     cmd_i : in  nsl_bnoc.framed.framed_ack;
     cmd_o : out nsl_bnoc.framed.framed_req;
@@ -24,6 +27,9 @@ end entity;
 
 architecture beh of io_extender_framed_driver is
 
+  constant byte_count_c : natural := (data_width_c + 7) / 8;
+  constant pad_c : unsigned(data_width_c to 8*byte_count_c) := (others => '0');
+  
   type state_t is (
     ST_RESET,
     ST_IDLE,
@@ -37,10 +43,12 @@ architecture beh of io_extender_framed_driver is
   
   type regs_t is record
     state : state_t;
-    data  : nsl_bnoc.framed.framed_data_t;
+    data  : nsl_data.bytestream.byte_string(0 to byte_count_c-1);
+    ctr: integer range 0 to byte_count_c-1;
   end record;
 
   signal r, rin: regs_t;
+  signal data_s : nsl_data.bytestream.byte_string(0 to byte_count_c-1);
     
 begin
   
@@ -55,7 +63,9 @@ begin
     end if;
   end process;
 
-  transition: process(r, cmd_i, rsp_i, data_i)
+  data_s <= to_be(pad_c & unsigned(data_i));
+  
+  transition: process(r, cmd_i, rsp_i, data_s)
   begin
     rin <= r;
 
@@ -64,12 +74,12 @@ begin
         rin.state <= ST_DIV;
 
       when ST_IDLE =>
-        if r.data /= data_i then
+        if r.data /= data_s then
           rin.state <= ST_DIV;
         end if;
 
       when ST_DIV =>
-        rin.data <= data_i;
+        rin.data <= data_s;
         if cmd_i.ready = '1' then
           rin.state <= ST_SELECT;
         end if;
@@ -82,11 +92,17 @@ begin
       when ST_SHIFT_CMD =>
         if cmd_i.ready = '1' then
           rin.state <= ST_SHIFT_DATA;
+          rin.ctr <= byte_count_c-1;
         end if;
         
       when ST_SHIFT_DATA =>
         if cmd_i.ready = '1' then
-          rin.state <= ST_UNSELECT;
+          rin.data <= rot_left(r.data);
+          if r.ctr = 0 then
+            rin.state <= ST_UNSELECT;
+          else
+            rin.ctr <= r.ctr - 1;
+          end if;
         end if;
         
       when ST_UNSELECT =>
@@ -128,14 +144,14 @@ begin
 
       when ST_SHIFT_CMD =>
         cmd_o.valid <= '1';
-        -- SPI_CMD_SHIFT_OUT | 0
-        cmd_o.data <= "10000000";
+        -- SPI_CMD_SHIFT_OUT | len-1
+        cmd_o.data <= "10" & std_ulogic_vector(to_unsigned((data_width_c-1)/8, 6));
         cmd_o.last <= '0';
         rsp_o.ready <= '1';
 
       when ST_SHIFT_DATA =>
         cmd_o.valid <= '1';
-        cmd_o.data <= r.data;
+        cmd_o.data <= first_left(r.data);
         cmd_o.last <= '0';
         rsp_o.ready <= '1';
 
