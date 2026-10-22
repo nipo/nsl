@@ -20,6 +20,12 @@ package i2c is
     sda : std_ulogic;
   end record;
 
+  -- Released bus
+  constant i2c_i_idle_c : i2c_i := (
+    scl => '1',
+    sda => '1'
+    );
+
   -- An output from an I2C device. May only drive bus lines down.
   type i2c_o is record
     scl : nsl_io.io.opendrain;
