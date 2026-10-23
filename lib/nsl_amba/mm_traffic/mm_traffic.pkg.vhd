@@ -67,6 +67,9 @@ package mm_traffic is
   -- With scramble_c set, transactions are visited in bit-reversed
   -- index order: still every location exactly once, but jumping across
   -- rows and banks instead of walking them.
+  --
+  -- All transactions use ID 0, so read data comes back in the order it
+  -- was asked for and is checked against the same walk.
   component axi4_mm_memory_tester is
     generic(
       config_c: config_t;
@@ -77,7 +80,13 @@ package mm_traffic is
       -- Bus beats per transaction
       burst_length_c: natural := 8;
       seed_c: natural := 1;
-      scramble_c: boolean := false
+      scramble_c: boolean := false;
+      -- Transactions in flight at most: a write is in flight from its
+      -- address to its response, a read from its address to its last
+      -- beat.  With one, the walker measures the latency of the
+      -- memory; with enough to cover that latency, beats stream back
+      -- to back and it measures bandwidth.
+      outstanding_c: positive := 1
       );
     port(
       clock_i: in std_ulogic;
@@ -88,7 +97,11 @@ package mm_traffic is
       axi_o: out master_t;
       axi_i: in slave_t;
 
+      -- Set from start until every location is read back
       busy_o: out std_ulogic;
+      -- Set from start until the last write response, so that busy
+      -- cycles split between write and read bandwidth
+      writing_o: out std_ulogic;
       done_o: out std_ulogic;
       error_count_o: out unsigned(31 downto 0);
       first_error_address_o: out unsigned(config_c.address_width - 1 downto 0)
