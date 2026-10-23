@@ -1,0 +1,56 @@
+name: tang_console_60k_camera_probe
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.reset
+    - nsl_clocking.async
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_usb.usb
+    - nsl_usb.utmi
+    - nsl_usb.fs_phy
+    - nsl_usb.func
+    - nsl_usb.io
+    - nsl_amba.axi4_stream
+    - nsl_bnoc.axi_adapter
+    - nsl_bnoc.framed
+    - nsl_io.io
+    - nsl_i2c.i2c
+    - nsl_i2c.cbor_transactor
+  sources:
+    - file_type: verilog
+      files:
+        - ../usb2/usb2_0_softphy.v
+    - file_type: vhdl
+      files:
+        - ../usb2/softphy.pkg.vhd
+        - ../usb2/gw_usb2_phy.vhd
+        - main.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/usb2.cst
+        - ../pinout/j7_pmod_double_lvcmos33.cst
+        - ../pinout/buttons.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/clk.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - clock.sdc
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - mspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: camera_probe.fs
