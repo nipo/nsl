@@ -1,0 +1,4 @@
+// The video PLL has to sit on the side of the HDMI banks.  Left to
+// itself, the placer may put it across the die, where it outputs the
+// right rate but never asserts lock.
+INS_LOC "video_pll/use_plla.inst" PLL_R[0];

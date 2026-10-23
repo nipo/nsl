@@ -1,0 +1,63 @@
+name: tang_console_60k_camera_hdmi
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.reset
+    - nsl_clocking.async
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_bnoc.framed
+    - nsl_io.io
+    - nsl_i2c.i2c
+    - nsl_i2c.transactor
+    - nsl_omnivision.ov5640
+    - nsl_sipeed.pmod_dvp
+    - nsl_video.mode
+    - nsl_video.pixel_stream
+    - nsl_video.raster
+    - nsl_video.dvp
+    - nsl_color.rgb
+    - nsl_dvi.encoder
+    - nsl_dvi.transceiver
+    - nsl_io.diff
+    - nsl_io.clock
+  sources:
+    - file_type: vhdl
+      files:
+        - main.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/buttons.cst
+        - ../pinout/j6_pmod_double_lvcmos33.cst
+        - ../pinout/j7_pmod_double_lvcmos33.cst
+        - ../pinout/hdmi.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/clk.cst
+        - placement.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - clock.sdc
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - mspi
+        - done
+        - ready
+        - cpu
+    outputs:
+      - type: gowin-fs
+        path: camera_hdmi.fs
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html
+      - type: timing-summary
+        path: timing.yaml
