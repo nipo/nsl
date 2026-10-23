@@ -290,6 +290,9 @@ projects:
   - name: amba_mm_traffic
     path: amba/mm_traffic
     tags: [ghdl, simulation]
+  - name: amba_mm_traffic_pipelined
+    path: amba/mm_traffic_pipelined
+    tags: [ghdl, simulation]
   - name: ext_ram_sdram_model
     path: ext_ram/sdram_model
     tags: [ghdl, simulation]
