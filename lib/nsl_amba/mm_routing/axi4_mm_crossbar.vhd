@@ -16,7 +16,10 @@ entity axi4_mm_crossbar is
     master_count_c : positive;
     routing_table_c : nsl_amba.address.address_vector;
     default_slave_c : integer := -1;
-    aw_tracking_depth_c : positive := 4
+    aw_tracking_depth_c : positive := 4;
+    max_outstanding_c : positive := 16;
+    master_slice_c : boolean := false;
+    slave_slice_c : boolean := false
     );
   port(
     clock_i : in std_ulogic;
@@ -93,7 +96,6 @@ architecture beh of axi4_mm_crossbar is
   -- Slave port interface signals (aggregated for slave ports)
   signal slave_ar_ready : std_ulogic_vector(0 to internal_slave_count_c-1);
   signal slave_aw_ready : std_ulogic_vector(0 to internal_slave_count_c-1);
-  signal slave_w_ready : std_ulogic_vector(0 to internal_slave_count_c-1);
 
   -- Internal error slave signals
   signal error_slave_axi_o : master_t;
@@ -130,39 +132,95 @@ begin
 
   -- Master ports generation
   master_ports: for m in 0 to master_count_c-1 generate
-    master_port_inst: work.crossbar_priv.axi4_mm_crossbar_master_port
-      generic map(
-        master_config_c => master_config_c,
-        slave_config_c => slave_config_c,
-        slave_count_c => internal_slave_count_c,
-        routing_table_c => routing_table_c,
-        default_slave_c => actual_default_slave_c,
-        master_index_c => m,
-        aw_tracking_depth_c => aw_tracking_depth_c
-        )
-      port map(
-        clock_i => clock_i,
-        reset_n_i => reset_n_i,
-        ext_i => slave_i(m),
-        ext_o => slave_o(m),
-        int_ar_o => master_ar_address(m),
-        int_ar_ready_i => master_ar_ready(m),
-        int_ar_request_o => master_ar_request(m),
-        int_ar_grant_i => master_ar_grant(m),
-        int_aw_o => master_aw_address(m),
-        int_aw_ready_i => master_aw_ready(m),
-        int_aw_request_o => master_aw_request(m),
-        int_aw_grant_i => master_aw_grant(m),
-        int_w_o => master_w_data(m),
-        int_w_ready_i => master_w_ready(m),
-        int_w_select_o => master_w_select(m),
-        int_r_i => merged_r_data(m),
-        int_r_valid_i => merged_r_valid(m),
-        int_r_ready_o => master_r_ready(m),
-        int_b_i => merged_b_data(m),
-        int_b_valid_i => merged_b_valid(m),
-        int_b_ready_o => master_b_ready(m)
-        );
+    direct: if not master_slice_c generate
+      master_port_inst: work.crossbar_priv.axi4_mm_crossbar_master_port
+        generic map(
+          master_config_c => master_config_c,
+          slave_config_c => slave_config_c,
+          slave_count_c => internal_slave_count_c,
+          routing_table_c => routing_table_c,
+          default_slave_c => actual_default_slave_c,
+          master_index_c => m,
+          aw_tracking_depth_c => aw_tracking_depth_c,
+          max_outstanding_c => max_outstanding_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          ext_i => slave_i(m),
+          ext_o => slave_o(m),
+          int_ar_o => master_ar_address(m),
+          int_ar_ready_i => master_ar_ready(m),
+          int_ar_request_o => master_ar_request(m),
+          int_ar_grant_i => master_ar_grant(m),
+          int_aw_o => master_aw_address(m),
+          int_aw_ready_i => master_aw_ready(m),
+          int_aw_request_o => master_aw_request(m),
+          int_aw_grant_i => master_aw_grant(m),
+          int_w_o => master_w_data(m),
+          int_w_ready_i => master_w_ready(m),
+          int_w_select_o => master_w_select(m),
+          int_r_i => merged_r_data(m),
+          int_r_valid_i => merged_r_valid(m),
+          int_r_ready_o => master_r_ready(m),
+          int_b_i => merged_b_data(m),
+          int_b_valid_i => merged_b_valid(m),
+          int_b_ready_o => master_b_ready(m)
+          );
+    end generate;
+
+    sliced: if master_slice_c generate
+      signal sliced_m : master_t;
+      signal sliced_s : slave_t;
+    begin
+      slice: nsl_amba.mm_fifo.axi4_mm_slice
+        generic map(
+          config_c => master_config_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          slave_i => slave_i(m),
+          slave_o => slave_o(m),
+          master_o => sliced_m,
+          master_i => sliced_s
+          );
+
+      master_port_inst: work.crossbar_priv.axi4_mm_crossbar_master_port
+        generic map(
+          master_config_c => master_config_c,
+          slave_config_c => slave_config_c,
+          slave_count_c => internal_slave_count_c,
+          routing_table_c => routing_table_c,
+          default_slave_c => actual_default_slave_c,
+          master_index_c => m,
+          aw_tracking_depth_c => aw_tracking_depth_c,
+          max_outstanding_c => max_outstanding_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          ext_i => sliced_m,
+          ext_o => sliced_s,
+          int_ar_o => master_ar_address(m),
+          int_ar_ready_i => master_ar_ready(m),
+          int_ar_request_o => master_ar_request(m),
+          int_ar_grant_i => master_ar_grant(m),
+          int_aw_o => master_aw_address(m),
+          int_aw_ready_i => master_aw_ready(m),
+          int_aw_request_o => master_aw_request(m),
+          int_aw_grant_i => master_aw_grant(m),
+          int_w_o => master_w_data(m),
+          int_w_ready_i => master_w_ready(m),
+          int_w_select_o => master_w_select(m),
+          int_r_i => merged_r_data(m),
+          int_r_valid_i => merged_r_valid(m),
+          int_r_ready_o => master_r_ready(m),
+          int_b_i => merged_b_data(m),
+          int_b_valid_i => merged_b_valid(m),
+          int_b_ready_o => master_b_ready(m)
+          );
+    end generate;
   end generate;
 
   -- External slave ports generation
@@ -175,6 +233,7 @@ begin
     signal aw_grants : std_ulogic_vector(0 to master_count_c-1);
     signal w_datas : write_data_vector(0 to master_count_c-1);
     signal w_selects : std_ulogic_vector(0 to master_count_c-1);
+    signal w_readys : std_ulogic_vector(0 to master_count_c-1);
     signal r_readys : std_ulogic_vector(0 to master_count_c-1);
     signal b_readys : std_ulogic_vector(0 to master_count_c-1);
   begin
@@ -192,41 +251,93 @@ begin
 
       w_datas(m) <= master_w_data(m);
       w_selects(m) <= master_w_select(m)(s);
-      master_w_ready(m)(s) <= slave_w_ready(s);
+      master_w_ready(m)(s) <= w_readys(m);
 
       r_readys(m) <= slave_r_ready(s)(m);
       b_readys(m) <= slave_b_ready(s)(m);
     end generate;
 
-    slave_port_inst: work.crossbar_priv.axi4_mm_crossbar_slave_port
-      generic map(
-        master_config_c => master_config_c,
-        slave_config_c => slave_config_c,
-        master_count_c => master_count_c
-        )
-      port map(
-        clock_i => clock_i,
-        reset_n_i => reset_n_i,
-        int_ar_i => ar_addresses,
-        int_ar_ready_o => slave_ar_ready(s),
-        int_ar_request_i => ar_requests,
-        int_ar_grant_o => ar_grants,
-        int_aw_i => aw_addresses,
-        int_aw_ready_o => slave_aw_ready(s),
-        int_aw_request_i => aw_requests,
-        int_aw_grant_o => aw_grants,
-        int_w_i => w_datas,
-        int_w_ready_o => slave_w_ready(s),
-        int_w_select_i => w_selects,
-        int_r_o => slave_r_data(s),
-        int_r_valid_o => slave_r_valid(s),
-        int_r_ready_i => r_readys,
-        int_b_o => slave_b_data(s),
-        int_b_valid_o => slave_b_valid(s),
-        int_b_ready_i => b_readys,
-        ext_o => master_o(s),
-        ext_i => master_i(s)
-        );
+    direct: if not slave_slice_c generate
+      slave_port_inst: work.crossbar_priv.axi4_mm_crossbar_slave_port
+        generic map(
+          master_config_c => master_config_c,
+          slave_config_c => slave_config_c,
+          master_count_c => master_count_c,
+          aw_tracking_depth_c => aw_tracking_depth_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          int_ar_i => ar_addresses,
+          int_ar_ready_o => slave_ar_ready(s),
+          int_ar_request_i => ar_requests,
+          int_ar_grant_o => ar_grants,
+          int_aw_i => aw_addresses,
+          int_aw_ready_o => slave_aw_ready(s),
+          int_aw_request_i => aw_requests,
+          int_aw_grant_o => aw_grants,
+          int_w_i => w_datas,
+          int_w_ready_o => w_readys,
+          int_w_select_i => w_selects,
+          int_r_o => slave_r_data(s),
+          int_r_valid_o => slave_r_valid(s),
+          int_r_ready_i => r_readys,
+          int_b_o => slave_b_data(s),
+          int_b_valid_o => slave_b_valid(s),
+          int_b_ready_i => b_readys,
+          ext_o => master_o(s),
+          ext_i => master_i(s)
+          );
+    end generate;
+
+    sliced: if slave_slice_c generate
+      signal sliced_m : master_t;
+      signal sliced_s : slave_t;
+    begin
+      slave_port_inst: work.crossbar_priv.axi4_mm_crossbar_slave_port
+        generic map(
+          master_config_c => master_config_c,
+          slave_config_c => slave_config_c,
+          master_count_c => master_count_c,
+          aw_tracking_depth_c => aw_tracking_depth_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          int_ar_i => ar_addresses,
+          int_ar_ready_o => slave_ar_ready(s),
+          int_ar_request_i => ar_requests,
+          int_ar_grant_o => ar_grants,
+          int_aw_i => aw_addresses,
+          int_aw_ready_o => slave_aw_ready(s),
+          int_aw_request_i => aw_requests,
+          int_aw_grant_o => aw_grants,
+          int_w_i => w_datas,
+          int_w_ready_o => w_readys,
+          int_w_select_i => w_selects,
+          int_r_o => slave_r_data(s),
+          int_r_valid_o => slave_r_valid(s),
+          int_r_ready_i => r_readys,
+          int_b_o => slave_b_data(s),
+          int_b_valid_o => slave_b_valid(s),
+          int_b_ready_i => b_readys,
+          ext_o => sliced_m,
+          ext_i => sliced_s
+          );
+
+      slice: nsl_amba.mm_fifo.axi4_mm_slice
+        generic map(
+          config_c => slave_config_c
+          )
+        port map(
+          clock_i => clock_i,
+          reset_n_i => reset_n_i,
+          slave_i => sliced_m,
+          slave_o => sliced_s,
+          master_o => master_o(s),
+          master_i => master_i(s)
+          );
+    end generate;
   end generate;
 
   -- Internal error slave generation (conditional)
@@ -239,6 +350,7 @@ begin
     signal aw_grants : std_ulogic_vector(0 to master_count_c-1);
     signal w_datas : write_data_vector(0 to master_count_c-1);
     signal w_selects : std_ulogic_vector(0 to master_count_c-1);
+    signal w_readys : std_ulogic_vector(0 to master_count_c-1);
     signal r_readys : std_ulogic_vector(0 to master_count_c-1);
     signal b_readys : std_ulogic_vector(0 to master_count_c-1);
   begin
@@ -256,7 +368,7 @@ begin
 
       w_datas(m) <= master_w_data(m);
       w_selects(m) <= master_w_select(m)(error_slave_index_c);
-      master_w_ready(m)(error_slave_index_c) <= slave_w_ready(error_slave_index_c);
+      master_w_ready(m)(error_slave_index_c) <= w_readys(m);
 
       r_readys(m) <= slave_r_ready(error_slave_index_c)(m);
       b_readys(m) <= slave_b_ready(error_slave_index_c)(m);
@@ -266,7 +378,8 @@ begin
       generic map(
         master_config_c => master_config_c,
         slave_config_c => slave_config_c,
-        master_count_c => master_count_c
+        master_count_c => master_count_c,
+        aw_tracking_depth_c => aw_tracking_depth_c
         )
       port map(
         clock_i => clock_i,
@@ -280,7 +393,7 @@ begin
         int_aw_request_i => aw_requests,
         int_aw_grant_o => aw_grants,
         int_w_i => w_datas,
-        int_w_ready_o => slave_w_ready(error_slave_index_c),
+        int_w_ready_o => w_readys,
         int_w_select_i => w_selects,
         int_r_o => slave_r_data(error_slave_index_c),
         int_r_valid_o => slave_r_valid(error_slave_index_c),

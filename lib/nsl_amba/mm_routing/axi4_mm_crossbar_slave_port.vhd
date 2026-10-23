@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_amba, nsl_math, nsl_logic;
+library nsl_amba, nsl_math, nsl_logic, nsl_memory;
 use nsl_amba.axi4_mm.all;
 use nsl_amba.mm_routing.all;
 use nsl_amba.crossbar_priv.all;
@@ -11,11 +11,13 @@ use nsl_logic.bool.all;
 
 -- Slave port: handles one external slave's connection to the crossbar.
 -- Performs arbitration among masters and ID widening/stripping.
+-- Write data is forwarded in the order write addresses were accepted.
 entity axi4_mm_crossbar_slave_port is
   generic(
     master_config_c : config_t;
     slave_config_c : config_t;
-    master_count_c : positive
+    master_count_c : positive;
+    aw_tracking_depth_c : positive
     );
   port(
     clock_i : in std_ulogic;
@@ -36,7 +38,7 @@ entity axi4_mm_crossbar_slave_port is
 
     -- W channel
     int_w_i : in write_data_vector(0 to master_count_c-1);
-    int_w_ready_o : out std_ulogic;
+    int_w_ready_o : out std_ulogic_vector(0 to master_count_c-1);
     int_w_select_i : in std_ulogic_vector(0 to master_count_c-1);
 
     -- R channel (broadcast to all masters, they filter by ID)
@@ -58,6 +60,7 @@ end entity;
 architecture beh of axi4_mm_crossbar_slave_port is
 
   constant route_width_c : natural := slave_config_c.id_width - master_config_c.id_width;
+  constant master_idx_width_c : positive := max(1, log2(master_count_c));
 
   type ar_state_t is (
     ST_AR_RESET,
@@ -91,6 +94,10 @@ architecture beh of axi4_mm_crossbar_slave_port is
   end record;
 
   signal r, rin : regs_t;
+
+  signal order_in_data, order_out_data : std_ulogic_vector(master_idx_width_c-1 downto 0);
+  signal order_in_valid, order_in_ready : std_ulogic;
+  signal order_out_valid, order_out_ready : std_ulogic;
 
   function widen_id(master_id : std_ulogic_vector;
                     master_index : natural) return std_ulogic_vector
@@ -138,6 +145,24 @@ begin
     report "slave_config_c.id_width must be >= master_config_c.id_width + ceil_log2(master_count_c)"
     severity failure;
 
+  -- Masters of accepted write addresses, in order
+  write_order_fifo: nsl_memory.fifo.fifo_homogeneous
+    generic map(
+      data_width_c => master_idx_width_c,
+      word_count_c => aw_tracking_depth_c,
+      clock_count_c => 1
+      )
+    port map(
+      reset_n_i => reset_n_i,
+      clock_i(0) => clock_i,
+      in_data_i => order_in_data,
+      in_valid_i => order_in_valid,
+      in_ready_o => order_in_ready,
+      out_data_o => order_out_data,
+      out_valid_o => order_out_valid,
+      out_ready_i => order_out_ready
+      );
+
   regs: process(clock_i, reset_n_i)
   begin
     if rising_edge(clock_i) then
@@ -152,16 +177,15 @@ begin
   end process;
 
   transition: process(r, int_ar_i, int_ar_request_i, int_aw_i, int_aw_request_i,
-                      int_w_i, int_w_select_i, int_r_ready_i, int_b_ready_i, ext_i)
+                      int_w_i, int_w_select_i, int_r_ready_i, int_b_ready_i, ext_i,
+                      order_in_ready, order_out_valid, order_out_data)
     variable ar_any_request : boolean;
     variable aw_any_request : boolean;
-    variable w_any_select : boolean;
   begin
     rin <= r;
 
     ar_any_request := int_ar_request_i /= (int_ar_request_i'range => '0');
     aw_any_request := int_aw_request_i /= (int_aw_request_i'range => '0');
-    w_any_select := int_w_select_i /= (int_w_select_i'range => '0');
 
     -- AR channel state machine
     case r.ar_state is
@@ -191,7 +215,7 @@ begin
         rin.aw_last_selected <= 0;
 
       when ST_AW_IDLE =>
-        if aw_any_request then
+        if aw_any_request and order_in_ready = '1' then
           rin.aw_selected <= round_robin_select(int_aw_request_i, r.aw_last_selected, master_count_c);
           rin.aw_state <= ST_AW_FORWARD;
         end if;
@@ -210,15 +234,9 @@ begin
         rin.w_selected <= 0;
 
       when ST_W_IDLE =>
-        if w_any_select then
-          for i in 0 to master_count_c-1
-          loop
-            if int_w_select_i(i) = '1' then
-              rin.w_selected <= i;
-              rin.w_state <= ST_W_FORWARD;
-              exit;
-            end if;
-          end loop;
+        if order_out_valid = '1' then
+          rin.w_selected <= to_integer(unsigned(order_out_data));
+          rin.w_state <= ST_W_FORWARD;
         end if;
 
       when ST_W_FORWARD =>
@@ -226,14 +244,20 @@ begin
           and is_valid(master_config_c, int_w_i(r.w_selected))
           and int_w_select_i(r.w_selected) = '1' then
           if is_last(master_config_c, int_w_i(r.w_selected)) then
-            rin.w_state <= ST_W_IDLE;
+            -- Chain the next burst without an idle cycle.
+            if order_out_valid = '1' then
+              rin.w_selected <= to_integer(unsigned(order_out_data));
+            else
+              rin.w_state <= ST_W_IDLE;
+            end if;
           end if;
         end if;
     end case;
   end process;
 
   outputs: process(r, int_ar_i, int_ar_request_i, int_aw_i, int_aw_request_i,
-                   int_w_i, int_w_select_i, int_r_ready_i, int_b_ready_i, ext_i)
+                   int_w_i, int_w_select_i, int_r_ready_i, int_b_ready_i, ext_i,
+                   order_in_ready, order_out_valid)
     variable r_master_idx : natural range 0 to master_count_c-1;
     variable b_master_idx : natural range 0 to master_count_c-1;
     variable ar_v : address_t;
@@ -241,7 +265,10 @@ begin
     variable w_v : write_data_t;
     variable int_r_v : read_data_t;
     variable int_b_v : write_response_t;
+    variable aw_any_request : boolean;
   begin
+    aw_any_request := int_aw_request_i /= (int_aw_request_i'range => '0');
+
     -- Default outputs
     ext_o.ar <= address_defaults(slave_config_c);
     ext_o.aw <= address_defaults(slave_config_c);
@@ -253,7 +280,10 @@ begin
     int_ar_grant_o <= (others => '0');
     int_aw_ready_o <= '0';
     int_aw_grant_o <= (others => '0');
-    int_w_ready_o <= '0';
+    int_w_ready_o <= (others => '0');
+    order_in_data <= (others => '0');
+    order_in_valid <= '0';
+    order_out_ready <= '0';
 
     int_r_o <= read_data_defaults(master_config_c);
     int_r_valid_o <= (others => '0');
@@ -279,8 +309,18 @@ begin
 
     -- AW channel
     case r.aw_state is
-      when ST_AW_RESET | ST_AW_IDLE =>
+      when ST_AW_RESET =>
         null;
+
+      when ST_AW_IDLE =>
+        -- Write data order is set by address arbitration, write data
+        -- may flow before the address is accepted
+        if aw_any_request and order_in_ready = '1' then
+          order_in_data <= std_ulogic_vector(to_unsigned(
+            round_robin_select(int_aw_request_i, r.aw_last_selected, master_count_c),
+            master_idx_width_c));
+          order_in_valid <= '1';
+        end if;
 
       when ST_AW_FORWARD =>
         int_aw_grant_o(r.aw_selected) <= '1';
@@ -296,14 +336,21 @@ begin
 
     -- W channel
     case r.w_state is
-      when ST_W_RESET | ST_W_IDLE =>
+      when ST_W_RESET =>
         null;
 
+      when ST_W_IDLE =>
+        order_out_ready <= order_out_valid;
+
       when ST_W_FORWARD =>
-        int_w_ready_o <= ext_i.w.ready and int_w_select_i(r.w_selected);
+        int_w_ready_o(r.w_selected) <= ext_i.w.ready and int_w_select_i(r.w_selected);
         w_v := int_w_i(r.w_selected);
         w_v.valid := int_w_i(r.w_selected).valid and int_w_select_i(r.w_selected);
         ext_o.w <= w_v;
+        if is_ready(slave_config_c, ext_i.w) and w_v.valid = '1'
+          and is_last(master_config_c, int_w_i(r.w_selected)) then
+          order_out_ready <= order_out_valid;
+        end if;
     end case;
 
     -- R channel: route based on ID MSBs

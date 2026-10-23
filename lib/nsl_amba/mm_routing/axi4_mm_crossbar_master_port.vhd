@@ -11,6 +11,8 @@ use nsl_logic.bool.all;
 
 -- Master port: handles one external master's connection to the crossbar.
 -- Performs address decode, request generation, and W channel correlation.
+-- Reads, and writes, may only be outstanding to one slave at a time,
+-- this keeps responses in order and W channel free of deadlocks.
 entity axi4_mm_crossbar_master_port is
   generic(
     master_config_c : config_t;
@@ -19,7 +21,8 @@ entity axi4_mm_crossbar_master_port is
     routing_table_c : nsl_amba.address.address_vector;
     default_slave_c : natural;
     master_index_c : natural;
-    aw_tracking_depth_c : positive := 4
+    aw_tracking_depth_c : positive := 4;
+    max_outstanding_c : positive := 16
     );
   port(
     clock_i : in std_ulogic;
@@ -86,9 +89,11 @@ architecture beh of axi4_mm_crossbar_master_port is
   type regs_t is record
     ar_state : ar_state_t;
     ar_target : natural range 0 to slave_count_c-1;
+    ar_pending : natural range 0 to max_outstanding_c;
 
     aw_state : aw_state_t;
     aw_target : natural range 0 to slave_count_c-1;
+    aw_pending : natural range 0 to max_outstanding_c;
 
     w_state : w_state_t;
     w_target : natural range 0 to slave_count_c-1;
@@ -112,6 +117,14 @@ architecture beh of axi4_mm_crossbar_master_port is
                                                  routing_table_c,
                                                  addr,
                                                  default_slave_c);
+  end function;
+
+  function may_issue(pending : natural;
+                     current_target, target : natural) return boolean
+  is
+  begin
+    return pending = 0
+      or (target = current_target and pending < max_outstanding_c);
   end function;
 
   function pack_fifo_data(target : natural; len_m1 : unsigned) return std_ulogic_vector
@@ -185,13 +198,20 @@ begin
   transition: process(r, ext_i, int_ar_ready_i, int_ar_grant_i,
                       int_aw_ready_i, int_aw_grant_i,
                       int_w_ready_i, fifo_in_ready, fifo_out_valid, fifo_out_data,
-                      int_r_valid_i, int_b_valid_i)
+                      int_r_i, int_r_valid_i, int_b_valid_i)
     variable ar_target_v : natural range 0 to slave_count_c-1;
     variable aw_target_v : natural range 0 to slave_count_c-1;
     variable w_target_v : natural range 0 to slave_count_c-1;
     variable w_len_m1_v : unsigned(master_config_c.len_width-1 downto 0);
+    variable ar_issue, ar_retire, aw_issue, aw_retire : boolean;
   begin
     rin <= r;
+
+    ar_issue := false;
+    aw_issue := false;
+    ar_retire := r.ar_pending /= 0 and int_r_valid_i = '1' and ext_i.r.ready = '1'
+                 and is_last(master_config_c, int_r_i);
+    aw_retire := r.aw_pending /= 0 and int_b_valid_i = '1' and ext_i.b.ready = '1';
 
     -- AR channel state machine
     case r.ar_state is
@@ -202,8 +222,11 @@ begin
       when ST_AR_IDLE =>
         if is_valid(master_config_c, ext_i.ar) then
           ar_target_v := decode_address(address(master_config_c, ext_i.ar));
-          rin.ar_target <= ar_target_v;
-          rin.ar_state <= ST_AR_REQUEST;
+          if may_issue(r.ar_pending, r.ar_target, ar_target_v) then
+            ar_issue := true;
+            rin.ar_target <= ar_target_v;
+            rin.ar_state <= ST_AR_REQUEST;
+          end if;
         end if;
 
       when ST_AR_REQUEST =>
@@ -221,8 +244,11 @@ begin
       when ST_AW_IDLE =>
         if is_valid(master_config_c, ext_i.aw) and fifo_in_ready = '1' then
           aw_target_v := decode_address(address(master_config_c, ext_i.aw));
-          rin.aw_target <= aw_target_v;
-          rin.aw_state <= ST_AW_REQUEST;
+          if may_issue(r.aw_pending, r.aw_target, aw_target_v) then
+            aw_issue := true;
+            rin.aw_target <= aw_target_v;
+            rin.aw_state <= ST_AW_REQUEST;
+          end if;
         end if;
 
       when ST_AW_REQUEST =>
@@ -230,6 +256,26 @@ begin
           rin.aw_state <= ST_AW_IDLE;
         end if;
     end case;
+
+    if ar_issue and not ar_retire then
+      rin.ar_pending <= r.ar_pending + 1;
+    elsif ar_retire and not ar_issue then
+      rin.ar_pending <= r.ar_pending - 1;
+    end if;
+
+    if aw_issue and not aw_retire then
+      rin.aw_pending <= r.aw_pending + 1;
+    elsif aw_retire and not aw_issue then
+      rin.aw_pending <= r.aw_pending - 1;
+    end if;
+
+    if r.ar_state = ST_AR_RESET then
+      rin.ar_pending <= 0;
+    end if;
+
+    if r.aw_state = ST_AW_RESET then
+      rin.aw_pending <= 0;
+    end if;
 
     -- W channel state machine
     case r.w_state is
@@ -250,7 +296,13 @@ begin
       when ST_W_BURST =>
         if is_valid(master_config_c, ext_i.w) and int_w_ready_i(r.w_target) = '1' then
           if is_last(master_config_c, ext_i.w) then
-            rin.w_state <= ST_W_IDLE;
+            -- Chain the next burst without an idle cycle.
+            if fifo_out_valid = '1' then
+              rin.w_target <= unpack_fifo_target(fifo_out_data);
+              rin.w_beats_left <= unpack_fifo_len_m1(fifo_out_data);
+            else
+              rin.w_state <= ST_W_IDLE;
+            end if;
           else
             if master_config_c.len_width > 0 then
               rin.w_beats_left <= r.w_beats_left - 1;
@@ -264,6 +316,7 @@ begin
                    int_aw_ready_i, int_aw_grant_i, int_w_ready_i,
                    int_r_i, int_r_valid_i, int_b_i, int_b_valid_i,
                    fifo_in_ready, fifo_out_valid, fifo_out_data)
+    variable aw_target_v : natural range 0 to slave_count_c-1;
   begin
     -- Default outputs
     ext_o.ar <= handshake_defaults(master_config_c);
@@ -303,18 +356,23 @@ begin
 
     -- AW channel
     case r.aw_state is
-      when ST_AW_RESET | ST_AW_IDLE =>
+      when ST_AW_RESET =>
         null;
+
+      when ST_AW_IDLE =>
+        -- Write data may flow as soon as the target is known
+        if is_valid(master_config_c, ext_i.aw) and fifo_in_ready = '1' then
+          aw_target_v := decode_address(address(master_config_c, ext_i.aw));
+          if may_issue(r.aw_pending, r.aw_target, aw_target_v) then
+            fifo_in_data <= pack_fifo_data(aw_target_v, length_m1(master_config_c, ext_i.aw, master_config_c.len_width));
+            fifo_in_valid <= '1';
+          end if;
+        end if;
 
       when ST_AW_REQUEST =>
         int_aw_request_o(r.aw_target) <= '1';
         int_aw_o <= ext_i.aw;
         int_aw_o.valid <= int_aw_grant_i(r.aw_target);
-
-        if int_aw_grant_i(r.aw_target) = '1' and int_aw_ready_i(r.aw_target) = '1' then
-          fifo_in_data <= pack_fifo_data(r.aw_target, length_m1(master_config_c, ext_i.aw, master_config_c.len_width));
-          fifo_in_valid <= '1';
-        end if;
 
         ext_o.aw <= accept(master_config_c,
                            int_aw_grant_i(r.aw_target) = '1' and int_aw_ready_i(r.aw_target) = '1');
@@ -332,6 +390,10 @@ begin
         int_w_select_o(r.w_target) <= '1';
         int_w_o <= ext_i.w;
         ext_o.w <= accept(master_config_c, int_w_ready_i(r.w_target) = '1');
+        if is_valid(master_config_c, ext_i.w) and int_w_ready_i(r.w_target) = '1'
+          and is_last(master_config_c, ext_i.w) then
+          fifo_out_ready <= fifo_out_valid;
+        end if;
     end case;
 
     -- R channel: forward to external master

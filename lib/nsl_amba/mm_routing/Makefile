@@ -7,6 +7,7 @@ vhdl-sources += axi4_mm_crossbar.vhd
 vhdl-sources += axi4_mm_shared_bus.vhd
 
 deps += nsl_amba.axi4_mm
+deps += nsl_amba.mm_fifo
 deps += nsl_amba.address
 deps += nsl_data.bytestream
 deps += nsl_logic.bool

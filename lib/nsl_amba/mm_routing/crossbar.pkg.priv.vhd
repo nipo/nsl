@@ -23,7 +23,8 @@ package crossbar_priv is
       routing_table_c : work.address.address_vector;
       default_slave_c : natural;
       master_index_c : natural;
-      aw_tracking_depth_c : positive := 4
+      aw_tracking_depth_c : positive := 4;
+      max_outstanding_c : positive := 16
       );
     port(
       clock_i : in std_ulogic;
@@ -69,7 +70,8 @@ package crossbar_priv is
     generic(
       master_config_c : work.axi4_mm.config_t;
       slave_config_c : work.axi4_mm.config_t;
-      master_count_c : positive
+      master_count_c : positive;
+      aw_tracking_depth_c : positive
       );
     port(
       clock_i : in std_ulogic;
@@ -90,7 +92,7 @@ package crossbar_priv is
 
       -- W channel
       int_w_i : in write_data_vector(0 to master_count_c-1);
-      int_w_ready_o : out std_ulogic;
+      int_w_ready_o : out std_ulogic_vector(0 to master_count_c-1);
       int_w_select_i : in std_ulogic_vector(0 to master_count_c-1);
 
       -- R channel (broadcast to all masters, they filter by ID)

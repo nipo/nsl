@@ -35,11 +35,30 @@ package mm_routing is
   -- - If < 0: an internal error slave is instantiated, unmapped accesses return DECERR
   -- - If >= 0: unmapped addresses route to the external slave at that index
   --
-  -- aw_tracking_depth_c sets the depth of the per-master FIFO that
-  -- correlates AW and W channels. This limits how many write
-  -- transactions each master can have outstanding before AW blocks.
-  -- Increase if masters issue many back-to-back write addresses
-  -- before sending data.
+  -- Write data reaches each slave in the order its write addresses
+  -- were accepted.
+  --
+  -- aw_tracking_depth_c sets the depth of the per-master and per-slave
+  -- FIFOs that correlate AW and W channels. This limits how many
+  -- write transactions each master can have, and each slave can
+  -- receive, with address accepted but data not forwarded yet, before
+  -- AW blocks.  Increase if masters issue many back-to-back write
+  -- addresses before sending data.
+  --
+  -- Each master may only have reads outstanding to one slave at a
+  -- time, and writes outstanding to one slave at a time.  A read
+  -- (resp. write) to another slave waits until all previous ones got
+  -- their response.  This keeps responses in order whatever the IDs,
+  -- and avoids write data deadlocks between masters.  Write data may
+  -- reach a slave before its address.
+  --
+  -- max_outstanding_c limits how many reads, and how many writes,
+  -- each master can have waiting for a response.
+  --
+  -- master_slice_c (resp. slave_slice_c) inserts a register slice on
+  -- all channels of each master (resp. slave) side port.  Paths
+  -- through the crossbar are combinational, slices on both sides
+  -- isolate them from the outside.
   component axi4_mm_crossbar is
     generic(
       master_config_c : work.axi4_mm.config_t;
@@ -47,7 +66,10 @@ package mm_routing is
       master_count_c : positive;
       routing_table_c : work.address.address_vector;
       default_slave_c : integer := -1;
-      aw_tracking_depth_c : positive := 4
+      aw_tracking_depth_c : positive := 4;
+      max_outstanding_c : positive := 16;
+      master_slice_c : boolean := false;
+      slave_slice_c : boolean := false
       );
     port(
       clock_i : in std_ulogic;
