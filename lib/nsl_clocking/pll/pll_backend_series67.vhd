@@ -49,6 +49,10 @@ package body pll_backend is
   -- 511 eighths: with an output divisor above 85 that is short of
   -- three quarters of an output cycle.
   --
+  -- An MMCM divides CLKOUT0 by eighths too, but only from 2 to 128:
+  -- below that, and up to 128 for the other outputs, the counter is
+  -- integer only.
+  --
   -- A DCM has no VCO: its multiplier feeds the output divider
   -- directly, and the "VCO" window is the DFS output window.  Its
   -- phase shift is a fraction of the input period and common to every
@@ -99,6 +103,8 @@ package body pll_backend is
       for i in 0 to 6 loop
         ret.output(i) := shifting_output_c;
       end loop;
+      ret.output(0).divisor.frac_l2_den := 3;
+      ret.output(0).divisor.frac_range := pll_range(2, 127);
     else
       ret.output_count := 6;
       for i in 0 to 5 loop

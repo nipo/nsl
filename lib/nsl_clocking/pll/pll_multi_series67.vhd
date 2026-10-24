@@ -260,8 +260,19 @@ architecture series67 of pll_multi is
 
   function odiv(p: natural) return integer
   is
+    constant m: pll_output_mapping_t := port_mapping(p);
   begin
-    return port_mapping(p).divisor.num;
+    assert m.divisor.den = 1
+      report "Port " & to_string(p) & " has no fractional divider"
+      severity failure;
+    return m.divisor.num;
+  end function;
+
+  function odiv_f(p: natural) return real
+  is
+    constant m: pll_output_mapping_t := port_mapping(p);
+  begin
+    return real(m.divisor.num) / real(m.divisor.den);
   end function;
 
   -- CLKOUTx_PHASE, in degrees of the output cycle.  The block delays
@@ -381,7 +392,7 @@ begin
       generic map (
         divclk_divide => mapping_c.refdiv,
         clkfbout_mult_f => real(mapping_c.fbdiv.num),
-        clkout0_divide_f => real(odiv(0)),
+        clkout0_divide_f => odiv_f(0),
         clkout1_divide => odiv(1),
         clkout2_divide => odiv(2),
         clkout3_divide => odiv(3),

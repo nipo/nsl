@@ -66,6 +66,16 @@ begin
       report "MMCM outputs state no VCO-relative phase grid"
       severity failure;
 
+    -- Only CLKOUT0 of the MMCM divides by eighths, and only from 2 to
+    -- 128
+
+    assert t.output(0).divisor.frac_l2_den = 3
+      and t.output(0).divisor.frac_range = (min => 2, max => 127, step => 1)
+      and t.output(0).divisor.ranges(0) = (min => 1, max => 128, step => 1)
+      and t.output(1).divisor.frac_l2_den = 0
+      report "Bad MMCM fractional divisor"
+      severity failure;
+
     -- Same request, two blocks, two mappings
 
     cfg := pll_config(100_000_000,
@@ -207,6 +217,54 @@ begin
       severity note;
     assert not m.valid
       report "Off-grid phase accepted"
+      severity failure;
+
+    -- No VCO is a multiple of both rates, so one comes out of the
+    -- MMCM fractional divider, on port 0 whatever the request order:
+    -- 1200 / 9.375 = 128.
+
+    cfg := pll_config(100_000_000,
+                      pll_output(100_000_000),
+                      pll_output(128_000_000, allow_fractional => true),
+                      implementation => mmcm_c);
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert m.valid
+      report "No fractional mapping on the MMCM"
+      severity failure;
+    assert m.output(1).exact and m.output(1).port_index = 0
+      and m.output(1).divisor = (num => 75, den => 8)
+      and m.vco_khz = 1_200_000
+      report "Unexpected fractional mapping on the MMCM"
+      severity failure;
+
+    -- The PLL has no fractional divider, and no VCO is a multiple of
+    -- both rates
+
+    cfg := pll_config(100_000_000,
+                      pll_output(100_000_000),
+                      pll_output(128_000_000, allow_fractional => true));
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & " on the PLL: " & to_string(m)
+      severity note;
+    assert not m.valid
+      report "PLL mapped a fractional divisor"
+      severity failure;
+
+    -- Below 2, the MMCM fractional divider does not run: 800MHz out
+    -- of a 1200MHz VCO would need 1.5, so it comes out of an integer
+    -- divisor of a slower VCO instead
+
+    cfg := pll_config(100_000_000,
+                      pll_output(800_000_000, allow_fractional => true),
+                      implementation => mmcm_c);
+    m := nsl_clocking.pll_backend.pll_solve(cfg);
+    report to_string(cfg) & ": " & to_string(m)
+      severity note;
+    assert m.valid and m.output(0).divisor.den = 1
+      and m.output(0).divisor.num = 1
+      report "Fractional divisor below 2 on the MMCM"
       severity failure;
 
     nsl_simulation.control.terminate(0);

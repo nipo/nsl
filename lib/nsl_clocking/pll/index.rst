@@ -201,7 +201,8 @@ this way is the one `pll_multi` implements.
 
 * Xilinx Series-6 and Series-7, on PLL_BASE, PLLE2_ADV, MMCME2_BASE or
   DCM_SP: six outputs, seven on the MMCM, one on the DCM. Phase shift
-  is carried on every output of the PLL and MMCM variants. A DCM
+  is carried on every output of the PLL and MMCM variants. The MMCM
+  also has an eighths fractional divisor on output 0, from 2 to 128. A DCM
   states its shift as a fraction of the input period, common to all
   its outputs, which is not what a per-output phase means, so it
   offers none.
