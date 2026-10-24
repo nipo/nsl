@@ -65,7 +65,7 @@ The board
   board divider: **VTTREF** reaches V3, W7, F1 and P1.  Plain LVCMOS15
   therefore carries both directions, which is what
   ``../pinout/ddr3_probe2.cst`` drove and answered on and what
-  ``../pinout/ddr3_walk.cst`` follows.  SSTL15 receivers against that
+  ``../pinout/ddr3_serdes.cst`` follows.  SSTL15 receivers against that
   reference are a later option: a receiver threshold is worth moving
   once the bus answers at all, and not while nothing does.
 - Every pin of the bus carries ``SLEW_RATE=FAST``.  A Gowin pad
@@ -407,7 +407,7 @@ taken -- and SUG113 *Gowin FPGA Design User Guide* §4.3.2 prescribes
 exactly this when the clock resources are exceeded.  GowinSynthesis
 offers no counterpart: SUG550 lists ``syn_maxfan`` and nothing that
 says *not a clock*, because the promotion is the placer's and not the
-synthesiser's.  ``../pinout/ddr3_walk.cst`` names all four walkers,
+synthesiser's.  ``walkers.cst`` names all four walkers,
 not the two a given build promotes::
 
   CLOCK_LOC "probe/transition.advance" LOCAL_CLOCK;
@@ -948,7 +948,7 @@ What is open
   resolve the part's own alternating pattern perfectly.  Reading 5 has
   the three measurements that separate the two.  It survived the slew
   rate, so it is not the edge that reading 7 was: the DQ pins carry no
-  ``DRIVE`` attribute in ``../pinout/ddr3_walk.cst``, where the clock
+  ``DRIVE`` attribute in ``../pinout/ddr3_serdes.cst``, where the clock
   pins carry ``DRIVE=8``, and turning the part's termination off makes
   the reading worse rather than better.  It costs nothing now that the
   slip is measured against the array, and it is worth knowing before

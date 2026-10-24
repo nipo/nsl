@@ -1,0 +1,27 @@
+# The six walkers' beat enables, kept off the global clock tree.
+#
+# A memory tester advances its whole hash pipeline on one enable, so
+# `transition.advance` reaches some two to three hundred clock enables
+# inside its own walker.  The placer counts that as a clock candidate
+# and promotes it to a *primary* global clock resource -- there are
+# eight, this design has eight real clocks, and a bench net taking one
+# costs a real clock its place and the whole device its placement.
+# The net is an enable and not a clock, so it belongs on ordinary
+# routing whatever its fanout.
+#
+# CLOCK_LOC ... LOCAL_CLOCK is the statement of that, from SUG1018
+# "Arora V Design Physical Constraints User Guide", section 2.7 Clock
+# Net Constraints: "LOCAL_CLOCK means this net is not routed to the
+# global clock wire", and with LOCAL_CLOCK no signal_type is taken.
+#
+# All six are named, not the two a given build happens to promote:
+# which walker wins a primary is the placer's, and the policy is about
+# what the net is.  Each walker's reset is the same shape and is not
+# nameable -- it comes out of synthesis as `nNNN_5` -- so the enable is
+# the lever this file has.
+CLOCK_LOC "probe/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "bank_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "row_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "low_walk/transition.advance" LOCAL_CLOCK;
+CLOCK_LOC "high_walk/transition.advance" LOCAL_CLOCK;

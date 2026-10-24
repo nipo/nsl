@@ -53,7 +53,8 @@ root:
     - file_type: gowin-cst
       files:
         - ../pinout/clk.cst
-        - ../pinout/ddr3_walk.cst
+        - ../pinout/ddr3_serdes.cst
+        - walkers.cst
         - ../../../../gatecap/gateware/example/tang_console/constraint/usb2.cst
     - file_type: gowin-sdc
       files:
