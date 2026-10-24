@@ -1,0 +1,3 @@
+# The video PLL locks only from this site; left to the placer, HDMI
+# stays black.
+INS_LOC "video_pll/use_plla.inst" PLL_R[0];

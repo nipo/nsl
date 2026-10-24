@@ -1,0 +1,82 @@
+name: tang_console_60k_camera_ddr
+
+root:
+  name: top
+  deps:
+    - nsl_clocking.reset
+    - nsl_clocking.async
+    - nsl_clocking.interdomain
+    - nsl_clocking.pll
+    - nsl_clocking.distribution
+    - nsl_bnoc.framed
+    - nsl_io.io
+    - nsl_io.diff
+    - nsl_io.clock
+    - nsl_i2c.i2c
+    - nsl_i2c.transactor
+    - nsl_omnivision.ov5640
+    - nsl_sipeed.pmod_dvp
+    - nsl_video.mode
+    - nsl_video.pixel_stream
+    - nsl_video.colorspace
+    - nsl_video.dvp
+    - nsl_video.vdma
+    - nsl_dvi.encoder
+    - nsl_dvi.transceiver
+    - nsl_amba.axi4_mm
+    - nsl_amba.axi4_stream
+    - nsl_amba.stream_fifo
+    - nsl_amba.mm_fifo
+    - nsl_ext_ram.ddr3
+    - nsl_ext_ram.ddr3_io
+    - nsl_ext_ram.dram
+    - nsl_ext_ram.frontend
+    - nsl_ext_ram.part
+    - nsl_ext_ram.timing
+  sources:
+    - file_type: vhdl
+      files:
+        - src/main.vhd
+    - file_type: gowin-cst
+      files:
+        - ../pinout/buttons.cst
+        - ../pinout/j6_pmod_double_lvcmos33.cst
+        - ../pinout/j7_pmod_double_lvcmos33.cst
+        - ../pinout/hdmi.cst
+        - ../pinout/done_led.cst
+        - ../pinout/ready_led.cst
+        - ../pinout/clk.cst
+        - ../pinout/ddr3_serdes.cst
+        - placement.cst
+    - file_type: gowin-sdc
+      files:
+        - ../pinout/clk.sdc
+        - clocks.sdc
+
+output:
+  - name: synthesis
+    topcell: main
+    target:
+      part: GW5AT-LV60PG484AC1/I0#B
+      use_as_gpio:
+        - sspi
+        - mspi
+        - done
+        - ready
+        - cpu
+      options:
+        # Replicating high-fanout drivers keeps the placer from
+        # promoting resets and enables into the primary clock
+        # resources this design needs for its own clocks.
+        replicate_resources: 1
+        # Gowin's own default on the larger Arora V parts.
+        place_option: 3
+    outputs:
+      - type: gowin-fs
+        path: camera_ddr.fs
+      - type: synthesis-report
+        path: synthesis-report.html
+      - type: pnr-report
+        path: pnr-report.html
+      - type: timing-summary
+        path: timing.yaml
