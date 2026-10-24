@@ -82,6 +82,10 @@ package pixel_stream is
   --   the line: Cb on even pixels, Cr on odd ones, counted from the
   --   first pixel of the line.  Lines have an even pixel count.
   -- - GRAY: one component, luma.  One bit makes black and white.
+  -- - RGB565: one 16-bit component packing R in bits 15-11, G in
+  --   bits 10-5, B in bits 4-0.  Half the bytes of RGB888, for
+  --   storage and links; blocks that work on colors want it unpacked
+  --   to RGB first.
   --
   -- AUTO is only an argument value for config(): it resolves from
   -- the component count, one component is INDEXED, others are RGB.
@@ -91,7 +95,8 @@ package pixel_stream is
     COLORSPACE_RGB,
     COLORSPACE_YCBCR444,
     COLORSPACE_YCBCR422,
-    COLORSPACE_GRAY
+    COLORSPACE_GRAY,
+    COLORSPACE_RGB565
     );
 
   -- Colorimetry of luma and color difference.  It is informative to
@@ -147,7 +152,7 @@ package pixel_stream is
 
   -- Components default to what the colorspace takes, and to three
   -- RGB components when neither is stated.  When both are stated,
-  -- they must agree.
+  -- they must agree.  RGB565 needs component_bits stated as 16.
   function config(
     pixels: natural := 1;
     components: natural range 0 to max_component_count_c := 0;
@@ -216,9 +221,9 @@ package pixel_stream is
   function accept(cfg: config_t;
                   ready: boolean := false) return slave_t;
 
-  -- RGB conversion, for the usual three-component configuration.
-  -- Components narrower than eight bits are left-aligned in the
-  -- rgb24 component, wider ones are truncated.
+  -- RGB conversion, for the usual three-component configuration and
+  -- for RGB565.  Components narrower than eight bits are left-aligned
+  -- in the rgb24 component, wider ones are truncated.
   function to_pixel(cfg: config_t; color: nsl_color.rgb.rgb24) return pixel_t;
   function to_rgb24(cfg: config_t; p: pixel_t) return nsl_color.rgb.rgb24;
 
@@ -276,7 +281,7 @@ package body pixel_stream is
   begin
     case colorspace is
       when COLORSPACE_AUTO => return 0;
-      when COLORSPACE_INDEXED | COLORSPACE_GRAY => return 1;
+      when COLORSPACE_INDEXED | COLORSPACE_GRAY | COLORSPACE_RGB565 => return 1;
       when COLORSPACE_YCBCR422 => return 2;
       when COLORSPACE_RGB | COLORSPACE_YCBCR444 => return 3;
     end case;
@@ -302,6 +307,9 @@ package body pixel_stream is
     if colorspace /= COLORSPACE_AUTO then
       assert components = 0 or components = colorspace_components(colorspace)
         report "Component count does not match colorspace"
+        severity failure;
+      assert colorspace /= COLORSPACE_RGB565 or component_bits = 16
+        report "RGB565 packs a pixel in one 16-bit component"
         severity failure;
       components_v := colorspace_components(colorspace);
       colorspace_v := colorspace;
@@ -573,6 +581,11 @@ package body pixel_stream is
     variable ret: pixel_t := pixel_zero_c;
     variable v: unsigned(max_component_bits_c+7 downto 0);
   begin
+    if cfg.colorspace = COLORSPACE_RGB565 then
+      ret(0) := color.r(7 downto 3) & color.g(7 downto 2) & color.b(7 downto 3);
+      return ret;
+    end if;
+
     assert cfg.component_count >= 3
       report "RGB conversion needs at least three components"
       severity failure;
@@ -601,6 +614,13 @@ package body pixel_stream is
     variable v: unsigned(max_component_bits_c-1 downto 0);
     variable c8: unsigned(7 downto 0);
   begin
+    if cfg.colorspace = COLORSPACE_RGB565 then
+      ret.r := p(0)(15 downto 11) & "000";
+      ret.g := p(0)(10 downto 5) & "00";
+      ret.b := p(0)(4 downto 0) & "000";
+      return ret;
+    end if;
+
     assert cfg.component_count >= 3
       report "RGB conversion needs at least three components"
       severity failure;
@@ -683,6 +703,13 @@ package body pixel_stream is
     variable r, g, b, y, cb, cr, kr, kb: real;
     variable ret: pixel_t := pixel_zero_c;
 
+    -- Full range code of a given width, v in [0, 1]
+    function full_code(v: real; width: natural) return unsigned is
+      constant top: real := 2.0 ** width - 1.0;
+    begin
+      return to_unsigned(integer(realmax(0.0, realmin(top, round(v * top)))), width);
+    end function;
+
     -- Luma or RGB component, v in [0, 1]
     function luma_code(v: real) return component_t is
       variable code: real;
@@ -739,6 +766,9 @@ package body pixel_stream is
 
       when COLORSPACE_GRAY =>
         ret(0) := luma_code(y);
+
+      when COLORSPACE_RGB565 =>
+        ret(0) := full_code(r, 5) & full_code(g, 6) & full_code(b, 5);
 
       when COLORSPACE_INDEXED | COLORSPACE_AUTO =>
         assert false

@@ -72,6 +72,11 @@ architecture beh of dvp_to_pixel_stream is
   begin
     case format_c is
       when FORMAT_RGB565 =>
+        if config_c.colorspace = COLORSPACE_RGB565 then
+          ret(0) := unsigned(word);
+          return ret;
+        end if;
+
         ret(0) := rescaled(unsigned(word(15 downto 11)));
         ret(1) := rescaled(unsigned(word(10 downto 5)));
         ret(2) := rescaled(unsigned(word(4 downto 0)));
@@ -100,9 +105,10 @@ begin
 
   format_check: nsl_synthesis.assertion.synth_assert
     generic map(
-      message_c => "Only RGB565 is implemented, into an RGB stream",
+      message_c => "Only RGB565 is implemented, into an RGB or RGB565 stream",
       condition_c => format_c = FORMAT_RGB565
-      and config_c.colorspace = COLORSPACE_RGB
+      and (config_c.colorspace = COLORSPACE_RGB
+           or config_c.colorspace = COLORSPACE_RGB565)
       )
     port map(
       unused_i => '0'

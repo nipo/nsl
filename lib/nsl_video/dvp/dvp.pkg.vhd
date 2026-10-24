@@ -87,10 +87,11 @@ package dvp is
   -- Feeding a FIFO that has room for a burst of beats makes this a
   -- non-event.  A stream with no ready never overflows.
   --
-  -- Components narrower or wider than what format_c packs are
-  -- rescaled by bit replication, so full scale stays full scale.
-  -- config_c must state one pixel a beat and the colorspace of
-  -- format_c.
+  -- config_c must state one pixel a beat.  An RGB565 word goes out
+  -- either as is, into an RGB565 stream, or unpacked into an RGB
+  -- stream.  When unpacking, components narrower or wider than what
+  -- the word packs are rescaled by bit replication, so full scale
+  -- stays full scale.
   component dvp_to_pixel_stream is
     generic(
       config_c: nsl_video.pixel_stream.config_t;

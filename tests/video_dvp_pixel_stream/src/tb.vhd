@@ -17,6 +17,10 @@ use nsl_data.text.all;
 -- long line, a line past the frame height, frames cut short between
 -- lines and inside a line, and a frame stalled by the stream ready
 -- going low long enough to lose a word.
+--
+-- A second converter beside the first one keeps words packed in an
+-- RGB565 stream.  It sees the same bus and the same ready, so it
+-- must hand out the same beats, holding the words themselves.
 entity tb is
 end entity;
 
@@ -24,6 +28,8 @@ architecture arch of tb is
 
   constant geometry_c: geometry_t := geometry(4, 3);
   constant config_c: config_t := config(pixels => 1, component_bits => 8);
+  constant packed_config_c: config_t := config(pixels => 1, component_bits => 16,
+                                               colorspace => COLORSPACE_RGB565);
 
   -- One line expected out of the stream: where its words came from,
   -- how many beats it holds, and what it closes with.
@@ -82,6 +88,8 @@ architecture arch of tb is
   signal stream_s: bus_t;
   signal ready_s: boolean;
   signal overflow_s: std_ulogic;
+  signal packed_s: bus_t;
+  signal packed_overflow_s: std_ulogic;
 
   function word(frame, y, x: natural) return std_ulogic_vector
   is
@@ -151,7 +159,29 @@ begin
       overflow_o => overflow_s
       );
 
+  packed_dut: nsl_video.dvp.dvp_to_pixel_stream
+    generic map(
+      config_c => packed_config_c,
+      format_c => nsl_video.dvp.FORMAT_RGB565,
+      geometry_c => geometry_c
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+
+      valid_i => word_valid_s,
+      sof_i => word_sof_s,
+      sol_i => word_sol_s,
+      data_i => word_s,
+
+      out_o => packed_s.m,
+      out_i => packed_s.s,
+
+      overflow_o => packed_overflow_s
+      );
+
   stream_s.s <= accept(config_c, ready => ready_s);
+  packed_s.s <= accept(packed_config_c, ready => ready_s);
 
   dvp_bus: process is
     procedure cycles(constant n: natural) is
@@ -262,6 +292,13 @@ begin
         overflows := overflows + 1;
       end if;
 
+      assert packed_overflow_s = overflow_s
+        report "Packed converter disagrees on overflow"
+        severity failure;
+      assert is_valid(packed_config_c, packed_s.m) = is_valid(config_c, stream_s.m)
+        report "Packed converter disagrees on beat timing"
+        severity failure;
+
       if is_taken(config_c, stream_s.m, stream_s.s) then
         assert index < expected_c'length
           report "Beat after the last expected one"
@@ -288,6 +325,21 @@ begin
           & to_hex_string(std_ulogic_vector(c.r))
           & to_hex_string(std_ulogic_vector(c.g))
           & to_hex_string(std_ulogic_vector(c.b))
+          severity failure;
+
+        assert std_ulogic_vector(pixel(packed_config_c, packed_s.m)(0)) = word(l.frame, l.y, x)
+          report where(l, x) & " came out packed as "
+          & to_hex_string(std_ulogic_vector(pixel(packed_config_c, packed_s.m)(0)))
+          severity failure;
+        assert is_sof(packed_config_c, packed_s.m) = is_sof(config_c, stream_s.m)
+          and is_last(packed_config_c, packed_s.m) = is_last(config_c, stream_s.m)
+          and is_eof(packed_config_c, packed_s.m) = is_eof(config_c, stream_s.m)
+          and is_error(packed_config_c, packed_s.m) = is_error(config_c, stream_s.m)
+          report where(l, x) & " framing differs when packed"
+          severity failure;
+        assert to_rgb24(packed_config_c, pixel(packed_config_c, packed_s.m))
+          = to_rgb24(packed_config_c, to_pixel(packed_config_c, c))
+          report where(l, x) & " packed pixel does not match its colors"
           severity failure;
 
         if l.frame = stall_frame_c and l.y = stall_y_c and x = 0 then
