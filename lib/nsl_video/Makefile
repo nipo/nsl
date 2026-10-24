@@ -3,6 +3,7 @@ packages += edid
 packages += pixel_stream
 packages += raster
 packages += dvp
+packages += colorspace
 packages += pattern
 packages += colormap
 packages += blender

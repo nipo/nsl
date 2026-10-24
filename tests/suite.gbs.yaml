@@ -807,6 +807,9 @@ projects:
   - name: video_repeater
     path: video_repeater
     tags: [ghdl, simulation]
+  - name: video_rgb565_unpacker
+    path: video_rgb565_unpacker
+    tags: [ghdl, simulation]
   - name: dvi_encoder
     path: dvi_encoder
     tags: [ghdl, simulation]
