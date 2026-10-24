@@ -1,0 +1,1 @@
+packages += ov5640

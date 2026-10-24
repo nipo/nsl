@@ -707,6 +707,9 @@ projects:
   - name: i2c_mcp4726
     path: i2c_mcp4726
     tags: [ghdl, simulation]
+  - name: ov5640
+    path: ov5640
+    tags: [ghdl, simulation]
   - name: tla202x
     path: tla202x
     tags: [ghdl, simulation]
