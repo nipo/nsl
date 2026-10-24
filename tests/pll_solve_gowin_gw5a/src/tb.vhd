@@ -37,6 +37,7 @@ begin
     assert t.output(0).divisor.range_count = 1
       and t.output(0).divisor.ranges(0) = (min => 1, max => 128, step => 1)
       and t.output(0).divisor.frac_l2_den = 3
+      and t.output(0).divisor.frac_range = (min => 2, max => 127, step => 1)
       and t.output(1).divisor.frac_l2_den = 0
       report "Bad output divisor constraints"
       severity failure;

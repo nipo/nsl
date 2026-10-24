@@ -11,7 +11,8 @@ architecture arch of tb is
 
   constant od_int_c : pll_divisor_constraint_t := pll_divisor(pll_range(1, 128));
   constant od_frac_c : pll_divisor_constraint_t := pll_divisor(pll_range(1, 128),
-                                                              frac_l2_den => 3);
+                                                              frac_l2_den => 3,
+                                                              frac_range => pll_range(1, 128));
   constant no_out_c : pll_output_topology_t := (divisor => pll_divisor_unity_c,
                                                 phase_den => 0, phase_step_max => 0,
                                                 phase_vco_den => 0, phase_vco_step_max => 0);
@@ -48,7 +49,8 @@ architecture arch of tb is
     out_khz_max => 0,
     output_count => 1,
     output => (0 => (divisor => pll_divisor(pll_range(16, 16),
-                                            frac_l2_den => 3),
+                                            frac_l2_den => 3,
+                                            frac_range => pll_range(16, 16)),
                      phase_den => 0, phase_step_max => 0,
                      phase_vco_den => 0, phase_vco_step_max => 0),
                others => no_out_c));
@@ -112,7 +114,8 @@ begin
       report "Fractional value accepted on integer-only constraint"
       severity failure;
 
-    dc := pll_divisor(pll_range(2, 128, 2), frac_l2_den => 3);
+    dc := pll_divisor(pll_range(2, 128, 2), frac_l2_den => 3,
+                      frac_range => pll_range(2, 128, 2));
     assert is_allowed(dc, (num => 135, den => 8))
       report "On-grid fractional value refused"
       severity failure;
@@ -121,6 +124,24 @@ begin
       severity failure;
     assert not is_allowed(dc, (num => 1, den => 3))
       report "Off-grid fractional value accepted"
+      severity failure;
+
+    -- A fractional counter spanning less than the integer one keeps
+    -- the integer values out of its span
+
+    dc := pll_divisor(pll_range(1, 128), frac_l2_den => 3,
+                      frac_range => pll_range(2, 127));
+    assert is_allowed(dc, (num => 1, den => 1))
+      and is_allowed(dc, (num => 128, den => 1))
+      report "Integer value refused outside the fractional span"
+      severity failure;
+    assert is_allowed(dc, (num => 17, den => 8))
+      and is_allowed(dc, (num => 1023, den => 8))
+      report "Fractional value refused within its span"
+      severity failure;
+    assert not is_allowed(dc, (num => 3, den => 2))
+      and not is_allowed(dc, (num => 1025, den => 8))
+      report "Fractional value accepted outside its span"
       severity failure;
 
     -- Multi-output exact solve

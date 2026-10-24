@@ -68,6 +68,7 @@ package body pll_backend is
     variable pending: boolean := false;
   begin
     ret.frac_l2_den := 0;
+    ret.frac_range := pll_range_none_c;
     ret.ranges := (others => pll_range_none_c);
 
     for i in l'range loop
@@ -135,7 +136,7 @@ package body pll_backend is
 
     if pll_type = "plla" then
       -- Feedback is realized on MDIV, ODIV0 has an eighths
-      -- fractional part.
+      -- fractional part, valid on an integer part from 2 to 127 only.
       ret.fbdiv := pll_divisor(pll_range(2, 128));
       ret.output_count := 7;
       -- PLLA shifts an output by whole and eighth VCO cycles,
@@ -152,6 +153,7 @@ package body pll_backend is
                           phase_vco_step_max => 1023);
       end loop;
       ret.output(0).divisor.frac_l2_den := 3;
+      ret.output(0).divisor.frac_range := pll_range(2, 127);
     else
       ret.fbdiv := pll_divisor(pll_range(1, 64));
       ret.output_count := 1;

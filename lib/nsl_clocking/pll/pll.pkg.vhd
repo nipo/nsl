@@ -107,9 +107,12 @@ package pll is
 
   type pll_range_vector is array (0 to pll_range_max_c-1) of pll_range_t;
 
-  -- Legal values for one divisor stage.  Integer part must fall in
-  -- one of the ranges.  frac_l2_den is the log2 of the fractional
-  -- part denominator, 0 meaning integer-only.
+  -- Legal values for one divisor stage.  An integer value must fall
+  -- in one of the ranges.  frac_l2_den is the log2 of the fractional
+  -- part denominator, 0 meaning integer-only.  A value with a
+  -- fractional part must have its integer part in frac_range
+  -- instead: a fractional counter usually spans less than the
+  -- integer one.
   --
   -- e.g. "even from 2 to 128, or 3" is expressed as
   -- (2, 128, 2) + (3, 3, 1).
@@ -118,6 +121,7 @@ package pll is
     range_count: natural range 0 to pll_range_max_c;
     ranges: pll_range_vector;
     frac_l2_den: natural;
+    frac_range: pll_range_t;
   end record;
 
   -- Divisor stage that only allows not dividing.
@@ -125,7 +129,8 @@ package pll is
     range_count => 1,
     ranges => (0 => (min => 1, max => 1, step => 1),
                others => pll_range_none_c),
-    frac_l2_den => 0);
+    frac_l2_den => 0,
+    frac_range => pll_range_none_c);
 
   -- Per-output features of a PLL block.
   --
@@ -305,13 +310,15 @@ package pll is
                        r5: pll_range_t := pll_range_none_c;
                        r6: pll_range_t := pll_range_none_c;
                        r7: pll_range_t := pll_range_none_c;
-                       frac_l2_den: natural := 0)
+                       frac_l2_den: natural := 0;
+                       frac_range: pll_range_t := pll_range_none_c)
     return pll_divisor_constraint_t;
 
   -- Solver
 
-  -- Whether value integer part falls in one of the constraint ranges
-  -- and its fractional part fits the constraint denominator.
+  -- Whether value fractional part fits the constraint denominator,
+  -- and its integer part falls in one of the constraint ranges, or in
+  -- frac_range when it is not an integer.
   function is_allowed(constraint: pll_divisor_constraint_t;
                       value: pll_ratio_t) return boolean;
 
@@ -427,6 +434,13 @@ package body pll is
     return (out_hz mod ih) = 0 and (out_hz / ih) = n;
   end function;
 
+  function in_range(r: pll_range_t; value: natural) return boolean
+  is
+  begin
+    return value >= r.min and value <= r.max
+      and (value - r.min) mod r.step = 0;
+  end function;
+
   function is_allowed(constraint: pll_divisor_constraint_t;
                       value: pll_ratio_t) return boolean
   is
@@ -451,32 +465,17 @@ package body pll is
     end if;
 
     ipart := value.num / value.den;
+    if l /= 0 then
+      return in_range(constraint.frac_range, ipart);
+    end if;
     for i in 0 to pll_range_max_c - 1 loop
       if i < constraint.range_count then
-        if ipart >= constraint.ranges(i).min
-          and ipart <= constraint.ranges(i).max
-          and (ipart - constraint.ranges(i).min)
-              mod constraint.ranges(i).step = 0 then
+        if in_range(constraint.ranges(i), ipart) then
           return true;
         end if;
       end if;
     end loop;
     return false;
-  end function;
-
-  function constraint_int_max(constraint: pll_divisor_constraint_t)
-    return natural
-  is
-    variable ret: natural := 0;
-  begin
-    for i in 0 to pll_range_max_c - 1 loop
-      if i < constraint.range_count then
-        if constraint.ranges(i).max > ret then
-          ret := constraint.ranges(i).max;
-        end if;
-      end if;
-    end loop;
-    return ret;
   end function;
 
   -- Config constructors
@@ -496,7 +495,8 @@ package body pll is
                        r5: pll_range_t := pll_range_none_c;
                        r6: pll_range_t := pll_range_none_c;
                        r7: pll_range_t := pll_range_none_c;
-                       frac_l2_den: natural := 0)
+                       frac_l2_den: natural := 0;
+                       frac_range: pll_range_t := pll_range_none_c)
     return pll_divisor_constraint_t
   is
     constant all_c: pll_range_vector := (r0, r1, r2, r3, r4, r5, r6, r7);
@@ -504,7 +504,11 @@ package body pll is
     variable n: natural := 0;
   begin
     ret.ranges := (others => pll_range_none_c);
+    assert frac_l2_den = 0 or frac_range.max >= frac_range.min
+      report "Fractional divisor states no integer part range"
+      severity failure;
     ret.frac_l2_den := frac_l2_den;
+    ret.frac_range := frac_range;
     for i in all_c'range loop
       if all_c(i).max >= all_c(i).min then
         ret.ranges(n) := all_c(i);
@@ -795,7 +799,7 @@ package body pll is
     variable best, cand: solve_output_t := solve_output_none_c;
     variable ideal_r: real;
     variable r: pll_range_t;
-    variable count, base, den, num_max: natural;
+    variable count, base, den, num_min, num_max: natural;
     variable k, num: integer;
   begin
     if cfg.hz = 0 then
@@ -841,8 +845,12 @@ package body pll is
       and port_topo.divisor.frac_l2_den > 0
       and cfg.phase.num = 0 then
       den := 2 ** port_topo.divisor.frac_l2_den;
-      num_max := (constraint_int_max(port_topo.divisor) + 1) * den;
-      if ideal_r * real(den) >= real(num_max) then
+      r := port_topo.divisor.frac_range;
+      num_min := r.min * den;
+      num_max := (r.max + 1) * den - 1;
+      if ideal_r * real(den) <= real(num_min) then
+        base := num_min;
+      elsif ideal_r * real(den) >= real(num_max) then
         base := num_max;
       else
         base := natural(ideal_r * real(den));
