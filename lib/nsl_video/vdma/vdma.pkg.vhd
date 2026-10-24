@@ -168,6 +168,64 @@ package vdma is
       );
   end component;
 
+  -- Triple buffering scheduler between a vdma_writer and a
+  -- vdma_reader, in their clock domain.
+  --
+  -- Three frame buffers live at base_c + i * buffer_size_c, i in 0..2.
+  -- Each buffer has a role at any time: displayed (the one the reader
+  -- is given), latest (the newest complete frame) and writing (the one
+  -- the writer is given). Roles are a permutation of the buffers, so
+  -- the writer is never pointed at the displayed buffer, even while a
+  -- reader frame is in flight.
+  --
+  -- writer_base_o connects to the writer base_i, writer_done_i and
+  -- writer_status_i to its done_o and status_o. When the writer reports
+  -- a complete frame, the written buffer becomes latest and the
+  -- previous latest becomes writing. The new base is in place on the
+  -- cycle following done, before the writer can sample it on the next
+  -- SOF. An incomplete frame keeps the writer on the same buffer and
+  -- pulses frame_dropped_o.
+  --
+  -- display_request_i is a one-cycle pulse asking for a new reader
+  -- frame. It is ignored while reader_ready_i is low. Otherwise, if
+  -- latest holds a frame that was never displayed, displayed and latest
+  -- roles are swapped. reader_start_o is then pulsed the cycle after,
+  -- with reader_base_o already stable. reader_start_o and reader_base_o
+  -- connect to the reader start_i and base_i, reader_ready_i to its
+  -- ready_o. A complete frame reported on the same cycle as an accepted
+  -- request is displayed immediately.
+  --
+  -- Until the first complete frame, the reader is started on the
+  -- displayed buffer, i.e. whatever buffer 0 holds after power-up.
+  --
+  -- frame_repeated_o pulses when a reader frame is started on an
+  -- already displayed buffer. frame_skipped_o pulses when a complete
+  -- frame is discarded without ever being displayed.
+  component vdma_triple_buffer is
+    generic(
+      address_width_c : positive;
+      base_c : unsigned;
+      buffer_size_c : unsigned
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      writer_base_o : out unsigned(address_width_c-1 downto 0);
+      writer_done_i : in std_ulogic;
+      writer_status_i : in frame_status_t;
+
+      display_request_i : in std_ulogic;
+      reader_base_o : out unsigned(address_width_c-1 downto 0);
+      reader_start_o : out std_ulogic;
+      reader_ready_i : in std_ulogic;
+
+      frame_dropped_o : out std_ulogic;
+      frame_repeated_o : out std_ulogic;
+      frame_skipped_o : out std_ulogic
+      );
+  end component;
+
   -- Byte gearbox between two packet streams of different widths,
   -- used internally by the DMAs. Packet bytes are repacked from byte 0
   -- of the first output beat, the last output beat of a packet has

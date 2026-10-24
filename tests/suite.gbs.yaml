@@ -777,6 +777,9 @@ projects:
   - name: video_vdma
     path: video_vdma
     tags: [ghdl, simulation]
+  - name: video_vdma_triple_buffer
+    path: video_vdma_triple_buffer
+    tags: [ghdl, simulation]
   - name: video_dvp_pixel_stream
     path: video_dvp_pixel_stream
     tags: [ghdl, simulation]

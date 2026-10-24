@@ -2,6 +2,7 @@ vhdl-sources += vdma.pkg.vhd
 vhdl-sources += vdma_gearbox.vhd
 vhdl-sources += vdma_writer.vhd
 vhdl-sources += vdma_reader.vhd
+vhdl-sources += vdma_triple_buffer.vhd
 
 deps += nsl_amba.axi4_mm
 deps += nsl_amba.axi4_stream
