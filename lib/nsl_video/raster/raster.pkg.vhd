@@ -205,6 +205,39 @@ package raster is
       );
   end component;
 
+  -- Makes a wider raster out of a narrower one, by sending every
+  -- pixel factor_c times in a row.
+  --
+  -- This is the cheap way up, the one a small framebuffer shown on a
+  -- big screen wants: no line store, no interpolation, every input
+  -- beat simply comes out factor_c times.  Lines and frames end where
+  -- they ended, on the last copy of the pixel that closed them, and
+  -- a frame opens on the first copy of the pixel that opened it.
+  -- ERROR goes with what closes a line, so on the last copy too.
+  --
+  -- Going taller is the other half of the same job, and needs the
+  -- lines again rather than the pixels.  Whatever holds the lines is
+  -- better at that: a DMA reading a frame from memory reads each line
+  -- as many times as needed (see nsl_video.vdma.vdma_reader).
+  --
+  -- A beat holds one pixel, on both sides.
+  component pixel_stream_repeater is
+    generic(
+      config_c: nsl_video.pixel_stream.config_t;
+      factor_c: positive
+      );
+    port(
+      clock_i: in std_ulogic;
+      reset_n_i: in std_ulogic;
+
+      in_i: in nsl_video.pixel_stream.master_t;
+      in_o: out nsl_video.pixel_stream.slave_t;
+
+      out_o: out nsl_video.pixel_stream.master_t;
+      out_i: in nsl_video.pixel_stream.slave_t
+      );
+  end component;
+
   -- Feeds a raster that owns its own timing from a pixel stream.
   --
   -- Framing travels with the pixels, and a wire-side raster cannot

@@ -6,6 +6,7 @@ vhdl-sources += pixel_stream_framer.vhd
 vhdl-sources += pixel_stream_requester.vhd
 vhdl-sources += pixel_stream_unframer.vhd
 vhdl-sources += pixel_stream_decimator.vhd
+vhdl-sources += pixel_stream_repeater.vhd
 
 deps += nsl_video.mode
 deps += nsl_video.pixel_stream

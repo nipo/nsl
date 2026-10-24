@@ -801,6 +801,9 @@ projects:
   - name: video_color_bars
     path: video_color_bars
     tags: [ghdl, simulation]
+  - name: video_repeater
+    path: video_repeater
+    tags: [ghdl, simulation]
   - name: dvi_encoder
     path: dvi_encoder
     tags: [ghdl, simulation]
