@@ -2,15 +2,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_data, nsl_i2c, nsl_math;
+library nsl_bnoc, nsl_data, nsl_i2c, nsl_math, nsl_omnivision, nsl_synthesis;
 use nsl_data.bytestream.all;
+use nsl_omnivision.ov5640.all;
 
 entity ov5640_driver is
   generic(
     clock_i_hz_c : natural;
     i2c_saddr_c : unsigned(7 downto 1) := "0111100";
-    width_c : positive range 1 to 640 := 640;
-    height_c : positive range 1 to 480 := 480
+    mode_c : mode_t := MODE_VGA;
+    width_c : positive range 1 to 1280 := 640;
+    height_c : positive range 1 to 720 := 480
     );
   port(
     clock_i : in std_ulogic;
@@ -93,6 +95,75 @@ architecture beh of ov5640_driver is
     x"460c22", x"382402", x"5001a3"
     );
 
+  -- From vendor 720p setup, written after VGA setup: a 2624x1456
+  -- window, binned to 1312x728, cropped by the ISP to 1280x720.  VCO
+  -- runs 24MHz / 3 * 105 = 840MHz.  Frame is 1892 x 740 system clock
+  -- cycles.
+  function hd_delta(scaled: boolean) return entry_vector
+  is
+    constant sde_c : entry_vector(0 to 0) := (0 => x"5001a3");
+    constant sde_unscaled_c : entry_vector(0 to 0) := (0 => x"500183");
+    constant delta_c : entry_vector := (
+      x"303669", x"303713", x"3c0707",
+      x"380000", x"380100", x"380200", x"3803fa", x"38040a", x"38053f",
+      x"380606", x"3807a9", x"380c07", x"380d64", x"380e02", x"380fe4",
+      x"381000", x"381110", x"381200", x"381304",
+      x"370864", x"3a0202", x"3a03e4", x"3a0801", x"3a09bc", x"3a0a01",
+      x"3a0b72", x"3a0e01", x"3a0d02", x"3a1402", x"3a15e4",
+      -- DVP PCLK is the PLL output, undivided: two PCLK per system
+      -- clock cycle
+      x"460c22", x"382401"
+      );
+  begin
+    if scaled then
+      return delta_c & sde_c;
+    else
+      return delta_c & sde_unscaled_c;
+    end if;
+  end function;
+
+  function window_width(mode: mode_t) return positive
+  is
+  begin
+    case mode is
+      when MODE_VGA => return 640;
+      when MODE_720P15 | MODE_720P30 => return 1280;
+    end case;
+  end function;
+
+  function window_height(mode: mode_t) return positive
+  is
+  begin
+    case mode is
+      when MODE_VGA => return 480;
+      when MODE_720P15 | MODE_720P30 => return 720;
+    end case;
+  end function;
+
+  function setup(mode: mode_t) return entry_vector
+  is
+  begin
+    case mode is
+      when MODE_VGA =>
+        return vga_c;
+      when MODE_720P15 | MODE_720P30 =>
+        return vga_c & hd_delta(width_c /= window_width(mode)
+                                or height_c /= window_height(mode));
+    end case;
+  end function;
+
+  constant setup_c : entry_vector := setup(mode_c);
+
+  -- System clock divider.  In VGA, this halves PCLK.
+  function sysdiv(mode: mode_t) return entry_t
+  is
+  begin
+    case mode is
+      when MODE_VGA | MODE_720P30 => return x"303521";
+      when MODE_720P15 => return x"303541";
+    end case;
+  end function;
+
   constant reg_test_pattern_c : std_ulogic_vector(15 downto 0) := x"503d";
 
   -- Changes from vendor setup, written after it.
@@ -104,8 +175,7 @@ architecture beh of ov5640_driver is
     constant h : std_ulogic_vector(15 downto 0) := std_ulogic_vector(to_unsigned(height_c, 16));
   begin
     case index is
-      -- System clock divided by 2, this halves PCLK
-      when 0 => return x"303521";
+      when 0 => return sysdiv(mode_c);
       -- Output size, scaled down from the window
       when 1 => return x"3808" & w(15 downto 8);
       when 2 => return x"3809" & w(7 downto 0);
@@ -126,15 +196,15 @@ architecture beh of ov5640_driver is
     end case;
   end function;
 
-  constant entry_count_c : natural := vga_c'length + override_count_c;
+  constant entry_count_c : natural := setup_c'length + override_count_c;
 
   function entry(index: natural; test_pattern: boolean) return entry_t
   is
   begin
-    if index < vga_c'length then
-      return vga_c(index);
+    if index < setup_c'length then
+      return setup_c(setup_c'low + index);
     else
-      return override(index - vga_c'length, test_pattern);
+      return override(index - setup_c'length, test_pattern);
     end if;
   end function;
 
@@ -188,6 +258,16 @@ architecture beh of ov5640_driver is
   signal access_rdata_s: byte_string(0 to 1);
 
 begin
+
+  size_check: nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c => "Sensor scales down only, output must fit the mode window",
+      condition_c => width_c <= window_width(mode_c)
+      and height_c <= window_height(mode_c)
+      )
+    port map(
+      unused_i => '0'
+      );
 
   regs: process(clock_i, reset_n_i) is
   begin

@@ -10,14 +10,28 @@ package ov5640 is
 
   constant i2c_saddr_default_c : unsigned(7 downto 1) := "0111100";
 
+  -- Sensor setups.  All of them take the whole array width, binned
+  -- 2x2.  Given PCLK figures are for a 24MHz XCLK.
+  type mode_t is (
+    -- 4:3 window, 640x480 after binning and scaling.  PCLK runs near
+    -- 32MHz.
+    MODE_VGA,
+    -- 16:9 window, 1280x720 after binning, 15 frames a second.  PCLK
+    -- runs at 42MHz, a line takes 3784 PCLK cycles, 2560 of them with
+    -- HREF high.
+    MODE_720P15,
+    -- As MODE_720P15, 30 frames a second, PCLK runs at 84MHz.
+    MODE_720P30
+    );
+
   -- Powers the sensor up and sets it to stream RGB565 on its DVP
   -- port.
   --
-  -- Sensor takes a 640x480 window of the whole array, binned, and
-  -- scales it down to width_c x height_c.  Pixels go out as two
-  -- bytes, first one holding red and upper bits of green, data valid
-  -- on PCLK rising edge, HREF and VSYNC active high.  With a 24MHz
-  -- XCLK, this runs PCLK around 28MHz.
+  -- Sensor takes the window mode_c gives and scales it down to
+  -- width_c x height_c, which may not be larger than the window.
+  -- Pixels go out as two bytes, first one holding red and upper bits
+  -- of green, data valid on PCLK rising edge, HREF and VSYNC active
+  -- high.
   --
   -- XCLK has to run before reset is released.  Driver holds the
   -- sensor in power down and reset for a while, releases it, checks
@@ -31,8 +45,9 @@ package ov5640 is
     generic(
       clock_i_hz_c : natural;
       i2c_saddr_c : unsigned(7 downto 1) := i2c_saddr_default_c;
-      width_c : positive range 1 to 640 := 640;
-      height_c : positive range 1 to 480 := 480
+      mode_c : mode_t := MODE_VGA;
+      width_c : positive range 1 to 1280 := 640;
+      height_c : positive range 1 to 720 := 480
       );
     port(
       clock_i : in std_ulogic;
