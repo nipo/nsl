@@ -774,6 +774,9 @@ projects:
   - name: video_pixel_stream
     path: video_pixel_stream
     tags: [ghdl, simulation]
+  - name: video_vdma
+    path: video_vdma
+    tags: [ghdl, simulation]
   - name: video_dvp_pixel_stream
     path: video_dvp_pixel_stream
     tags: [ghdl, simulation]

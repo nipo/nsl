@@ -7,3 +7,4 @@ packages += pattern
 packages += colormap
 packages += blender
 packages += terminal
+packages += vdma
