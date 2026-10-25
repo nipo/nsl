@@ -24,4 +24,5 @@ packages += stream_to_tcp
 packages += stream_meta
 packages += stream_sized
 packages += stream_processing
+packages += axi_m2m_dma
 nsl_amba-ghdl-flags += -Wno-hide

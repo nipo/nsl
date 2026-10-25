@@ -21,6 +21,9 @@ AMBA is a set of on-chip protocols. NSL chose a subset, among which:
 * `APB <apb/index>`_, used to access low-performance register maps, mostly
   used for low-bandwidth peripherals.
 
+Beside interconnect and adapters, the library holds a `microcoded
+memory-to-memory DMA controller <axi_m2m_dma/index>`_ on AXI4-MM.
+
 Detailed description
 ====================
 
@@ -33,6 +36,7 @@ Detailed description
    apb/index
    apb_routing/index
    axi_apb/index
+   axi_m2m_dma/index
    mm_fifo/index
    mm_logger/index
    ram/index
