@@ -62,18 +62,18 @@ begin
       gap_max: natural;
       read_min, read_max: natural;
       request_min, request_max: natural;
-      incomplete_ratio: real;
+      incomplete_percent: natural;
       cycles: natural;
     end record;
     type scenario_vector is array(natural range <>) of scenario_t;
 
     constant scenarios_c : scenario_vector := (
-      ("fast writer ", 40, 60, 5, 80, 100, 140, 160, 0.0, 30000),
-      ("slow writer ", 180, 220, 20, 50, 60, 70, 90, 0.0, 30000),
-      ("same rate   ", 60, 140, 10, 70, 90, 60, 140, 0.0, 30000),
-      ("incomplete  ", 30, 150, 10, 40, 80, 50, 150, 0.4, 30000),
-      ("busy request", 30, 50, 0, 100, 120, 1, 20, 0.1, 30000),
-      ("tight       ", 1, 3, 0, 1, 3, 1, 3, 0.2, 30000)
+      ("fast writer ", 40, 60, 5, 80, 100, 140, 160, 0, 30000),
+      ("slow writer ", 180, 220, 20, 50, 60, 70, 90, 0, 30000),
+      ("same rate   ", 60, 140, 10, 70, 90, 60, 140, 0, 30000),
+      ("incomplete  ", 30, 150, 10, 40, 80, 50, 150, 40, 30000),
+      ("busy request", 30, 50, 0, 100, 120, 1, 20, 10, 30000),
+      ("tight       ", 1, 3, 0, 1, 3, 1, 3, 20, 30000)
       );
 
     type int_vector is array(0 to 2) of integer;
@@ -209,7 +209,7 @@ begin
                 report "Writer starts on buffer being read" severity failure;
               being_written(widx) := true;
               content(widx) := -1;
-              wcomplete := not chance(s.incomplete_ratio);
+              wcomplete := not chance(real(s.incomplete_percent) / 100.0);
               wcount := rand(s.write_min, s.write_max);
               wstate := W_BUSY;
             end if;
@@ -304,7 +304,7 @@ begin
         report "Repeated count mismatch" severity failure;
       assert pending = 0 or pending = 1
         report "Complete frames unaccounted for" severity failure;
-      if s.incomplete_ratio = 0.0 and s.write_min > s.request_max + s.read_max then
+      if s.incomplete_percent = 0 and s.write_min > s.request_max + s.read_max then
         assert n_skipped = 0
           report "Frames skipped with a slow writer" severity failure;
       end if;
