@@ -43,6 +43,9 @@ package sgmii is
     clk_cor         : std_ulogic; -- 1 insert/skip, 0 none
   end record;
 
+  type sgmii_m2p_vector is array (natural range <>) of sgmii_m2p;
+  type sgmii_p2m_vector is array (natural range <>) of sgmii_p2m;
+
   component sgmii_driver is
     generic (
       sgmii_mode : boolean := false
