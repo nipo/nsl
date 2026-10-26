@@ -14,3 +14,13 @@ deps += gowin.components
 deps += nsl_data.endian
 endif
 endif
+
+ifeq ($(hwdep),xilinx)
+vhdl-sources += transceiver_cluster_series7_serdes.vhd
+deps += nsl_data.bytestream
+deps += nsl_hwdep.xc7_config
+deps += nsl_logic.gearbox
+deps += nsl_clocking.distribution
+deps += nsl_clocking.async
+deps += nsl_synthesis.assertion
+endif

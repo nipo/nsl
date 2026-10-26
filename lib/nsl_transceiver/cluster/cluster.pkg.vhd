@@ -33,6 +33,19 @@ package cluster is
     ref_clock_index => 0,
     ref_clock_mhz => 0,
     target_vco_mhz => 0
+    );  
+
+  type refclk_config_t is
+  record
+    ref_clock_index : natural;
+    ref_clock_mhz : natural;
+  end record;
+
+  type refclk_config_vector is array (natural range <>) of refclk_config_t;
+
+  constant disabled_refclk_c : refclk_config_t := (
+    ref_clock_index => 0,
+    ref_clock_mhz => 0
     );
 
   type config_t is
@@ -41,11 +54,13 @@ package cluster is
     pll_count : natural range 0 to max_pll_count_c;
     user_clock_group_count : natural range 0 to max_user_clock_group_count_c;
     plls : pll_config_vector(0 to max_pll_count_c-1);
+    refclks : refclk_config_vector(0 to max_pll_count_c-1);
     lanes : nsl_transceiver.lane.config_vector(0 to max_lane_count_c-1);
   end record;
 
   function config(
     plls : pll_config_vector;
+    refclks: refclk_config_vector;
     lanes : nsl_transceiver.lane.config_vector;
     user_clock_group_count : natural
     ) return config_t;
@@ -107,6 +122,7 @@ package body cluster is
 
   function config(
     plls : pll_config_vector;
+    refclks: refclk_config_vector;    
     lanes : nsl_transceiver.lane.config_vector;
     user_clock_group_count : natural
     ) return config_t
@@ -117,10 +133,14 @@ package body cluster is
     ret.pll_count := plls'length;
     ret.user_clock_group_count := user_clock_group_count;
     ret.plls := (others => disabled_pll_c);
+    ret.refclks := (others => disabled_refclk_c);
     ret.lanes := (others => nsl_transceiver.lane.disabled_lane_c);
     for i in 0 to plls'length-1 loop
       ret.plls(i) := plls(plls'low + i);
     end loop;
+    for i in 0 to refclks'length-1 loop
+      ret.refclks(i) := refclks(refclks'low + i);
+    end loop;    
     for i in 0 to lanes'length-1 loop
       ret.lanes(i) := lanes(lanes'low + i);
     end loop;
