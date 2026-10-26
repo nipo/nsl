@@ -1,0 +1,45 @@
+name: transceiver_cluster_series7
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - transceiver_cluster_series7_ip_top.vhd
+    - file_type: vivado-bus-yaml
+      files:
+        - ../interface/diff_pair/diff_pair.yaml
+        - ../interface/transceiver_lane/transceiver_lane.yaml
+    - file_type: vivado-ip-customization-tcl
+      files:
+        - ports.tcl
+  deps:
+    - nsl_transceiver.cluster
+    - nsl_transceiver.lane
+    - nsl_transceiver.target
+    - nsl_io.diff
+    - nsl_amba.apb
+    - nsl_clocking.async
+    - nsl_math.int_ext
+
+output:
+  - name: ip_package
+    topcell: transceiver_cluster_series7_ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: transceiver
+        name: transceiver_cluster_series7
+        version: "1.0"
+        taxonomy: /NSL/Transceiver
+        display_name: Transceiver Cluster (Series 7 LVDS SerDes)
+        description: nsl_transceiver cluster on series 7 bulk IO -- MMCM, IDELAYCTRL, ISERDES/OSERDES, 8B/10B codec, 1 to 4 LVDS lanes from any reference clock. Pair each lane with sgmii_adapter for SGMII.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: transceiver_cluster_series7_1.0.zip

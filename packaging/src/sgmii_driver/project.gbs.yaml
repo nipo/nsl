@@ -1,0 +1,38 @@
+name: sgmii_driver
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - sgmii_driver_ip_top.vhd
+    - file_type: vivado-bus-yaml
+      files:
+        - ../interface/sgmii_symbol/sgmii_symbol.yaml
+  deps:
+    - nsl_bnoc.committed
+    - nsl_bnoc.framed
+    - nsl_mii.sgmii
+    - nsl_mii.link
+
+output:
+  - name: ip_package
+    topcell: sgmii_driver_ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: mii
+        name: sgmii_driver
+        version: "1.0"
+        taxonomy: /NSL/Mii
+        display_name: SGMII Driver
+        description: SGMII protocol layer (PCS TX/RX and clause-37 auto-negotiation) exposing layer-1 frames as AXI4-Stream. Pair with sgmii_adapter + transceiver_cluster_series7 to reach real pins.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: sgmii_driver_1.0.zip

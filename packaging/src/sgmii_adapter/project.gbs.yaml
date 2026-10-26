@@ -1,0 +1,38 @@
+name: sgmii_adapter
+
+root:
+  name: top
+  sources:
+    - file_type: vhdl
+      files:
+        - sgmii_adapter_ip_top.vhd
+    - file_type: vivado-bus-yaml
+      files:
+        - ../interface/sgmii_symbol/sgmii_symbol.yaml
+        - ../interface/transceiver_lane/transceiver_lane.yaml
+  deps:
+    - nsl_mii.sgmii
+    - nsl_transceiver.lane
+    - nsl_transceiver.sgmii
+
+output:
+  - name: ip_package
+    topcell: sgmii_adapter_ip_top
+    target:
+      part: xc7z020clg400-1
+    backend_config:
+      gbs.builtin.vivado-ip:
+        tool: vivado
+        vendor: nsl
+        library: transceiver
+        name: sgmii_adapter
+        version: "1.0"
+        taxonomy: /NSL/Transceiver
+        display_name: SGMII Transceiver Adapter
+        description: Maps the sgmii_driver symbol bus onto one transceiver_cluster lane (8B/10B, one byte per word). Pure wiring, no clock.
+        supported_families:
+          - zynq
+          - artix7
+    outputs:
+      - type: vivado-ip-zip
+        path: sgmii_adapter_1.0.zip
