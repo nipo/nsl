@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: sgmii_symbol
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [sgmii_symbol.yaml]
+
+output:
+  - name: sgmii_symbol
+    topcell: sgmii_symbol
+    outputs:
+      - type: vivado-bus-zip
+        path: sgmii_symbol.zip

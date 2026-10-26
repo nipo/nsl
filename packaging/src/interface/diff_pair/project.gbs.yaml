@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: diff_pair
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [diff_pair.yaml]
+
+output:
+  - name: diff_pair
+    topcell: diff_pair
+    outputs:
+      - type: vivado-bus-zip
+        path: diff_pair.zip

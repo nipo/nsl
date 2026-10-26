@@ -1,0 +1,14 @@
+library: interface
+name: diff_pair
+description: NSL differential pair, mirrors nsl_io.diff.diff_pair (p/n std_ulogic). The master side is the pair's source (drives p/n out); the slave side is its destination (reads p/n in).
+display_name: Differential pair
+
+ports:
+  p:
+    role: m2s
+    qualifier: data
+    description: Positive leg
+  n:
+    role: m2s
+    qualifier: data
+    description: Negative leg
