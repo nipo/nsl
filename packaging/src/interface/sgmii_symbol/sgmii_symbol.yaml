@@ -1,0 +1,54 @@
+library: interface
+name: sgmii_symbol
+description: NSL SGMII 8B/10B symbol exchange between the SGMII protocol driver and its SerDes backend
+display_name: SGMII symbol bus
+
+roles:
+  # Present only on ends that use it. A backend whose 8B/10B encoder keeps
+  # its own running disparity (series-7 SERDES) has no use for it.
+  m2s_optional:
+    base: m2s
+    master:
+      presence: optional
+    slave:
+      presence: optional
+
+ports:
+  m2p_data:
+    role: m2s
+    width: 8
+    qualifier: data
+    description: Driver-to-backend symbol data byte
+  m2p_control:
+    role: m2s
+    description: Driver-to-backend symbol control/K-character flag
+  m2p_tx_disparity:
+    role: m2s_optional
+    default: 0
+    description: Driver-requested running disparity for this symbol, for backends that let the PCS force it
+  m2p_align_rst:
+    role: m2s
+    description: Driver-requested alignment restart
+  m2p_valid_symbol:
+    role: m2s
+    description: Driver-asserted valid symbol indicator
+  p2m_data:
+    role: s2m
+    width: 8
+    qualifier: data
+    description: Backend-to-driver symbol data byte
+  p2m_control:
+    role: s2m
+    description: Backend-to-driver symbol control/K-character flag
+  p2m_code_err:
+    role: s2m
+    description: Backend-reported 8B/10B code error
+  p2m_disparity_err:
+    role: s2m
+    description: Backend-reported running disparity error
+  p2m_align_ready:
+    role: s2m
+    description: Backend-reported alignment ready
+  p2m_clk_cor:
+    role: s2m
+    description: Backend-reported clock correction, 1 when a symbol was inserted or skipped

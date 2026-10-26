@@ -1,0 +1,87 @@
+library: interface
+name: transceiver_lane
+description: NSL transceiver lane, mirrors nsl_transceiver.lane tx/rx master/slave records for one lane with data_byte_count = 1. The master side is the protocol adapter, the slave side is the transceiver cluster.
+display_name: Transceiver lane
+
+ports:
+  # TX, adapter to cluster (tx_master_t)
+  tx_data:
+    role: m2s
+    width: 8
+    qualifier: data
+    description: TX data byte 0
+  tx_aux:
+    role: m2s
+    width: 8
+    description: TX auxiliary bits for byte 0, profile-dependent
+  tx_valid:
+    role: m2s
+    description: TX word valid
+  tx_pcs_reset_n:
+    role: m2s
+    description: TX PCS reset, active low
+  tx_control:
+    role: m2s
+    width: 64
+    description: TX vendor-opaque control bits
+  tx_control_h:
+    role: m2s
+    width: 64
+    description: TX vendor-opaque control bits, high half
+  tx_c2i_clock:
+    role: m2s
+    description: TX clock-to-interface clock
+  # TX, cluster to adapter (tx_slave_t)
+  tx_ready:
+    role: s2m
+    description: TX ready
+  tx_pll_lock:
+    role: s2m
+    description: TX PLL locked
+  tx_status:
+    role: s2m
+    width: 32
+    description: TX vendor-opaque status bits
+  # RX, cluster to adapter (rx_master_t)
+  rx_data:
+    role: s2m
+    width: 8
+    qualifier: data
+    description: RX data byte 0
+  rx_aux:
+    role: s2m
+    width: 8
+    description: RX auxiliary bits for byte 0, profile-dependent
+  rx_valid:
+    role: s2m
+    description: RX word valid
+  rx_pma_lock:
+    role: s2m
+    description: RX PMA locked
+  rx_pcs_aligned:
+    role: s2m
+    description: RX PCS word aligned
+  rx_elec_idle:
+    role: s2m
+    description: RX electrical idle
+  rx_status:
+    role: s2m
+    width: 32
+    description: RX vendor-opaque status bits
+  # RX, adapter to cluster (rx_slave_t)
+  rx_ready:
+    role: m2s
+    description: RX ready
+  rx_pcs_reset_n:
+    role: m2s
+    description: RX PCS reset, active low
+  rx_align_trigger:
+    role: m2s
+    description: RX alignment trigger
+  rx_chbond_start:
+    role: m2s
+    description: RX channel bonding start
+  rx_control:
+    role: m2s
+    width: 64
+    description: RX vendor-opaque control bits

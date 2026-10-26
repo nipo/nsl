@@ -1,0 +1,14 @@
+name: interface
+
+root:
+  name: transceiver_lane
+  sources:
+    - file_type: vivado-bus-yaml
+      files: [transceiver_lane.yaml]
+
+output:
+  - name: transceiver_lane
+    topcell: transceiver_lane
+    outputs:
+      - type: vivado-bus-zip
+        path: transceiver_lane.zip

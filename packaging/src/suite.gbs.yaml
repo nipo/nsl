@@ -35,6 +35,15 @@ projects:
   - name: tristated
     path: interface/tristated
     tags: [vivado-interface]
+  - name: diff_pair
+    path: interface/diff_pair
+    tags: [vivado-interface]
+  - name: sgmii_symbol
+    path: interface/sgmii_symbol
+    tags: [vivado-interface]
+  - name: transceiver_lane
+    path: interface/transceiver_lane
+    tags: [vivado-interface]
   - name: activity_monitor
     path: activity_monitor
     tags: [vivado-ip]
