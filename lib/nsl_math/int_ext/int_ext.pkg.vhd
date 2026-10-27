@@ -10,6 +10,7 @@ package int_ext is
                default : integer := integer'low) return integer;
   function min(v : integer_vector;
                default : integer := integer'high) return integer;
+  function sum(v : integer_vector) return integer;
 
 end package int_ext;
 
@@ -33,6 +34,16 @@ package body int_ext is
     for i in v'range
     loop
       ret := work.arith.min(v(i), ret);
+    end loop;
+    return ret;
+  end function;
+
+  function sum(v : integer_vector) return integer is
+    variable ret : integer := 0;
+  begin
+    for i in v'range
+    loop
+      ret := ret + v(i);
     end loop;
     return ret;
   end function;
