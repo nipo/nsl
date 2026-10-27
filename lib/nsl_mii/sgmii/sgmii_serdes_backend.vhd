@@ -58,7 +58,7 @@ begin  -- architecture beh
       disparity_error_o => sgmii_o.disparity_err
       );
 
-  aligner : nsl_io.delay.input_delay_aligner_slow
+  aligner : nsl_io.delay.input_delay_aligner
     generic map(
       stabilization_delay_c => 8,
       stabilization_cycle_c => 8
