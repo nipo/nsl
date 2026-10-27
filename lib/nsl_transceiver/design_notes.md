@@ -1,7 +1,6 @@
 # nsl_transceiver — intent and state
 
-State snapshot: as of "nsl_transceiver: Add CUFF adapter and
-single-byte data path".
+State snapshot: as of "nsl_transceiver/cluster: Replace IDELAYCTRL with nsl_io.delay.delay_reference".
 
 ## Purpose
 
@@ -280,6 +279,20 @@ The load-bearing conclusions:
 CSR contents are generated from a TOML file, and TOML→CSR tooling
 already exists in the build system; sweeping TOML input to decode CSR
 semantics is possible but was not pursued.
+
+## 7 Series SERDES backend
+This backend implements 8b/10b line encoding in the fabric, while wrapping
+the IO SERDES blocks and other necessary elements to create a bulk IO
+cluster. The various loopback modes of the cluster have been implemented
+and tested on hardware. Polarity inversion and the choice of reference clock
+speed are also possible. Variable data widths however, have not been 
+implemented, nor alternative encoding schemes. These constraints are enforced
+through VHDL assertions using both the `assert` keyword and nsl_synthesis.assertion.
+
+While this backend targets 7 Series Xilinx FPGAs, a rewrite of the multi_pll
+block could allow this to be portable across any backend implemented in
+the rest of the nsl library--The only architecture-specific components are
+the clock buffers used in the design (BUFR and BUFIO). 
 
 ## Adapters
 
