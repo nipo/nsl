@@ -5,7 +5,7 @@ use ieee.std_logic_1164.all;
 -- transceiver_cluster contract (see cluster_pkg.vhd).
 --
 -- Datapath is: ISERDESE2/OSERDESE2 based DDR 10:1 SERDES
--- (nsl_io.serdes), IDELAY based bit aligner, and fabric 8b/10b codec.
+-- (nsl_io.serdes), input_delay_variable based bit aligner, and fabric 8b/10b codec.
 --
 -- Hardware bypassed by the selected loopback mode is not instantiated.
 --
@@ -17,7 +17,7 @@ use ieee.std_logic_1164.all;
 --                         decoder, SERDES and RX pad are bypassed, the TX pad
 --                         keeps transmitting. Errors are 0, align ready is 1.
 --   LOOPBACK_NEAR_END_PMA the 10b code word leaving the encoder is fed to
---                         the decoder, bypassing SERDES, IDELAY and pads
+--                         the decoder, bypassing SERDES, input_delay_variable and pads
 --                         (the 8b/10b logic is tested, not the IO). The TX
 --                         pad keeps transmitting. Align ready is 1.
 --   LOOPBACK_FAR_END_PMA  the RX pad net drives the TX pad directly in
@@ -61,7 +61,7 @@ entity transceiver_cluster is
     tx_s_o : out nsl_transceiver.lane.tx_slave_vector(0 to config_c.lane_count-1);
     rx_m_o : out nsl_transceiver.lane.rx_master_vector(0 to config_c.lane_count-1);
     rx_s_i : in  nsl_transceiver.lane.rx_slave_vector(0 to config_c.lane_count-1);
-    
+
     pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
 
     apb_clock_o   : out std_ulogic;
@@ -74,7 +74,7 @@ end entity;
 architecture series7_serdes of transceiver_cluster is
 
   -- Constants ---------------------------------------------------------------------------
-  constant ref_index_c : natural  := 0;
+  constant ref_index_c : natural := 0;
 
   -- Error messages
   constant lane_count_msg_c    : string := "transceiver_cluster/series7_serdes: at least one lane is required";
@@ -86,7 +86,7 @@ architecture series7_serdes of transceiver_cluster is
   constant ref_clk_ok_c : boolean := ref_index_c < ref_clock_c'length;
 
   -- True when at least one enabled lane instantiates an RX SERDES path
-  -- (IDELAY + ISERDES), i.e. when an IDELAYCTRL is needed.
+  -- (input_delay_variable + ISERDES), i.e. when an delay_reference is needed.
   function uses_idelay(cfg : nsl_transceiver.cluster.config_t) return boolean is
   begin
     for i in 0 to cfg.lane_count-1 loop
@@ -105,10 +105,10 @@ architecture series7_serdes of transceiver_cluster is
   constant apb_config_c : nsl_amba.apb.config_t := nsl_amba.apb.config(8, 8);
 
   -- Clocking
-  constant ref_hz_c    : positive := config_c.refclks(0).ref_clock_mhz * 1_000_000;      
-  constant delay_clock_hz_c  : positive := 200_000_000;      
+  constant ref_hz_c          : positive := config_c.refclks(0).ref_clock_mhz * 1_000_000;
+  constant delay_clock_hz_c  : positive := 200_000_000;
   constant serial_clock_hz_c : positive := positive(real(config_c.lanes(0).line_rate_mbps) / 2.0) * 1_000_000;
-  
+
   signal s_ref_clk               : std_ulogic;
   signal s_delay_clock           : std_ulogic;
   signal s_serial_clock          : std_ulogic;
@@ -120,7 +120,7 @@ architecture series7_serdes of transceiver_cluster is
   signal s_delay_rdy             : std_ulogic;
   signal s_bufr_rst              : std_ulogic;
   signal s_everything_ready      : std_ulogic;
-  signal s_general_reset_sync_n  : std_ulogic;      
+  signal s_general_reset_sync_n  : std_ulogic;
 
 begin
 
@@ -163,26 +163,26 @@ begin
 
   -- APB: no runtime configuration exists for this backend. 
   apb_clock_o <= '0';
-  apb_s_o <= response_idle(apb_config_c);
+  apb_s_o     <= response_idle(apb_config_c);
 
-  -- Common Clocking between lanes: MMCM, BUFIO, BUFR, IDELAYCTRL ---------------------------------------
+  -- Common Clocking between lanes: MMCM, BUFIO, BUFR, delay_reference ---------------------------------------
   s_ref_clk <= ref_clock_i(ref_index_c) when ref_index_c < ref_clock_c'length else '0';
 
-  domain_a_pll_inst: nsl_clocking.pll.pll_multi
+  domain_a_pll_inst : nsl_clocking.pll.pll_multi
     generic map (
-      config_c => pll_config(
-        implementation => pll_implementation_id("MMCM"), -- Required for BUFR
-        input_hz => ref_hz_c,
-        o0 => pll_output(delay_clock_hz_c, 0, true),
-        o1 => pll_output(serial_clock_hz_c)
+      config_c         => pll_config(
+        implementation => pll_implementation_id("MMCM"),  -- Required for BUFR
+        input_hz       => ref_hz_c,
+        o0             => pll_output(delay_clock_hz_c, 0, true),
+        o1             => pll_output(serial_clock_hz_c)
         )
       )
     port map (
-      clock_i => s_ref_clk,
+      clock_i    => s_ref_clk,
       clock_o(0) => s_delay_clock,
       clock_o(1) => s_serial_clock,
-      reset_n_i => reset_n_i,
-      locked_o => s_domain_a_pll_locked
+      reset_n_i  => reset_n_i,
+      locked_o   => s_domain_a_pll_locked
       );  
 
   s_everything_ready <= s_delay_rdy and s_domain_a_pll_locked;
@@ -214,10 +214,9 @@ begin
       I   => s_serial_clock
       );
 
-  -- IDELAYCTRL is only needed (and only kept by the tools) when a lane
-  -- instantiates an IDELAY.
+  -- delay_reference is only needed (and only kept by the tools) when a lane
+  -- instantiates an input_delay_variable.
   idelayctrl_gen : if idelay_used_c generate
-    signal s_delay_rst     : std_ulogic;
     signal s_delay_reset_n : std_ulogic;
   begin
 
@@ -228,14 +227,11 @@ begin
         data_o  => s_delay_reset_n
         );
 
-
-    s_delay_rst <= not(s_delay_reset_n);
-
-    IDELAYCTRL_inst : idelayctrl
+    delay_ref_inst : nsl_io.delay.delay_reference
       port map (
-        RDY    => s_delay_rdy,
-        REFCLK => s_delay_clock,
-        RST    => s_delay_rst
+        clock_i   => s_delay_clock,
+        reset_n_i => s_delay_reset_n,
+        ready_o   => s_delay_rdy
         );
 
   end generate;
@@ -253,21 +249,21 @@ begin
       -- Lane constants and signals
       constant lane_c : nsl_transceiver.lane.config_t := config_c.lanes(lane_idx);
 
-      constant encoding_ok_c : boolean := lane_c.encoding = nsl_transceiver.lane.ENCODING_8B10B;
-      constant bytes_ok_c    : boolean := lane_c.data_byte_count = 1;
+      constant encoding_ok_c : boolean                              := lane_c.encoding = nsl_transceiver.lane.ENCODING_8B10B;
+      constant bytes_ok_c    : boolean                              := lane_c.data_byte_count = 1;
       constant loopback_c    : nsl_transceiver.lane.loopback_mode_t := lane_c.loopback;
 
       -- Which parts of the lane exist in the selected loopback mode. Hardware
       -- that the mode bypasses is not instantiated.
-      --   RX SERDES path (pad, IDELAY, ISERDES, aligner): not in near end modes
+      --   RX SERDES path (pad, input_delay_variable, ISERDES, aligner): not in near end modes
       --   Decoder                                        : not in near end PCS
       --   TX path (encoder, OSERDES)                     : not in far end PMA
       --   TX pad                                         : always
       constant has_rx_serdes_c : boolean := loopback_c = nsl_transceiver.lane.LOOPBACK_NONE
                                             or loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA
                                             or loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS;
-      constant has_decoder_c   : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS;
-      constant has_tx_c        : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PMA;
+      constant has_decoder_c : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS;
+      constant has_tx_c      : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PMA;
 
       -- Signals shared between the sections below. Each one is driven in
       -- every mode where it is read.
@@ -276,15 +272,15 @@ begin
       signal s_enc2ser_code : nsl_line_coding.ibm_8b10b.code_word_t;  -- Driven by the TX path
       signal s_dec_code_in  : nsl_line_coding.ibm_8b10b.code_word_t;  -- Decoder input
 
-      signal s_tx_symbol    : nsl_line_coding.ibm_8b10b.data_t; -- From user
-      signal s_dec_symbol   : nsl_line_coding.ibm_8b10b.data_t; -- Decoder output
-      signal s_dec_code_err : std_ulogic;
-      signal s_dec_disp_err : std_ulogic;
-      signal s_loop_symbol  : nsl_line_coding.ibm_8b10b.data_t; -- Near end PCS loop register
-      signal s_rx_symbol    : nsl_line_coding.ibm_8b10b.data_t; -- To user
-      signal s_code_err     : std_ulogic;
-      signal s_disp_err     : std_ulogic;
-      signal s_user_align_ready : std_ulogic;  -- To user
+      signal s_tx_symbol        : nsl_line_coding.ibm_8b10b.data_t;  -- From user
+      signal s_dec_symbol       : nsl_line_coding.ibm_8b10b.data_t;  -- Decoder output
+      signal s_dec_code_err     : std_ulogic;
+      signal s_dec_disp_err     : std_ulogic;
+      signal s_loop_symbol      : nsl_line_coding.ibm_8b10b.data_t;  -- Near end PCS loop register
+      signal s_rx_symbol        : nsl_line_coding.ibm_8b10b.data_t;  -- To user
+      signal s_code_err         : std_ulogic;
+      signal s_disp_err         : std_ulogic;
+      signal s_user_align_ready : std_ulogic;                        -- To user
 
     begin
 
@@ -433,7 +429,7 @@ begin
       -- TX path (encoder + OSERDES) --------------------------------------------------------
       tx_path : if has_tx_c generate
 
-        signal s_enc_symbol             : nsl_line_coding.ibm_8b10b.data_t; -- Encoder input
+        signal s_enc_symbol             : nsl_line_coding.ibm_8b10b.data_t;  -- Encoder input
         signal s_enc2ser_processed_code : nsl_line_coding.ibm_8b10b.code_word_t;
         signal s_data_m2p_se            : std_ulogic;
 
@@ -509,7 +505,7 @@ begin
       -- Clocks to the user
       lane_tx_clock_o(lane_idx) <= s_parallel_clock_buff;
       lane_rx_clock_o(lane_idx) <= s_parallel_clock_buff;
-      
+
       tx_s_o(lane_idx).ready    <= s_everything_ready;
       tx_s_o(lane_idx).pll_lock <= s_domain_a_pll_locked;
       tx_s_o(lane_idx).status   <= (others => '0');
@@ -528,7 +524,7 @@ begin
       rx_m_o(lane_idx).elec_idle   <= '0';
       rx_m_o(lane_idx).status <= (
         0      => s_user_align_ready,
-        1      => '0', -- No clock correction for SERDES backend
+        1      => '0',  -- No clock correction for SERDES backend
         others => '-'
         );
 
