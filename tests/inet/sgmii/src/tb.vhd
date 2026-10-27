@@ -3,6 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity tb is
+  generic (
+    clk_delay_ps_c  : integer := 3000;
+    data_delay_ps_c : integer := 2000
+    );
 end tb;
 
 library nsl_simulation, nsl_bnoc, nsl_mii, nsl_data, nsl_io;
@@ -33,8 +37,8 @@ architecture arch of tb is
     "02000000feed00deadbeef"
     );
 
-  constant clk_delay_c  : time := 3 ns;
-  constant data_delay_c : time := 2 ns;
+  constant clk_delay_c  : time := clk_delay_ps_c * 1 ps;
+  constant data_delay_c : time := data_delay_ps_c * 1 ps;  
 
 begin
 
@@ -65,7 +69,8 @@ begin
   -- SGMII number 1
   sgmii_driver_1 : nsl_mii.sgmii.sgmii_driver
     generic map (
-      link_timer_c => 30  -- Faster simulation than the spec default
+      sgmii_mode => false,
+      simulation => true
       )
     port map (
       reset_n_i    => reset_n_s,
@@ -93,7 +98,8 @@ begin
   -- SGMII number 2
   sgmii_driver_2 : nsl_mii.sgmii.sgmii_driver
     generic map (
-      link_timer_c => 30  -- Faster simulation than the spec default
+      sgmii_mode => false,
+      simulation => true
       )    
     port map (
       reset_n_i    => reset_n_s,

@@ -38,7 +38,7 @@ begin
     end if;
   end process;
 
-  mark_o <= '1' when step_count_s = 0 else '0';
+  mark_o <= '1' when step_count_s = tap_step_count_c-1 else '0';
   -- A delay line passes what it is given, however short: an inertial
   -- delay would swallow any pulse shorter than the tap count it is set
   -- to, which is exactly the case a line this long is set up for.

@@ -8,7 +8,8 @@ use work.sgmii.all;
 
 entity sgmii_driver is
   generic (
-    sgmii_mode : boolean := false
+    sgmii_mode : boolean := false;
+    simulation : boolean := false
     );
   port (
     reset_n_i : in std_ulogic;
@@ -30,10 +31,6 @@ entity sgmii_driver is
 end entity sgmii_driver;
 
 architecture beh of sgmii_driver is
-
-  -- Choose mode constants
-  constant config_reg_c : config_reg_t := config_sgmii_c when sgmii_mode else config_1000BaseX_c;
-  constant link_timer_c : natural      := link_timer_sgmii_c when sgmii_mode else link_timer_1000BaseX_c;
 
   -- Internal signals
   signal s_rx_config_valid : std_ulogic;
@@ -149,20 +146,88 @@ begin  -- architecture beh
       );
 
   -- Auto negotiation ----------------------------------------------------------------------
-  sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
-    generic map (
-      link_timer_cycles_c => link_timer_c)
-    port map (
-      clock_i           => clock_i,
-      reset_n_i         => reset_n_i,
-      config_i          => config_reg_c,
-      restart_i         => s_autoneg_restart,
-      rx_config_valid_i => s_rx_config_valid,
-      rx_config_i       => s_rx_config,
-      rx_idle_i         => s_rx_idle_match,
-      send_config_o     => s_tx_send_config,
-      tx_config_o       => s_tx_config,
-      link_up_o         => s_link_up
-      );
+  use_sgmii: if sgmii_mode generate
+
+    sim: if simulation generate -- Override link_timer in simulation 
+      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
+        generic map (
+          link_timer_cycles_c => 30
+        )
+        port map (
+          clock_i           => clock_i,
+          reset_n_i         => reset_n_i,
+          config_i          => config_sgmii_c,
+          restart_i         => s_autoneg_restart,
+          rx_config_valid_i => s_rx_config_valid,
+          rx_config_i       => s_rx_config,
+          rx_idle_i         => s_rx_idle_match,
+          send_config_o     => s_tx_send_config,
+          tx_config_o       => s_tx_config,
+          link_up_o         => s_link_up
+        );
+    end generate;
+
+    hw: if not simulation generate
+      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
+        generic map (
+          link_timer_cycles_c => link_timer_sgmii_c
+        )
+        port map (
+          clock_i           => clock_i,
+          reset_n_i         => reset_n_i,
+          config_i          => config_sgmii_c,
+          restart_i         => s_autoneg_restart,
+          rx_config_valid_i => s_rx_config_valid,
+          rx_config_i       => s_rx_config,
+          rx_idle_i         => s_rx_idle_match,
+          send_config_o     => s_tx_send_config,
+          tx_config_o       => s_tx_config,
+          link_up_o         => s_link_up
+        );
+    end generate;
+
+  end generate;
+
+  use_1000basex: if not sgmii_mode generate
+
+    sim: if simulation generate
+      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
+        generic map (
+          link_timer_cycles_c => 30
+        )
+        port map (
+          clock_i           => clock_i,
+          reset_n_i         => reset_n_i,
+          config_i          => config_1000BaseX_c,
+          restart_i         => s_autoneg_restart,
+          rx_config_valid_i => s_rx_config_valid,
+          rx_config_i       => s_rx_config,
+          rx_idle_i         => s_rx_idle_match,
+          send_config_o     => s_tx_send_config,
+          tx_config_o       => s_tx_config,
+          link_up_o         => s_link_up
+        );
+    end generate;
+
+    hw: if not simulation generate
+      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
+        generic map (
+          link_timer_cycles_c => link_timer_1000BaseX_c
+        )
+        port map (
+          clock_i           => clock_i,
+          reset_n_i         => reset_n_i,
+          config_i          => config_1000BaseX_c,
+          restart_i         => s_autoneg_restart,
+          rx_config_valid_i => s_rx_config_valid,
+          rx_config_i       => s_rx_config,
+          rx_idle_i         => s_rx_idle_match,
+          send_config_o     => s_tx_send_config,
+          tx_config_o       => s_tx_config,
+          link_up_o         => s_link_up
+        );
+    end generate;
+
+  end generate;
 
 end architecture beh;

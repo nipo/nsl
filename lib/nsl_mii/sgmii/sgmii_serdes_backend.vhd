@@ -40,6 +40,8 @@ architecture beh of sgmii_serdes_backend is
 
 begin  -- architecture beh
 
+  sgmii_o.clk_cor <= '0';
+
   -- Component instatiation
   -- RX side --------------------------------------------------------------------------------
 
