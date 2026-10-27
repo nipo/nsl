@@ -425,6 +425,9 @@ begin
     signal s_cdr_hold        : std_logic;
 
     signal s_align_ready : std_ulogic_vector(0 downto 0);
+
+    signal s_rx_clk_cr : std_ulogic_vector(1 downto 0);
+    signal s_rx_clk_cr_stdl : std_logic_vector(1 downto 0);
     
     type reset_state_t is (
       ST_RESET,
@@ -889,6 +892,7 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
+    s_rx_clk_cr <= std_ulogic_vector(s_rx_clk_cr_stdl);
     rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr(0 downto 0);
     
     gtpe2_i : GTPE2_CHANNEL

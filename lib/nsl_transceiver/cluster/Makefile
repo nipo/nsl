@@ -19,7 +19,7 @@ ifeq ($(hwdep),xilinx)
 vhdl-sources += transceiver_cluster_gtpe2.vhd
 vhdl-sources += transceiver_config_gtpe2.vhd
 deps += nsl_data.bytestream
-deps += nsl_hwdep.xc7_config
+deps += nsl_hwconfig.xc7_config
 deps += nsl_logic.gearbox
 deps += nsl_clocking.distribution
 deps += nsl_clocking.async
