@@ -344,7 +344,7 @@ begin
             mark_o       => s_slip_mark
             );
 
-        aligner : nsl_io.delay.input_delay_aligner_slow
+        aligner : nsl_io.delay.input_delay_aligner
           generic map(
             stabilization_delay_c => 8,
             stabilization_cycle_c => 8
