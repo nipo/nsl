@@ -48,7 +48,8 @@ package sgmii is
 
   component sgmii_driver is
     generic (
-      sgmii_mode : boolean := false
+      sgmii_mode : boolean := false;
+      simulation : boolean := false
       );
     port (
       reset_n_i : in std_ulogic;
