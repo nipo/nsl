@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library nsl_io;
+library nsl_io, nsl_math;
 
 package delay is
 
@@ -102,7 +102,12 @@ package delay is
       -- data decode is correct.
       stabilization_delay_c: integer := 8;
       -- Contiguous word count to assert validity for
-      stabilization_cycle_c: integer := 8
+      stabilization_cycle_c: integer := 8;
+      -- Weights given to a tap and its neighbours when scoring it.  The
+      -- tap scored is at index kernel_c'length / 2.  The center of the
+      -- best scoring taps is retained, however narrow the eye is.
+      -- Scores of a line with fewer taps than the kernel alias.
+      kernel_c: nsl_math.int_ext.integer_vector := (1, 2, 3, 2, 1)
       );
     port(
       clock_i : in std_ulogic;
