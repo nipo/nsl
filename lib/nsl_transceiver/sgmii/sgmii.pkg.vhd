@@ -17,14 +17,12 @@ package sgmii is
 
   component sgmii_adapter is
     port (
-      gt_ref_clk_pair_i : in  nsl_io.diff.diff_pair;
-      refclk_o          : out std_ulogic;
-      sgmii_i           : in  sgmii_m2p;
-      sgmii_o           : out sgmii_p2m;
-      tx_m_o            : out nsl_transceiver.lane.tx_master_t;
-      tx_s_i            : in  nsl_transceiver.lane.tx_slave_t;
-      rx_m_i            : in  nsl_transceiver.lane.rx_master_t;
-      rx_s_o            : out nsl_transceiver.lane.rx_slave_t
+      sgmii_i           : in  sgmii_m2p_vector;
+      sgmii_o           : out sgmii_p2m_vector;
+      tx_m_o            : out nsl_transceiver.lane.tx_master_vector;
+      tx_s_i            : in  nsl_transceiver.lane.tx_slave_vector;
+      rx_m_i            : in  nsl_transceiver.lane.rx_master_vector;
+      rx_s_o            : out nsl_transceiver.lane.rx_slave_vector
       );
   end component;
 
