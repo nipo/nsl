@@ -383,16 +383,16 @@ begin
   -- Lanes --------------------------------------------------------------------------------
   instantiate_lanes : for lane_idx in 0 to config_c.lane_count-1 generate
 
-    signal s_gtp_rst             : std_logic;
-    signal s_drp_data_in         : std_logic_vector(15 downto 0);
-    signal s_drp_data_out        : std_logic_vector(15 downto 0);
-    signal s_drp_addr            : std_logic_vector(8 downto 0);
-    signal s_drp_en              : std_logic;
-    signal s_drp_wr              : std_logic;
-    signal s_drp_rdy             : std_logic;
-    signal s_pma_rst_done        : std_logic;
-    signal s_pll_locked_sync     : std_logic;
-    signal s_pma_rst_done_sync   : std_logic;
+    signal s_gtp_rst           : std_logic;
+    signal s_drp_data_in       : std_logic_vector(15 downto 0);
+    signal s_drp_data_out      : std_logic_vector(15 downto 0);
+    signal s_drp_addr          : std_logic_vector(8 downto 0);
+    signal s_drp_en            : std_logic;
+    signal s_drp_wr            : std_logic;
+    signal s_drp_rdy           : std_logic;
+    signal s_pma_rst_done      : std_logic;
+    signal s_pll_locked_sync   : std_logic;
+    signal s_pma_rst_done_sync : std_logic;
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock        : std_ulogic;
@@ -426,7 +426,7 @@ begin
 
     signal s_align_ready : std_ulogic_vector(0 downto 0);
 
-    signal s_rx_clk_cr : std_ulogic_vector(1 downto 0);
+    signal s_rx_clk_cr      : std_ulogic_vector(1 downto 0);
     signal s_rx_clk_cr_stdl : std_logic_vector(1 downto 0);
     
     type reset_state_t is (
@@ -508,14 +508,14 @@ begin
       port map(
         clock_i => s_stableclk,
         data_i  => s_pll_locked,
-        data_o => s_pll_locked_sync
+        data_o  => s_pll_locked_sync
         );
 
     pma_rst_done_sync : nsl_clocking.async.async_deglitcher
       port map(
         clock_i => s_stableclk,
         data_i  => s_pma_rst_done,
-        data_o => s_pma_rst_done_sync
+        data_o  => s_pma_rst_done_sync
         );            
 
     -- Reset FSM
@@ -628,7 +628,7 @@ begin
       signal s_tx_disp_val_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_tx_disp_frc_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_txdisp_val_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
-      signal s_txdisp_frc_vec   : std_ulogic_vector(3 downto 0) := (others => '0');      
+      signal s_txdisp_frc_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
       signal s_gtp_tx_data_stdu : std_ulogic_vector(data_width_config_c.interface_width - 1 downto 0);
 
     begin
@@ -645,7 +645,7 @@ begin
       disp_pack : for i in 0 to data_byte_count_c - 1 generate
         s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(4);
         s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(3) and tx_m_i(lane_idx).aux(i)(4);
-      end generate;      
+      end generate;
 
       gearbox_datafromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
@@ -759,34 +759,98 @@ begin
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA) or
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) or
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS) generate
-      -- Alignment done
-      s_pcomma_align_en                                                               <= not(s_align_ready(0));
-      s_mcomma_align_en                                                               <= not(s_align_ready(0));
-      s_cdr_hold                                                                      <= '0';
-      rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
 
-      aligner : nsl_io.delay.input_delay_aligner_slow
-        generic map(
-          stabilization_delay_c => 300,
-          stabilization_cycle_c => 300
-          )
-        port map(
-          clock_i   => s_parallel_clock_buff,
-          reset_n_i => s_parallel_reset_sync_n,
+      constant stabilization_count_c : integer := 300;      
+      constant flush_count_c         : integer := 64;
+      constant lost_count_c          : integer := 2**16;   
 
-          delay_mark_i  => '1',
-          serdes_mark_i => '1',
+      type align_state_t is (ST_RESET, ST_FLUSH, ST_WAIT_VALID, ST_STABLE);
 
-          restart_i => tx_m_i(lane_idx).control(data_byte_count_c * 3),
-          valid_i   => tx_m_i(lane_idx).control(data_byte_count_c * 1),
-          ready_o   => s_align_ready(0)
-          );
+      type align_regs_t is record
+        state       : align_state_t;
+        count       : integer range 0 to stabilization_count_c - 1;
+        lost_count  : integer range 0 to lost_count_c - 1;  
+        align_en    : std_ulogic;
+        align_ready : std_ulogic;
+      end record;
+
+      signal r_align, rin_align : align_regs_t;
+      signal s_valid_data_pcs   : std_ulogic;
+      signal s_restart_pcs      : std_ulogic;
+
+      begin
+        
+        s_cdr_hold                                                                      <= '0';
+        s_valid_data_pcs                                                                <= tx_m_i(lane_idx).control(data_byte_count_c * 1);
+        s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 3);
+        rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
+        s_pcomma_align_en                                                               <= r_align.align_en;
+        s_mcomma_align_en                                                               <= r_align.align_en;
+        s_align_ready(0)                                                                <= r_align.align_ready;
+
+        align_reg : process(s_parallel_reset_sync_n, s_parallel_clock_buff)
+        begin
+          if rising_edge(s_parallel_clock_buff) then
+            r_align <= rin_align;
+          end if;
+
+          if s_parallel_reset_sync_n = '0' then
+            r_align.state       <= ST_RESET;
+            r_align.align_en    <= '1';
+            r_align.align_ready <= '0';
+          end if;
+        end process;
+
+        transition : process(r_align, s_restart_pcs, s_valid_data_pcs) is
+        begin
+          rin_align <= r_align;
+
+          case r_align.state is
+            when ST_RESET =>
+              rin_align.align_en    <= '1';
+              rin_align.align_ready <= '0';
+              rin_align.count       <= flush_count_c - 1;  -- ignore valid while stale value drains
+              rin_align.state       <= ST_FLUSH;
+
+            when ST_FLUSH =>
+              if r_align.count = 0 then
+                rin_align.count <= stabilization_count_c - 1;
+                rin_align.state <= ST_WAIT_VALID;
+              else
+                rin_align.count <= r_align.count - 1;
+              end if;
+
+            when ST_WAIT_VALID =>       -- needs N *consecutive* valid cycles
+              if s_valid_data_pcs = '0' then
+                rin_align.count <= stabilization_count_c - 1;
+              elsif r_align.count = 0 then
+                rin_align.align_en    <= '0';
+                rin_align.align_ready <= '1';
+                rin_align.lost_count  <= lost_count_c - 1;
+                rin_align.state       <= ST_STABLE;
+              else
+                rin_align.count <= r_align.count - 1;
+              end if;
+
+            when ST_STABLE =>
+              if s_restart_pcs = '1' then
+                rin_align.state <= ST_RESET;
+              elsif s_valid_data_pcs = '1' then
+                rin_align.lost_count <= lost_count_c - 1;
+              elsif r_align.lost_count = 0 then  -- self-heal: link gone, re-arm aligner
+                rin_align.state <= ST_RESET;
+              else
+                rin_align.lost_count <= r_align.lost_count - 1;
+              end if;
+          end case;
+        end process;
+    
     end generate;
 
     no_align : if (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA) generate
-      s_pcomma_align_en                                                               <= '1';
-      s_mcomma_align_en                                                               <= '1';
-      s_cdr_hold                                                                      <= '1';
+      s_pcomma_align_en                                                               <= '0';
+      s_mcomma_align_en                                                               <= '0';
+      s_cdr_hold                                                                      <= '0';
       s_align_ready(0)                                                                <= '1';
       rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
     end generate;
@@ -892,9 +956,9 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
-    s_rx_clk_cr <= std_ulogic_vector(s_rx_clk_cr_stdl);
+    s_rx_clk_cr                                                                     <= std_ulogic_vector(s_rx_clk_cr_stdl);
     rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr(0 downto 0);
-    
+
     gtpe2_i : GTPE2_CHANNEL
       generic map
       (
