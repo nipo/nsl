@@ -56,9 +56,8 @@ architecture gthe4 of transceiver_cluster is
   -- Signal declarations --------------------------------------------------------------
 
   -- Clock signals
-  signal s_refclk_vec : std_ulogic_vector(0 to 6);  -- 7 total clock signals
-                                                    -- to assign
-  signal s_stableclk  : std_ulogic;
+  signal s_refclk_vec    : std_ulogic_vector(0 to 6);  -- 7 total clocks
+  signal s_stableclk     : std_ulogic;
 
   constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
   constant stable_clk_ref_mhz_c   : natural        := config_c.refclks(0).ref_clock_mhz;
@@ -173,25 +172,25 @@ begin
   -- Lanes --------------------------------------------------------------------------------
   instantiate_lanes : for lane_idx in 0 to config_c.lane_count-1 generate
 
-    signal s_gth_tx_rst            : std_logic;
-    signal s_gth_rx_rst            : std_logic;
-    signal s_drp_data_in        : std_logic_vector(15 downto 0);
-    signal s_drp_data_out       : std_logic_vector(15 downto 0);
-    signal s_drp_addr           : std_logic_vector(9 downto 0);
-    signal s_drp_en             : std_logic;
-    signal s_drp_wr             : std_logic;
-    signal s_drp_rdy            : std_logic;
-    signal s_gt_power_good      : std_logic;
-    signal s_gt_power_good_sync : std_logic;
-    signal s_rx_pma_rst_done       : std_logic;
-    signal s_tx_pma_rst_done       : std_logic;
-    signal s_rx_rst_done       : std_logic;
-    signal s_tx_rst_done       : std_logic;    
-    signal s_pll_locked_sync    : std_logic;
-    signal s_rx_pma_rst_done_sync  : std_logic;
-    signal s_tx_pma_rst_done_sync  : std_logic;
-    signal s_rx_rst_done_sync  : std_logic;
-    signal s_tx_rst_done_sync  : std_logic;    
+    signal s_gth_tx_rst           : std_logic;
+    signal s_gth_rx_rst           : std_logic;
+    signal s_drp_data_in          : std_logic_vector(15 downto 0);
+    signal s_drp_data_out         : std_logic_vector(15 downto 0);
+    signal s_drp_addr             : std_logic_vector(9 downto 0);
+    signal s_drp_en               : std_logic;
+    signal s_drp_wr               : std_logic;
+    signal s_drp_rdy              : std_logic;
+    signal s_gt_power_good        : std_logic;
+    signal s_gt_power_good_sync   : std_logic;
+    signal s_rx_pma_rst_done      : std_logic;
+    signal s_tx_pma_rst_done      : std_logic;
+    signal s_rx_rst_done          : std_logic;
+    signal s_tx_rst_done          : std_logic;
+    signal s_pll_locked_sync      : std_logic;
+    signal s_rx_pma_rst_done_sync : std_logic;
+    signal s_tx_pma_rst_done_sync : std_logic;
+    signal s_rx_rst_done_sync     : std_logic;
+    signal s_tx_rst_done_sync     : std_logic;
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock        : std_ulogic;
@@ -200,7 +199,7 @@ begin
     signal s_txusrclk2             : std_ulogic;
     signal s_txusrclk2_buff        : std_ulogic;
 
-    signal s_pll_locked : std_logic;
+    signal s_pll_locked     : std_logic;
     signal s_pll_pd         : std_logic;
     signal s_pll_reset_done : std_logic;
 
@@ -257,12 +256,12 @@ begin
 
     type regs_t is
     record
-      state   : reset_state_t;
-      gth_rst : std_ulogic;
-      timeout : natural;
+      state     : reset_state_t;
+      gth_rst   : std_ulogic;
+      timeout   : natural;
       pwr_timer : natural;
-      rx_ready : std_logic;
-      tx_ready : std_logic;
+      rx_ready  : std_logic;
+      tx_ready  : std_logic;
     end record;
 
     signal r_rx, rin_rx, r_tx, rin_tx : regs_t;
@@ -281,7 +280,7 @@ begin
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
 
     signal s_rx_clk_cr_cnt_stdl : std_logic_vector(1 downto 0);
-    signal s_rx_clk_cr_cnt : std_ulogic_vector(1 downto 0);
+    signal s_rx_clk_cr_cnt      : std_ulogic_vector(1 downto 0);
 
   begin
 
@@ -343,11 +342,11 @@ begin
     end process;
 
     -- GTH reset -----------------------------------------------------------------
-    s_gth_rx_rst  <= r_rx.gth_rst;
-    s_gth_tx_rst  <= r_tx.gth_rst;
-    s_rx_ready <= r_rx.rx_ready;
-    s_tx_ready <= r_tx.tx_ready;
-    
+    s_gth_rx_rst <= r_rx.gth_rst;
+    s_gth_tx_rst <= r_tx.gth_rst;
+    s_rx_ready   <= r_rx.rx_ready;
+    s_tx_ready   <= r_tx.tx_ready;
+
     -- De-glitch asynchronous signals
     pll_locked_sync : nsl_clocking.async.async_deglitcher
       port map(
@@ -409,9 +408,9 @@ begin
 
       case r_rx.state is
         when ST_RESET =>
-          rin_rx.state   <= ST_WAIT_PLL;
-          rin_rx.gth_rst <= '1';
-          rin_rx.timeout <= timeout_delay_c;
+          rin_rx.state    <= ST_WAIT_PLL;
+          rin_rx.gth_rst  <= '1';
+          rin_rx.timeout  <= timeout_delay_c;
           rin_rx.rx_ready <= '0';
           rin_rx.tx_ready <= '0';
         when ST_WAIT_PLL =>
@@ -441,7 +440,7 @@ begin
           end if;
         when ST_READY =>
           rin_rx.rx_ready <= '1';
-          rin_rx.timeout <= timeout_delay_c;
+          rin_rx.timeout  <= timeout_delay_c;
           if s_rx_rst_done_sync = '1' then
             rin_rx.state <= ST_DONE;
           end if;
@@ -449,7 +448,7 @@ begin
           rin_rx.timeout <= timeout_delay_c;
           if s_pll_locked_sync = '0' then
             rin_rx.state <= ST_RESET;
-          end if;                    
+          end if;
       end case;
 
     end process;
@@ -478,9 +477,9 @@ begin
 
       case r_tx.state is
         when ST_RESET =>
-          rin_tx.state   <= ST_WAIT_PLL;
-          rin_tx.gth_rst <= '1';
-          rin_tx.timeout <= timeout_delay_c;
+          rin_tx.state    <= ST_WAIT_PLL;
+          rin_tx.gth_rst  <= '1';
+          rin_tx.timeout  <= timeout_delay_c;
           rin_tx.rx_ready <= '0';
           rin_tx.tx_ready <= '0';
         when ST_WAIT_PLL =>
@@ -493,7 +492,7 @@ begin
             rin_tx.state <= ST_WAIT_PWR_GOOD;
           end if;
         when ST_WAIT_PWR_GOOD =>
-          rin_tx.pwr_timer <= gt_pwr_delay_c;          
+          rin_tx.pwr_timer <= gt_pwr_delay_c;
           if s_gt_power_good_sync = '1' then
             rin_tx.state <= ST_DELAY_PWR_GOOD;
           end if;
@@ -502,7 +501,7 @@ begin
             rin_tx.state <= ST_WAIT_PMA_HIGH;
           else
             rin_tx.pwr_timer <= r_tx.pwr_timer - 1;
-          end if;          
+          end if;
         when ST_WAIT_PMA_HIGH =>
           rin_tx.gth_rst <= '0';
           if s_tx_pma_rst_done_sync = '1' then
@@ -517,7 +516,7 @@ begin
           rin_tx.timeout <= timeout_delay_c;
           if s_pll_locked_sync = '0' then
             rin_tx.state <= ST_RESET;
-          end if;                    
+          end if;
       end case;
 
     end process;
@@ -540,22 +539,22 @@ begin
 
     begin
 
-      rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_rx_charisk_gear;
-      rx_m_o(lane_idx).status(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_disperr_gear;
-      rx_m_o(lane_idx).status(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_rx_codeerr_gear;
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_rx_charisk_gear;
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_codeerr_gear;      
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_rx_disperr_gear;
       s_tx_charisk_gear                                                               <= tx_m_i(lane_idx).control(data_byte_count_c - 1 downto 0);
       s_txcharisk                                                                     <= std_logic_vector(s_txcharisk_vec);
       s_gth_tx_data(data_width_config_c.interface_width - 1 downto 0)                 <= std_logic_vector(s_gth_tx_data_stdu);
       s_rxcharisk(3 downto 0)                                                         <= s_rxctrl0(3 downto 0);
       s_rxdisperr(3 downto 0)                                                         <= s_rxctrl1(3 downto 0);
       s_rxcodeerr(3 downto 0)                                                         <= s_rxctrl3(3 downto 0);
-      s_txctrl2                                                                       <= (3 => s_txcharisk(3), 2 => s_txcharisk(2), 1 => s_txcharisk(1), 0 => s_txcharisk(0), others => '0');
+      s_txctrl2                                                                       <= (3           => s_txcharisk(3), 2 => s_txcharisk(2), 1 => s_txcharisk(1), 0 => s_txcharisk(0), others => '0');
       s_txctrl0                                                                       <= (15 downto 4 => '0') & std_logic_vector(s_txdisp_val_vec);
       s_txctrl1                                                                       <= (15 downto 4 => '0') & std_logic_vector(s_txdisp_frc_vec);
 
       disp_pack : for i in 0 to data_byte_count_c - 1 generate
-        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(4);
-        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(3) and tx_m_i(lane_idx).aux(i)(4);
+        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(0);
+        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(0) and tx_m_i(lane_idx).aux(i)(1);
       end generate;
 
       gearbox_datafromrx : nsl_logic.gearbox.gearbox_c2c
@@ -670,16 +669,16 @@ begin
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA) or
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) or
                         (config_c.lanes(lane_idx).loopback = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS) generate
-      constant stabilization_count_c : integer := 300;      
+      constant stabilization_count_c : integer := 300;
       constant flush_count_c         : integer := 64;
-      constant lost_count_c          : integer := 2**16;   
+      constant lost_count_c          : integer := 2**16;
 
       type align_state_t is (ST_RESET, ST_FLUSH, ST_WAIT_VALID, ST_STABLE);
 
       type align_regs_t is record
         state       : align_state_t;
         count       : integer range 0 to stabilization_count_c - 1;
-        lost_count  : integer range 0 to lost_count_c - 1;  
+        lost_count  : integer range 0 to lost_count_c - 1;
         align_en    : std_ulogic;
         align_ready : std_ulogic;
       end record;
@@ -692,8 +691,8 @@ begin
         
         s_cdr_hold                                                                      <= '0';
         s_valid_data_pcs                                                                <= tx_m_i(lane_idx).control(data_byte_count_c * 1);
-        s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 3);
-        rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
+        s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 2);
+        rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
         s_pcomma_align_en                                                               <= r_align.align_en;
         s_mcomma_align_en                                                               <= r_align.align_en;
         s_align_ready(0)                                                                <= r_align.align_ready;
@@ -762,7 +761,7 @@ begin
       s_mcomma_align_en                                                               <= '0';
       s_cdr_hold                                                                      <= '0';
       s_align_ready(0)                                                                <= '1';
-      rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
+      rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
     end generate;
 
     -- Clocking and MMCM if necessary ------------------------------------------------------------
@@ -774,8 +773,8 @@ begin
       signal s_domain_a_pll_feedback   : std_ulogic;
 
       -- BUFG_GT
-      signal s_cesync : std_ulogic;
-      signal s_clrsync : std_ulogic;
+      signal s_cesync    : std_ulogic;
+      signal s_clrsync   : std_ulogic;
       signal s_bufgt_clr : std_ulogic;
 
     begin
@@ -795,13 +794,13 @@ begin
 
           BUFG_GT_SYNC_inst : BUFG_GT_SYNC
             port map (
-              CESYNC => s_cesync,   
-              CLRSYNC => s_clrsync, 
-              CE => '1',           
-              CLK => s_tx_out_clock,         
-              CLR => s_bufgt_clr
+              CESYNC  => s_cesync,
+              CLRSYNC => s_clrsync,
+              CE      => '1',
+              CLK     => s_tx_out_clock,
+              CLR     => s_bufgt_clr
               );          
-          
+
           BUFG_GT_parallelclk : BUFG_GT
             generic map (
               SIM_DEVICE => "ULTRASCALE_PLUS"  -- ULTRASCALE, ULTRASCALE_PLUS
@@ -842,7 +841,7 @@ begin
         end generate;
 
       s_domain_a_pll_locked_vec(0)                                                    <= s_domain_a_pll_locked;
-      rx_m_o(lane_idx).status(data_byte_count_c * 5 - 1 downto data_byte_count_c * 4) <= s_domain_a_pll_locked_vec;
+      rx_m_o(lane_idx).status(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_domain_a_pll_locked_vec;
 
       general_reset_sync : nsl_clocking.async.async_edge
         port map(
@@ -854,9 +853,9 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
-    s_rx_clk_cr_cnt <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
-    rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr_cnt(0 downto 0);
-      
+    s_rx_clk_cr_cnt                                                                 <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
+    rx_m_o(lane_idx).status(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_clk_cr_cnt(0 downto 0);
+
     gthe4_i : GTHE4_CHANNEL
       generic map
       (
@@ -1299,7 +1298,7 @@ begin
         TX_FABINT_USRCLK_FLOP        => '0',
         TX_FIFO_BYP_EN               => '0',
         TX_IDLE_DATA_ZERO            => '0',
-        TX_INT_DATAWIDTH             => data_width_config_c.int_data_width,  
+        TX_INT_DATAWIDTH             => data_width_config_c.int_data_width,
         TX_LOOPBACK_DRIVE_HIZ        => "FALSE",
         TX_MAINCURSOR_SEL            => '0',
         TX_MARGIN_FULL_0             => "1011111",
@@ -1378,7 +1377,7 @@ begin
         CPLLLOCKDETCLK       => '0',
         CPLLLOCKEN           => '1',
         CPLLPD               => s_pll_pd,
-        CPLLREFCLKSEL        => cpll_refclk_set(ref_clock_c),  
+        CPLLREFCLKSEL        => cpll_refclk_set(ref_clock_c),
         CPLLRESET            => '0',
         DMONFIFORESET        => '0',
         DMONITORCLK          => '0',
