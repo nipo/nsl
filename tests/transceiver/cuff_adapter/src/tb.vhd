@@ -198,6 +198,7 @@ begin
     constant enabled_pll_c : nsl_transceiver.cluster.pll_config_t := (
       enabled => true,
       ref_clock_index => 0,
+      ref_clock_mhz => 125,
       target_vco_mhz => 2500
       );
 
@@ -205,6 +206,11 @@ begin
       data_byte_count => 1,
       encoding => nsl_transceiver.lane.ENCODING_8B10B,
       line_rate_mbps => 1250
+      );
+
+    constant refclk_c : nsl_transceiver.cluster.refclk_config_t := (
+      ref_clock_index => 1,
+      ref_clock_mhz => 125
       );
 
     variable lane_v : nsl_transceiver.lane.config_t;
@@ -215,6 +221,7 @@ begin
                  nsl_transceiver.cluster.is_valid(
                    nsl_transceiver.cluster.config(
                      plls => (0 => enabled_pll_c),
+                     refclks => (0 => refclk_c),
                      lanes => (0 => lane_c),
                      user_clock_group_count => 1)),
                  true, FAILURE);
@@ -223,6 +230,7 @@ begin
                  nsl_transceiver.cluster.is_valid(
                    nsl_transceiver.cluster.config(
                      plls => (0 => nsl_transceiver.cluster.disabled_pll_c),
+                     refclks => (0 => nsl_transceiver.cluster.disabled_refclk_c),
                      lanes => (0 => nsl_transceiver.lane.disabled_lane_c),
                      user_clock_group_count => 0)),
                  true, FAILURE);
@@ -231,6 +239,7 @@ begin
                  nsl_transceiver.cluster.is_valid(
                    nsl_transceiver.cluster.config(
                      plls => (0 => nsl_transceiver.cluster.disabled_pll_c),
+                     refclks => (0 => refclk_c),
                      lanes => (0 => lane_c),
                      user_clock_group_count => 1)),
                  false, FAILURE);
@@ -241,6 +250,7 @@ begin
                  nsl_transceiver.cluster.is_valid(
                    nsl_transceiver.cluster.config(
                      plls => (0 => enabled_pll_c),
+                     refclks => (0 => refclk_c),
                      lanes => (0 => lane_v),
                      user_clock_group_count => 1)),
                  false, FAILURE);
@@ -251,6 +261,7 @@ begin
                  nsl_transceiver.cluster.is_valid(
                    nsl_transceiver.cluster.config(
                      plls => (0 => enabled_pll_c),
+                     refclks => (0 => refclk_c),
                      lanes => (0 => lane_v),
                      user_clock_group_count => 1)),
                  false, FAILURE);
