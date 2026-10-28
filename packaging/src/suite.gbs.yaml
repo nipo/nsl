@@ -35,6 +35,15 @@ projects:
   - name: tristated
     path: interface/tristated
     tags: [vivado-interface]
+  - name: diff_pair
+    path: interface/diff_pair
+    tags: [vivado-interface]
+  - name: sgmii_symbol
+    path: interface/sgmii_symbol
+    tags: [vivado-interface]
+  - name: transceiver_lane
+    path: interface/transceiver_lane
+    tags: [vivado-interface]
   - name: activity_monitor
     path: activity_monitor
     tags: [vivado-ip]
@@ -101,6 +110,12 @@ projects:
   - name: routed_router
     path: routed_router
     tags: [vivado-ip]
+  - name: sgmii_adapter
+    path: sgmii_adapter
+    tags: [vivado-ip]
+  - name: sgmii_driver
+    path: sgmii_driver
+    tags: [vivado-ip]
   - name: swd_axi4lite_master
     path: swd_axi4lite_master
     tags: [vivado-ip]
@@ -109,6 +124,9 @@ projects:
     tags: [vivado-ip]
   - name: tristated_driver
     path: tristated_driver
+    tags: [vivado-ip]
+  - name: transceiver_cluster_series7
+    path: transceiver_cluster_series7
     tags: [vivado-ip]
   - name: vlan_path_router
     path: vlan_path_router
