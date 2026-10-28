@@ -633,9 +633,9 @@ begin
 
     begin
 
-      rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_rx_charisk_gear;
-      rx_m_o(lane_idx).status(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_disperr_gear;
-      rx_m_o(lane_idx).status(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_rx_codeerr_gear;
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_rx_charisk_gear;
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_codeerr_gear;      
+      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_rx_disperr_gear;
       s_tx_charisk_gear                                                               <= tx_m_i(lane_idx).control(data_byte_count_c - 1 downto 0);
       s_txcharisk                                                                     <= std_logic_vector(s_txcharisk_vec);
       s_gtp_tx_data(data_width_config_c.interface_width - 1 downto 0)                 <= std_logic_vector(s_gtp_tx_data_stdu);
@@ -643,8 +643,8 @@ begin
       s_txchardispmode                                                                <= std_logic_vector(s_txdisp_frc_vec);
 
       disp_pack : for i in 0 to data_byte_count_c - 1 generate
-        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(4);
-        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(3) and tx_m_i(lane_idx).aux(i)(4);
+        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(0);
+        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(0) and tx_m_i(lane_idx).aux(i)(1);
       end generate;
 
       gearbox_datafromrx : nsl_logic.gearbox.gearbox_c2c
@@ -783,7 +783,7 @@ begin
         s_cdr_hold                                                                      <= '0';
         s_valid_data_pcs                                                                <= tx_m_i(lane_idx).control(data_byte_count_c * 1);
         s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 3);
-        rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
+        rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
         s_pcomma_align_en                                                               <= r_align.align_en;
         s_mcomma_align_en                                                               <= r_align.align_en;
         s_align_ready(0)                                                                <= r_align.align_ready;
@@ -852,7 +852,7 @@ begin
       s_mcomma_align_en                                                               <= '0';
       s_cdr_hold                                                                      <= '0';
       s_align_ready(0)                                                                <= '1';
-      rx_m_o(lane_idx).status(data_byte_count_c * 4 - 1 downto data_byte_count_c * 3) <= s_align_ready;
+      rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
     end generate;
 
     -- Clocking and MMCM if necessary ------------------------------------------------------------
@@ -944,7 +944,7 @@ begin
         end generate;
 
       s_domain_a_pll_locked_vec(0)                                                    <= s_domain_a_pll_locked;
-      rx_m_o(lane_idx).status(data_byte_count_c * 5 - 1 downto data_byte_count_c * 4) <= s_domain_a_pll_locked_vec;
+      rx_m_o(lane_idx).status(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_domain_a_pll_locked_vec;
 
       general_reset_sync : nsl_clocking.async.async_edge
         port map(
@@ -957,7 +957,7 @@ begin
 
     -- Lane instance ----------------------------------------------------------------
     s_rx_clk_cr                                                                     <= std_ulogic_vector(s_rx_clk_cr_stdl);
-    rx_m_o(lane_idx).status(data_byte_count_c * 6 - 1 downto data_byte_count_c * 5) <= s_rx_clk_cr(0 downto 0);
+    rx_m_o(lane_idx).status(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_clk_cr(0 downto 0);
 
     gtpe2_i : GTPE2_CHANNEL
       generic map
