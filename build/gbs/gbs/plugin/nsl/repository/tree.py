@@ -184,6 +184,7 @@ class NSLRepository(Repository):
         vhdl_sources_str = context.expand(context.get("vhdl-sources", ""))
         verilog_sources_str = context.expand(context.get("verilog-sources", ""))
         systemverilog_sources_str = context.expand(context.get("systemverilog-sources", ""))
+        xilinx_xdc_sources_str = context.expand(context.get("xilinx-xdc-sources", ""))
 
         sources = []
 
@@ -212,6 +213,15 @@ class NSLRepository(Repository):
                 sources.append(SourceFile(
                     path=package_path / source_file,
                     file_type="systemverilog"
+                ))
+
+        # Xilinx XDC sources
+        for source_file in xilinx_xdc_sources_str.split():
+            source_file = source_file.strip()
+            if source_file and not source_file.startswith('$('):
+                sources.append(SourceFile(
+                    path=package_path / source_file,
+                    file_type="xilinx-xdc"
                 ))
 
         # GHDL VHPIDIRECT C sources. Package Makefiles declare these in
