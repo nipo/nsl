@@ -39,28 +39,6 @@ package transceiver_config_gtpe2 is
   -- Loopback configuration, two bit vector
   subtype loopback_config_t is std_logic_vector(2 downto 0);
 
-  -- MMCM configuration types
-  type params is
-  record
-    vco_freq    : integer;
-    fin_factor  : integer;
-    fout_factor : integer;
-  end record;
-
-  type pll_variant is (
-    S6_PLL,
-    S7_MMCM,
-    S7_PLL,
-    S6_DCM
-    );
-
-  type constraints is
-  record
-    fmin, fmax                    : integer;
-    in_factor_max, out_factor_max : integer;
-    mode                          : string(1 to 3);
-  end record;  
-
   -- Functions ---------------------------------------------------------
   -- Reference clock vector builder
   -- Assigns clock ID's to correct signals  
@@ -81,15 +59,6 @@ package transceiver_config_gtpe2 is
   -- Data width calculation, see Table 3-4 UG482  
   function determine_data_width (byte_count : natural)
     return data_width_t;
-
-  -- MMCM configuration for getting TXOUTCLK at the correct frequency
-  -- See TX Fabric Clock Output Control UG482
-  function constraints_get(mode : pll_variant)
-    return constraints;
-
-  function pll_params_calc(fin, fout : integer;
-                           mode      : pll_variant)
-    return params;
 
 end package;
 
@@ -241,77 +210,6 @@ package body transceiver_config_gtpe2 is
       return_val.interface_width := 32;
     end if;
     return return_val;
-  end function;
-
-  function constraints_get(mode : pll_variant)
-    return constraints
-  is
-    variable ret : nsl_hwconfig.xc7_config.pll_constraints;
-  begin
-    if mode = S7_MMCM then
-      ret := nsl_hwconfig.xc7_config.pll_constraints_get(nsl_hwconfig.xc7_config.MMCM);
-    elsif mode = S7_PLL then
-      ret := nsl_hwconfig.xc7_config.pll_constraints_get(nsl_hwconfig.xc7_config.PLL);
-    else
-      report "Unsupported mode" severity failure;
-    end if;
-
-    return constraints'(
-      fmin           => ret.fmin,
-      fmax           => ret.fmax,
-      in_factor_max  => ret.in_factor_max,
-      out_factor_max => ret.out_factor_max,
-      mode           => ret.mode
-      );
-  end function;
-
-  function pll_params_calc(fin, fout : integer;
-                           mode      : pll_variant)
-    return params
-  is
-    constant bounds             : constraints := constraints_get(mode);
-    variable freq_lcm, vco_mult : integer;
-    variable ret                : params;
-  begin
-    freq_lcm := nsl_math.arith.lcm(fin, fout);
-
-    vco_mult := integer(trunc(realmin(
-      real(bounds.fmax) / real(freq_lcm),
-      real(bounds.in_factor_max) * real(fin) / real(freq_lcm)
-      )));
-    if vco_mult = 0 then
-      vco_mult := 1;
-    end if;
-
-    ret.vco_freq    := freq_lcm * vco_mult;
-    ret.fin_factor  := ret.vco_freq / fin;
-    ret.fout_factor := ret.vco_freq / fout;
-
-    report "Synthesizing " & bounds.mode & ", "
-      & "fin=" & to_string(real(fin) / 1.0e6) & " MHz, "
-      & "fout=" & to_string(real(fout) / 1.0e6) & "MHz"
-      severity note;
-    report "Freq lcm=" & to_string(real(freq_lcm) / 1.0e6) & "MHz, "
-      & "vco_freq=" & to_string(real(ret.vco_freq) / 1.0e6) & "MHz "
-      & "(min=" & to_string(real(bounds.fmin) / 1.0e6) & "MHz, "
-      & "max=" & to_string(real(bounds.fmax) / 1.0e6) & "MHz), "
-      & "= fin * " & to_string(ret.fin_factor) & ", "
-      & "= fout * " & to_string(ret.fout_factor)
-      severity note;
-
-    assert bounds.fmin <= ret.vco_freq and ret.vco_freq <= bounds.fmax
-                          report "Needed VCO frequency is out of range"
-                          severity failure;
-
-    assert ret.fout_factor <= bounds.out_factor_max
-                              report "Clock output frequency is out of range"
-                              severity failure;
-
-    assert ret.fin_factor <= bounds.in_factor_max
-                             report "Clock input frequency is out of range"
-                             severity failure;
-
-    return ret;
   end function;
 
 end package body;
