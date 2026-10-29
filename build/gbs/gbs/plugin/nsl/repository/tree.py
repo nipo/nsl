@@ -35,6 +35,14 @@ class NSLRepository(Repository):
     which packages (partitions) are available and what sources they contain.
     """
 
+    # Map between NSL Makefile variables and target source type in GBS
+    source_type_map = {
+        "vhdl-sources": "vhdl",
+        "verilog-sources": "verilog",
+        "systemverilog-sources": "systemverilog",
+        "xilinx-xdc-sources": "xilinx-xdc",
+        }
+
     def __init__(self, name: str, root: Path, libraries: dict[str, Path]):
         """Initialize NSL repository
 
@@ -181,48 +189,18 @@ class NSLRepository(Repository):
             self.definition_files.append(makefile_path.resolve())
 
         # Extract sources
-        vhdl_sources_str = context.expand(context.get("vhdl-sources", ""))
-        verilog_sources_str = context.expand(context.get("verilog-sources", ""))
-        systemverilog_sources_str = context.expand(context.get("systemverilog-sources", ""))
-        xilinx_xdc_sources_str = context.expand(context.get("xilinx-xdc-sources", ""))
-
         sources = []
 
-        # VHDL sources
-        for source_file in vhdl_sources_str.split():
-            source_file = source_file.strip()
-            if source_file and not source_file.startswith('$('):
-                sources.append(SourceFile(
-                    path=package_path / source_file,
-                    file_type="vhdl"
-                ))
+        for variable_name, gbs_source_type in self.source_type_map.items():
+            sources_str = context.expand(context.get(variable_name, ""))
 
-        # Verilog sources
-        for source_file in verilog_sources_str.split():
-            source_file = source_file.strip()
-            if source_file and not source_file.startswith('$('):
-                sources.append(SourceFile(
-                    path=package_path / source_file,
-                    file_type="verilog"
-                ))
-
-        # SystemVerilog sources
-        for source_file in systemverilog_sources_str.split():
-            source_file = source_file.strip()
-            if source_file and not source_file.startswith('$('):
-                sources.append(SourceFile(
-                    path=package_path / source_file,
-                    file_type="systemverilog"
-                ))
-
-        # Xilinx XDC sources
-        for source_file in xilinx_xdc_sources_str.split():
-            source_file = source_file.strip()
-            if source_file and not source_file.startswith('$('):
-                sources.append(SourceFile(
-                    path=package_path / source_file,
-                    file_type="xilinx-xdc"
-                ))
+            for source_file in sources_str.split():
+                source_file = source_file.strip()
+                if source_file and not source_file.startswith('$('):
+                    sources.append(SourceFile(
+                        path=package_path / source_file,
+                        file_type=gbs_source_type
+                    ))
 
         # GHDL VHPIDIRECT C sources. Package Makefiles declare these in
         # vhpidirect-sources under their tool==ghdl branch; the GHDL simulate
