@@ -191,6 +191,8 @@ begin
     signal s_tx_pma_rst_done_sync : std_logic;
     signal s_rx_rst_done_sync     : std_logic;
     signal s_tx_rst_done_sync     : std_logic;
+    signal s_tx_polarity          : std_logic;
+    signal s_rx_polarity          : std_logic;
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock_buff   : std_ulogic;
@@ -863,6 +865,23 @@ begin
     s_rx_clk_cr_cnt                                                                 <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
     rx_m_o(lane_idx).status(data_byte_count_c * 1) <= s_rx_clk_cr_cnt(0);
 
+    -- Manage polarity
+    tx_invert : if config_c.lanes(lane_idx).polarity_invert_tx generate
+      s_tx_polarity <= '1';
+    end generate;
+
+    tx_not_invert : if not config_c.lanes(lane_idx).polarity_invert_tx generate
+      s_tx_polarity <= '0';
+    end generate;
+
+    rx_invert : if config_c.lanes(lane_idx).polarity_invert_rx generate
+      s_rx_polarity <= '1';
+    end generate;
+
+    rx_not_invert : if not config_c.lanes(lane_idx).polarity_invert_rx generate
+      s_rx_polarity <= '0';
+    end generate;        
+
     gthe4_i : GTHE4_CHANNEL
       generic map
       (
@@ -1520,7 +1539,7 @@ begin
         RXPHOVRDEN           => '0',
         RXPLLCLKSEL          => (others => '0'),
         RXPMARESET           => '0',
-        RXPOLARITY           => '0',
+        RXPOLARITY           => s_rx_polarity,
         RXPRBSCNTRESET       => '0',
         RXPRBSSEL            => (others => '0'),
         RXPROGDIVRESET       => '0',
@@ -1592,7 +1611,7 @@ begin
         TXPISOPD             => '0',
         TXPLLCLKSEL          => (others => '0'),
         TXPMARESET           => '0',
-        TXPOLARITY           => '0',
+        TXPOLARITY           => s_tx_polarity,
         TXPOSTCURSOR         => (others => '0'),
         TXPRBSFORCEERR       => '0',
         TXPRBSSEL            => (others => '0'),

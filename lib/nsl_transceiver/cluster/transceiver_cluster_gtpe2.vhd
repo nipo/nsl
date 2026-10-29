@@ -393,6 +393,8 @@ begin
     signal s_pma_rst_done      : std_logic;
     signal s_pll_locked_sync   : std_logic;
     signal s_pma_rst_done_sync : std_logic;
+    signal s_tx_polarity       : std_logic;
+    signal s_rx_polarity       : std_logic;    
 
     signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock        : std_ulogic;
@@ -968,6 +970,24 @@ begin
     s_rx_clk_cr                                                                     <= std_ulogic_vector(s_rx_clk_cr_stdl);
     rx_m_o(lane_idx).status(data_byte_count_c * 1) <= s_rx_clk_cr(0);
 
+    -- Manage polarity
+    tx_invert : if config_c.lanes(lane_idx).polarity_invert_tx generate
+      s_tx_polarity <= '1';
+    end generate;
+
+    tx_not_invert : if not config_c.lanes(lane_idx).polarity_invert_tx generate
+      s_tx_polarity <= '0';
+    end generate;
+
+    rx_invert : if config_c.lanes(lane_idx).polarity_invert_rx generate
+      s_rx_polarity <= '1';
+    end generate;
+
+    rx_not_invert : if not config_c.lanes(lane_idx).polarity_invert_rx generate
+      s_rx_polarity <= '0';
+    end generate;        
+    
+
     gtpe2_i : GTPE2_CHANNEL
       generic map
       (
@@ -1490,7 +1510,7 @@ begin
         RXELECIDLE                 => open,
         RXELECIDLEMODE             => "11",
         ----------------- Receive Ports - RX Polarity Control Ports ----------------
-        RXPOLARITY                 => '0',
+        RXPOLARITY                 => s_rx_polarity,
         -------------- Receive Ports -RX Initialization and Reset Ports ------------
         RXRESETDONE                => open,
         --------------------------- TX Buffer Bypass Ports -------------------------
@@ -1596,7 +1616,7 @@ begin
         TXCOMWAKE                  => '0',
         TXPDELECIDLEMODE           => '0',
         ----------------- Transmit Ports - TX Polarity Control Ports ---------------
-        TXPOLARITY                 => '0',
+        TXPOLARITY                 => s_tx_polarity,
         --------------- Transmit Ports - TX Receiver Detection Ports  --------------
         TXDETECTRX                 => '0',
         ------------------ Transmit Ports - pattern Generator Ports ----------------
