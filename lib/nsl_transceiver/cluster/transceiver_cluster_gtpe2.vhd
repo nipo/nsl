@@ -6,6 +6,8 @@ use ieee.math_real.all;
 library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_hwdep, nsl_logic, nsl_clocking, nsl_synthesis;
 use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
+use nsl_clocking.pll.all;
+use nsl_clocking.pll_backend.all;
 use nsl_transceiver.target.all;
 use nsl_transceiver.lane.all;
 use nsl_transceiver.transceiver_config_gtpe2.all;
@@ -872,9 +874,7 @@ begin
 
     clocking : block
 
-      signal s_domain_a_pll_reset      : std_ulogic;
       signal s_domain_a_pll_locked     : std_ulogic;
-      signal s_domain_a_pll_feedback   : std_ulogic;
 
     begin
 
@@ -886,52 +886,30 @@ begin
           clock_o => s_txoutclk_buff
           );    
 
-      s_domain_a_pll_reset <= not s_pma_rst_done_sync;
-
       mmcm_gen : if data_width_ratio_c /= 1 generate
 
         constant input_hz_c        : natural := config_c.lanes(lane_idx).line_rate_mbps * 50000;
-        constant input_period_ns_c : real    := 1.0e9 / real(input_hz_c);
         constant output_hz_c       : natural := input_hz_c * data_width_ratio_c;
 
-        constant p : params := pll_params_calc(input_hz_c, output_hz_c, S7_MMCM);
-
         begin
-          domain_a_pll_inst : mmcme2_adv
+
+          domain_a_pll_inst : nsl_clocking.pll.pll_multi
             generic map (
-              divclk_divide    => 1,
-              clkin1_period    => input_period_ns_c,
-              clkfbout_mult_f  => real(p.fin_factor),
-              clkout0_divide_f => real(p.fout_factor),
-              clkout1_divide   => p.fin_factor,
-              ref_jitter1      => 0.125
+              config_c         => pll_config(
+                implementation => pll_implementation_id("MMCM"),
+                input_hz       => input_hz_c,
+                o0             => pll_output(output_hz_c, 0, false),
+                o1             => pll_output(input_hz_c)
+                )
               )
             port map (
-              rst      => s_domain_a_pll_reset,
-              clkin1   => s_txoutclk_buff,
-              clkin2   => '0',
-              clkinsel => '1',
-
-              clkout0 => s_parallel_clock,
-              clkout1 => s_txusrclk2,
-              locked  => s_domain_a_pll_locked,
-
-              daddr => "0000000",
-              dclk  => '0',
-              den   => '0',
-              di    => x"0000",
-              dwe   => '0',
-
-              pwrdwn => '0',
-
-              clkfbin  => s_domain_a_pll_feedback,
-              clkfbout => s_domain_a_pll_feedback,
-
-              psclk    => '0',
-              psen     => '0',
-              psincdec => '0'
+              clock_i    => s_txoutclk_buff,
+              clock_o(0) => s_parallel_clock,
+              clock_o(1) => s_txusrclk2,
+              reset_n_i  => s_pma_rst_done_sync,
+              locked_o   => s_domain_a_pll_locked
               );
-
+          
           bufg_parclk : nsl_clocking.distribution.clock_buffer
             port map (
               clock_i => s_parallel_clock,
