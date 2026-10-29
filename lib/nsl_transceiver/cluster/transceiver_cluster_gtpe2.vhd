@@ -464,12 +464,21 @@ begin
     constant data_width_config_c : data_width_t := determine_data_width(data_byte_count_c);
     constant data_bit_count_c    : natural      := config_c.lanes(lane_idx).data_byte_count * 8;
     constant data_width_ratio_c  : natural      := data_width_config_c.interface_width / data_bit_count_c;
+    -- One control bit (charisk, disperr, codeerr, disp val/frc) per byte of the
+    -- transceiver fabric interface
+    constant interface_byte_count_c : natural   := data_width_config_c.interface_width / 8;
     constant timeout_delay_c     : natural      := stable_clk_ref_mhz_c * 1_000_000;
 
     signal s_rx_data_to_adapter   : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
     signal s_tx_data_from_adapter : std_ulogic_vector(data_bit_count_c - 1 downto 0) := (others => '0');
 
   begin
+
+    -- Sideband layout (N = data_byte_count_c, byte-wide fields start at bit N*k):
+    --   TX control : [N-1:0] K per byte, [N] data valid, [2*N] aligner restart
+    --   TX aux(i)  : (0) force RD, (1) RD value
+    --   RX aux(i)  : (0) K, (1) code error, (2) disparity error
+    --   RX status  : [0] align ready, [N] clock correction, [2*N] domain lock
 
     -- TX and RX Data ------------------------------------------------------------
     packunpack : for i in 0 to data_byte_count_c - 1 generate
@@ -624,23 +633,25 @@ begin
       signal s_tx_charisk_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_rx_disperr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_rx_codeerr_gear  : std_ulogic_vector(data_byte_count_c - 1 downto 0);
-      signal s_txcharisk_vec    : std_ulogic_vector(3 downto 0);
+      signal s_txcharisk_vec    : std_ulogic_vector(interface_byte_count_c - 1 downto 0);
       signal s_tx_disp_val_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
       signal s_tx_disp_frc_in   : std_ulogic_vector(data_byte_count_c - 1 downto 0);
-      signal s_txdisp_val_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
-      signal s_txdisp_frc_vec   : std_ulogic_vector(3 downto 0) := (others => '0');
+      signal s_txdisp_val_vec   : std_ulogic_vector(interface_byte_count_c - 1 downto 0) := (others => '0');
+      signal s_txdisp_frc_vec   : std_ulogic_vector(interface_byte_count_c - 1 downto 0) := (others => '0');
       signal s_gtp_tx_data_stdu : std_ulogic_vector(data_width_config_c.interface_width - 1 downto 0);
 
     begin
 
-      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_rx_charisk_gear;
-      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_codeerr_gear;      
-      rx_m_o(lane_idx).aux(0)(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_rx_disperr_gear;
+      rx_aux_pack : for i in 0 to data_byte_count_c - 1 generate
+        rx_m_o(lane_idx).aux(i)(0) <= s_rx_charisk_gear(i);
+        rx_m_o(lane_idx).aux(i)(1) <= s_rx_codeerr_gear(i);
+        rx_m_o(lane_idx).aux(i)(2) <= s_rx_disperr_gear(i);
+      end generate;
       s_tx_charisk_gear                                                               <= tx_m_i(lane_idx).control(data_byte_count_c - 1 downto 0);
-      s_txcharisk                                                                     <= std_logic_vector(s_txcharisk_vec);
+      s_txcharisk                                                                     <= (s_txcharisk'high downto interface_byte_count_c => '0') & std_logic_vector(s_txcharisk_vec);
       s_gtp_tx_data(data_width_config_c.interface_width - 1 downto 0)                 <= std_logic_vector(s_gtp_tx_data_stdu);
-      s_txchardispval                                                                 <= std_logic_vector(s_txdisp_val_vec);
-      s_txchardispmode                                                                <= std_logic_vector(s_txdisp_frc_vec);
+      s_txchardispval                                                                 <= (s_txchardispval'high downto interface_byte_count_c => '0') & std_logic_vector(s_txdisp_val_vec);
+      s_txchardispmode                                                                <= (s_txchardispmode'high downto interface_byte_count_c => '0') & std_logic_vector(s_txdisp_frc_vec);
 
       disp_pack : for i in 0 to data_byte_count_c - 1 generate
         s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(0);
@@ -662,40 +673,40 @@ begin
 
       gearbox_controlfromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
-          input_width_c   => data_byte_count_c * 2,
+          input_width_c   => interface_byte_count_c,
           output_width_c  => data_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
-          in_i      => std_ulogic_vector(s_rxcharisk((data_byte_count_c * 2 - 1) downto 0)),
+          in_i      => std_ulogic_vector(s_rxcharisk(interface_byte_count_c - 1 downto 0)),
           out_o     => s_rx_charisk_gear
           );
 
       gearbox_disperrfromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
-          input_width_c   => data_byte_count_c * 2,
+          input_width_c   => interface_byte_count_c,
           output_width_c  => data_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
-          in_i      => std_ulogic_vector(s_rxdisperr((data_byte_count_c * 2 - 1) downto 0)),
+          in_i      => std_ulogic_vector(s_rxdisperr(interface_byte_count_c - 1 downto 0)),
           out_o     => s_rx_disperr_gear
           );
 
       gearbox_codeerrfromrx : nsl_logic.gearbox.gearbox_c2c
         generic map (
-          input_width_c   => data_byte_count_c * 2,
+          input_width_c   => interface_byte_count_c,
           output_width_c  => data_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
-          in_i      => std_ulogic_vector(s_rxcodeerr((data_byte_count_c * 2 - 1) downto 0)),
+          in_i      => std_ulogic_vector(s_rxcodeerr(interface_byte_count_c - 1 downto 0)),
           out_o     => s_rx_codeerr_gear
           );    
 
@@ -715,40 +726,40 @@ begin
       gearbox_controltotx : nsl_logic.gearbox.gearbox_c2c
         generic map (
           input_width_c   => data_byte_count_c,
-          output_width_c  => data_byte_count_c * 2,
+          output_width_c  => interface_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
           in_i      => s_tx_charisk_gear,
-          out_o     => s_txcharisk_vec((data_byte_count_c * 2) - 1 downto 0)
+          out_o     => s_txcharisk_vec
           );
 
       gearbox_dispfrctotx : nsl_logic.gearbox.gearbox_c2c
         generic map (
           input_width_c   => data_byte_count_c,
-          output_width_c  => data_byte_count_c * 2,
+          output_width_c  => interface_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
           in_i      => s_tx_disp_frc_in,
-          out_o     => s_txdisp_frc_vec((data_byte_count_c * 2) - 1 downto 0)
+          out_o     => s_txdisp_frc_vec
           );
 
       gearbox_dispvaltotx : nsl_logic.gearbox.gearbox_c2c
         generic map (
           input_width_c   => data_byte_count_c,
-          output_width_c  => data_byte_count_c * 2,
+          output_width_c  => interface_byte_count_c,
           left_to_right_c => false
           )
         port map (
           clock_i   => s_parallel_clock_buff,
           reset_n_i => s_parallel_reset_sync_n,
           in_i      => s_tx_disp_val_in,
-          out_o     => s_txdisp_val_vec((data_byte_count_c * 2) - 1 downto 0)
+          out_o     => s_txdisp_val_vec
           );      
 
     end block;
@@ -782,8 +793,8 @@ begin
         
         s_cdr_hold                                                                      <= '0';
         s_valid_data_pcs                                                                <= tx_m_i(lane_idx).control(data_byte_count_c * 1);
-        s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 3);
-        rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
+        s_restart_pcs                                                                   <= tx_m_i(lane_idx).control(data_byte_count_c * 2);
+        rx_m_o(lane_idx).status(data_byte_count_c * 0) <= s_align_ready(0);
         s_pcomma_align_en                                                               <= r_align.align_en;
         s_mcomma_align_en                                                               <= r_align.align_en;
         s_align_ready(0)                                                                <= r_align.align_ready;
@@ -852,7 +863,7 @@ begin
       s_mcomma_align_en                                                               <= '0';
       s_cdr_hold                                                                      <= '0';
       s_align_ready(0)                                                                <= '1';
-      rx_m_o(lane_idx).status(data_byte_count_c * 1 - 1 downto data_byte_count_c * 0) <= s_align_ready;
+      rx_m_o(lane_idx).status(data_byte_count_c * 0) <= s_align_ready(0);
     end generate;
 
     -- Clocking and MMCM if necessary ------------------------------------------------------------
@@ -861,7 +872,6 @@ begin
 
       signal s_domain_a_pll_reset      : std_ulogic;
       signal s_domain_a_pll_locked     : std_ulogic;
-      signal s_domain_a_pll_locked_vec : std_ulogic_vector(0 downto 0);
       signal s_domain_a_pll_feedback   : std_ulogic;
 
     begin
@@ -943,8 +953,7 @@ begin
         
         end generate;
 
-      s_domain_a_pll_locked_vec(0)                                                    <= s_domain_a_pll_locked;
-      rx_m_o(lane_idx).status(data_byte_count_c * 3 - 1 downto data_byte_count_c * 2) <= s_domain_a_pll_locked_vec;
+      rx_m_o(lane_idx).status(data_byte_count_c * 2) <= s_domain_a_pll_locked;
 
       general_reset_sync : nsl_clocking.async.async_edge
         port map(
@@ -957,7 +966,7 @@ begin
 
     -- Lane instance ----------------------------------------------------------------
     s_rx_clk_cr                                                                     <= std_ulogic_vector(s_rx_clk_cr_stdl);
-    rx_m_o(lane_idx).status(data_byte_count_c * 2 - 1 downto data_byte_count_c * 1) <= s_rx_clk_cr(0 downto 0);
+    rx_m_o(lane_idx).status(data_byte_count_c * 1) <= s_rx_clk_cr(0);
 
     gtpe2_i : GTPE2_CHANNEL
       generic map
