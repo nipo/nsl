@@ -140,7 +140,7 @@ begin
       constant encoding_condition_c : boolean := config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
                                                  or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B;
       constant data_byte_count_condition_c : boolean := config_c.lanes(lane_idx).data_byte_count >= 1
-                                                        or config_c.lanes(lane_idx).data_byte_count <= 4;
+                                                        and config_c.lanes(lane_idx).data_byte_count <= 4;
 
       begin
       
