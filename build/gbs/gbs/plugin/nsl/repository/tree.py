@@ -15,11 +15,6 @@ from pathlib import Path
 from typing import Optional
 import sys
 
-# Import from main GBS
-gbs_src = Path(__file__).parents[4] / "src"
-if gbs_src.exists() and str(gbs_src) not in sys.path:
-    sys.path.insert(0, str(gbs_src))
-
 from gbs.repository.model import Repository, Partition, SourceFile
 from gbs.repository.loader import RepositoryLoader, LoadError
 from gbs.logging import get_logger
