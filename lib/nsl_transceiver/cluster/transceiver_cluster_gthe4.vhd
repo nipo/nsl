@@ -193,10 +193,8 @@ begin
     signal s_tx_rst_done_sync     : std_logic;
 
     signal s_txoutclk_buff         : std_ulogic;
-    signal s_parallel_clock        : std_ulogic;
     signal s_parallel_clock_buff   : std_ulogic;
     signal s_parallel_reset_sync_n : std_ulogic;
-    signal s_txusrclk2             : std_ulogic;
     signal s_txusrclk2_buff        : std_ulogic;
 
     signal s_pll_locked     : std_logic;
@@ -781,7 +779,6 @@ begin
     clocking : block
 
       signal s_domain_a_pll_locked     : std_ulogic;
-      signal s_domain_a_pll_feedback   : std_ulogic;
 
       -- BUFG_GT
       signal s_cesync    : std_ulogic;
