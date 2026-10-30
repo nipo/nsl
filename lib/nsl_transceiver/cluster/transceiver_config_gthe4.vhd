@@ -118,13 +118,13 @@ package body transceiver_config_gthe4 is
   begin  -- function pll_mult_div_assign
     -- Check valid PLL VCO frequency
     assert (pll_vco_mhz >= 2000 and pll_vco_mhz <= 6250)
-      report "transceiver_cluster/gthe2: Invalid PLL VCO frequency: CPLL in GTH transceivers accept a range of 2.0GHz to 6.25GHz"
+      report "transceiver_cluster/gthe4: Invalid PLL VCO frequency: CPLL in GTH transceivers accept a range of 2.0GHz to 6.25GHz"
       severity failure;
 
     -- Calculate D
     d := (real(pll_vco_mhz) * 2.0) / real(line_rate_mhz);
     assert d = 1.0 or d = 2.0 or d = 4.0 or d = 8.0
-      report "transceiver_cluster/gthe2: Invalid PLL VCO to line rate ratio, valid ratios are 1, 2, 4, or 8"
+      report "transceiver_cluster/gthe4: Invalid PLL VCO to line rate ratio, valid ratios are 1, 2, 4, or 8"
       severity failure;
     pll_config.D := natural(d);
 
@@ -133,7 +133,7 @@ package body transceiver_config_gthe4 is
     assert ratio = 2.0 or ratio = 2.5 or ratio = 4.0 or ratio = 5.0 or ratio = 6.0 or ratio = 7.5 or
       ratio = 8.0 or ratio = 10.0 or ratio = 12.0 or ratio = 12.5 or ratio = 15.0 or ratio = 16.0 or
       ratio = 20.0 or ratio = 25.0
-      report "transceiver_cluster/gthe2: Invalid PLL VCO to reference clock ratio, valid ratios are 2, 2.5, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 16, 20, or 25"
+      report "transceiver_cluster/gthe4: Invalid PLL VCO to reference clock ratio, valid ratios are 2, 2.5, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 16, 20, or 25"
       severity failure;
 
     -- Assign M, N2, and N1
