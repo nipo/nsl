@@ -122,4 +122,30 @@ package mm_routing is
       );
   end component;
 
+  -- AXI4 to AXI4-Lite adapter.
+  --
+  -- Bursts are split into single-beat Lite accesses. One read and one
+  -- write transaction are handled at a time. Write response is the
+  -- first non-OKAY response of the burst beats, if any.
+  --
+  -- Address and data widths must match between both configurations.
+  -- Exclusive accesses are forwarded as normal ones and never
+  -- succeed.
+  component axi4_mm_lite_adapter is
+    generic(
+      full_config_c : work.axi4_mm.config_t;
+      lite_config_c : work.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      full_i : in work.axi4_mm.master_t;
+      full_o : out work.axi4_mm.slave_t;
+
+      lite_o : out work.axi4_mm.master_t;
+      lite_i : in work.axi4_mm.slave_t
+      );
+  end component;
+
 end package mm_routing;

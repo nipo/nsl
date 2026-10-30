@@ -5,6 +5,7 @@ vhdl-sources += axi4_mm_crossbar_slave_port.vhd
 vhdl-sources += axi4_mm_crossbar_master_port.vhd
 vhdl-sources += axi4_mm_crossbar.vhd
 vhdl-sources += axi4_mm_shared_bus.vhd
+vhdl-sources += axi4_mm_lite_adapter.vhd
 
 deps += nsl_amba.axi4_mm
 deps += nsl_amba.mm_fifo

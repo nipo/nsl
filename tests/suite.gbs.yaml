@@ -68,6 +68,9 @@ projects:
   - name: amba_axi_m2m_dma_self
     path: amba/axi_m2m_dma_self
     tags: [ghdl, yavs, simulation]
+  - name: amba_axi4_mm_lite_adapter
+    path: amba/axi4_mm_lite_adapter
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_lite_ram
     path: amba/axi4_mm_lite_ram
     tags: [ghdl, yavs, simulation]
