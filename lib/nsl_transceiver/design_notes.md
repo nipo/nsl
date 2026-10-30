@@ -1,6 +1,6 @@
 # nsl_transceiver — intent and state
 
-State snapshot: as of "nsl_transceiver/cluster: Add comment to document unused port for GTPE2 backend".
+State snapshot: as of "nsl_transceiver/cluster: Calculate the VCO frequency automatically, use user input as a guess".
 
 ## Purpose
 
@@ -294,6 +294,7 @@ limited use-case for now. Features include:
 * Using any reference clock pin (east, west, etc.)
 * Use up to all four lanes in the quad (each with their own configuration)
 * 8B/10B encoding (built-in feature of the GTP transceiver)
+* Polarity inversion
 * Loopback configuration (any mode)
 * Integrated reset state machines (for `GTPE2_COMMON` and `GTPE2_CHANNEL`)
 * Configuration-based PLL0/1 routing from `GTPE2_COMMON` to the corresponding 
@@ -302,17 +303,66 @@ limited use-case for now. Features include:
   clock frequency, PLL frequency, and line rate
 * Variable data width on user-end (automatic placement of gearboxes and MMCM 
   depending on the data width)
-* Automatic alignment management (not used when in loopback mode)
+* Automatic alignment management
 
 Some features remain to be implemented:
 
+* For now all lanes share the same clocking scheme. This can be extended to ensure that
+  each lane manages its own rate for the case where one lane may need to run at a 
+  different speed than the other. 
+* For now the alignment requires the protocol to indicate to the cluster when the incoming
+  data is valid. This could be improved by passing the alignment words as a configuration
+  so that no sideband signals are required for alignment. 
 * Other encoding schemes such as 64B/66B (supported natively by the GTP transceiver)
 * APB to DRP bridge
 * More flexible clocking scheme. Currently assumptions are made regarding the clock rate.
   The clock rate is automatically calculated based on user-side data width and GTP
   interface data width. No RX clock is provided since the elastic buffer inside the GTP
   transceiver crosses the recovered clock domain for the user. `TXOUTCLK2` is therefore the
-  only clock currently being used. Future implementations may desire more flexibility. 
+  only clock currently being used. Future implementations may desire to separate the RX path
+  from the TX path. 
+
+The current implementation has been tested on hardware along with the SGMII adapter and driver. 
+Various data rates work, along with various PLL configurations. 
+
+## GTHE4 backend
+This wraps the `GTHE4_CHANNEL` primitives. One channel
+corresponds to one lane. Therefore, the cluster configuration instantiates
+one `GTHE4_CHANNEL` per lane. See UG576 for more information. 
+
+Various features have been implemented thus far although in a somewhat 
+limited use-case for now. Features include:
+
+* Using any reference clock pin (east, west, etc.)
+* Use up to all four lanes in the quad (each with their own configuration)
+* 8B/10B encoding (built-in feature of the GTH transceiver)
+* Polarity inversion
+* Loopback configuration (any mode)
+* Integrated reset state machines (for `GTHE4_CHANNEL`)
+* The CPLL is used for each `GTHE4_CHANNEL` so that each lane "owns" its clocking
+  scheme
+* Automatic resolution of PLL/MMCM parameters given the user-specified reference 
+  clock frequency, PLL frequency, and line rate
+* Variable data width on user-end (automatic placement of gearboxes and MMCM 
+  depending on the data width)
+* Automatic alignment management
+
+Some features remain to be implemented:
+
+* For now all lanes share the same clocking scheme. This can be extended to ensure that
+  each lane manages its own rate for the case where one lane may need to run at a 
+  different speed than the other. 
+* For now the alignment requires the protocol to indicate to the cluster when the incoming
+  data is valid. This could be improved by passing the alignment words as a configuration
+  so that no sideband signals are required for alignment.   
+* Other encoding schemes such as 64B/66B (supported natively by the GTH transceiver)
+* APB to DRP bridge
+* More flexible clocking scheme. Currently assumptions are made regarding the clock rate.
+  The clock rate is automatically calculated based on user-side data width and GTH
+  interface data width. No RX clock is provided since the elastic buffer inside the GTH
+  transceiver crosses the recovered clock domain for the user. `TXOUTCLK2` is therefore the
+  only clock currently being used. Future implementations may desire to separate the RX path
+  from the TX path. 
 
 The current implementation has been tested on hardware along with the SGMII adapter and driver. 
 Various data rates work, along with various PLL configurations. 
