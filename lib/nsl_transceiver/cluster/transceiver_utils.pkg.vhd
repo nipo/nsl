@@ -74,8 +74,11 @@ package transceiver_utils is
       pma_rst_done_i   : in std_ulogic;
       rst_done_i       : in std_ulogic;
 
-      gth_rst_o : out std_ulogic;
-      ready_o   : out std_ulogic
+      progdiv_rst_done_i : in std_ulogic := '1';
+
+      gth_rst_o     : out std_ulogic;
+      progdiv_rst_o : out std_ulogic;
+      ready_o       : out std_ulogic
       );
   end component;
 

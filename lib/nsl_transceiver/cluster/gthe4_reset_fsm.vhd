@@ -9,6 +9,11 @@ use ieee.std_logic_1164.all;
 -- reset-done and finally raises ready. The sequence restarts if it stalls
 -- for timeout_delay_c cycles or if the PLL loses lock.
 --
+-- The programmable divider reset (progdiv_rst_o) is held together with the
+-- channel reset, released once the PLL is locked, and its done flag is
+-- awaited before continuing. Leave progdiv_rst_done_i unconnected (defaults
+-- to '1') and progdiv_rst_o open when the divider is not used (e.g. RX).
+--
 -- All inputs must already be synchronous to clock_i.
 entity gthe4_reset_fsm is
   generic(
@@ -27,8 +32,11 @@ entity gthe4_reset_fsm is
     pma_rst_done_i   : in std_ulogic;
     rst_done_i       : in std_ulogic;
 
-    gth_rst_o : out std_ulogic;
-    ready_o   : out std_ulogic
+    progdiv_rst_done_i : in std_ulogic := '1';
+
+    gth_rst_o    : out std_ulogic;
+    progdiv_rst_o : out std_ulogic;
+    ready_o      : out std_ulogic
     );
 end entity;
 
@@ -37,6 +45,7 @@ architecture beh of gthe4_reset_fsm is
   type reset_state_t is (
     ST_RESET,
     ST_WAIT_PLL,
+    ST_WAIT_PROGDIV,
     ST_WAIT_PMA_LOW,
     ST_WAIT_PWR_GOOD,
     ST_DELAY_PWR_GOOD,
@@ -48,6 +57,7 @@ architecture beh of gthe4_reset_fsm is
   record
     state     : reset_state_t;
     gth_rst   : std_ulogic;
+    progdiv_rst : std_ulogic;
     timeout   : natural;
     pwr_timer : natural;
     ready     : std_ulogic;
@@ -57,7 +67,8 @@ architecture beh of gthe4_reset_fsm is
 
 begin
 
-  gth_rst_o <= r.gth_rst;
+  gth_rst_o     <= r.gth_rst;
+  progdiv_rst_o <= r.progdiv_rst;
   ready_o   <= r.ready;
 
   reg : process(reset_n_i, clock_i)
@@ -75,7 +86,7 @@ begin
   end process;
 
   transition : process(r, power_good_i, pll_locked_i, pll_reset_done_i,
-                       pma_rst_done_i, rst_done_i) is
+                       pma_rst_done_i, rst_done_i, progdiv_rst_done_i) is
 
   begin
     rin         <= r;
@@ -85,11 +96,17 @@ begin
       when ST_RESET =>
         rin.state   <= ST_WAIT_PLL;
         rin.gth_rst <= '1';
+        rin.progdiv_rst <= '1';
         rin.timeout <= timeout_delay_c;
         rin.ready   <= '0';
       when ST_WAIT_PLL =>
         rin.gth_rst <= '1';
         if pll_locked_i = '1' and pll_reset_done_i = '1' then
+          rin.state       <= ST_WAIT_PROGDIV;
+          rin.progdiv_rst <= '0';
+        end if;
+      when ST_WAIT_PROGDIV =>
+        if progdiv_rst_done_i = '1' then
           rin.state <= ST_WAIT_PMA_LOW;
         end if;
       when ST_WAIT_PMA_LOW =>

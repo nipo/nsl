@@ -65,6 +65,19 @@ package transceiver_config_gthe4 is
   function determine_data_width (byte_count : natural)
     return data_width_t;
 
+
+  -- TX_PROGDIV_CFG calculator. The PROGDIV output (TXOUTCLKSEL = "101") must
+  -- run at twice the GT interface clock, since the interface BUFG_GT divides
+  -- by 2. Checks the result against the legal PROGDIV values, see UG576
+  function prog_div_assign (pll_config : pll_mult_div_t;
+                            data_width : data_width_t)
+    return real;
+
+  -- BUFG_GT DIV value (divider - 1) for the user-side clock.
+  -- ratio = interface width / user width (real), divider = 2 / ratio, 1 to 8
+  function bufg_gt_div_assign (ratio : real)
+    return std_logic_vector;
+
 end package;
 
 package body transceiver_config_gthe4 is
@@ -233,6 +246,47 @@ package body transceiver_config_gthe4 is
       return_val.int_data_width  := 1;      
     end if;
     return return_val;
+  end function;
+
+  function prog_div_assign (pll_config : pll_mult_div_t;
+                            data_width : data_width_t)
+    return real
+  is
+    -- 5 * D * (internal_width / 20): 5D for 16/20, 10D for 32/40, 20D for 64/80
+    constant prog_div_c : real := real(5 * pll_config.D * data_width.internal_width) / 20.0;
+    type real_array_t is array (natural range <>) of real;
+    constant valid_c    : real_array_t := (4.0, 5.0, 10.0, 16.0, 16.5, 20.0, 32.0, 33.0, 40.0, 64.0, 66.0, 80.0, 100.0);
+    variable found      : boolean := false;
+  begin
+    for i in valid_c'range loop
+      if abs(prog_div_c - valid_c(i)) < 0.001 then
+        found := true;
+      end if;
+    end loop;
+
+    assert found
+      report "transceiver_cluster/gthe4: Invalid PROGDIV value " & real'image(prog_div_c)
+             & ", valid values are 4, 5, 10, 16, 16.5, 20, 32, 33, 40, 64, 66, 80, or 100"
+      severity failure;
+
+    return prog_div_c;
+  end function;
+
+  function bufg_gt_div_assign (ratio : real)
+    return std_logic_vector
+  is
+    constant div_c : real := 2.0 / ratio;
+    variable div_i : integer;
+  begin
+    div_i := integer(div_c);
+
+    assert abs(div_c - real(div_i)) < 0.001 and div_i >= 1 and div_i <= 8
+      report "transceiver_cluster/gthe4: Interface to user width ratio " & real'image(ratio)
+             & " requires BUFG_GT divider " & real'image(div_c) & ", must be an integer from 1 to 8"
+      severity failure;
+
+    -- BUFG_GT DIV encodes divider - 1
+    return std_logic_vector(to_unsigned(div_i - 1, 3));
   end function;
 
 end package body;
