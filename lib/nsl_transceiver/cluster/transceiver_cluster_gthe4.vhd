@@ -192,10 +192,12 @@ begin
     signal s_tx_pma_rst_done_sync : std_logic;
     signal s_rx_rst_done_sync     : std_logic;
     signal s_tx_rst_done_sync     : std_logic;
+    signal s_tx_progdiv_rst       : std_logic;
+    signal s_tx_progdiv_done      : std_logic;
+    signal s_tx_progdiv_done_sync : std_logic;
     signal s_tx_polarity          : std_logic;
     signal s_rx_polarity          : std_logic;
 
-    signal s_txoutclk_buff         : std_ulogic;
     signal s_parallel_clock_buff   : std_ulogic;
     signal s_parallel_reset_sync_n : std_ulogic;
     signal s_txusrclk2_buff        : std_ulogic;
@@ -232,7 +234,10 @@ begin
     constant data_byte_count_c      : natural      := config_c.lanes(lane_idx).data_byte_count;
     constant data_width_config_c    : data_width_t := determine_data_width(data_byte_count_c);
     constant data_bit_count_c       : natural      := config_c.lanes(lane_idx).data_byte_count * 8;
-    constant data_width_ratio_c     : natural      := data_width_config_c.interface_width / data_bit_count_c;
+    -- interface / user, real since it can be fractional (0.25, 0.5, ...)
+    constant data_width_ratio_c     : real         := real(data_width_config_c.interface_width) / real(data_bit_count_c);
+    constant tx_progdiv_c           : real         := prog_div_assign(pll_mult_div_config_c, data_width_config_c);
+    constant user_bufg_div_c        : std_logic_vector(2 downto 0) := bufg_gt_div_assign(data_width_ratio_c);
     -- One control bit (charisk, disperr, codeerr, disp val/frc) per byte of the
     -- transceiver fabric interface
     constant interface_byte_count_c : natural      := data_width_config_c.interface_width / 8;
@@ -322,6 +327,13 @@ begin
         data_o  => s_tx_rst_done_sync
         );                    
 
+    tx_progdiv_done_sync : nsl_clocking.async.async_deglitcher
+      port map(
+        clock_i => s_stableclk,
+        data_i  => s_tx_progdiv_done,
+        data_o  => s_tx_progdiv_done_sync
+        );
+
     -- Reset FSMs
     rx_reset : gthe4_reset_fsm
       generic map (
@@ -353,7 +365,9 @@ begin
         pll_reset_done_i => s_pll_reset_done,
         pma_rst_done_i   => s_tx_pma_rst_done_sync,
         rst_done_i       => s_tx_rst_done_sync,
+        progdiv_rst_done_i => s_tx_progdiv_done_sync,
         gth_rst_o        => s_gth_tx_rst,
+        progdiv_rst_o    => s_tx_progdiv_rst,
         ready_o          => s_tx_ready
         );
 
@@ -465,62 +479,50 @@ begin
       -- FIXME: debug
       lane_rx_clock_o(lane_idx) <= s_txusrclk2_buff;
 
-      -- FIXME: Add an MMCM for more flexibility?
-      mmcm_gen : if data_width_ratio_c /= 1 generate
+      -- No MMCM: the GTHE4 programmable divider (TXOUTCLKSEL = "101") plus the
+      -- BUFG_GT dividers generate both clocks from TXOUTCLK.
+      s_domain_a_pll_locked <= s_rx_rst_done_sync and s_tx_rst_done_sync;
 
-        begin
+      s_bufgt_clr <= not(s_rx_pma_rst_done_sync and s_tx_pma_rst_done_sync);
 
-          s_domain_a_pll_locked <= s_rx_rst_done_sync and s_tx_rst_done_sync;
+      BUFG_GT_SYNC_inst : BUFG_GT_SYNC
+        port map (
+          CESYNC  => s_cesync,
+          CLRSYNC => s_clrsync,
+          CE      => '1',
+          CLK     => s_tx_out_clock,
+          CLR     => s_bufgt_clr
+          );
 
-          s_bufgt_clr <= not(s_rx_pma_rst_done_sync and s_tx_pma_rst_done_sync);
+      -- User clock: divider = 2 * user width / interface width
+      BUFG_GT_parallelclk : BUFG_GT
+        generic map (
+          SIM_DEVICE => "ULTRASCALE_PLUS"  -- ULTRASCALE, ULTRASCALE_PLUS
+          )
+        port map (
+          O       => s_parallel_clock_buff,
+          CE      => s_cesync,
+          CEMASK  => '0',
+          CLR     => s_clrsync,
+          CLRMASK => '0',
+          DIV     => user_bufg_div_c,
+          I       => s_tx_out_clock
+          );
 
-          BUFG_GT_SYNC_inst : BUFG_GT_SYNC
-            port map (
-              CESYNC  => s_cesync,
-              CLRSYNC => s_clrsync,
-              CE      => '1',
-              CLK     => s_tx_out_clock,
-              CLR     => s_bufgt_clr
-              );          
-
-          BUFG_GT_parallelclk : BUFG_GT
-            generic map (
-              SIM_DEVICE => "ULTRASCALE_PLUS"  -- ULTRASCALE, ULTRASCALE_PLUS
-              )
-            port map (
-              O       => s_parallel_clock_buff,
-              CE      => s_cesync,
-              CEMASK  => '0',
-              CLR     => s_clrsync,
-              CLRMASK => '0',
-              DIV     => "000",
-              I       => s_tx_out_clock
-              );                          
-
-          BUFG_GT_txusrclk : BUFG_GT
-            generic map (
-              SIM_DEVICE => "ULTRASCALE_PLUS"  -- ULTRASCALE, ULTRASCALE_PLUS
-              )
-            port map (
-              O       => s_txusrclk2_buff,
-              CE      => s_cesync,
-              CEMASK  => '0',
-              CLR     => s_clrsync,
-              CLRMASK => '0',
-              DIV     => "001",
-              I       => s_tx_out_clock
-              );                          
-
-      end generate;
-
-        no_mmcm_gen : if data_width_ratio_c = 1 generate  -- Data width between adapter and transceiver is the same
-
-          -- No MMCM needed
-          s_parallel_clock_buff <= s_txoutclk_buff;
-          s_txusrclk2_buff      <= s_txoutclk_buff;
-          s_domain_a_pll_locked <= s_pll_locked_sync;
-        
-        end generate;
+      -- GT interface clock: PROGDIV output is 2x the interface clock, divide by 2
+      BUFG_GT_txusrclk : BUFG_GT
+        generic map (
+          SIM_DEVICE => "ULTRASCALE_PLUS"  -- ULTRASCALE, ULTRASCALE_PLUS
+          )
+        port map (
+          O       => s_txusrclk2_buff,
+          CE      => s_cesync,
+          CEMASK  => '0',
+          CLR     => s_clrsync,
+          CLRMASK => '0',
+          DIV     => "001",
+          I       => s_tx_out_clock
+          );
 
       rx_m_o(lane_idx).status(data_byte_count_c * 2) <= s_domain_a_pll_locked;
 
@@ -1019,7 +1021,7 @@ begin
         TX_PMA_RSV0                  => "0000000000001000",
         TX_PREDRV_CTRL               => 2,
         TX_PROGCLK_SEL               => "PREPI",
-        TX_PROGDIV_CFG               => 0.0,
+        TX_PROGDIV_CFG               => tx_progdiv_c,
         TX_PROGDIV_RATE              => "0000000000000001",
         TX_QPI_STATUS_EN             => '0',
         TX_RXDETECT_CFG              => "00000000110010",
@@ -1264,7 +1266,7 @@ begin
         TXMUXDCDEXHOLD       => '0',
         TXMUXDCDORWREN       => '0',
         TXONESZEROS          => '0',
-        TXOUTCLKSEL          => "011",
+        TXOUTCLKSEL          => "101",
         TXPCSRESET           => '0',
         TXPD                 => (others => '0'),
         TXPDELECIDLEMODE     => '0',
@@ -1288,7 +1290,7 @@ begin
         TXPRBSFORCEERR       => '0',
         TXPRBSSEL            => (others => '0'),
         TXPRECURSOR          => (others => '0'),
-        TXPROGDIVRESET       => '0',
+        TXPROGDIVRESET       => s_tx_progdiv_rst,
         TXQPIBIASEN          => '0',
         TXQPIWEAKPUP         => '0',
         TXRATE               => (others => '0'),
@@ -1399,7 +1401,7 @@ begin
         TXPHALIGNDONE        => open,
         TXPHINITDONE         => open,
         TXPMARESETDONE       => s_tx_pma_rst_done,
-        TXPRGDIVRESETDONE    => open,
+        TXPRGDIVRESETDONE    => s_tx_progdiv_done,
         TXQPISENN            => open,
         TXQPISENP            => open,
         TXRATEDONE           => open,
