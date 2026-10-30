@@ -568,7 +568,12 @@ begin
 
       mmcm_gen : if data_width_ratio_c /= 1 generate
 
-        constant input_hz_c  : natural := config_c.lanes(lane_idx).line_rate_mbps * 50000;
+        constant input_hz_c : natural :=
+          config_c.plls(config_c.lanes(lane_idx).pll_index).ref_clock_mhz
+          * 100_000
+          * pll_mult_div_config_c.N1
+          * pll_mult_div_config_c.N2
+          / (pll_mult_div_config_c.M * pll_mult_div_config_c.D);
         constant output_hz_c : natural := input_hz_c * data_width_ratio_c;
 
         begin
