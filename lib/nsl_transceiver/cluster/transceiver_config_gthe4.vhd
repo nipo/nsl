@@ -51,7 +51,9 @@ package transceiver_config_gthe4 is
   function cpll_refclk_set (ids : integer_vector)
     return std_logic_vector;  
 
-  -- PLL multiplier and divider calculator
+  -- PLL multiplier and divider calculator. pll_vco_mhz is only a hint: the
+  -- function picks the D / VCO combination closest to it that is valid for
+  -- the line rate and reference clock
   function pll_mult_div_assign (line_rate_mhz : natural;
                                 pll_vco_mhz   : natural;
                                 ref_clk_mhz   : natural)
@@ -112,29 +114,57 @@ package body transceiver_config_gthe4 is
                                 ref_clk_mhz   : natural)
     return pll_mult_div_t
   is
-    variable d          : real;
     variable ratio      : real;
     variable pll_config : pll_mult_div_t;
+
+    variable cand_d     : natural;
+    variable cand_vco   : real;
+    variable cand_ratio : real;
+    variable best_d     : natural := 0;
+    variable best_ratio : real    := 0.0;
+    variable best_diff  : real    := 1.0e12;
+
+    -- Returns the matching entry of the valid VCO to reference clock ratios
+    -- (UG576 Table 2-9), or 0.0 if the ratio is not achievable
+    function snap_ratio (r : real) return real is
+      type real_array_t is array (natural range <>) of real;
+      constant valid_c : real_array_t := (2.0, 2.5, 4.0, 5.0, 6.0, 7.5, 8.0, 10.0, 12.0, 12.5, 15.0, 16.0, 20.0, 25.0);
+    begin
+      for i in valid_c'range loop
+        if abs(r - valid_c(i)) < 0.0001 then
+          return valid_c(i);
+        end if;
+      end loop;
+      return 0.0;
+    end function;
   begin  -- function pll_mult_div_assign
-    -- Check valid PLL VCO frequency
-    assert (pll_vco_mhz >= 2000 and pll_vco_mhz <= 6250)
-      report "transceiver_cluster/gthe4: Invalid PLL VCO frequency: CPLL in GTH transceivers accept a range of 2.0GHz to 6.25GHz"
+    -- pll_vco_mhz is only a hint. line rate = 2 * VCO / D, so every D in
+    -- 1, 2, 4, 8 gives a candidate VCO of line_rate * D / 2. A candidate is
+    -- usable if it is within the CPLL range (2.0GHz to 6.25GHz) and is an
+    -- achievable multiple of the reference clock. Of the usable candidates,
+    -- the one closest to the hint is chosen (the lowest D on a tie).
+    for i in 0 to 3 loop
+      cand_d     := 2 ** i;
+      cand_vco   := real(line_rate_mhz) * real(cand_d) / 2.0;
+      cand_ratio := snap_ratio(cand_vco / real(ref_clk_mhz));
+
+      if cand_vco >= 2000.0 and cand_vco <= 6250.0 and cand_ratio /= 0.0 then
+        if abs(cand_vco - real(pll_vco_mhz)) < best_diff then
+          best_diff  := abs(cand_vco - real(pll_vco_mhz));
+          best_d     := cand_d;
+          best_ratio := cand_ratio;
+        end if;
+      end if;
+    end loop;
+
+    assert best_d /= 0
+      report "transceiver_cluster/gthe4: No valid CPLL configuration for line rate " & integer'image(line_rate_mhz)
+             & " Mbps with reference clock " & integer'image(ref_clk_mhz)
+             & " MHz: need line_rate * D / 2 (D = 1, 2, 4 or 8) within 2000 to 6250 MHz and equal to ref_clk * 2, 2.5, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 16, 20 or 25"
       severity failure;
 
-    -- Calculate D
-    d := (real(pll_vco_mhz) * 2.0) / real(line_rate_mhz);
-    assert d = 1.0 or d = 2.0 or d = 4.0 or d = 8.0
-      report "transceiver_cluster/gthe4: Invalid PLL VCO to line rate ratio, valid ratios are 1, 2, 4, or 8"
-      severity failure;
-    pll_config.D := natural(d);
-
-    -- Calculate PLL to Ref ratio and check valid value
-    ratio := real(pll_vco_mhz) / real(ref_clk_mhz);
-    assert ratio = 2.0 or ratio = 2.5 or ratio = 4.0 or ratio = 5.0 or ratio = 6.0 or ratio = 7.5 or
-      ratio = 8.0 or ratio = 10.0 or ratio = 12.0 or ratio = 12.5 or ratio = 15.0 or ratio = 16.0 or
-      ratio = 20.0 or ratio = 25.0
-      report "transceiver_cluster/gthe4: Invalid PLL VCO to reference clock ratio, valid ratios are 2, 2.5, 4, 5, 6, 7.5, 8, 10, 12, 12.5, 15, 16, 20, or 25"
-      severity failure;
+    pll_config.D := best_d;
+    ratio        := best_ratio;
 
     -- Assign M, N2, and N1
     if ratio = 2.0 then
