@@ -490,6 +490,10 @@ begin
       rx_m_o(lane_idx).pma_lock <= s_pma_rx_lock(lane_idx);
       rx_m_o(lane_idx).pcs_aligned <= s_align_link(lane_idx);
       rx_m_o(lane_idx).elec_idle <= s_rxelecidle(lane_idx);
+      -- Elastic buffer insertion and deletion events are part of the
+      -- lane status word the primitive returns, handed over raw
+      -- above; they are not decoded into this flag yet.
+      rx_m_o(lane_idx).clock_corrected <= '0';
 
       tx_s_o(lane_idx).ready <= not s_tx_fifo_afull(lane_idx);
       tx_s_o(lane_idx).pll_lock <= s_cmu0_ok

@@ -20,11 +20,28 @@ package lane is
   -- 256-bit user interfaces seen on current high-speed transceivers.
   constant max_data_byte_count_c : natural := 32;
 
-  -- Auxiliary bits accompanying each data byte. Bit assignment is
-  -- profile-dependent. Typical 8b10b profile: bit 0 = K, bit 1 =
-  -- decode error, bit 2 = disparity error, bit 3 = current running
-  -- disparity. 64b/66b profile uses a few bits per block instead.
-  -- Sized to a byte to keep the carrier array regular.
+  -- Auxiliary bits accompanying each data byte. Which bits are
+  -- meaningful depends on the encoding, but their assignment is part
+  -- of the portable contract: an adapter and a cluster agreeing on
+  -- the encoding agree on these bits, whatever the vendor.
+  --
+  -- ENCODING_8B10B, TX direction:
+  --   bit 0: data byte is a control code (K)
+  --   bit 1: force the running disparity of this code group
+  --   bit 2: running disparity to force, when bit 1 is set
+  -- A backend whose primitive cannot force the disparity ignores
+  -- bits 1 and 2.
+  --
+  -- ENCODING_8B10B, RX direction:
+  --   bit 0: data byte is a control code (K)
+  --   bit 1: code group was not valid
+  --   bit 2: code group came with the wrong running disparity
+  --   bit 3: running disparity after this code group
+  --
+  -- Remaining bits are reserved and driven low. ENCODING_64B66B and
+  -- ENCODING_128B130B would use a few bits per block instead, and
+  -- have no assignment yet. Sized to a byte to keep the carrier
+  -- array regular.
   subtype aux_t is std_ulogic_vector(7 downto 0);
   type aux_string is array (natural range <>) of aux_t;
   subtype data_aux_t is aux_string(0 to max_data_byte_count_c-1);
@@ -32,7 +49,9 @@ package lane is
   -- Vendor-opaque per-lane control and status carriers. Bit
   -- assignment is not portable between vendors; the protocol
   -- adapter and the cluster entity for a given target agree on the
-  -- layout.
+  -- layout. These carry what the portable fields cannot express,
+  -- which makes an adapter using them target-specific: anything the
+  -- named fields or the aux bits above cover belongs there instead.
   constant max_control_width_c : natural := 64;
   constant max_status_width_c : natural := 32;
   subtype control_t is std_ulogic_vector(max_control_width_c-1 downto 0);
@@ -203,6 +222,12 @@ package lane is
   end record;
 
   -- RX path: signals driven by the transceiver to the adapter.
+  --
+  -- ``clock_corrected`` tells the adapter the elastic buffer added
+  -- or dropped a clock-correction sequence in this cycle. A protocol
+  -- tracking the running disparity itself has to resynchronise on
+  -- it, so it is a named field rather than a vendor status bit. A
+  -- backend without an elastic buffer never asserts it.
   type rx_master_t is
   record
     data : byte_string(0 to max_data_byte_count_c-1);
@@ -210,11 +235,17 @@ package lane is
     valid : std_ulogic;
     pma_lock : std_ulogic;
     pcs_aligned : std_ulogic;
+    clock_corrected : std_ulogic;
     elec_idle : std_ulogic;
     status : status_t;
   end record;
 
   -- RX path: signals driven by the adapter back to the transceiver.
+  --
+  -- ``align_trigger`` asks the receiver to restart its word
+  -- alignment search. A protocol that can tell its framing is wrong
+  -- while the PCS still believes it is aligned uses it to force
+  -- another search.
   type rx_slave_t is
   record
     ready : std_ulogic;
@@ -271,6 +302,7 @@ package lane is
     valid => '-',
     pma_lock => '-',
     pcs_aligned => '-',
+    clock_corrected => '-',
     elec_idle => '-',
     status => (others => '-')
     );

@@ -312,11 +312,12 @@ begin
 
   begin
 
-    -- Sideband layout (N = data_byte_count_c, byte-wide fields start at bit N*k):
-    --   TX control : [N-1:0] K per byte, [N] data valid, [2*N] aligner restart
-    --   TX aux(i)  : (0) force RD, (1) RD value
-    --   RX aux(i)  : (0) K, (1) code error, (2) disparity error
-    --   RX status  : [0] align ready, [N] clock correction, [2*N] domain lock
+    -- Sideband follows the portable layout of nsl_transceiver.lane:
+    -- the aux bits of each data byte carry the control-code flag and
+    -- the disparity controls, and everything else travels in the
+    -- named fields of the lane records. Nothing a lane record can
+    -- express goes through the vendor-opaque control and status
+    -- vectors.
 
     -- TX and RX Data ------------------------------------------------------------
     packunpack : for i in 0 to data_byte_count_c - 1 generate
@@ -450,7 +451,6 @@ begin
         rx_m_o(lane_idx).aux(i)(2) <= s_rx_disperr_gear(i);
       end generate;
       
-      s_tx_charisk_gear                                               <= tx_m_i(lane_idx).control(data_byte_count_c - 1 downto 0);
       s_txcharisk                                                     <= std_logic_vector(s_txcharisk_vec);
       s_gth_tx_data(data_width_config_c.interface_width - 1 downto 0) <= std_logic_vector(s_gth_tx_data_stdu);
       s_rxcharisk                                                     <= s_rxctrl0(interface_byte_count_c - 1 downto 0);
@@ -460,9 +460,11 @@ begin
       s_txctrl0                                                       <= (s_txctrl0'high downto interface_byte_count_c => '0') & std_logic_vector(s_txdisp_val_vec);
       s_txctrl1                                                       <= (s_txctrl1'high downto interface_byte_count_c => '0') & std_logic_vector(s_txdisp_frc_vec);
 
-      disp_pack : for i in 0 to data_byte_count_c - 1 generate
-        s_tx_disp_frc_in(i) <= tx_m_i(lane_idx).aux(i)(0);
-        s_tx_disp_val_in(i) <= tx_m_i(lane_idx).aux(i)(0) and tx_m_i(lane_idx).aux(i)(1);
+      tx_aux_unpack : for i in 0 to data_byte_count_c - 1 generate
+        s_tx_charisk_gear(i) <= tx_m_i(lane_idx).aux(i)(0);
+        s_tx_disp_frc_in(i)  <= tx_m_i(lane_idx).aux(i)(1);
+        s_tx_disp_val_in(i)  <= tx_m_i(lane_idx).aux(i)(1)
+                                and tx_m_i(lane_idx).aux(i)(2);
       end generate;
 
       gearbox_i : lane_gearbox
@@ -506,16 +508,16 @@ begin
       port map (
         clock_i    => s_parallel_clock_buff,
         reset_n_i  => s_parallel_reset_sync_n,
-        valid_i    => tx_m_i(lane_idx).control(data_byte_count_c * 1),
-        restart_i  => tx_m_i(lane_idx).control(data_byte_count_c * 2),
+        valid_i    => tx_m_i(lane_idx).valid,
+        restart_i  => rx_s_i(lane_idx).align_trigger,
         align_en_o => s_align_en,
         ready_o    => s_align_ready
         );
 
-    s_cdr_hold                                     <= '0';
-    s_pcomma_align_en                              <= s_align_en;
-    s_mcomma_align_en                              <= s_align_en;
-    rx_m_o(lane_idx).status(data_byte_count_c * 0) <= s_align_ready;
+    s_cdr_hold                   <= '0';
+    s_pcomma_align_en            <= s_align_en;
+    s_mcomma_align_en            <= s_align_en;
+    rx_m_o(lane_idx).pcs_aligned <= s_align_ready;
 
     -- Clocking and MMCM if necessary ------------------------------------------------------------
 
@@ -579,7 +581,7 @@ begin
           I       => s_tx_out_clock
           );
 
-      rx_m_o(lane_idx).status(data_byte_count_c * 2) <= s_domain_a_pll_locked;
+      tx_s_o(lane_idx).pll_lock <= s_domain_a_pll_locked;
 
       general_reset_sync : nsl_clocking.async.async_edge
         port map(
@@ -591,8 +593,8 @@ begin
     end block;
 
     -- Lane instance ----------------------------------------------------------------
-    s_rx_clk_cr_cnt                                <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
-    rx_m_o(lane_idx).status(data_byte_count_c * 1) <= s_rx_clk_cr_cnt(0);
+    s_rx_clk_cr_cnt                  <= std_ulogic_vector(s_rx_clk_cr_cnt_stdl);
+    rx_m_o(lane_idx).clock_corrected <= s_rx_clk_cr_cnt(0);
 
     -- Manage polarity
     tx_invert : if config_c.lanes(lane_idx).polarity_invert_tx generate

@@ -65,6 +65,7 @@ begin
       valid => '1',
       pma_lock => '1',
       pcs_aligned => '1',
+      clock_corrected => '0',
       elec_idle => '0',
       status => (others => '0')
       );
