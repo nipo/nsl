@@ -10,18 +10,18 @@ use work.sgmii.all;
 
 entity sgmii_pcs_tx is
   port(
-    clock_i     : in  std_ulogic;
-    reset_n_i   : in  std_ulogic;
+    clock_i : in  std_ulogic;
+    reset_n_i : in  std_ulogic;
 
-    flit_i      : in  mii_flit_t;
+    flit_i : in  mii_flit_t;
     flit_ready_o : out std_ulogic;
 
-    symbol_o    : out nsl_line_coding.ibm_8b10b.data_t;
+    symbol_o : out nsl_line_coding.ibm_8b10b.data_t;
     disparity_o : out std_ulogic;
 
     send_config_i : in  std_ulogic;
-    config_i      : in  config_reg_t;
-    link_up_i     : in  std_ulogic
+    config_i : in  config_reg_t;
+    link_up_i : in  std_ulogic
     );
 end entity;
 
@@ -40,17 +40,17 @@ architecture beh of sgmii_pcs_tx is
 
   type regs_t is
   record
-    state    : state_t;
+    state : state_t;
     c_toggle : boolean;
     -- True when the code group sent THIS cycle sits on an even position.
     -- Ordered sets (/I/, /C/) must start on even positions, so a frame
     -- must end on an even boundary: /T/R/ or /T/R/R/.
-    even     : boolean;
+    even : boolean;
     -- Running disparity BEFORE the code group sent THIS cycle (true =
     -- positive). This PCS is the single source of truth for RD: it is
     -- exported on disparity_o and the encoder is told to use it, so the
     -- encoder's own RD state is irrelevant.
-    rd_pos   : boolean;
+    rd_pos : boolean;
   end record;
 
   signal r, rin: regs_t;
@@ -66,7 +66,7 @@ architecture beh of sgmii_pcs_tx is
   function flips_rd(sym : nsl_line_coding.ibm_8b10b.data_t) return boolean is
     variable x : natural range 0 to 31;
     variable y : natural range 0 to 7;
-    variable six_unbal  : boolean;
+    variable six_unbal : boolean;
     variable four_unbal : boolean;
   begin
     x := to_integer(unsigned(sym.data(4 downto 0)));

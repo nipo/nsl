@@ -40,23 +40,23 @@ begin
 
     constant sgmii_i_idx_c : natural := sgmii_i'low + i;
     constant sgmii_o_idx_c : natural := sgmii_o'low + i;
-    constant tx_m_idx_c    : natural := tx_m_o'low + i;
-    constant rx_m_idx_c    : natural := rx_m_i'low + i;
-    constant rx_s_idx_c    : natural := rx_s_o'low + i;
+    constant tx_m_idx_c : natural := tx_m_o'low + i;
+    constant rx_m_idx_c : natural := rx_m_i'low + i;
+    constant rx_s_idx_c : natural := rx_s_o'low + i;
 
   begin
 
     -- Cluster RX lane -> SGMII ----------------------------------------------------------
-    sgmii_o(sgmii_o_idx_c).symbol.data    <= rx_m_i(rx_m_idx_c).data(0);
+    sgmii_o(sgmii_o_idx_c).symbol.data <= rx_m_i(rx_m_idx_c).data(0);
     sgmii_o(sgmii_o_idx_c).symbol.control <= rx_m_i(rx_m_idx_c).aux(0)(0);
-    sgmii_o(sgmii_o_idx_c).code_err                <= rx_m_i(rx_m_idx_c).aux(0)(1);
-    sgmii_o(sgmii_o_idx_c).disparity_err           <= rx_m_i(rx_m_idx_c).aux(0)(2);
-    sgmii_o(sgmii_o_idx_c).align_ready             <= rx_m_i(rx_m_idx_c).pcs_aligned;
-    sgmii_o(sgmii_o_idx_c).clk_cor                 <= rx_m_i(rx_m_idx_c).clock_corrected;
+    sgmii_o(sgmii_o_idx_c).code_err <= rx_m_i(rx_m_idx_c).aux(0)(1);
+    sgmii_o(sgmii_o_idx_c).disparity_err <= rx_m_i(rx_m_idx_c).aux(0)(2);
+    sgmii_o(sgmii_o_idx_c).align_ready <= rx_m_i(rx_m_idx_c).pcs_aligned;
+    sgmii_o(sgmii_o_idx_c).clk_cor <= rx_m_i(rx_m_idx_c).clock_corrected;
 
     -- SGMII -> cluster TX lane ----------------------------------------------------------
     tx_m_o(tx_m_idx_c).data <= (
-      0      => sgmii_i(sgmii_i_idx_c).symbol.data,
+      0 => sgmii_i(sgmii_i_idx_c).symbol.data,
       others => (others => '-')
       );
 
@@ -68,18 +68,18 @@ begin
       others => (others => '-')
       );
 
-    tx_m_o(tx_m_idx_c).valid       <= sgmii_i(sgmii_i_idx_c).valid_symbol;
-    tx_m_o(tx_m_idx_c).control     <= (others => '0');
-    tx_m_o(tx_m_idx_c).control_h   <= (others => '0');
+    tx_m_o(tx_m_idx_c).valid <= sgmii_i(sgmii_i_idx_c).valid_symbol;
+    tx_m_o(tx_m_idx_c).control <= (others => '0');
+    tx_m_o(tx_m_idx_c).control_h <= (others => '0');
     tx_m_o(tx_m_idx_c).pcs_reset_n <= '1';
-    tx_m_o(tx_m_idx_c).c2i_clock   <= '0';
+    tx_m_o(tx_m_idx_c).c2i_clock <= '0';
 
     -- RX handshake: always accept -------------------------------------------------------
-    rx_s_o(rx_s_idx_c).ready         <= '1';
-    rx_s_o(rx_s_idx_c).pcs_reset_n   <= '1';
+    rx_s_o(rx_s_idx_c).ready <= '1';
+    rx_s_o(rx_s_idx_c).pcs_reset_n <= '1';
     rx_s_o(rx_s_idx_c).align_trigger <= sgmii_i(sgmii_i_idx_c).align_rst;
-    rx_s_o(rx_s_idx_c).chbond_start  <= '0';
-    rx_s_o(rx_s_idx_c).control       <= (others => '0');
+    rx_s_o(rx_s_idx_c).chbond_start <= '0';
+    rx_s_o(rx_s_idx_c).control <= (others => '0');
 
   end generate;
 

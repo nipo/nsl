@@ -8,19 +8,19 @@ use work.sgmii.all;
 
 entity sgmii_pcs_rx is
   port(
-    clock_i     : in  std_ulogic;
-    reset_n_i   : in  std_ulogic;
+    clock_i : in  std_ulogic;
+    reset_n_i : in  std_ulogic;
 
-    symbol_i    : in  nsl_line_coding.ibm_8b10b.data_t;
+    symbol_i : in  nsl_line_coding.ibm_8b10b.data_t;
     symbol_expected_o : out std_ulogic;
 
     clk_cor_i : in std_ulogic;
 
-    flit_o         : out mii_flit_t;
+    flit_o : out mii_flit_t;
     config_valid_o : out std_ulogic;
-    config_o       : out config_reg_t;
-    valid_o        : out std_ulogic;
-    idle_match_o   : out std_ulogic
+    config_o : out config_reg_t;
+    valid_o : out std_ulogic;
+    idle_match_o : out std_ulogic
     );
 end entity;
 
@@ -38,7 +38,7 @@ architecture beh of sgmii_pcs_rx is
 
   type regs_t is
   record
-    state      : state_t;
+    state : state_t;
     config_reg : config_reg_t;
     wait_comma_timeout : natural;
   end record;
