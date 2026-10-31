@@ -3,11 +3,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_transceiver, nsl_math, nsl_hwconfig, nsl_data;
-use nsl_transceiver.target.all;
+library nsl_transceiver, nsl_math;
 use nsl_transceiver.lane.all;
 use nsl_math.int_ext.all;
-use nsl_data.text.all;
 
 package transceiver_config_gtpe2 is
 
