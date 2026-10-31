@@ -71,6 +71,18 @@ package cluster is
   -- its architecture body.
   function is_valid(cfg : config_t) return boolean;
 
+  -- Shape of the configuration bus every vendor cluster exposes on
+  -- apb_m_i / apb_s_o. Declared here rather than per backend so a
+  -- configuration master can be written once: a cluster whose
+  -- primitive has no runtime configuration path still answers, with
+  -- an error response, instead of leaving the master waiting.
+  constant csr_config_c : nsl_amba.apb.config_t
+    := nsl_amba.apb.apb4_config(address_width => 24,
+                                data_bus_width => 32,
+                                strb => true,
+                                ready => true,
+                                err => true);
+
   -- Portable transceiver cluster component. One vendor entity matching
   -- this declaration is compiled into the working library based on
   -- the project's hwdep / target_part variables. The vendor entity
@@ -108,7 +120,9 @@ package cluster is
       -- APB clock for the user-facing master, sourced internally
       -- from the vendor primitive's housekeeping clock. The APB
       -- master and any companion logic on the configuration bus
-      -- must clock on this output.
+      -- must clock on this output. It runs even on a target whose
+      -- primitive has no configuration path, so the master's own
+      -- reset and error handling stay clocked.
       apb_clock_o : out std_ulogic;
       apb_reset_n_i : in std_ulogic;
       apb_m_i : in nsl_amba.apb.master_t;
