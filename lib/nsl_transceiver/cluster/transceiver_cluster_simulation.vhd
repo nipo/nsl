@@ -528,6 +528,25 @@ begin
             & integer'image(lane_idx) & " needs exactly one comma byte"
             & " to align on, the symbol the stream is framed by"
             severity failure;
+
+          -- comma_negated describes a comma detector that matches a
+          -- raw code group rather than a decoded symbol. This model
+          -- decodes, and the two running-disparity forms of a
+          -- control code are each other's complement, so its
+          -- detector finds the comma on a swapped pair whether or
+          -- not it is told to: there is nothing here for the field
+          -- to change. Honouring it would also be a half-measure,
+          -- because the data on a swapped pair does not come back
+          -- the same either way, which is what polarity_invert_rx is
+          -- for. Saying so beats quietly behaving as if the field
+          -- fixed the lane.
+          assert not cfg_c.sync.comma_negated
+            report "transceiver_cluster/simulation: lane "
+            & integer'image(lane_idx) & " asks for a negated comma,"
+            & " which a model aligning on decoded symbols cannot"
+            & " express; a swapped pair is undone by"
+            & " polarity_invert_rx"
+            severity failure;
           comma_v.data := cfg_c.sync.comma_value(0);
           comma_v.control := '1';
           comma_mask_v := cfg_c.sync.comma_mask(0);
@@ -544,9 +563,6 @@ begin
 
           line_v := rx_serial_s;
           if cfg_c.polarity_invert_rx then
-            line_v := not line_v;
-          end if;
-          if cfg_c.sync.comma_negated then
             line_v := not line_v;
           end if;
           bit_v := line_v;
