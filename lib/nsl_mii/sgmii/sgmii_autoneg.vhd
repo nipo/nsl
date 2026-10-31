@@ -10,19 +10,19 @@ entity sgmii_autoneg is
     link_timer_cycles_c : natural := 1250000
     );
   port(
-    clock_i     : in  std_ulogic;
-    reset_n_i   : in  std_ulogic;
+    clock_i : in  std_ulogic;
+    reset_n_i : in  std_ulogic;
 
-    config_i    : in  config_reg_t;
-    restart_i   : in  std_ulogic := '0';
+    config_i : in  config_reg_t;
+    restart_i : in  std_ulogic := '0';
 
     rx_config_valid_i : in  std_ulogic;
-    rx_config_i       : in  config_reg_t;
-    rx_idle_i         : in  std_ulogic;
+    rx_config_i : in  config_reg_t;
+    rx_idle_i : in  std_ulogic;
 
-    send_config_o    : out std_ulogic;
-    tx_config_o      : out config_reg_t;
-    link_up_o        : out std_ulogic;
+    send_config_o : out std_ulogic;
+    tx_config_o : out config_reg_t;
+    link_up_o : out std_ulogic;
     partner_config_o : out config_reg_t
     );
 end entity;
@@ -43,11 +43,11 @@ architecture beh of sgmii_autoneg is
 
   type regs_t is
   record
-    state          : state_t;
-    link_timer     : natural range 0 to link_timer_cycles_c;
-    match_count    : natural range 0 to match_count_c;
+    state : state_t;
+    link_timer : natural range 0 to link_timer_cycles_c;
+    match_count : natural range 0 to match_count_c;
     partner_config : config_reg_t;
-    idle_count     : natural range 0 to match_count_c;
+    idle_count : natural range 0 to match_count_c;
   end record;
 
   signal r, rin: regs_t;
