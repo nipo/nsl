@@ -60,7 +60,7 @@ architecture beh of gtpe2_reset_fsm is
     drp_wr  : std_ulogic;
     drp_val : std_ulogic_vector(15 downto 0);
     drp_out : std_ulogic_vector(15 downto 0);
-    timeout : natural;
+    timeout : natural range 0 to timeout_delay_c;
   end record;
 
   signal r, rin : regs_t;
@@ -92,7 +92,14 @@ begin
 
   begin
     rin         <= r;
-    rin.timeout <= r.timeout - 1;
+
+    -- The watchdog runs in every state, and the state process puts
+    -- the sequence back to the start when it reads zero. It has to
+    -- stop there rather than run past it: the counter starts at zero
+    -- out of reset, before any state has had the chance to load it.
+    if r.timeout /= 0 then
+      rin.timeout <= r.timeout - 1;
+    end if;
 
     case r.state is
       when ST_RESET =>
