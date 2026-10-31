@@ -829,6 +829,16 @@ begin
             -- filling the buffer there is nothing on it yet.
             fill_v := fill_of(store_wptr_s, rptr_v);
 
+            -- A writer that laps the reader corrupts the stream
+            -- without anything downstream being able to tell, so
+            -- the fill is checked rather than left to wrap.
+            assert fill_v <= store_depth_c - 2 * byte_count_c
+              report "transceiver_cluster/simulation: lane "
+              & integer'image(lane_idx) & " overran its elastic"
+              & " buffer: its partner is sending faster than the"
+              & " clock-correction sequence lets it drop"
+              severity failure;
+
             if not primed_v then
               rx_m_o(lane_idx).valid <= '0';
               primed_v := fill_v >= store_target_c;
@@ -846,20 +856,29 @@ begin
                 corrected_v := '1';
               end loop;
 
-              -- Too empty: the sequence goes in rather than out, and
-              -- the word the fabric gets this cycle is the one the
-              -- buffer made up.
-              if fill_v < byte_count_c and insert_v = 0 then
-                assert cfg_c.sync.clock_correction_byte_count /= 0
-                  report "transceiver_cluster/simulation: lane "
-                  & integer'image(lane_idx) & " ran its elastic buffer"
-                  & " empty and has no clock-correction sequence to"
-                  & " insert, so the rate difference cannot be absorbed"
-                  severity failure;
-
+              -- Running dry: the sequence at the read pointer is
+              -- sent twice, which is the only thing the buffer may
+              -- add. It cannot invent one in the middle of a frame
+              -- any more than a real quad can: what it adds is a
+              -- copy of what is already there, so the addition only
+              -- ever lands where the protocol put a sequence.
+              if fill_v < store_target_c and insert_v = 0
+                and fill_v >= cfg_c.sync.clock_correction_byte_count
+                and at_clock_correction(rptr_v) then
                 insert_v := cfg_c.sync.clock_correction_byte_count;
                 insert_phase_v := 0;
               end if;
+
+              -- Nothing left and nothing to repeat. Either the
+              -- partner is running away from this lane faster than
+              -- its rate-matching sequence arrives, or it has no
+              -- such sequence at all.
+              assert fill_v >= byte_count_c or insert_v /= 0
+                report "transceiver_cluster/simulation: lane "
+                & integer'image(lane_idx) & " ran its elastic buffer"
+                & " empty with no clock-correction sequence to"
+                & " repeat, so the rate difference cannot be absorbed"
+                severity failure;
 
               for i in 0 to byte_count_c-1 loop
                 if insert_v /= 0 then
