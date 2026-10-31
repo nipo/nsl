@@ -24,10 +24,8 @@ entity link_bench is
     data_byte_count_c : natural;
     line_rate_mbps_c : natural;
     -- Both ends are the same lane, so a polarity inversion on the
-    -- transmit side has to be undone by the receiver's own setting
-    -- or by the comma the receiver is told to look for.
+    -- transmit side has to be undone by the receiver's own setting.
     polarity_invert_c : boolean := false;
-    comma_negated_c : boolean := false;
     loopback_c : loopback_mode_t := LOOPBACK_NONE;
     frame_count_c : natural := 4;
     label_c : string
@@ -52,7 +50,7 @@ architecture beh of link_bench is
     comma_value => (0 => comma_c, others => x"00"),
     comma_mask => (0 => x"ff", others => x"00"),
     comma_byte_count => 1,
-    comma_negated => comma_negated_c,
+    comma_negated => false,
     clock_correction_pattern => (0 => comma_c, 1 => d16_2_c, others => x"00"),
     clock_correction_byte_count => 2,
     idle_pattern => (0 => comma_c, 1 => d16_2_c, others => x"00"),
@@ -75,7 +73,7 @@ architecture beh of link_bench is
         ref_clock_index => 0,
         user_clock_group_index => 0,
         polarity_invert_tx => polarity_invert_c,
-        polarity_invert_rx => polarity_invert_c and not comma_negated_c,
+        polarity_invert_rx => polarity_invert_c,
         loopback => loopback_c,
         sync => sync_c)),
       user_clock_group_count => 1

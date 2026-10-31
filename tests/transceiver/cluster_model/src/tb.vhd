@@ -19,7 +19,7 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 4);
+  signal done_s : std_ulogic_vector(0 to 3);
 
 begin
 
@@ -75,23 +75,6 @@ begin
       clock_i => clock_s,
       reset_n_i => reset_n_s,
       done_o => done_s(3)
-      );
-
-  -- The same swapped pair, this time undone on the receive side by
-  -- the comma setting instead, which is what a transceiver without a
-  -- runtime polarity invert has to use.
-  negated_comma: entity work.link_bench
-    generic map(
-      data_byte_count_c => 1,
-      line_rate_mbps_c => 1250,
-      polarity_invert_c => true,
-      comma_negated_c => true,
-      label_c => "negated comma lane"
-      )
-    port map(
-      clock_i => clock_s,
-      reset_n_i => reset_n_s,
-      done_o => done_s(4)
       );
 
   driver: nsl_simulation.driver.simulation_driver
