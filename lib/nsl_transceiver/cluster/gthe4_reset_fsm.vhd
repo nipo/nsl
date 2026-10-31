@@ -58,8 +58,8 @@ architecture beh of gthe4_reset_fsm is
     state     : reset_state_t;
     gth_rst   : std_ulogic;
     progdiv_rst : std_ulogic;
-    timeout   : natural;
-    pwr_timer : natural;
+    timeout   : natural range 0 to timeout_delay_c;
+    pwr_timer : natural range 0 to gt_pwr_delay_c;
     ready     : std_ulogic;
   end record;
 
@@ -90,7 +90,14 @@ begin
 
   begin
     rin         <= r;
-    rin.timeout <= r.timeout - 1;
+
+    -- The watchdog runs in every state, and the state process puts
+    -- the sequence back to the start when it reads zero. It has to
+    -- stop there rather than run past it: the counter starts at zero
+    -- out of reset, before any state has had the chance to load it.
+    if r.timeout /= 0 then
+      rin.timeout <= r.timeout - 1;
+    end if;
 
     case r.state is
       when ST_RESET =>
