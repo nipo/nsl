@@ -46,7 +46,8 @@ begin
 
     type align_state_t is (ST_RESET, ST_FLUSH, ST_WAIT_VALID, ST_STABLE);
 
-    type align_regs_t is record
+    type align_regs_t is
+    record
       state       : align_state_t;
       count       : integer range 0 to stabilization_count_c - 1;
       lost_count  : integer range 0 to lost_count_c - 1;

@@ -15,13 +15,13 @@ entity sgmii_driver is
     );
   port (
     reset_n_i : in std_ulogic;
-    clock_i   : in std_ulogic;
+    clock_i : in std_ulogic;
 
     sgmii_o : out sgmii_m2p_t;
     sgmii_i : in  sgmii_p2m_t;
 
     link_speed_i : in  link_speed_t := LINK_SPEED_1000;
-    link_up_o    : out std_ulogic;
+    link_up_o : out std_ulogic;
 
     rx_o : out nsl_bnoc.committed.committed_req;
     rx_i : in  nsl_bnoc.committed.committed_ack;
@@ -36,23 +36,23 @@ architecture beh of sgmii_driver is
 
   -- Internal signals
   signal s_rx_config_valid : std_ulogic;
-  signal s_rx_config       : config_reg_t;
-  signal s_rx_idle_match   : std_ulogic;
-  signal s_tx_send_config  : std_ulogic;
-  signal s_tx_config       : config_reg_t;
-  signal s_link_up         : std_ulogic;
+  signal s_rx_config : config_reg_t;
+  signal s_rx_idle_match : std_ulogic;
+  signal s_tx_send_config : std_ulogic;
+  signal s_tx_config : config_reg_t;
+  signal s_link_up : std_ulogic;
 
-  signal s_tx_flit           : mii_flit_t;
-  signal s_tx_flit_ready     : std_ulogic;
-  signal s_rx_flit           : mii_flit_t;
+  signal s_tx_flit : mii_flit_t;
+  signal s_tx_flit_ready : std_ulogic;
+  signal s_rx_flit : mii_flit_t;
   signal s_rx_valid_2_commit : std_ulogic;
 
   signal s_autoneg_restart : std_ulogic;
 
   signal s_symbol_expected : std_ulogic;
-  signal s_valid_symbol    : std_ulogic;
+  signal s_valid_symbol : std_ulogic;
 
-  signal s_align_rst   : std_ulogic;
+  signal s_align_rst : std_ulogic;
 
   signal s_loss_connect_rst_n : std_ulogic;
 
@@ -60,7 +60,7 @@ begin  -- architecture beh
 
   -- Signal assignments
   -- Outputs
-  sgmii_o.align_rst    <= s_align_rst;
+  sgmii_o.align_rst <= s_align_rst;
   sgmii_o.valid_symbol <= s_valid_symbol;
 
   -- Valid symbol
@@ -77,7 +77,7 @@ begin  -- architecture beh
     if reset_n_i = '0' then
       s_align_rst <= '1';
     end if;
-    
+
     if rising_edge(clock_i) then     -- rising clock edge
       if (sgmii_i.align_ready = '1') and (s_valid_symbol = '0') then
         s_align_rst <= '1';
@@ -91,24 +91,24 @@ begin  -- architecture beh
   -- RX side --------------------------------------------------------------------------------
   sgmii_pcs_rx_1 : work.sgmii.sgmii_pcs_rx
     port map (
-      clock_i           => clock_i,
-      reset_n_i         => reset_n_i,
-      clk_cor_i         => sgmii_i.clk_cor,
-      symbol_i          => sgmii_i.symbol,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      clk_cor_i => sgmii_i.clk_cor,
+      symbol_i => sgmii_i.symbol,
       symbol_expected_o => s_symbol_expected,
-      flit_o            => s_rx_flit,
-      config_valid_o    => s_rx_config_valid,
-      config_o          => s_rx_config,
-      valid_o           => s_rx_valid_2_commit,
-      idle_match_o      => s_rx_idle_match
+      flit_o => s_rx_flit,
+      config_valid_o => s_rx_config_valid,
+      config_o => s_rx_config,
+      valid_o => s_rx_valid_2_commit,
+      idle_match_o => s_rx_idle_match
       );
 
   rx_to_committed : work.flit.mii_flit_to_committed
     port map(
-      clock_i   => clock_i,
+      clock_i => clock_i,
       reset_n_i => reset_n_i,
 
-      flit_i  => s_rx_flit,
+      flit_i => s_rx_flit,
       valid_i => s_rx_valid_2_commit,
 
       committed_o => rx_o,
@@ -119,15 +119,15 @@ begin  -- architecture beh
 
   sgmii_pcs_tx_1 : work.sgmii.sgmii_pcs_tx
     port map (
-      clock_i       => clock_i,
-      reset_n_i     => reset_n_i,
-      flit_i        => s_tx_flit,
-      flit_ready_o  => s_tx_flit_ready,
-      symbol_o      => sgmii_o.symbol,
-      disparity_o   => sgmii_o.tx_disparity,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      flit_i => s_tx_flit,
+      flit_ready_o => s_tx_flit_ready,
+      symbol_o => sgmii_o.symbol,
+      disparity_o => sgmii_o.tx_disparity,
       send_config_i => s_tx_send_config,
-      config_i      => s_tx_config,
-      link_up_i     => s_link_up
+      config_i => s_tx_config,
+      link_up_i => s_link_up
       );
 
   tx_from_committed : work.flit.mii_flit_from_committed
@@ -137,13 +137,13 @@ begin  -- architecture beh
                   -- Carrier Extend
       )
     port map(
-      clock_i   => clock_i,
+      clock_i => clock_i,
       reset_n_i => reset_n_i,
 
       committed_i => tx_i,
       committed_o => tx_o,
 
-      flit_o  => s_tx_flit,
+      flit_o => s_tx_flit,
       ready_i => s_tx_flit_ready
       );
 
@@ -153,16 +153,16 @@ begin  -- architecture beh
       link_timer_cycles_c => link_timer_cycles(sgmii_mode_c, link_timer_c)
       )
     port map (
-      clock_i           => clock_i,
-      reset_n_i         => reset_n_i,
-      config_i          => config_reg(sgmii_mode_c),
-      restart_i         => s_autoneg_restart,
+      clock_i => clock_i,
+      reset_n_i => reset_n_i,
+      config_i => config_reg(sgmii_mode_c),
+      restart_i => s_autoneg_restart,
       rx_config_valid_i => s_rx_config_valid,
-      rx_config_i       => s_rx_config,
-      rx_idle_i         => s_rx_idle_match,
-      send_config_o     => s_tx_send_config,
-      tx_config_o       => s_tx_config,
-      link_up_o         => s_link_up
+      rx_config_i => s_rx_config,
+      rx_idle_i => s_rx_idle_match,
+      send_config_o => s_tx_send_config,
+      tx_config_o => s_tx_config,
+      link_up_o => s_link_up
       );
 
 end architecture beh;
