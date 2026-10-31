@@ -17,8 +17,8 @@ entity sgmii_driver is
     reset_n_i : in std_ulogic;
     clock_i   : in std_ulogic;
 
-    sgmii_o : out sgmii_m2p;
-    sgmii_i : in  sgmii_p2m;
+    sgmii_o : out sgmii_m2p_t;
+    sgmii_i : in  sgmii_p2m_t;
 
     link_speed_i : in  link_speed_t := LINK_SPEED_1000;
     link_up_o    : out std_ulogic;
@@ -94,7 +94,7 @@ begin  -- architecture beh
       clock_i           => clock_i,
       reset_n_i         => reset_n_i,
       clk_cor_i         => sgmii_i.clk_cor,
-      symbol_i          => sgmii_i.data_p2m_symbol,
+      symbol_i          => sgmii_i.symbol,
       symbol_expected_o => s_symbol_expected,
       flit_o            => s_rx_flit,
       config_valid_o    => s_rx_config_valid,
@@ -123,7 +123,7 @@ begin  -- architecture beh
       reset_n_i     => reset_n_i,
       flit_i        => s_tx_flit,
       flit_ready_o  => s_tx_flit_ready,
-      symbol_o      => sgmii_o.data_m2p_symbol,
+      symbol_o      => sgmii_o.symbol,
       disparity_o   => sgmii_o.tx_disparity,
       send_config_i => s_tx_send_config,
       config_i      => s_tx_config,

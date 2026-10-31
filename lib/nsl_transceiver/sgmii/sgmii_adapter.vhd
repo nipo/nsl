@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 library nsl_transceiver, nsl_mii;
 use nsl_mii.sgmii.all;
 
--- Translates between the SGMII PCS symbol interface (sgmii_m2p / sgmii_p2m)
+-- Translates between the SGMII PCS symbol interface (sgmii_m2p_t / sgmii_p2m_t)
 -- and the lanes of a transceiver_cluster (8B10B, data_byte_count = 1).
 --
 -- One adapter serves any number of lanes: lane i of every port is wired to
@@ -47,8 +47,8 @@ begin
   begin
 
     -- Cluster RX lane -> SGMII ----------------------------------------------------------
-    sgmii_o(sgmii_o_idx_c).data_p2m_symbol.data    <= rx_m_i(rx_m_idx_c).data(0);
-    sgmii_o(sgmii_o_idx_c).data_p2m_symbol.control <= rx_m_i(rx_m_idx_c).aux(0)(0);
+    sgmii_o(sgmii_o_idx_c).symbol.data    <= rx_m_i(rx_m_idx_c).data(0);
+    sgmii_o(sgmii_o_idx_c).symbol.control <= rx_m_i(rx_m_idx_c).aux(0)(0);
     sgmii_o(sgmii_o_idx_c).code_err                <= rx_m_i(rx_m_idx_c).aux(0)(1);
     sgmii_o(sgmii_o_idx_c).disparity_err           <= rx_m_i(rx_m_idx_c).aux(0)(2);
     sgmii_o(sgmii_o_idx_c).align_ready             <= rx_m_i(rx_m_idx_c).pcs_aligned;
@@ -56,12 +56,12 @@ begin
 
     -- SGMII -> cluster TX lane ----------------------------------------------------------
     tx_m_o(tx_m_idx_c).data <= (
-      0      => sgmii_i(sgmii_i_idx_c).data_m2p_symbol.data,
+      0      => sgmii_i(sgmii_i_idx_c).symbol.data,
       others => (others => '-')
       );
 
     tx_m_o(tx_m_idx_c).aux <= (
-      0 => (0 => sgmii_i(sgmii_i_idx_c).data_m2p_symbol.control,
+      0 => (0 => sgmii_i(sgmii_i_idx_c).symbol.control,
             1 => '1',
             2 => sgmii_i(sgmii_i_idx_c).tx_disparity,
             others => '0'),
