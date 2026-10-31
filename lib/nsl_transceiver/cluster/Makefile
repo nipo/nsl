@@ -24,6 +24,14 @@ vhdl-sources += gthe4_cpll_reset_fsm.vhd
 vhdl-sources += gthe4_reset_fsm.vhd
 deps += nsl_logic.gearbox
 
+# Behavioural backend. It reaches no primitive at all: it models a
+# transceiver quad, so a testbench can exercise the portable
+# contract without a vendor simulation library.
+ifeq ($(hwdep),simulation)
+vhdl-sources += transceiver_cluster_simulation.vhd
+deps += nsl_line_coding.ibm_8b10b
+endif
+
 ifeq ($(hwdep),gowin)
 ifneq ($(filter GW5%,$(target_part)),)
 vhdl-sources += transceiver_cluster_gw5a.vhd
