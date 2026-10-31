@@ -605,6 +605,9 @@ projects:
   - name: mii_ipg
     path: mii_ipg
     tags: [ghdl, simulation]
+  - name: mii_sgmii_channel
+    path: mii/sgmii_channel
+    tags: [ghdl, simulation, slow]
   - name: manchester_recovery
     path: manchester/recovery
     tags: [ghdl, simulation]
