@@ -22,8 +22,8 @@ architecture arch of tb is
   signal done_s                                 : std_ulogic_vector(1 downto 0);
   signal committed_i_s1, committed_o_s1         : nsl_bnoc.committed.committed_bus;
   signal committed_i_s2, committed_o_s2         : nsl_bnoc.committed.committed_bus;
-  signal sgmii_m2p1, sgmii_m2p2                 : nsl_mii.sgmii.sgmii_m2p;
-  signal sgmii_p2m1, sgmii_p2m2                 : nsl_mii.sgmii.sgmii_p2m;
+  signal sgmii_m2p1, sgmii_m2p2                 : nsl_mii.sgmii.sgmii_m2p_t;
+  signal sgmii_p2m1, sgmii_p2m2                 : nsl_mii.sgmii.sgmii_p2m_t;
   signal data_diff_tx_1                         : nsl_io.diff.diff_pair;
   signal data_diff_rx_1                         : nsl_io.diff.diff_pair;
   signal data_diff_tx_2                         : nsl_io.diff.diff_pair;
