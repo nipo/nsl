@@ -26,18 +26,24 @@ deps += nsl_clocking.distribution
 deps += nsl_clocking.async
 deps += nsl_synthesis.assertion
 
+# The two cluster files below reach their channel primitive through
+# "library unisim", which Vivado resolves on its own. Every other
+# Xilinx primitive in NSL is declared locally with a BOX_TYPE
+# attribute instead, so no lib/unisim preparation is needed; these
+# two files are the exception and still have to be converted.
+
 ifneq ($(filter zynqusp%,$(family)),)
-vhdl-sources += transceiver_cluster_gthe4.vhd
 vhdl-sources += transceiver_config_gthe4.vhd
 vhdl-sources += gthe4_cpll_reset_fsm.vhd
 vhdl-sources += gthe4_reset_fsm.vhd
+vhdl-sources += transceiver_cluster_gthe4.vhd
 endif
 
 ifneq ($(filter artix7%,$(family)),)
-vhdl-sources += transceiver_cluster_gtpe2.vhd
 vhdl-sources += transceiver_config_gtpe2.vhd
 vhdl-sources += gtpe2_pll_reset_fsm.vhd
 vhdl-sources += gtpe2_reset_fsm.vhd
+vhdl-sources += transceiver_cluster_gtpe2.vhd
 deps += nsl_clocking.pll
 endif
 
