@@ -43,10 +43,10 @@ entity transceiver_cluster is
     pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
 
     -- APB clock for the user-facing master. Sourced internally from
-    -- GTR12_QUADB's FABRIC_CM_LIFE_CLK_O loopback (the same clock
-    -- the wizard uses for AHB / UPAR). The APB master and any
-    -- companion logic on the configuration bus must clock on this
-    -- output.
+    -- the "stableclk" reference clock, which runs independently of
+    -- the transceiver and is therefore available while the lanes are
+    -- held in reset. The APB master and any companion logic on the
+    -- configuration bus must clock on this output.
     apb_clock_o   : out std_ulogic;
     apb_reset_n_i : in  std_ulogic;
     apb_m_i       : in  nsl_amba.apb.master_t;
@@ -1365,6 +1365,34 @@ begin
 
   end generate;
 
-  -- FIXME: do something with the APB input bus, maybe nothing for now
+  -- The only reconfiguration path of a GTPE2 channel is its DRP
+  -- port, and that port is owned by the reset calibration logic, so
+  -- there is nothing left here to expose as registers. The bus is
+  -- still answered so a master shared with other slaves does not
+  -- stall on this one; every access takes an error response.
+  apb_clock_o <= s_stableclk;
+
+  csr: nsl_amba.apb.apb_slave
+    generic map(
+      config_c => nsl_transceiver.cluster.csr_config_c
+      )
+    port map(
+      clock_i => s_stableclk,
+      reset_n_i => apb_reset_n_i,
+
+      apb_i => apb_m_i,
+      apb_o => apb_s_o,
+
+      address_o => open,
+
+      w_data_o => open,
+      w_mask_o => open,
+      w_error_i => '1',
+      w_valid_o => open,
+
+      r_data_i => (others => x"00"),
+      r_ready_o => open,
+      r_error_i => '1'
+      );
 
 end architecture;
