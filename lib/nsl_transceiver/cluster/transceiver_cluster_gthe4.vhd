@@ -54,6 +54,25 @@ end entity;
 
 architecture gthe4 of transceiver_cluster is
 
+  -- Every lane is driven from the CPLL set computed for lane 0, so a
+  -- cluster whose enabled lanes disagree on the line rate would be
+  -- programmed for the wrong rate on all but one of them.
+  function lane_rates_agree return boolean is
+    variable rate : natural := 0;
+  begin
+    for lane_idx in 0 to config_c.lane_count-1 loop
+      if config_c.lanes(lane_idx).enabled then
+        if rate /= 0
+          and config_c.lanes(lane_idx).line_rate_mbps /= rate then
+          return false;
+        end if;
+        rate := config_c.lanes(lane_idx).line_rate_mbps;
+      end if;
+    end loop;
+
+    return true;
+  end function;
+
   -- Signal declarations --------------------------------------------------------------
 
   -- Clock signals
@@ -70,6 +89,9 @@ architecture gthe4 of transceiver_cluster is
   constant cluster_valid_msg_c   : string := "transceiver_cluster/gthe4: configuration failed target-agnostic consistency check";
   constant encoding_valid_msg_c  : string := "transceiver_cluster/gthe4: lane encoding not supported by this backend yet";
   constant data_byte_count_msg_c : string := "transceiver_cluster/gthe4: lane data_byte_count must be between >= 1 and <= 4";
+  constant lane_rate_msg_c       : string := "transceiver_cluster/gthe4: every enabled lane must ask for the same line rate";
+  constant pll_ref_clk_msg_c     : string := "transceiver_cluster/gthe4: plls(0).ref_clock_mhz feeds the CPLL multiplier and divider search and must not be zero";
+  constant stable_clk_msg_c      : string := "transceiver_cluster/gthe4: refclks(0).ref_clock_mhz carries the stable clock rate and must not be zero";
 
 begin
 
@@ -124,6 +146,45 @@ begin
     port map(
       unused_i => '0'
       );    
+
+  assert lane_rates_agree
+    report lane_rate_msg_c
+    severity failure;
+
+  lane_rate_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => lane_rate_msg_c,
+      condition_c => lane_rates_agree
+      )
+    port map(
+      unused_i => '0'
+      );
+
+  assert config_c.plls(0).ref_clock_mhz /= 0
+    report pll_ref_clk_msg_c
+    severity failure;
+
+  pll_ref_clk_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => pll_ref_clk_msg_c,
+      condition_c => config_c.plls(0).ref_clock_mhz /= 0
+      )
+    port map(
+      unused_i => '0'
+      );
+
+  assert stable_clk_ref_mhz_c /= 0
+    report stable_clk_msg_c
+    severity failure;
+
+  stable_clk_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => stable_clk_msg_c,
+      condition_c => stable_clk_ref_mhz_c /= 0
+      )
+    port map(
+      unused_i => '0'
+      );
 
   encoding_check : for lane_idx in 0 to config_c.lane_count-1 generate
     encoding_supported : if config_c.lanes(lane_idx).enabled generate
