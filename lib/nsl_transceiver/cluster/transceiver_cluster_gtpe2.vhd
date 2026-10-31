@@ -56,6 +56,54 @@ end entity;
 
 architecture gtpe2 of transceiver_cluster is
 
+  -- Line rate requested by the enabled lanes routed to pll_index. A
+  -- PLL is shared by every lane that selects it, so the lanes have to
+  -- agree; pll_rates_agree below reports when they do not.
+  function pll_line_rate_mbps(pll_index : natural) return natural is
+    variable rate : natural := 0;
+  begin
+    for lane_idx in 0 to config_c.lane_count-1 loop
+      if config_c.lanes(lane_idx).enabled
+        and config_c.lanes(lane_idx).pll_index = pll_index then
+        rate := config_c.lanes(lane_idx).line_rate_mbps;
+      end if;
+    end loop;
+
+    return rate;
+  end function;
+
+  function pll_rates_agree(pll_index : natural) return boolean is
+    variable rate : natural := 0;
+  begin
+    for lane_idx in 0 to config_c.lane_count-1 loop
+      if config_c.lanes(lane_idx).enabled
+        and config_c.lanes(lane_idx).pll_index = pll_index then
+        if rate /= 0
+          and config_c.lanes(lane_idx).line_rate_mbps /= rate then
+          return false;
+        end if;
+        rate := config_c.lanes(lane_idx).line_rate_mbps;
+      end if;
+    end loop;
+
+    return true;
+  end function;
+
+  -- Multiplier and divider set programmed into pll_index. A PLL left
+  -- disabled carries a zero reference clock, which pll_mult_div_assign
+  -- would divide by, so the unused case answers with the smallest
+  -- in-range set instead of being computed.
+  function pll_mult_div_for(pll_index : natural) return pll_mult_div_t is
+  begin
+    if not config_c.plls(pll_index).enabled then
+      return (M => 1, N2 => 1, N1 => 4, D => 1);
+    end if;
+
+    return pll_mult_div_assign(pll_line_rate_mbps(pll_index),
+                               config_c.plls(pll_index).target_vco_mhz,
+                               config_c.plls(pll_index).ref_clock_mhz);
+  end function;
+
   -- Signal declarations --------------------------------------------------------------
   -- Transceiver signals
   signal s_pll0_out       : std_logic;
@@ -71,8 +119,8 @@ architecture gtpe2 of transceiver_cluster is
                                                     -- to assign
   signal s_stableclk  : std_ulogic;
 
-  constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
-  constant pll1_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(1).line_rate_mbps, config_c.plls(1).target_vco_mhz, config_c.plls(1).ref_clock_mhz);
+  constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_for(0);
+  constant pll1_mult_div_config_c : pll_mult_div_t := pll_mult_div_for(1);
   constant stable_clk_ref_mhz_c   : natural        := config_c.refclks(0).ref_clock_mhz;
 
   -- Error message constants
@@ -82,6 +130,7 @@ architecture gtpe2 of transceiver_cluster is
   constant cluster_valid_msg_c   : string := "transceiver_cluster/gtpe2: configuration failed target-agnostic consistency check";
   constant encoding_valid_msg_c  : string := "transceiver_cluster/gtpe2: lane encoding not supported by this backend yet";
   constant data_byte_count_msg_c : string := "transceiver_cluster/gtpe2: lane data_byte_count must be between >= 1 and <= 4";
+  constant pll_rate_msg_c        : string := "transceiver_cluster/gtpe2: every enabled lane sharing a PLL must ask for the same line rate";
 
 begin
 
@@ -135,7 +184,20 @@ begin
       )
     port map(
       unused_i => '0'
-      );    
+      );
+
+  assert pll_rates_agree(0) and pll_rates_agree(1)
+    report pll_rate_msg_c
+    severity failure;
+
+  pll_rate_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => pll_rate_msg_c,
+      condition_c => pll_rates_agree(0) and pll_rates_agree(1)
+      )
+    port map(
+      unused_i => '0'
+      );
 
   encoding_check : for lane_idx in 0 to config_c.lane_count-1 generate
     encoding_supported : if config_c.lanes(lane_idx).enabled generate
@@ -378,7 +440,7 @@ begin
     signal s_rx_clk_cr_stdl : std_logic_vector(1 downto 0);
 
     constant loopback_config_c     : loopback_config_t := loopback_configure(config_c.lanes(lane_idx).loopback);
-    constant pll_mult_div_config_c : pll_mult_div_t    := pll0_mult_div_config_c when config_c.lanes(lane_idx).pll_index = 0 else pll1_mult_div_config_c;
+    constant pll_mult_div_config_c : pll_mult_div_t    := pll_mult_div_for(config_c.lanes(lane_idx).pll_index);
 
     constant data_byte_count_c      : natural      := config_c.lanes(lane_idx).data_byte_count;
     constant data_width_config_c    : data_width_t := determine_data_width(data_byte_count_c);
