@@ -40,6 +40,10 @@ architecture beh of sgmii_serdes_backend is
 
 begin  -- architecture beh
 
+  -- This backend recovers the symbol stream with an IO delay line and
+  -- a bit slip, not an elastic buffer, so it never inserts or skips.
+  sgmii_o.clk_cor <= '0';
+
   -- Component instatiation
   -- RX side --------------------------------------------------------------------------------
 
