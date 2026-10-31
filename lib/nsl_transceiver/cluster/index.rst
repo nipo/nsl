@@ -58,14 +58,14 @@ The layering for the transceiver cluster would be:
   file (``transceiver_cluster_<vendor>.vhd`` or a sibling
   ``cluster_<vendor>_body.vhd``). It implements the vendor
   functions, typically by calling into a target-family constants
-  package under ``nsl_hwdep``. VHDL allows exactly one package
+  package under ``nsl_hwconfig``. VHDL allows exactly one package
   body per package; the Makefile guarantees only one vendor body
   file is compiled.
 
 * Raw primitive constants live under
-  ``lib/nsl_hwdep/<vendor>_xcvr_config/`` (one file per chip
+  ``lib/nsl_hwconfig/<vendor>_xcvr_config/`` (one file per chip
   family if needed, mirroring how
-  ``lib/nsl_hwdep/xc7_config/`` is organised). The vendor
+  ``lib/nsl_hwconfig/xc7_config/`` is organised). The vendor
   ``cluster`` body imports them.
 
 * The portable ``is_valid`` function in the package body uses the

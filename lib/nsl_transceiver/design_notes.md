@@ -138,7 +138,7 @@ When a backend eventually needs to express primitive constraints
 pattern to follow is the one used by
 `lib/nsl_clocking/pll/pll_config_series67.pkg.vhd` (declaration) and
 `pll_config_series7.vhd` (backend body), with raw constants under
-`lib/nsl_hwdep/`. See `cluster/index.rst` for the full description.
+`lib/nsl_hwconfig/`. See `cluster/index.rst` for the full description.
 That layering is not in place yet, on purpose — there is no
 vendor-specific content in the package today.
 
