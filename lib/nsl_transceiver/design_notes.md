@@ -1,6 +1,6 @@
 # nsl_transceiver — intent and state
 
-State snapshot: as of "nsl_transceiver/cluster: Calculate the VCO frequency automatically, use user input as a guess".
+State snapshot: as of "transceiver/cluster: Present the lane receive clock on the GT backends".
 
 ## Purpose
 
@@ -206,20 +206,48 @@ control inputs per lane — plus `c2i_clock`, an adapter-driven per-lane
 fabric clock needed by encodings where the protocol IP owns the
 lane's interface clock.
 
+The per-byte `aux_t` layout is normative per encoding, documented in
+`lane.pkg.vhd`: for `ENCODING_8B10B`, TX bit 0 is the K flag, bits 1
+and 2 force a running disparity and give its value, and RX bits 0 to
+3 are K flag, invalid code group, wrong running disparity and the
+disparity the group was decoded with. `control` and `status` carry
+only what no portable field covers, which is why the K flag lives in
+`aux` even on the backends whose primitive takes it on a dedicated
+input: GW5A spends its entire lane control word on the primitive and
+has no room to put it there.
+
 ### `cluster`
 
-`config_t` holds lane count, PLL count, user clock group count, a
-`pll_config_vector` and a `lane.config_vector`. `is_valid()` performs
-target-agnostic checks only (each enabled lane refers to an enabled,
-in-range PLL and an in-range user clock group); refclk index bounds
-are checked in the vendor architecture, since the refclk count is
-carried by the `ref_clock_c` generic rather than by `config_t`.
+`config_t` holds lane count, PLL count, refclk count, user clock
+group count, a `pll_config_vector`, a `refclk_config_vector` and a
+`lane.config_vector`.
+
+The refclk entries describe the board: each gives the rate of the
+clock arriving on one `ref_clock_i` port, named by its position in
+the `ref_clock_c` binding. A clock a PLL multiplies therefore has its
+rate stated twice, once there and once in `pll_config_t`, and
+`is_valid()` rejects a configuration where the two disagree or where
+an enabled PLL has no rate. Clocks no PLL multiplies — the
+housekeeping clock a backend's reset sequencer counts on, typically —
+are described only in the refclk entries, and a backend asks for one
+by target clock identifier through `refclk_port()`, never by
+position.
+
+`is_valid()` is otherwise target-agnostic (each enabled lane refers
+to an enabled, in-range PLL and an in-range user clock group).
+Whether a refclk port exists at all is checked in the vendor
+architecture, since the port count is carried by the `ref_clock_c`
+generic rather than by `config_t`.
 
 The component exposes per-lane differential pads, per-lane TX/RX
 fabric clocks, the four lane record vectors, per-lane PMA reset, and
 an APB slave port for configuration. `apb_clock_o` is an *output*:
-the configuration bus clock comes from inside the primitive, so the
-user-side APB master must clock on it.
+the configuration bus clock comes from inside the cluster, so the
+user-side APB master must clock on it. A backend whose primitive has
+no configuration path still drives that clock and still answers the
+bus with an error response, so a master shared with other slaves does
+not stall on it. The bus shape is published as
+`cluster.csr_config_c`.
 
 ## GW5A backend
 
@@ -286,9 +314,9 @@ This wraps the `GTPE2_COMMON` and `GTPE2_CHANNEL` primitives. One
 `GTPE2_COMMON` primitive is instantiated per cluster whereas one channel
 corresponds to one lane. Therefore, the cluster configuration instantiates
 one `GTPE2_CHANNEL` per lane. The common block contains the PLL's used by one
-or more channels (see UG482). 
+or more channels (see UG482).
 
-Various features have been implemented thus far although in a somewhat 
+Various features have been implemented thus far although in a somewhat
 limited use-case for now. Features include:
 
 * Using any reference clock pin (east, west, etc.)
@@ -297,40 +325,40 @@ limited use-case for now. Features include:
 * Polarity inversion
 * Loopback configuration (any mode)
 * Integrated reset state machines (for `GTPE2_COMMON` and `GTPE2_CHANNEL`)
-* Configuration-based PLL0/1 routing from `GTPE2_COMMON` to the corresponding 
+* Configuration-based PLL0/1 routing from `GTPE2_COMMON` to the corresponding
   lane (one or more lanes can use the same PLL output)
-* Automatic resolution of PLL/MMCM parameters given the user-specified reference 
+* Automatic resolution of PLL/MMCM parameters given the user-specified reference
   clock frequency, PLL frequency, and line rate
-* Variable data width on user-end (automatic placement of gearboxes and MMCM 
+* Variable data width on user-end (automatic placement of gearboxes and MMCM
   depending on the data width)
 * Automatic alignment management
 
 Some features remain to be implemented:
 
 * For now all lanes share the same clocking scheme. This can be extended to ensure that
-  each lane manages its own rate for the case where one lane may need to run at a 
-  different speed than the other. 
+  each lane manages its own rate for the case where one lane may need to run at a
+  different speed than the other.
 * For now the alignment requires the protocol to indicate to the cluster when the incoming
   data is valid. This could be improved by passing the alignment words as a configuration
-  so that no sideband signals are required for alignment. 
+  so that no sideband signals are required for alignment.
 * Other encoding schemes such as 64B/66B (supported natively by the GTP transceiver)
 * APB to DRP bridge
 * More flexible clocking scheme. Currently assumptions are made regarding the clock rate.
   The clock rate is automatically calculated based on user-side data width and GTP
-  interface data width. No RX clock is provided since the elastic buffer inside the GTP
-  transceiver crosses the recovered clock domain for the user. `TXOUTCLK2` is therefore the
-  only clock currently being used. Future implementations may desire to separate the RX path
-  from the TX path. 
+  interface data width. The elastic buffer inside the GTP transceiver crosses the recovered
+  clock domain for the user, so `TXOUTCLK2` is the only clock currently being used and both
+  lane clock outputs present it. Future implementations may desire to separate the RX path
+  from the TX path, in which case the two outputs become distinct.
 
-The current implementation has been tested on hardware along with the SGMII adapter and driver. 
-Various data rates work, along with various PLL configurations. 
+The current implementation has been tested on hardware along with the SGMII adapter and driver.
+Various data rates work, along with various PLL configurations.
 
 ## GTHE4 backend
 This wraps the `GTHE4_CHANNEL` primitives. One channel
 corresponds to one lane. Therefore, the cluster configuration instantiates
-one `GTHE4_CHANNEL` per lane. See UG576 for more information. 
+one `GTHE4_CHANNEL` per lane. See UG576 for more information.
 
-Various features have been implemented thus far although in a somewhat 
+Various features have been implemented thus far although in a somewhat
 limited use-case for now. Features include:
 
 * Using any reference clock pin (east, west, etc.)
@@ -341,31 +369,31 @@ limited use-case for now. Features include:
 * Integrated reset state machines (for `GTHE4_CHANNEL`)
 * The CPLL is used for each `GTHE4_CHANNEL` so that each lane "owns" its clocking
   scheme
-* Automatic resolution of PLL/MMCM parameters given the user-specified reference 
+* Automatic resolution of PLL/MMCM parameters given the user-specified reference
   clock frequency, PLL frequency, and line rate
-* Variable data width on user-end (automatic placement of gearboxes and MMCM 
+* Variable data width on user-end (automatic placement of gearboxes and MMCM
   depending on the data width)
 * Automatic alignment management
 
 Some features remain to be implemented:
 
 * For now all lanes share the same clocking scheme. This can be extended to ensure that
-  each lane manages its own rate for the case where one lane may need to run at a 
-  different speed than the other. 
+  each lane manages its own rate for the case where one lane may need to run at a
+  different speed than the other.
 * For now the alignment requires the protocol to indicate to the cluster when the incoming
   data is valid. This could be improved by passing the alignment words as a configuration
-  so that no sideband signals are required for alignment.   
+  so that no sideband signals are required for alignment.
 * Other encoding schemes such as 64B/66B (supported natively by the GTH transceiver)
 * APB to DRP bridge
 * More flexible clocking scheme. Currently assumptions are made regarding the clock rate.
   The clock rate is automatically calculated based on user-side data width and GTH
-  interface data width. No RX clock is provided since the elastic buffer inside the GTH
-  transceiver crosses the recovered clock domain for the user. `TXOUTCLK2` is therefore the
-  only clock currently being used. Future implementations may desire to separate the RX path
-  from the TX path. 
+  interface data width. The elastic buffer inside the GTH transceiver crosses the recovered
+  clock domain for the user, so `TXOUTCLK2` is the only clock currently being used and both
+  lane clock outputs present it. Future implementations may desire to separate the RX path
+  from the TX path, in which case the two outputs become distinct.
 
-The current implementation has been tested on hardware along with the SGMII adapter and driver. 
-Various data rates work, along with various PLL configurations. 
+The current implementation has been tested on hardware along with the SGMII adapter and driver.
+Various data rates work, along with various PLL configurations.
 
 ## Adapters
 
@@ -390,11 +418,16 @@ Functional gaps, roughly in dependency order:
 2. **`dynamic_reconfig.apb_arbiter` has no implementation.** Only the
    component declaration exists. It is needed as soon as more than one
    adapter in a cluster wants CSR access.
-3. **The GW5A backend has no coverage.** `tests/transceiver/cuff_adapter`
-   exercises `lane`, `cluster` and `cuff` under GHDL, but the backend
-   selects on `hwdep=gowin` and instantiates `GTR12_QUADB`, which has
-   no simulation model. Only a synthesis project under `example/` on a
-   real GW5A part can compile it.
+3. **No backend has simulation coverage.**
+   `tests/transceiver/cuff_adapter` exercises `lane`, `cluster` and
+   `cuff` under GHDL, but every backend instantiates a vendor
+   primitive the simulator cannot see: `GTR12_QUADB` has no
+   simulation model at all, and the two Xilinx backends reach their
+   channel through `library unisim`, whose sources this repository
+   only copies out of an ISE 14.7 installation. Compiling them needs
+   either a synthesis project under `example/` on a real part, or the
+   conversion to local `BOX_TYPE` component declarations that every
+   other NSL vendor primitive uses.
 4. **`cuff_adapter` ignores flow control.** It drives `tx.valid` to a
    constant `'1'`, never inspects `tx_s_i.ready`, and never inspects
    `rx_m_i.valid`. This matches CUFF's word-per-cycle contract only if
@@ -405,6 +438,15 @@ Functional gaps, roughly in dependency order:
    no primitive input, consistent with the finding that these are
    CSR-driven — but the backend currently accepts a config requesting
    them and silently does nothing.
-6. **Only one backend exists.** Agilex 5 and 7-series are unstarted;
-   the portable contract has therefore been validated against exactly
-   one primitive.
+6. **Agilex 5 is unstarted.** The portable contract has been
+   validated against GW5A, GTPE2 and GTHE4, which are all 8b/10b
+   quads of the same general shape. An Altera primitive is the next
+   real test of its portability.
+7. **The GT backends hardcode `sync_t`.** `analog_t` reaches no
+   primitive input, and none of the comma, clock-correction or idle
+   patterns a lane configures reach one either: `ALIGN_MCOMMA_VALUE`,
+   `ALIGN_PCOMMA_VALUE`, `CLK_COR_SEQ_1_*` and `CLK_COR_SEQ_2_*` are
+   written as literals, and the literals are the 1000BASE-X ordered
+   sets (K28.5 then D16.2 or D21.5). Any lane that is not SGMII will
+   align and rate-match on the wrong patterns while `is_valid()`
+   accepts its configuration.
