@@ -68,7 +68,14 @@ begin
       others => (others => '-')
       );
 
-    tx_m_o(tx_m_idx_c).valid <= sgmii_i(sgmii_i_idx_c).valid_symbol;
+    -- The PCS drives a symbol every cycle, so the lane always has
+    -- one to send. sgmii_m2p_t.valid_symbol is not that bit: it
+    -- scores the symbols coming back, and the serdes backend uses it
+    -- to tell its alignment loop whether the delay it settled on is
+    -- working. Gating transmission with it replaces the outgoing
+    -- frame with the lane's idle pattern whenever the receive side
+    -- momentarily dislikes what it got.
+    tx_m_o(tx_m_idx_c).valid <= '1';
     tx_m_o(tx_m_idx_c).control <= (others => '0');
     tx_m_o(tx_m_idx_c).control_h <= (others => '0');
     tx_m_o(tx_m_idx_c).pcs_reset_n <= '1';
