@@ -175,12 +175,6 @@ begin
 
     signal s_gth_tx_rst           : std_logic;
     signal s_gth_rx_rst           : std_logic;
-    signal s_drp_data_in          : std_logic_vector(15 downto 0);
-    signal s_drp_data_out         : std_logic_vector(15 downto 0);
-    signal s_drp_addr             : std_logic_vector(9 downto 0);
-    signal s_drp_en               : std_logic;
-    signal s_drp_wr               : std_logic;
-    signal s_drp_rdy              : std_logic;
     signal s_gt_power_good        : std_logic;
     signal s_gt_power_good_sync   : std_logic;
     signal s_rx_pma_rst_done      : std_logic;
@@ -1081,12 +1075,12 @@ begin
         CPLLRESET            => '0',
         DMONFIFORESET        => '0',
         DMONITORCLK          => '0',
-        DRPADDR              => s_drp_addr,
+        DRPADDR              => (others => '0'),
         DRPCLK               => s_stableclk,
-        DRPDI                => s_drp_data_in,
-        DRPEN                => s_drp_en,
+        DRPDI                => (others => '0'),
+        DRPEN                => '0',
         DRPRST               => '0',
-        DRPWE                => s_drp_wr,
+        DRPWE                => '0',
         EYESCANRESET         => '0',
         EYESCANTRIGGER       => '0',
         FREQOS               => '0',
@@ -1314,8 +1308,8 @@ begin
         CPLLREFCLKLOST       => open,
         DMONITOROUT          => open,
         DMONITOROUTCLK       => open,
-        DRPDO                => s_drp_data_out,
-        DRPRDY               => s_drp_rdy,
+        DRPDO                => open,
+        DRPRDY               => open,
         EYESCANDATAERROR     => open,
         GTHTXN               => lane_tx_o(lane_idx).n,
         GTHTXP               => lane_tx_o(lane_idx).p,
