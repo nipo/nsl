@@ -80,7 +80,12 @@ architecture gthe4 of transceiver_cluster is
   signal s_stableclk  : std_ulogic;
 
   constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_assign(config_c.lanes(0).line_rate_mbps, config_c.plls(0).target_vco_mhz, config_c.plls(0).ref_clock_mhz);
-  constant stable_clk_ref_mhz_c   : natural        := config_c.refclks(0).ref_clock_mhz;
+  -- The reset sequencer times itself on the housekeeping clock, so
+  -- the configuration has to describe that clock's rate.
+  constant stable_clk_ref_mhz_c   : natural
+    := nsl_transceiver.cluster.ref_clock_mhz(
+      config_c,
+      nsl_transceiver.cluster.refclk_port(ref_clock_c, clock_id("stableclk")));
 
   -- Error message constants
   constant lane_count_msg_c      : string := "transceiver_cluster/gthe4: GTHE4_CHANNEL primitive can have up to 4 lanes";
@@ -91,7 +96,7 @@ architecture gthe4 of transceiver_cluster is
   constant data_byte_count_msg_c : string := "transceiver_cluster/gthe4: lane data_byte_count must be between >= 1 and <= 4";
   constant lane_rate_msg_c       : string := "transceiver_cluster/gthe4: every enabled lane must ask for the same line rate";
   constant pll_ref_clk_msg_c     : string := "transceiver_cluster/gthe4: plls(0).ref_clock_mhz feeds the CPLL multiplier and divider search and must not be zero";
-  constant stable_clk_msg_c      : string := "transceiver_cluster/gthe4: refclks(0).ref_clock_mhz carries the stable clock rate and must not be zero";
+  constant stable_clk_msg_c      : string := "transceiver_cluster/gthe4: refclks must give the rate of the ""stableclk"" reference clock";
 
 begin
 
