@@ -747,8 +747,23 @@ projects:
   - name: tmds
     path: tmds
     tags: [ghdl, yavs, simulation]
+  - name: transceiver_cluster_model
+    path: transceiver/cluster_model
+    tags: [ghdl, yavs, simulation]
   - name: transceiver_cuff_adapter
     path: transceiver/cuff_adapter
+    tags: [ghdl, yavs, simulation]
+  - name: transceiver_gt_config
+    path: transceiver/gt_config
+    tags: [ghdl, yavs, simulation]
+  - name: transceiver_lane_utils
+    path: transceiver/lane_utils
+    tags: [ghdl, yavs, simulation]
+  - name: transceiver_reset_sequencer
+    path: transceiver/reset_sequencer
+    tags: [ghdl, yavs, simulation]
+  - name: transceiver_sgmii_adapter
+    path: transceiver/sgmii_adapter
     tags: [ghdl, yavs, simulation]
   - name: uart_8n1
     path: uart_8n1
