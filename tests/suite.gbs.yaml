@@ -743,6 +743,9 @@ projects:
   - name: transceiver_cuff_adapter
     path: transceiver/cuff_adapter
     tags: [ghdl, simulation]
+  - name: transceiver_cuff_link
+    path: transceiver/cuff_link
+    tags: [ghdl, simulation]
   - name: transceiver_gt_config
     path: transceiver/gt_config
     tags: [ghdl, simulation]
