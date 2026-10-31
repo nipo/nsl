@@ -31,6 +31,8 @@ begin
 
     signal s_decoded : nsl_line_coding.ibm_8b10b.data_t;
     signal s_encoder_in : nsl_line_coding.ibm_8b10b.data_t;
+    signal s_encoded : nsl_cuff.protocol.cuff_code_word_t;
+    signal s_delivering : std_ulogic;
 
   begin
 
@@ -74,8 +76,31 @@ begin
         valid_i => '1',
         data_i => s_encoder_in,
         valid_o => open,
-        data_o => rx_lane_o(lane_idx)
+        data_o => s_encoded
         );
+
+    -- A lane with nothing to deliver leaves its last word on the
+    -- bus, which is what a registered output does, and CUFF's word
+    -- interface has no way to carry the difference: there is no
+    -- valid bit on it. Handing the link layer that word again says
+    -- the line is alive. What a transceiver on a dead line really
+    -- hands up is not a code group at all, so that is what goes up
+    -- here, and the link layer leaves its data state on the code
+    -- error.
+    liveness: process(clock_i, reset_n_i) is
+    begin
+      if rising_edge(clock_i) then
+        s_delivering <= rx_m_i(lane_idx).pcs_aligned
+                        and rx_m_i(lane_idx).valid;
+      end if;
+
+      if reset_n_i = '0' then
+        s_delivering <= '0';
+      end if;
+    end process;
+
+    rx_lane_o(lane_idx) <= s_encoded when s_delivering = '1'
+                           else (others => '0');
 
     rx_s_o(lane_idx) <= (
       ready => '1',
