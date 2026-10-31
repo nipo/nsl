@@ -483,6 +483,34 @@ begin
       rx_m_o(lane_idx).data(i)                   <= s_rx_data_to_adapter(8*i + 7 downto 8*i);
     end generate;
 
+    -- The lane carries data_byte_count_c bytes per cycle. The rest of
+    -- the worst-case vectors has no meaning for this configuration.
+    unused_bytes : for i in data_byte_count_c
+      to nsl_transceiver.lane.max_data_byte_count_c - 1 generate
+      rx_m_o(lane_idx).data(i) <= (others => '-');
+      rx_m_o(lane_idx).aux(i)  <= (others => '-');
+    end generate;
+
+    -- The parallel datapath hands over one word every cycle and the
+    -- primitive's own buffers absorb the handoff, so neither
+    -- direction ever has to hold the other back.
+    rx_m_o(lane_idx).valid <= '1';
+    tx_s_o(lane_idx).ready <= '1';
+
+    -- Electrical idle detection is turned off (RXELECIDLEMODE), so
+    -- the primitive has nothing to report here.
+    rx_m_o(lane_idx).elec_idle <= '0';
+
+    -- The CDR lock output of a GTP channel is not dependable enough
+    -- to gate a receiver on, so report the receiver PMA having
+    -- finished its reset sequence instead: that is the point from
+    -- which the recovered clock and data are usable.
+    rx_m_o(lane_idx).pma_lock <= s_pma_rst_done_sync;
+
+    -- Everything this backend has to say fits in the named fields.
+    rx_m_o(lane_idx).status <= (others => '0');
+    tx_s_o(lane_idx).status <= (others => '0');
+
     -- PLL Mux ----------------------------------------------------------------------
     use_pll0 : if config_c.lanes(lane_idx).pll_index = 0 generate
       s_pll0_clk    <= s_pll0_out;
@@ -563,6 +591,9 @@ begin
         rx_m_o(lane_idx).aux(i)(0) <= s_rx_charisk_gear(i);
         rx_m_o(lane_idx).aux(i)(1) <= s_rx_codeerr_gear(i);
         rx_m_o(lane_idx).aux(i)(2) <= s_rx_disperr_gear(i);
+        -- The primitive does not expose the running disparity it
+        -- decoded the code group with.
+        rx_m_o(lane_idx).aux(i)(aux_t'left downto 3) <= (others => '-');
       end generate;
       s_txcharisk                                                   <= (s_txcharisk'high downto interface_byte_count_c      => '0') & std_logic_vector(s_txcharisk_vec);
       s_gtp_tx_data(data_width_config_c.interface_width - 1 downto 0) <= std_logic_vector(s_gtp_tx_data_stdu);
