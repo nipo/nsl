@@ -8,25 +8,39 @@ use nsl_math.int_ext.all;
 use nsl_transceiver.lane.all;
 use nsl_simulation.logging.all;
 
--- One lane of a behaviourally modelled quad, looped back at the
--- pads, carrying a framed byte stream the receiving side has to
--- recover.
+-- Two lanes of one behaviourally modelled quad, wired to each other
+-- at the pads, carrying a framed byte stream the receiving lane has
+-- to recover.
 --
--- The lane comes up from nothing: the model holds it in reset until
--- its PLL locks, hunts for the comma in a stream it has no prior
--- phase knowledge of, fills its elastic buffer, and only then
+-- The lanes come up from nothing: the model holds them in reset
+-- until the PLL locks, hunts for the comma in a stream it has no
+-- prior phase knowledge of, fills its elastic buffer, and only then
 -- presents words. The frame marker is a control symbol the check
 -- process hunts for, so nothing here depends on knowing the lane's
 -- latency: a stream that came back in the wrong order, lost a byte,
 -- or lost its K flag fails whatever the latency turns out to be.
+--
+-- The two lanes may be configured at different line rates, which is
+-- how the elastic buffer is made to work: the receiving lane's own
+-- clock then runs away from the stream arriving at it, and the only
+-- thing standing between that and a corrupted frame is the
+-- clock-correction sequence in the gaps.
 entity link_bench is
   generic(
     data_byte_count_c : natural;
     line_rate_mbps_c : natural;
-    -- Both ends are the same lane, so a polarity inversion on the
-    -- transmit side has to be undone by the receiver's own setting.
+    -- Rate the receiving lane is configured for. Zero means the same
+    -- as the transmitting one, which is the case with nothing for
+    -- the elastic buffer to absorb.
+    rx_rate_mbps_c : natural := 0;
+    -- A pair wired the wrong way round, undone by the receiving
+    -- lane's own polarity setting.
     polarity_invert_c : boolean := false;
-    loopback_c : loopback_mode_t := LOOPBACK_NONE;
+    -- Whether the elastic buffer is expected to correct. With both
+    -- lanes on the same rate it must not: a correction then means
+    -- the buffer moved on its own and the stream lost or gained a
+    -- word.
+    expect_correction_c : boolean := false;
     frame_count_c : natural := 4;
     label_c : string
     );
@@ -57,6 +71,31 @@ architecture beh of link_bench is
     idle_byte_count => 2
     );
 
+  function rx_rate return natural
+  is
+  begin
+    if rx_rate_mbps_c = 0 then
+      return line_rate_mbps_c;
+    end if;
+    return rx_rate_mbps_c;
+  end function;
+
+  function lane_config(rate : natural; invert_rx : boolean)
+    return nsl_transceiver.lane.config_t
+  is
+  begin
+    return nsl_transceiver.lane.config(
+      data_byte_count => data_byte_count_c,
+      encoding => ENCODING_8B10B,
+      line_rate_mbps => rate,
+      pll_index => 0,
+      ref_clock_index => 0,
+      user_clock_group_index => 0,
+      polarity_invert_tx => polarity_invert_c and not invert_rx,
+      polarity_invert_rx => polarity_invert_c and invert_rx,
+      sync => sync_c);
+  end function;
+
   constant config_c : nsl_transceiver.cluster.config_t
     := nsl_transceiver.cluster.config(
       plls => (0 => (enabled => true,
@@ -65,17 +104,8 @@ architecture beh of link_bench is
                      target_vco_mhz => 2500)),
       refclks => (0 => (ref_clock_index => 0, ref_clock_mhz => 125),
                   1 => (ref_clock_index => 1, ref_clock_mhz => 125)),
-      lanes => (0 => nsl_transceiver.lane.config(
-        data_byte_count => data_byte_count_c,
-        encoding => ENCODING_8B10B,
-        line_rate_mbps => line_rate_mbps_c,
-        pll_index => 0,
-        ref_clock_index => 0,
-        user_clock_group_index => 0,
-        polarity_invert_tx => polarity_invert_c,
-        polarity_invert_rx => polarity_invert_c,
-        loopback => loopback_c,
-        sync => sync_c)),
+      lanes => (0 => lane_config(line_rate_mbps_c, false),
+                1 => lane_config(rx_rate, true)),
       user_clock_group_count => 1
       );
 
@@ -85,24 +115,26 @@ architecture beh of link_bench is
     := (nsl_transceiver.target.clock_id("ref0"),
         nsl_transceiver.target.clock_id("stableclk"));
 
-  -- One control symbol opens each frame, the rest counts, so a byte
-  -- arriving out of order or a frame starting on the wrong byte is
-  -- visible without knowing where in the stream we joined.
+  -- One control symbol opens each frame and the rest counts, so a
+  -- frame starting on the wrong byte, or short one, is visible
+  -- without knowing where in the stream we joined.
   constant frame_byte_count_c : natural := 32;
   constant marker_c : byte := nsl_line_coding.ibm_8b10b.K27_7.data;
 
-  -- Words the transmitter stops presenting between frames, so the
-  -- model's idle substitution is on the path the frames travel.
-  constant gap_word_count_c : natural := 4;
+  -- Words the transmitter stops presenting between frames. The
+  -- model fills them with its idle pattern, which is also the
+  -- rate-matching sequence, so this is the room the elastic buffer
+  -- has to work in.
+  constant gap_word_count_c : natural
+    := 32 / data_byte_count_c;
 
-  signal pad_s : nsl_io.diff.diff_pair_vector(0 to 0);
-  signal lane_clock_s : std_ulogic_vector(0 to 0);
-  signal lane_rx_clock_s : std_ulogic_vector(0 to 0);
+  signal pad_s : nsl_io.diff.diff_pair_vector(0 to 1);
+  signal lane_clock_s, lane_rx_clock_s : std_ulogic_vector(0 to 1);
 
-  signal tx_m_s : nsl_transceiver.lane.tx_master_vector(0 to 0);
-  signal tx_s_s : nsl_transceiver.lane.tx_slave_vector(0 to 0);
-  signal rx_m_s : nsl_transceiver.lane.rx_master_vector(0 to 0);
-  signal rx_s_s : nsl_transceiver.lane.rx_slave_vector(0 to 0);
+  signal tx_m_s : nsl_transceiver.lane.tx_master_vector(0 to 1);
+  signal tx_s_s : nsl_transceiver.lane.tx_slave_vector(0 to 1);
+  signal rx_m_s : nsl_transceiver.lane.rx_master_vector(0 to 1);
+  signal rx_s_s : nsl_transceiver.lane.rx_slave_vector(0 to 1);
 
   signal apb_clock_s : std_ulogic;
   signal apb_s_s : nsl_amba.apb.slave_t;
@@ -121,7 +153,10 @@ begin
       ref_clock_i(1) => clock_i,
 
       lane_tx_o => pad_s,
-      lane_rx_i => pad_s,
+      -- Each lane listens to the other, which is the shortest
+      -- two-ended link a quad can carry.
+      lane_rx_i(0) => pad_s(1),
+      lane_rx_i(1) => pad_s(0),
 
       lane_tx_clock_o => lane_clock_s,
       lane_rx_clock_o => lane_rx_clock_s,
@@ -131,7 +166,7 @@ begin
       rx_m_o => rx_m_s,
       rx_s_i => rx_s_s,
 
-      pma_reset_n_i => (0 => '1'),
+      pma_reset_n_i => (others => '1'),
 
       apb_clock_o => apb_clock_s,
       apb_reset_n_i => reset_n_i,
@@ -139,13 +174,27 @@ begin
       apb_s_o => apb_s_s
       );
 
-  -- Nothing here reconfigures the lane at runtime, and the adapter
+  -- Nothing here reconfigures a lane at runtime, and the adapter
   -- side of the contract is driven from the two processes below.
-  rx_s_s(0) <= (ready => '1',
-                pcs_reset_n => '1',
-                align_trigger => '0',
-                chbond_start => '0',
-                control => (others => '0'));
+  rx_s_s <= (others => (ready => '1',
+                        pcs_reset_n => '1',
+                        align_trigger => '0',
+                        chbond_start => '0',
+                        control => (others => '0')));
+
+  -- The receiving lane has nothing of its own to send, so it sends
+  -- the model's idle pattern. That is what keeps the transmitting
+  -- lane's own receiver aligned, which both lanes need before
+  -- either reports a word.
+  tx_m_s(1) <= (
+    data => (others => (others => '-')),
+    aux => (others => (others => '-')),
+    valid => '0',
+    pcs_reset_n => '1',
+    control => (others => '0'),
+    control_h => (others => '0'),
+    c2i_clock => '0'
+    );
 
   feed: process
     variable phase_v : natural;
@@ -168,8 +217,9 @@ begin
       wait until rising_edge(lane_clock_s(0));
 
       if gap_v /= 0 then
-        -- The model substitutes its idle pattern here, which is what
-        -- keeps the far end aligned between frames.
+        -- The model substitutes its idle pattern here, which is
+        -- what keeps the far end aligned between frames and what
+        -- its elastic buffer is allowed to add to and take from.
         tx_m_s(0).valid <= '0';
         gap_v := gap_v - 1;
       else
@@ -202,6 +252,7 @@ begin
     variable frames_v : natural;
     variable cycles_v : natural;
     variable settle_v : natural;
+    variable corrections_v : natural;
     variable byte_v : byte;
   begin
     done_o <= '0';
@@ -212,22 +263,22 @@ begin
     -- the receiver finds in a stream it has no phase knowledge of,
     -- and an elastic buffer that fills before it presents anything.
     cycles_v := 0;
-    while rx_m_s(0).pcs_aligned /= '1' or rx_m_s(0).valid /= '1' loop
-      wait until rising_edge(lane_rx_clock_s(0));
+    while rx_m_s(1).pcs_aligned /= '1' or rx_m_s(1).valid /= '1' loop
+      wait until rising_edge(lane_rx_clock_s(1));
       cycles_v := cycles_v + 1;
       assert cycles_v < 4096
         report "the lane never came up: pma lock "
-        & std_ulogic'image(rx_m_s(0).pma_lock) & ", aligned "
-        & std_ulogic'image(rx_m_s(0).pcs_aligned) & ", valid "
-        & std_ulogic'image(rx_m_s(0).valid)
+        & std_ulogic'image(rx_m_s(1).pma_lock) & ", aligned "
+        & std_ulogic'image(rx_m_s(1).pcs_aligned) & ", valid "
+        & std_ulogic'image(rx_m_s(1).valid)
         severity failure;
     end loop;
 
-    assert rx_m_s(0).pma_lock = '1'
+    assert rx_m_s(1).pma_lock = '1'
       report "the lane presents words without having locked to the line"
       severity failure;
 
-    assert rx_m_s(0).elec_idle = '0'
+    assert rx_m_s(1).elec_idle = '0'
       report "the lane presents words while calling the line idle"
       severity failure;
 
@@ -243,43 +294,44 @@ begin
     expect_v := -1;
     frames_v := 0;
     settle_v := 0;
+    corrections_v := 0;
 
     while frames_v < frame_count_c loop
-      wait until rising_edge(lane_rx_clock_s(0));
+      wait until rising_edge(lane_rx_clock_s(1));
 
       settle_v := settle_v + 1;
-      assert settle_v < 4096
+      assert settle_v < 8192
         report "only " & integer'image(frames_v) & " of "
         & integer'image(frame_count_c) & " frames came back"
         severity failure;
 
-      next when rx_m_s(0).valid /= '1';
+      if rx_m_s(1).clock_corrected = '1' then
+        corrections_v := corrections_v + 1;
 
-      -- Both ends run off the same reference, so there is no rate
-      -- difference for the elastic buffer to absorb: a correction
-      -- here means the buffer moved on its own and the stream lost
-      -- or gained a word.
-      assert rx_m_s(0).clock_corrected = '0'
-        report "the elastic buffer corrected a lane that has no rate"
-        & " difference to correct for"
-        severity failure;
+        assert expect_correction_c
+          report "the elastic buffer corrected a lane that has no rate"
+          & " difference to correct for"
+          severity failure;
+      end if;
+
+      next when rx_m_s(1).valid /= '1';
 
       for i in 0 to data_byte_count_c-1 loop
-        byte_v := rx_m_s(0).data(i);
+        byte_v := rx_m_s(1).data(i);
 
-        assert rx_m_s(0).aux(i)(1) = '0'
+        assert rx_m_s(1).aux(i)(1) = '0'
           report "the receiver reports an invalid code group"
           severity failure;
-        assert rx_m_s(0).aux(i)(2) = '0'
+        assert rx_m_s(1).aux(i)(2) = '0'
           report "the receiver reports a running disparity error"
           severity failure;
 
         if expect_v < 0 then
-          if rx_m_s(0).aux(i)(0) = '1' and byte_v = marker_c then
+          if rx_m_s(1).aux(i)(0) = '1' and byte_v = marker_c then
             expect_v := 1;
           end if;
         else
-          assert rx_m_s(0).aux(i)(0) = '0'
+          assert rx_m_s(1).aux(i)(0) = '0'
             report "byte " & integer'image(expect_v)
             & " of the frame came back flagged as a control symbol"
             severity failure;
@@ -300,11 +352,20 @@ begin
       end loop;
     end loop;
 
+    -- A rate difference the buffer never had to correct for would
+    -- mean the two lanes were not running at different rates after
+    -- all, and the whole path this case exists for went unused.
+    assert not expect_correction_c or corrections_v /= 0
+      report "the lane carried the stream without the elastic buffer"
+      & " ever correcting, so the rate difference never bit"
+      severity failure;
+
     log_info(ctxt, "recovered " & integer'image(frame_count_c)
              & " frames of " & integer'image(frame_byte_count_c)
              & " bytes over a " & integer'image(line_rate_mbps_c)
-             & " Mbps lane carrying " & integer'image(data_byte_count_c)
-             & " byte words");
+             & " Mbps lane received at " & integer'image(rx_rate)
+             & " Mbps, with " & integer'image(corrections_v)
+             & " elastic buffer corrections");
 
     done_o <= '1';
     wait;

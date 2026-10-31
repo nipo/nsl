@@ -19,7 +19,7 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 3);
+  signal done_s : std_ulogic_vector(0 to 5);
 
 begin
 
@@ -75,6 +75,48 @@ begin
       clock_i => clock_s,
       reset_n_i => reset_n_s,
       done_o => done_s(3)
+      );
+
+  -- A receiving lane whose own clock runs away from the stream
+  -- arriving at it. The elastic buffer has to give the difference
+  -- back through the rate-matching sequence in the gaps, and the
+  -- frames themselves have to come through untouched.
+  --
+  -- The rates are about a percent apart, far wider than the hundred
+  -- parts per million two boards would be, so the buffer corrects
+  -- every hundred words or so rather than every ten thousand. Wider
+  -- still and the model's own clock recovery gives up first: it
+  -- re-centres on each transition and coasts between them, so an
+  -- 8b/10b run of five identical bits bounds how far apart the two
+  -- rates may be.
+  fast_receiver: entity work.link_bench
+    generic map(
+      data_byte_count_c => 1,
+      line_rate_mbps_c => 1250,
+      rx_rate_mbps_c => 1262,
+      expect_correction_c => true,
+      frame_count_c => 8,
+      label_c => "fast receiver"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      done_o => done_s(4)
+      );
+
+  slow_receiver: entity work.link_bench
+    generic map(
+      data_byte_count_c => 1,
+      line_rate_mbps_c => 1250,
+      rx_rate_mbps_c => 1238,
+      expect_correction_c => true,
+      frame_count_c => 8,
+      label_c => "slow receiver"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      done_o => done_s(5)
       );
 
   driver: nsl_simulation.driver.simulation_driver
