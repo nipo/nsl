@@ -121,7 +121,12 @@ architecture gtpe2 of transceiver_cluster is
 
   constant pll0_mult_div_config_c : pll_mult_div_t := pll_mult_div_for(0);
   constant pll1_mult_div_config_c : pll_mult_div_t := pll_mult_div_for(1);
-  constant stable_clk_ref_mhz_c   : natural        := config_c.refclks(0).ref_clock_mhz;
+  -- The reset sequencer times itself on the housekeeping clock, so
+  -- the configuration has to describe that clock's rate.
+  constant stable_clk_ref_mhz_c   : natural
+    := nsl_transceiver.cluster.ref_clock_mhz(
+      config_c,
+      nsl_transceiver.cluster.refclk_port(ref_clock_c, clock_id("stableclk")));
 
   -- Error message constants
   constant lane_count_msg_c      : string := "transceiver_cluster/gtpe2: GTPE2_CHANNEL primitive can have up to 4 lanes";
@@ -131,7 +136,7 @@ architecture gtpe2 of transceiver_cluster is
   constant encoding_valid_msg_c  : string := "transceiver_cluster/gtpe2: lane encoding not supported by this backend yet";
   constant data_byte_count_msg_c : string := "transceiver_cluster/gtpe2: lane data_byte_count must be between >= 1 and <= 4";
   constant pll_rate_msg_c        : string := "transceiver_cluster/gtpe2: every enabled lane sharing a PLL must ask for the same line rate";
-  constant stable_clk_msg_c      : string := "transceiver_cluster/gtpe2: refclks(0).ref_clock_mhz carries the stable clock rate and must not be zero";
+  constant stable_clk_msg_c      : string := "transceiver_cluster/gtpe2: refclks must give the rate of the ""stableclk"" reference clock";
 
 begin
 

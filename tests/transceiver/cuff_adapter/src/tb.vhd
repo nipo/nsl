@@ -210,11 +210,13 @@ begin
       );
 
     constant refclk_c : nsl_transceiver.cluster.refclk_config_t := (
-      ref_clock_index => 1,
+      ref_clock_index => 0,
       ref_clock_mhz => 125
       );
 
     variable lane_v : nsl_transceiver.lane.config_t;
+    variable pll_v : nsl_transceiver.cluster.pll_config_t;
+    variable refclk_v : nsl_transceiver.cluster.refclk_config_t;
   begin
     done_s(2) <= '0';
 
@@ -266,6 +268,38 @@ begin
                      lanes => (0 => lane_v),
                      user_clock_group_count => 1)),
                  false, FAILURE);
+
+    refclk_v := refclk_c;
+    refclk_v.ref_clock_mhz := 100;
+    assert_equal(ctxt, "pll disagreeing with the refclk rate",
+                 nsl_transceiver.cluster.is_valid(
+                   nsl_transceiver.cluster.config(
+                     plls => (0 => enabled_pll_c),
+                     refclks => (0 => refclk_v),
+                     lanes => (0 => lane_c),
+                     user_clock_group_count => 1)),
+                 false, FAILURE);
+
+    pll_v := enabled_pll_c;
+    pll_v.ref_clock_index := 1;
+    assert_equal(ctxt, "pll on an undescribed refclk",
+                 nsl_transceiver.cluster.is_valid(
+                   nsl_transceiver.cluster.config(
+                     plls => (0 => pll_v),
+                     refclks => (0 => refclk_c),
+                     lanes => (0 => lane_c),
+                     user_clock_group_count => 1)),
+                 false, FAILURE);
+
+    assert_equal(ctxt, "refclk rate lookup",
+                 nsl_transceiver.cluster.ref_clock_mhz(
+                   nsl_transceiver.cluster.config(
+                     plls => (0 => enabled_pll_c),
+                     refclks => (0 => refclk_c),
+                     lanes => (0 => lane_c),
+                     user_clock_group_count => 1),
+                   0),
+                 125, FAILURE);
 
     done_s(2) <= '1';
     wait;
