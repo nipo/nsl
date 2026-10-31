@@ -1,0 +1,26 @@
+name: transceiver_lane_utils
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_simulation.assertions
+    - nsl_simulation.logging
+    - nsl_transceiver.cluster
+  sources:
+    - file_type: vhdl
+      files:
+        - src/gearbox_bench.vhd
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
