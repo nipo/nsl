@@ -568,9 +568,13 @@ begin
 
     begin
 
+      -- The elastic buffer absorbs the difference between the
+      -- recovered clock and the transmit clock, so the lane presents
+      -- the same clock in both directions. s_txusrclk2_buff is the
+      -- clock the primitive's own interface runs on, a multiple of
+      -- this one whenever the gearbox is in the way.
       lane_tx_clock_o(lane_idx) <= s_parallel_clock_buff;
-      -- FIXME: debug
-      lane_rx_clock_o(lane_idx) <= s_txusrclk2_buff;
+      lane_rx_clock_o(lane_idx) <= s_parallel_clock_buff;
 
       -- No MMCM: the GTHE4 programmable divider (TXOUTCLKSEL = "101") plus the
       -- BUFG_GT dividers generate both clocks from TXOUTCLK.
