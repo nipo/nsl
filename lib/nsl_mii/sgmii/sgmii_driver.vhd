@@ -8,8 +8,10 @@ use work.sgmii.all;
 
 entity sgmii_driver is
   generic (
-    sgmii_mode : boolean := false;
-    simulation : boolean := false
+    sgmii_mode_c : boolean := false;
+    -- Zero selects the link timer the relevant specification
+    -- mandates. Any other value replaces it.
+    link_timer_c : natural := 0
     );
   port (
     reset_n_i : in std_ulogic;
@@ -146,88 +148,21 @@ begin  -- architecture beh
       );
 
   -- Auto negotiation ----------------------------------------------------------------------
-  use_sgmii: if sgmii_mode generate
-
-    sim: if simulation generate -- Override link_timer in simulation 
-      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
-        generic map (
-          link_timer_cycles_c => 30
-        )
-        port map (
-          clock_i           => clock_i,
-          reset_n_i         => reset_n_i,
-          config_i          => config_sgmii_c,
-          restart_i         => s_autoneg_restart,
-          rx_config_valid_i => s_rx_config_valid,
-          rx_config_i       => s_rx_config,
-          rx_idle_i         => s_rx_idle_match,
-          send_config_o     => s_tx_send_config,
-          tx_config_o       => s_tx_config,
-          link_up_o         => s_link_up
-        );
-    end generate;
-
-    hw: if not simulation generate
-      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
-        generic map (
-          link_timer_cycles_c => link_timer_sgmii_c
-        )
-        port map (
-          clock_i           => clock_i,
-          reset_n_i         => reset_n_i,
-          config_i          => config_sgmii_c,
-          restart_i         => s_autoneg_restart,
-          rx_config_valid_i => s_rx_config_valid,
-          rx_config_i       => s_rx_config,
-          rx_idle_i         => s_rx_idle_match,
-          send_config_o     => s_tx_send_config,
-          tx_config_o       => s_tx_config,
-          link_up_o         => s_link_up
-        );
-    end generate;
-
-  end generate;
-
-  use_1000basex: if not sgmii_mode generate
-
-    sim: if simulation generate
-      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
-        generic map (
-          link_timer_cycles_c => 30
-        )
-        port map (
-          clock_i           => clock_i,
-          reset_n_i         => reset_n_i,
-          config_i          => config_1000BaseX_c,
-          restart_i         => s_autoneg_restart,
-          rx_config_valid_i => s_rx_config_valid,
-          rx_config_i       => s_rx_config,
-          rx_idle_i         => s_rx_idle_match,
-          send_config_o     => s_tx_send_config,
-          tx_config_o       => s_tx_config,
-          link_up_o         => s_link_up
-        );
-    end generate;
-
-    hw: if not simulation generate
-      sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
-        generic map (
-          link_timer_cycles_c => link_timer_1000BaseX_c
-        )
-        port map (
-          clock_i           => clock_i,
-          reset_n_i         => reset_n_i,
-          config_i          => config_1000BaseX_c,
-          restart_i         => s_autoneg_restart,
-          rx_config_valid_i => s_rx_config_valid,
-          rx_config_i       => s_rx_config,
-          rx_idle_i         => s_rx_idle_match,
-          send_config_o     => s_tx_send_config,
-          tx_config_o       => s_tx_config,
-          link_up_o         => s_link_up
-        );
-    end generate;
-
-  end generate;
+  sgmii_autoneg_1 : work.sgmii.sgmii_autoneg
+    generic map (
+      link_timer_cycles_c => link_timer_cycles(sgmii_mode_c, link_timer_c)
+      )
+    port map (
+      clock_i           => clock_i,
+      reset_n_i         => reset_n_i,
+      config_i          => config_reg(sgmii_mode_c),
+      restart_i         => s_autoneg_restart,
+      rx_config_valid_i => s_rx_config_valid,
+      rx_config_i       => s_rx_config,
+      rx_idle_i         => s_rx_idle_match,
+      send_config_o     => s_tx_send_config,
+      tx_config_o       => s_tx_config,
+      link_up_o         => s_link_up
+      );
 
 end architecture beh;

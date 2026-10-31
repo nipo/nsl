@@ -28,6 +28,17 @@ package sgmii is
   -- changed from 10 msec to 1.6 msec to ensure a prompt update of the link status."
   constant link_timer_sgmii_c : natural := 200000;
 
+  -- Auto-negotiation configuration register advertised for the
+  -- selected mode.
+  function config_reg(sgmii_mode : boolean) return config_reg_t;
+
+  -- Auto-negotiation link timer, in clock cycles. A zero override
+  -- selects the duration the relevant specification mandates; any
+  -- other value replaces it, which lets a simulation reach link-up
+  -- without counting milliseconds of clock cycles.
+  function link_timer_cycles(sgmii_mode : boolean;
+                             override : natural) return natural;
+
   type sgmii_m2p is record
     data_m2p_symbol : nsl_line_coding.ibm_8b10b.data_t;
     tx_disparity    : std_ulogic;
@@ -48,8 +59,8 @@ package sgmii is
 
   component sgmii_driver is
     generic (
-      sgmii_mode : boolean := false;
-      simulation : boolean := false
+      sgmii_mode_c : boolean := false;
+      link_timer_c : natural := 0
       );
     port (
       reset_n_i : in std_ulogic;
@@ -144,48 +155,31 @@ package sgmii is
       );
   end component;
 
-  -- Xilinx series 7 backend that handles the clocking scheme
-  -- needed for the SERDES primitives (MMCM + BUFR + BUFIO, etc)
-  component sgmii_serdes_backend_series7 is
-    generic (
-      refclk_hz_c : positive := 25000000;
-      rx_invert_c : boolean := false
-      );
-    port (
-      ref_clk_i   : in std_ulogic;
-      ref_rst_n_i : in std_ulogic;
-
-      clk125_o : out std_ulogic;
-      rst_n_o  : out std_ulogic;
-
-      sgmii_i : in  sgmii_m2p;
-      sgmii_o : out sgmii_p2m;
-
-      pair_diff_i : in  nsl_io.diff.diff_pair;
-      pair_diff_o : out nsl_io.diff.diff_pair
-      );
-  end component;
-
-  component sgmii_transceiver_backend_series7 is
-    port (
-      gt_ref_clk_pair_i : in nsl_io.diff.diff_pair;
-      stable_clk_i      : in std_ulogic;
-      stable_rst_n_i    : in std_ulogic;
-
-      clk62_5_o : out std_ulogic;
-      clk125_o  : out std_ulogic;
-      rst_n_o   : out std_ulogic;
-
-      pll_0_clk_o    : out std_ulogic;
-      pll_0_outref_o : out std_ulogic;
-      pll_0_locked_o : out std_ulogic;
-
-      sgmii_i : in  sgmii_m2p;
-      sgmii_o : out sgmii_p2m;
-
-      pair_diff_i : in  nsl_io.diff.diff_pair;
-      pair_diff_o : out nsl_io.diff.diff_pair
-      );
-  end component;
-
 end package sgmii;
+
+package body sgmii is
+
+  function config_reg(sgmii_mode : boolean) return config_reg_t
+  is
+  begin
+    if sgmii_mode then
+      return config_sgmii_c;
+    else
+      return config_1000BaseX_c;
+    end if;
+  end function;
+
+  function link_timer_cycles(sgmii_mode : boolean;
+                             override : natural) return natural
+  is
+  begin
+    if override /= 0 then
+      return override;
+    elsif sgmii_mode then
+      return link_timer_sgmii_c;
+    else
+      return link_timer_1000BaseX_c;
+    end if;
+  end function;
+
+end package body sgmii;

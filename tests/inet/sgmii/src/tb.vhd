@@ -69,8 +69,8 @@ begin
   -- SGMII number 1
   sgmii_driver_1 : nsl_mii.sgmii.sgmii_driver
     generic map (
-      sgmii_mode => false,
-      simulation => true
+      sgmii_mode_c => false,
+      link_timer_c => 200
       )
     port map (
       reset_n_i    => reset_n_s,
@@ -98,8 +98,8 @@ begin
   -- SGMII number 2
   sgmii_driver_2 : nsl_mii.sgmii.sgmii_driver
     generic map (
-      sgmii_mode => false,
-      simulation => true
+      sgmii_mode_c => false,
+      link_timer_c => 200
       )    
     port map (
       reset_n_i    => reset_n_s,
