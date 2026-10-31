@@ -131,6 +131,7 @@ architecture gtpe2 of transceiver_cluster is
   constant encoding_valid_msg_c  : string := "transceiver_cluster/gtpe2: lane encoding not supported by this backend yet";
   constant data_byte_count_msg_c : string := "transceiver_cluster/gtpe2: lane data_byte_count must be between >= 1 and <= 4";
   constant pll_rate_msg_c        : string := "transceiver_cluster/gtpe2: every enabled lane sharing a PLL must ask for the same line rate";
+  constant stable_clk_msg_c      : string := "transceiver_cluster/gtpe2: refclks(0).ref_clock_mhz carries the stable clock rate and must not be zero";
 
 begin
 
@@ -194,6 +195,19 @@ begin
     generic map(
       message_c   => pll_rate_msg_c,
       condition_c => pll_rates_agree(0) and pll_rates_agree(1)
+      )
+    port map(
+      unused_i => '0'
+      );
+
+  assert stable_clk_ref_mhz_c /= 0
+    report stable_clk_msg_c
+    severity failure;
+
+  stable_clk_check : nsl_synthesis.assertion.synth_assert
+    generic map(
+      message_c   => stable_clk_msg_c,
+      condition_c => stable_clk_ref_mhz_c /= 0
       )
     port map(
       unused_i => '0'
