@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_hwdep, nsl_logic, nsl_clocking, nsl_synthesis;
+library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_logic, nsl_clocking, nsl_synthesis;
 use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
