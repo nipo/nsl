@@ -39,23 +39,23 @@ package sgmii is
   function link_timer_cycles(sgmii_mode : boolean;
                              override : natural) return natural;
 
-  type sgmii_m2p is record
-    data_m2p_symbol : nsl_line_coding.ibm_8b10b.data_t;
+  type sgmii_m2p_t is record
+    symbol : nsl_line_coding.ibm_8b10b.data_t;
     tx_disparity    : std_ulogic;
     align_rst       : std_ulogic;
     valid_symbol    : std_ulogic;
   end record;
 
-  type sgmii_p2m is record
-    data_p2m_symbol : nsl_line_coding.ibm_8b10b.data_t;
+  type sgmii_p2m_t is record
+    symbol : nsl_line_coding.ibm_8b10b.data_t;
     code_err        : std_ulogic;
     disparity_err   : std_ulogic;
     align_ready     : std_ulogic;
     clk_cor         : std_ulogic; -- 1 insert/skip, 0 none
   end record;
 
-  type sgmii_m2p_vector is array (natural range <>) of sgmii_m2p;
-  type sgmii_p2m_vector is array (natural range <>) of sgmii_p2m;
+  type sgmii_m2p_vector is array (natural range <>) of sgmii_m2p_t;
+  type sgmii_p2m_vector is array (natural range <>) of sgmii_p2m_t;
 
   component sgmii_driver is
     generic (
@@ -66,8 +66,8 @@ package sgmii is
       reset_n_i : in std_ulogic;
       clock_i   : in std_ulogic;
 
-      sgmii_o : out sgmii_m2p;
-      sgmii_i : in  sgmii_p2m;
+      sgmii_o : out sgmii_m2p_t;
+      sgmii_i : in  sgmii_p2m_t;
 
       link_speed_i : in  link_speed_t := LINK_SPEED_1000;
       link_up_o    : out std_ulogic;
@@ -147,8 +147,8 @@ package sgmii is
       clock125_i : in std_ulogic;
       clock625_i : in std_ulogic;
 
-      sgmii_i : in  sgmii_m2p;
-      sgmii_o : out sgmii_p2m;
+      sgmii_i : in  sgmii_m2p_t;
+      sgmii_o : out sgmii_p2m_t;
 
       pair_diff_i : in  nsl_io.diff.diff_pair;
       pair_diff_o : out nsl_io.diff.diff_pair

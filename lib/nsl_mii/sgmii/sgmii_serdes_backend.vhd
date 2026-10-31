@@ -15,8 +15,8 @@ entity sgmii_serdes_backend is
     clock125_i : in std_ulogic;
     clock625_i : in std_ulogic;
 
-    sgmii_i : in  sgmii_m2p;
-    sgmii_o : out sgmii_p2m;
+    sgmii_i : in  sgmii_m2p_t;
+    sgmii_o : out sgmii_p2m_t;
 
     pair_diff_i : in  nsl_io.diff.diff_pair;
     pair_diff_o : out nsl_io.diff.diff_pair
@@ -55,7 +55,7 @@ begin  -- architecture beh
       reset_n_i         => reset_n_i,
       valid_i           => '1',
       data_i            => s_ser2dec_code,
-      data_o            => sgmii_o.data_p2m_symbol,
+      data_o            => sgmii_o.symbol,
       code_error_o      => sgmii_o.code_err,
       disparity_error_o => sgmii_o.disparity_err
       );
@@ -121,7 +121,7 @@ begin  -- architecture beh
       clock_i   => clock125_i,
       reset_n_i => reset_n_i,
       valid_i   => '1',
-      data_i    => sgmii_i.data_m2p_symbol,
+      data_i    => sgmii_i.symbol,
       data_o    => s_enc2ser_code
       );
 
