@@ -86,6 +86,66 @@ architecture beh of sgmii_pcs_tx is
     return six_unbal xor four_unbal;
   end function;
 
+  -- Code group the transmitter puts on the wire in the cycle the
+  -- state machine is in state r. The running disparity after it is
+  -- also needed to compute the next state, so the choice is a
+  -- function of the state and the inputs rather than a side effect
+  -- of the state transition.
+  function symbol_for(r : regs_t;
+                      flit : mii_flit_t;
+                      config : config_reg_t;
+                      link_up : std_ulogic) return nsl_line_coding.ibm_8b10b.data_t
+  is
+  begin
+    case r.state is
+      when ST_IDLE =>
+        if link_up = '1' and flit.valid = '1' then
+          return K27_7;
+        else
+          return K28_5;
+        end if;
+
+      when ST_I_D =>
+        -- r.rd_pos is the RD after the K28.5 just sent. Pick the idle
+        -- ordered set so that it always ends with negative RD:
+        --   RD positive here -> /I2/ (D16.2 flips RD to negative)
+        --   RD negative here -> /I1/ (D5.6 is balanced, RD stays negative)
+        if r.rd_pos then
+          return data(16, 2);
+        else
+          return data(5, 6);
+        end if;
+
+      when ST_C_D =>
+        if r.c_toggle then
+          return data(2, 2);
+        else
+          return data(21, 5);
+        end if;
+
+      when ST_C_LO =>
+        return data(config(7 downto 0));
+
+      when ST_C_HI =>
+        return data(config(15 downto 8));
+
+      when ST_F_DATA =>
+        if link_up = '1' and flit.valid = '1' then
+          return data(flit.data);
+        else
+          return K29_7;
+        end if;
+
+      when ST_F_T =>
+        -- Not used as a distinct state; /T/ is output in the
+        -- ST_F_DATA -> ST_F_R transition above. Kept for completeness.
+        return K29_7;
+
+      when ST_F_R =>
+        return K23_7;
+    end case;
+  end function;
+
 begin
 
   disparity_o <= '1' when r.rd_pos else '0';
@@ -111,71 +171,44 @@ begin
   end process;
 
   transition: process(r, flit_i, send_config_i, config_i, link_up_i)
-    variable sym : nsl_line_coding.ibm_8b10b.data_t;
   begin
     rin <= r;
     rin.even <= not r.even;
-    sym := K28_5;
 
     case r.state is
       when ST_IDLE =>
         if link_up_i = '1' and flit_i.valid = '1' then
-          sym := K27_7;
           rin.state <= ST_F_DATA;
         elsif send_config_i = '1' then
-          sym := K28_5;
           rin.state <= ST_C_D;
         else
-          sym := K28_5;
           rin.state <= ST_I_D;
         end if;
 
       when ST_I_D =>
-        -- r.rd_pos is the RD after the K28.5 just sent. Pick the idle
-        -- ordered set so that it always ends with negative RD:
-        --   RD positive here -> /I2/ (D16.2 flips RD to negative)
-        --   RD negative here -> /I1/ (D5.6 is balanced, RD stays negative)
-        if r.rd_pos then
-          sym := data(16, 2);
-        else
-          sym := data(5, 6);
-        end if;
         rin.state <= ST_IDLE;
 
       when ST_C_D =>
-        if r.c_toggle then
-          sym := data(2, 2);
-        else
-          sym := data(21, 5);
-        end if;
         rin.c_toggle <= not r.c_toggle;
         rin.state <= ST_C_LO;
 
       when ST_C_LO =>
-        sym := data(config_i(7 downto 0));
         rin.state <= ST_C_HI;
 
       when ST_C_HI =>
-        sym := data(config_i(15 downto 8));
         rin.state <= ST_IDLE;
 
       when ST_F_DATA =>
         if link_up_i = '1' and flit_i.valid = '1' then
-          sym := data(flit_i.data);
           rin.state <= ST_F_DATA;
         else
-          sym := K29_7;
           rin.state <= ST_F_R;
         end if;
 
       when ST_F_T =>
-        -- Not used as a distinct state; /T/ is output in the
-        -- ST_F_DATA -> ST_F_R transition above. Kept for completeness.
-        sym := K29_7;
         rin.state <= ST_F_R;
 
       when ST_F_R =>
-        sym := K23_7;
         if r.even then
           -- This /R/ is on an even slot, so the next slot would be odd:
           -- pad with another /R/ so the following ordered set starts even.
@@ -185,8 +218,13 @@ begin
         end if;
     end case;
 
-    symbol_o <= sym;
-    rin.rd_pos <= r.rd_pos xor flips_rd(sym);
+    rin.rd_pos <= r.rd_pos
+                  xor flips_rd(symbol_for(r, flit_i, config_i, link_up_i));
+  end process;
+
+  mealy: process(r, flit_i, config_i, link_up_i)
+  begin
+    symbol_o <= symbol_for(r, flit_i, config_i, link_up_i);
   end process;
 
 end architecture;
