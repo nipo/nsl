@@ -11,11 +11,12 @@ use nsl_mii.sgmii.all;
 -- lane i of the others. All five vectors must have the same length; they do
 -- not need to share the same index range (0 to n-1 is the usual one).
 --
--- Sideband layout:
---   TX: data(0) = symbol, control(0) = K, control(1) = symbol valid,
---       control(2) = aligner restart, aux(0)(0) = force RD, aux(0)(1) = RD value
---   RX: data(0) = symbol, aux(0)(0) = K, aux(0)(1) = code error,
---       aux(0)(2) = disparity error, status(0) = align ready, status(1) = clk_cor
+-- The lane carries one byte per cycle, and the sideband of that byte
+-- follows the ENCODING_8B10B layout of nsl_transceiver.lane. The PCS
+-- drives the running disparity of every code group it emits, so the
+-- adapter always asks the lane to force it; a backend that cannot
+-- ignores the request and relies on the PCS alternating disparity on
+-- its own.
 
 entity sgmii_adapter is
   port(
@@ -50,8 +51,8 @@ begin
     sgmii_o(sgmii_o_idx_c).data_p2m_symbol.control <= rx_m_i(rx_m_idx_c).aux(0)(0);
     sgmii_o(sgmii_o_idx_c).code_err                <= rx_m_i(rx_m_idx_c).aux(0)(1);
     sgmii_o(sgmii_o_idx_c).disparity_err           <= rx_m_i(rx_m_idx_c).aux(0)(2);
-    sgmii_o(sgmii_o_idx_c).align_ready             <= rx_m_i(rx_m_idx_c).status(0);
-    sgmii_o(sgmii_o_idx_c).clk_cor                 <= rx_m_i(rx_m_idx_c).status(1);
+    sgmii_o(sgmii_o_idx_c).align_ready             <= rx_m_i(rx_m_idx_c).pcs_aligned;
+    sgmii_o(sgmii_o_idx_c).clk_cor                 <= rx_m_i(rx_m_idx_c).clock_corrected;
 
     -- SGMII -> cluster TX lane ----------------------------------------------------------
     tx_m_o(tx_m_idx_c).data <= (
@@ -59,29 +60,24 @@ begin
       others => (others => '-')
       );
 
-    -- Disparity forcing is requested for backends that support it (GTPE2).
-    -- The SERDES cluster ignores it.
     tx_m_o(tx_m_idx_c).aux <= (
-      0      => (0 => '1', 1 => sgmii_i(sgmii_i_idx_c).tx_disparity, others => '0'),
+      0 => (0 => sgmii_i(sgmii_i_idx_c).data_m2p_symbol.control,
+            1 => '1',
+            2 => sgmii_i(sgmii_i_idx_c).tx_disparity,
+            others => '0'),
       others => (others => '-')
       );
 
-    tx_m_o(tx_m_idx_c).control <= (
-      0      => sgmii_i(sgmii_i_idx_c).data_m2p_symbol.control,
-      1      => sgmii_i(sgmii_i_idx_c).valid_symbol,
-      2      => sgmii_i(sgmii_i_idx_c).align_rst,
-      others => '0'
-      );
-
+    tx_m_o(tx_m_idx_c).valid       <= sgmii_i(sgmii_i_idx_c).valid_symbol;
+    tx_m_o(tx_m_idx_c).control     <= (others => '0');
     tx_m_o(tx_m_idx_c).control_h   <= (others => '0');
-    tx_m_o(tx_m_idx_c).valid       <= '1';
     tx_m_o(tx_m_idx_c).pcs_reset_n <= '1';
     tx_m_o(tx_m_idx_c).c2i_clock   <= '0';
 
     -- RX handshake: always accept -------------------------------------------------------
     rx_s_o(rx_s_idx_c).ready         <= '1';
     rx_s_o(rx_s_idx_c).pcs_reset_n   <= '1';
-    rx_s_o(rx_s_idx_c).align_trigger <= '0';
+    rx_s_o(rx_s_idx_c).align_trigger <= sgmii_i(sgmii_i_idx_c).align_rst;
     rx_s_o(rx_s_idx_c).chbond_start  <= '0';
     rx_s_o(rx_s_idx_c).control       <= (others => '0');
 
