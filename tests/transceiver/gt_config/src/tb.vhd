@@ -83,6 +83,13 @@ begin
         return nsl_transceiver.transceiver_config_gtpe2.loopback_configure(mode);
       end function;
 
+      function prbs_of(mode : nsl_transceiver.lane.prbs_mode_t)
+        return std_logic_vector
+      is
+      begin
+        return nsl_transceiver.transceiver_config_gtpe2.prbs_configure(mode);
+      end function;
+
       variable cfg_v : nsl_transceiver.transceiver_config_gtpe2.pll_mult_div_t;
       variable width_v : nsl_transceiver.transceiver_config_gtpe2.data_width_t;
       variable rate_v, vco_v : real;
@@ -163,6 +170,29 @@ begin
 
       log_info(ctxt, "encoded every loopback mode as documented");
 
+      -- Table 3-20 UG482. Each order has to reach the channel as its
+      -- own selection: two that collided would put a different
+      -- pattern on the line than the far end predicts, which looks
+      -- exactly like a line with a very high error rate rather than
+      -- like a misconfiguration.
+      assert_equal(ctxt, "pattern off",
+                   prbs_of(nsl_transceiver.lane.PRBS_NONE),
+                   "000", FAILURE);
+      assert_equal(ctxt, "order 7 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_7),
+                   "001", FAILURE);
+      assert_equal(ctxt, "order 15 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_15),
+                   "010", FAILURE);
+      assert_equal(ctxt, "order 23 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_23),
+                   "011", FAILURE);
+      assert_equal(ctxt, "order 31 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_31),
+                   "100", FAILURE);
+
+      log_info(ctxt, "selected every pattern the channel offers");
+
       done_s(0) <= '1';
       wait;
     end process;
@@ -189,6 +219,13 @@ begin
       is
       begin
         return nsl_transceiver.transceiver_config_gthe4.loopback_configure(mode);
+      end function;
+
+      function prbs_of(mode : nsl_transceiver.lane.prbs_mode_t)
+        return std_logic_vector
+      is
+      begin
+        return nsl_transceiver.transceiver_config_gthe4.prbs_configure(mode);
       end function;
 
       variable cfg_v : nsl_transceiver.transceiver_config_gthe4.pll_mult_div_t;
@@ -274,6 +311,31 @@ begin
                    "110", FAILURE);
 
       log_info(ctxt, "encoded every loopback mode as documented");
+
+      -- Table 3-25 UG576. This channel offers an order 9 pattern
+      -- where the series 7 one does not, which is the whole reason
+      -- the selection is a per-family table rather than a field of
+      -- the portable configuration.
+      assert_equal(ctxt, "pattern off",
+                   prbs_of(nsl_transceiver.lane.PRBS_NONE),
+                   "0000", FAILURE);
+      assert_equal(ctxt, "order 7 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_7),
+                   "0001", FAILURE);
+      assert_equal(ctxt, "order 9 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_9),
+                   "0010", FAILURE);
+      assert_equal(ctxt, "order 15 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_15),
+                   "0011", FAILURE);
+      assert_equal(ctxt, "order 23 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_23),
+                   "0100", FAILURE);
+      assert_equal(ctxt, "order 31 pattern",
+                   prbs_of(nsl_transceiver.lane.PRBS_31),
+                   "0101", FAILURE);
+
+      log_info(ctxt, "selected every pattern the channel offers");
 
       done_s(1) <= '1';
       wait;
