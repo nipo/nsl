@@ -195,7 +195,8 @@ begin
     encoding_supported : if config_c.lanes(lane_idx).enabled generate
 
       constant encoding_condition_c : boolean := config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
-                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B;
+                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B
+                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_PRBS;
       constant data_byte_count_condition_c : boolean := config_c.lanes(lane_idx).data_byte_count >= 1
                                                         and config_c.lanes(lane_idx).data_byte_count <= 4;
 
@@ -257,6 +258,9 @@ begin
     signal s_tx_progdiv_done_sync : std_logic;
     signal s_tx_polarity          : std_logic;
     signal s_rx_polarity          : std_logic;
+
+    signal s_rx_prbs_err    : std_logic;
+    signal s_rx_prbs_locked : std_logic;
 
     signal s_parallel_clock_buff   : std_ulogic;
     signal s_parallel_reset_sync_n : std_ulogic;
@@ -357,6 +361,19 @@ begin
     -- Everything this backend has to say fits in the named fields.
     rx_m_o(lane_idx).status <= (others => '0');
     tx_s_o(lane_idx).status <= (others => '0');
+
+    -- Test pattern ---------------------------------------------------------------
+    -- The channel's own generator and checker sit in the PMA, past
+    -- the PCS, so selecting a pattern takes over the serialiser
+    -- whatever the rest of the datapath is configured for and
+    -- nothing else here has to move.
+    --
+    -- This channel reports both the words it could not predict and
+    -- whether it found the pattern at all, so nothing has to be
+    -- counted up from the errors the way it does on a series 7
+    -- channel.
+    rx_m_o(lane_idx).prbs_error <= s_rx_prbs_err;
+    rx_m_o(lane_idx).prbs_locked <= s_rx_prbs_locked;
 
     -- CPLL reset ----------------------------------------------------------------
     gth_power_good_sync : nsl_clocking.async.async_deglitcher
@@ -1311,8 +1328,8 @@ begin
         RXPLLCLKSEL          => (others => '0'),
         RXPMARESET           => '0',
         RXPOLARITY           => s_rx_polarity,
-        RXPRBSCNTRESET       => '0',
-        RXPRBSSEL            => (others => '0'),
+        RXPRBSCNTRESET       => rx_s_i(lane_idx).prbs_error_reset,
+        RXPRBSSEL            => prbs_configure(rx_s_i(lane_idx).prbs_select),
         RXPROGDIVRESET       => '0',
         RXQPIEN              => '0',
         RXRATE               => (others => '0'),
@@ -1384,8 +1401,8 @@ begin
         TXPMARESET           => '0',
         TXPOLARITY           => s_tx_polarity,
         TXPOSTCURSOR         => (others => '0'),
-        TXPRBSFORCEERR       => '0',
-        TXPRBSSEL            => (others => '0'),
+        TXPRBSFORCEERR       => tx_m_i(lane_idx).prbs_force_error,
+        TXPRBSSEL            => prbs_configure(tx_m_i(lane_idx).prbs_select),
         TXPRECURSOR          => (others => '0'),
         TXPROGDIVRESET       => s_tx_progdiv_rst,
         TXQPIBIASEN          => '0',
@@ -1471,8 +1488,8 @@ begin
         RXPHALIGNDONE        => open,
         RXPHALIGNERR         => open,
         RXPMARESETDONE       => s_rx_pma_rst_done,
-        RXPRBSERR            => open,
-        RXPRBSLOCKED         => open,
+        RXPRBSERR            => s_rx_prbs_err,
+        RXPRBSLOCKED         => s_rx_prbs_locked,
         RXPRGDIVRESETDONE    => open,
         RXQPISENN            => open,
         RXQPISENP            => open,
