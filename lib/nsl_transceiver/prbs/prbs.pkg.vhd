@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_data;
+library nsl_transceiver, nsl_data, nsl_amba;
 use nsl_data.bytestream.all;
 use nsl_data.prbs.all;
 use nsl_transceiver.lane.all;
@@ -28,6 +28,19 @@ package prbs is
   constant max_order_c : natural := 31;
 
   subtype history_t is std_ulogic_vector(0 to max_order_c-1);
+
+  -- How a mode is carried by a control bus. Numbered by the
+  -- pattern's order, which is the order the vendors' own selection
+  -- tables use, so a register value reads the same as a datasheet
+  -- selection.
+  constant mode_width_c : natural := 3;
+
+  function to_logic(mode : prbs_mode_t) return std_ulogic_vector;
+
+  -- A value naming no pattern selects none rather than failing: this
+  -- arrives from software, and a configuration bus is not a place to
+  -- stop a simulation.
+  function to_prbs_mode(value : std_ulogic_vector) return prbs_mode_t;
 
   -- Whether a mode asks for a pattern at all, as a logic level,
   -- which is what a backend has to hand its own lock counting.
@@ -127,6 +140,55 @@ package prbs is
       );
   end component;
 
+  -- Protocol-side end of a lane carrying a test pattern: it drives
+  -- which pattern each direction uses and gathers what came back
+  -- into counters a register bus can be read from, so the
+  -- measurement reaches a person through whatever already reaches
+  -- that bus.
+  --
+  -- Four 32-bit registers per lane, at a stride of four words:
+  --
+  --   +0  control  [2:0] pattern to transmit
+  --                [10:8] pattern to expect
+  --                [16] spoil one transmitted bit
+  --                [17] make the checker hunt again
+  --                The two requests act on the write and read back
+  --                as zero.
+  --   +1  status   [0] the checker has found the pattern
+  --   +2  errors   words the checker could not predict
+  --   +3  words    words the checker examined while it had the
+  --                pattern
+  --
+  -- The counters run free and wrap: a reader takes a difference
+  -- between two reads, which is what makes them safe to carry out of
+  -- the lane's own clock domain at all. Resetting them on command
+  -- would be a jump rather than a step, and a step at a time is the
+  -- whole reason the crossing is sound.
+  component prbs_adapter is
+    generic(
+      config_c : nsl_amba.apb.config_t;
+      lane_count_c : natural
+      );
+    port(
+      -- Register bus side, on the clock the cluster hands out for
+      -- its own configuration bus.
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      apb_i : in nsl_amba.apb.master_t;
+      apb_o : out nsl_amba.apb.slave_t;
+
+      -- One clock per lane: the one that lane presents its receive
+      -- status on, which is recovered and therefore neither the
+      -- register bus's nor another lane's.
+      lane_clock_i : in std_ulogic_vector(0 to lane_count_c-1);
+
+      tx_m_o : out tx_master_vector(0 to lane_count_c-1);
+      tx_s_i : in tx_slave_vector(0 to lane_count_c-1);
+      rx_m_i : in rx_master_vector(0 to lane_count_c-1);
+      rx_s_o : out rx_slave_vector(0 to lane_count_c-1)
+      );
+  end component;
+
 end package prbs;
 
 package body prbs is
@@ -159,6 +221,46 @@ package body prbs is
     end case;
 
     return ret;
+  end function;
+
+  function to_logic(mode : prbs_mode_t) return std_ulogic_vector
+  is
+  begin
+    case mode is
+      when PRBS_NONE =>
+        return "000";
+      when PRBS_7 =>
+        return "001";
+      when PRBS_9 =>
+        return "010";
+      when PRBS_15 =>
+        return "011";
+      when PRBS_23 =>
+        return "100";
+      when PRBS_31 =>
+        return "101";
+    end case;
+  end function;
+
+  function to_prbs_mode(value : std_ulogic_vector) return prbs_mode_t
+  is
+    variable v : std_ulogic_vector(mode_width_c-1 downto 0);
+  begin
+    v := value(value'right + mode_width_c - 1 downto value'right);
+
+    if v = "001" then
+      return PRBS_7;
+    elsif v = "010" then
+      return PRBS_9;
+    elsif v = "011" then
+      return PRBS_15;
+    elsif v = "100" then
+      return PRBS_23;
+    elsif v = "101" then
+      return PRBS_31;
+    else
+      return PRBS_NONE;
+    end if;
   end function;
 
   function is_active(mode : prbs_mode_t) return std_ulogic
