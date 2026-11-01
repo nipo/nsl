@@ -426,6 +426,7 @@ begin
       assert config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
           or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B
           or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_64B66B
+          or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_PRBS
         report "transceiver_cluster/gw5a: lane encoding not supported by this backend yet"
         severity failure;
       assert config_c.lanes(lane_idx).data_byte_count = 1
@@ -455,13 +456,26 @@ begin
     enabled_lane: if config_c.lanes(lane_idx).enabled generate
 
       constant byte_count_c : natural := config_c.lanes(lane_idx).data_byte_count;
+      constant pattern_c : boolean
+        := config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_PRBS;
+
+      -- What the lane actually sends and what it actually received:
+      -- the fabric's word on a lane carrying a protocol, and the
+      -- pattern generator's on one carrying a test pattern.
+      signal s_tx_word, s_rx_word : byte_string(0 to byte_count_c-1);
+      signal s_tx_k : std_ulogic_vector(0 to byte_count_c-1);
 
     begin
 
+      rx_word_pack: for byte_idx in 0 to byte_count_c-1 generate
+        s_rx_word(byte_idx)
+          <= std_ulogic_vector(s_rx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx));
+      end generate;
+
       tx_pack: for byte_idx in 0 to byte_count_c-1 generate
         s_tx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx)
-          <= std_logic_vector(tx_m_i(lane_idx).data(byte_idx));
-        s_tx_data(lane_idx)(64+byte_idx) <= tx_m_i(lane_idx).aux(byte_idx)(0);
+          <= std_logic_vector(s_tx_word(byte_idx));
+        s_tx_data(lane_idx)(64+byte_idx) <= s_tx_k(byte_idx);
       end generate;
       -- Data and aux bytes past the lane's parallel width are '-' on
       -- the adapter side. Zero them rather than handing don't-cares
@@ -472,12 +486,88 @@ begin
       end generate;
       s_tx_data(lane_idx)(79 downto 72) <= (others => '0');
 
-      rx_unpack: for byte_idx in 0 to byte_count_c-1 generate
-        rx_m_o(lane_idx).data(byte_idx)
-          <= std_ulogic_vector(s_rx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx));
-        rx_m_o(lane_idx).aux(byte_idx)
-          <= (0 => s_rx_data(lane_idx)(64+byte_idx), others => '0');
+      -- This quad exposes no pattern generator on its fabric
+      -- interface, so a lane carrying a test pattern gets one built
+      -- here. It sits on the parallel word, which means the pattern
+      -- travels through whatever coding the lane is configured for
+      -- rather than replacing it: what it measures is the lane from
+      -- one fabric interface to the other, where a generator inside
+      -- the PMA would measure the line itself.
+      coded_lane: if not pattern_c generate
+        tx_word_unpack: for byte_idx in 0 to byte_count_c-1 generate
+          s_tx_word(byte_idx) <= tx_m_i(lane_idx).data(byte_idx);
+          s_tx_k(byte_idx) <= tx_m_i(lane_idx).aux(byte_idx)(0);
+        end generate;
+
+        rx_unpack: for byte_idx in 0 to byte_count_c-1 generate
+          rx_m_o(lane_idx).data(byte_idx) <= s_rx_word(byte_idx);
+          rx_m_o(lane_idx).aux(byte_idx)
+            <= (0 => s_rx_data(lane_idx)(64+byte_idx), others => '0');
+        end generate;
+
+        s_tx_vld_in(lane_idx) <= tx_m_i(lane_idx).valid;
+        rx_m_o(lane_idx).valid <= s_rx_vld_out(lane_idx);
+        rx_m_o(lane_idx).prbs_locked <= '0';
+        rx_m_o(lane_idx).prbs_error <= '0';
       end generate;
+
+      pattern_lane: if pattern_c generate
+
+        signal locked_s, error_s, generated_s : std_ulogic;
+
+      begin
+
+        generator: nsl_transceiver.prbs.prbs_generator
+          generic map(
+            byte_count_c => byte_count_c
+            )
+          port map(
+            clock_i => s_lane_pcs_tx_clk_buf(lane_idx),
+            reset_n_i => pma_reset_n_i(lane_idx),
+
+            mode_i => tx_m_i(lane_idx).prbs_select,
+            force_error_i => tx_m_i(lane_idx).prbs_force_error,
+
+            data_o => s_tx_word,
+            valid_o => generated_s
+            );
+
+        -- The pattern is data, never a control code.
+        s_tx_k <= (others => '0');
+        s_tx_vld_in(lane_idx) <= generated_s;
+
+        checker: nsl_transceiver.prbs.prbs_checker
+          generic map(
+            byte_count_c => byte_count_c
+            )
+          port map(
+            clock_i => s_lane_pcs_rx_clk_buf(lane_idx),
+            reset_n_i => pma_reset_n_i(lane_idx),
+
+            mode_i => rx_s_i(lane_idx).prbs_select,
+            restart_i => rx_s_i(lane_idx).prbs_error_reset,
+
+            data_i => s_rx_word,
+            valid_i => s_rx_vld_out(lane_idx),
+
+            locked_o => locked_s,
+            error_o => error_s,
+            error_bit_count_o => open
+            );
+
+        -- A lane carrying a pattern has nothing for the fabric on
+        -- its data bus.
+        rx_unpack: for byte_idx in 0 to byte_count_c-1 generate
+          rx_m_o(lane_idx).data(byte_idx) <= (others => '-');
+          rx_m_o(lane_idx).aux(byte_idx) <= (others => '-');
+        end generate;
+
+        rx_m_o(lane_idx).valid <= '0';
+        rx_m_o(lane_idx).prbs_locked <= locked_s;
+        rx_m_o(lane_idx).prbs_error <= error_s;
+
+      end generate;
+
       rx_data_unused: for byte_idx in byte_count_c to 31 generate
         rx_m_o(lane_idx).data(byte_idx) <= (others => '0');
         rx_m_o(lane_idx).aux(byte_idx) <= (others => '0');
@@ -486,7 +576,6 @@ begin
         <= std_ulogic_vector(s_rx_data(lane_idx)(87 downto 72));
       rx_m_o(lane_idx).status(31 downto 16) <= (others => '0');
 
-      rx_m_o(lane_idx).valid <= s_rx_vld_out(lane_idx);
       rx_m_o(lane_idx).pma_lock <= s_pma_rx_lock(lane_idx);
       rx_m_o(lane_idx).pcs_aligned <= s_align_link(lane_idx);
       rx_m_o(lane_idx).elec_idle <= s_rxelecidle(lane_idx);
@@ -504,7 +593,6 @@ begin
       s_pcs_tx_rst(lane_idx) <= not tx_m_i(lane_idx).pcs_reset_n;
       s_pcs_rx_rst(lane_idx) <= not rx_s_i(lane_idx).pcs_reset_n;
       s_lane_rstn(lane_idx) <= pma_reset_n_i(lane_idx);
-      s_tx_vld_in(lane_idx) <= tx_m_i(lane_idx).valid;
       s_rx_fifo_rden(lane_idx) <= rx_s_i(lane_idx).ready;
       s_align_trigger(lane_idx) <= rx_s_i(lane_idx).align_trigger;
       s_chbond_start(lane_idx) <= rx_s_i(lane_idx).chbond_start;
