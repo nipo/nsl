@@ -91,8 +91,26 @@ architecture simulation of transceiver_cluster is
   constant pma_lock_delay_c : time := 100 ns;
 
   -- A line that holds its value for this long has nothing driving
-  -- it. Any 8b/10b stream transitions at least every five bits.
-  constant elec_idle_bit_count_c : natural := 20;
+  -- it. How long that is depends on what the lane carries, because
+  -- the whole judgement rests on the coding promising to move the
+  -- line: an 8b/10b stream transitions at least every five bits, a
+  -- test pattern holds its line for as long as its order, and a raw
+  -- lane promises nothing at all.
+  function elec_idle_bit_count(encoding : encoding_t) return natural
+  is
+  begin
+    case encoding is
+      when ENCODING_8B10B =>
+        return 20;
+      when ENCODING_PRBS =>
+        return 4 * nsl_transceiver.prbs.max_order_c;
+      when others =>
+        -- Long enough that a raw lane sending a run of zeros on
+        -- purpose is not mistaken for a dead one, short enough that
+        -- a dead one is still noticed.
+        return 256;
+    end case;
+  end function;
 
   function symbol_bit_count(encoding : encoding_t) return natural
   is
@@ -278,6 +296,8 @@ begin
       constant bit_period_c : time := bit_period(lane_idx);
       constant word_period_c : time := word_period(lane_idx);
       constant guard_c : time := bit_period_c / 8;
+      constant elec_idle_bit_count_c : natural
+        := elec_idle_bit_count(cfg_c.encoding);
 
       -- Fill the elastic buffer holds when nothing disturbs it.
       -- A few words of slack in each direction: enough that a
@@ -672,8 +692,11 @@ begin
 
           -- No signal on the line is no alignment to keep: a lane
           -- whose partner went away has to find the boundary again
-          -- when it comes back.
-          if elec_idle_s = '1' then
+          -- when it comes back. Only where there is a boundary to
+          -- find, though: a lane with no comma in its stream has
+          -- nothing to re-find and would only lose what it had
+          -- buffered.
+          if elec_idle_s = '1' and cfg_c.encoding = ENCODING_8B10B then
             aligned_s <= '0';
             rehunt_v := false;
             filled_v := 0;
