@@ -774,6 +774,9 @@ projects:
   - name: transceiver_prbs_link
     path: transceiver/prbs_link
     tags: [ghdl, yavs, simulation]
+  - name: transceiver_prbs_serdes
+    path: transceiver/prbs_serdes
+    tags: [ghdl, yavs, simulation]
   - name: transceiver_reset_sequencer
     path: transceiver/reset_sequencer
     tags: [ghdl, yavs, simulation]
