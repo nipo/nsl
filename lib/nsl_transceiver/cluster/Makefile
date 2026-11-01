@@ -34,8 +34,10 @@ endif
 
 ifeq ($(hwdep),gowin)
 ifneq ($(filter GW5%,$(target_part)),)
-vhdl-sources += transceiver_cluster_gw5a.vhd
+# The bridge is instantiated by its entity name, so it has to be
+# analysed before the cluster that reaches for it.
 vhdl-sources += apb_upar_bridge_gw5a.vhd
+vhdl-sources += transceiver_cluster_gw5a.vhd
 deps += gowin.components
 deps += nsl_data.endian
 endif
