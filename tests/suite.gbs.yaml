@@ -752,6 +752,12 @@ projects:
   - name: transceiver_lane_utils
     path: transceiver/lane_utils
     tags: [ghdl, simulation]
+  - name: transceiver_prbs
+    path: transceiver/prbs
+    tags: [ghdl, simulation]
+  - name: transceiver_prbs_link
+    path: transceiver/prbs_link
+    tags: [ghdl, simulation]
   - name: transceiver_reset_sequencer
     path: transceiver/reset_sequencer
     tags: [ghdl, simulation]
