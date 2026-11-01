@@ -2,14 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_data;
-use nsl_data.bytestream.all;
+library nsl_transceiver;
 use nsl_transceiver.lane.all;
 use nsl_transceiver.prbs.all;
 
 entity prbs_generator is
   generic(
-    byte_count_c : natural
+    -- Bits of pattern handed over per clock. Any width does: a lane
+    -- passing a byte at a time asks for 8, one with a ten bit raw
+    -- word asks for 10, one driving a single pad asks for 1.
+    bit_count_c : natural
     );
   port(
     clock_i : in std_ulogic;
@@ -24,14 +26,13 @@ entity prbs_generator is
     -- stays locked and one that has to hunt again.
     ready_i : in std_ulogic;
 
-    data_o : out byte_string(0 to byte_count_c-1);
+    -- Oldest bit first: index 0 goes on the line before index 1.
+    data_o : out std_ulogic_vector(0 to bit_count_c-1);
     valid_o : out std_ulogic
     );
 end entity;
 
 architecture beh of prbs_generator is
-
-  constant bit_count_c : natural := byte_count_c * 8;
 
   -- History plus the word being produced from it. Oldest bit first,
   -- so a tap of depth d for the bit at index i reads index i-d.
@@ -40,7 +41,7 @@ architecture beh of prbs_generator is
   type regs_t is
   record
     history : history_t;
-    data : byte_string(0 to byte_count_c-1);
+    data : std_ulogic_vector(0 to bit_count_c-1);
     valid : std_ulogic;
   end record;
 
@@ -65,7 +66,6 @@ begin
   transition: process(r, mode_i, force_error_i, ready_i) is
     variable window_v : window_t;
     variable deep_v, shallow_v : natural;
-    variable byte_v : byte;
   begin
     rin <= r;
 
@@ -74,7 +74,7 @@ begin
 
     if mode_i = PRBS_NONE then
       rin.valid <= '0';
-      rin.data <= (others => (others => '-'));
+      rin.data <= (others => '-');
     elsif r.valid = '0' or ready_i = '1' then
       window_v := (others => '0');
       window_v(0 to max_order_c-1) := r.history;
@@ -90,12 +90,7 @@ begin
         window_v(max_order_c) := not window_v(max_order_c);
       end if;
 
-      for i in 0 to byte_count_c-1 loop
-        for b in 0 to 7 loop
-          byte_v(b) := window_v(max_order_c + i * 8 + b);
-        end loop;
-        rin.data(i) <= byte_v;
-      end loop;
+      rin.data <= window_v(max_order_c to max_order_c + bit_count_c - 1);
 
       -- The forced bit is not fed back, so what the generator
       -- remembers is the pattern it should have sent.

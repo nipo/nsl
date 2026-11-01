@@ -528,15 +528,22 @@ begin
         signal locked_s, error_s, generated_s : std_ulogic;
         -- Room in the TX elastic FIFO, and the word going into it.
         signal accepting_s, written_s : std_ulogic;
+        -- The pattern as a bit stream, which is what the generator
+        -- and the checker work on, and what the lane carries it in.
+        signal tx_bits_s, rx_bits_s
+          : std_ulogic_vector(0 to byte_count_c*8-1);
 
       begin
 
         accepting_s <= not s_tx_fifo_afull(lane_idx);
         written_s <= generated_s and accepting_s;
 
+        s_tx_word <= nsl_transceiver.prbs.from_line_bits(tx_bits_s);
+        rx_bits_s <= nsl_transceiver.prbs.to_line_bits(s_rx_word);
+
         generator: nsl_transceiver.prbs.prbs_generator
           generic map(
-            byte_count_c => byte_count_c
+            bit_count_c => byte_count_c * 8
             )
           port map(
             clock_i => s_lane_pcs_tx_clk_buf(lane_idx),
@@ -546,7 +553,7 @@ begin
             force_error_i => tx_m_i(lane_idx).prbs_force_error,
             ready_i => accepting_s,
 
-            data_o => s_tx_word,
+            data_o => tx_bits_s,
             valid_o => generated_s
             );
 
@@ -556,7 +563,7 @@ begin
 
         checker: nsl_transceiver.prbs.prbs_checker
           generic map(
-            byte_count_c => byte_count_c
+            bit_count_c => byte_count_c * 8
             )
           port map(
             clock_i => s_lane_pcs_rx_clk_buf(lane_idx),
@@ -565,7 +572,7 @@ begin
             mode_i => rx_s_i(lane_idx).prbs_select,
             restart_i => rx_s_i(lane_idx).prbs_error_reset,
 
-            data_i => s_rx_word,
+            data_i => rx_bits_s,
             valid_i => s_rx_vld_out(lane_idx),
 
             locked_o => locked_s,

@@ -2,14 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_data;
-use nsl_data.bytestream.all;
+library nsl_transceiver;
 use nsl_transceiver.lane.all;
 use nsl_transceiver.prbs.all;
 
 entity prbs_checker is
   generic(
-    byte_count_c : natural;
+    -- Bits of line looked at per clock, matching the generator's.
+    bit_count_c : natural;
     lock_word_count_c : natural := 16;
     unlock_word_count_c : natural := 16
     );
@@ -20,18 +20,17 @@ entity prbs_checker is
     mode_i : in prbs_mode_t;
     restart_i : in std_ulogic;
 
-    data_i : in byte_string(0 to byte_count_c-1);
+    -- Oldest bit first, as the generator hands them over.
+    data_i : in std_ulogic_vector(0 to bit_count_c-1);
     valid_i : in std_ulogic;
 
     locked_o : out std_ulogic;
     error_o : out std_ulogic;
-    error_bit_count_o : out integer range 0 to byte_count_c*8
+    error_bit_count_o : out integer range 0 to bit_count_c
     );
 end entity;
 
 architecture beh of prbs_checker is
-
-  constant bit_count_c : natural := byte_count_c * 8;
 
   subtype window_t is std_ulogic_vector(0 to max_order_c + bit_count_c - 1);
 
@@ -68,11 +67,9 @@ begin
 
   transition: process(r, mode_i, restart_i, data_i, valid_i) is
     variable window_v : window_t;
-    variable received_v : std_ulogic_vector(0 to bit_count_c-1);
     variable deep_v, shallow_v : natural;
     variable errors_v : natural range 0 to bit_count_c;
     variable predicted_v : std_ulogic;
-    variable byte_v : byte;
   begin
     rin <= r;
     rin.error <= '0';
@@ -86,13 +83,6 @@ begin
       rin.clean_count <= 0;
       rin.dirty_count <= 0;
     elsif valid_i = '1' then
-      for i in 0 to byte_count_c-1 loop
-        byte_v := data_i(i);
-        for b in 0 to 7 loop
-          received_v(i * 8 + b) := byte_v(b);
-        end loop;
-      end loop;
-
       window_v := (others => '0');
       window_v(0 to max_order_c-1) := r.history;
       errors_v := 0;
@@ -100,7 +90,7 @@ begin
       for i in max_order_c to max_order_c + bit_count_c - 1 loop
         predicted_v := window_v(i - deep_v) xor window_v(i - shallow_v);
 
-        if predicted_v /= received_v(i - max_order_c) then
+        if predicted_v /= data_i(i - max_order_c) then
           errors_v := errors_v + 1;
         end if;
 
@@ -112,7 +102,7 @@ begin
         if r.locked = '1' then
           window_v(i) := predicted_v;
         else
-          window_v(i) := received_v(i - max_order_c);
+          window_v(i) := data_i(i - max_order_c);
         end if;
       end loop;
 
