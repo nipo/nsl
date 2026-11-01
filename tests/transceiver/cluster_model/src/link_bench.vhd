@@ -180,7 +180,9 @@ begin
                         pcs_reset_n => '1',
                         align_trigger => '0',
                         chbond_start => '0',
-                        control => (others => '0')));
+                        control => (others => '0'),
+                        prbs_select => PRBS_NONE,
+                        prbs_error_reset => '0'));
 
   -- The receiving lane has nothing of its own to send, so it sends
   -- the model's idle pattern. That is what keeps the transmitting
@@ -193,7 +195,9 @@ begin
     pcs_reset_n => '1',
     control => (others => '0'),
     control_h => (others => '0'),
-    c2i_clock => '0'
+    c2i_clock => '0',
+    prbs_select => PRBS_NONE,
+    prbs_force_error => '0'
     );
 
   feed: process

@@ -81,12 +81,19 @@ begin
     tx_m_o(tx_m_idx_c).pcs_reset_n <= '1';
     tx_m_o(tx_m_idx_c).c2i_clock <= '0';
 
+    -- SGMII frames its own lane, so the pattern generator stays out
+    -- of the way.
+    tx_m_o(tx_m_idx_c).prbs_select <= nsl_transceiver.lane.PRBS_NONE;
+    tx_m_o(tx_m_idx_c).prbs_force_error <= '0';
+
     -- RX handshake: always accept -------------------------------------------------------
     rx_s_o(rx_s_idx_c).ready <= '1';
     rx_s_o(rx_s_idx_c).pcs_reset_n <= '1';
     rx_s_o(rx_s_idx_c).align_trigger <= sgmii_i(sgmii_i_idx_c).align_rst;
     rx_s_o(rx_s_idx_c).chbond_start <= '0';
     rx_s_o(rx_s_idx_c).control <= (others => '0');
+    rx_s_o(rx_s_idx_c).prbs_select <= nsl_transceiver.lane.PRBS_NONE;
+    rx_s_o(rx_s_idx_c).prbs_error_reset <= '0';
 
   end generate;
 

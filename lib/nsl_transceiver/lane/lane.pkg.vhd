@@ -57,11 +57,41 @@ package lane is
   subtype control_t is std_ulogic_vector(max_control_width_c-1 downto 0);
   subtype status_t is std_ulogic_vector(max_status_width_c-1 downto 0);
 
+  -- How the lane codes the bits it carries. This is a property of
+  -- the lane, not a layer on top of one: a lane either carries a
+  -- coded protocol stream or it carries a test pattern, never one
+  -- inside the other.
+  --
+  -- ENCODING_PRBS hands the lane over to its own pattern generator
+  -- and checker. The data bus carries nothing in that mode, the
+  -- comma and rate-matching parameters of sync_t go unused, and the
+  -- prbs fields below are the whole interface. A cluster whose
+  -- primitive generates the pattern itself hands the job over to
+  -- it; one whose primitive cannot does it in fabric, the same way
+  -- 8b/10b is done for a primitive without a codec.
   type encoding_t is (
     ENCODING_RAW,
     ENCODING_8B10B,
     ENCODING_64B66B,
-    ENCODING_128B130B
+    ENCODING_128B130B,
+    ENCODING_PRBS
+    );
+
+  -- Pattern a lane in ENCODING_PRBS carries, named by the order of
+  -- its polynomial. These five are what transceiver pattern
+  -- generators offer; the polynomials themselves live in
+  -- nsl_data.prbs.
+  --
+  -- PRBS_NONE leaves the generator idle, so a lane can be brought up
+  -- without putting a pattern on the line, and leaves the checker
+  -- unlocked. A direction set to it is quiet, not broken.
+  type prbs_mode_t is (
+    PRBS_NONE,
+    PRBS_7,
+    PRBS_9,
+    PRBS_15,
+    PRBS_23,
+    PRBS_31
     );
 
   type loopback_mode_t is (
@@ -205,6 +235,11 @@ package lane is
     control : control_t;
     control_h : control_t;
     c2i_clock : std_ulogic;
+    -- ENCODING_PRBS only. The pattern to transmit, and a request to
+    -- corrupt one bit of it so the far end's checker can be seen to
+    -- notice. The request is taken once per cycle it is held.
+    prbs_select : prbs_mode_t;
+    prbs_force_error : std_ulogic;
   end record;
 
   -- TX path: signals driven by the transceiver back to the adapter.
@@ -238,6 +273,16 @@ package lane is
     clock_corrected : std_ulogic;
     elec_idle : std_ulogic;
     status : status_t;
+    -- ENCODING_PRBS only. The checker has found the sequence and is
+    -- predicting it, and this cycle's word did not match what it
+    -- predicted.
+    --
+    -- The error is reported per word rather than per bit because
+    -- that is all a transceiver's own checker reports. A lane
+    -- counting bits would be measuring something its neighbour on
+    -- another vendor could not.
+    prbs_locked : std_ulogic;
+    prbs_error : std_ulogic;
   end record;
 
   -- RX path: signals driven by the adapter back to the transceiver.
@@ -253,6 +298,11 @@ package lane is
     align_trigger : std_ulogic;
     chbond_start : std_ulogic;
     control : control_t;
+    -- ENCODING_PRBS only. The pattern to expect, and a request to
+    -- make the checker hunt for it again, which is also how a
+    -- statistics counter is told where its window starts.
+    prbs_select : prbs_mode_t;
+    prbs_error_reset : std_ulogic;
   end record;
 
   type rx_t is
@@ -287,7 +337,9 @@ package lane is
     pcs_reset_n => '-',
     control => (others => '-'),
     control_h => (others => '-'),
-    c2i_clock => '-'
+    c2i_clock => '-',
+    prbs_select => PRBS_NONE,
+    prbs_force_error => '-'
     );
 
   constant null_tx_slave_c : tx_slave_t := (
@@ -304,7 +356,9 @@ package lane is
     pcs_aligned => '-',
     clock_corrected => '-',
     elec_idle => '-',
-    status => (others => '-')
+    status => (others => '-'),
+    prbs_locked => '-',
+    prbs_error => '-'
     );
 
   constant null_rx_slave_c : rx_slave_t := (
@@ -312,7 +366,9 @@ package lane is
     pcs_reset_n => '-',
     align_trigger => '-',
     chbond_start => '-',
-    control => (others => '-')
+    control => (others => '-'),
+    prbs_select => PRBS_NONE,
+    prbs_error_reset => '-'
     );
 
 end package lane;

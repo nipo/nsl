@@ -60,7 +60,11 @@ begin
       pcs_reset_n => reset_n_i,
       control => (others => '-'),
       control_h => (others => '-'),
-      c2i_clock => '-'
+      c2i_clock => '-',
+      -- CUFF frames its own lane, so the pattern generator stays
+      -- out of the way.
+      prbs_select => nsl_transceiver.lane.PRBS_NONE,
+      prbs_force_error => '0'
       );
 
     s_encoder_in.data <= rx_m_i(lane_idx).data(0);
@@ -107,7 +111,9 @@ begin
       pcs_reset_n => reset_n_i,
       align_trigger => '0',
       chbond_start => '0',
-      control => (others => '-')
+      control => (others => '-'),
+      prbs_select => nsl_transceiver.lane.PRBS_NONE,
+      prbs_error_reset => '0'
       );
 
   end generate;
