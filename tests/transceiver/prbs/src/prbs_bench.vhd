@@ -39,6 +39,11 @@ architecture beh of prbs_bench is
   signal force_error_s : std_ulogic;
   signal restart_s : std_ulogic;
   signal corrupt_s : std_ulogic;
+  -- The word sink's backpressure, driven low to hold the line, and
+  -- the word it takes: the sink reads exactly when the generator
+  -- parts with a word.
+  signal ready_s : std_ulogic;
+  signal taken_s : std_ulogic;
 
   signal locked_s, error_s : std_ulogic;
   signal error_bit_count_s : integer range 0 to byte_count_c*8;
@@ -55,6 +60,7 @@ begin
 
       mode_i => mode_c,
       force_error_i => force_error_s,
+      ready_i => ready_s,
 
       data_o => gen_data_s,
       valid_o => gen_valid_s
@@ -71,6 +77,8 @@ begin
     end if;
   end process;
 
+  taken_s <= gen_valid_s and ready_s;
+
   checker: nsl_transceiver.prbs.prbs_checker
     generic map(
       byte_count_c => byte_count_c
@@ -83,7 +91,7 @@ begin
       restart_i => restart_s,
 
       data_i => rx_data_s,
-      valid_i => gen_valid_s,
+      valid_i => taken_s,
 
       locked_o => locked_s,
       error_o => error_s,
@@ -130,6 +138,37 @@ begin
           & " interrupted"
           severity failure;
       end loop;
+    end procedure;
+
+    -- Holds the line, then lets it go. The pattern has to pick up
+    -- where it stopped: a generator running on through a stall would
+    -- leave a hole in the sequence and the far end would have to
+    -- hunt for its phase again.
+    procedure stall(word_count : natural; what : string) is
+    begin
+      wait until falling_edge(clock_i);
+      ready_s <= '0';
+
+      for i in 0 to word_count-1 loop
+        wait until rising_edge(clock_i);
+      end loop;
+
+      wait until falling_edge(clock_i);
+      ready_s <= '1';
+
+      for i in 0 to 15 loop
+        wait until rising_edge(clock_i);
+        assert error_s = '0'
+          report what & ": the checker reported "
+          & integer'image(error_bit_count_s)
+          & " wrong bits once the line started again"
+          severity failure;
+        assert locked_s = '1'
+          report what & ": the checker lost the pattern over a stall"
+          severity failure;
+      end loop;
+
+      log_info(ctxt, what & " left the pattern where it was");
     end procedure;
 
     -- Breaks exactly one bit and counts what comes back.
@@ -182,11 +221,14 @@ begin
     force_error_s <= '0';
     restart_s <= '0';
     corrupt_s <= '0';
+    ready_s <= '1';
 
     wait until reset_n_i = '1';
 
     wait_locked(256, "finding the pattern");
     run_clean(64, "running clean");
+
+    stall(5, "a stalled word sink");
 
     one_bit(true, "a wrong bit on the line");
     run_clean(64, "running clean after a line error");

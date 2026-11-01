@@ -514,8 +514,13 @@ begin
       pattern_lane: if pattern_c generate
 
         signal locked_s, error_s, generated_s : std_ulogic;
+        -- Room in the TX elastic FIFO, and the word going into it.
+        signal accepting_s, written_s : std_ulogic;
 
       begin
+
+        accepting_s <= not s_tx_fifo_afull(lane_idx);
+        written_s <= generated_s and accepting_s;
 
         generator: nsl_transceiver.prbs.prbs_generator
           generic map(
@@ -527,6 +532,7 @@ begin
 
             mode_i => tx_m_i(lane_idx).prbs_select,
             force_error_i => tx_m_i(lane_idx).prbs_force_error,
+            ready_i => accepting_s,
 
             data_o => s_tx_word,
             valid_o => generated_s
@@ -534,7 +540,7 @@ begin
 
         -- The pattern is data, never a control code.
         s_tx_k <= (others => '0');
-        s_tx_vld_in(lane_idx) <= generated_s;
+        s_tx_vld_in(lane_idx) <= written_s;
 
         checker: nsl_transceiver.prbs.prbs_checker
           generic map(
