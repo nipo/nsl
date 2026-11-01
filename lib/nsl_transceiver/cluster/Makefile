@@ -30,6 +30,7 @@ deps += nsl_logic.gearbox
 ifeq ($(hwdep),simulation)
 vhdl-sources += transceiver_cluster_simulation.vhd
 deps += nsl_line_coding.ibm_8b10b
+deps += nsl_transceiver.prbs
 endif
 
 ifeq ($(hwdep),gowin)
