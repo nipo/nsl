@@ -500,6 +500,8 @@ begin
 
             mode_i => tx_m_i(lane_idx).prbs_select,
             force_error_i => tx_m_i(lane_idx).prbs_force_error,
+            -- The serialiser takes a word every word period.
+            ready_i => '1',
 
             data_o => word_s,
             valid_o => word_valid_s

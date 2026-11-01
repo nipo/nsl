@@ -41,6 +41,7 @@ begin
 
       mode_i => PRBS_7,
       force_error_i => '0',
+      ready_i => '1',
 
       data_o => period_data_s,
       valid_o => period_valid_s

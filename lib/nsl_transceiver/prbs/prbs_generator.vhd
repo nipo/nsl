@@ -18,6 +18,12 @@ entity prbs_generator is
     mode_i : in prbs_mode_t;
     force_error_i : in std_ulogic;
 
+    -- The pattern advances on an accepted word only. A sink that
+    -- stalls gets the same word again rather than a hole in the
+    -- sequence, which is the difference between a far end that
+    -- stays locked and one that has to hunt again.
+    ready_i : in std_ulogic;
+
     data_o : out byte_string(0 to byte_count_c-1);
     valid_o : out std_ulogic
     );
@@ -56,7 +62,7 @@ begin
     end if;
   end process;
 
-  transition: process(r, mode_i, force_error_i) is
+  transition: process(r, mode_i, force_error_i, ready_i) is
     variable window_v : window_t;
     variable deep_v, shallow_v : natural;
     variable byte_v : byte;
@@ -69,7 +75,7 @@ begin
     if mode_i = PRBS_NONE then
       rin.valid <= '0';
       rin.data <= (others => (others => '-'));
-    else
+    elsif r.valid = '0' or ready_i = '1' then
       window_v := (others => '0');
       window_v(0 to max_order_c-1) := r.history;
 

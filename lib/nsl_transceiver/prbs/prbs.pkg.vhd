@@ -68,6 +68,7 @@ package prbs is
 
       mode_i : in prbs_mode_t;
       force_error_i : in std_ulogic;
+      ready_i : in std_ulogic;
 
       data_o : out byte_string(0 to byte_count_c-1);
       valid_o : out std_ulogic
