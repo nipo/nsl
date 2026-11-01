@@ -755,6 +755,9 @@ projects:
   - name: transceiver_prbs
     path: transceiver/prbs
     tags: [ghdl, simulation]
+  - name: transceiver_prbs_apb
+    path: transceiver/prbs_apb
+    tags: [ghdl, simulation]
   - name: transceiver_prbs_link
     path: transceiver/prbs_link
     tags: [ghdl, simulation]
