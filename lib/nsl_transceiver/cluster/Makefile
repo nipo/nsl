@@ -23,6 +23,10 @@ vhdl-sources += transceiver_config_gthe4.vhd
 vhdl-sources += gthe4_cpll_reset_fsm.vhd
 vhdl-sources += gthe4_reset_fsm.vhd
 deps += nsl_logic.gearbox
+# The pattern generator and checker are vendor-neutral: a backend
+# whose primitive has one hands the job over, and one whose primitive
+# has none builds it here.
+deps += nsl_transceiver.prbs
 
 # Behavioural backend. It reaches no primitive at all: it models a
 # transceiver quad, so a testbench can exercise the portable
@@ -30,7 +34,6 @@ deps += nsl_logic.gearbox
 ifeq ($(hwdep),simulation)
 vhdl-sources += transceiver_cluster_simulation.vhd
 deps += nsl_line_coding.ibm_8b10b
-deps += nsl_transceiver.prbs
 endif
 
 ifeq ($(hwdep),gowin)
