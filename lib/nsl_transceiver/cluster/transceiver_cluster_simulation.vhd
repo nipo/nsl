@@ -102,6 +102,9 @@ architecture simulation of transceiver_cluster is
         return 8;
       when ENCODING_8B10B =>
         return 10;
+      when ENCODING_PRBS =>
+        -- A test pattern is raw bits, so a word is just its bytes.
+        return 8;
       when others =>
         -- The model would have to carry a scrambler and a block sync
         -- state machine, and no backend in the library drives these
@@ -297,6 +300,15 @@ begin
       signal pma_locked_s : std_ulogic;
       signal elec_idle_s : std_ulogic;
 
+      -- What the receive side recovered, before it is decided
+      -- whether the fabric is given it or a pattern checker is.
+      signal rx_data_s : byte_string(0 to nsl_transceiver.lane.max_data_byte_count_c-1);
+      signal rx_aux_s : nsl_transceiver.lane.data_aux_t;
+      signal rx_valid_s : std_ulogic;
+      signal rx_aligned_s : std_ulogic;
+      signal rx_corrected_s : std_ulogic;
+      signal rx_status_s : nsl_transceiver.lane.status_t;
+
     begin
 
       lane_reset_n_s <= reset_n_i and pma_reset_n_i(lane_idx)
@@ -319,126 +331,200 @@ begin
 
       -- Transmit -----------------------------------------------------
 
-      -- A word is sampled on each rising edge of the lane clock and
-      -- shifted out over exactly one word period, so the serialiser
-      -- stays in phase with the clock without ever waiting on it
-      -- again: a process landing on the edge and then waiting for it
-      -- would race the clock's own update and be a word late or
-      -- early depending on the simulator.
-      tx: process
-        variable disparity_v : std_ulogic;
-        variable sym_v : nsl_line_coding.ibm_8b10b.data_t;
-        variable group_v : nsl_line_coding.ibm_8b10b.code_word_t;
-        variable word_v : nsl_line_coding.ibm_8b10b.data_vector(0 to byte_count_c-1);
-        -- Captured with the word: the adapter is entitled to change
-        -- them as soon as the edge has passed.
-        variable force_v : std_ulogic_vector(0 to byte_count_c-1);
-        variable force_to_v : std_ulogic_vector(0 to byte_count_c-1);
-        variable bit_v : std_ulogic;
-        variable idle_phase_v : natural;
+      -- A lane carrying a protocol serialises what the fabric gave
+      -- it; one carrying a test pattern serialises what its own
+      -- generator produced, and never looks at the data bus. Only
+      -- one of the two is built, because they are coding models of
+      -- the lane rather than layers over it.
+      coded_tx: if cfg_c.encoding /= ENCODING_PRBS generate
       begin
-        tx_serial_s <= '0';
-        disparity_v := '0';
-        idle_phase_v := 0;
 
-        wait until lane_reset_n_s = '1';
-        wait until rising_edge(word_clock_s);
 
-        while lane_reset_n_s = '1' loop
-          -- A lane whose sideband is unknown is a lane whose partner
-          -- decodes something arbitrary, so say so here rather than
-          -- let the value travel.
-          assert tx_m_i(lane_idx).valid = '0' or tx_m_i(lane_idx).valid = '1'
-            report "transceiver_cluster/simulation: lane "
-            & integer'image(lane_idx) & " has no transmit valid"
-            severity failure;
+        -- A word is sampled on each rising edge of the lane clock and
+        -- shifted out over exactly one word period, so the serialiser
+        -- stays in phase with the clock without ever waiting on it
+        -- again: a process landing on the edge and then waiting for it
+        -- would race the clock's own update and be a word late or
+        -- early depending on the simulator.
+        tx: process
+          variable disparity_v : std_ulogic;
+          variable sym_v : nsl_line_coding.ibm_8b10b.data_t;
+          variable group_v : nsl_line_coding.ibm_8b10b.code_word_t;
+          variable word_v : nsl_line_coding.ibm_8b10b.data_vector(0 to byte_count_c-1);
+          -- Captured with the word: the adapter is entitled to change
+          -- them as soon as the edge has passed.
+          variable force_v : std_ulogic_vector(0 to byte_count_c-1);
+          variable force_to_v : std_ulogic_vector(0 to byte_count_c-1);
+          variable bit_v : std_ulogic;
+          variable idle_phase_v : natural;
+        begin
+          tx_serial_s <= '0';
+          disparity_v := '0';
+          idle_phase_v := 0;
 
-          force_v := (others => '0');
-          force_to_v := (others => '0');
+          wait until lane_reset_n_s = '1';
+          wait until rising_edge(word_clock_s);
 
-          if tx_m_i(lane_idx).valid = '1' then
-            for i in 0 to byte_count_c-1 loop
-              assert tx_m_i(lane_idx).aux(i)(0) = '0'
-                or tx_m_i(lane_idx).aux(i)(0) = '1'
-                report "transceiver_cluster/simulation: lane "
-                & integer'image(lane_idx) & " byte " & integer'image(i)
-                & " has no control flag in aux bit 0"
-                severity failure;
-
-              word_v(i).data := tx_m_i(lane_idx).data(i);
-              word_v(i).control := tx_m_i(lane_idx).aux(i)(0);
-
-              if cfg_c.encoding = ENCODING_8B10B
-                and tx_m_i(lane_idx).aux(i)(1) = '1' then
-                force_v(i) := '1';
-                force_to_v(i) := tx_m_i(lane_idx).aux(i)(2);
-              end if;
-            end loop;
-
-            -- The idle sequence restarts whenever the lane stops
-            -- sending it, so a partner always sees it whole.
-            idle_phase_v := 0;
-          else
-            -- Nothing to send: the configured idle goes out, so the
-            -- partner keeps its alignment and its disparity. The
-            -- sequence advances across words, which is the only way
-            -- a lane narrower than the pattern can send it at all.
-            assert cfg_c.sync.idle_byte_count /= 0
+          while lane_reset_n_s = '1' loop
+            -- A lane whose sideband is unknown is a lane whose partner
+            -- decodes something arbitrary, so say so here rather than
+            -- let the value travel.
+            assert tx_m_i(lane_idx).valid = '0' or tx_m_i(lane_idx).valid = '1'
               report "transceiver_cluster/simulation: lane "
-              & integer'image(lane_idx) & " has nothing to transmit and"
-              & " no idle pattern to send instead"
+              & integer'image(lane_idx) & " has no transmit valid"
               severity failure;
 
+            force_v := (others => '0');
+            force_to_v := (others => '0');
+
+            if tx_m_i(lane_idx).valid = '1' then
+              for i in 0 to byte_count_c-1 loop
+                assert tx_m_i(lane_idx).aux(i)(0) = '0'
+                  or tx_m_i(lane_idx).aux(i)(0) = '1'
+                  report "transceiver_cluster/simulation: lane "
+                  & integer'image(lane_idx) & " byte " & integer'image(i)
+                  & " has no control flag in aux bit 0"
+                  severity failure;
+
+                word_v(i).data := tx_m_i(lane_idx).data(i);
+                word_v(i).control := tx_m_i(lane_idx).aux(i)(0);
+
+                if cfg_c.encoding = ENCODING_8B10B
+                  and tx_m_i(lane_idx).aux(i)(1) = '1' then
+                  force_v(i) := '1';
+                  force_to_v(i) := tx_m_i(lane_idx).aux(i)(2);
+                end if;
+              end loop;
+
+              -- The idle sequence restarts whenever the lane stops
+              -- sending it, so a partner always sees it whole.
+              idle_phase_v := 0;
+            else
+              -- Nothing to send: the configured idle goes out, so the
+              -- partner keeps its alignment and its disparity. The
+              -- sequence advances across words, which is the only way
+              -- a lane narrower than the pattern can send it at all.
+              assert cfg_c.sync.idle_byte_count /= 0
+                report "transceiver_cluster/simulation: lane "
+                & integer'image(lane_idx) & " has nothing to transmit and"
+                & " no idle pattern to send instead"
+                severity failure;
+
+              for i in 0 to byte_count_c-1 loop
+                word_v(i).data := cfg_c.sync.idle_pattern(idle_phase_v);
+                -- The first byte of a pattern names a control symbol.
+                if idle_phase_v = 0 then
+                  word_v(i).control := '1';
+                else
+                  word_v(i).control := '0';
+                end if;
+                idle_phase_v := (idle_phase_v + 1) mod cfg_c.sync.idle_byte_count;
+              end loop;
+            end if;
+
             for i in 0 to byte_count_c-1 loop
-              word_v(i).data := cfg_c.sync.idle_pattern(idle_phase_v);
-              -- The first byte of a pattern names a control symbol.
-              if idle_phase_v = 0 then
-                word_v(i).control := '1';
-              else
-                word_v(i).control := '0';
-              end if;
-              idle_phase_v := (idle_phase_v + 1) mod cfg_c.sync.idle_byte_count;
+              sym_v := word_v(i);
+
+              case cfg_c.encoding is
+                when ENCODING_8B10B =>
+                  -- A lane may ask for a disparity rather than take
+                  -- the one the encoder would have picked: that is
+                  -- what aux bits 1 and 2 are for.
+                  if force_v(i) = '1' then
+                    disparity_v := not force_to_v(i);
+                  end if;
+
+                  nsl_line_coding.ibm_8b10b_spec.encode(
+                    sym_v, disparity_v, group_v, disparity_v);
+
+                  -- A code group is indexed in transmission order.
+                  for b in 0 to 9 loop
+                    bit_v := group_v(b);
+                    if cfg_c.polarity_invert_tx then
+                      bit_v := not bit_v;
+                    end if;
+                    tx_serial_s <= bit_v;
+                    wait for bit_period_c;
+                  end loop;
+
+                when others =>
+                  for b in 0 to 7 loop
+                    bit_v := sym_v.data(b);
+                    if cfg_c.polarity_invert_tx then
+                      bit_v := not bit_v;
+                    end if;
+                    tx_serial_s <= bit_v;
+                    wait for bit_period_c;
+                  end loop;
+              end case;
             end loop;
-          end if;
+          end loop;
+        end process;
 
-          for i in 0 to byte_count_c-1 loop
-            sym_v := word_v(i);
+      end generate;
 
-            case cfg_c.encoding is
-              when ENCODING_8B10B =>
-                -- A lane may ask for a disparity rather than take
-                -- the one the encoder would have picked: that is
-                -- what aux bits 1 and 2 are for.
-                if force_v(i) = '1' then
-                  disparity_v := not force_to_v(i);
+      pattern_tx: if cfg_c.encoding = ENCODING_PRBS generate
+
+        signal word_s : byte_string(0 to byte_count_c-1);
+        signal word_valid_s : std_ulogic;
+
+      begin
+
+        generator: nsl_transceiver.prbs.prbs_generator
+          generic map(
+            byte_count_c => byte_count_c
+            )
+          port map(
+            clock_i => word_clock_s,
+            reset_n_i => lane_reset_n_s,
+
+            mode_i => tx_m_i(lane_idx).prbs_select,
+            force_error_i => tx_m_i(lane_idx).prbs_force_error,
+
+            data_o => word_s,
+            valid_o => word_valid_s
+            );
+
+        -- Same shape as the coded serialiser: a word is sampled on
+        -- the edge and shifted out over exactly one word period, so
+        -- the two stay in step without the serialiser ever waiting
+        -- on the clock again.
+        tx: process
+          variable word_v : byte_string(0 to byte_count_c-1);
+          variable valid_v : std_ulogic;
+          variable bit_v : std_ulogic;
+        begin
+          tx_serial_s <= '0';
+
+          wait until lane_reset_n_s = '1';
+          wait until rising_edge(word_clock_s);
+
+          while lane_reset_n_s = '1' loop
+            word_v := word_s;
+            valid_v := word_valid_s;
+
+            for i in 0 to byte_count_c-1 loop
+              for b in 0 to 7 loop
+                if valid_v = '1' then
+                  bit_v := word_v(i)(b);
+                else
+                  -- No pattern asked for, so the lane is held quiet
+                  -- rather than made to carry something arbitrary.
+                  bit_v := '0';
                 end if;
 
-                nsl_line_coding.ibm_8b10b_spec.encode(
-                  sym_v, disparity_v, group_v, disparity_v);
+                if cfg_c.polarity_invert_tx then
+                  bit_v := not bit_v;
+                end if;
 
-                -- A code group is indexed in transmission order.
-                for b in 0 to 9 loop
-                  bit_v := group_v(b);
-                  if cfg_c.polarity_invert_tx then
-                    bit_v := not bit_v;
-                  end if;
-                  tx_serial_s <= bit_v;
-                  wait for bit_period_c;
-                end loop;
-
-              when others =>
-                for b in 0 to 7 loop
-                  bit_v := sym_v.data(b);
-                  if cfg_c.polarity_invert_tx then
-                    bit_v := not bit_v;
-                  end if;
-                  tx_serial_s <= bit_v;
-                  wait for bit_period_c;
-                end loop;
-            end case;
+                tx_serial_s <= bit_v;
+                wait for bit_period_c;
+              end loop;
+            end loop;
           end loop;
-        end loop;
-      end process;
+        end process;
+
+      end generate;
 
       lane_tx_o(lane_idx) <= nsl_io.diff.to_diff(tx_serial_s);
 
@@ -792,18 +878,18 @@ begin
         insert_v := 0;
         insert_phase_v := 0;
 
-        rx_m_o(lane_idx).valid <= '0';
-        rx_m_o(lane_idx).pcs_aligned <= '0';
-        rx_m_o(lane_idx).clock_corrected <= '0';
-        rx_m_o(lane_idx).status <= (others => '0');
+        rx_valid_s <= '0';
+        rx_aligned_s <= '0';
+        rx_corrected_s <= '0';
+        rx_status_s <= (others => '0');
 
         -- Bytes past the lane's width belong to no byte on this
         -- lane. They are driven from here rather than from a
         -- concurrent statement because a process assigning an array
         -- element under a dynamic index drives the whole array.
         for i in 0 to nsl_transceiver.lane.max_data_byte_count_c-1 loop
-          rx_m_o(lane_idx).data(i) <= (others => '-');
-          rx_m_o(lane_idx).aux(i) <= (others => '-');
+          rx_data_s(i) <= (others => '-');
+          rx_aux_s(i) <= (others => '-');
         end loop;
 
         wait until lane_reset_n_s = '1';
@@ -815,8 +901,8 @@ begin
           if aligned_s /= '1' then
             -- Nothing has framed the stream yet, so there is no word
             -- to present and no fill worth keeping.
-            rx_m_o(lane_idx).valid <= '0';
-            rx_m_o(lane_idx).pcs_aligned <= '0';
+            rx_valid_s <= '0';
+            rx_aligned_s <= '0';
             rptr_v := store_wptr_s;
             primed_v := false;
             insert_v := 0;
@@ -840,10 +926,10 @@ begin
               severity failure;
 
             if not primed_v then
-              rx_m_o(lane_idx).valid <= '0';
+              rx_valid_s <= '0';
               primed_v := fill_v >= store_target_c;
             else
-              rx_m_o(lane_idx).pcs_aligned <= '1';
+              rx_aligned_s <= '1';
 
               -- Too full: a clock-correction sequence is what the
               -- buffer is permitted to lose, and the protocol above
@@ -891,20 +977,20 @@ begin
                   rptr_v := (rptr_v + 1) mod store_depth_c;
                 end if;
 
-                rx_m_o(lane_idx).data(i) <= entry_v.sym.data;
-                rx_m_o(lane_idx).aux(i)(0) <= entry_v.sym.control;
-                rx_m_o(lane_idx).aux(i)(1) <= entry_v.code_error;
-                rx_m_o(lane_idx).aux(i)(2) <= entry_v.disparity_error;
-                rx_m_o(lane_idx).aux(i)(3) <= entry_v.disparity;
-                rx_m_o(lane_idx).aux(i)(aux_t'left downto 4) <= (others => '-');
+                rx_data_s(i) <= entry_v.sym.data;
+                rx_aux_s(i)(0) <= entry_v.sym.control;
+                rx_aux_s(i)(1) <= entry_v.code_error;
+                rx_aux_s(i)(2) <= entry_v.disparity_error;
+                rx_aux_s(i)(3) <= entry_v.disparity;
+                rx_aux_s(i)(aux_t'left downto 4) <= (others => '-');
               end loop;
 
-              rx_m_o(lane_idx).valid <= '1';
+              rx_valid_s <= '1';
             end if;
           end if;
 
           store_rptr_s <= rptr_v;
-          rx_m_o(lane_idx).clock_corrected <= corrected_v;
+          rx_corrected_s <= corrected_v;
 
           wait until rising_edge(word_clock_s);
         end loop;
@@ -912,6 +998,63 @@ begin
 
       rx_m_o(lane_idx).pma_lock <= pma_locked_s;
       rx_m_o(lane_idx).elec_idle <= elec_idle_s;
+
+      -- A lane carrying a protocol hands what it recovered to the
+      -- fabric; one carrying a test pattern hands it to a checker
+      -- instead and leaves the data bus alone. The two are coding
+      -- models of the lane, so exactly one of them is built.
+      coded_rx: if cfg_c.encoding /= ENCODING_PRBS generate
+        rx_m_o(lane_idx).data <= rx_data_s;
+        rx_m_o(lane_idx).aux <= rx_aux_s;
+        rx_m_o(lane_idx).valid <= rx_valid_s;
+        rx_m_o(lane_idx).pcs_aligned <= rx_aligned_s;
+        rx_m_o(lane_idx).clock_corrected <= rx_corrected_s;
+        rx_m_o(lane_idx).status <= rx_status_s;
+        rx_m_o(lane_idx).prbs_locked <= '0';
+        rx_m_o(lane_idx).prbs_error <= '0';
+      end generate;
+
+      pattern_rx: if cfg_c.encoding = ENCODING_PRBS generate
+
+        signal locked_s, error_s : std_ulogic;
+
+      begin
+
+        -- The checker finds the pattern's phase in the bits
+        -- themselves, so it does not care that the words it is
+        -- given were framed wherever the receiver happened to
+        -- start.
+        checker: nsl_transceiver.prbs.prbs_checker
+          generic map(
+            byte_count_c => byte_count_c
+            )
+          port map(
+            clock_i => word_clock_s,
+            reset_n_i => lane_reset_n_s,
+
+            mode_i => rx_s_i(lane_idx).prbs_select,
+            restart_i => rx_s_i(lane_idx).prbs_error_reset,
+
+            data_i => rx_data_s(0 to byte_count_c-1),
+            valid_i => rx_valid_s,
+
+            locked_o => locked_s,
+            error_o => error_s,
+            error_bit_count_o => open
+            );
+
+        rx_m_o(lane_idx).data <= (others => (others => '-'));
+        rx_m_o(lane_idx).aux <= (others => (others => '-'));
+        rx_m_o(lane_idx).valid <= '0';
+        -- Word alignment means nothing to a pattern: there is no
+        -- comma in it and nothing framed by one.
+        rx_m_o(lane_idx).pcs_aligned <= '0';
+        rx_m_o(lane_idx).clock_corrected <= '0';
+        rx_m_o(lane_idx).status <= (others => '0');
+        rx_m_o(lane_idx).prbs_locked <= locked_s;
+        rx_m_o(lane_idx).prbs_error <= error_s;
+
+      end generate;
 
       -- One word per lane clock either way, and the model always has
       -- room for it.
