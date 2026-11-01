@@ -32,15 +32,30 @@ end entity;
 
 architecture beh of prbs_checker is
 
+  -- Losing the pattern is counted by weight rather than by a run of
+  -- errored words, because a run means different things at
+  -- different widths: a checker that has not found the pattern
+  -- mispredicts about half the bits it looks at, which errors
+  -- nearly every word of thirty two bits but only half the words of
+  -- one. An errored word therefore adds unlock_weight_c and a clean
+  -- one takes away a single unit, so what the counter measures is
+  -- errored words outnumbering clean ones. A line merely carrying
+  -- the wrong pattern walks it up at any width, and a line carrying
+  -- the right one with real bit errors never does, because there
+  -- the clean words outnumber the others by orders of magnitude.
+  constant unlock_weight_c : natural := 2;
+  constant unlock_limit_c : natural := unlock_weight_c * unlock_word_count_c;
+
   subtype window_t is std_ulogic_vector(0 to max_order_c + bit_count_c - 1);
 
   type regs_t is
   record
     history : history_t;
     locked : std_ulogic;
-    -- Words in a row that agreed, or in a row that did not.
+    -- Words in a row that agreed, and how far the ones that did
+    -- not outweigh them.
     clean_count : natural range 0 to lock_word_count_c;
-    dirty_count : natural range 0 to unlock_word_count_c;
+    dirty_count : natural range 0 to unlock_limit_c;
     error : std_ulogic;
     error_bit_count : natural range 0 to bit_count_c;
   end record;
@@ -110,7 +125,10 @@ begin
       rin.error_bit_count <= errors_v;
 
       if errors_v = 0 then
-        rin.dirty_count <= 0;
+        if r.dirty_count /= 0 then
+          rin.dirty_count <= r.dirty_count - 1;
+        end if;
+
         if r.clean_count /= lock_word_count_c then
           rin.clean_count <= r.clean_count + 1;
         else
@@ -119,8 +137,9 @@ begin
       else
         rin.error <= '1';
         rin.clean_count <= 0;
-        if r.dirty_count /= unlock_word_count_c then
-          rin.dirty_count <= r.dirty_count + 1;
+
+        if r.dirty_count + unlock_weight_c < unlock_limit_c then
+          rin.dirty_count <= r.dirty_count + unlock_weight_c;
         else
           rin.locked <= '0';
           rin.dirty_count <= 0;

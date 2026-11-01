@@ -23,7 +23,7 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 6);
+  signal done_s : std_ulogic_vector(0 to 7);
 
   -- A PRBS-7 generator watched on its own, to measure what it emits.
   signal period_data_s : std_ulogic_vector(0 to 7);
@@ -182,10 +182,11 @@ begin
       done_o => done_s(4)
       );
 
-  -- A width that is not a whole number of bytes, because nothing in
-  -- the pattern is byte shaped: ten bits is the raw word of a 10:1
-  -- serialiser, the width a lane carrying 8b/10b code groups would
-  -- hand over if it were passing them raw instead.
+  -- Widths that are not a whole number of bytes, because nothing
+  -- in the pattern is byte shaped: ten bits is the raw word of a
+  -- 10:1 serialiser, the width a lane carrying 8b/10b code groups
+  -- would hand over if it were passing them raw instead, and one
+  -- bit is a single pad driven straight.
   raw_word_15: entity work.prbs_bench
     generic map(
       bit_count_c => 10,
@@ -197,6 +198,19 @@ begin
       clock_i => clock_s,
       reset_n_i => reset_n_s,
       done_o => done_s(5)
+      );
+
+  single_bit_9: entity work.prbs_bench
+    generic map(
+      bit_count_c => 1,
+      mode_c => PRBS_9,
+      other_mode_c => PRBS_15,
+      label_c => "1 bit prbs 9"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      done_o => done_s(6)
       );
 
   -- A transceiver that checks the pattern itself does not
@@ -234,7 +248,7 @@ begin
         end loop;
       end procedure;
     begin
-      done_s(6) <= '0';
+      done_s(7) <= '0';
       checking_s <= '0';
       restart_s <= '0';
       error_s <= '0';
@@ -316,7 +330,7 @@ begin
 
       log_info(ctxt, "dropped the pattern the moment it was restarted");
 
-      done_s(6) <= '1';
+      done_s(7) <= '1';
       wait;
     end process;
 
