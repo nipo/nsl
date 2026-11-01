@@ -67,7 +67,9 @@ begin
       pcs_aligned => '1',
       clock_corrected => '0',
       elec_idle => '0',
-      status => (others => '0')
+      status => (others => '0'),
+      prbs_locked => '0',
+      prbs_error => '0'
       );
 
     -- Stands in for the CUFF lane receiver.
