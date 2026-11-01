@@ -488,11 +488,23 @@ begin
 
       -- This quad exposes no pattern generator on its fabric
       -- interface, so a lane carrying a test pattern gets one built
-      -- here. It sits on the parallel word, which means the pattern
-      -- travels through whatever coding the lane is configured for
-      -- rather than replacing it: what it measures is the lane from
-      -- one fabric interface to the other, where a generator inside
-      -- the PMA would measure the line itself.
+      -- here, handing the serialiser one word of raw pattern bits
+      -- at a time.
+      --
+      -- That makes a pattern lane a raw lane: the CSR init for it
+      -- must bypass the 8b/10b encoder and the comma aligner, the
+      -- same configuration ENCODING_RAW asks for, because encoding
+      -- on this primitive is CSR-driven rather than a fabric input.
+      -- Left in a coded mode the pattern would be re-coded on the
+      -- way out and the receiver would wait forever for a comma
+      -- that a pattern never contains.
+      --
+      -- The receiver needs no alignment of its own: the checker
+      -- finds the pattern's phase in the bit stream, so whatever
+      -- bit the quad happens to frame its word on is just a shift
+      -- of the same sequence. What it does need is the quad's own
+      -- bit order on the line, since a word handed over bit
+      -- reversed is not a shift of the pattern and never locks.
       coded_lane: if not pattern_c generate
         tx_word_unpack: for byte_idx in 0 to byte_count_c-1 generate
           s_tx_word(byte_idx) <= tx_m_i(lane_idx).data(byte_idx);
