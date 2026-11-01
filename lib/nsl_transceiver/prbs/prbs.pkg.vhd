@@ -13,8 +13,10 @@ use nsl_transceiver.lane.all;
 -- A transceiver that generates and checks the pattern itself is
 -- handed the job instead; these are for the ones that cannot, the
 -- same way nsl_line_coding.ibm_8b10b stands in for a primitive
--- without a codec. They work on the lane's parallel word, so one
--- instance serves whatever width the lane was built at.
+-- without a codec. They work on a parallel word of any width, so one
+-- instance serves whatever the lane hands over per clock: eight bits
+-- for a byte-wide lane, ten for a raw word off a 10:1 serialiser,
+-- one for a single pad.
 --
 -- The polynomials come from nsl_data.prbs, which is the only place
 -- they are written down. What is needed here is not the polynomial
@@ -51,6 +53,13 @@ package prbs is
   function deep_tap(mode : prbs_mode_t) return natural;
   function shallow_tap(mode : prbs_mode_t) return natural;
 
+  -- A byte-oriented lane's parallel word as a bit stream and back,
+  -- oldest bit first: bit 0 of byte 0 is the first on the line, the
+  -- order the 8b/10b code words in nsl_line_coding use as well. A
+  -- lane whose word is not a whole number of bytes needs neither.
+  function to_line_bits(data : byte_string) return std_ulogic_vector;
+  function from_line_bits(bits : std_ulogic_vector) return byte_string;
+
   -- Produces the pattern a mode names, one lane word per cycle.
   --
   -- Asking for PRBS_NONE leaves the generator idle and valid_o low,
@@ -60,7 +69,7 @@ package prbs is
   -- notice.
   component prbs_generator is
     generic(
-      byte_count_c : natural
+      bit_count_c : natural
       );
     port(
       clock_i : in std_ulogic;
@@ -68,9 +77,12 @@ package prbs is
 
       mode_i : in prbs_mode_t;
       force_error_i : in std_ulogic;
+      -- The pattern advances on an accepted word only, so a stalled
+      -- sink costs the far end nothing.
       ready_i : in std_ulogic;
 
-      data_o : out byte_string(0 to byte_count_c-1);
+      -- Oldest bit first: index 0 goes on the line before index 1.
+      data_o : out std_ulogic_vector(0 to bit_count_c-1);
       valid_o : out std_ulogic
       );
   end component;
@@ -86,7 +98,7 @@ package prbs is
   -- polynomial taps.
   component prbs_checker is
     generic(
-      byte_count_c : natural;
+      bit_count_c : natural;
       -- Clean words before the pattern is called found, and errored
       -- words before it is called lost.
       lock_word_count_c : natural := 16;
@@ -101,7 +113,7 @@ package prbs is
       -- counter is told where its window begins.
       restart_i : in std_ulogic;
 
-      data_i : in byte_string(0 to byte_count_c-1);
+      data_i : in std_ulogic_vector(0 to bit_count_c-1);
       valid_i : in std_ulogic;
 
       locked_o : out std_ulogic;
@@ -109,7 +121,7 @@ package prbs is
       -- The lane contract carries only the former, because a
       -- transceiver's own checker reports only the former.
       error_o : out std_ulogic;
-      error_bit_count_o : out integer range 0 to byte_count_c*8
+      error_bit_count_o : out integer range 0 to bit_count_c
       );
   end component;
 
@@ -320,6 +332,39 @@ package body prbs is
       & " not a pattern this generator can produce"
       severity failure;
     return 0;
+  end function;
+
+  function to_line_bits(data : byte_string) return std_ulogic_vector is
+    alias xdata : byte_string(0 to data'length-1) is data;
+    variable ret : std_ulogic_vector(0 to data'length*8-1);
+  begin
+    for i in xdata'range loop
+      for b in 0 to 7 loop
+        ret(i*8 + b) := xdata(i)(b);
+      end loop;
+    end loop;
+
+    return ret;
+  end function;
+
+  function from_line_bits(bits : std_ulogic_vector) return byte_string is
+    alias xbits : std_ulogic_vector(0 to bits'length-1) is bits;
+    variable ret : byte_string(0 to bits'length/8-1);
+    variable byte_v : byte;
+  begin
+    assert bits'length mod 8 = 0
+      report "nsl_transceiver.prbs.from_line_bits: "
+      & "a bit stream is only a byte string by the byte"
+      severity failure;
+
+    for i in ret'range loop
+      for b in 0 to 7 loop
+        byte_v(b) := xbits(i*8 + b);
+      end loop;
+      ret(i) := byte_v;
+    end loop;
+
+    return ret;
   end function;
 
 end package body prbs;
