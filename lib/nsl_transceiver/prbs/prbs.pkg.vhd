@@ -29,6 +29,10 @@ package prbs is
 
   subtype history_t is std_ulogic_vector(0 to max_order_c-1);
 
+  -- Whether a mode asks for a pattern at all, as a logic level,
+  -- which is what a backend has to hand its own lock counting.
+  function is_active(mode : prbs_mode_t) return std_ulogic;
+
   -- The two depths the mode's polynomial taps, deepest first. A mode
   -- with no pattern taps nothing and reports zero.
   function deep_tap(mode : prbs_mode_t) return natural;
@@ -155,6 +159,15 @@ package body prbs is
     end case;
 
     return ret;
+  end function;
+
+  function is_active(mode : prbs_mode_t) return std_ulogic
+  is
+  begin
+    if mode = PRBS_NONE then
+      return '0';
+    end if;
+    return '1';
   end function;
 
   function deep_tap(mode : prbs_mode_t) return natural

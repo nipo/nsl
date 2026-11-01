@@ -222,7 +222,8 @@ begin
     encoding_supported : if config_c.lanes(lane_idx).enabled generate
 
       constant encoding_condition_c : boolean := config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_RAW
-                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B;
+                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_8B10B
+                                                 or config_c.lanes(lane_idx).encoding = nsl_transceiver.lane.ENCODING_PRBS;
       constant data_byte_count_condition_c : boolean := config_c.lanes(lane_idx).data_byte_count >= 1
                                                         and config_c.lanes(lane_idx).data_byte_count <= 4;
 
@@ -458,6 +459,9 @@ begin
     signal s_rx_clk_cr      : std_ulogic_vector(1 downto 0);
     signal s_rx_clk_cr_stdl : std_logic_vector(1 downto 0);
 
+    signal s_rx_prbs_err : std_logic;
+    signal s_rx_prbs_locked : std_ulogic;
+
     constant loopback_config_c     : loopback_config_t := loopback_configure(config_c.lanes(lane_idx).loopback);
     constant pll_mult_div_config_c : pll_mult_div_t    := pll_mult_div_for(config_c.lanes(lane_idx).pll_index);
 
@@ -515,6 +519,32 @@ begin
     -- Everything this backend has to say fits in the named fields.
     rx_m_o(lane_idx).status <= (others => '0');
     tx_s_o(lane_idx).status <= (others => '0');
+
+    -- Test pattern ---------------------------------------------------------------
+    -- The channel's own generator and checker sit in the PMA, past
+    -- the PCS, so selecting a pattern takes over the serialiser
+    -- whatever the rest of the datapath is configured for and
+    -- nothing else here has to move.
+    --
+    -- The checker reports the words it could not predict but never
+    -- says whether it found the pattern, so that answer is counted
+    -- up from them. Where the channel's interface is wider than the
+    -- lane's word, one report covers the whole of the channel's
+    -- word, which is the only granularity it offers.
+    rx_m_o(lane_idx).prbs_error <= s_rx_prbs_err;
+    rx_m_o(lane_idx).prbs_locked <= s_rx_prbs_locked;
+
+    prbs_lock : nsl_transceiver.prbs.prbs_lock_detector
+      port map (
+        clock_i    => s_txusrclk2_buff,
+        reset_n_i  => s_pma_rst_done_sync,
+
+        checking_i => nsl_transceiver.prbs.is_active(rx_s_i(lane_idx).prbs_select),
+        restart_i  => rx_s_i(lane_idx).prbs_error_reset,
+        error_i    => s_rx_prbs_err,
+
+        locked_o   => s_rx_prbs_locked
+        );
 
     -- PLL Mux ----------------------------------------------------------------------
     use_pll0 : if config_c.lanes(lane_idx).pll_index = 0 generate
@@ -1183,10 +1213,10 @@ begin
         RXUSRCLK                   => s_txusrclk2_buff,
         RXUSRCLK2                  => s_txusrclk2_buff,
         ------------------- Receive Ports - Pattern Checker Ports ------------------
-        RXPRBSERR                  => open,
-        RXPRBSSEL                  => "000",
+        RXPRBSERR                  => s_rx_prbs_err,
+        RXPRBSSEL                  => prbs_configure(rx_s_i(lane_idx).prbs_select),
         ------------------- Receive Ports - Pattern Checker ports ------------------
-        RXPRBSCNTRESET             => '0',
+        RXPRBSCNTRESET             => rx_s_i(lane_idx).prbs_error_reset,
         ------------------ Receive Ports - RX 8B/10B Decoder Ports -----------------
         RXCHARISCOMMA(3 downto 2)  => s_rxchariscomma(3 downto 2),
         RXCHARISCOMMA(1 downto 0)  => s_rxchariscomma(1 downto 0),
@@ -1334,7 +1364,7 @@ begin
         TXRATE                     => "000",
         TXSWING                    => '0',
         ------------------ Transmit Ports - Pattern Generator Ports ----------------
-        TXPRBSFORCEERR             => '0',
+        TXPRBSFORCEERR             => tx_m_i(lane_idx).prbs_force_error,
         ------------------ Transmit Ports - TX 8B/10B Encoder Ports ----------------
         TX8B10BBYPASS              => "0000",
         TXCHARDISPMODE(3 downto 2) => s_txchardispmode(3 downto 2),
@@ -1403,7 +1433,7 @@ begin
         --------------- Transmit Ports - TX Receiver Detection Ports  --------------
         TXDETECTRX                 => '0',
         ------------------ Transmit Ports - pattern Generator Ports ----------------
-        TXPRBSSEL                  => "000"
+        TXPRBSSEL                  => prbs_configure(tx_m_i(lane_idx).prbs_select)
 
         );
 
