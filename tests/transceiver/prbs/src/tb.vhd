@@ -23,17 +23,17 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 5);
+  signal done_s : std_ulogic_vector(0 to 6);
 
   -- A PRBS-7 generator watched on its own, to measure what it emits.
-  signal period_data_s : byte_string(0 to 0);
+  signal period_data_s : std_ulogic_vector(0 to 7);
   signal period_valid_s : std_ulogic;
 
 begin
 
   period_generator: nsl_transceiver.prbs.prbs_generator
     generic map(
-      byte_count_c => 1
+      bit_count_c => 8
       )
     port map(
       clock_i => clock_s,
@@ -60,7 +60,6 @@ begin
     constant seed_c : prbs_state(order_c-1 downto 0) := (others => '1');
     variable bits_v : std_ulogic_vector(0 to capture_c-1);
     variable reference_v : std_ulogic_vector(0 to order_c + capture_c - 1);
-    variable byte_v : byte;
     variable matches_v : boolean;
     variable period_v : natural;
   begin
@@ -70,10 +69,7 @@ begin
 
     for i in 0 to capture_c/8 - 1 loop
       wait until rising_edge(clock_s) and period_valid_s = '1';
-      byte_v := period_data_s(0);
-      for b in 0 to 7 loop
-        bits_v(i * 8 + b) := byte_v(b);
-      end loop;
+      bits_v(i * 8 to i * 8 + 7) := period_data_s;
     end loop;
 
     period_v := 0;
@@ -127,17 +123,17 @@ begin
     wait;
   end process;
 
-  -- One byte per cycle, the width every 8b/10b lane in the library
-  -- runs at, across the orders a transceiver offers. The shallowest
-  -- and the deepest matter most: a checker only has eight bits of
-  -- line per cycle, so a pattern of order 31 takes four of them
-  -- before it has even seen enough history to predict anything.
+  -- Eight bits per cycle, the width a byte-wide lane hands over,
+  -- across the orders a transceiver offers. The shallowest and the
+  -- deepest matter most: a checker only has eight bits of line per
+  -- cycle, so a pattern of order 31 takes four of them before it
+  -- has even seen enough history to predict anything.
   narrow_7: entity work.prbs_bench
     generic map(
-      byte_count_c => 1,
+      bit_count_c => 8,
       mode_c => PRBS_7,
       other_mode_c => PRBS_9,
-      label_c => "1 byte prbs 7"
+      label_c => "8 bit prbs 7"
       )
     port map(
       clock_i => clock_s,
@@ -147,10 +143,10 @@ begin
 
   narrow_31: entity work.prbs_bench
     generic map(
-      byte_count_c => 1,
+      bit_count_c => 8,
       mode_c => PRBS_31,
       other_mode_c => PRBS_23,
-      label_c => "1 byte prbs 31"
+      label_c => "8 bit prbs 31"
       )
     port map(
       clock_i => clock_s,
@@ -162,10 +158,10 @@ begin
   -- more history than the generator keeps.
   wide_7: entity work.prbs_bench
     generic map(
-      byte_count_c => 4,
+      bit_count_c => 32,
       mode_c => PRBS_7,
       other_mode_c => PRBS_15,
-      label_c => "4 byte prbs 7"
+      label_c => "32 bit prbs 7"
       )
     port map(
       clock_i => clock_s,
@@ -175,15 +171,32 @@ begin
 
   wide_23: entity work.prbs_bench
     generic map(
-      byte_count_c => 4,
+      bit_count_c => 32,
       mode_c => PRBS_23,
       other_mode_c => PRBS_31,
-      label_c => "4 byte prbs 23"
+      label_c => "32 bit prbs 23"
       )
     port map(
       clock_i => clock_s,
       reset_n_i => reset_n_s,
       done_o => done_s(4)
+      );
+
+  -- A width that is not a whole number of bytes, because nothing in
+  -- the pattern is byte shaped: ten bits is the raw word of a 10:1
+  -- serialiser, the width a lane carrying 8b/10b code groups would
+  -- hand over if it were passing them raw instead.
+  raw_word_15: entity work.prbs_bench
+    generic map(
+      bit_count_c => 10,
+      mode_c => PRBS_15,
+      other_mode_c => PRBS_7,
+      label_c => "10 bit prbs 15"
+      )
+    port map(
+      clock_i => clock_s,
+      reset_n_i => reset_n_s,
+      done_o => done_s(5)
       );
 
   -- A transceiver that checks the pattern itself does not
@@ -221,7 +234,7 @@ begin
         end loop;
       end procedure;
     begin
-      done_s(5) <= '0';
+      done_s(6) <= '0';
       checking_s <= '0';
       restart_s <= '0';
       error_s <= '0';
@@ -303,7 +316,7 @@ begin
 
       log_info(ctxt, "dropped the pattern the moment it was restarted");
 
-      done_s(5) <= '1';
+      done_s(6) <= '1';
       wait;
     end process;
 

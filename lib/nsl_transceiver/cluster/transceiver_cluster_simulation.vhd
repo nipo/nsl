@@ -485,14 +485,14 @@ begin
 
       pattern_tx: if cfg_c.encoding = ENCODING_PRBS generate
 
-        signal word_s : byte_string(0 to byte_count_c-1);
+        signal word_s : std_ulogic_vector(0 to byte_count_c*8-1);
         signal word_valid_s : std_ulogic;
 
       begin
 
         generator: nsl_transceiver.prbs.prbs_generator
           generic map(
-            byte_count_c => byte_count_c
+            bit_count_c => byte_count_c * 8
             )
           port map(
             clock_i => word_clock_s,
@@ -512,7 +512,7 @@ begin
         -- the two stay in step without the serialiser ever waiting
         -- on the clock again.
         tx: process
-          variable word_v : byte_string(0 to byte_count_c-1);
+          variable word_v : std_ulogic_vector(0 to byte_count_c*8-1);
           variable valid_v : std_ulogic;
           variable bit_v : std_ulogic;
         begin
@@ -525,23 +525,21 @@ begin
             word_v := word_s;
             valid_v := word_valid_s;
 
-            for i in 0 to byte_count_c-1 loop
-              for b in 0 to 7 loop
-                if valid_v = '1' then
-                  bit_v := word_v(i)(b);
-                else
-                  -- No pattern asked for, so the lane is held quiet
-                  -- rather than made to carry something arbitrary.
-                  bit_v := '0';
-                end if;
+            for i in word_v'range loop
+              if valid_v = '1' then
+                bit_v := word_v(i);
+              else
+                -- No pattern asked for, so the lane is held quiet
+                -- rather than made to carry something arbitrary.
+                bit_v := '0';
+              end if;
 
-                if cfg_c.polarity_invert_tx then
-                  bit_v := not bit_v;
-                end if;
+              if cfg_c.polarity_invert_tx then
+                bit_v := not bit_v;
+              end if;
 
-                tx_serial_s <= bit_v;
-                wait for bit_period_c;
-              end loop;
+              tx_serial_s <= bit_v;
+              wait for bit_period_c;
             end loop;
           end loop;
         end process;
@@ -1042,8 +1040,12 @@ begin
       pattern_rx: if cfg_c.encoding = ENCODING_PRBS generate
 
         signal locked_s, error_s : std_ulogic;
+        signal rx_bits_s : std_ulogic_vector(0 to byte_count_c*8-1);
 
       begin
+
+        rx_bits_s <= nsl_transceiver.prbs.to_line_bits(
+          rx_data_s(0 to byte_count_c-1));
 
         -- The checker finds the pattern's phase in the bits
         -- themselves, so it does not care that the words it is
@@ -1051,7 +1053,7 @@ begin
         -- start.
         checker: nsl_transceiver.prbs.prbs_checker
           generic map(
-            byte_count_c => byte_count_c
+            bit_count_c => byte_count_c * 8
             )
           port map(
             clock_i => word_clock_s,
@@ -1060,7 +1062,7 @@ begin
             mode_i => rx_s_i(lane_idx).prbs_select,
             restart_i => rx_s_i(lane_idx).prbs_error_reset,
 
-            data_i => rx_data_s(0 to byte_count_c-1),
+            data_i => rx_bits_s,
             valid_i => rx_valid_s,
 
             locked_o => locked_s,

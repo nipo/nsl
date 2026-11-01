@@ -2,8 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_data, nsl_simulation;
-use nsl_data.bytestream.all;
+library nsl_transceiver, nsl_simulation;
 use nsl_transceiver.lane.all;
 use nsl_simulation.logging.all;
 
@@ -16,7 +15,7 @@ use nsl_simulation.logging.all;
 -- wherever it liked.
 entity prbs_bench is
   generic(
-    byte_count_c : natural;
+    bit_count_c : natural;
     mode_c : prbs_mode_t;
     -- A pattern the checker is switched to part way, which it must
     -- fail to find.
@@ -32,7 +31,7 @@ end entity;
 
 architecture beh of prbs_bench is
 
-  signal gen_data_s, rx_data_s : byte_string(0 to byte_count_c-1);
+  signal gen_data_s, rx_data_s : std_ulogic_vector(0 to bit_count_c-1);
   signal gen_valid_s : std_ulogic;
 
   signal mode_s : prbs_mode_t;
@@ -46,13 +45,13 @@ architecture beh of prbs_bench is
   signal taken_s : std_ulogic;
 
   signal locked_s, error_s : std_ulogic;
-  signal error_bit_count_s : integer range 0 to byte_count_c*8;
+  signal error_bit_count_s : integer range 0 to bit_count_c;
 
 begin
 
   generator: nsl_transceiver.prbs.prbs_generator
     generic map(
-      byte_count_c => byte_count_c
+      bit_count_c => bit_count_c
       )
     port map(
       clock_i => clock_i,
@@ -66,14 +65,14 @@ begin
       valid_o => gen_valid_s
       );
 
-  -- The line. One bit of one byte goes wrong on request, which is
+  -- The line. One bit of the word goes wrong on request, which is
   -- what a bit error on a pair looks like to the checker.
   corrupt: process(gen_data_s, corrupt_s) is
   begin
     rx_data_s <= gen_data_s;
 
     if corrupt_s = '1' then
-      rx_data_s(0)(0) <= not gen_data_s(0)(0);
+      rx_data_s(0) <= not gen_data_s(0);
     end if;
   end process;
 
@@ -81,7 +80,7 @@ begin
 
   checker: nsl_transceiver.prbs.prbs_checker
     generic map(
-      byte_count_c => byte_count_c
+      bit_count_c => bit_count_c
       )
     port map(
       clock_i => clock_i,
