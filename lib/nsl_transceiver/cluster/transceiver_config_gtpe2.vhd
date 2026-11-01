@@ -54,6 +54,18 @@ package transceiver_config_gtpe2 is
   function loopback_configure (config : nsl_transceiver.lane.loopback_mode_t)
     return std_logic_vector;
 
+  -- Pattern generator and checker selection for TXPRBSSEL /
+  -- RXPRBSSEL, Table 3-20 UG482. PRBS_NONE is the channel's standard
+  -- operating mode, where the pattern logic is out of the datapath.
+  --
+  -- A pattern this channel cannot produce is reported rather than
+  -- quietly turned into another one: a lane configured for an order
+  -- the primitive does not have would otherwise come up carrying a
+  -- different pattern than the far end expects, which looks exactly
+  -- like a line with a very high error rate.
+  function prbs_configure (mode : nsl_transceiver.lane.prbs_mode_t)
+    return std_logic_vector;
+
   -- Data width calculation, see Table 3-4 UG482  
   function determine_data_width (byte_count : natural)
     return data_width_t;
@@ -219,6 +231,26 @@ package body transceiver_config_gtpe2 is
       when nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS => return_val := "001";
       when nsl_transceiver.lane.LOOPBACK_FAR_END_PMA  => return_val := "100";
       when nsl_transceiver.lane.LOOPBACK_FAR_END_PCS  => return_val := "110";
+    end case;
+    return return_val;
+  end function;
+
+  function prbs_configure (mode : nsl_transceiver.lane.prbs_mode_t)
+    return std_logic_vector
+  is
+    variable return_val : std_logic_vector(2 downto 0) := (others => '0');
+  begin
+    case mode is
+      when nsl_transceiver.lane.PRBS_NONE => return_val := "000";
+      when nsl_transceiver.lane.PRBS_7    => return_val := "001";
+      when nsl_transceiver.lane.PRBS_9 =>
+        assert false
+          report "transceiver_config_gtpe2: the channel has no order 9"
+          & " pattern; the orders it offers are 7, 15, 23 and 31"
+          severity failure;
+      when nsl_transceiver.lane.PRBS_15   => return_val := "010";
+      when nsl_transceiver.lane.PRBS_23   => return_val := "011";
+      when nsl_transceiver.lane.PRBS_31   => return_val := "100";
     end case;
     return return_val;
   end function;
