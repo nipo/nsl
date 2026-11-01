@@ -1,0 +1,31 @@
+name: transceiver_prbs_apb
+
+root:
+  name: top
+  deps:
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_transceiver.lane
+    - nsl_transceiver.cluster
+    - nsl_transceiver.target
+    - nsl_transceiver.prbs
+    - nsl_amba.apb
+    - nsl_io.diff
+    - nsl_math.int_ext
+    - nsl_data.bytestream
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    backend_config:
+      gbs.builtin.ghdl:
+        success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
