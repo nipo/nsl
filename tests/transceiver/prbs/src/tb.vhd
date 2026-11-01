@@ -23,7 +23,7 @@ end tb;
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 4);
+  signal done_s : std_ulogic_vector(0 to 5);
 
   -- A PRBS-7 generator watched on its own, to measure what it emits.
   signal period_data_s : byte_string(0 to 0);
@@ -184,6 +184,129 @@ begin
       reset_n_i => reset_n_s,
       done_o => done_s(4)
       );
+
+  -- A transceiver that checks the pattern itself does not
+  -- necessarily say whether it found it: the series 7 channel
+  -- reports only the errors, so the answer the lane contract asks
+  -- for has to be counted up from them.
+  lock: block
+    signal checking_s, restart_s, error_s, locked_s : std_ulogic;
+  begin
+
+    detector: nsl_transceiver.prbs.prbs_lock_detector
+      generic map(
+        lock_word_count_c => 16,
+        unlock_word_count_c => 16
+        )
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        checking_i => checking_s,
+        restart_i => restart_s,
+        error_i => error_s,
+
+        locked_o => locked_s
+        );
+
+    check: process
+      constant ctxt : log_context := "lock detector";
+      variable cycles_v : natural;
+
+      procedure settle(count : natural) is
+      begin
+        for i in 0 to count-1 loop
+          wait until rising_edge(clock_s);
+        end loop;
+      end procedure;
+    begin
+      done_s(5) <= '0';
+      checking_s <= '0';
+      restart_s <= '0';
+      error_s <= '0';
+
+      wait until reset_n_s = '1';
+
+      -- Not looking is not the same as looking and failing.
+      settle(64);
+      assert locked_s = '0'
+        report "the detector reported a pattern nobody was looking for"
+        severity failure;
+
+      wait until falling_edge(clock_s);
+      checking_s <= '1';
+
+      cycles_v := 0;
+      while locked_s /= '1' loop
+        wait until rising_edge(clock_s);
+        cycles_v := cycles_v + 1;
+        assert cycles_v < 256
+          report "the detector never reported a clean stream"
+          severity failure;
+      end loop;
+
+      log_info(ctxt, "called a clean stream locked after "
+               & integer'image(cycles_v) & " words");
+
+      -- One bad word out of many is a bit error, not a lost
+      -- pattern: a detector that gave up on it would make a link
+      -- with any error rate at all look unusable.
+      wait until falling_edge(clock_s);
+      error_s <= '1';
+      wait until falling_edge(clock_s);
+      error_s <= '0';
+
+      settle(64);
+      assert locked_s = '1'
+        report "the detector gave up the pattern over one bad word"
+        severity failure;
+
+      log_info(ctxt, "kept the pattern across a single bad word");
+
+      -- Nothing but bad words is a lost pattern.
+      wait until falling_edge(clock_s);
+      error_s <= '1';
+
+      cycles_v := 0;
+      while locked_s /= '0' loop
+        wait until rising_edge(clock_s);
+        cycles_v := cycles_v + 1;
+        assert cycles_v < 256
+          report "the detector kept the pattern through "
+          & integer'image(cycles_v) & " unpredictable words"
+          severity failure;
+      end loop;
+
+      log_info(ctxt, "gave the pattern up after "
+               & integer'image(cycles_v) & " unpredictable words");
+
+      -- And a restart drops it at once, which is what makes the
+      -- answer trustworthy right after a counter window opens.
+      wait until falling_edge(clock_s);
+      error_s <= '0';
+      settle(64);
+      assert locked_s = '1'
+        report "the detector did not come back on a clean stream"
+        severity failure;
+
+      wait until falling_edge(clock_s);
+      restart_s <= '1';
+      wait until rising_edge(clock_s);
+      wait until rising_edge(clock_s);
+      assert locked_s = '0'
+        report "the detector still reported a pattern after a restart"
+        severity failure;
+
+      wait until falling_edge(clock_s);
+      restart_s <= '0';
+
+      log_info(ctxt, "dropped the pattern the moment it was restarted");
+
+      done_s(5) <= '1';
+      wait;
+    end process;
+
+  end block;
 
   driver: nsl_simulation.driver.simulation_driver
     generic map(

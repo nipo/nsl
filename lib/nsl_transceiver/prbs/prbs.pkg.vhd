@@ -95,6 +95,34 @@ package prbs is
       );
   end component;
 
+  -- Turns a stream of per-word error reports into the "the pattern
+  -- is there" answer a lane's contract asks for.
+  --
+  -- A transceiver that checks the pattern itself does not
+  -- necessarily say whether it found it: the UltraScale+ channel
+  -- reports both, where the series 7 one reports only the errors.
+  -- The same counting the fabric checker does internally is
+  -- therefore needed on its own.
+  component prbs_lock_detector is
+    generic(
+      lock_word_count_c : natural := 16;
+      unlock_word_count_c : natural := 16
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+
+      -- Low when no pattern is being looked for at all, which is
+      -- not the same as looking and failing.
+      checking_i : in std_ulogic;
+      restart_i : in std_ulogic;
+      -- One per word the checker could not predict.
+      error_i : in std_ulogic;
+
+      locked_o : out std_ulogic
+      );
+  end component;
+
 end package prbs;
 
 package body prbs is
