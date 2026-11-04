@@ -17,9 +17,8 @@ output:
       hwdep: xilinx
       target_part: xc6slx9
       target_speed: "-1"
-    backend_config:
-      gbs.builtin.ghdl:
-        success_regex: "Terminating with error level: 0"
+    simulation:
+      success_regex: "Terminating with error level: 0"
     outputs:
       - type: simulation-log
         path: simulation.log

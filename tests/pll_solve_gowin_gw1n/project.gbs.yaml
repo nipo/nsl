@@ -16,9 +16,8 @@ output:
     filter_vars:
       hwdep: gowin
       target_part_name: GW1N-9C
-    backend_config:
-      gbs.builtin.ghdl:
-        success_regex: "Terminating with error level: 0"
+    simulation:
+      success_regex: "Terminating with error level: 0"
     outputs:
       - type: simulation-log
         path: simulation.log

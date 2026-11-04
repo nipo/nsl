@@ -18,9 +18,8 @@ root:
 output:
   - name: simulation
     topcell: tb
-    backend_config:
-      gbs.builtin.ghdl:
-        success_regex: "Terminating with error level: 0"
+    simulation:
+      success_regex: "Terminating with error level: 0"
     outputs:
       - type: simulation-log
         path: simulation.log

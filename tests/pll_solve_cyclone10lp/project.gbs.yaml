@@ -16,9 +16,8 @@ output:
     filter_vars:
       hwdep: altera
       target_part: 10CL025YU256C8G
-    backend_config:
-      gbs.builtin.ghdl:
-        success_regex: "Terminating with error level: 0"
+    simulation:
+      success_regex: "Terminating with error level: 0"
     outputs:
       - type: simulation-log
         path: simulation.log
