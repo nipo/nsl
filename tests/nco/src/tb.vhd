@@ -15,7 +15,7 @@ architecture arch of tb is
   signal s_reset_n : std_ulogic;
   signal s_value : sfixed(0 downto -10);
   signal s_value_r : real;
-  signal s_freq_r : real;
+  signal s_freq_r : real := 0.0;
   signal s_angle_increment : ufixed(-1 downto -20);
   signal s_done : std_ulogic_vector(0 to 0);
 
