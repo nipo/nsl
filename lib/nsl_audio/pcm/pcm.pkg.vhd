@@ -97,13 +97,13 @@ package pcm is
 
   function to_rate(hz: natural) return rate_t;
 
-  constant rate_32k_c: rate_t := to_rate(32_000);
-  constant rate_44k1_c: rate_t := to_rate(44_100);
-  constant rate_48k_c: rate_t := to_rate(48_000);
-  constant rate_88k2_c: rate_t := to_rate(88_200);
-  constant rate_96k_c: rate_t := to_rate(96_000);
-  constant rate_176k4_c: rate_t := to_rate(176_400);
-  constant rate_192k_c: rate_t := to_rate(192_000);
+  constant rate_32k_c: rate_t;
+  constant rate_44k1_c: rate_t;
+  constant rate_48k_c: rate_t;
+  constant rate_88k2_c: rate_t;
+  constant rate_96k_c: rate_t;
+  constant rate_176k4_c: rate_t;
+  constant rate_192k_c: rate_t;
 
 end package pcm;
 
@@ -136,5 +136,13 @@ package body pcm is
 
     return to_unsigned(hz, max_rate_width_c);
   end function;
+
+  constant rate_32k_c: rate_t := to_rate(32_000);
+  constant rate_44k1_c: rate_t := to_rate(44_100);
+  constant rate_48k_c: rate_t := to_rate(48_000);
+  constant rate_88k2_c: rate_t := to_rate(88_200);
+  constant rate_96k_c: rate_t := to_rate(96_000);
+  constant rate_176k4_c: rate_t := to_rate(176_400);
+  constant rate_192k_c: rate_t := to_rate(192_000);
 
 end package body pcm;
