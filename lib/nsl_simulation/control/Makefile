@@ -7,6 +7,7 @@ control-ghdl := control_ghdl.vhd
 endif
 control-xsim := control_xsim.vhd
 control-nvc := control_nvc.vhd
+control-yavs := control_yavs.vhd
 
 nvc-plugin += control_nvc_backend
 control_nvc_backend-plugin-sources := $(srcdir)/control_nvc_backend.c
