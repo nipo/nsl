@@ -207,7 +207,7 @@ begin
         p_cmd_in_ack.ready <= '1';
         
       when CMD_PUT_TABLE =>
-        rin.cmd_state <= CMD_PUT_HEADER;
+        null;
         
       when CMD_PUT_HEADER =>
         p_cmd_out_val.valid <= '1';
