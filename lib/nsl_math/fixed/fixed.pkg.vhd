@@ -176,11 +176,12 @@ package body fixed is
 
   function to_string(v: std_ulogic_vector) return string
   is
-    variable ret: string(v'range) := (others => '?');
+    alias xv: std_ulogic_vector(1 to v'length) is v;
+    variable ret: string(1 to v'length) := (others => '?');
   begin
-    for i in v'range
+    for i in ret'range
     loop
-      ret(i) := to_string(v(i));
+      ret(i) := to_string(xv(i));
     end loop;
     return ret;
   end function;
