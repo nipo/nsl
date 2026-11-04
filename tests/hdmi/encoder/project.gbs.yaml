@@ -26,8 +26,6 @@ root:
 output:
   - name: simulation
     topcell: tb
-    filter_vars:
-      hwdep: simulation
     simulation:
       success_regex: "Terminating with error level: 0"
     outputs:
