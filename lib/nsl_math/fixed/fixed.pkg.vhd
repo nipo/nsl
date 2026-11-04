@@ -427,22 +427,25 @@ package body fixed is
   is
     constant sat_min : ufixed(left downto right) := (others => '0');
     constant sat_max : ufixed(left downto right) := (others => '1');
-    constant as_int: integer := integer(round(value * 2.0 ** (-right)));
     constant w: integer := left - right + 1;
-    variable ret : ufixed(left downto right);
+    constant scaled: real := round(value * 2.0 ** (-right));
+    variable remainder: real := scaled;
+    variable ret : ufixed(left downto right) := sat_min;
   begin
-    if as_int <= 0 or w <= 0 then
+    if w <= 0 or scaled <= 0.0 then
       return sat_min;
+    elsif scaled >= 2.0 ** w - 1.0 then
+      return sat_max;
     end if;
-    -- Skip the saturation check when 2**w would overflow VHDL integer:
-    -- saturation is unreachable since as_int is itself bounded by
-    -- integer'high < 2**w - 1 for w >= 31.
-    if w < 31 then
-      if as_int >= (2 ** w) - 1 then
-        return sat_max;
+
+    -- Bit by bit, as the value may not fit an integer.
+    for i in left downto right
+    loop
+      if remainder >= 2.0 ** (i - right) then
+        ret(i) := '1';
+        remainder := remainder - 2.0 ** (i - right);
       end if;
-    end if;
-    ret := ufixed(to_unsigned(as_int, w));
+    end loop;
     return ret;
   end function;
 
