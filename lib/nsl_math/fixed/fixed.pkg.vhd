@@ -485,7 +485,7 @@ package body fixed is
 
     if value'length > 0
       and value'left > left
-      and value(value'left downto left+1) /= (value'left downto left+1 => '0') then
+      and to_suv(value(value'left downto left+1)) /= (1 to value'left-left => '0') then
         ret := (others => '1');
     end if;
 
@@ -712,7 +712,7 @@ package body fixed is
 --      report integer'image(value'left) & ":" & integer'image(value'right)
 --        & ":" & integer'image(left)  & ":" & integer'image(right)
 --        severity note;
-      if value(value'left-1 downto left) /= (value'left-1 downto left => s) then
+      if to_suv(value(value'left-1 downto left)) /= (1 to value'left-left => s) then
         ret := (others => not s);
         ret(ret'left) := s;
       end if;
