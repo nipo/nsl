@@ -119,11 +119,13 @@ begin
     tx_level_i => tx_fillness_s
     );
 
-  jtag_to_system_fifo: nsl_memory.fifo.fifo_homogeneous
+  jtag_to_system_fifo: nsl_memory.fifo.fifo_auto
     generic map(
-      data_width_c => 9,
-      word_count_c => rx_fifo_depth_c,
-      clock_count_c => 2
+      config_c => nsl_memory.fifo.fifo_config(
+        data_width => 9,
+        word_count => tx_fifo_depth_c,
+        clock_count => 2
+        )
       )
     port map(
       reset_n_i => reset_n_s,
@@ -142,11 +144,13 @@ begin
       in_free_o => rx_fifo_free_s
       );
 
-  system_to_jtag_fifo: nsl_memory.fifo.fifo_homogeneous
+  system_to_jtag_fifo: nsl_memory.fifo.fifo_auto
     generic map(
-      data_width_c => 9,
-      word_count_c => tx_fifo_depth_c,
-      clock_count_c => 2
+      config_c => nsl_memory.fifo.fifo_config(
+        data_width => 9,
+        word_count => tx_fifo_depth_c,
+        clock_count => 2
+        )
       )
     port map(
       reset_n_i => reset_n_s,
