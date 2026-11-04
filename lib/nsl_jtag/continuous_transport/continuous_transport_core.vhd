@@ -30,6 +30,9 @@ entity continuous_transport_core is
     tdi_i     : in  std_ulogic;
     tdo_o     : out std_ulogic;
 
+    -- Asserted when at least one batch waits for transmission
+    irq_o : out std_ulogic;
+
     -- RX FIFO write side (received payload).
     rx_data_o  : out byte;
     rx_last_o  : out std_ulogic;
@@ -103,6 +106,7 @@ begin
       byte_o => frame_byte,
       budget_set_i => budget_set,
       budget_i => budget,
+      irq_o => irq_o,
       tx_data_i => tx_data_i,
       tx_last_i => tx_last_i,
       tx_valid_i => tx_valid_i,

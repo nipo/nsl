@@ -79,6 +79,9 @@ package continuous_transport is
       reset_n_i   : in  std_ulogic;
       reset_n_o   : out std_ulogic;
 
+      -- Asserted when at least one batch waits for transmission
+      irq_o : out std_ulogic;
+
       tx_i : in nsl_bnoc.framed.framed_req;
       tx_o : out nsl_bnoc.framed.framed_ack;
 
@@ -141,6 +144,9 @@ package continuous_transport is
       update_i  : in  std_ulogic;
       tdi_i     : in  std_ulogic;
       tdo_o     : out std_ulogic;
+
+      -- Asserted when at least one batch waits for transmission
+      irq_o : out std_ulogic;
 
       rx_data_o  : out byte;
       rx_last_o  : out std_ulogic;

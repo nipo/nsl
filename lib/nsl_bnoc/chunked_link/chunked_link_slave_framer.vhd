@@ -25,6 +25,9 @@ entity chunked_link_slave_framer is
     clock_i   : in  std_ulogic;
     reset_n_i : in  std_ulogic;
 
+    -- Asserted when at least one batch waits for transmission
+    irq_o : out std_ulogic;
+    
     -- Batch start: budget back to zero, emission restarts with control.
     batch_start_i : in std_ulogic;
 
@@ -240,6 +243,8 @@ begin
       rin.budget <= r.budget - 1;
     end if;
   end process;
+
+  irq_o <= chunk_valid_s;
 
   moore: process(r, chunk_byte_s) is
   begin

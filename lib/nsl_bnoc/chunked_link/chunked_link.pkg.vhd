@@ -85,6 +85,9 @@ package chunked_link is
       clock_i   : in  std_ulogic;
       reset_n_i : in  std_ulogic;
 
+      -- Asserted when at least one batch waits for transmission
+      irq_o : out std_ulogic;
+
       -- Batch start: budget back to zero, emission restarts with control.
       batch_start_i : in std_ulogic;
 

@@ -29,6 +29,9 @@ entity jtag_continuous_transport_tap is
     reset_n_i   : in  std_ulogic;
     reset_n_o   : out std_ulogic;
 
+    -- Asserted when at least one batch waits for transmission
+    irq_o : out std_ulogic;
+
     tx_i : in nsl_bnoc.framed.framed_req;
     tx_o : out nsl_bnoc.framed.framed_ack;
 
@@ -107,6 +110,8 @@ begin
     tdi_i     => tdi_s,
     tdo_o     => tdo_s,
 
+    irq_o => irq_o,
+    
     rx_data_o  => rx_data_s,
     rx_last_o  => rx_last_s,
     rx_valid_o => rx_valid_s,
