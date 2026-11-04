@@ -134,42 +134,42 @@ package mode is
 
   -- VIC 31,75
   -- PxClk = 148.5
-  constant mode_std_1920x1080p50_c: mode_t := mode_build(1920, 720, 528, 44, 1080, 45, 4, 5, 50.0, '1', '1');
+  constant mode_std_1920x1080p50_c: mode_t;
   -- VIC 19,68
   -- PxClk = 74.25
-  constant mode_std_1280x720p50_c: mode_t := mode_build(1280, 700, 440, 40, 720, 30, 5, 5, 50.0, '1', '1');
+  constant mode_std_1280x720p50_c: mode_t;
   -- VIC 17,18
   -- PxClk = 27
-  constant mode_std_720x576p50_c: mode_t := mode_build(720, 144, 12, 64, 576, 49, 5, 5, 50.0, '0', '0');
+  constant mode_std_720x576p50_c: mode_t;
 
   -- VIC 16,76
   -- PxClk = 148.5
-  constant mode_std_1920x1080p60_c: mode_t := mode_build(1920, 280, 88, 44, 1080, 45, 4, 5, 60.0, '1', '1');
+  constant mode_std_1920x1080p60_c: mode_t;
   -- VIC 4,69
   -- PxClk = 74.25
-  constant mode_std_1280x720p60_c: mode_t := mode_build(1280, 370, 110, 40, 720, 30, 5, 5, 60.0, '1', '1');
+  constant mode_std_1280x720p60_c: mode_t;
   -- VIC 34.  Same frame as 1080p60 at half the rate, so the same
   -- 74.25 MHz a 720p60 link runs at carries it.
-  constant mode_std_1920x1080p30_c: mode_t := mode_build(1920, 280, 88, 44, 1080, 45, 4, 5, 30.0, '1', '1');
+  constant mode_std_1920x1080p30_c: mode_t;
 
   -- VIC 1.  Same, and the standard clock is not the geometry's
   -- either.
-  constant mode_std_640x480p5994_c: mode_t := mode_build_clocked(640, 160, 16, 96, 480, 45, 10, 2, 25_175_000, 59.94, '0', '0');
+  constant mode_std_640x480p5994_c: mode_t;
   -- VIC 2,3.  59.94 is 60000/1001, which the literal below only
   -- approximates, hence the stated clock.
-  constant mode_std_720x480p5994_c: mode_t := mode_build_clocked(720, 138, 16, 62, 480, 45, 9, 6, 27_000_000, 59.94, '0', '0');
+  constant mode_std_720x480p5994_c: mode_t;
 
 
   -- VESA/DMT computer modes, stated by their pixel clock.
 
   -- DMT 4, VGA
-  constant mode_std_640x480p60_c: mode_t := mode_build_clocked(640, 160, 16, 96, 480, 45, 10, 2, 25_175_000, 60.0, '0', '0');
+  constant mode_std_640x480p60_c: mode_t;
   -- DMT 9, SVGA
-  constant mode_std_800x600p60_c: mode_t := mode_build_clocked(800, 256, 40, 128, 600, 28, 1, 4, 40_000_000, 60.0, '1', '1');
+  constant mode_std_800x600p60_c: mode_t;
   -- DMT 16, XGA
-  constant mode_std_1024x768p60_c: mode_t := mode_build_clocked(1024, 320, 24, 136, 768, 38, 3, 6, 65_000_000, 60.0, '0', '0');
+  constant mode_std_1024x768p60_c: mode_t;
   -- DMT 35, SXGA
-  constant mode_std_1280x1024p60_c: mode_t := mode_build_clocked(1280, 408, 48, 112, 1024, 42, 1, 3, 108_000_000, 60.0, '1', '1');
+  constant mode_std_1280x1024p60_c: mode_t;
 
 end package mode;
 
@@ -395,5 +395,18 @@ package body mode is
   begin
     return real(mode.pixel_hz) / real(h_total(mode)) / real(v_total(mode));
   end function;
+
+  constant mode_std_1920x1080p50_c: mode_t := mode_build(1920, 720, 528, 44, 1080, 45, 4, 5, 50.0, '1', '1');
+  constant mode_std_1280x720p50_c: mode_t := mode_build(1280, 700, 440, 40, 720, 30, 5, 5, 50.0, '1', '1');
+  constant mode_std_720x576p50_c: mode_t := mode_build(720, 144, 12, 64, 576, 49, 5, 5, 50.0, '0', '0');
+  constant mode_std_1920x1080p60_c: mode_t := mode_build(1920, 280, 88, 44, 1080, 45, 4, 5, 60.0, '1', '1');
+  constant mode_std_1280x720p60_c: mode_t := mode_build(1280, 370, 110, 40, 720, 30, 5, 5, 60.0, '1', '1');
+  constant mode_std_1920x1080p30_c: mode_t := mode_build(1920, 280, 88, 44, 1080, 45, 4, 5, 30.0, '1', '1');
+  constant mode_std_640x480p5994_c: mode_t := mode_build_clocked(640, 160, 16, 96, 480, 45, 10, 2, 25_175_000, 59.94, '0', '0');
+  constant mode_std_720x480p5994_c: mode_t := mode_build_clocked(720, 138, 16, 62, 480, 45, 9, 6, 27_000_000, 59.94, '0', '0');
+  constant mode_std_640x480p60_c: mode_t := mode_build_clocked(640, 160, 16, 96, 480, 45, 10, 2, 25_175_000, 60.0, '0', '0');
+  constant mode_std_800x600p60_c: mode_t := mode_build_clocked(800, 256, 40, 128, 600, 28, 1, 4, 40_000_000, 60.0, '1', '1');
+  constant mode_std_1024x768p60_c: mode_t := mode_build_clocked(1024, 320, 24, 136, 768, 38, 3, 6, 65_000_000, 60.0, '0', '0');
+  constant mode_std_1280x1024p60_c: mode_t := mode_build_clocked(1280, 408, 48, 112, 1024, 42, 1, 3, 108_000_000, 60.0, '1', '1');
 
 end package body;
