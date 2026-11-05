@@ -653,16 +653,37 @@ package body fixed is
                      constant left : integer;
                      constant right : integer) return sfixed
   is
+    constant w: integer := left - right + 1;
+    constant scaled: real := round(value * 2.0 ** (-right));
+    variable remainder: real := abs(scaled);
     variable ret : sfixed(left downto right);
+    variable magnitude : signed(w-1 downto 0) := (others => '0');
   begin
-    if value <= -2.0**left then
+    if w <= 0 then
+      return ret;
+    elsif scaled <= -(2.0 ** (w-1)) then
       ret := (others => '0');
-      ret(ret'left) := '0';
-    elsif value > 2.0**left then
+      ret(ret'left) := '1';
+      return ret;
+    elsif scaled >= 2.0 ** (w-1) - 1.0 then
       ret := (others => '1');
-    else
-      ret := sfixed(to_signed(integer(value * 2.0 ** (-right)), left - right + 1));
+      ret(ret'left) := '0';
+      return ret;
     end if;
+
+    -- Bit by bit, as the value may not fit an integer.
+    for i in w-2 downto 0
+    loop
+      if remainder >= 2.0 ** i then
+        magnitude(i) := '1';
+        remainder := remainder - 2.0 ** i;
+      end if;
+    end loop;
+
+    if scaled < 0.0 then
+      magnitude := -magnitude;
+    end if;
+    ret := sfixed(magnitude);
     return ret;
   end function;
 
