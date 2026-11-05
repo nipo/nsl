@@ -105,7 +105,7 @@ begin
     variable res: uacc_t;
   begin
     if r.acc(r.acc'left) = '1' then
-      out_o <= (others => '0');
+      out_o <= (out_o'range => '0');
     else
       res := ufixed(r.acc(uacc_t'range));
       out_o <= resize_saturate(res, out_o'left, out_o'right);

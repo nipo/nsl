@@ -202,7 +202,7 @@ begin
 
       if pages(page) = null then
         pages(page) := new byte_string(0 to page_byte_c - 1);
-        pages(page).all := (others => (others => 'U'));
+        pages(page).all := (pages(page)'range => (others => 'U'));
       end if;
 
       pages(page).all(offset + lane) := value;

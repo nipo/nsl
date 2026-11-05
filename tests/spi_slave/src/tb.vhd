@@ -133,7 +133,7 @@ architecture sim of tb is
       i := i + datas'length;
     end loop;
 
-    data <= (others => dontcare_byte_c);
+    data <= (data'range => dontcare_byte_c);
     wait until active = '0';
   end procedure;
 

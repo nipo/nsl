@@ -176,7 +176,7 @@ begin
 
       if pages(page) = null then
         pages(page) := new byte_string(0 to page_byte_c - 1);
-        pages(page).all := (others => (others => 'U'));
+        pages(page).all := (pages(page)'range => (others => 'U'));
       end if;
 
       for i in 0 to dq_byte_count_c - 1
@@ -194,7 +194,7 @@ begin
       locate(bank_index, row_index, column_index, page, offset);
 
       if pages(page) = null then
-        value := (others => (others => 'U'));
+        value := (value'range => (others => 'U'));
         return;
       end if;
 
