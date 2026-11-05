@@ -312,20 +312,22 @@ class Context(dict):
     
     def _func_filter(self, function: str, pattern: str, text: str) -> str:
         """
-        $(filter pattern,text)
+        $(filter pattern...,text)
         """
         pattern = self.expand(pattern)
         text = self.expand(text)
 
-        expected_result = function == "filter"
-        
-        pattern = re.escape(pattern).replace("%", ".*")
-        p = re.compile("^" + pattern + "$")
+        pattern = "(^" + re.sub(r'(\\\s)+', r'$)|(^', re.escape(pattern).replace("%", ".*")) + "$)"
+        p = re.compile(pattern)
         r = []
+        expected_result = function == "filter"
 
         for item in text.split():
             item = item.strip()
-            if bool(p.match(item)) == expected_result:
+            if not item:
+                continue
+            m = p.match(item)
+            if bool(m) == expected_result:
                 r.append(item)
         return ' '.join(r)
 
@@ -406,7 +408,7 @@ if __name__ == "__main__":
             m = Makefile(Path(filename))
             m.interpret(c)
 
-        for key, value in c.expanded_items():
+        for key, value in c.expanded_items().items():
             print(f"{key} = {value}")
 
     dump()
