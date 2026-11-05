@@ -13,145 +13,145 @@ settings:
 projects:
   - name: adv7511
     path: adv7511
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_address
     path: amba/address
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_apb_dispatch
     path: amba/apb_dispatch
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_apb_ram
     path: amba/apb_ram
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_apb_rom
     path: amba/apb_rom
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_apb_regmap
     path: amba/apb_regmap
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_stream_apb
     path: amba/stream_apb
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_apb_bridge
     path: amba/axi4_apb_bridge
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_apb_bridge_dispatch
     path: amba/axi4_apb_bridge_dispatch
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_cdc
     path: amba/axi4_mm_cdc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_crossbar
     path: amba/axi4_mm_crossbar
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_crossbar_write_order
     path: amba/axi4_mm_crossbar_write_order
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_crossbar_random
     path: amba/axi4_mm_crossbar_random
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_crossbar_tester
     path: amba/axi4_mm_crossbar_tester
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_crossbar_order
     path: amba/axi4_mm_crossbar_order
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi_m2m_dma
     path: amba/axi_m2m_dma
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi_m2m_dma_self
     path: amba/axi_m2m_dma_self
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_lite_ram
     path: amba/axi4_mm_lite_ram
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_lite_regmap
     path: amba/axi4_mm_lite_regmap
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_lite_stream_endpoint
     path: amba/axi4_mm_lite_stream_endpoint
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_async_packet_drop_fifo
     path: amba/axi4_stream_async_packet_drop_fifo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_async_packet_drop_fifo_pkt_gen
     path: amba/axi4_stream_async_packet_drop_fifo_pkt_gen
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_logger
     path: amba/axi4_mm_logger
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_on_stream
     path: amba/axi4_mm_on_stream
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_ram
     path: amba/axi4_mm_ram
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_shared_bus
     path: amba/axi4_mm_shared_bus
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_mm_types
     path: amba/axi4_mm_types
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_buffer
     path: amba/axi4_stream_buffer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_buffer_align
     path: amba/axi4_stream_buffer_align
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_buffer_io
     path: amba/axi4_stream_buffer_io
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_buffer_short
     path: amba/axi4_stream_buffer_short
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_cdc
     path: amba/axi4_stream_cdc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_error_inserter
     path: amba/axi4_stream_error_inserter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_fifo
     path: amba/axi4_stream_fifo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_fifo_cancellable
     path: amba/axi4_stream_fifo_cancellable
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_fifo_clean
     path: amba/axi4_stream_fifo_clean
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_flusher
     path: amba/axi4_stream_flusher
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_meta
     path: amba/axi4_stream_meta
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_narrower
     path: amba/axi4_stream_narrower
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_prefill_buffer
     path: amba/axi4_stream_prefill_buffer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_random_pkt_checker
     path: amba/axi4_stream_random_pkt_checker
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_router
     path: amba/axi4_stream_router
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_router_linerate
     path: amba/axi4_stream_router_linerate
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_sized
     path: amba/axi4_stream_sized
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs_xfail, simulation]
   - name: amba_axi4_stream_types
     path: amba/axi4_stream_types
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_widener
     path: amba/axi4_stream_widener
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_stream_packer
     path: amba/stream_packer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: audio_echo
     path: audio/echo
     tags: [ghdl, simulation, audio]
@@ -175,49 +175,49 @@ projects:
     tags: [ghdl, simulation, audio]
   - name: avalon_axi4_stream_adapter
     path: avalon/axi4_stream_adapter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: avalon_fifo
     path: avalon/fifo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: avalon_passthrough
     path: avalon/passthrough
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: avalon_ready_latency_adapter
     path: avalon/ready_latency_adapter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: avalon_width_adapter
     path: avalon/width_adapter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_axi_adapter_framed
     path: bnoc/axi_adapter_framed
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_axi_adapter_pipe
     path: bnoc/axi_adapter_pipe
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_committed_filter
     path: bnoc/committed_filter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_committed_header
     path: bnoc/committed_header
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_committed_padder
     path: bnoc/committed_padder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_crc
     path: bnoc/crc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_framed_router
     path: bnoc/framed_router
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bnoc_spi_committed_sink
     path: bnoc/spi_committed_sink
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: bytestream
     path: bytestream
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: cbor_codec
     path: cbor/codec
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: chunked_link_deframer
     path: chunked_link/deframer
     tags: [ghdl, simulation, chunked_link]
@@ -232,52 +232,52 @@ projects:
     tags: [ghdl, simulation, chunked_link]
   - name: clock_div
     path: clock_div
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: clock_rate_estimator
     path: clock_rate_estimator
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: color
     path: color
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: console
     path: console
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: cordic
     path: cordic
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: crc
     path: crc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: crc_gen
     path: crc_gen
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: cuff_link
     path: cuff/link
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ddr_io
     path: ddr_io
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: delay_aligner
     path: delay_aligner
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: dsp_pid
     path: dsp/pid
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: dsp_delay_line
     path: dsp/delay_line
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: easyscale
     path: easyscale
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: encoder
     path: encoder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_serdes_output_tristated
     path: ext_ram/serdes_output_tristated
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_ddr_output_tristated
     path: ext_ram/ddr_output_tristated
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_ddr3_axi
     path: ext_ram/ddr3_axi
     tags: [ghdl, simulation, slow]
@@ -301,208 +301,208 @@ projects:
     tags: [ghdl, simulation, slow]
   - name: ext_ram_sdram_controller
     path: ext_ram/sdram_controller
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_mm_traffic
     path: amba/mm_traffic
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_mm_traffic_pipelined
     path: amba/mm_traffic_pipelined
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_sdram_model
     path: ext_ram/sdram_model
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_sram_axi
     path: ext_ram/sram_axi
     tags: [ghdl, simulation, slow]
   - name: ext_ram_sram_controller
     path: ext_ram/sram_controller
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ext_ram_sram_model
     path: ext_ram/sram_model
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo4
     path: fifo4
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_cancel
     path: fifo_cancel
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_cancel_async
     path: fifo_cancel_async
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_count
     path: fifo_count
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_paced
     path: fifo_paced
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_auto
     path: fifo_auto
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs_xfail, simulation]
   - name: fifo_lutram
     path: fifo_lutram
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_shift_register
     path: fifo_shift_register
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fixed
     path: fixed
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: float
     path: float
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ftdi
     path: ftdi
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: gaussian
     path: gaussian
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: gray
     path: gray
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: gray_sync
     path: gray_sync
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: hdmi_colorspace
     path: hdmi/colorspace
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: hdmi_di_bch
     path: hdmi/di_bch
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: hdmi_encoder
     path: hdmi/encoder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: hdmi_decoder
     path: hdmi_decoder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: i2c_cbor_full_test
     path: i2c_cbor/full_test
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: i2c_transactor_stuck_abort
     path: i2c_transactor/stuck_abort
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: i2c_transactor_stuck_bus
     path: i2c_transactor/stuck_bus
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: i2s
     path: i2s
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ibm_8b10b_procedural
     path: ibm_8b10b/procedural
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ibm_8b10b_serdes
     path: ibm_8b10b/serdes
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ibm_8b10b_stream
     path: ibm_8b10b/stream
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ibm_8b10b_stream_idle_filter
     path: ibm_8b10b/stream_idle_filter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ibm_8b10b_synchronous
     path: ibm_8b10b/synchronous
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: interdomain_tick
     path: interdomain_tick
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ethernet
     path: inet/ethernet
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_checksum_acc
     path: inet/checksum_acc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_types
     path: inet/stream_types
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_checksum
     path: inet/stream_checksum
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_fcs
     path: inet/stream_fcs
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_mac
     path: inet/stream_mac
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_ethernet
     path: inet/stream_ethernet
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_mac_ethernet
     path: inet/stream_mac_ethernet
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_ipv4
     path: inet/stream_ipv4
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_icmp_echo
     path: inet/stream_icmp_echo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_ipv4_ping
     path: inet/stream_ipv4_ping
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_resolver
     path: inet/stream_resolver
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_arp
     path: inet/stream_arp
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_arp_ping
     path: inet/stream_arp_ping
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_udp
     path: inet/stream_udp
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_block_resizer
     path: inet/stream_block_resizer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_dhcp
     path: inet/stream_dhcp
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_host
     path: inet/stream_host
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_host_dhcp
     path: inet/stream_host_dhcp
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_vlan
     path: inet/vlan
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ipv4
     path: inet/ipv4
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ipv4_checksum
     path: inet/ipv4_checksum
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ipv4_receiver
     path: inet/ipv4_receiver
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ipv4_rgmii
     path: inet/ipv4_rgmii
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_ipv4_trx
     path: inet/ipv4_trx
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_mii
     path: inet/mii
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_mii_timestamping
     path: inet/mii_timestamping
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_rmii
     path: inet/rmii
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_switching_bridge
     path: inet/switching/bridge
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_switching_fabric
     path: inet/switching/fabric
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_switching_ingress
     path: inet/switching/ingress
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_switching_mac_table
     path: inet/switching/mac_table
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: inet_vlan_path_router
     path: inet/vlan_path_router
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: jtag
     path: jtag
     tags: [ghdl, simulation, jtag_tap]
@@ -511,7 +511,7 @@ projects:
     tags: [ghdl, simulation, jtag_tap]
   - name: jtag_cbor_full_test
     path: jtag_cbor/full_test
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: jtag_continuous_transport_bit_loopback
     path: jtag_continuous_transport/bit_loopback
     tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
@@ -529,109 +529,109 @@ projects:
     tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]
   - name: lifo
     path: lifo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: mesochronous
     path: mesochronous
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: nco
     path: nco
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ram_auto
     path: ram_auto
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ublox_nav_timegps
     path: ublox/nav_timegps
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_multi_sim
     path: pll_multi_sim
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve
     path: pll_solve
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_agilex5
     path: pll_solve_agilex5
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_cyclone10lp
     path: pll_solve_cyclone10lp
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_ecp5
     path: pll_solve_ecp5
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_gowin_gw1n
     path: pll_solve_gowin_gw1n
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_gowin_gw5a
     path: pll_solve_gowin_gw5a
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_ice40
     path: pll_solve_ice40
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_series6
     path: pll_solve_series6
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_series7
     path: pll_solve_series7
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll_solve_zynq7
     path: pll_solve_zynq7
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ptp_stream_l2
     path: ptp/stream_l2
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ptp_two_nodes
     path: ptp/two_nodes
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ptp_master_fields
     path: ptp/master_fields
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ptp_gm_screen
     path: ptp_gm_screen
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_discipline
     path: precise_clock/discipline
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_offset
     path: precise_clock/offset
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_pps
     path: precise_clock/pps
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_pps_source
     path: precise_clock/pps_source
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: mii_ipg
     path: mii_ipg
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: manchester_recovery
     path: manchester/recovery
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: mau_10baset_back_to_back
     path: mau_10baset/back_to_back
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_second_setter
     path: precise_clock/second_setter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_pps_latency
     path: precise_clock/pps_latency
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: precise_clock_phc
     path: precise_clock/phc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: padded
     path: padded
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pll
     path: pll
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: prbs
     path: prbs
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: pwm
     path: pwm
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: publish_counter
     path: publish_counter
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: qspi_transactor
     path: qspi/transactor
     tags: [ghdl, simulation, qspi]
@@ -643,128 +643,128 @@ projects:
     tags: [ghdl, simulation, qspi, apb]
   - name: sc202
     path: sc202
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: scrambler
     path: scrambler
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_card
     path: sdio/card
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_cbor
     path: sdio/cbor
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_cmd_engine
     path: sdio/cmd_engine
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_dat_engine
     path: sdio/dat_engine
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_host
     path: sdio/host
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: sdio_pmod_tf_card
     path: sdio/pmod_tf_card
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: serdes_input
     path: serdes/input
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: serdes_output
     path: serdes/output
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: spi_committed_sink
     path: spi/committed_sink
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: spi_fifo_transport_master
     path: spi/fifo_transport_master
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: spi_framed_sink
     path: spi/framed_sink
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: spi_cbor_full_test
     path: spi_cbor/full_test
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: spi_chunked_link_loopback
     path: spi_chunked_link/loopback
     tags: [ghdl, simulation, chunked_link]
   - name: spi_slave
     path: spi_slave
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ssd1306_labels
     path: ssd1306_labels
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ssd1331
     path: ssd1331
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ssd1331_terminal
     path: ssd1331_terminal
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: st7735
     path: st7735
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: terminal_ansi
     path: terminal_ansi
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: terminal_labels
     path: terminal_labels
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: swd_cbor_full_test
     path: swd_cbor/full_test
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: swd_monitor
     path: swd_monitor
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: text
     path: text
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: tick
     path: tick
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: i2c_mcp4726
     path: i2c_mcp4726
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: ov5640
     path: ov5640
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: tla202x
     path: tla202x
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: tmds
     path: tmds
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: uart_8n1
     path: uart_8n1
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: uart_cbor_full_test
     path: uart_cbor/full_test
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
     skip: true
   - name: usb11
     path: usb11
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb2
     path: usb2
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb2_framed
     path: usb2_framed
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb2_framed_dual
     path: usb2_framed_dual
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: wishbone_base
     path: wishbone/base
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs_xfail, simulation]
   - name: time_calendar
     path: time/calendar
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_program
     path: usb_hid_host/program
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_extractor
     path: usb_hid_host/extractor
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_ls_bfm
     path: usb_hid_host/ls_bfm
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_host
     path: usb_hid_host/host
     tags: [ghdl, simulation, slow]
@@ -779,58 +779,58 @@ projects:
     tags: [ghdl, simulation, slow]
   - name: usb_hid_host_keyboard_chars
     path: usb_hid_host/keyboard_chars
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_keyboard_events
     path: usb_hid_host/keyboard_events
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: usb_hid_host_keyboard_repeat
     path: usb_hid_host/keyboard_repeat
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_pixel_stream
     path: video_pixel_stream
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_vdma
     path: video_vdma
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_vdma_triple_buffer
     path: video_vdma_triple_buffer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_dvp_pixel_stream
     path: video_dvp_pixel_stream
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_measurer
     path: video_measurer
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_capture
     path: video_capture
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_edid
     path: video_edid
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_capture_fifo
     path: video_capture_fifo
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_raster
     path: video_raster
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_palette_expander
     path: video_palette_expander
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_color_bars
     path: video_color_bars
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_repeater
     path: video_repeater
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: video_rgb565_unpacker
     path: video_rgb565_unpacker
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: dvi_encoder
     path: dvi_encoder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: dvi_decoder
     path: dvi_decoder
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: dvi_ddc
     path: dvi_ddc
-    tags: [ghdl, simulation]
+    tags: [ghdl, yavs, simulation]
