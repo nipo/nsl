@@ -1,0 +1,33 @@
+name: zcu102_ps8_axi_check
+
+root:
+  name: top
+  deps:
+    - nsl_xilinx.ps8
+    - nsl_amba.axi4_mm
+    - nsl_amba.apb
+    - nsl_amba.axi_apb
+    - nsl_amba.mm_traffic
+    - nsl_amba.ram
+    - nsl_clocking.async
+  sources:
+    - file_type: vhdl
+      files:
+        - src/boundary.vhd
+    - file_type: xilinx-xdc
+      files:
+        - src/clocks.xdc
+        - ../pinout/leds.xdc
+
+output:
+  - name: synthesis
+    topcell: boundary
+    target:
+      part: xczu9eg-ffvb1156-2-e
+    outputs:
+      - type: bitstream
+        path: ps8_axi_check.bit
+      - type: vivado-timing-report
+        path: timing.rpt
+      - type: vivado-usage-report
+        path: utilization.rpt
