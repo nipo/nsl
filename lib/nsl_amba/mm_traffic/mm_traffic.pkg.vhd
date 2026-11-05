@@ -73,8 +73,9 @@ package mm_traffic is
   component axi4_mm_memory_tester is
     generic(
       config_c: config_t;
-      -- First byte of the region under test
-      base_address_c: natural := 0;
+      -- First byte of the region under test, resized to the address
+      -- width of config_c
+      base_address_c: unsigned := "0";
       -- Size of the region, as a power of two bytes
       region_byte_l2_c: natural;
       -- Bus beats per transaction

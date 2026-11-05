@@ -136,7 +136,7 @@ begin
     tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
       generic map(
         config_c => axi_config_c,
-        base_address_c => pass_base(pass),
+        base_address_c => to_unsigned(pass_base(pass), axi_config_c.address_width),
         region_byte_l2_c => region_byte_l2_c,
         burst_length_c => burst_length_c,
         seed_c => 4242 + pass,

@@ -11,7 +11,7 @@ use nsl_amba.mm_traffic.all;
 entity axi4_mm_memory_tester is
   generic(
     config_c: config_t;
-    base_address_c: natural := 0;
+    base_address_c: unsigned := "0";
     region_byte_l2_c: natural;
     burst_length_c: natural := 8;
     seed_c: natural := 1;
@@ -124,7 +124,7 @@ architecture beh of axi4_mm_memory_tester is
   function transaction_address(index: index_t) return unsigned
   is
   begin
-    return resize(to_unsigned(base_address_c, config_c.address_width)
+    return resize(resize(base_address_c, config_c.address_width)
                   + (resize(visit(index), config_c.address_width)
                      sll burst_byte_l2_c),
                   config_c.address_width);

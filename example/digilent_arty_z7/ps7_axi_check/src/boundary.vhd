@@ -197,7 +197,7 @@ begin
   hp0_tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
     generic map(
       config_c => hp0_config_c,
-      base_address_c => hp0_base_c,
+      base_address_c => to_unsigned(hp0_base_c, hp0_config_c.address_width),
       region_byte_l2_c => ocm_region_byte_l2_c,
       burst_length_c => burst_length_c
       )
@@ -216,7 +216,7 @@ begin
   hp1_tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
     generic map(
       config_c => hp1_config_c,
-      base_address_c => hp1_base_c,
+      base_address_c => to_unsigned(hp1_base_c, hp1_config_c.address_width),
       region_byte_l2_c => ocm_region_byte_l2_c,
       burst_length_c => burst_length_c
       )
@@ -235,7 +235,7 @@ begin
   acp_tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
     generic map(
       config_c => acp_config_c,
-      base_address_c => acp_base_c,
+      base_address_c => to_unsigned(acp_base_c, acp_config_c.address_width),
       region_byte_l2_c => ocm_region_byte_l2_c,
       burst_length_c => burst_length_c
       )
@@ -254,7 +254,7 @@ begin
   gp_loop_tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
     generic map(
       config_c => s_gp0_config_c,
-      base_address_c => gp_loop_base_c,
+      base_address_c => to_unsigned(gp_loop_base_c, s_gp0_config_c.address_width),
       region_byte_l2_c => ram_byte_l2_c,
       burst_length_c => burst_length_c
       )

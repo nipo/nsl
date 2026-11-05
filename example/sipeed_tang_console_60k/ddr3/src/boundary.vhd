@@ -732,7 +732,7 @@ begin
   high_walk: nsl_amba.mm_traffic.axi4_mm_memory_tester
     generic map(
       config_c => axi_config_c,
-      base_address_c => half_base_c,
+      base_address_c => to_unsigned(half_base_c, axi_config_c.address_width),
       region_byte_l2_c => half_byte_l2_c,
       burst_length_c => 8,
       seed_c => 20260920,

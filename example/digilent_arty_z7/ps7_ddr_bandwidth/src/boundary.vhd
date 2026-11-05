@@ -194,7 +194,7 @@ begin
     tester: nsl_amba.mm_traffic.axi4_mm_memory_tester
       generic map(
         config_c => tester_config_c,
-        base_address_c => region_base_c + i * 2 ** region_byte_l2_c,
+        base_address_c => to_unsigned(region_base_c + i * 2 ** region_byte_l2_c, tester_config_c.address_width),
         region_byte_l2_c => region_byte_l2_c,
         burst_length_c => burst_length_c,
         seed_c => i + 1,
