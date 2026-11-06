@@ -1,7 +1,7 @@
 vhdl-sources += udp_socket.pkg.vhd
 deps += nsl_simulation.socket
 
-ifeq ($(tool),ghdl)
+ifneq ($(filter ghdl yavs,$(tool)),)
 
 vhdl-sources += udp_socket-vhpidirect.vhd
 vhpidirect-sources += udp_socket-vhpidirect.c

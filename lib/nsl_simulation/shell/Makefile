@@ -1,6 +1,6 @@
 vhdl-sources += shell.pkg.vhd
 
-ifeq ($(tool),ghdl)
+ifneq ($(filter ghdl yavs,$(tool)),)
 
 vhdl-sources += shell-vhpidirect.vhd
 vhpidirect-sources += shell-vhpidirect.c

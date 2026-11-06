@@ -1,7 +1,7 @@
 vhdl-sources += tcp_socket.pkg.vhd
 deps += nsl_simulation.socket
 
-ifeq ($(tool),ghdl)
+ifneq ($(filter ghdl yavs,$(tool)),)
 
 vhdl-sources += tcp_socket-vhpidirect.vhd
 vhpidirect-sources += tcp_socket-vhpidirect.c
