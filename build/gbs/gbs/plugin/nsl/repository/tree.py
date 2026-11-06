@@ -54,11 +54,11 @@ class NSLRepository(Repository):
 
         Only unconditional source types belong here. The planner requires a
         consuming pass for every type it is given, so conditionally-emitted
-        sources must be omitted. In particular ghdl-vhpidirect-c is produced
-        only under a tool==ghdl build and is then picked up opportunistically
-        by the GHDL simulate dispatcher; declaring it here would force every
-        other flow (e.g. ISE bitstream) to provide a consumer for it and so
-        fail to plan.
+        sources must be omitted. In particular vhpidirect-c is produced
+        only under a tool==ghdl or tool==yavs build and is then picked up
+        opportunistically by that simulator's dispatcher; declaring it here
+        would force every other flow (e.g. ISE bitstream) to provide a
+        consumer for it and so fail to plan.
         """
         return {"vhdl"}
 
@@ -197,8 +197,8 @@ class NSLRepository(Repository):
                         file_type=gbs_source_type
                     ))
 
-        # GHDL VHPIDIRECT C sources. Package Makefiles declare these in
-        # vhpidirect-sources under their tool==ghdl branch; the GHDL simulate
+        # VHPIDIRECT C sources. Package Makefiles declare these in
+        # vhpidirect-sources under their tool==ghdl or yavs branch; the simulate
         # dispatcher compiles each into a .so and links it into the simulator.
         # Without extracting them here the C never enters the build graph, so
         # the simulator link fails on undefined VHPIDIRECT references.
@@ -214,7 +214,7 @@ class NSLRepository(Repository):
             if source_file and not source_file.startswith('$('):
                 sources.append(SourceFile(
                     path=package_path / source_file,
-                    file_type="ghdl-vhpidirect-c",
+                    file_type="vhpidirect-c",
                     include_dirs=[vhpidirect_support],
                 ))
 
