@@ -1,0 +1,125 @@
+# DE25-Nano HPS, golden reference design settings without HPS memory,
+# lwh2f only
+cpu:
+  a55: true
+  a76_core2: true
+  a76_core3: true
+  boot_core: 0
+  l3_cache_mb: 1
+  mpu_frequency_hz: 533330000
+peripherals: [usb0, emac0, sdmmc]
+watchdog_reset: cold
+bridges:
+  lwh2f: {data_width: 32, address_width: 29}
+pins:
+  0: {select: 1, mode: input}  # USB0 CLK
+  1: {select: 1, mode: output}  # USB0 STP
+  2: {select: 1, mode: input}  # USB0 DIR
+  3: {select: 1, mode: bidir}  # USB0 DATA0
+  4: {select: 1, mode: bidir}  # USB0 DATA1
+  5: {select: 1, mode: input}  # USB0 NXT
+  6: {select: 1, mode: bidir}  # USB0 DATA2
+  7: {select: 1, mode: bidir}  # USB0 DATA3
+  8: {select: 1, mode: bidir}  # USB0 DATA4
+  9: {select: 1, mode: bidir}  # USB0 DATA5
+  10: {select: 1, mode: bidir}  # USB0 DATA6
+  11: {select: 1, mode: bidir}  # USB0 DATA7
+  12: {select: 0, mode: output, output_delay: 117}  # EMAC0 TX_CLK
+  13: {select: 0, mode: output}  # EMAC0 TX_CTL
+  14: {select: 0, mode: input, input_delay: 117}  # EMAC0 RX_CLK
+  15: {select: 0, mode: input}  # EMAC0 RX_CTL
+  16: {select: 0, mode: output}  # EMAC0 TXD0
+  17: {select: 0, mode: output}  # EMAC0 TXD1
+  18: {select: 0, mode: input}  # EMAC0 RXD0
+  19: {select: 0, mode: input}  # EMAC0 RXD1
+  20: {select: 0, mode: output}  # EMAC0 TXD2
+  21: {select: 0, mode: output}  # EMAC0 TXD3
+  22: {select: 0, mode: input}  # EMAC0 RXD2
+  23: {select: 0, mode: input}  # EMAC0 RXD3
+  24: {select: 3, mode: bidir}  # SDMMC DATA0
+  25: {select: 3, mode: bidir}  # SDMMC DATA1
+  26: {select: 3, mode: output}  # SDMMC CCLK
+  27: {select: 9, mode: input}  # HPS_OSC_CLK
+  28: {select: 8, mode: bidir}  # GPIO28
+  29: {select: 3, mode: bidir}  # SDMMC DATA2
+  30: {select: 3, mode: bidir}  # SDMMC DATA3
+  31: {select: 3, mode: bidir}  # SDMMC CMD
+  32: {select: 8, mode: unused}
+  33: {select: 8, mode: unused}
+  34: {select: 8, mode: bidir}  # GPIO34
+  35: {select: 8, mode: unused}
+  36: {select: 4, mode: i2c}  # I2C1 SDA
+  37: {select: 4, mode: i2c}  # I2C1 SCL
+  38: {select: 5, mode: output}  # UART1 TX
+  39: {select: 5, mode: input}  # UART1 RX
+  40: {select: 8, mode: bidir}  # GPIO40
+  41: {select: 8, mode: bidir}  # GPIO41
+  42: {select: 8, mode: unused}
+  43: {select: 8, mode: unused}
+  44: {select: 8, mode: unused}
+  45: {select: 8, mode: unused}
+  46: {select: 5, mode: bidir}  # MDIO0 MDIO
+  47: {select: 5, mode: output}  # MDIO0 MDC
+use_fpga: []
+clock_manager:
+  mainpllgrp.nocclk.src: 0
+  mainpllgrp.nocdiv.cspdbgclk: 2
+  mainpllgrp.nocdiv.cstraceclk: 2
+  mainpllgrp.nocdiv.csclk: 0
+  mainpllgrp.nocdiv.mpuperiphdiv: 2
+  mainpllgrp.nocdiv.ccudiv: 1
+  mainpllgrp.nocdiv.softphydiv: 0
+  mainpllgrp.nocdiv.l4spclk: 2
+  mainpllgrp.nocdiv.l4mpclk: 1
+  mainpllgrp.nocdiv.l4sysfreeclk: 2
+  mainpllgrp.pllglob.modclkdiv: 6
+  mainpllgrp.pllglob.fastrefclk: 0
+  mainpllgrp.pllglob.psrc: 0
+  mainpllgrp.pllglob.drefclkdiv: 0
+  mainpllgrp.pllglob.arefclkdiv: 1
+  mainpllgrp.fdbck.fdiv: 0
+  mainpllgrp.pllc0.div: 4
+  mainpllgrp.pllc1.div: 4
+  mainpllgrp.pllc2.div: 6
+  mainpllgrp.pllc3.div: 8
+  mainpllgrp.pllm.mdiv: 128
+  perpllgrp.emacctl.emac0sel: 0
+  perpllgrp.emacctl.emac1sel: 0
+  perpllgrp.emacctl.emac2sel: 0
+  perpllgrp.pllglob.modclkdiv: 5
+  perpllgrp.pllglob.fstrefclk: 0
+  perpllgrp.pllglob.psrc: 0
+  perpllgrp.pllglob.drefclkdiv: 0
+  perpllgrp.pllglob.arefclkdiv: 1
+  perpllgrp.fdbck.fdiv: 0
+  perpllgrp.pllc0.div: 5
+  perpllgrp.pllc1.div: 5
+  perpllgrp.pllc2.div: 125
+  perpllgrp.pllc3.div: 6
+  perpllgrp.pllm.mdiv: 120
+  ctl.emacactr.src: 1
+  ctl.emacactr.cnt: 1
+  ctl.emacbctr.src: 1
+  ctl.emacbctr.cnt: 9
+  ctl.emacptpctr.src: 0
+  ctl.emacptpctr.cnt: 0
+  ctl.gpiodbctr.src: 0
+  ctl.gpiodbctr.cnt: 1
+  perpllgrp.gpiodiv.gpiodbclk: 1
+  ctl.s2fuser0ctr.src: 1
+  ctl.s2fuser0ctr.cnt: 0
+  ctl.s2fuser1ctr.src: 1
+  ctl.s2fuser1ctr.cnt: 0
+  ctl.psirefctr.src: 1
+  ctl.psirefctr.cnt: 0
+  ctl.usb31ctr.src: 0
+  ctl.usb31ctr.cnt: 19
+  ctl.dsuctr.src: 0
+  ctl.dsuctr.cnt: 0
+  ctl.core01ctr.src: 0
+  ctl.core01ctr.cnt: 0
+  ctl.core23ctr.src: 0
+  ctl.core2ctr.cnt: 0
+  ctl.core3ctr.cnt: 0
+  hps_osc_clk_hz: 25000000
+  fpga_clk_hz: 125000000

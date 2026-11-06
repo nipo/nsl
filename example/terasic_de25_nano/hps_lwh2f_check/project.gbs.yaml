@@ -1,0 +1,32 @@
+name: de25_nano_hps_lwh2f_check
+
+root:
+  name: top
+  deps:
+    - nsl_altera.hps
+    - nsl_amba.axi_apb
+    - nsl_amba.apb
+  sources:
+    - file_type: vhdl
+      files:
+        - src/top.vhd
+    - file_type: quartus-pin-assignment
+      files:
+        - pins.tcl
+    - file_type: nsl-agilex5-hps
+      files:
+        - hps.yaml
+
+output:
+  - name: synthesis
+    topcell: top
+    target:
+      part: A5EB013BB23BE4SCS
+    backend_config:
+      gbs.builtin.quartus:
+        tool: quartus-pro:25.3.1
+    outputs:
+      - type: bitstream
+        path: hps_lwh2f_check.sof
+      - type: synthesis-report
+        path: synthesis-report.html
