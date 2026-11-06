@@ -14,6 +14,9 @@ projects:
   - name: adv7511
     path: adv7511
     tags: [ghdl, yavs, simulation]
+  - name: altera_hps_bridge_channel
+    path: altera/hps_bridge_channel
+    tags: [ghdl, yavs, simulation]
   - name: amba_address
     path: amba/address
     tags: [ghdl, yavs, simulation]
