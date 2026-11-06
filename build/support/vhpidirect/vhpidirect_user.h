@@ -3,7 +3,9 @@
 
 struct vhpidirect_range
 {
-    int32_t left, right, dir, len;
+    int32_t left, right;
+    uint8_t dir;
+    uint32_t len;
 };
 
 struct vhpidirect_array
