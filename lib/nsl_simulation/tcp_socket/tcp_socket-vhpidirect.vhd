@@ -2,7 +2,8 @@ use std.textio.all;
 
 package body tcp_socket is
 
-  procedure tcp_socket_create_listener(local: sockaddr_in_t;
+  procedure tcp_socket_create_listener(ip: ipv4_t;
+                                       prt: integer;
                                        socket: out tcp_socket_t)
   is
   begin
@@ -11,7 +12,8 @@ package body tcp_socket is
 
   attribute foreign of tcp_socket_create_listener: procedure is "VHPIDIRECT tcp_socket-vhpidirect.so tcp_socket_create_listener";
 
-  procedure tcp_socket_create_connect(remote: sockaddr_in_t;
+  procedure tcp_socket_create_connect(ip: ipv4_t;
+                                      prt: integer;
                                       socket: out tcp_socket_t)
   is
   begin
@@ -60,14 +62,14 @@ package body tcp_socket is
                             socket: out tcp_socket_t)
   is
   begin
-    tcp_socket_create_listener(local, socket);
+    tcp_socket_create_listener(local.ip, local.prt, socket);
   end procedure;
 
   procedure create_connect(remote: sockaddr_in_t;
                            socket: out tcp_socket_t)
   is
   begin
-    tcp_socket_create_connect(remote, socket);
+    tcp_socket_create_connect(remote.ip, remote.prt, socket);
   end procedure;
 
   procedure is_connected(socket: inout tcp_socket_t;

@@ -43,52 +43,37 @@ void hexdump(const void *data, size_t size)
         printf("\n");
 }
 
-struct ghdl_sockaddr_in_t
-{
-    int ip[4];
-    int port;
-};
-
-static void sockaddr_in_from_ghdl(
+static void sockaddr_in_from_vhdl(
     struct sockaddr_in *dst,
-    const struct ghdl_sockaddr_in_t *src)
+    const int32_t ip[4],
+    int32_t port)
 {
     uint32_t tmp = 0;
     for (int i = 0; i < 4; ++i) {
         tmp <<= 8;
-        tmp |= src->ip[i];
+        tmp |= ip[i];
     }
+    memset(dst, 0, sizeof(*dst));
     dst->sin_addr.s_addr = htonl(tmp);
-    dst->sin_port = htons(src->port);
+    dst->sin_port = htons(port);
     dst->sin_family = AF_INET;
 }
 
-static void sockaddr_in_to_ghdl(
-    struct ghdl_sockaddr_in_t *dst,
-    const struct sockaddr_in *src)
-{
-    uint32_t tmp = htonl(src->sin_addr.s_addr);
-    for (int i = 3; i >= 0; --i) {
-        dst->ip[i] = tmp & 0xff;
-        tmp >>= 8;
-    }
-    dst->port = htons(src->sin_port);
-}
-
-struct ghdl_tcp_socket_t
+struct vhdl_tcp_socket_t
 {
     int listen_fd;
     int sock_fd;
 };
 
 void tcp_socket_create_listener(
-    struct ghdl_sockaddr_in_t *local,
-    struct ghdl_tcp_socket_t *handle)
+    const int32_t ip[4],
+    int32_t port,
+    struct vhdl_tcp_socket_t *handle)
 {
     struct sockaddr_in addr;
     handle->listen_fd = handle->sock_fd = -1;
   
-    sockaddr_in_from_ghdl(&addr, local);
+    sockaddr_in_from_vhdl(&addr, ip, port);
 
     dprintf("Binding to %08x:%d\n", addr.sin_addr.s_addr, htons(addr.sin_port));
 
@@ -119,13 +104,14 @@ void tcp_socket_create_listener(
 }
 
 void tcp_socket_create_connect(
-    struct ghdl_sockaddr_in_t *remote,
-    struct ghdl_tcp_socket_t *handle)
+    const int32_t ip[4],
+    int32_t port,
+    struct vhdl_tcp_socket_t *handle)
 {
     struct sockaddr_in addr;
     handle->listen_fd = handle->sock_fd = -1;
   
-    sockaddr_in_from_ghdl(&addr, remote);
+    sockaddr_in_from_vhdl(&addr, ip, port);
 
     dprintf("Connecting to %08x:%d\n", addr.sin_addr.s_addr, htons(addr.sin_port));
 
@@ -149,7 +135,7 @@ void tcp_socket_create_connect(
 }
 
 static void maybe_accept(
-    struct ghdl_tcp_socket_t *handle)
+    struct vhdl_tcp_socket_t *handle)
 {
     struct sockaddr_in addr;
     socklen_t slen = sizeof(addr);
@@ -180,8 +166,8 @@ static void maybe_accept(
 }
 
 void tcp_socket_is_connected(
-    struct ghdl_tcp_socket_t *handle,
-    uint32_t *status)
+    struct vhdl_tcp_socket_t *handle,
+    uint8_t *status)
 {
     maybe_accept(handle);
 
@@ -189,7 +175,7 @@ void tcp_socket_is_connected(
 }
 
 void tcp_socket_send(
-    struct ghdl_tcp_socket_t *handle,
+    struct vhdl_tcp_socket_t *handle,
     const struct vhpidirect_array *data)
 {
     maybe_accept(handle);
@@ -213,7 +199,7 @@ void tcp_socket_send(
 }
 
 void tcp_socket_recv_len(
-    struct ghdl_tcp_socket_t *handle,
+    struct vhdl_tcp_socket_t *handle,
     int *rlen)
 {
     maybe_accept(handle);
@@ -251,7 +237,7 @@ void tcp_socket_recv_len(
 }
 
 void tcp_socket_recv_data(
-    struct ghdl_tcp_socket_t *handle,
+    struct vhdl_tcp_socket_t *handle,
     struct vhpidirect_array *rdata,
     int *rlen)
 {
