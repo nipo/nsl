@@ -1,6 +1,7 @@
 package body udp_socket is
 
-  procedure udp_socket_create(local: sockaddr_in_t;
+  procedure udp_socket_create(ip: ipv4_t;
+                              prt: integer;
                               socket: out udp_socket_t)
   is
   begin
@@ -10,7 +11,8 @@ package body udp_socket is
   attribute foreign of udp_socket_create: procedure is "VHPIDIRECT udp_socket-vhpidirect.so udp_socket_create";
 
   procedure udp_socket_sendto(socket: udp_socket_t;
-                              remote: sockaddr_in_t;
+                              ip: ipv4_t;
+                              prt: integer;
                               data: string)
   is
   begin
@@ -28,7 +30,8 @@ package body udp_socket is
   attribute foreign of udp_socket_recv_len: function is "VHPIDIRECT udp_socket-vhpidirect.so udp_socket_recv_len";
 
   procedure udp_socket_recv_data(socket: udp_socket_t;
-                                 remote: out sockaddr_in_t;
+                                 ip: out ipv4_t;
+                                 prt: out integer;
                                  data: inout string;
                                  rlen: inout integer)
   is
@@ -42,7 +45,7 @@ package body udp_socket is
                    socket: out udp_socket_t)
   is
   begin
-    udp_socket_create(local, socket);
+    udp_socket_create(local.ip, local.prt, socket);
   end procedure;
 
   procedure sendto(socket: udp_socket_t;
@@ -50,7 +53,7 @@ package body udp_socket is
                    data: byte_string)
   is
   begin
-    udp_socket_sendto(socket, remote, to_character_string(data));
+    udp_socket_sendto(socket, remote.ip, remote.prt, to_character_string(data));
   end procedure;
 
   procedure recv_nonblock(socket: udp_socket_t;
@@ -66,7 +69,7 @@ package body udp_socket is
     if available_len <= 0 then
       return;
     end if;
-    udp_socket_recv_data(socket, remote, tmp, rlen);
+    udp_socket_recv_data(socket, remote.ip, remote.prt, tmp, rlen);
     ret := new byte_string(0 to rlen-1);
     ret.all := to_byte_string(tmp(1 to rlen));
     data :=ret;

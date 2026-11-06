@@ -33,46 +33,44 @@ void hexdump(const void *data, size_t size)
         printf("\n");
 }
 
-struct ghdl_sockaddr_in_t
-{
-    int ip[4];
-    int port;
-};
-
-static void sockaddr_in_from_ghdl(
+static void sockaddr_in_from_vhdl(
     struct sockaddr_in *dst,
-    const struct ghdl_sockaddr_in_t *src)
+    const int32_t ip[4],
+    int32_t port)
 {
     uint32_t tmp = 0;
     for (int i = 0; i < 4; ++i) {
         tmp <<= 8;
-        tmp |= src->ip[i];
+        tmp |= ip[i];
     }
+    memset(dst, 0, sizeof(*dst));
     dst->sin_addr.s_addr = htonl(tmp);
-    dst->sin_port = htons(src->port);
+    dst->sin_port = htons(port);
     dst->sin_family = AF_INET;
 }
 
-static void sockaddr_in_to_ghdl(
-    struct ghdl_sockaddr_in_t *dst,
+static void sockaddr_in_to_vhdl(
+    int32_t ip[4],
+    int32_t *port,
     const struct sockaddr_in *src)
 {
-    uint32_t tmp = htonl(src->sin_addr.s_addr);
+    uint32_t tmp = ntohl(src->sin_addr.s_addr);
     for (int i = 3; i >= 0; --i) {
-        dst->ip[i] = tmp & 0xff;
+        ip[i] = tmp & 0xff;
         tmp >>= 8;
     }
-    dst->port = htons(src->sin_port);
+    *port = ntohs(src->sin_port);
 }
 
 void udp_socket_create(
-    struct ghdl_sockaddr_in_t *local,
+    const int32_t ip[4],
+    int32_t port,
     int *rfd)
 {
     struct sockaddr_in addr;
     *rfd = -1;
   
-    sockaddr_in_from_ghdl(&addr, local);
+    sockaddr_in_from_vhdl(&addr, ip, port);
 
     /* printf("Bind to %08x:%d\n", addr.sin_addr.s_addr, htons(addr.sin_port)); */
 
@@ -87,14 +85,15 @@ void udp_socket_create(
 
 int udp_socket_sendto(
     int fd,
-    struct ghdl_sockaddr_in_t *remote,
+    const int32_t ip[4],
+    int32_t port,
     const struct vhpidirect_array *data)
 {
     size_t data_len = data->range->len;
     const uint8_t *data_ptr = data->data;
     struct sockaddr_in addr;
 
-    sockaddr_in_from_ghdl(&addr, remote);
+    sockaddr_in_from_vhdl(&addr, ip, port);
 
     /* printf("Send to %08x:%d\n", addr.sin_addr.s_addr, htons(addr.sin_port)); */
     
@@ -130,7 +129,8 @@ int udp_socket_recv_len(
 
 void udp_socket_recv_data(
     int fd,
-    struct ghdl_sockaddr_in_t *remote,
+    int32_t ip[4],
+    int32_t *port,
     struct vhpidirect_array *rdata,
     int *rlen)
 {
@@ -141,5 +141,5 @@ void udp_socket_recv_data(
     
     /* printf("Received from %08x:%d\n", addr.sin_addr.s_addr, htons(addr.sin_port)); */
 
-    sockaddr_in_to_ghdl(remote, &addr);
+    sockaddr_in_to_vhdl(ip, port, &addr);
 }
