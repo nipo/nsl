@@ -215,6 +215,10 @@ projects:
   - name: bytestream
     path: bytestream
     tags: [ghdl, yavs, simulation]
+  - name: socket_loopback
+    path: socket_loopback
+    tags: [ghdl, yavs, simulation]
+    skip: true
   - name: cbor_codec
     path: cbor/codec
     tags: [ghdl, yavs, simulation]

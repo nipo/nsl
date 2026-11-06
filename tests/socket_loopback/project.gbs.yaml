@@ -1,0 +1,23 @@
+name: socket_loopback
+
+root:
+  name: top
+  deps:
+    - nsl_data.bytestream
+    - nsl_simulation.control
+    - nsl_simulation.socket
+    - nsl_simulation.tcp_socket
+    - nsl_simulation.udp_socket
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    simulation:
+      success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log
