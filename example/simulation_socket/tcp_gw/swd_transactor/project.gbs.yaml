@@ -26,3 +26,9 @@ output:
     outputs:
       - type: ghdl-simulator
         path: tb
+
+  - name: simulation-yavs
+    topcell: tb
+    outputs:
+      - type: yavs-simulator
+        path: tb-yavs
