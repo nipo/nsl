@@ -3,6 +3,7 @@
 Provides:
 - tree: NSL tree repository loader
 - cdc: CDC constraint generation dispatchers for Gowin and ISE
+- agilex5_hps: Agilex 5 HPS configuration file to HPS atom layer
 - filter_vars: legacy variable aliases for the NSL Makefile tree
 
 The CDC dispatchers activate when a netlist is generated (gowin-netlist or ise-netlist).
@@ -48,9 +49,10 @@ class NslPlugin(BasePlugin):
         ]
 
     def enumerate_backends(self):
-        """Return NSL CDC backends"""
+        """Return NSL backends"""
         from .cdc import CdcIseBackend
-        return [CdcIseBackend()]
+        from .agilex5_hps import HpsGenerateBackend
+        return [CdcIseBackend(), HpsGenerateBackend()]
 
     def enumerate_repository_parsers(self):
         """Return NSL tree repository parser class"""
