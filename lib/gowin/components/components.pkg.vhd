@@ -1524,10 +1524,10 @@ package components is
       DCS_MODE : string := "RISING"
       );
     PORT (
-      CLK0 : IN std_logic;
-      CLK1 : IN std_logic;
-      CLK2 : IN std_logic;
-      CLK3 : IN std_logic;
+      CLKIN0 : IN std_logic;
+      CLKIN1 : IN std_logic;
+      CLKIN2 : IN std_logic;
+      CLKIN3 : IN std_logic;
       CLKSEL : IN std_logic_vector(3 downto 0);
       SELFORCE : IN std_logic;
       CLKOUT : OUT std_logic
