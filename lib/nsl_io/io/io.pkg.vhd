@@ -88,7 +88,7 @@ package io is
     port(
       v_i : in directed;
       v_o : out std_ulogic;
-      io_o : inout std_logic;
+      io_io : inout std_logic;
       gate_dir_o : out std_ulogic
       );
     end component;
