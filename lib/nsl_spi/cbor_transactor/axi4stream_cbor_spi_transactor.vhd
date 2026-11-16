@@ -554,7 +554,12 @@ begin
             -- report "in ST_DATA_PUT Word count is " & integer'image(r.word_count) & "; minus is " & integer'image(r.minus);
             if r.word_count = 0 and r.minus /= 0 then
               rsp_data := (others => '0');
-              rsp_data(r.minus-1 downto 0) := r.shreg(r.minus-1 downto 0);
+              for i in rsp_data'range
+              loop
+                if i < r.minus then
+                  rsp_data(i) := r.shreg(i);
+                end if;
+              end loop;
               -- report "r.shreg is " & nsl_data.text.to_string(r.shreg) & " r.shreg(r.minus-1 downto 0) "& nsl_data.text.to_string(r.shreg(r.minus-1 downto 0));
             else
               rsp_data := r.shreg;
