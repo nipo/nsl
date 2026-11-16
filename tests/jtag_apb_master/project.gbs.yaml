@@ -1,0 +1,30 @@
+name: jtag_apb_master
+
+root:
+  name: top
+  deps:
+    - nsl_jtag.apb_master
+    - nsl_jtag.transactor
+    - nsl_jtag.jtag
+    - nsl_simulation.jtag
+    - nsl_amba.apb
+    - nsl_bnoc.framed
+    - nsl_bnoc.testing
+    - nsl_clocking.async
+    - nsl_data.bytestream
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_simulation.assertions
+  sources:
+    - file_type: vhdl
+      files:
+        - tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    simulation:
+      success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

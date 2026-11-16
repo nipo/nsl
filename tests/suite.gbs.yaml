@@ -528,6 +528,9 @@ projects:
   - name: jtag_cbor_full_test
     path: jtag_cbor/full_test
     tags: [ghdl, yavs, simulation]
+  - name: jtag_apb_master
+    path: jtag_apb_master
+    tags: [ghdl, simulation, jtag_apb_master, jtag_tap]
   - name: jtag_continuous_transport_bit_loopback
     path: jtag_continuous_transport/bit_loopback
     tags: [ghdl, simulation, jtag_continuous_transport, jtag_tap]

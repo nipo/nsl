@@ -19,6 +19,7 @@ package user_tap is
   -- NSL types:
   -- 0x00: nothing stated.
   -- 0x01: nsl_jtag.continuous_transport, carrying framed bytes.
+  -- 0x02: nsl_jtag.apb_master, an APB master.
   component jtag_user_tap
     generic(
       user_port_count_c : integer := 1;
