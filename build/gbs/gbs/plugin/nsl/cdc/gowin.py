@@ -6,6 +6,8 @@ NSL uses special naming patterns for signals that should be excluded from
 timing analysis:
 - tig_reg_clr: Registers with timing-ignored clear signals
 - tig_reg_pre: Registers with timing-ignored preset signals
+- tig_reg_d: Registers with timing-ignored data inputs, first stages of
+  synchronizers
 - tig_reg_q: Registers with timing-ignored outputs
 - tig_static_reg: Static registers (constant after initialization)
 - cross_region_reg: Clock domain crossing registers
@@ -37,6 +39,7 @@ from gbs.build.task import Task, ResourceTypology
 # Each pattern is (cell name pattern, set_false_path direction, cell pin)
 NSL_PATTERNS = [
     ('tig_reg_clr', 'to', 'CLEAR'),
+    ('tig_reg_d', 'to', 'D'),
     ('tig_reg_pre', 'to', 'PRE'),
     ('tig_reg_q', 'from', 'O'),
     ('tig_reg_q', 'from', 'Q'),
