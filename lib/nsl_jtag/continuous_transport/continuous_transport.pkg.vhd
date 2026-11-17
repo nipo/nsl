@@ -80,8 +80,8 @@ package continuous_transport is
       reset_n_o   : out std_ulogic;
 
       -- Asserted while data waits for transmission to the host, in the
-      -- clock_i domain: it rises while the host runs no batch, TCK
-      -- being stopped then.
+      -- FIFO to the host or in the core: it rises while the host runs
+      -- no batch, TCK being stopped then.
       irq_o : out std_ulogic;
 
       tx_i : in nsl_bnoc.framed.framed_req;
