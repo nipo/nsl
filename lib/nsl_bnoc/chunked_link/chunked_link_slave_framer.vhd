@@ -49,9 +49,11 @@ entity chunked_link_slave_framer is
     -- RX buffer free space to advertise to the master (credit frames).
     rx_free_i : in  unsigned(credit_bits_c-1 downto 0);
 
-    -- TX backlog to advertise to the master (tx-level frames): after each
-    -- end-of-packet, and in place of idle whenever the value changed
-    -- since last advertised.
+    -- Level of the TX stream, not counting the chunk the framer holds.
+    -- The framer advertises both together as its backlog to the master
+    -- (tx-level frames): after each end-of-packet, and in place of idle
+    -- whenever the value changed since last advertised. A backlog of
+    -- zero thus means nothing is left to send.
     tx_level_i : in  unsigned(credit_bits_c-1 downto 0)
     );
 end entity;
@@ -88,6 +90,9 @@ architecture beh of chunked_link_slave_framer is
   signal r, rin : regs_t;
 
   signal chunk_valid_s : std_ulogic;
+  -- TX backlog: the stream level, and the chunk held, which the stream
+  -- level no longer counts. Saturating.
+  signal backlog_s : unsigned(credit_bits_c-1 downto 0);
   signal chunk_byte_s : byte;
   signal chunk_len_m1_s : unsigned(data_bytes_max_l2_c-1 downto 0);
   signal chunk_last_s : std_ulogic;
@@ -128,7 +133,7 @@ begin
   transition: process(r, batch_start_i, byte_ready_i,
                       budget_set_i, budget_i,
                       chunk_valid_s, chunk_len_m1_s, chunk_last_s,
-                      rx_free_i, tx_level_i)
+                      rx_free_i, backlog_s)
   begin
     rin <= r;
 
@@ -159,7 +164,7 @@ begin
         elsif r.rx_credit /= rx_free_i then
           -- Credit is dirty, update it.
           rin.state <= ST_CREDIT_OP;
-        elsif r.tx_level /= tx_level_i then
+        elsif r.tx_level /= backlog_s then
           -- Backlog changed since last advertised: tell the master, so it
           -- can size its budget grants (a budget-starved backlog would
           -- otherwise stay invisible) and reliably learn it can stop
@@ -186,7 +191,7 @@ begin
       when ST_LEVEL_OP =>
         if byte_ready_i = '1' then
           rin.state <= ST_LEVEL_LSB;
-          rin.tx_level <= tx_level_i;
+          rin.tx_level <= backlog_s;
         end if;
 
       when ST_LEVEL_LSB =>
@@ -241,6 +246,20 @@ begin
       rin.budget <= to_integer(budget_i);
     elsif byte_ready_i = '1' and r.budget /= 0 then
       rin.budget <= r.budget - 1;
+    end if;
+  end process;
+
+  backlog: process(tx_level_i, chunk_valid_s, chunk_len_m1_s) is
+    variable sum : unsigned(credit_bits_c downto 0);
+  begin
+    sum := resize(tx_level_i, sum'length);
+    if chunk_valid_s = '1' then
+      sum := sum + resize(chunk_len_m1_s, sum'length) + 1;
+    end if;
+    if sum(credit_bits_c) = '1' then
+      backlog_s <= (others => '1');
+    else
+      backlog_s <= sum(credit_bits_c-1 downto 0);
     end if;
   end process;
 
