@@ -371,7 +371,8 @@ begin
     -- This channel reports both the words it could not predict and
     -- whether it found the pattern at all, so nothing has to be
     -- counted up from the errors the way it does on a series 7
-    -- channel.
+    -- channel. The locked signal is sticky and must be reset.
+    -- See table 4.23 UG576
     rx_m_o(lane_idx).prbs_error <= s_rx_prbs_err;
     rx_m_o(lane_idx).prbs_locked <= s_rx_prbs_locked;
 

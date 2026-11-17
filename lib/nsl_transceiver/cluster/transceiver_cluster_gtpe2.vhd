@@ -537,7 +537,7 @@ begin
     prbs_lock : nsl_transceiver.prbs.prbs_lock_detector
       port map (
         clock_i    => s_txusrclk2_buff,
-        reset_n_i  => s_pma_rst_done_sync,
+        reset_n_i  => s_pma_rst_done,
 
         checking_i => nsl_transceiver.prbs.is_active(rx_s_i(lane_idx).prbs_select),
         restart_i  => rx_s_i(lane_idx).prbs_error_reset,
