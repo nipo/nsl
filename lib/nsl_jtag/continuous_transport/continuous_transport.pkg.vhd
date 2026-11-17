@@ -79,7 +79,9 @@ package continuous_transport is
       reset_n_i   : in  std_ulogic;
       reset_n_o   : out std_ulogic;
 
-      -- Asserted when at least one batch waits for transmission
+      -- Asserted while data waits for transmission to the host, in the
+      -- clock_i domain: it rises while the host runs no batch, TCK
+      -- being stopped then.
       irq_o : out std_ulogic;
 
       tx_i : in nsl_bnoc.framed.framed_req;

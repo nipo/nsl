@@ -29,7 +29,9 @@ entity jtag_continuous_transport_tap is
     reset_n_i   : in  std_ulogic;
     reset_n_o   : out std_ulogic;
 
-    -- Asserted when at least one batch waits for transmission
+    -- Asserted while data waits for transmission to the host, in the
+    -- clock_i domain: it rises while the host runs no batch, TCK
+    -- being stopped then.
     irq_o : out std_ulogic;
 
     tx_i : in nsl_bnoc.framed.framed_req;
@@ -49,6 +51,7 @@ architecture beh of jtag_continuous_transport_tap is
 
   signal rx_fifo_free_s : integer range 0 to rx_fifo_depth_c;
   signal tx_fifo_fill_s : integer range 0 to tx_fifo_depth_c;
+  signal tx_fifo_free_s : integer range 0 to tx_fifo_depth_c;
 
   signal rx_valid_s, rx_last_s, tx_valid_s, tx_ready_s, tx_last_s : std_ulogic;
   signal rx_data_s, tx_data_s : byte;
@@ -57,6 +60,10 @@ architecture beh of jtag_continuous_transport_tap is
 begin
 
   rx_free_s <= to_unsigned(rx_fifo_free_s, rx_free_s'length);
+  -- The core runs on TCK: its own interrupt cannot rise while the host
+  -- runs no batch. The free count of the FIFO to the host is a lower
+  -- bound clamped to its depth: below it, the FIFO holds data.
+  irq_o <= '1' when tx_fifo_free_s /= tx_fifo_depth_c else '0';
   tx_fillness_s <= to_unsigned(tx_fifo_fill_s, tx_fillness_s'length);
   reset_n_o <= not tlr_s;
 
@@ -110,7 +117,7 @@ begin
     tdi_i     => tdi_s,
     tdo_o     => tdo_s,
 
-    irq_o => irq_o,
+    irq_o => open,
     
     rx_data_o  => rx_data_s,
     rx_last_o  => rx_last_s,
@@ -166,6 +173,7 @@ begin
       in_data_i(7 downto 0) => tx_i.data,
       in_valid_i => tx_i.valid,
       in_ready_o => tx_o.ready,
+      in_free_o => tx_fifo_free_s,
 
       out_available_min_o => tx_fifo_fill_s,
 
