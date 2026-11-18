@@ -69,8 +69,8 @@ begin
   begin
     rin <= r;
 
-    deep_v := deep_tap(mode_i);
-    shallow_v := shallow_tap(mode_i);
+    deep_v := selected_deep_tap(mode_i);
+    shallow_v := selected_shallow_tap(mode_i);
 
     if mode_i = PRBS_NONE then
       rin.valid <= '0';

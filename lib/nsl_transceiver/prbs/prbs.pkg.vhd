@@ -53,6 +53,15 @@ package prbs is
   function deep_tap(mode : prbs_mode_t) return natural;
   function shallow_tap(mode : prbs_mode_t) return natural;
 
+  -- Same two depths, for a mode that is a signal rather than a
+  -- constant. deep_tap and shallow_tap work the polynomial out with
+  -- loops and checks, which only a constant mode lets a synthesis
+  -- tool evaluate; these select between depths worked out once, at
+  -- elaboration, from each fixed mode. Use these in hardware that
+  -- takes the mode from a port.
+  function selected_deep_tap(mode : prbs_mode_t) return natural;
+  function selected_shallow_tap(mode : prbs_mode_t) return natural;
+
   -- A byte-oriented lane's parallel word as a bit stream and back,
   -- oldest bit first: bit 0 of byte 0 is the first on the line, the
   -- order the 8b/10b code words in nsl_line_coding use as well. A
@@ -332,6 +341,43 @@ package body prbs is
       & " not a pattern this generator can produce"
       severity failure;
     return 0;
+  end function;
+
+  constant deep_7_c : natural := deep_tap(PRBS_7);
+  constant deep_9_c : natural := deep_tap(PRBS_9);
+  constant deep_15_c : natural := deep_tap(PRBS_15);
+  constant deep_23_c : natural := deep_tap(PRBS_23);
+  constant deep_31_c : natural := deep_tap(PRBS_31);
+  constant shallow_7_c : natural := shallow_tap(PRBS_7);
+  constant shallow_9_c : natural := shallow_tap(PRBS_9);
+  constant shallow_15_c : natural := shallow_tap(PRBS_15);
+  constant shallow_23_c : natural := shallow_tap(PRBS_23);
+  constant shallow_31_c : natural := shallow_tap(PRBS_31);
+
+  function selected_deep_tap(mode : prbs_mode_t) return natural
+  is
+  begin
+    case mode is
+      when PRBS_7 => return deep_7_c;
+      when PRBS_9 => return deep_9_c;
+      when PRBS_15 => return deep_15_c;
+      when PRBS_23 => return deep_23_c;
+      when PRBS_31 => return deep_31_c;
+      when PRBS_NONE => return 0;
+    end case;
+  end function;
+
+  function selected_shallow_tap(mode : prbs_mode_t) return natural
+  is
+  begin
+    case mode is
+      when PRBS_7 => return shallow_7_c;
+      when PRBS_9 => return shallow_9_c;
+      when PRBS_15 => return shallow_15_c;
+      when PRBS_23 => return shallow_23_c;
+      when PRBS_31 => return shallow_31_c;
+      when PRBS_NONE => return 0;
+    end case;
   end function;
 
   function to_line_bits(data : byte_string) return std_ulogic_vector is

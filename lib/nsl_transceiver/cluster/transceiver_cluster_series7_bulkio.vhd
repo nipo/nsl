@@ -7,6 +7,18 @@ use ieee.std_logic_1164.all;
 -- Datapath is: ISERDESE2/OSERDESE2 based DDR 10:1 SERDES
 -- (nsl_io.serdes), input_delay_variable based bit aligner, and fabric 8b/10b codec.
 --
+-- A lane is either ENCODING_8B10B or ENCODING_PRBS, chosen statically
+-- by its configuration. A PRBS lane carries a test pattern instead of a
+-- coded stream: the 8b/10b codec is not instantiated and the lane
+-- drives nsl_transceiver.prbs.prbs_generator / prbs_checker, one 10-bit
+-- SERDES word per parallel clock, in the place of the encoder and
+-- decoder. Everything between the code word and the pads (polarity,
+-- SERDES, aligner, pads) is shared with the 8b/10b lane. The pattern
+-- and the force-error request come from tx_m_i.prbs_*, the expected
+-- pattern and the checker restart from rx_s_i.prbs_*, and the checker
+-- reports on rx_m_o.prbs_*. TX and RX share the parallel clock, so
+-- nothing here crosses a clock domain.
+--
 -- Hardware bypassed by the selected loopback mode is not instantiated.
 --
 -- Loopback (lane.config_t.loopback, static per lane). "PCS" is the 8b/10b
@@ -29,6 +41,13 @@ use ieee.std_logic_1164.all;
 --                         normally, user TX is ignored. There is no rate
 --                         matching: the RX word clock is the local clock, not
 --                         the partner's.
+--
+-- On a PRBS lane there is no codec, so the PCS loopbacks reduce to:
+--   LOOPBACK_NEAR_END_PCS same as NEAR_END_PMA: the generator word is fed to
+--                         the checker, bypassing SERDES and pads.
+--   LOOPBACK_FAR_END_PCS  the received 10-bit word (after RX polarity
+--                         correction) is registered and re-transmitted
+--                         instead of the generator's pattern.
 
 library nsl_transceiver, nsl_io, nsl_amba, nsl_line_coding, nsl_clocking, nsl_synthesis, nsl_math;
 use nsl_math.int_ext.all;
@@ -80,7 +99,7 @@ architecture series7_serdes of transceiver_cluster_bulkio is
   constant lane_count_msg_c    : string := "transceiver_cluster/series7_serdes: at least one lane is required";
   constant ref_clk_msg_c       : string := "transceiver_cluster/series7_serdes: a reference clock is required";
   constant cluster_valid_msg_c : string := "transceiver_cluster/series7_serdes: configuration failed target-agnostic consistency check";
-  constant encoding_msg_c      : string := "transceiver_cluster/series7_serdes: lane encoding must be ENCODING_8B10B";
+  constant encoding_msg_c      : string := "transceiver_cluster/series7_serdes: lane encoding must be ENCODING_8B10B or ENCODING_PRBS";
   constant byte_count_msg_c    : string := "transceiver_cluster/series7_serdes: lane data_byte_count must be 1";
 
   constant ref_clk_ok_c : boolean := ref_index_c < ref_clock_c'length;
@@ -249,7 +268,9 @@ begin
       -- Lane constants and signals
       constant lane_c : nsl_transceiver.lane.config_t := config_c.lanes(lane_idx);
 
-      constant encoding_ok_c : boolean                              := lane_c.encoding = nsl_transceiver.lane.ENCODING_8B10B;
+      constant is_prbs_c     : boolean                              := lane_c.encoding = nsl_transceiver.lane.ENCODING_PRBS;
+      constant encoding_ok_c : boolean                              := lane_c.encoding = nsl_transceiver.lane.ENCODING_8B10B
+                                                                       or is_prbs_c;
       constant bytes_ok_c    : boolean                              := lane_c.data_byte_count = 1;
       constant loopback_c    : nsl_transceiver.lane.loopback_mode_t := lane_c.loopback;
 
@@ -262,7 +283,14 @@ begin
       constant has_rx_serdes_c : boolean := loopback_c = nsl_transceiver.lane.LOOPBACK_NONE
                                             or loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PMA
                                             or loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS;
-      constant has_decoder_c : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS;
+      --   Decoder (8b/10b lanes only)                    : not in near end PCS
+      --   Pattern checker (PRBS lanes only)              : always
+      --   Pattern generator (PRBS lanes only)            : with the TX path, except far end PCS
+      constant has_decoder_c : boolean := not is_prbs_c
+                                          and loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS;
+      -- The checker looks at the SERDES word, or at the generator's word
+      -- when the SERDES is bypassed.
+      constant code_bits_c   : natural := nsl_line_coding.ibm_8b10b.code_word_t'length;
       constant has_tx_c      : boolean := loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PMA;
 
       -- Signals shared between the sections below. Each one is driven in
@@ -281,6 +309,12 @@ begin
       signal s_code_err         : std_ulogic;
       signal s_disp_err         : std_ulogic;
       signal s_user_align_ready : std_ulogic;                        -- To user
+      signal s_align_valid      : std_ulogic;                        -- To the aligner
+
+      -- PRBS lanes only
+      signal s_prbs_rx_word : std_ulogic_vector(0 to code_bits_c-1);  -- Checker input, oldest bit first
+      signal s_prbs_locked  : std_ulogic;
+      signal s_prbs_error   : std_ulogic;
 
     begin
 
@@ -295,8 +329,11 @@ begin
         generic map(message_c => byte_count_msg_c, condition_c => bytes_ok_c)
         port map(unused_i     => '0');
 
-      s_tx_symbol.data    <= tx_m_i(lane_idx).data(0);
-      s_tx_symbol.control <= tx_m_i(lane_idx).aux(0)(0);
+      symbol_in : if not is_prbs_c generate
+      begin
+        s_tx_symbol.data    <= tx_m_i(lane_idx).data(0);
+        s_tx_symbol.control <= tx_m_i(lane_idx).aux(0)(0);
+      end generate;
 
       -- RX SERDES path ---------------------------------------------------------------------
       rx_serdes_path : if has_rx_serdes_c generate
@@ -359,7 +396,7 @@ begin
             serdes_mark_i  => s_slip_mark,
 
             restart_i => rx_s_i(lane_idx).align_trigger,
-            valid_i   => tx_m_i(lane_idx).control(0),
+            valid_i   => s_align_valid,
             ready_o   => s_align_ready
             );
 
@@ -374,6 +411,21 @@ begin
         end generate;
 
       end generate;  -- rx_serdes_path
+
+      -- What tells the aligner the current sampling point is good. An
+      -- 8b/10b lane's protocol adapter says so through control(0). A PRBS
+      -- lane has no adapter-side symbol to judge, so it is the checker:
+      -- a pattern is being looked for and this word was predicted.
+      align_valid_adapter : if not is_prbs_c generate
+      begin
+        s_align_valid <= tx_m_i(lane_idx).control(0);
+      end generate;
+
+      align_valid_prbs : if is_prbs_c generate
+      begin
+        s_align_valid <= nsl_transceiver.prbs.is_active(rx_s_i(lane_idx).prbs_select)
+                         and not s_prbs_error;
+      end generate;
 
       -- Near end modes: the SERDES is bypassed, there is nothing to align
       no_rx_serdes_path : if not has_rx_serdes_c generate
@@ -398,14 +450,41 @@ begin
             );
       end generate;
 
-      -- Near end PMA: the decoder is fed by the encoder instead of the SERDES
-      dec_in_loopback : if loopback_c = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA generate
+      -- Pattern checker -------------------------------------------------------------------
+      checker_path : if is_prbs_c generate
+      begin
+        checker_in : for i in 0 to code_bits_c-1 generate
+          s_prbs_rx_word(i) <= s_dec_code_in(i);
+        end generate;
+
+        prbs_checker_1 : nsl_transceiver.prbs.prbs_checker
+          generic map (
+            bit_count_c => code_bits_c)
+          port map (
+            clock_i           => s_parallel_clock_buff,
+            reset_n_i         => s_general_reset_sync_n,
+            mode_i            => rx_s_i(lane_idx).prbs_select,
+            restart_i         => rx_s_i(lane_idx).prbs_error_reset,
+            data_i            => s_prbs_rx_word,
+            valid_i           => '1',
+            locked_o          => s_prbs_locked,
+            error_o           => s_prbs_error,
+            error_bit_count_o => open
+            );
+      end generate;
+
+      -- Near end PMA: the decoder is fed by the encoder instead of the SERDES.
+      -- Near end PCS on a PRBS lane has no codec to loop around, so it is the
+      -- same loop.
+      dec_in_loopback : if loopback_c = nsl_transceiver.lane.LOOPBACK_NEAR_END_PMA
+                           or (is_prbs_c and loopback_c = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS) generate
       begin
         s_dec_code_in <= s_enc2ser_code;
       end generate;
 
       -- RX symbol seen by the user ---------------------------------------------------------
-      rx_user_loopback_pcs : if loopback_c = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS generate
+      rx_user_loopback_pcs : if not is_prbs_c
+                                and loopback_c = nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS generate
       begin
         loop_reg : process(s_parallel_clock_buff)
         begin
@@ -419,7 +498,8 @@ begin
         s_disp_err  <= '0';
       end generate;
 
-      rx_user_decoder : if loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS generate
+      rx_user_decoder : if not is_prbs_c
+                           and loopback_c /= nsl_transceiver.lane.LOOPBACK_NEAR_END_PCS generate
       begin
         s_rx_symbol <= s_dec_symbol;
         s_code_err  <= s_dec_code_err;
@@ -435,25 +515,65 @@ begin
 
       begin
 
-        -- Encoder input: user, or the decoded RX symbol for far end PCS loopback
-        enc_in_user : if loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
-          s_enc_symbol <= s_tx_symbol;
+        encoder_path : if not is_prbs_c generate
+        begin
+          -- Encoder input: user, or the decoded RX symbol for far end PCS loopback
+          enc_in_user : if loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
+            s_enc_symbol <= s_tx_symbol;
+          end generate;
+
+          enc_in_loopback : if loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
+            s_enc_symbol <= s_dec_symbol;
+          end generate;
+
+          ibm_8b10b_encoder_1 : nsl_line_coding.ibm_8b10b.ibm_8b10b_encoder
+            generic map (
+              implementation_c => "logic")
+            port map (
+              clock_i   => s_parallel_clock_buff,
+              reset_n_i => s_general_reset_sync_n,
+              valid_i   => '1',
+              data_i    => s_enc_symbol,
+              data_o    => s_enc2ser_code
+              );
         end generate;
 
-        enc_in_loopback : if loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
-          s_enc_symbol <= s_dec_symbol;
+        -- Pattern generator: the word is oldest bit first, and index i of
+        -- the code word is what the SERDES puts on the line i-th, so the
+        -- two are connected index for index.
+        generator_path : if is_prbs_c
+                            and loopback_c /= nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
+          signal s_prbs_tx_word : std_ulogic_vector(0 to code_bits_c-1);
+        begin
+          prbs_generator_1 : nsl_transceiver.prbs.prbs_generator
+            generic map (
+              bit_count_c => code_bits_c)
+            port map (
+              clock_i       => s_parallel_clock_buff,
+              reset_n_i     => s_general_reset_sync_n,
+              mode_i        => tx_m_i(lane_idx).prbs_select,
+              force_error_i => tx_m_i(lane_idx).prbs_force_error,
+              ready_i       => '1',
+              data_o        => s_prbs_tx_word,
+              valid_o       => open
+              );
+
+          generator_out : for i in 0 to code_bits_c-1 generate
+            s_enc2ser_code(i) <= s_prbs_tx_word(i);
+          end generate;
         end generate;
 
-        ibm_8b10b_encoder_1 : nsl_line_coding.ibm_8b10b.ibm_8b10b_encoder
-          generic map (
-            implementation_c => "logic")
-          port map (
-            clock_i   => s_parallel_clock_buff,
-            reset_n_i => s_general_reset_sync_n,
-            valid_i   => '1',
-            data_i    => s_enc_symbol,
-            data_o    => s_enc2ser_code
-            );
+        -- Far end PCS on a PRBS lane: send back what was received
+        prbs_far_pcs : if is_prbs_c
+                          and loopback_c = nsl_transceiver.lane.LOOPBACK_FAR_END_PCS generate
+        begin
+          far_pcs_reg : process(s_parallel_clock_buff)
+          begin
+            if rising_edge(s_parallel_clock_buff) then
+              s_enc2ser_code <= s_dec_code_in;
+            end if;
+          end process;
+        end generate;
 
         invert_out : if lane_c.polarity_invert_tx generate
           s_enc2ser_processed_code <= not s_enc2ser_code;
@@ -510,14 +630,28 @@ begin
       tx_s_o(lane_idx).pll_lock <= s_domain_a_pll_locked;
       tx_s_o(lane_idx).status   <= (others => '0');
 
-      rx_m_o(lane_idx).data <= (
-        0      => s_rx_symbol.data,
-        others => (others => '-')
-        );
-      rx_m_o(lane_idx).aux <= (
-        0      => (0 => s_rx_symbol.control, 1 => s_code_err, 2 => s_disp_err, others => '0'),
-        others => (others => '-')
-        );
+      rx_out_8b10b : if not is_prbs_c generate
+      begin
+        rx_m_o(lane_idx).data <= (
+          0      => s_rx_symbol.data,
+          others => (others => '-')
+          );
+        rx_m_o(lane_idx).aux <= (
+          0      => (0 => s_rx_symbol.control, 1 => s_code_err, 2 => s_disp_err, others => '0'),
+          others => (others => '-')
+          );
+        rx_m_o(lane_idx).prbs_locked <= '-';
+        rx_m_o(lane_idx).prbs_error  <= '-';
+      end generate;
+
+      -- A PRBS lane's data bus carries nothing
+      rx_out_prbs : if is_prbs_c generate
+      begin
+        rx_m_o(lane_idx).data        <= (others => (others => '-'));
+        rx_m_o(lane_idx).aux         <= (others => (others => '-'));
+        rx_m_o(lane_idx).prbs_locked <= s_prbs_locked;
+        rx_m_o(lane_idx).prbs_error  <= s_prbs_error;
+      end generate;
       rx_m_o(lane_idx).valid           <= '1';
       rx_m_o(lane_idx).pma_lock        <= s_everything_ready;
       rx_m_o(lane_idx).pcs_aligned     <= s_user_align_ready;
