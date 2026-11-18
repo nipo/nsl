@@ -69,14 +69,15 @@ begin
       );
 
     -- The PCS drives a symbol every cycle, so the lane always has
-    -- one to send. sgmii_m2p_t.valid_symbol is not that bit: it
-    -- scores the symbols coming back, and the serdes backend uses it
-    -- to tell its alignment loop whether the delay it settled on is
-    -- working. Gating transmission with it replaces the outgoing
-    -- frame with the lane's idle pattern whenever the receive side
-    -- momentarily dislikes what it got.
+    -- one to send. The valid bit is therefore always high. However,
+    -- valid_symbol is needed by some backends to determine when
+    -- alignment is appropriate (the protocol can tell the aligner
+    -- when incoming data makes sense from a protocol standpoint)
     tx_m_o(tx_m_idx_c).valid <= '1';
-    tx_m_o(tx_m_idx_c).control <= (others => '0');
+    tx_m_o(tx_m_idx_c).control <= (
+      0 => sgmii_i(sgmii_i_idx_c).valid_symbol,
+      others => '0'
+      );
     tx_m_o(tx_m_idx_c).control_h <= (others => '0');
     tx_m_o(tx_m_idx_c).pcs_reset_n <= '1';
     tx_m_o(tx_m_idx_c).c2i_clock <= '0';

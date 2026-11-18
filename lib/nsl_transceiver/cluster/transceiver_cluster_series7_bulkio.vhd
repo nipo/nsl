@@ -296,7 +296,7 @@ begin
         port map(unused_i     => '0');
 
       s_tx_symbol.data    <= tx_m_i(lane_idx).data(0);
-      s_tx_symbol.control <= tx_m_i(lane_idx).control(0);
+      s_tx_symbol.control <= tx_m_i(lane_idx).aux(0)(0);
 
       -- RX SERDES path ---------------------------------------------------------------------
       rx_serdes_path : if has_rx_serdes_c generate
@@ -358,8 +358,8 @@ begin
             serdes_shift_o => s_slip_shift,
             serdes_mark_i  => s_slip_mark,
 
-            restart_i => tx_m_i(lane_idx).control(2),
-            valid_i   => tx_m_i(lane_idx).control(1),
+            restart_i => rx_s_i(lane_idx).align_trigger,
+            valid_i   => tx_m_i(lane_idx).control(0),
             ready_o   => s_align_ready
             );
 
@@ -518,15 +518,13 @@ begin
         0      => (0 => s_rx_symbol.control, 1 => s_code_err, 2 => s_disp_err, others => '0'),
         others => (others => '-')
         );
-      rx_m_o(lane_idx).valid       <= '1';
-      rx_m_o(lane_idx).pma_lock    <= s_everything_ready;
-      rx_m_o(lane_idx).pcs_aligned <= s_user_align_ready;
-      rx_m_o(lane_idx).elec_idle   <= '0';
-      rx_m_o(lane_idx).status <= (
-        0      => s_user_align_ready,
-        1      => '0',  -- No clock correction for SERDES backend
-        others => '-'
-        );
+      rx_m_o(lane_idx).valid           <= '1';
+      rx_m_o(lane_idx).pma_lock        <= s_everything_ready;
+      rx_m_o(lane_idx).pcs_aligned     <= s_user_align_ready;
+      rx_m_o(lane_idx).clock_corrected <= '0';  -- No clock correction for
+                                                -- SERDES backend
+      rx_m_o(lane_idx).elec_idle       <= '0';
+      rx_m_o(lane_idx).status          <= (others => '-');
 
     end generate;  -- lane_enabled
 
