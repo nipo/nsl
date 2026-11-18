@@ -159,6 +159,51 @@ package cluster is
       );
   end component;
 
+  -- Same interface as above but uses the bulk IO's as a backend.
+  -- Having two separate components allows the user to decide which
+  -- backend to use for a given architecture when both are available.
+  component transceiver_cluster_bulkio is
+    generic(
+      config_c : config_t;
+      -- Reference clock source binding. One entry per fabric-side
+      -- refclk port; each carries a target-defined identifier from
+      -- nsl_transceiver.target.clock_id(name). The vendor entity
+      -- routes ref_clock_i(i) to the primitive input matching
+      -- ref_clock_c(i). Lane configurations refer to entries in
+      -- this array via lane.config_t.ref_clock_index.
+      ref_clock_c : integer_vector
+      );
+    port(
+      reset_n_i : in std_ulogic;
+
+      ref_clock_i : in std_ulogic_vector(0 to ref_clock_c'length-1);
+
+      lane_tx_o : out nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
+      lane_rx_i : in nsl_io.diff.diff_pair_vector(0 to config_c.lane_count-1);
+
+      lane_tx_clock_o : out std_ulogic_vector(0 to config_c.lane_count-1);
+      lane_rx_clock_o : out std_ulogic_vector(0 to config_c.lane_count-1);
+
+      tx_m_i : in nsl_transceiver.lane.tx_master_vector(0 to config_c.lane_count-1);
+      tx_s_o : out nsl_transceiver.lane.tx_slave_vector(0 to config_c.lane_count-1);
+      rx_m_o : out nsl_transceiver.lane.rx_master_vector(0 to config_c.lane_count-1);
+      rx_s_i : in nsl_transceiver.lane.rx_slave_vector(0 to config_c.lane_count-1);
+
+      pma_reset_n_i : in std_ulogic_vector(0 to config_c.lane_count-1);
+
+      -- APB clock for the user-facing master, sourced internally
+      -- from the vendor primitive's housekeeping clock. The APB
+      -- master and any companion logic on the configuration bus
+      -- must clock on this output. It runs even on a target whose
+      -- primitive has no configuration path, so the master's own
+      -- reset and error handling stay clocked.
+      apb_clock_o : out std_ulogic;
+      apb_reset_n_i : in std_ulogic;
+      apb_m_i : in nsl_amba.apb.master_t;
+      apb_s_o : out nsl_amba.apb.slave_t
+      );
+  end component;  
+
 end package cluster;
 
 package body cluster is

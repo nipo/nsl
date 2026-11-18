@@ -41,7 +41,7 @@ use nsl_transceiver.target.all;
 library unisim;
 use unisim.vcomponents.all;
 
-entity transceiver_cluster is
+entity transceiver_cluster_bulkio is
   generic(
     config_c    : nsl_transceiver.cluster.config_t;
     ref_clock_c : integer_vector
@@ -71,7 +71,7 @@ entity transceiver_cluster is
     );
 end entity;
 
-architecture series7_serdes of transceiver_cluster is
+architecture series7_serdes of transceiver_cluster_bulkio is
 
   -- Constants ---------------------------------------------------------------------------
   constant ref_index_c : natural := 0;

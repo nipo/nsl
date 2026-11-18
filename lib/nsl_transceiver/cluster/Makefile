@@ -68,7 +68,12 @@ endif
 
 ifneq ($(filter artix7%,$(family)),)
 vhdl-sources += transceiver_cluster_gtpe2.vhd
+vhdl-sources += transceiver_cluster_series7_bulkio.vhd
 deps += nsl_clocking.pll
+deps += nsl_io.pad
+deps += nsl_io.serdes
+deps += nsl_io.delay
+deps += nsl_line_coding.ibm_8b10b
 endif
 
 endif
