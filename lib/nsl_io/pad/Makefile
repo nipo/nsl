@@ -16,6 +16,7 @@ endif
 ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += pad_diff_input_xc7.vhd
 vhdl-sources += pad_diff_clock_input_xc7.vhd
+vhdl-sources += pad_diff_transceiver_clock_input_xc7.vhd
 endif
 
 # UltraScale / UltraScale+ (Kintex, Virtex, Zynq MPSoC, Artix US+, Kria)
@@ -34,6 +35,7 @@ vhdl-sources += pad_tmds_output_simulation.vhd
 vhdl-sources += pad_tmds_input_simulation.vhd
 vhdl-sources += pad_diff_input_simulation.vhd
 vhdl-sources += pad_diff_clock_input_simulation.vhd
+vhdl-sources += pad_diff_transceiver_clock_input_simulation.vhd
 endif
 
 ifneq ($(filter gowin,$(hwdep)),)

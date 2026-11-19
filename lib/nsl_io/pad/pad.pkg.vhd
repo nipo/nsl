@@ -68,6 +68,16 @@ package pad is
       );
   end component;
 
+  -- Input of a dedicated transceiver reference clock pin, such as
+  -- MGTREFCLK on Series 7. The clock may feed transceivers and fabric
+  -- clock buffers.
+  component pad_diff_transceiver_clock_input
+    port(
+      p_diff : in diff_pair;
+      p_se : out std_ulogic
+      );
+  end component;
+
   component pad_diff_input
     generic(
       diff_term : boolean := true;
