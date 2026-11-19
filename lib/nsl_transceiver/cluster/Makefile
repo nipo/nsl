@@ -68,6 +68,11 @@ endif
 
 ifneq ($(filter artix7%,$(family)),)
 vhdl-sources += transceiver_cluster_gtpe2.vhd
+endif
+
+# The bulk IO backend only needs the I/O SERDES every Series 7 family
+# has.
+ifneq ($(filter artix7% kintex7% virtex7% zynq7% spartan7%,$(family)),)
 vhdl-sources += transceiver_cluster_series7_bulkio.vhd
 deps += nsl_clocking.pll
 deps += nsl_io.pad
