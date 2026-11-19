@@ -1,6 +1,6 @@
 # nsl_transceiver — intent and state
 
-State snapshot: as of "transceiver/cluster: Present the lane receive clock on the GT backends".
+State snapshot: as of "nsl_transceiver/cluster: Instantiate proper null APB bus for bulk IO backend".
 
 ## Purpose
 
@@ -20,7 +20,7 @@ and what the fabric must do. `nsl_transceiver` provides one portable
 contract on top of them, so that link- and transport-layer
 infrastructure can be written once and built for several targets.
 Target families in scope: Gowin GW5A, Altera Agilex 5, Xilinx
-7-series.
+7-series, Xilinx Ultrascale+.
 
 ## Scope and non-goals
 
@@ -309,11 +309,12 @@ CSR contents are generated from a TOML file, and TOML→CSR tooling
 already exists in the build system; sweeping TOML input to decode CSR
 semantics is possible but was not pursued.
 
-## 7 Series SERDES backend
+## 7 Series Bulk IO backend
 This backend implements 8b/10b line encoding in the fabric, while wrapping
 the IO SERDES blocks and other necessary elements to create a bulk IO
 cluster. The various loopback modes of the cluster have been implemented
-and tested on hardware. Polarity inversion and the choice of reference clock
+and tested on hardware. PRBS modes have also been implemented either in normal
+mode or in loopback. Polarity inversion and the choice of reference clock
 speed are also possible. Variable data widths however, have not been 
 implemented, nor alternative encoding schemes. These constraints are enforced
 through VHDL assertions using both the `assert` keyword and nsl_synthesis.assertion.
@@ -322,6 +323,7 @@ While this backend targets 7 Series Xilinx FPGAs, a rewrite of the multi_pll
 block could allow this to be portable across any backend implemented in
 the rest of the nsl library--The only architecture-specific components are
 the clock buffers used in the design (BUFR and BUFIO). 
+
 ## GTPE2 backend
 This wraps the `GTPE2_COMMON` and `GTPE2_CHANNEL` primitives. One
 `GTPE2_COMMON` primitive is instantiated per cluster whereas one channel
@@ -345,13 +347,14 @@ limited use-case for now. Features include:
 * Variable data width on user-end (automatic placement of gearboxes and MMCM
   depending on the data width)
 * Automatic alignment management
+* PRBS encoding through the built-in generator and checker
 
-Some features remain to be implemented:
+Some features still remain to be implemented:
 
 * For now all lanes share the same clocking scheme. This can be extended to ensure that
   each lane manages its own rate for the case where one lane may need to run at a
   different speed than the other.
-* For now the alignment requires the protocol to indicate to the cluster when the incoming
+* Alignment requires the protocol to indicate to the cluster when the incoming
   data is valid. This could be improved by passing the alignment words as a configuration
   so that no sideband signals are required for alignment.
 * Other encoding schemes such as 64B/66B (supported natively by the GTP transceiver)
@@ -387,13 +390,14 @@ limited use-case for now. Features include:
 * Variable data width on user-end (automatic placement of gearboxes and MMCM
   depending on the data width)
 * Automatic alignment management
+* PRBS encoding through the built-in generator and checker
 
 Some features remain to be implemented:
 
 * For now all lanes share the same clocking scheme. This can be extended to ensure that
   each lane manages its own rate for the case where one lane may need to run at a
   different speed than the other.
-* For now the alignment requires the protocol to indicate to the cluster when the incoming
+* The alignment requires the protocol to indicate to the cluster when the incoming
   data is valid. This could be improved by passing the alignment words as a configuration
   so that no sideband signals are required for alignment.
 * Other encoding schemes such as 64B/66B (supported natively by the GTH transceiver)
@@ -418,6 +422,11 @@ runs on Spartan-6/7 `ISERDES2`/`OSERDES2` — a basic 10:1 IO serdes
 that caps the achievable rate — and a real transceiver should take it
 higher. The stated first milestone is a working design at 1.25 Gb/s
 before anything faster.
+
+`sgmii_adapter` bridges the interface of a `nsl_mii.sgmii` entity to
+the cluster interface. This passes all the control signals and the data
+to the cluster for serialization. One adapter can handle multiple lanes
+although the data is assumed to be one byte wide. 
 
 ## Gaps and next steps
 
