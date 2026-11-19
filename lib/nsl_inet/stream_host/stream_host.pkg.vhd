@@ -57,7 +57,11 @@ package stream_host is
       retry_count_c : natural := 3;
       dhcp_c : boolean := false;
       clock_i_hz_c : natural := 125000000;
-      hostname_c : string := ""
+      hostname_c : string := "";
+      -- Whether frames on the l1 ports carry an FCS. False for links
+      -- whose transport has its own CRCs (USB CDC-ECM / NCM): see
+      -- nsl_inet.stream_mac.
+      l1_has_fcs_c : boolean := true
       );
     port(
       clock_i : in std_ulogic;

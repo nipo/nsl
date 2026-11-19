@@ -33,6 +33,11 @@ use nsl_math.int_ext.all;
 -- Both components take the stream configuration from
 -- nsl_inet.stream.stream_config() and use the user bit as the reject
 -- flag defined there.
+--
+-- With l1_has_fcs_c false, the layer-1 side carries frames without an
+-- FCS (e.g. USB CDC-ECM / NCM, whose transport has its own CRCs): the
+-- receiver forwards frames untouched, the transmitter still pads but
+-- appends nothing (as nsl_inet.mac, the bnoc implementation).
 package stream_mac is
 
   constant ethernet_header_length_c : natural := 14;
@@ -51,10 +56,16 @@ package stream_mac is
   -- Frames whose total transported length does not exceed the FCS
   -- length carry no byte at all once trimmed: they are dropped
   -- silently.
+  --
+  -- With l1_has_fcs_c false, frames are forwarded untouched: no FCS to
+  -- check or strip, and no minimum size (frames carried without an FCS
+  -- are not padded on such links either).  The reject flag is
+  -- forwarded as it comes.
   component stream_mac_receiver is
     generic(
       config_c : config_t;
-      header_length_c : integer_vector := null_integer_vector
+      header_length_c : integer_vector := null_integer_vector;
+      l1_has_fcs_c : boolean := true
       );
     port(
       clock_i : in std_ulogic;
@@ -75,10 +86,16 @@ package stream_mac is
   -- arriving with the reject flag set gets a corrupted FCS, which is
   -- how a late cancellation reaches the peer; the outgoing frame
   -- itself is not flagged.
+  --
+  -- With l1_has_fcs_c false, frames are padded the same way but no
+  -- FCS is appended: a frame ends on its last data or padding beat,
+  -- and a frame arriving with the reject flag set leaves with the
+  -- reject flag set on that beat instead of a corrupted FCS.
   component stream_mac_transmitter is
     generic(
       config_c : config_t;
-      header_length_c : integer_vector := null_integer_vector
+      header_length_c : integer_vector := null_integer_vector;
+      l1_has_fcs_c : boolean := true
       );
     port(
       clock_i : in std_ulogic;

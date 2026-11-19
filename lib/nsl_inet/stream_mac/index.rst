@@ -15,6 +15,13 @@ ethernet layer.
   size and appends the FCS.  A frame arriving with the reject flag set
   gets a corrupted FCS, so that the peer drops it.
 
+Both take ``l1_has_fcs_c`` (default true), as the bnoc ``mac`` layer
+does.  Set to false for layer-1 links that carry frames without an FCS,
+such as USB CDC-ECM / NCM: the receiver then forwards frames untouched
+(no check, no strip, no minimum size), and the transmitter still pads
+but appends no FCS, ending the frame on its last data or padding beat
+and keeping the reject flag of a cancelled frame on that beat.
+
 Outgoing frames are padded to the minimum ethernet frame size and
 further to the next beat boundary, so a frame may reach the wire up to
 one byte short of a beat longer than strictly needed.  The padding is

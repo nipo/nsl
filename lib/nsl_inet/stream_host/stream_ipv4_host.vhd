@@ -25,7 +25,8 @@ entity stream_ipv4_host is
     retry_count_c : natural := 3;
     dhcp_c : boolean := false;
     clock_i_hz_c : natural := 125000000;
-    hostname_c : string := ""
+    hostname_c : string := "";
+    l1_has_fcs_c : boolean := true
     );
   port(
     clock_i : in std_ulogic;
@@ -85,7 +86,8 @@ begin
   mac_rx: nsl_inet.stream_mac.stream_mac_receiver
     generic map(
       config_c => config_c,
-      header_length_c => header_length_c
+      header_length_c => header_length_c,
+      l1_has_fcs_c => l1_has_fcs_c
       )
     port map(
       clock_i => clock_i,
@@ -99,7 +101,8 @@ begin
   mac_tx: nsl_inet.stream_mac.stream_mac_transmitter
     generic map(
       config_c => config_c,
-      header_length_c => header_length_c
+      header_length_c => header_length_c,
+      l1_has_fcs_c => l1_has_fcs_c
       )
     port map(
       clock_i => clock_i,

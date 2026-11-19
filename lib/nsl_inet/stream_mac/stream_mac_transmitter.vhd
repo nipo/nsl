@@ -15,7 +15,8 @@ use work.stream_mac.all;
 entity stream_mac_transmitter is
   generic(
     config_c : config_t;
-    header_length_c : integer_vector := null_integer_vector
+    header_length_c : integer_vector := null_integer_vector;
+    l1_has_fcs_c : boolean := true
     );
   port(
     clock_i : in std_ulogic;
@@ -367,7 +368,7 @@ begin
   end process;
 
   transition: process(r, in_i, out_i) is
-    variable push_v, pop_v, capture_v, consume_v, in_ready_v: boolean;
+    variable push_v, pop_v, capture_v, consume_v, in_ready_v, last_v: boolean;
     variable filled_v, covered_bytes_v, data_v: beat_bytes_t;
     variable skip_v, covered_v: natural range 0 to width_c;
     variable fcs_v: crc_state_t;
@@ -385,6 +386,21 @@ begin
     keep_v := (others => '1');
     pop_v := r.fifo_fillness > 0 and is_ready(config_c, out_i);
 
+    -- Last beat of the frame: the last FCS beat, or without an FCS the
+    -- last data beat (no padding owed) or the last padding beat.
+    if l1_has_fcs_c then
+      last_v := r.state = ST_FCS and r.fcs_left = 1;
+    else
+      last_v := (r.state = ST_FORWARD and r.beat_last and r.beat_pad = 0)
+                or (r.state = ST_PAD and r.pad_left = 1);
+      -- No FCS to corrupt: a cancelled frame keeps its reject flag.
+      if r.state = ST_FORWARD then
+        user_v(0) := to_logic(last_v and r.beat_corrupt);
+      else
+        user_v(0) := to_logic(last_v and r.corrupt);
+      end if;
+    end if;
+
     -- Tail stage.
     push_v := r.fifo_fillness < fifo_depth_c
               and (r.beat_valid or r.state /= ST_FORWARD);
@@ -398,7 +414,7 @@ begin
                        keep => keep_v,
                        user => user_v,
                        valid => true,
-                       last => r.state = ST_FCS and r.fcs_left = 1);
+                       last => last_v);
 
     if push_v then
       case r.state is
@@ -410,7 +426,7 @@ begin
             rin.fcs_left <= fcs_beat_count_c;
             if r.beat_pad /= 0 then
               rin.state <= ST_PAD;
-            else
+            elsif l1_has_fcs_c then
               rin.state <= ST_FCS;
             end if;
           end if;
@@ -421,7 +437,12 @@ begin
           rin.tail_fcs <= crc_update(fcs_params_c, r.tail_fcs, pad_bytes_c);
           rin.pad_left <= r.pad_left - 1;
           if r.pad_left = 1 then
-            rin.state <= ST_FCS;
+            if l1_has_fcs_c then
+              rin.state <= ST_FCS;
+            else
+              rin.state <= ST_FORWARD;
+              rin.corrupt <= false;
+            end if;
           end if;
 
         when ST_FCS =>

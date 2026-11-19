@@ -15,7 +15,8 @@ use work.stream_mac.all;
 entity stream_mac_receiver is
   generic(
     config_c : config_t;
-    header_length_c : integer_vector := null_integer_vector
+    header_length_c : integer_vector := null_integer_vector;
+    l1_has_fcs_c : boolean := true
     );
   port(
     clock_i : in std_ulogic;
@@ -275,6 +276,16 @@ begin
     report "Configuration must have a user bit for the reject flag"
     severity failure;
 
+  -- No FCS on layer 1: nothing to check, strip or count.
+  no_fcs: if not l1_has_fcs_c
+  generate
+    out_o <= in_i;
+    in_o <= out_i;
+  end generate;
+
+  has_fcs: if l1_has_fcs_c
+  generate
+
   monitor: process(clock_i) is
   begin
     if rising_edge(clock_i) then
@@ -437,5 +448,7 @@ begin
       out_o <= transfer_defaults(config_c);
     end if;
   end process;
+
+  end generate;
 
 end architecture;

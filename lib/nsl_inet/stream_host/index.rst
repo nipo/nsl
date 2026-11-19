@@ -16,6 +16,11 @@ With the ``dhcp_c`` generic set, the host runs a `DHCP client
 address from the lease instead of ``local_address_i``, reporting the
 lease on the ``dhcp_*_o`` ports.
 
+``l1_has_fcs_c`` (default true) says whether frames on the ``l1_*``
+ports carry an FCS. Set it to false behind links whose transport has
+its own CRCs, such as USB CDC-ECM / NCM: the mac layer then neither
+checks nor appends one (see `stream_mac <../stream_mac/index>`_).
+
 Peers outside the local subnet resolve through the gateway, taken
 from the lease with DHCP or from the ``local_netmask_i`` /
 ``local_gateway_i`` ports otherwise.

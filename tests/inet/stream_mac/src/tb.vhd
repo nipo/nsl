@@ -24,13 +24,18 @@ use nsl_inet.mac.all;
 -- both chained back-to-back, and a line-rate phase where minimum-size
 -- frames enter the receiver with no interpacket gap and a monitor
 -- proves the receiver input never stalls.
+--
+-- Each configuration also runs without an FCS on layer 1
+-- (l1_has_fcs_c false): the transmitter pads and appends nothing, a
+-- cancelled frame keeping its reject flag; the receiver forwards
+-- frames untouched, runts and flags included; and both back-to-back.
 entity tb is
 end tb;
 
 architecture arch of tb is
 
   signal clock_s, reset_n_s : std_ulogic;
-  signal done_s : std_ulogic_vector(0 to 23);
+  signal done_s : std_ulogic_vector(0 to 41);
 
   constant instance_count_c : natural := 6;
 
@@ -491,6 +496,226 @@ begin
         clock_i => clock_s,
         reset_n_i => reset_n_s,
         bus_i => line_in_s
+        );
+
+  end generate;
+
+  nofcs: for index in 0 to instance_count_c-1 generate
+    constant width_c : natural := width_of(index);
+    constant lengths_c : integer_vector := header_length_of(index);
+    constant pre_c : byte_string := prefix_of(index);
+    constant cfg_c : config_t := stream_config(width_c);
+    constant name_c : string := "W" & to_string(width_c)
+                                & "P" & to_string(pre_c'length) & " no FCS";
+    constant done_base_c : natural := instance_count_c * 4 + index * 3;
+
+    signal tx_in_s, tx_out_s : bus_t;
+    signal rx_in_s, rx_out_s : bus_t;
+    signal loop_in_s, loop_mid_s, loop_out_s : bus_t;
+  begin
+
+    tx_stim: process is
+    begin
+      tx_in_s.m <= transfer_defaults(cfg_c);
+      wait for 40 ns;
+
+      for i in payload_length_c'range
+      loop
+        packet_send(cfg_c, clock_s, tx_in_s.s, tx_in_s.m,
+                    packet => pre_c & frame_of(payload_length_c(i), i),
+                    user => "0");
+      end loop;
+
+      -- Cancelled, one short (padded) and one long (not padded)
+      packet_send(cfg_c, clock_s, tx_in_s.s, tx_in_s.m,
+                  packet => pre_c & frame_of(10, 6),
+                  user => "1");
+      packet_send(cfg_c, clock_s, tx_in_s.s, tx_in_s.m,
+                  packet => pre_c & frame_of(64, 7),
+                  user => "1");
+      wait;
+    end process;
+
+    tx_check: process is
+    begin
+      tx_out_s.s <= accept(cfg_c, false);
+      wait for 40 ns;
+
+      for i in payload_length_c'range
+      loop
+        packet_expect(cfg_c, clock_s, tx_out_s.m, tx_out_s.s,
+                      expected => pre_c & padded_frame_of(index, payload_length_c(i), i),
+                      rejected => false,
+                      what => name_c & " tx payload "
+                      & to_string(payload_length_c(i)));
+      end loop;
+
+      packet_expect(cfg_c, clock_s, tx_out_s.m, tx_out_s.s,
+                    expected => pre_c & padded_frame_of(index, 10, 6),
+                    rejected => true,
+                    what => name_c & " tx cancelled, padded");
+      packet_expect(cfg_c, clock_s, tx_out_s.m, tx_out_s.s,
+                    expected => pre_c & padded_frame_of(index, 64, 7),
+                    rejected => true,
+                    what => name_c & " tx cancelled, unpadded");
+
+      log_info(name_c & " transmitter OK");
+      done_s(done_base_c) <= '1';
+      wait;
+    end process;
+
+    rx_stim: process is
+    begin
+      rx_in_s.m <= transfer_defaults(cfg_c);
+      wait for 40 ns;
+
+      -- Unpadded frames, runts included: nothing to check or strip
+      for i in payload_length_c'range
+      loop
+        packet_send(cfg_c, clock_s, rx_in_s.s, rx_in_s.m,
+                    packet => pre_c & frame_of(payload_length_c(i), i),
+                    user => "0");
+      end loop;
+
+      packet_send(cfg_c, clock_s, rx_in_s.s, rx_in_s.m,
+                  packet => pre_c & frame_of(10, 4),
+                  user => "1");
+      wait;
+    end process;
+
+    rx_check: process is
+    begin
+      rx_out_s.s <= accept(cfg_c, false);
+      wait for 40 ns;
+
+      for i in payload_length_c'range
+      loop
+        packet_expect(cfg_c, clock_s, rx_out_s.m, rx_out_s.s,
+                      expected => pre_c & frame_of(payload_length_c(i), i),
+                      rejected => false,
+                      what => name_c & " rx payload "
+                      & to_string(payload_length_c(i)));
+      end loop;
+
+      packet_expect(cfg_c, clock_s, rx_out_s.m, rx_out_s.s,
+                    expected => pre_c & frame_of(10, 4),
+                    rejected => true,
+                    what => name_c & " rx already rejected");
+
+      log_info(name_c & " receiver OK");
+      done_s(done_base_c + 1) <= '1';
+      wait;
+    end process;
+
+    loop_stim: process is
+    begin
+      loop_in_s.m <= transfer_defaults(cfg_c);
+      wait for 40 ns;
+
+      for i in payload_length_c'range
+      loop
+        packet_send(cfg_c, clock_s, loop_in_s.s, loop_in_s.m,
+                    packet => pre_c & frame_of(payload_length_c(i), i + 3),
+                    user => "0");
+      end loop;
+
+      packet_send(cfg_c, clock_s, loop_in_s.s, loop_in_s.m,
+                  packet => pre_c & frame_of(20, 5),
+                  user => "1");
+      wait;
+    end process;
+
+    loop_check: process is
+    begin
+      loop_out_s.s <= accept(cfg_c, false);
+      wait for 40 ns;
+
+      for i in payload_length_c'range
+      loop
+        packet_expect(cfg_c, clock_s, loop_out_s.m, loop_out_s.s,
+                      expected => pre_c
+                      & padded_frame_of(index, payload_length_c(i), i + 3),
+                      rejected => false,
+                      what => name_c & " loopback payload "
+                      & to_string(payload_length_c(i)));
+      end loop;
+
+      packet_expect(cfg_c, clock_s, loop_out_s.m, loop_out_s.s,
+                    expected => pre_c & padded_frame_of(index, 20, 5),
+                    rejected => true,
+                    what => name_c & " loopback rejected");
+
+      log_info(name_c & " loopback OK");
+      done_s(done_base_c + 2) <= '1';
+      wait;
+    end process;
+
+    transmitter: nsl_inet.stream_mac.stream_mac_transmitter
+      generic map(
+        config_c => cfg_c,
+        header_length_c => lengths_c,
+        l1_has_fcs_c => false
+        )
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        in_i => tx_in_s.m,
+        in_o => tx_in_s.s,
+
+        out_o => tx_out_s.m,
+        out_i => tx_out_s.s
+        );
+
+    receiver: nsl_inet.stream_mac.stream_mac_receiver
+      generic map(
+        config_c => cfg_c,
+        header_length_c => lengths_c,
+        l1_has_fcs_c => false
+        )
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        in_i => rx_in_s.m,
+        in_o => rx_in_s.s,
+
+        out_o => rx_out_s.m,
+        out_i => rx_out_s.s
+        );
+
+    loop_transmitter: nsl_inet.stream_mac.stream_mac_transmitter
+      generic map(
+        config_c => cfg_c,
+        header_length_c => lengths_c,
+        l1_has_fcs_c => false
+        )
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        in_i => loop_in_s.m,
+        in_o => loop_in_s.s,
+
+        out_o => loop_mid_s.m,
+        out_i => loop_mid_s.s
+        );
+
+    loop_receiver: nsl_inet.stream_mac.stream_mac_receiver
+      generic map(
+        config_c => cfg_c,
+        header_length_c => lengths_c,
+        l1_has_fcs_c => false
+        )
+      port map(
+        clock_i => clock_s,
+        reset_n_i => reset_n_s,
+
+        in_i => loop_mid_s.m,
+        in_o => loop_mid_s.s,
+
+        out_o => loop_out_s.m,
+        out_i => loop_out_s.s
         );
 
   end generate;
