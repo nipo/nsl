@@ -71,6 +71,13 @@ with the following features:
 
   * CDC-ACM function.
 
+* CDC-NCM data path (see ncm/): NTB16 stream to/from ethernet frames
+  (nsl_inet stream conventions, no FCS), AXI4-Stream at 1 or 2 bytes
+  per beat, with bnoc (pipe / framed / committed) wrappers; helpers for
+  the NCM functional descriptor (descriptor/), GET_NTB_PARAMETERS and
+  notifications. Usable behind any bulk transport, e.g. the FX2 slave
+  FIFOs, as the NTB framing needs no transfer boundaries.
+
 Host side, the library contains a standalone low-/full-speed host
 dedicated to HID devices (see hid_host/):
 

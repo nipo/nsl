@@ -26,6 +26,7 @@ package descriptor is
   constant SUBTYPE_CDC_FUNC_CALL_MGMT       : integer := 16#01#;
   constant SUBTYPE_CDC_FUNC_ACM             : integer := 16#02#;
   constant SUBTYPE_CDC_FUNC_ECM             : integer := 16#0F#;
+  constant SUBTYPE_CDC_FUNC_NCM             : integer := 16#1A#;
   constant SUBTYPE_CDC_FUNC_DLM             : integer := 16#03#;
   constant SUBTYPE_CDC_FUNC_TEL_RING        : integer := 16#04#;
   constant SUBTYPE_CDC_FUNC_TEL_CALL        : integer := 16#05#;
@@ -112,6 +113,16 @@ package descriptor is
   function cdc_functional_ecm(
     iMacAddress, max_segment_size, statistics,
     nbr_mc_filters, nbr_power_filters : natural := 0)
+    return byte_string;
+
+  -- NCM functional descriptor (USB CDC NCM 1.0, 5.2.1), to follow the
+  -- header, union and ECM (Ethernet networking) functional descriptors.
+  -- capabilities is bmNetworkCapabilities: bit 0 SetEthernetPacketFilter,
+  -- 1 Get/SetNetAddress, 2 Send/GetEncapsulated, 3 Get/SetMaxDatagramSize,
+  -- 4 Get/SetCrcMode, 5 8-byte GetNtbInputSize / SetNtbInputSize.
+  function cdc_functional_ncm(
+    capabilities : natural := 0;
+    ncm_version : natural := 16#0100#)
     return byte_string;
 
   function language(
@@ -381,6 +392,19 @@ package body descriptor is
       & wv(nbr_mc_filters)
       & bv(nbr_power_filters));
   end function cdc_functional_ecm;
+
+  function cdc_functional_ncm(
+    capabilities : natural := 0;
+    ncm_version : natural := 16#0100#)
+    return byte_string
+  is
+  begin
+    return sized(
+      TYPE_CDC_CS_INTERFACE,
+      bv(SUBTYPE_CDC_FUNC_NCM)
+      & wv(ncm_version)
+      & bv(capabilities));
+  end function cdc_functional_ncm;
 
   function string_from_ascii(
     str : string)

@@ -805,6 +805,9 @@ projects:
   - name: usb2_framed_dual
     path: usb2_framed_dual
     tags: [ghdl, yavs, simulation]
+  - name: usb_ncm
+    path: usb_ncm
+    tags: [ghdl, simulation]
   - name: wishbone_base
     path: wishbone/base
     tags: [ghdl, yavs_xfail, simulation]

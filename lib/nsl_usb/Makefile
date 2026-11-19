@@ -6,6 +6,7 @@ packages += fs_phy
 packages += ulpi
 packages += sie
 packages += device
+packages += ncm
 packages += func
 packages += hid_host
 packages += io
