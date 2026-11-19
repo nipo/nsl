@@ -120,9 +120,6 @@ architecture series7_serdes of transceiver_cluster_bulkio is
 
   constant idelay_used_c : boolean := uses_idelay(config_c);
 
-  -- APB bus
-  constant apb_config_c : nsl_amba.apb.config_t := nsl_amba.apb.config(8, 8);
-
   -- Clocking
   constant ref_hz_c          : positive := config_c.refclks(0).ref_clock_mhz * 1_000_000;
   constant delay_clock_hz_c  : positive := 200_000_000;
@@ -181,8 +178,30 @@ begin
       );
 
   -- APB: no runtime configuration exists for this backend. 
-  apb_clock_o <= '0';
-  apb_s_o     <= response_idle(apb_config_c);
+  apb_clock_o <= s_ref_clk;
+  
+  csr: nsl_amba.apb.apb_slave
+    generic map(
+      config_c => nsl_transceiver.cluster.csr_config_c
+      )
+    port map(
+      clock_i => s_ref_clk,
+      reset_n_i => apb_reset_n_i,
+
+      apb_i => apb_m_i,
+      apb_o => apb_s_o,
+
+      address_o => open,
+
+      w_data_o => open,
+      w_mask_o => open,
+      w_error_i => '1',
+      w_valid_o => open,
+
+      r_data_i => (others => x"00"),
+      r_ready_o => open,
+      r_error_i => '1'
+      );
 
   -- Common Clocking between lanes: MMCM, BUFIO, BUFR, delay_reference ---------------------------------------
   s_ref_clk <= ref_clock_i(ref_index_c) when ref_index_c < ref_clock_c'length else '0';
