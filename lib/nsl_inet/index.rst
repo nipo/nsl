@@ -161,6 +161,9 @@ Contents
   layer, address filtering, context compression and ethertype
   dispatch;
 
+* `stream_vlan <stream_vlan/index>`_: AXI4-Stream 802.1Q VLAN
+  tagging, per-VID pipes on the mac side stream;
+
 * `stream_ipv4 <stream_ipv4/index>`_: AXI4-Stream IPv4 layer with
   protocol dispatch, and the ICMP echo responder;
 
@@ -203,6 +206,7 @@ Contents
    stream/index
    stream_mac/index
    stream_ethernet/index
+   stream_vlan/index
    stream_ipv4/index
    stream_resolver/index
    stream_arp/index

@@ -11,6 +11,7 @@ packages += switching
 packages += stream
 packages += stream_mac
 packages += stream_ethernet
+packages += stream_vlan
 packages += stream_ipv4
 packages += stream_resolver
 packages += stream_arp

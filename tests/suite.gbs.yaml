@@ -438,6 +438,15 @@ projects:
   - name: inet_stream_ethernet
     path: inet/stream_ethernet
     tags: [ghdl, yavs, simulation]
+  - name: inet_stream_vlan
+    path: inet/stream_vlan
+    tags: [ghdl, yavs, simulation]
+  - name: inet_stream_vlan_sweep
+    path: inet/stream_vlan_sweep
+    tags: [ghdl, yavs, simulation]
+  - name: inet_stream_vlan_path_router
+    path: inet/stream_vlan_path_router
+    tags: [ghdl, yavs, simulation]
   - name: inet_stream_mac_ethernet
     path: inet/stream_mac_ethernet
     tags: [ghdl, yavs, simulation]
