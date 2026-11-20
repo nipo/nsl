@@ -5,3 +5,5 @@ deps += nsl_io.io
 deps += nsl_amba.axi4_stream
 deps += nsl_data.cbor
 deps += nsl_logic.bool
+deps += nsl_data.bytestream
+deps += nsl_simulation.logging
