@@ -18,6 +18,11 @@ ifneq ($(filter xc7%,$(target_part)),)
 vhdl-sources += ddr_input_series7.vhd
 vhdl-sources += ddr_output_series7.vhd
 endif
+# UltraScale / UltraScale+ (one pattern per filter, see nsl_io/pad)
+ifneq ($(filter xcku%,$(target_part))$(filter xcvu%,$(target_part))$(filter xczu%,$(target_part))$(filter xcau%,$(target_part))$(filter xck2%,$(target_part)),)
+vhdl-sources += ddr_input_xcu.vhd
+vhdl-sources += ddr_output_xcu.vhd
+endif
 endif
 
 ifneq ($(filter lattice-machxo2,$(hwdep)),)
