@@ -151,7 +151,7 @@ projects:
     tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_sized
     path: amba/axi4_stream_sized
-    tags: [ghdl, yavs_xfail, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: amba_axi4_stream_types
     path: amba/axi4_stream_types
     tags: [ghdl, yavs, simulation]
@@ -350,7 +350,7 @@ projects:
     tags: [ghdl, yavs, simulation]
   - name: fifo_auto
     path: fifo_auto
-    tags: [ghdl, yavs_xfail, simulation]
+    tags: [ghdl, yavs, simulation]
   - name: fifo_lutram
     path: fifo_lutram
     tags: [ghdl, yavs, simulation]
