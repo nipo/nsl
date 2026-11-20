@@ -14,7 +14,10 @@ use nsl_data.bytestream.all;
 -- them. This package converts between NTB16 streams (the bulk endpoint
 -- side) and frame streams following the nsl_inet.stream conventions,
 -- ready for nsl_inet.stream_host.stream_ipv4_host with l1_has_fcs_c
--- false. Descriptors and class requests belong to whatever runs the
+-- false: 1, 2 or 4 bytes per beat, packed keep, the front pad of
+-- nsl_inet.stream_mac (2 bytes at width 4, none below) and the reject
+-- flag (user bit 0 on the last beat) when the frame stream has a user
+-- field. Descriptors and class requests belong to whatever runs the
 -- control endpoint (nsl_usb.descriptor.cdc_functional_ncm and the
 -- helpers below for the class request and notification payloads).
 --
@@ -97,9 +100,11 @@ package ncm is
   -- A whole block is stored (two buffers of ntb_max_size_c bytes) before
   -- its NDP16 chain is walked, so NDPs and datagrams may come in any
   -- order (Linux puts the NDP first, ndp_to_end last), while the next
-  -- block is received. Datagrams come out on frame_o (frame_config_c, 1
-  -- or 2 bytes per beat, keep and last required at 2), one frame per
-  -- datagram, at any byte offset.
+  -- block is received. Datagrams come out on frame_o (frame_config_c, 1,
+  -- 2 or 4 bytes per beat, keep required above 1, last), one frame per
+  -- datagram, whatever its offset in the block. At 4 bytes, each frame
+  -- starts with 2 zero bytes of front pad. The reject flag is driven low:
+  -- no frame is delivered rejected.
   --
   -- A bad header counts a header error and the receiver scans the
   -- following beats for the next "NCMH". Bad NDPs and datagram entries
@@ -127,10 +132,11 @@ package ncm is
 
   -- Frames to NTB16 stream (device -> host).
   --
-  -- frame_i carries frames (frame_config_c, 1 or 2 bytes per beat, keep
-  -- and last required at 2). A frame flagged rejected (user bit 0 on the
-  -- last beat, nsl_inet.stream convention, when frame_config_c has a user
-  -- field) is dropped.
+  -- frame_i carries frames (frame_config_c, 1, 2 or 4 bytes per beat,
+  -- keep required above 1, last). At 4 bytes, the 2-byte front pad of
+  -- each frame is skipped, and a beat is taken in two cycles. A frame
+  -- flagged rejected (user bit 0 on the last beat, nsl_inet.stream
+  -- convention, when frame_config_c has a user field) is dropped.
   --
   -- Frames are packed in NTB16 blocks in two buffers of ntb_max_size_c
   -- bytes: NTH16, datagrams on 4-byte boundaries, NDP16 last. A block is

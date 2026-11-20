@@ -40,6 +40,12 @@ end entity;
 --   frame beats are built. Reads take two cycles (address register,
 --   RAM), tracked by a two-entry tag pipeline; a credit on the queue
 --   keeps the reads in flight from overflowing it.
+--
+-- Frames follow the nsl_inet.stream conventions: at a 4-byte width each
+-- one starts with the front pad of nsl_inet.stream_mac (zeros, so the
+-- payload after the ethernet header lands on a beat boundary), and the
+-- reject flag is driven low on the last beat: there is no FCS to check,
+-- bad datagram entries are skipped instead.
 architecture beh of ncm_receiver is
 
   constant ntb_width_c : natural := ntb_config_c.data_width;
@@ -49,6 +55,12 @@ architecture beh of ncm_receiver is
   constant word_count_c : natural := 2 ** word_addr_size_c;
   constant queue_depth_c : natural := 8;
   constant ethernet_header_size_c : natural := 14;
+  -- nsl_inet.stream_mac.ethernet_frame_offset() of the frame stream
+  constant front_pad_c : natural
+    := (frame_width_c - ethernet_header_size_c mod frame_width_c) mod frame_width_c;
+  -- Reject flag, cleared (user_width 0: null, not driven)
+  constant user_ok_c : std_ulogic_vector(frame_config_c.user_width-1 downto 0)
+    := (others => '0');
   -- Smallest block: NTH16 and an NDP16 with one entry and its terminator.
   constant ntb_min_size_c : natural := ncm_nth16_length_c + 16;
 
@@ -69,6 +81,7 @@ architecture beh of ncm_receiver is
     EMIT_ENTRY,       -- read one datagram entry (index, length)
     EMIT_ENTRY_WAIT,
     EMIT_ENTRY_CHECK,
+    EMIT_PAD,         -- front pad of a frame (4-byte frame stream)
     EMIT_DATA,        -- read the datagram words
     EMIT_DONE         -- next NDP of the chain, or release the buffer
     );
@@ -151,20 +164,20 @@ architecture beh of ncm_receiver is
     return to_integer(unsigned(bb(1)) & unsigned(bb(0)));
   end function;
 
-  -- Bytes of the next frame beat: a whole beat, or the last byte of a
-  -- datagram alone; 0 while the queue cannot form one.
+  -- Bytes of the next frame beat: a whole beat, or the bytes up to the
+  -- end of a datagram; 0 while the queue cannot form one.
   function frame_beat_size(r : regs_t) return natural
   is
   begin
-    if r.queue_count = 0 then
-      return 0;
-    elsif frame_width_c = 1 or r.queue_last(r.queue_read) = '1' then
-      return 1;
-    elsif r.queue_count >= 2 then
-      return 2;
-    else
-      return 0;
-    end if;
+    for i in 0 to frame_width_c-1
+    loop
+      if i >= r.queue_count then
+        return 0;
+      elsif r.queue_last((r.queue_read + i) mod queue_depth_c) = '1' then
+        return i + 1;
+      end if;
+    end loop;
+    return frame_width_c;
   end function;
 
   function word_address(buf : natural; word : natural) return unsigned
@@ -184,14 +197,14 @@ begin
   assert ntb_width_c = 1 or ntb_width_c = 2
     report "NTB stream must be 1 or 2 bytes wide"
     severity failure;
-  assert frame_width_c = 1 or frame_width_c = 2
-    report "Frame stream must be 1 or 2 bytes wide"
+  assert frame_width_c = 1 or frame_width_c = 2 or frame_width_c = 4
+    report "Frame stream must be 1, 2 or 4 bytes wide"
     severity failure;
   assert frame_config_c.has_last
     report "Frame stream must have a last signal"
     severity failure;
   assert frame_width_c = 1 or frame_config_c.has_keep
-    report "A 2-byte frame stream must have keep"
+    report "A frame stream wider than a byte must have keep"
     severity failure;
   assert ntb_max_size_c = 2 * word_count_c and ntb_max_size_c <= 65536
     report "ntb_max_size_c must be a power of two, at most 65536"
@@ -243,7 +256,7 @@ begin
     variable queue_last_v : std_ulogic_vector(0 to queue_depth_c-1);
     variable queue_read_v : natural range 0 to queue_depth_c-1;
     variable queue_count_v : natural range 0 to queue_depth_c;
-    variable pop_v : natural range 0 to 2;
+    variable pop_v : natural range 0 to frame_width_c;
 
     procedure header_error is
     begin
@@ -488,10 +501,25 @@ begin
           rin.data_first <= r.entry_index;
           rin.data_last <= r.entry_index + r.entry_length - 1;
           stats_v.datagram_count := stats_v.datagram_count + 1;
-          rin.emit_state <= EMIT_DATA;
+          if front_pad_c /= 0 then
+            rin.emit_state <= EMIT_PAD;
+          else
+            rin.emit_state <= EMIT_DATA;
+          end if;
         else
           stats_v.datagram_error_count := stats_v.datagram_error_count + 1;
           rin.emit_state <= EMIT_ENTRY;
+        end if;
+
+      when EMIT_PAD =>
+        -- No data read in flight: the previous datagram ended at least
+        -- two entry reads ago.
+        if queue_count_v + front_pad_c <= queue_depth_c then
+          for i in 1 to front_pad_c
+          loop
+            push(x"00", false);
+          end loop;
+          rin.emit_state <= EMIT_DATA;
         end if;
 
       when EMIT_DATA =>
@@ -540,7 +568,8 @@ begin
   end process;
 
   moore: process(r) is
-    variable size_v : natural range 0 to 2;
+    variable size_v : natural range 0 to frame_width_c;
+    variable user_v : std_ulogic_vector(frame_config_c.user_width-1 downto 0);
     variable bytes_v : byte_string(0 to frame_width_c-1);
     variable keep_v : std_ulogic_vector(0 to frame_width_c-1);
     variable last_v : boolean;
@@ -566,9 +595,14 @@ begin
                           bytes => bytes_v,
                           valid => false);
     else
+      user_v := (others => '-');
+      if last_v then
+        user_v := user_ok_c;
+      end if;
       frame_o <= transfer(frame_config_c,
                           bytes => bytes_v,
                           keep => keep_v,
+                          user => user_v,
                           valid => true,
                           last => last_v);
     end if;

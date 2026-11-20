@@ -42,6 +42,11 @@ end entity;
 --   queue, from which NTB beats are built. Reads take two cycles
 --   (address register, RAM), tracked by a two-entry tag pipeline; a
 --   credit on the queue keeps the reads in flight from overflowing it.
+--
+-- Frames follow the nsl_inet.stream conventions: at a 4-byte width each
+-- one starts with the front pad of nsl_inet.stream_mac, which is not
+-- part of the datagram. The RAM takes one 16-bit word per cycle, so a
+-- 4-byte beat is taken in two cycles.
 architecture beh of ncm_transmitter is
 
   constant frame_width_c : natural := frame_config_c.data_width;
@@ -52,6 +57,12 @@ architecture beh of ncm_transmitter is
   constant queue_depth_c : natural := 8;
   constant ethernet_header_size_c : natural := 14;
   constant has_user_c : boolean := frame_config_c.user_width >= 1;
+  -- nsl_inet.stream_mac.ethernet_frame_offset() of the frame stream
+  constant front_pad_c : natural
+    := (frame_width_c - ethernet_header_size_c mod frame_width_c) mod frame_width_c;
+  -- Beat bytes written per cycle (one RAM word at most), parts per beat
+  constant part_width_c : natural := nsl_math.arith.min(frame_width_c, 2);
+  constant part_count_c : natural := frame_width_c / part_width_c;
   -- NTH16 fields as words, NDP16 header words
   constant nth16_header_words_c : natural := ncm_nth16_length_c / 2;
   constant ndp16_header_words_c : natural := 4;
@@ -100,6 +111,8 @@ architecture beh of ncm_transmitter is
     start : offset_t;
     length : natural range 0 to 4095;
     bad : boolean;
+    part : natural range 0 to part_count_c-1;  -- of the current beat
+    head : boolean;                          -- first beat of the frame
     close_word : natural range 0 to 2 * datagram_max_count_c + 12;
     close_last : natural range 0 to 2 * datagram_max_count_c + 12;
     ndp_offset : offset_t;
@@ -159,8 +172,11 @@ begin
   assert ntb_width_c = 1 or ntb_width_c = 2
     report "NTB stream must be 1 or 2 bytes wide"
     severity failure;
-  assert frame_width_c = 1 or frame_width_c = 2
-    report "Frame stream must be 1 or 2 bytes wide"
+  assert frame_width_c = 1 or frame_width_c = 2 or frame_width_c = 4
+    report "Frame stream must be 1, 2 or 4 bytes wide"
+    severity failure;
+  assert frame_width_c = 1 or frame_config_c.has_keep
+    report "A frame stream wider than a byte must have keep"
     severity failure;
   assert ntb_config_c.has_last
     report "NTB stream must have a last signal"
@@ -205,6 +221,8 @@ begin
     variable fits_v, last_v, rejected_v : boolean;
     variable in_bytes_v : byte_string(0 to frame_width_c-1);
     variable in_count_v : natural range 0 to frame_width_c;
+    variable part_first_v : natural range 0 to frame_width_c-1;
+    variable part_count_v : natural range 0 to part_width_c;
     variable length_v : natural range 0 to 4095;
     variable block_size_v : offset_t;
     variable offset_v : offset_t;
@@ -282,55 +300,74 @@ begin
             rin.start <= r.next_offset;
             rin.length <= 0;
             rin.bad <= false;
+            rin.part <= 0;
+            rin.head <= true;
             rin.fill_state <= FILL_DATA;
           end if;
         end if;
 
       when FILL_DATA =>
-        -- frame_o is ready in this state.
+        -- frame_o is ready in this state, on the last part of a beat.
         if is_valid(frame_config_c, frame_i) then
           in_bytes_v := bytes(frame_config_c, frame_i);
           in_count_v := byte_count(frame_config_c, frame_i);
           last_v := is_last(frame_config_c, frame_i);
           length_v := r.length;
 
-          -- start is even and only the last beat can be short, so the
-          -- bytes of a beat fall in one word.
+          -- Kept bytes of this part (only the last beat can be short),
+          -- none in the front pad.
+          part_first_v := r.part * part_width_c;
+          if in_count_v <= part_first_v
+            or (r.head and part_first_v < front_pad_c) then
+            part_count_v := 0;
+          else
+            part_count_v := nsl_math.arith.min(in_count_v - part_first_v, part_width_c);
+          end if;
+
+          -- start is a multiple of 4 and the front pad a whole part, so
+          -- the bytes of a part fall in one word.
           if r.length < datagram_max_size_c then
             offset_v := r.start + r.length;
             rin.write_address <= word_address(r.fill_buffer, offset_v / 2);
-            for i in 0 to frame_width_c-1
+            for i in 0 to part_width_c-1
             loop
-              if i < in_count_v then
+              if i < part_count_v then
                 rin.write_en((offset_v + i) mod 2) <= '1';
-                rin.write_data((offset_v + i) mod 2) <= in_bytes_v(i);
+                rin.write_data((offset_v + i) mod 2) <= in_bytes_v(part_first_v + i);
               end if;
             end loop;
-          else
+          elsif part_count_v /= 0 then
             rin.bad <= true;
           end if;
-          if length_v + in_count_v <= 4095 then
-            length_v := length_v + in_count_v;
+          if length_v + part_count_v <= 4095 then
+            length_v := length_v + part_count_v;
           end if;
           rin.length <= length_v;
 
-          if last_v then
-            rejected_v := false;
-            if has_user_c then
-              rejected_v := user(frame_config_c, frame_i)(0) = '1';
+          if r.part /= part_count_c-1 then
+            rin.part <= r.part + 1;
+          else
+            rin.part <= 0;
+            rin.head <= false;
+
+            if last_v then
+              rejected_v := false;
+              if has_user_c then
+                rejected_v := user(frame_config_c, frame_i)(0) = '1';
+              end if;
+              if r.bad or length_v > datagram_max_size_c
+                or length_v < ethernet_header_size_c or rejected_v then
+                stats_v.drop_count := stats_v.drop_count + 1;
+              else
+                rin.entry_index(r.datagram_count) <= r.start;
+                rin.entry_length(r.datagram_count) <= length_v;
+                rin.datagram_count <= r.datagram_count + 1;
+                -- next datagram on a 4-byte boundary
+                rin.next_offset <= ((r.start + length_v + 3) / 4) * 4;
+                stats_v.datagram_count := stats_v.datagram_count + 1;
+              end if;
+              rin.fill_state <= FILL_IDLE;
             end if;
-            if r.bad or length_v > datagram_max_size_c
-              or length_v < ethernet_header_size_c or rejected_v then
-              stats_v.drop_count := stats_v.drop_count + 1;
-            else
-              rin.entry_index(r.datagram_count) <= r.start;
-              rin.entry_length(r.datagram_count) <= length_v;
-              rin.datagram_count <= r.datagram_count + 1;
-              -- next datagram on a 4-byte boundary
-              rin.next_offset <= ((r.start + length_v + 3) / 4) * 4;
-              stats_v.datagram_count := stats_v.datagram_count + 1;
-            end if;
-            rin.fill_state <= FILL_IDLE;
           end if;
         end if;
 
@@ -442,7 +479,8 @@ begin
     variable bytes_v : byte_string(0 to ntb_width_c-1);
     variable last_v : boolean;
   begin
-    frame_o <= accept(frame_config_c, r.fill_state = FILL_DATA);
+    frame_o <= accept(frame_config_c, r.fill_state = FILL_DATA
+                                      and r.part = part_count_c-1);
     stats_o <= r.stats;
 
     bytes_v := (others => dontcare_byte_c);

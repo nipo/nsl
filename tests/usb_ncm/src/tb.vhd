@@ -12,8 +12,10 @@ use nsl_logic.bool.all;
 use nsl_usb.ncm.all;
 
 -- nsl_usb.ncm: receiver, transmitter and loopback for every pair of NTB
--- stream width (1, 2) and frame stream width (1, 2), then the bnoc
--- wrappers in loopback. Every output stalls at random.
+-- stream width (1, 2) and frame stream width (1, 2, 4), then the bnoc
+-- wrappers in loopback. Every output stalls at random. Frame streams
+-- follow nsl_inet.stream: the front pad at width 4, the reject flag
+-- driven on every last beat.
 --
 -- Receiver input: NTB16 blocks laid out as Linux cdc_ncm builds them
 -- (NDP right after the NTH16 with room for 40 entries, datagrams 2 bytes
@@ -25,7 +27,7 @@ end tb;
 
 architecture arch of tb is
 
-  constant config_count_c : natural := 4;
+  constant config_count_c : natural := 6;
   signal clock_s, reset_n_s : std_ulogic;
   signal done_s : std_ulogic_vector(0 to config_count_c * 3);
 
@@ -259,6 +261,8 @@ architecture arch of tb is
         at := at + n;
         if is_last(cfg, m) then
           if cfg.user_width >= 1 then
+            assert user(cfg, m)(0) = '0' or user(cfg, m)(0) = '1'
+              report "reject flag not driven on the last beat" severity failure;
             rejected := user(cfg, m)(0) = '1';
           end if;
           exit;
@@ -309,8 +313,17 @@ architecture arch of tb is
   end function;
 
   type width_vector is array(natural range <>) of natural;
-  constant ntb_width_c : width_vector(0 to config_count_c-1) := (2, 1, 2, 1);
-  constant frame_width_c : width_vector(0 to config_count_c-1) := (2, 1, 1, 2);
+  constant ntb_width_c : width_vector(0 to config_count_c-1) := (2, 1, 2, 1, 2, 1);
+  constant frame_width_c : width_vector(0 to config_count_c-1) := (2, 1, 1, 2, 4, 4);
+
+  -- nsl_inet.stream_mac front pad of a frame at a stream width
+  function front_pad(w : natural) return byte_string
+  is
+    constant n_c : natural := (w - 14 mod w) mod w;
+    constant ret_c : byte_string(0 to n_c-1) := (others => x"00");
+  begin
+    return ret_c;
+  end function;
 
 begin
 
@@ -319,6 +332,7 @@ begin
     constant frame_cfg_c : config_t := nsl_inet.stream.stream_config(frame_width_c(index));
     constant name_c : string := "N" & to_string(ntb_width_c(index))
                                 & "F" & to_string(frame_width_c(index));
+    constant pad_c : byte_string := front_pad(frame_width_c(index));
     signal rx_ntb_s, rx_frame_s : bus_t;
     signal tx_frame_s, tx_ntb_s : bus_t;
     signal loop_in_s, loop_mid_s, loop_out_s : bus_t;
@@ -364,7 +378,9 @@ begin
             packet_get(frame_cfg_c, clock_s, rx_frame_s.m, rx_frame_s.s,
                        b, n, rej, state);
             check_bytes(name_c & " rx case " & to_string(c) & " frame " & to_string(i),
-                        b(0 to n-1), frame_of(rx_length(c, i), c * 64 + i));
+                        b(0 to n-1), pad_c & frame_of(rx_length(c, i), c * 64 + i));
+            assert not rej
+              report name_c & " rx: frame delivered rejected" severity failure;
             delivered := delivered + 1;
           end loop;
         end if;
@@ -408,10 +424,10 @@ begin
       loop
         if tx_rejected(i) then
           bytes_send(frame_cfg_c, clock_s, tx_frame_s.s, tx_frame_s.m,
-                     frame_of(tx_length(i), 200 + i), "1", state);
+                     pad_c & frame_of(tx_length(i), 200 + i), "1", state);
         else
           bytes_send(frame_cfg_c, clock_s, tx_frame_s.s, tx_frame_s.m,
-                     frame_of(tx_length(i), 200 + i), "0", state);
+                     pad_c & frame_of(tx_length(i), 200 + i), "0", state);
         end if;
       end loop;
       wait;
@@ -511,7 +527,7 @@ begin
       for i in 0 to 99
       loop
         bytes_send(frame_cfg_c, clock_s, loop_in_s.s, loop_in_s.m,
-                   frame_of(length_table_c(i mod 10), 500 + i), "0", state);
+                   pad_c & frame_of(length_table_c(i mod 10), 500 + i), "0", state);
       end loop;
       wait;
     end process;
@@ -527,7 +543,9 @@ begin
       loop
         packet_get(frame_cfg_c, clock_s, loop_out_s.m, loop_out_s.s, b, n, rej, state);
         check_bytes(name_c & " loopback frame " & to_string(i),
-                    b(0 to n-1), frame_of(length_table_c(i mod 10), 500 + i));
+                    b(0 to n-1), pad_c & frame_of(length_table_c(i mod 10), 500 + i));
+        assert not rej
+          report name_c & " loopback: frame delivered rejected" severity failure;
       end loop;
       for i in 1 to 50 loop
         wait until rising_edge(clock_s);
