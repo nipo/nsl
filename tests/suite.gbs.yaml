@@ -414,6 +414,9 @@ projects:
   - name: ibm_8b10b_synchronous
     path: ibm_8b10b/synchronous
     tags: [ghdl, yavs, simulation]
+  - name: interdomain_fifo_slice
+    path: interdomain_fifo_slice
+    tags: [ghdl, yavs, simulation]
   - name: interdomain_tick
     path: interdomain_tick
     tags: [ghdl, yavs, simulation]

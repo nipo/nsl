@@ -137,10 +137,15 @@ begin
         );
   end block;
   
+  -- The data and the toggle are sampled in the same cycles: a sample
+  -- may see the new toggle with data bits still changing. The input side
+  -- holds the data until acknowledged, so it is taken one cycle after
+  -- the toggle is seen.
   out_side: block is
     type state_t is (
       ST_RESET,
       ST_IDLE,
+      ST_SETTLE,
       ST_WAIT
       );
 
@@ -175,9 +180,12 @@ begin
 
         when ST_IDLE =>
           if i2o_toggle_out_s /= r.toggle then
-            rin.state <= ST_WAIT;
-            rin.data <= i2o_data_out_s;
+            rin.state <= ST_SETTLE;
           end if;
+
+        when ST_SETTLE =>
+          rin.state <= ST_WAIT;
+          rin.data <= i2o_data_out_s;
 
         when ST_WAIT =>
           if out_ready_i = '1' then

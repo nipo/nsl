@@ -115,7 +115,7 @@ package interdomain is
   end component;
 
   -- This is a two word data fifo with two clocks.  It is implemented
-  -- with resynchronized acknowledge signals.  A flit takes at least 3
+  -- with resynchronized acknowledge signals.  A flit takes at least 4
   -- cycles of the slowest clock to go through.
   component interdomain_fifo_slice
     generic(
