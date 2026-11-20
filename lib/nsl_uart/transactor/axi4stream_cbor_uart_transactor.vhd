@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;       
 
-library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_simulation, nsl_logic, nsl_event, nsl_signal_generator, nsl_math;
+library nsl_uart, nsl_bnoc, nsl_amba, nsl_data, nsl_logic, nsl_event, nsl_signal_generator, nsl_math;
 use nsl_uart.serdes.all;
 use nsl_data.cbor.all;
 
