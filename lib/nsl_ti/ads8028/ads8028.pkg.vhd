@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_math;
+library nsl_bnoc, nsl_math, nsl_amba;
 
 -- Texas Instruments ADS8028: 8-channel 12-bit SPI ADC with an internal
 -- temperature sensor.
@@ -77,6 +77,34 @@ package ads8028 is
       valid_o : out channel_mask_t;
       -- Asserted for a cycle when a result is stored
       strobe_o : out channel_mask_t
+      );
+  end component;
+
+  -- Read-only registers of the results of a scanner, on a 32-bit APB,
+  -- 16 registers, little endian:
+  --
+  -- * 0 to 8, channel results: bit 31 set once the channel has a
+  --   result, bits 23-16 count results, wrapping, bits 11-0 hold the
+  --   last code,
+  -- * 15, INFO: bits 31-16 register layout version, 1, bits 8-0
+  --   channels the scanner converts.
+  --
+  -- Other registers read 0, writes are ignored.
+  component ads8028_apb_registers is
+    generic(
+      config_c : nsl_amba.apb.config_t;
+      channels_c : channel_mask_t := all_channels_c
+      );
+    port(
+      reset_n_i : in std_ulogic;
+      clock_i   : in std_ulogic;
+
+      apb_i : in nsl_amba.apb.master_t;
+      apb_o : out nsl_amba.apb.slave_t;
+
+      code_i : in code_vector(0 to channel_count_c-1);
+      valid_i : in channel_mask_t;
+      strobe_i : in channel_mask_t
       );
   end component;
 

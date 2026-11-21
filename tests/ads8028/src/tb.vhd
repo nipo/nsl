@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_bnoc, nsl_ti, nsl_spi, nsl_io, nsl_simulation, nsl_math, nsl_data;
+library nsl_bnoc, nsl_ti, nsl_spi, nsl_io, nsl_simulation, nsl_math, nsl_data, nsl_amba;
 use nsl_ti.ads8028.all;
 use nsl_simulation.logging.all;
 
@@ -23,6 +23,12 @@ architecture arch of tb is
 
   signal code_s : code_vector(0 to channel_count_c-1);
   signal valid_s, strobe_s : channel_mask_t;
+
+  constant apb_config_c : nsl_amba.apb.config_t
+    := nsl_amba.apb.apb3_config(address_width => 8, data_bus_width => 32,
+                                ready => true, err => true);
+  signal apb_m_s : nsl_amba.apb.master_t;
+  signal apb_s_s : nsl_amba.apb.slave_t;
 
   -- Model control
   signal device_reset_s : boolean := false;
@@ -58,6 +64,21 @@ begin
       code_o => code_s,
       valid_o => valid_s,
       strobe_o => strobe_s
+      );
+
+  registers: nsl_ti.ads8028.ads8028_apb_registers
+    generic map(
+      config_c => apb_config_c,
+      channels_c => channels_c
+      )
+    port map(
+      reset_n_i => reset_n_s,
+      clock_i => clock_s,
+      apb_i => apb_m_s,
+      apb_o => apb_s_s,
+      code_i => code_s,
+      valid_i => valid_s,
+      strobe_i => strobe_s
       );
 
   transactor: nsl_spi.transactor.spi_framed_transactor
@@ -207,6 +228,7 @@ begin
 
   begin
     done_s <= "0";
+    apb_m_s <= nsl_amba.apb.transfer_idle(apb_config_c);
     wait until reset_n_s = '1';
 
     wait_scans(4);
@@ -219,6 +241,17 @@ begin
       report "Temperature conversion"
       severity failure;
     log_info("Scanner reads every enabled channel");
+
+    wait until falling_edge(clock_s);
+    nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 15, 2,
+                           val => x"0001016d");
+    nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 2, 2,
+                           val => x"80--025a");
+    nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 1, 2,
+                           val => x"00000000");
+    nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 8, 2,
+                           val => x"80--0fd8");
+    log_info("Registers report results and channels");
 
     -- Device loses its configuration: scanner resynchronizes
     device_reset_s <= true;

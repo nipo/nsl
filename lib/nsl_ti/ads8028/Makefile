@@ -5,3 +5,5 @@ deps += nsl_spi.transactor
 deps += nsl_data.bytestream
 deps += nsl_math.fixed
 deps += nsl_clocking.async
+vhdl-sources += ads8028_apb_registers.vhd
+deps += nsl_amba.apb

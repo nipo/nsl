@@ -11,6 +11,7 @@ root:
     - nsl_simulation.logging
     - nsl_math.fixed
     - nsl_data.text
+    - nsl_amba.apb
   sources:
     - file_type: vhdl
       files:
