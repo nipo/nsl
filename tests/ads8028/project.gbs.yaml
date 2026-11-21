@@ -1,0 +1,26 @@
+name: ads8028
+
+root:
+  name: top
+  deps:
+    - nsl_bnoc.framed
+    - nsl_ti.ads8028
+    - nsl_spi.transactor
+    - nsl_io.io
+    - nsl_simulation.driver
+    - nsl_simulation.logging
+    - nsl_math.fixed
+    - nsl_data.text
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    simulation:
+      success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

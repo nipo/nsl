@@ -11,6 +11,9 @@ settings:
     save_logs: true
 
 projects:
+  - name: ads8028
+    path: ads8028
+    tags: [ghdl, yavs, simulation]
   - name: adv7511
     path: adv7511
     tags: [ghdl, yavs, simulation]

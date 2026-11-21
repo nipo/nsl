@@ -1,0 +1,7 @@
+vhdl-sources += ads8028.pkg.vhd
+vhdl-sources += ads8028_framed_scanner.vhd
+deps += nsl_bnoc.framed
+deps += nsl_spi.transactor
+deps += nsl_data.bytestream
+deps += nsl_math.fixed
+deps += nsl_clocking.async
