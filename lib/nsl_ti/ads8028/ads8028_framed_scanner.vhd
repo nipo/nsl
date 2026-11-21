@@ -120,6 +120,7 @@ begin
     end if;
     if reset_n_i = '0' then
       r.state <= ST_RESET;
+      r.code <= (others => (others => '0'));
       r.valid <= (others => '0');
       r.strobe <= (others => '0');
     end if;
