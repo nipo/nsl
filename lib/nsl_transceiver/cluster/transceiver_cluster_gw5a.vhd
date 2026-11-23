@@ -55,16 +55,14 @@ end entity;
 -- error. Unused bits are zeroed. The upper 16 RX bits are surfaced
 -- through rx_master.status. Per-lane PMA / PCS resets are routed;
 -- per-lane BUFGs sit on the recovered/derived fabric clocks;
--- elastic FIFO controls drive the valid/ready handshake. CSR access
--- goes through apb_upar_bridge_gw5a, which drives GTR12_UPARA and
--- feeds its AHB reset and test-decoder-enable outputs back into the
--- companion GTR12_QUADB.
+-- elastic FIFO controls drive the valid/ready handshake.
 --
 -- Reference clock selection, line rate, encoding mode, polarity
 -- invert and analog tuning are not fabric inputs on this primitive:
--- they are CSR-driven and expected to be written over the APB port
--- during init. The matching lane.config_t fields therefore reach no
--- primitive input here.
+-- they are CSR settings the bitstream carries, from the SerDes
+-- configuration of the project. The matching lane.config_t fields
+-- therefore reach no primitive input here. There is no runtime CSR
+-- access: the configuration bus answers with errors.
 architecture gw5a of transceiver_cluster is
 
   component GTR12_QUADB is
@@ -395,8 +393,6 @@ architecture gw5a of transceiver_cluster is
 
   signal s_cm_life_clk_raw : std_logic;
   signal s_apb_clock : std_ulogic;
-  signal s_ahb_reset_n : std_ulogic;
-  signal s_test_dec_en : std_ulogic;
 
   -- CLK_VIQ_I fabric slots. Bit 0 receives the ref_clock_i entry
   -- tagged clock_id("fabric"); bit 1 receives the entry tagged
@@ -948,9 +944,9 @@ begin
       FABRIC_CLK_MON_O => open,
       FABRIC_POR_N_I => gw_gnd,
       FABRIC_QUAD_MCU_REQ_I => gw_gnd,
-      CK_AHB_I => std_logic(s_apb_clock),
-      AHB_RSTN => std_logic(s_ahb_reset_n),
-      TEST_DEC_EN => std_logic(s_test_dec_en),
+      CK_AHB_I => gw_gnd,
+      AHB_RSTN => gw_vcc,
+      TEST_DEC_EN => gw_gnd,
       QUAD_PCLK0 => open,
       QUAD_PCLK1 => open,
       QUAD_PCIE_CLK => gw_gnd,
@@ -970,13 +966,13 @@ begin
       );
   apb_clock_o <= s_apb_clock;
 
-  upar_bridge: entity work.apb_upar_bridge_gw5a
+  -- No runtime configuration: the quad takes its CSR settings from the
+  -- bitstream, and its AHB inputs are tied off as the vendor wrappers
+  -- tie them. Driving them from a GTR12_UPARA instead keeps the quad
+  -- PLLs from locking. The configuration bus answers with errors.
+  csr: nsl_amba.apb.apb_slave
     generic map(
-      config_c => nsl_amba.apb.apb4_config(
-        address_width => 24,
-        data_bus_width => 32,
-        strb => true,
-        ready => true)
+      config_c => nsl_transceiver.cluster.csr_config_c
       )
     port map(
       clock_i => s_apb_clock,
@@ -985,8 +981,16 @@ begin
       apb_i => apb_m_i,
       apb_o => apb_s_o,
 
-      ahb_reset_n_o => s_ahb_reset_n,
-      test_dec_en_o => s_test_dec_en
+      address_o => open,
+
+      w_data_o => open,
+      w_mask_o => open,
+      w_error_i => '1',
+      w_valid_o => open,
+
+      r_data_i => (others => x"00"),
+      r_ready_o => open,
+      r_error_i => '1'
       );
 
 end architecture;

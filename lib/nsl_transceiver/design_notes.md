@@ -266,11 +266,20 @@ channel-bond start, opaque `CTRL_I` / `CTRL_I_H` / `C2I_CLK`, per-lane
 BUFGs on the recovered and derived fabric clocks, `CLK_VIQ_I` fabric
 refclk slots, and CMU lock status onto `tx_slave.pll_lock`.
 
-`apb_upar_bridge_gw5a.vhd` instantiates `GTR12_UPARA` and maps
-`nsl_amba.apb.apb_slave` onto the 24-bit-address / 32-bit-data UPAR
-bus. It also surfaces `AHB_RSTN_O` and `QUAD_CFG_TEST_DEC_EN`, which
-feed back into the companion `GTR12_QUADB`. The APB clock is the
-buffered `FABRIC_CM_LIFE_CLK_O` loopback.
+The quad takes its CSR settings from the bitstream only: its AHB
+inputs are tied off as the vendor wrappers of init-only protocols tie
+them (`CK_AHB_I` and `TEST_DEC_EN` low, `AHB_RSTN` high), and the
+configuration bus answers every access with an error, clocked by the
+buffered `FABRIC_CM_LIFE_CLK_O`. Driving the AHB inputs from a
+`GTR12_UPARA` instead, as protocols with runtime CSR access do, keeps
+the quad PLLs from locking with an init-only configuration (seen with
+1000BASE-X on lane 0, reference clock on pad 0).
+
+`apb_upar_bridge_gw5a.vhd`, unused by the backend for now, instantiates
+`GTR12_UPARA` and maps `nsl_amba.apb.apb_slave` onto the 24-bit-address
+/ 32-bit-data UPAR bus. It also surfaces `AHB_RSTN_O` and
+`QUAD_CFG_TEST_DEC_EN`, which would feed back into the companion
+`GTR12_QUADB`.
 
 ### How the primitive was decoded
 
