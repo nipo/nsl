@@ -53,14 +53,15 @@ end entity;
 -- 8b/10b, bit 10n+8 flags a control code in both directions, and
 -- on RX bit 10n+9 flags a disparity error and bit 80+n a code
 -- error. Unused bits are zeroed. The upper 16 RX bits are surfaced
--- through rx_master.status. Per-lane PMA / PCS resets are routed;
--- a global clock buffer sits on the lane's PCS TX clock. The RX
--- interface FIFO is read on that clock too, so RX data reaches the
--- user in the TX clock domain, as with the elastic buffer of other
--- backends: both lane clock outputs present the TX clock. Without
--- clock correction, this needs the far end to transmit at the
--- frequency of the local reference clock. FIFO controls drive the
--- valid/ready handshake.
+-- through rx_master.status, and reference clock detection, PLL locks
+-- and the lane status word through tx_slave.status. Per-lane PMA /
+-- PCS resets are routed; a global clock buffer sits on the lane's PCS
+-- TX clock. The RX interface FIFO is read on that clock too, so RX
+-- data reaches the user in the TX clock domain, as with the elastic
+-- buffer of other backends: both lane clock outputs present the TX
+-- clock. Without clock correction, this needs the far end to transmit
+-- at the frequency of the local reference clock. FIFO controls drive
+-- the valid/ready handshake.
 --
 -- Reference clock selection, line rate, encoding mode, polarity
 -- invert and analog tuning are not fabric inputs on this primitive:
@@ -369,6 +370,12 @@ architecture gw5a of transceiver_cluster is
   signal s_rx_data : rx_data_array_t;
 
   signal s_lane_pcs_tx_clk_raw : std_logic_vector(0 to 3);
+  -- Reference clock detectors of the quad, and per-lane CMU lock and
+  -- status word, handed over through tx_slave.status.
+  signal s_refclk_det : std_logic_vector(0 to 3);
+  signal s_lane_cmu_ok : std_logic_vector(0 to 3);
+  type lane_stat_array_t is array (0 to 3) of std_logic_vector(12 downto 0);
+  signal s_lane_stat : lane_stat_array_t;
   signal s_lane_pcs_tx_clk_buf : std_logic_vector(0 to 3);
 
   signal s_tx_fifo_afull : std_logic_vector(0 to 3);
@@ -615,7 +622,18 @@ begin
       tx_s_o(lane_idx).pll_lock <= s_cmu0_ok
         when config_c.lanes(lane_idx).pll_index = 0
         else s_cmu1_ok;
-      tx_s_o(lane_idx).status <= (others => '0');
+      -- Vendor status: bits 3-0 reference clock detected on CM3-0,
+      -- bit 4 CMU0 locked, bit 5 CMU1 locked, bit 6 lane CMU locked,
+      -- bits 28-16 lane status word.
+      refclk_det: for i in 0 to 3 generate
+        tx_s_o(lane_idx).status(i) <= s_refclk_det(i);
+      end generate;
+      tx_s_o(lane_idx).status(4) <= s_cmu0_ok;
+      tx_s_o(lane_idx).status(5) <= s_cmu1_ok;
+      tx_s_o(lane_idx).status(6) <= s_lane_cmu_ok(lane_idx);
+      tx_s_o(lane_idx).status(15 downto 7) <= (others => '0');
+      tx_s_o(lane_idx).status(28 downto 16) <= std_ulogic_vector(s_lane_stat(lane_idx));
+      tx_s_o(lane_idx).status(31 downto 29) <= (others => '0');
 
       s_pcs_tx_rst(lane_idx) <= not tx_m_i(lane_idx).pcs_reset_n;
       s_pcs_rx_rst(lane_idx) <= not rx_s_i(lane_idx).pcs_reset_n;
@@ -710,10 +728,10 @@ begin
       FABRIC_CMU1_CLK => open,
       FABRIC_CM_LIFE_CLK_O => s_cm_life_clk_raw,
       FABRIC_CM1_LIFE_CLK_O => open,
-      FABRIC_PMA_CM0_DR_REFCLK_DET_O => open,
-      FABRIC_PMA_CM1_DR_REFCLK_DET_O => open,
-      FABRIC_PMA_CM2_DR_REFCLK_DET_O => open,
-      FABRIC_PMA_CM3_DR_REFCLK_DET_O => open,
+      FABRIC_PMA_CM0_DR_REFCLK_DET_O => s_refclk_det(0),
+      FABRIC_PMA_CM1_DR_REFCLK_DET_O => s_refclk_det(1),
+      FABRIC_PMA_CM2_DR_REFCLK_DET_O => s_refclk_det(2),
+      FABRIC_PMA_CM3_DR_REFCLK_DET_O => s_refclk_det(3),
       FABRIC_CM0_PD_REFCLK_DET_I => gw_gnd,
       FABRIC_CM1_PD_REFCLK_DET_I => gw_gnd,
       FABRIC_CM2_PD_REFCLK_DET_I => gw_gnd,
@@ -731,10 +749,10 @@ begin
       FABRIC_LN3_CPLL_RESETN_I => gw_gnd,
       FABRIC_LN3_CPLL_PD_I => gw_gnd,
       FABRIC_LN3_CPLL_IDDQ_I => gw_gnd,
-      FABRIC_LANE0_CMU_OK_O => open,
-      FABRIC_LANE1_CMU_OK_O => open,
-      FABRIC_LANE2_CMU_OK_O => open,
-      FABRIC_LANE3_CMU_OK_O => open,
+      FABRIC_LANE0_CMU_OK_O => s_lane_cmu_ok(0),
+      FABRIC_LANE1_CMU_OK_O => s_lane_cmu_ok(1),
+      FABRIC_LANE2_CMU_OK_O => s_lane_cmu_ok(2),
+      FABRIC_LANE3_CMU_OK_O => s_lane_cmu_ok(3),
       FABRIC_LANE0_CMU_CK_REF_O => open,
       FABRIC_LANE1_CMU_CK_REF_O => open,
       FABRIC_LANE2_CMU_CK_REF_O => open,
@@ -798,10 +816,10 @@ begin
       FABRIC_LN1_ASTAT_O => open,
       FABRIC_LN2_ASTAT_O => open,
       FABRIC_LN3_ASTAT_O => open,
-      FABRIC_LN0_STAT_O => open,
-      FABRIC_LN1_STAT_O => open,
-      FABRIC_LN2_STAT_O => open,
-      FABRIC_LN3_STAT_O => open,
+      FABRIC_LN0_STAT_O => s_lane_stat(0),
+      FABRIC_LN1_STAT_O => s_lane_stat(1),
+      FABRIC_LN2_STAT_O => s_lane_stat(2),
+      FABRIC_LN3_STAT_O => s_lane_stat(3),
       FABRIC_LN0_STAT_O_H => open,
       FABRIC_LN1_STAT_O_H => open,
       FABRIC_LN2_STAT_O_H => open,
