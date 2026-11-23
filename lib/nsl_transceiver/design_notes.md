@@ -256,9 +256,10 @@ exactly 4 lanes, at most 2 PLLs (CMU0/CMU1), at most 4 refclk entries,
 config validity, per-lane encoding in {RAW, 8B10B, 64B66B}, and
 `data_byte_count` in {1, 8}.
 
-Wired: per-lane TX data packing (8 data bytes at `TXDATA_I[63:0]`,
-per-byte aux bit 0 at `[71:64]`), symmetric RX unpacking with
-`rx_data[87:72]` surfaced through `rx_master.status`, TX valid /
+Wired: per-lane data packing in the primitive's ten-bit-per-byte
+layout (IPUG1024, tables 3-4 to 3-9: byte n at `[10n+7:10n]`, with
+8b/10b its K flag at `10n+8`, and on RX a disparity error at `10n+9`
+and a code error at `80+n`), `rx_data[87:72]` surfaced through `rx_master.status`, TX valid /
 `RX_IF_FIFO_RDEN` handshake against the primitive's FIFO
 almost-full/almost-empty flags, PMA and PCS resets, align trigger,
 channel-bond start, opaque `CTRL_I` / `CTRL_I_H` / `C2I_CLK`, per-lane

@@ -48,10 +48,11 @@ end entity;
 -- four reference clock sources (ref0, ref1, fabric, mclk);
 -- configurations that do not match are rejected at elaboration.
 --
--- Per-lane data path uses a uniform layout serving both a one-byte
--- and an eight-byte parallel interface: data bytes 0..7 at
--- txdata[63:0], per-byte aux bit 0 at txdata[71:64], unused bits
--- zeroed. RX is symmetric, with the upper 16 RX bits surfaced
+-- Per-lane data path follows the primitive's word layout, ten bits
+-- per byte whatever the width: byte n at data[10n+7:10n]. With
+-- 8b/10b, bit 10n+8 flags a control code in both directions, and
+-- on RX bit 10n+9 flags a disparity error and bit 80+n a code
+-- error. Unused bits are zeroed. The upper 16 RX bits are surfaced
 -- through rx_master.status. Per-lane PMA / PCS resets are routed;
 -- per-lane BUFGs sit on the recovered/derived fabric clocks;
 -- elastic FIFO controls drive the valid/ready handshake. CSR access
@@ -469,22 +470,21 @@ begin
 
       rx_word_pack: for byte_idx in 0 to byte_count_c-1 generate
         s_rx_word(byte_idx)
-          <= std_ulogic_vector(s_rx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx));
+          <= std_ulogic_vector(s_rx_data(lane_idx)(10*byte_idx+7 downto 10*byte_idx));
       end generate;
 
       tx_pack: for byte_idx in 0 to byte_count_c-1 generate
-        s_tx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx)
+        s_tx_data(lane_idx)(10*byte_idx+7 downto 10*byte_idx)
           <= std_logic_vector(s_tx_word(byte_idx));
-        s_tx_data(lane_idx)(64+byte_idx) <= s_tx_k(byte_idx);
+        s_tx_data(lane_idx)(10*byte_idx+8) <= s_tx_k(byte_idx);
+        s_tx_data(lane_idx)(10*byte_idx+9) <= '0';
       end generate;
       -- Data and aux bytes past the lane's parallel width are '-' on
       -- the adapter side. Zero them rather than handing don't-cares
       -- to the primitive.
       tx_pad: for byte_idx in byte_count_c to 7 generate
-        s_tx_data(lane_idx)(8*byte_idx+7 downto 8*byte_idx) <= (others => '0');
-        s_tx_data(lane_idx)(64+byte_idx) <= '0';
+        s_tx_data(lane_idx)(10*byte_idx+9 downto 10*byte_idx) <= (others => '0');
       end generate;
-      s_tx_data(lane_idx)(79 downto 72) <= (others => '0');
 
       -- This quad exposes no pattern generator on its fabric
       -- interface, so a lane carrying a test pattern gets one built
@@ -514,7 +514,10 @@ begin
         rx_unpack: for byte_idx in 0 to byte_count_c-1 generate
           rx_m_o(lane_idx).data(byte_idx) <= s_rx_word(byte_idx);
           rx_m_o(lane_idx).aux(byte_idx)
-            <= (0 => s_rx_data(lane_idx)(64+byte_idx), others => '0');
+            <= (0 => s_rx_data(lane_idx)(10*byte_idx+8),
+                1 => s_rx_data(lane_idx)(80+byte_idx),
+                2 => s_rx_data(lane_idx)(10*byte_idx+9),
+                others => '0');
         end generate;
 
         s_tx_vld_in(lane_idx) <= tx_m_i(lane_idx).valid;
