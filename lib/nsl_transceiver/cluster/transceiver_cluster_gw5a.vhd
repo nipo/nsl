@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, gowin;
+library nsl_transceiver, nsl_io, nsl_amba, nsl_data, nsl_math, nsl_clocking, gowin;
 use nsl_data.bytestream.all;
 use nsl_math.int_ext.all;
 use nsl_transceiver.target.all;
@@ -54,8 +54,13 @@ end entity;
 -- on RX bit 10n+9 flags a disparity error and bit 80+n a code
 -- error. Unused bits are zeroed. The upper 16 RX bits are surfaced
 -- through rx_master.status. Per-lane PMA / PCS resets are routed;
--- per-lane BUFGs sit on the recovered/derived fabric clocks;
--- elastic FIFO controls drive the valid/ready handshake.
+-- a global clock buffer sits on the lane's PCS TX clock. The RX
+-- interface FIFO is read on that clock too, so RX data reaches the
+-- user in the TX clock domain, as with the elastic buffer of other
+-- backends: both lane clock outputs present the TX clock. Without
+-- clock correction, this needs the far end to transmit at the
+-- frequency of the local reference clock. FIFO controls drive the
+-- valid/ready handshake.
 --
 -- Reference clock selection, line rate, encoding mode, polarity
 -- invert and analog tuning are not fabric inputs on this primitive:
@@ -364,9 +369,7 @@ architecture gw5a of transceiver_cluster is
   signal s_rx_data : rx_data_array_t;
 
   signal s_lane_pcs_tx_clk_raw : std_logic_vector(0 to 3);
-  signal s_lane_pcs_rx_clk_raw : std_logic_vector(0 to 3);
   signal s_lane_pcs_tx_clk_buf : std_logic_vector(0 to 3);
-  signal s_lane_pcs_rx_clk_buf : std_logic_vector(0 to 3);
 
   signal s_tx_fifo_afull : std_logic_vector(0 to 3);
   signal s_rx_fifo_aempty : std_logic_vector(0 to 3);
@@ -565,7 +568,7 @@ begin
             bit_count_c => byte_count_c * 8
             )
           port map(
-            clock_i => s_lane_pcs_rx_clk_buf(lane_idx),
+            clock_i => s_lane_pcs_tx_clk_buf(lane_idx),
             reset_n_i => pma_reset_n_i(lane_idx),
 
             mode_i => rx_s_i(lane_idx).prbs_select,
@@ -624,18 +627,13 @@ begin
       s_lane_ctrl_h(lane_idx) <= std_logic_vector(tx_m_i(lane_idx).control_h(42 downto 0));
       s_lane_c2i_clk(lane_idx) <= tx_m_i(lane_idx).c2i_clock;
 
-      tx_bufg: gowin.components.bufg
+      tx_buffer: nsl_clocking.distribution.clock_buffer
         port map(
-          i => s_lane_pcs_tx_clk_raw(lane_idx),
-          o => s_lane_pcs_tx_clk_buf(lane_idx)
-          );
-      rx_bufg: gowin.components.bufg
-        port map(
-          i => s_lane_pcs_rx_clk_raw(lane_idx),
-          o => s_lane_pcs_rx_clk_buf(lane_idx)
+          clock_i => s_lane_pcs_tx_clk_raw(lane_idx),
+          clock_o => s_lane_pcs_tx_clk_buf(lane_idx)
           );
       lane_tx_clock_o(lane_idx) <= s_lane_pcs_tx_clk_buf(lane_idx);
-      lane_rx_clock_o(lane_idx) <= s_lane_pcs_rx_clk_buf(lane_idx);
+      lane_rx_clock_o(lane_idx) <= s_lane_pcs_tx_clk_buf(lane_idx);
 
     end generate;
 
@@ -654,7 +652,6 @@ begin
       s_lane_ctrl_h(lane_idx) <= (others => '0');
       s_lane_c2i_clk(lane_idx) <= '0';
       s_lane_pcs_tx_clk_buf(lane_idx) <= '0';
-      s_lane_pcs_rx_clk_buf(lane_idx) <= '0';
       lane_tx_clock_o(lane_idx) <= '0';
       lane_rx_clock_o(lane_idx) <= '0';
     end generate;
@@ -871,18 +868,18 @@ begin
       LANE1_PCS_TX_O_FABRIC_CLK => s_lane_pcs_tx_clk_raw(1),
       LANE2_PCS_TX_O_FABRIC_CLK => s_lane_pcs_tx_clk_raw(2),
       LANE3_PCS_TX_O_FABRIC_CLK => s_lane_pcs_tx_clk_raw(3),
-      LANE0_PCS_RX_O_FABRIC_CLK => s_lane_pcs_rx_clk_raw(0),
-      LANE1_PCS_RX_O_FABRIC_CLK => s_lane_pcs_rx_clk_raw(1),
-      LANE2_PCS_RX_O_FABRIC_CLK => s_lane_pcs_rx_clk_raw(2),
-      LANE3_PCS_RX_O_FABRIC_CLK => s_lane_pcs_rx_clk_raw(3),
+      LANE0_PCS_RX_O_FABRIC_CLK => open,
+      LANE1_PCS_RX_O_FABRIC_CLK => open,
+      LANE2_PCS_RX_O_FABRIC_CLK => open,
+      LANE3_PCS_RX_O_FABRIC_CLK => open,
       LANE0_FABRIC_TX_CLK => s_lane_pcs_tx_clk_buf(0),
       LANE1_FABRIC_TX_CLK => s_lane_pcs_tx_clk_buf(1),
       LANE2_FABRIC_TX_CLK => s_lane_pcs_tx_clk_buf(2),
       LANE3_FABRIC_TX_CLK => s_lane_pcs_tx_clk_buf(3),
-      LANE0_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(0),
-      LANE1_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(1),
-      LANE2_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(2),
-      LANE3_FABRIC_RX_CLK => s_lane_pcs_rx_clk_buf(3),
+      LANE0_FABRIC_RX_CLK => s_lane_pcs_tx_clk_buf(0),
+      LANE1_FABRIC_RX_CLK => s_lane_pcs_tx_clk_buf(1),
+      LANE2_FABRIC_RX_CLK => s_lane_pcs_tx_clk_buf(2),
+      LANE3_FABRIC_RX_CLK => s_lane_pcs_tx_clk_buf(3),
       LANE0_FABRIC_C2I_CLK => s_lane_c2i_clk(0),
       LANE1_FABRIC_C2I_CLK => s_lane_c2i_clk(1),
       LANE2_FABRIC_C2I_CLK => s_lane_c2i_clk(2),
@@ -959,10 +956,10 @@ begin
   -- Buffer GTR12_QUADB's life clock so it can drive the APB
   -- domain (bridge, user-facing APB master, and the primitive's
   -- own AHB clock loopback).
-  apb_clock_bufg: gowin.components.bufg
+  apb_clock_buffer: nsl_clocking.distribution.clock_buffer
     port map(
-      i => s_cm_life_clk_raw,
-      o => s_apb_clock
+      clock_i => s_cm_life_clk_raw,
+      clock_o => s_apb_clock
       );
   apb_clock_o <= s_apb_clock;
 

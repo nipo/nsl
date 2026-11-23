@@ -43,6 +43,7 @@ ifneq ($(filter GW5%,$(target_part)),)
 vhdl-sources += apb_upar_bridge_gw5a.vhd
 vhdl-sources += transceiver_cluster_gw5a.vhd
 deps += gowin.components
+deps += nsl_clocking.distribution
 deps += nsl_data.endian
 endif
 endif
