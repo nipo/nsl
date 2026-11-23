@@ -74,16 +74,16 @@ begin  -- architecture beh
 
   align_rst : process (clock_i, reset_n_i) is
   begin
-    if reset_n_i = '0' then
-      s_align_rst <= '1';
-    end if;
-
     if rising_edge(clock_i) then     -- rising clock edge
       if (sgmii_i.align_ready = '1') and (s_valid_symbol = '0') then
         s_align_rst <= '1';
       else
         s_align_rst <= '0';
       end if;
+    end if;
+
+    if reset_n_i = '0' then
+      s_align_rst <= '1';
     end if;
   end process;
 
