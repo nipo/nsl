@@ -42,19 +42,20 @@ architecture arch of tb is
   --  1 core cycle for the crossing to take the word,
   --  up to 1 far cycle for the toggle to meet a far clock edge,
   --  2 far cycles of resynchronizer,
+  --  1 far cycle for the crossing output side to see the toggle,
   --  1 far cycle for the crossing output side to publish the word,
   --  1 far cycle for the strobe register.
   -- Against the reference the generator samples half a core cycle
   -- after the strobe, with 8 ns core and 7 ns rtc clocks, that lands
-  -- on 5 or 6 rtc cycles.  One cycle of margin each way keeps the
+  -- on 6 or 7 rtc cycles.  One cycle of margin each way keeps the
   -- bound from depending on which of the two lands.
-  constant md_rtc_latency_min_c: natural := 4;
-  constant md_rtc_latency_max_c: natural := 7;
+  constant md_rtc_latency_min_c: natural := 5;
+  constant md_rtc_latency_max_c: natural := 8;
 
   -- Same path with both clocks tied together: the far cycles above
   -- are core cycles, and the toggle alignment costs a full cycle
   -- since a signal launched on an edge is only seen on the next one.
-  constant md_deg_latency_c: natural := 6;
+  constant md_deg_latency_c: natural := 7;
 
   type tag_id_vector is array(natural range <>) of tag_id_t;
   type timestamp_vector is array(natural range <>) of timestamp_t;
