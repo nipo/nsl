@@ -246,11 +246,11 @@ begin
     nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 15, 2,
                            val => x"0001016d");
     nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 2, 2,
-                           val => x"80--025a");
+                           val => x"80" & "--------" & x"025a");
     nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 1, 2,
                            val => x"00000000");
     nsl_amba.apb.apb_check(apb_config_c, clock_s, apb_s_s, apb_m_s, 8, 2,
-                           val => x"80--0fd8");
+                           val => x"80" & "--------" & x"0fd8");
     log_info("Registers report results and channels");
 
     -- Device loses its configuration: scanner resynchronizes
