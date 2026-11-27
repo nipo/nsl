@@ -58,7 +58,8 @@ The file holds, every key being mandatory unless stated otherwise::
                                       # sdmmc, coresight
   watchdog_reset: cold        # cold, warm or remote_update
   emif:                       # optional, HPS memory
-    topology: 1x32            # 1x16 or 1x32
+    topology: 1x32            # 1x16, 1x32, or 2x16 (two channels
+                              # on one IO96B)
   bridges:                    # optional, the ones in use
     h2f: {data_width: 128, address_width: 38}
     lwh2f: {data_width: 32, address_width: 29}
@@ -177,6 +178,33 @@ synchronized.
 The warm reset handshake is acknowledged by the wrapper unless
 ``warm_reset_handshake_c`` is set, ``warm_reset_ack_i`` is then the
 acknowledge.
+
+Platform Designer systems
+=========================
+
+A design may keep the HPS in a Platform Designer system, with the
+``intel_agilex_5_soc`` component, rather than use the wrapper.  The
+bridges it exports are then flat AXI signals, which
+:vhdl:component:`hps_pd_master_port <nsl_altera.hps.hps_pd_master_port>`
+(h2f, lwh2f) and :vhdl:component:`hps_pd_slave_port
+<nsl_altera.hps.hps_pd_slave_port>` (f2h, f2sdram) turn into NSL
+records.
+
+Both guard the port during reset: the bridges drive garbage on their
+valid signals while the fabric initializes, and the lightweight bridge
+pulses ARVALID for one cycle at bring-up, never expecting a
+handshake.  A slave answering it shifts every later response by one
+transaction, until the orphaned response wedges the bridge.  While
+their reset is asserted, no valid and no ready crosses the ports in
+either direction.  Their reset must be asserted during fabric
+initialization (``ninit_done``) and while the HPS asserts
+``h2f_reset``, which must also be the reset of the bridge interfaces
+in the system: the HPS master bridges do not operate properly from
+another one.  ``reset_n_o``, released synchronously to the bridge
+clock, is the reset of the logic behind the port.
+
+The Platform Designer component has its own ready latency adapters,
+the ports add no latency.
 
 Verification limits
 ===================

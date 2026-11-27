@@ -107,7 +107,8 @@ package hps is
 
   -- MPFE to HPS EMIF link (io96b0_to_hps in vendor IP), MPFE side.
   -- Fields are the ports of the EMIF IP, axi4 is the s0_axi4 port,
-  -- axil is the s0_noc_axi4lite one.  Link is a direct connection
+  -- axi4_1 the s1_axi4 one, second channel of a two-channel topology
+  -- (2x16, unused otherwise), axil is the s0_noc_axi4lite one.  Link is a direct connection
   -- between the hard blocks, clocks and resets come from the EMIF.
   type hps_emif_o_t is
   record
@@ -136,6 +137,31 @@ package hps is
     axi4_aruser : std_ulogic_vector(13 downto 0);
     axi4_arvalid : std_ulogic;
     axi4_rready : std_ulogic;
+    axi4_1_awid : std_ulogic_vector(6 downto 0);
+    axi4_1_awaddr : std_ulogic_vector(39 downto 0);
+    axi4_1_awlen : std_ulogic_vector(7 downto 0);
+    axi4_1_awsize : std_ulogic_vector(2 downto 0);
+    axi4_1_awburst : std_ulogic_vector(1 downto 0);
+    axi4_1_awlock : std_ulogic;
+    axi4_1_awqos : std_ulogic_vector(3 downto 0);
+    axi4_1_awuser : std_ulogic_vector(13 downto 0);
+    axi4_1_awvalid : std_ulogic;
+    axi4_1_wdata : std_ulogic_vector(255 downto 0);
+    axi4_1_wstrb : std_ulogic_vector(31 downto 0);
+    axi4_1_wlast : std_ulogic;
+    axi4_1_wuser : std_ulogic_vector(31 downto 0);
+    axi4_1_wvalid : std_ulogic;
+    axi4_1_bready : std_ulogic;
+    axi4_1_arid : std_ulogic_vector(6 downto 0);
+    axi4_1_araddr : std_ulogic_vector(39 downto 0);
+    axi4_1_arlen : std_ulogic_vector(7 downto 0);
+    axi4_1_arsize : std_ulogic_vector(2 downto 0);
+    axi4_1_arburst : std_ulogic_vector(1 downto 0);
+    axi4_1_arlock : std_ulogic;
+    axi4_1_arqos : std_ulogic_vector(3 downto 0);
+    axi4_1_aruser : std_ulogic_vector(13 downto 0);
+    axi4_1_arvalid : std_ulogic;
+    axi4_1_rready : std_ulogic;
     axil_awaddr : std_ulogic_vector(26 downto 0);
     axil_awvalid : std_ulogic;
     axil_wdata : std_ulogic_vector(31 downto 0);
@@ -148,7 +174,7 @@ package hps is
   end record;
 
   -- MPFE to HPS EMIF link, EMIF side.  axi4_clock is noc_aclk_0,
-  -- axil_clock is s0_noc_axi4lite_clock.
+  -- axi4_1_clock noc_aclk_1, axil_clock is s0_noc_axi4lite_clock.
   type hps_emif_i_t is
   record
     axi4_clock : std_ulogic;
@@ -164,6 +190,19 @@ package hps is
     axi4_rlast : std_ulogic;
     axi4_ruser : std_ulogic_vector(31 downto 0);
     axi4_rvalid : std_ulogic;
+    axi4_1_clock : std_ulogic;
+    axi4_1_awready : std_ulogic;
+    axi4_1_wready : std_ulogic;
+    axi4_1_bid : std_ulogic_vector(6 downto 0);
+    axi4_1_bresp : std_ulogic_vector(1 downto 0);
+    axi4_1_bvalid : std_ulogic;
+    axi4_1_arready : std_ulogic;
+    axi4_1_rid : std_ulogic_vector(6 downto 0);
+    axi4_1_rdata : std_ulogic_vector(255 downto 0);
+    axi4_1_rresp : std_ulogic_vector(1 downto 0);
+    axi4_1_rlast : std_ulogic;
+    axi4_1_ruser : std_ulogic_vector(31 downto 0);
+    axi4_1_rvalid : std_ulogic;
     axil_clock : std_ulogic;
     axil_awready : std_ulogic;
     axil_wready : std_ulogic;
@@ -182,6 +221,12 @@ package hps is
     axi4_rdata => (others => '0'),
     axi4_rresp => (others => '0'),
     axi4_ruser => (others => '0'),
+    axi4_1_bid => (others => '0'),
+    axi4_1_bresp => (others => '0'),
+    axi4_1_rid => (others => '0'),
+    axi4_1_rdata => (others => '0'),
+    axi4_1_rresp => (others => '0'),
+    axi4_1_ruser => (others => '0'),
     axil_bresp => (others => '0'),
     axil_rdata => (others => '0'),
     axil_rresp => (others => '0'),
@@ -440,6 +485,151 @@ package hps is
 
       ps_o : out hps_slave_fwd_t;
       ps_i : in hps_slave_bwd_t
+      );
+  end component;
+
+  -- A bridge where the HPS is master (h2f, lwh2f), as exported by the
+  -- intel_agilex_5_soc Platform Designer component, seen as NSL records
+  -- of configuration config_c, for designs that keep the HPS in a
+  -- Platform Designer system rather than using hps_wrapper.  Flat ports
+  -- are named as the AXI signals of the exported interface; their
+  -- width follows config_c, AxLEN is 8 bits.  ID, size, burst, lock,
+  -- cache and prot must be in config_c for them to be passed.
+  --
+  -- The bridge drives garbage on its valid signals while the fabric
+  -- initializes: in particular, the lightweight bridge pulses ARVALID
+  -- for one cycle at bring-up, without ever expecting a handshake.  A
+  -- slave answering it shifts every later response by one transaction,
+  -- then the orphaned response wedges the bridge.  The port guards
+  -- against that:
+  --
+  -- * reset_n_i is asynchronous.  It must be asserted while the fabric
+  --   initializes (ninit_done) and while the HPS resets the bridge
+  --   (h2f_reset, which must also be the reset of the bridge interface
+  --   in the system);
+  -- * reset_n_o is reset_n_i, asserted asynchronously and released
+  --   synchronously to clock_i: the slave logic must be reset by it;
+  -- * while reset_n_o is asserted, no valid and no ready crosses the
+  --   port, in either direction.
+  --
+  -- The port adds no latency: the Platform Designer component already
+  -- has its ready latency adapters.
+  component hps_pd_master_port is
+    generic(
+      config_c : nsl_amba.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      reset_n_o : out std_ulogic;
+
+      awid : in std_logic_vector(config_c.id_width-1 downto 0) := (others => '0');
+      awaddr : in std_logic_vector(config_c.address_width-1 downto 0);
+      awlen : in std_logic_vector(7 downto 0) := (others => '0');
+      awsize : in std_logic_vector(2 downto 0) := std_logic_vector(to_unsigned(config_c.data_bus_width_l2, 3));
+      awburst : in std_logic_vector(1 downto 0) := "01";
+      awlock : in std_logic := '0';
+      awcache : in std_logic_vector(3 downto 0) := (others => '0');
+      awprot : in std_logic_vector(2 downto 0) := (others => '0');
+      awvalid : in std_logic;
+      awready : out std_logic;
+
+      wdata : in std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
+      wstrb : in std_logic_vector((2 ** config_c.data_bus_width_l2) - 1 downto 0) := (others => '1');
+      wlast : in std_logic := '1';
+      wvalid : in std_logic;
+      wready : out std_logic;
+
+      bid : out std_logic_vector(config_c.id_width-1 downto 0);
+      bresp : out std_logic_vector(1 downto 0);
+      bvalid : out std_logic;
+      bready : in std_logic;
+
+      arid : in std_logic_vector(config_c.id_width-1 downto 0) := (others => '0');
+      araddr : in std_logic_vector(config_c.address_width-1 downto 0);
+      arlen : in std_logic_vector(7 downto 0) := (others => '0');
+      arsize : in std_logic_vector(2 downto 0) := std_logic_vector(to_unsigned(config_c.data_bus_width_l2, 3));
+      arburst : in std_logic_vector(1 downto 0) := "01";
+      arlock : in std_logic := '0';
+      arcache : in std_logic_vector(3 downto 0) := (others => '0');
+      arprot : in std_logic_vector(2 downto 0) := (others => '0');
+      arvalid : in std_logic;
+      arready : out std_logic;
+
+      rid : out std_logic_vector(config_c.id_width-1 downto 0);
+      rdata : out std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
+      rresp : out std_logic_vector(1 downto 0);
+      rlast : out std_logic;
+      rvalid : out std_logic;
+      rready : in std_logic;
+
+      axi_o : out nsl_amba.axi4_mm.master_t;
+      axi_i : in nsl_amba.axi4_mm.slave_t
+      );
+  end component;
+
+  -- A bridge where the HPS is slave (f2h, f2sdram), as exported by the
+  -- intel_agilex_5_soc Platform Designer component, driven from NSL
+  -- records of configuration config_c.  Flat ports are named as the AXI
+  -- signals of the exported interface, AxUSER is 8 bits wide.
+  --
+  -- reset_n_i is asynchronous, reset_n_o is it, released synchronously
+  -- to clock_i, for the master logic.  While reset_n_o is asserted, no
+  -- valid and no ready crosses the port, in either direction, whatever
+  -- the master does.
+  component hps_pd_slave_port is
+    generic(
+      config_c : nsl_amba.axi4_mm.config_t
+      );
+    port(
+      clock_i : in std_ulogic;
+      reset_n_i : in std_ulogic;
+      reset_n_o : out std_ulogic;
+
+      axi_i : in nsl_amba.axi4_mm.master_t;
+      axi_o : out nsl_amba.axi4_mm.slave_t;
+
+      awid : out std_logic_vector(config_c.id_width-1 downto 0);
+      awaddr : out std_logic_vector(config_c.address_width-1 downto 0);
+      awlen : out std_logic_vector(7 downto 0);
+      awsize : out std_logic_vector(2 downto 0);
+      awburst : out std_logic_vector(1 downto 0);
+      awlock : out std_logic;
+      awcache : out std_logic_vector(3 downto 0);
+      awprot : out std_logic_vector(2 downto 0);
+      awuser : out std_logic_vector(7 downto 0);
+      awvalid : out std_logic;
+      awready : in std_logic;
+
+      wdata : out std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
+      wstrb : out std_logic_vector((2 ** config_c.data_bus_width_l2) - 1 downto 0);
+      wlast : out std_logic;
+      wvalid : out std_logic;
+      wready : in std_logic;
+
+      bid : in std_logic_vector(config_c.id_width-1 downto 0);
+      bresp : in std_logic_vector(1 downto 0);
+      bvalid : in std_logic;
+      bready : out std_logic;
+
+      arid : out std_logic_vector(config_c.id_width-1 downto 0);
+      araddr : out std_logic_vector(config_c.address_width-1 downto 0);
+      arlen : out std_logic_vector(7 downto 0);
+      arsize : out std_logic_vector(2 downto 0);
+      arburst : out std_logic_vector(1 downto 0);
+      arlock : out std_logic;
+      arcache : out std_logic_vector(3 downto 0);
+      arprot : out std_logic_vector(2 downto 0);
+      aruser : out std_logic_vector(7 downto 0);
+      arvalid : out std_logic;
+      arready : in std_logic;
+
+      rid : in std_logic_vector(config_c.id_width-1 downto 0);
+      rdata : in std_logic_vector(8 * (2 ** config_c.data_bus_width_l2) - 1 downto 0);
+      rresp : in std_logic_vector(1 downto 0);
+      rlast : in std_logic;
+      rvalid : in std_logic;
+      rready : out std_logic
       );
   end component;
 

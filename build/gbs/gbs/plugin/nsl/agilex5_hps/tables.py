@@ -233,8 +233,8 @@ HPS_PORTS = [
     ('s2f_gp', 'out', 32, 'gp_o', 'base'),
     ('s2f_pending_rst_req', 'out', 1, 'warm_reset_request_n_o', 'base'),
     ('s2f_rst', 'out', 1, 'h2f_reset_o', 'base'),
-    ('s2f_user_clk0_hio', 'out', 1, 'user_clock_o(0)', 'base'),
-    ('s2f_user_clk1_hio', 'out', 1, 'user_clock_o(1)', 'base'),
+    ('s2f_user_clk0_hio', 'out', 1, 'user_clock_s(0)', 'base'),
+    ('s2f_user_clk1_hio', 'out', 1, 'user_clock_s(1)', 'base'),
     ('soc2fpga_ar_addr', 'out', 40, 'h2f_o.araddr', 'base'),
     ('soc2fpga_ar_burst', 'out', 2, 'h2f_o.arburst', 'base'),
     ('soc2fpga_ar_cache', 'out', 4, 'h2f_o.arcache', 'base'),
@@ -871,4 +871,33 @@ HPS_EMIF_O_FIELDS = [
     ('axil_araddr', 27),
     ('axil_arvalid', 0),
     ('axil_rready', 0),
+]
+
+# Second channel of the link, two-channel topologies only: s1_axi4 of the
+# EMIF IP, io96b0_p1 of the MPFE.
+HPS_EMIF_O_CH1_FIELDS = [(n.replace("axi4_", "axi4_1_", 1), w)
+                         for n, w in HPS_EMIF_O_FIELDS if n.startswith("axi4_")]
+
+MPFE_P1_PORTS = [(n.replace("io96b0_p0_", "io96b0_p1_", 1), d, w, a.replace(".axi4_", ".axi4_1_", 1))
+                 for n, d, w, a in MPFE_PORTS if n.startswith("io96b0_p0_")]
+
+# CoreSight debug APB towards the fabric (debug ROM entry 0x80000),
+# terminated as the vendor IP does it with no fabric slave: disabled, on
+# user clock 0, every access completing at once with zeros.  Left
+# undriven, PREADY stays low and the first debugger access wedges the DAP.
+DEBUG_APB_PORTS = [
+    ('dbgapbdisable', 'in', 1, "'1'", 'base'),
+    ('cs_dbg_fpga_apb_pclk', 'in', 1, 'user_clock_s(0)', 'base'),
+    ('cs_dbg_fpga_apb_pclken', 'in', 1, "'1'", 'base'),
+    ('cs_dbg_fpga_apb_pready', 'in', 1, "'1'", 'base'),
+    ('cs_dbg_fpga_apb_pslverr', 'in', 1, "'0'", 'base'),
+    ('cs_dbg_fpga_apb_prdata', 'in', 32, '(others => \'0\')', 'base'),
+]
+
+# Inputs the vendor IP ties high, active low or disabling: unconnected,
+# they read low once the core is configured.  An in-core loopback then
+# takes over the HPS IO, cutting the network of the HPS.
+TIED_HIGH_PORTS = [
+    ('dft_in_core_loopback_en_n', 'in', 1, "'1'", 'base'),
+    ('tpiu_trace_ctl', 'in', 1, "'1'", 'base'),
 ]

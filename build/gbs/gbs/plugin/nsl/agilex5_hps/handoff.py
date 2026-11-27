@@ -50,9 +50,8 @@ class Handoff:
         c = self.config
         e = [
             ("SDM", "DDR", str(int(c.emif_topology is not None))),
-            # Bit 0 tells two channels on one IO96B, bit 1 two IO96B, none
-            # of the supported topologies has them.
-            ("ddr", "IO96B_CSR", "0"),
+            # Bit 0 tells two channels on one IO96B, bit 1 two IO96B.
+            ("ddr", "IO96B_CSR", str(int(c.emif_topology == "2x16"))),
             ("SDM", "WACH", c.WATCHDOG_RESETS[c.watchdog_reset]),
             ("pwr", "core", str(self.cores_power())),
             ("pwr", "boot", str(c.cpu.boot_core)),

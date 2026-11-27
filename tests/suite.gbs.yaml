@@ -23,6 +23,9 @@ projects:
   - name: altera_hps_bridge_channel
     path: altera/hps_bridge_channel
     tags: [ghdl, yavs, simulation]
+  - name: altera_hps_pd_port
+    path: altera/hps_pd_port
+    tags: [ghdl, yavs, simulation]
   - name: amba_address
     path: amba/address
     tags: [ghdl, yavs, simulation]

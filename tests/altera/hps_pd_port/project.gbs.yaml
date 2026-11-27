@@ -1,0 +1,24 @@
+name: altera_hps_pd_port
+
+root:
+  name: top
+  deps:
+    - nsl_altera.hps
+    - nsl_simulation.driver
+    - nsl_amba.ram
+    - nsl_data.text
+  sources:
+    - file_type: vhdl
+      files:
+        - src/tb.vhd
+
+output:
+  - name: simulation
+    topcell: tb
+    filter_vars:
+      hwdep: simulation
+    simulation:
+      success_regex: "Terminating with error level: 0"
+    outputs:
+      - type: simulation-log
+        path: simulation.log

@@ -56,7 +56,8 @@ class HpsConfig:
     PIN_MODES = ("unused", "input", "output", "bidir", "bidir_open_drain", "i2c")
     PERIPHERALS = ("usb0", "usb1", "emac0", "emac1", "emac2", "nand", "sdmmc", "coresight")
     WATCHDOG_RESETS = {"cold": "COLD", "warm": "WARM", "remote_update": "C_RSU"}
-    EMIF_TOPOLOGIES = ("1x16", "1x32")
+    # One 16 or 32-bit channel, or two 16-bit channels on one IO96B.
+    EMIF_TOPOLOGIES = ("1x16", "1x32", "2x16")
 
     # Bridge name -> (allowed data widths, max address width)
     BRIDGES = {
